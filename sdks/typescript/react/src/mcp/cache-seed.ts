@@ -38,11 +38,7 @@ export function toTransportLimits(limits: LimitResponseWithPlan): TransportLimit
   }
 }
 
-function limitsCacheKey(
-  customerRef: string,
-  productRef: string,
-  meterName: string,
-): string {
+function limitsCacheKey(customerRef: string, productRef: string, meterName: string): string {
   return `${customerRef}:${productRef}:${meterName}`
 }
 

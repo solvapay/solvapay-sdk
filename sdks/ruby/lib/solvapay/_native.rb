@@ -42,7 +42,9 @@ module SolvaPay
       get_auto_recharge
       save_auto_recharge
       disable_auto_recharge
+      list_purchases
       mcp_bootstrap
+      get_credit_activity
       mcp_call_builtin_tool
       mcp_read_resource
       mcp_resolve_auth
@@ -75,25 +77,35 @@ module SolvaPay
       get_business_country_options
       is_email_conflict
       credits_to_display_minor_units
+      resolve_buyer_country
       validate_activate_plan_params
+      get_customer_address_field_errors
       is_zero_decimal_currency
       validate_create_payment_intent_params
+      is_customer_address_complete
       minor_units_per_major
       validate_topup_payment_intent_params
+      is_postal_code_required
       resolve_seller_identity_display
       validate_process_payment_intent_params
       get_seller_tax_identifier_display_label
+      is_state_required
       validate_attach_business_details_params
       SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
       attach_business_details_validation_error
+      get_state_field_label
+      get_postal_code_field_label
       is_unlimited_remaining
       paywall_tool_result
       project_payment_intent_result
+      get_postal_code_placeholder
       make_response_result
       project_topup_process_outcome
+      POSTAL_CODE_REQUIRED_COUNTRIES
       assert_response_result
       resolve_return_url
       MCP_TOOL_NAMES
+      STATE_REQUIRED_COUNTRIES
       topup_process_next
       validate_checkout_session_params
       is_cached_customer_ref_valid
@@ -104,6 +116,7 @@ module SolvaPay
       select_active_purchases
       build_prompt_descriptor_metadata
       classify_cancel_error
+      derive_active_products
       build_prompt_user_message
       classify_reactivate_error
       normalize_cancel_response
@@ -151,7 +164,17 @@ module SolvaPay
       tier_bands
       tier_meters
       usage_rate
+      plan_pricing_shape
       build_customer_snapshot
+      get_history_next
+      evaluate_claimed_limits
+      history_rows
+      resolve_plan_shape
+      resolve_account_state
+      derive_default_view
+      resolve_display_mode
+      plan_consequence
+      format_compact_credits
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

@@ -7,17 +7,17 @@ import (
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/livecontract"
 )
 
-func TestScenariosCoverThirtySixOpsInDependencyOrder(t *testing.T) {
-	// Python/Ruby/Rust live drivers ship 38 scenarios (36 unique ops + 2 bogus probes).
-	if got := len(livecontract.SCENARIOS); got != 38 {
-		t.Fatalf("SCENARIOS len = %d, want 38", got)
+func TestScenariosCoverThirtyEightOpsInDependencyOrder(t *testing.T) {
+	// Python/Ruby/Rust live drivers ship 40 scenarios (38 unique ops + 2 bogus probes).
+	if got := len(livecontract.SCENARIOS); got != 40 {
+		t.Fatalf("SCENARIOS len = %d, want 40", got)
 	}
 	unique := map[string]struct{}{}
 	for _, s := range livecontract.SCENARIOS {
 		unique[s.Op] = struct{}{}
 	}
-	if got := len(unique); got != 36 {
-		t.Fatalf("unique ops = %d, want 36", got)
+	if got := len(unique); got != 38 {
+		t.Fatalf("unique ops = %d, want 38", got)
 	}
 	if livecontract.SCENARIOS[0].ID != "getMerchant" || livecontract.SCENARIOS[0].Op != "getMerchant" {
 		t.Fatalf("first scenario = %+v, want getMerchant", livecontract.SCENARIOS[0])

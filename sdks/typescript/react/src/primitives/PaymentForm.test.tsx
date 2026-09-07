@@ -71,9 +71,8 @@ vi.mock('@stripe/stripe-js', () => ({
 }))
 
 vi.mock('../utils/confirmPayment', async () => {
-  const actual = await vi.importActual<typeof import('../utils/confirmPayment')>(
-    '../utils/confirmPayment',
-  )
+  const actual =
+    await vi.importActual<typeof import('../utils/confirmPayment')>('../utils/confirmPayment')
   return {
     ...actual,
     confirmPayment: vi.fn().mockResolvedValue({

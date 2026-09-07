@@ -47,6 +47,12 @@ const ROUTES: &[RouteMatch] = &[
     },
     RouteMatch {
         method: "GET",
+        path_template: "/v1/sdk/credits/activity",
+        operation_id: "CreditActivitySdkController_getActivity",
+        response_type: Some("CreditActivityResponseDto"),
+    },
+    RouteMatch {
+        method: "GET",
         path_template: "/v1/sdk/customers",
         operation_id: "CustomerSdkController_getCustomerByQuery",
         response_type: Some("CustomerResponse"),
@@ -382,6 +388,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
         }
         "CreateCustomerSessionResponse" => {
             let parsed: schemas::CreateCustomerSessionResponse =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
+        "CreditActivityResponseDto" => {
+            let parsed: schemas::CreditActivityResponseDto =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }

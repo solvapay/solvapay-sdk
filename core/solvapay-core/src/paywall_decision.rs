@@ -165,6 +165,50 @@ pub fn evaluate_fresh_limits(within_limits: bool, remaining: f64) -> FreshLimits
     }
 }
 
+/// Evaluate a concurrent claim against a fresh `checkLimits` remaining.
+///
+/// Hosts increment `claimed` (1-based) and never decide locally. Unlimited
+/// (`remaining == -1`) and throttle/overage (`within_limits && remaining == 0`)
+/// must not gate.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 59
+)]
+pub fn evaluate_claimed_limits(
+    within_limits: bool,
+    remaining: f64,
+    claimed: f64,
+) -> FreshLimitsEvaluation {
+    if remaining == -1.0 {
+        return FreshLimitsEvaluation {
+            within_limits: true,
+            remaining: -1.0,
+            should_cache: false,
+        };
+    }
+    if within_limits && remaining == 0.0 {
+        return FreshLimitsEvaluation {
+            within_limits: true,
+            remaining: 0.0,
+            should_cache: false,
+        };
+    }
+    if claimed <= remaining {
+        return FreshLimitsEvaluation {
+            within_limits: true,
+            remaining: (remaining - claimed).max(0.0),
+            should_cache: true,
+        };
+    }
+    FreshLimitsEvaluation {
+        within_limits: false,
+        remaining: 0.0,
+        should_cache: false,
+    }
+}
+
 /// Produce allow vs gate at the decision point.
 ///
 /// # Arguments
@@ -360,7 +404,7 @@ mod tests {
         assert_eq!(value["kind"], "payment_required");
         assert_eq!(value["checkoutUrl"], "");
         // Fallback plan is empty string; message is upgrade copy without URL.
-        assert!(value["message"].as_str().unwrap().contains("upgrade"));
+        assert!(value["message"].as_str().unwrap().contains("account"));
     }
 
     #[test]

@@ -81,7 +81,27 @@ mod replay {
                     if rel.contains("tools-list") {
                         assert_eq!(got["kind"], "rpc", "{rel}");
                         let tools = got["rpc"]["result"]["tools"].as_array().unwrap();
-                        assert!(tools.len() >= 8, "{rel}");
+                        // Transport tools stay advertised so widgets can call them;
+                        // `openai/visibility: private` is what keeps them off the
+                        // model's list (or `hideAudiences` when the server opts in).
+                        assert!(tools.len() >= 2, "{rel} advertised {}", tools.len());
+                        let names: Vec<&str> = tools
+                            .iter()
+                            .filter_map(|tool| tool["name"].as_str())
+                            .collect();
+                        assert!(
+                            names.contains(&"account") || names.contains(&"echo_paid"),
+                            "{rel}"
+                        );
+                        if let Some(transport) = tools
+                            .iter()
+                            .find(|tool| tool["name"] == "create_payment_intent")
+                        {
+                            assert_eq!(
+                                transport["_meta"]["openai/visibility"], "private",
+                                "{rel} transport tools must be marked private"
+                            );
+                        }
                         for tool in tools {
                             let title = tool.get("title");
                             assert!(

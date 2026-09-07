@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { logMcpConfigOnce } from './config-log'
 import { buildPromptUserMessage, deriveIcons, validatePublicBaseUrl } from './native-mcp'
 import { solvapayOverviewBody } from './resources/overview'
-import { MCP_TOOL_NAMES } from './tool-names'
+import { MCP_PROMPT_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
   McpToolExtra,
@@ -169,10 +169,10 @@ export function buildSolvaPayPrompts(
 }
 
 function promptArgsSchema(name: string): { argsSchema?: Record<string, z.ZodTypeAny> } {
-  if (name === MCP_TOOL_NAMES.upgrade || name === MCP_TOOL_NAMES.activatePlan) {
+  if (name === MCP_PROMPT_NAMES.upgrade || name === MCP_PROMPT_NAMES.activatePlan) {
     return { argsSchema: { planRef: z.string().optional() } }
   }
-  if (name === MCP_TOOL_NAMES.topup) {
+  if (name === MCP_PROMPT_NAMES.topup) {
     return { argsSchema: { amount: z.string().optional() } }
   }
   return {}

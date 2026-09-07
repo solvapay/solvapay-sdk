@@ -131,6 +131,7 @@ export interface SolvaPayCopy {
     invalidThreshold: string
     thresholdTooLow: string
     minTopupAmount: string
+    topupBelowThreshold: string
     deepDrawdownExplainer: string
     invalidMaxMonthlySpend: string
     maxMonthlySpendBelowTopup: string

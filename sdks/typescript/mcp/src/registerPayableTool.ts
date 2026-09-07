@@ -15,6 +15,7 @@ import {
   type SolvaPayToolIcon,
 } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
+import { PaywallStructuredContentSchema } from '@solvapay/server'
 import { registerAppTool } from './internal/extAppsServer'
 
 type ZodObjectSchema = ReturnType<typeof z.object>
@@ -64,6 +65,14 @@ export interface RegisterPayableToolOptions<
   title?: string
   description?: string
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
+  /**
+   * Opt-in structured-output schema. Declaring it converts a nicety
+   * into a spec MUST — the server must then return conforming
+   * `structuredContent`. Never auto-derived. The SDK unions this with
+   * the paywall gate schema so a blocked call is not an output-validation
+   * error.
+   */
+  outputSchema?: z.ZodTypeAny
   buildBootstrap?: BuildBootstrapPayloadFn
   getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
   /** Usage meter name (`trackUsage.metadata.action`). Defaults to `'requests'`. */
@@ -88,6 +97,7 @@ export function registerPayableTool<
     title,
     description,
     handler,
+    outputSchema,
     getCustomerRef,
     usageType,
     meta,
@@ -116,10 +126,14 @@ export function registerPayableTool<
   const hasUiResource =
     hasUi && typeof (mergedUi as { resourceUri?: unknown }).resourceUri === 'string'
 
+  const registeredOutputSchema =
+    outputSchema !== undefined ? z.union([outputSchema, PaywallStructuredContentSchema]) : undefined
+
   const toolConfig = {
     ...(title !== undefined ? { title } : {}),
     ...(description !== undefined ? { description } : {}),
     ...(schema !== undefined ? { inputSchema: wrapInputSchema(schema) } : {}),
+    ...(registeredOutputSchema !== undefined ? { outputSchema: registeredOutputSchema } : {}),
     ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),
     annotations: effectiveAnnotations,
     ...(icons !== undefined && icons.length > 0 ? { icons } : {}),

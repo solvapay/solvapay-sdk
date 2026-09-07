@@ -326,6 +326,7 @@ function renderView(
               value={{
                 displayMode: options.displayMode,
                 availableDisplayModes: ['inline', 'fullscreen'],
+                hostedRail: options.displayMode === 'fullscreen' ? 'hosted' : 'inline',
               }}
             >
               {view}

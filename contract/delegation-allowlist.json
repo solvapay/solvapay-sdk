@@ -172,6 +172,11 @@
     },
     {
       "package": "@solvapay/server",
+      "symbol": "getHistoryCore",
+      "reason": "host-orchestration-decisions-delegated"
+    },
+    {
+      "package": "@solvapay/server",
       "symbol": "getMerchantCore",
       "reason": "host-orchestration-decisions-delegated"
     },
@@ -187,6 +192,11 @@
     },
     {
       "package": "@solvapay/server",
+      "symbol": "deriveUsageSnapshot",
+      "reason": "host-orchestration-decisions-delegated"
+    },
+    {
+      "package": "@solvapay/server",
       "symbol": "getUsageCore",
       "reason": "host-orchestration-decisions-delegated"
     },
@@ -198,6 +208,11 @@
     {
       "package": "@solvapay/server",
       "symbol": "isPaywallStructuredContent",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/server",
+      "symbol": "PaywallStructuredContentSchema",
       "reason": "type-guard-or-const"
     },
     {

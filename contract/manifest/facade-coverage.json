@@ -1794,6 +1794,92 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "deriveActiveProducts": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "deriveDefaultView": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "deriveIcons": {
       "capi": {
         "exposed": false,
@@ -2050,6 +2136,50 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "evaluateClaimedLimits": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "evaluateFreshLimits": {
       "capi": {
         "exposed": false,
@@ -2221,6 +2351,49 @@
       "wasm-browser": {
         "exposed": false,
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "formatCompactCredits": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
       }
     },
     "formatPrice": {
@@ -2477,6 +2650,48 @@
         "exposed": true
       }
     },
+    "getCreditActivity": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "getCustomer": {
       "capi": {
         "exposed": true
@@ -2519,6 +2734,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "getCustomerAddressFieldErrors": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "getCustomerBalance": {
       "capi": {
         "exposed": true
@@ -2545,6 +2803,50 @@
       },
       "rust": {
         "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "getHistoryNext": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
       },
       "rust-mcp": {
         "exposed": false,
@@ -2687,6 +2989,90 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "getPostalCodeFieldLabel": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "getPostalCodePlaceholder": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "getProduct": {
       "capi": {
         "exposed": true
@@ -2730,6 +3116,48 @@
       }
     },
     "getSellerTaxIdentifierDisplayLabel": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "getStateFieldLabel": {
       "capi": {
         "exposed": false,
         "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
@@ -2981,6 +3409,49 @@
         "exposed": true
       }
     },
+    "historyRows": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "includedUnits": {
       "capi": {
         "exposed": false,
@@ -3108,6 +3579,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "isCustomerAddressComplete": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "isEmailConflict": {
       "capi": {
         "exposed": false,
@@ -3193,6 +3707,90 @@
       "wasm-browser": {
         "exposed": false,
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "isPostalCodeRequired": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "isStateRequired": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
       }
     },
     "isUnlimitedRemaining": {
@@ -3322,6 +3920,48 @@
       }
     },
     "listProducts": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "listPurchases": {
       "capi": {
         "exposed": true
       },
@@ -4115,6 +4755,134 @@
         "exposed": true
       }
     },
+    "planConsequence": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "planPricingShape": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "POSTAL_CODE_REQUIRED_COUNTRIES": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "processPaymentIntent": {
       "capi": {
         "exposed": true
@@ -4374,6 +5142,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "resolveAccountState": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "resolveAuthenticatedUser": {
       "capi": {
         "exposed": false,
@@ -4416,6 +5227,49 @@
       "wasm-browser": {
         "exposed": false,
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "resolveBuyerCountry": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
       }
     },
     "resolveCheckLimitsParams": {
@@ -4503,6 +5357,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "resolveDisplayMode": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "resolveFallbackGateLimits": {
       "capi": {
         "exposed": false,
@@ -4545,6 +5442,49 @@
       "wasm-browser": {
         "exposed": false,
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "resolvePlanShape": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
       }
     },
     "resolveProductRef": {
@@ -5089,6 +6029,49 @@
       },
       "rust": {
         "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
+    "STATE_REQUIRED_COUNTRIES": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": false,
+        "reason": "not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK"
       },
       "rust-mcp": {
         "exposed": false,

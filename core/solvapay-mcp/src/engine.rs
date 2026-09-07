@@ -364,7 +364,7 @@ fn payable_list_item(spec: &PayableToolSpec) -> Value {
         item["_meta"] = meta.clone();
     }
     if let Some(output_schema) = &spec.output_schema {
-        item["outputSchema"] = output_schema.clone();
+        item["outputSchema"] = crate::descriptors::union_payable_output_schema(output_schema);
     }
     with_legacy_ui_meta(item)
 }
@@ -815,6 +815,40 @@ mod tests {
             echo.get("outputSchema").is_none(),
             "generic payable tools must not inherit the gate oneOf schema"
         );
+    }
+
+    #[test]
+    fn tools_list_unions_merchant_output_schema_with_paywall() {
+        let tools = list_rpc(json!([{
+            "name": "echo_paid",
+            "title": "Echo paid",
+            "description": "Echo arguments after a paid gate",
+            "inputSchema": { "type": "object", "properties": { "n": { "type": "number" } } },
+            "outputSchema": {
+                "type": "object",
+                "required": ["n"],
+                "properties": { "n": { "type": "number" } }
+            }
+        }]));
+        let echo = tools
+            .iter()
+            .find(|t| t["name"] == "echo_paid")
+            .expect("payable advertised");
+        let schema = echo.get("outputSchema").expect("unioned outputSchema");
+        let one_of = schema
+            .get("oneOf")
+            .and_then(Value::as_array)
+            .expect("oneOf union");
+        assert_eq!(one_of.len(), 2);
+        assert_eq!(
+            one_of[0],
+            json!({
+                "type": "object",
+                "required": ["n"],
+                "properties": { "n": { "type": "number" } }
+            })
+        );
+        assert!(one_of[1].get("oneOf").is_some(), "paywall gate schema");
     }
 
     #[test]

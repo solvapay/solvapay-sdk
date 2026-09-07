@@ -105,33 +105,21 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   // read tools (history is the exception).
   return {
     createPayment: params =>
-      callTool(
-        MCP_TOOL_NAMES.createPayment,
-        pickDefined({ purpose: 'plan', ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ purpose: 'plan', ...params })),
 
     processPayment: params => callTool(MCP_TOOL_NAMES.processPayment, pickDefined({ ...params })),
 
     createTopupPayment: params =>
-      callTool(
-        MCP_TOOL_NAMES.createPayment,
-        pickDefined({ purpose: 'topup', ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ purpose: 'topup', ...params })),
 
     attachBusinessDetails: params =>
       callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
 
     cancelRenewal: params =>
-      callTool(
-        MCP_TOOL_NAMES.setRenewal,
-        pickDefined({ enabled: false, ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.setRenewal, pickDefined({ enabled: false, ...params })),
 
     reactivateRenewal: params =>
-      callTool(
-        MCP_TOOL_NAMES.setRenewal,
-        pickDefined({ enabled: true, ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.setRenewal, pickDefined({ enabled: true, ...params })),
 
     activatePlan: params => callTool(MCP_TOOL_NAMES.activatePlan, pickDefined({ ...params })),
 
@@ -141,8 +129,7 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
         pickDefined({ kind: 'checkout', ...(params ?? {}) }),
       ),
 
-    createCustomerSession: () =>
-      callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
+    createCustomerSession: () => callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
 
     // History is not on bootstrap (`checkPurchaseCore` is active-only).
     // This is the documented exception to the reads-from-bootstrap rule.

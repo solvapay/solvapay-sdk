@@ -1,6 +1,135 @@
 {
   "_comment": "generated — do not edit; regenerate with dto-gen --dump-boundary-types",
   "types": {
+    "ActiveProduct": {
+      "module": "purchase",
+      "rustdoc": "Active plan purchase projected for the MCP account widget.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "reference",
+            "wireName": "reference",
+            "rustdoc": "Purchase reference.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "product_name",
+            "wireName": "productName",
+            "rustdoc": "Product display name.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "product_ref",
+            "wireName": "productRef",
+            "rustdoc": "Product ref when present.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_name",
+            "wireName": "planName",
+            "rustdoc": "Frozen plan name.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_ref",
+            "wireName": "planRef",
+            "rustdoc": "Plan ref from the purchase or snapshot.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "since",
+            "wireName": "since",
+            "rustdoc": "Purchase start date.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "is_metered",
+            "wireName": "isMetered",
+            "rustdoc": "Snapshot `isMetered` flag.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "amount",
+            "wireName": "amount",
+            "rustdoc": "Purchase amount in minor units.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "Purchase currency.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
     "AllowConsequence": {
       "module": "gate_driver",
       "rustdoc": "Degraded allow reason. Absent on a plain allow.",
@@ -474,6 +603,32 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "customer_state",
+            "wireName": "customerState",
+            "rustdoc": "Trimmed buyer state/province.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "customer_postal_code",
+            "wireName": "customerPostalCode",
+            "rustdoc": "Trimmed buyer postal/ZIP code.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -577,6 +732,32 @@
             "ty": {
               "kind": "named",
               "name": "TaxIdType"
+            }
+          },
+          {
+            "rustName": "customer_state",
+            "wireName": "customerState",
+            "rustdoc": "Buyer state/province (required for US, CA, IN).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "customer_postal_code",
+            "wireName": "customerPostalCode",
+            "rustdoc": "Buyer postal/ZIP code (required for US, CA, GB).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
             }
           }
         ]
@@ -1961,6 +2142,19 @@
                   "kind": "named",
                   "name": "GateCacheOp"
                 }
+              },
+              {
+                "rustName": "request_id",
+                "wireName": "requestId",
+                "rustdoc": "Request id minted at `start`; the host reuses it when tracking the\nhandler outcome.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
               }
             ]
           },
@@ -2075,6 +2269,19 @@
                 "cfgFeature": null,
                 "ty": {
                   "kind": "value"
+                }
+              },
+              {
+                "rustName": "request_id",
+                "wireName": "requestId",
+                "rustdoc": "Request id minted at `start`, matching `request.metadata.requestId`.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
                 }
               }
             ]
@@ -2431,6 +2638,32 @@
             }
           },
           {
+            "rustName": "request_id",
+            "wireName": "requestId",
+            "rustdoc": "Minted at `start` and reused by every `trackUsage` body for this\nrequest, so the decision and its success / fail event share one\nidempotency key.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "tool_name",
+            "wireName": "toolName",
+            "rustdoc": "MCP tool that triggered the call, echoed into `metadata.toolName`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
             "rustName": "limits_key",
             "wireName": "limitsKey",
             "rustdoc": "`backendRef:product:meterName` once the backend ref is known.",
@@ -2499,6 +2732,221 @@
         ]
       }
     },
+    "GetHistoryAction": {
+      "module": "history",
+      "rustdoc": "Next host action or a terminal resolve.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "kind",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Fetch",
+            "wireName": "fetch",
+            "rustdoc": "Host fetches `listPurchases` and `getCreditActivity` in parallel.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "list_purchases",
+                "wireName": "listPurchases",
+                "rustdoc": "`listPurchases` query.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              },
+              {
+                "rustName": "get_credit_activity",
+                "wireName": "getCreditActivity",
+                "rustdoc": "`getCreditActivity` query.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Resolved",
+            "wireName": "resolved",
+            "rustdoc": "Terminal success.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "charges",
+                "wireName": "charges",
+                "rustdoc": "Product-scoped purchases.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "vec",
+                  "item": {
+                    "kind": "value"
+                  }
+                }
+              },
+              {
+                "rustName": "credit_activity",
+                "wireName": "creditActivity",
+                "rustdoc": "Account-wide credit ledger page.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "GetHistoryNextOutput": {
+      "module": "history",
+      "rustdoc": "Driver output.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "state",
+            "wireName": "state",
+            "rustdoc": "State to pass into the next call.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "GetHistoryState"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Host action or terminal result.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "GetHistoryAction"
+            }
+          }
+        ]
+      }
+    },
+    "GetHistoryPending": {
+      "module": "history",
+      "rustdoc": "In-flight step the next host event must complete.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "None",
+            "wireName": "none",
+            "rustdoc": "Terminal or short-circuit.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Fetch",
+            "wireName": "fetch",
+            "rustdoc": "Waiting for `results`.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "GetHistoryState": {
+      "module": "history",
+      "rustdoc": "Driver state between history steps.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "product_ref",
+            "wireName": "productRef",
+            "rustdoc": "Product whose purchases become `charges`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "customer_ref",
+            "wireName": "customerRef",
+            "rustdoc": "Backend customer ref for both fetches.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "limit",
+            "wireName": "limit",
+            "rustdoc": "Optional credit-activity page size.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "pending",
+            "wireName": "pending",
+            "rustdoc": "In-flight step the next host event must complete.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "GetHistoryPending"
+            }
+          }
+        ]
+      }
+    },
     "HelperErrorResult": {
       "module": "helper_error",
       "rustdoc": "Route-helper error object (matches TS `ErrorResult`).\n\n`details` is omitted when absent (skip-absent), unlike auth `email`/`name`\nwhich serialize as explicit `null`.",
@@ -2538,6 +2986,206 @@
             "rustName": "details",
             "wireName": "details",
             "rustdoc": "Optional detail string; skipped when [`None`].",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "HistoryChargeRow": {
+      "module": "history",
+      "rustdoc": "One charge table row.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "charge",
+            "wireName": "charge",
+            "rustdoc": "Plan or product name plus qualifier.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "date",
+            "wireName": "date",
+            "rustdoc": "UTC purchase date.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "amount",
+            "wireName": "amount",
+            "rustdoc": "Formatted amount.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "HistoryCreditRow": {
+      "module": "history",
+      "rustdoc": "One credit-activity table row.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "title",
+            "wireName": "title",
+            "rustdoc": "Product name or type label.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "subtitle",
+            "wireName": "subtitle",
+            "rustdoc": "Humanized reason.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "when",
+            "wireName": "when",
+            "rustdoc": "UTC day + time.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "credits",
+            "wireName": "credits",
+            "rustdoc": "Signed credit delta.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "balance",
+            "wireName": "balance",
+            "rustdoc": "Running balance.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "HistoryRows": {
+      "module": "history",
+      "rustdoc": "Mapped history tables plus merchant chrome.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "charges",
+            "wireName": "charges",
+            "rustdoc": "Product-scoped charges.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "HistoryChargeRow"
+              }
+            }
+          },
+          {
+            "rustName": "credit_activity",
+            "wireName": "creditActivity",
+            "rustdoc": "Account-wide credit activity.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "HistoryCreditRow"
+              }
+            }
+          },
+          {
+            "rustName": "merchant_place",
+            "wireName": "merchantPlace",
+            "rustdoc": "City / state line.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "website_host",
+            "wireName": "websiteHost",
+            "rustdoc": "Website host without `www.`.",
             "optional": true,
             "skipSerializingIf": "Option::is_none",
             "serdeDefault": false,
@@ -2911,6 +3559,70 @@
         ]
       }
     },
+    "McpContainerDimensions": {
+      "module": "mcp::display_mode",
+      "rustdoc": "Host-reported container size.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "width",
+            "wireName": "width",
+            "rustdoc": "Width in CSS pixels.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "height",
+            "wireName": "height",
+            "rustdoc": "Height in CSS pixels.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "max_width",
+            "wireName": "maxWidth",
+            "rustdoc": "Max width in CSS pixels.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "max_height",
+            "wireName": "maxHeight",
+            "rustdoc": "Max height in CSS pixels.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          }
+        ]
+      }
+    },
     "McpContentBlock": {
       "module": "mcp::paywall_tool_result",
       "rustdoc": "Single MCP content block (`content[0]` narration).",
@@ -2949,6 +3661,150 @@
         ]
       }
     },
+    "McpDisplayMode": {
+      "module": "mcp::display_mode",
+      "rustdoc": "MCP host display mode.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Inline",
+            "wireName": "inline",
+            "rustdoc": "Widget / inline.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Fullscreen",
+            "wireName": "fullscreen",
+            "rustdoc": "Fullscreen hosted surface.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Pip",
+            "wireName": "pip",
+            "rustdoc": "Picture-in-picture (advertised by some hosts; SolvaPay does not request it).",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "McpDisplayModeState": {
+      "module": "mcp::display_mode",
+      "rustdoc": "Display-mode snapshot plus derived hosted rail.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "display_mode",
+            "wireName": "displayMode",
+            "rustdoc": "Current host mode.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "McpDisplayMode"
+            }
+          },
+          {
+            "rustName": "available_display_modes",
+            "wireName": "availableDisplayModes",
+            "rustdoc": "Modes the host advertised.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "McpDisplayMode"
+              }
+            }
+          },
+          {
+            "rustName": "container_dimensions",
+            "wireName": "containerDimensions",
+            "rustdoc": "Host container size when reported.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "McpContainerDimensions"
+            }
+          },
+          {
+            "rustName": "safe_area_insets",
+            "wireName": "safeAreaInsets",
+            "rustdoc": "Host insets when reported.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "McpSafeAreaInsets"
+            }
+          },
+          {
+            "rustName": "hosted_rail",
+            "wireName": "hostedRail",
+            "rustdoc": "Payment geometry for `data-rail`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "McpHostedRail"
+            }
+          }
+        ]
+      }
+    },
+    "McpHostedRail": {
+      "module": "mcp::display_mode",
+      "rustdoc": "Payment geometry stamped on `data-rail`.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Hosted",
+            "wireName": "hosted",
+            "rustdoc": "Fullscreen hosted column.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Inline",
+            "wireName": "inline",
+            "rustdoc": "Inline widget.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
     "McpPayableToolResult": {
       "module": "mcp::payable_tool_result",
       "rustdoc": "MCP tool result for an allowed payable handler (`SolvaPayCallToolResult` allow path).\n\n`is_error` is omitted (`skip_serializing_if`) — allow is not a tool error.",
@@ -2974,7 +3830,7 @@
           {
             "rustName": "content",
             "wireName": "content",
-            "rustdoc": "Emitted blocks, then one `{ type: \"text\", text }` primary block.",
+            "rustdoc": "Emitted blocks, primary text, optional trailing JSON, optional nudge resource.",
             "optional": false,
             "skipSerializingIf": null,
             "serdeDefault": false,
@@ -3054,6 +3910,70 @@
             "ty": {
               "kind": "named",
               "name": "PaywallGate"
+            }
+          }
+        ]
+      }
+    },
+    "McpSafeAreaInsets": {
+      "module": "mcp::display_mode",
+      "rustdoc": "Host composer insets.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "top",
+            "wireName": "top",
+            "rustdoc": "Top inset.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "right",
+            "wireName": "right",
+            "rustdoc": "Right inset.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "bottom",
+            "wireName": "bottom",
+            "rustdoc": "Bottom inset.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "left",
+            "wireName": "left",
+            "rustdoc": "Left inset.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -4242,6 +5162,133 @@
             "rustName": "ReactivationRequired",
             "wireName": "reactivation_required",
             "rustdoc": "Previous plan inactive (type-only; classifier never returns this today).",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "PlanPricingShape": {
+      "module": "pricing_options",
+      "rustdoc": "Derived plan pricing presentation.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "shape",
+            "wireName": "shape",
+            "rustdoc": "Branch key for plan-row / narration surfaces.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PricingShape"
+            }
+          },
+          {
+            "rustName": "headline_minor",
+            "wireName": "headlineMinor",
+            "rustdoc": "Headline price in minor units.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "ISO currency, uppercased.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "cycle",
+            "wireName": "cycle",
+            "rustdoc": "Recurring cycle when the shape is recurring or hybrid.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "BillingCycle"
+            }
+          },
+          {
+            "rustName": "rate",
+            "wireName": "rate",
+            "rustdoc": "Metered rate when the plan is metered.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "UsageRate"
+            }
+          }
+        ]
+      }
+    },
+    "PricingShape": {
+      "module": "pricing_options",
+      "rustdoc": "Pricing shape a plan-row or narration surface should branch on.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Free",
+            "wireName": "free",
+            "rustdoc": "`requiresPayment == false`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Hybrid",
+            "wireName": "hybrid",
+            "rustdoc": "Recurring plus a billable metered rate.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Recurring",
+            "wireName": "recurring",
+            "rustdoc": "Recurring without billable metering.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Usage",
+            "wireName": "usage",
+            "rustdoc": "Metered without a billing cycle.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "OneTime",
+            "wireName": "oneTime",
+            "rustdoc": "One-time charge.",
             "cfgFeature": null,
             "fields": []
           }
@@ -5844,7 +6891,7 @@
           {
             "rustName": "total",
             "wireName": "total",
-            "rustdoc": "`used + remaining` when the meter has a finite cap; else `null`.",
+            "rustdoc": "`limits.limit` when that value is `> 0`; else `null`. Never `used + remaining`.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
@@ -6316,6 +7363,95 @@
         }
       }
     },
+    "solvapay_core::business_details::get_customer_address_field_errors": {
+      "name": "get_customer_address_field_errors",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Field-level buyer address errors.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "BusinessDetailsInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::business_details::get_postal_code_field_label": {
+      "name": "get_postal_code_field_label",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Field label for the buyer postal/ZIP input.",
+      "params": [
+        {
+          "rustName": "country",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::business_details::get_postal_code_placeholder": {
+      "name": "get_postal_code_placeholder",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Placeholder for the buyer postal/ZIP input.",
+      "params": [
+        {
+          "rustName": "country",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::business_details::get_state_field_label": {
+      "name": "get_state_field_label",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Field label for the buyer state/province input.",
+      "params": [
+        {
+          "rustName": "country",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::business_details::get_tax_id_example": {
       "name": "get_tax_id_example",
       "module": "business_details",
@@ -6382,6 +7518,73 @@
         }
       }
     },
+    "solvapay_core::business_details::is_customer_address_complete": {
+      "name": "is_customer_address_complete",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "True when buyer address fields required for the country are present.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "BusinessDetailsInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::business_details::is_postal_code_required": {
+      "name": "is_postal_code_required",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Whether Stripe Tax requires a postal/ZIP code for `country`.",
+      "params": [
+        {
+          "rustName": "country",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::business_details::is_state_required": {
+      "name": "is_state_required",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Whether Stripe Tax requires a state/province for `country`.",
+      "params": [
+        {
+          "rustName": "country",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
     "solvapay_core::business_details::is_supported_business_country": {
       "name": "is_supported_business_country",
       "module": "business_details",
@@ -6401,6 +7604,45 @@
         "optional": false,
         "ty": {
           "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::business_details::postal_code_required_countries": {
+      "name": "postal_code_required_countries",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Countries that require a postal/ZIP code for Stripe Tax.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
+        }
+      }
+    },
+    "solvapay_core::business_details::resolve_buyer_country": {
+      "name": "resolve_buyer_country",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Resolve the buyer country used for address completeness.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "BusinessDetailsInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
         }
       }
     },
@@ -6431,6 +7673,22 @@
         "optional": true,
         "ty": {
           "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::business_details::state_required_countries": {
+      "name": "state_required_countries",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Countries that require a state/province for Stripe Tax.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
         }
       }
     },
@@ -7322,6 +8580,74 @@
         }
       }
     },
+    "solvapay_core::history::get_history_next": {
+      "name": "get_history_next",
+      "module": "history",
+      "implTy": null,
+      "rustdoc": "Advance history by one step.\n\n# Arguments\n\n* `state` - Previous [`GetHistoryNextOutput::state`], or `None` on `start`.\n* `event` - Host event tagged with `kind`.\n\n# Errors\n\n[`HelperErrorResult`] when `productRef` is missing or the event is malformed.",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "event",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "GetHistoryNextOutput"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::history::history_rows": {
+      "name": "history_rows",
+      "module": "history",
+      "implTy": null,
+      "rustdoc": "Map `get_history` rows onto the designed fullscreen tables.\n\n# Errors\n\n[`HelperErrorResult`] when a charge or credit row is missing required fields.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "HistoryRows"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::hmac_util::bytes_to_hex_lower": {
       "name": "bytes_to_hex_lower",
       "module": "hmac_util",
@@ -7522,6 +8848,110 @@
         }
       }
     },
+    "solvapay_core::mcp::account_state::derive_default_view": {
+      "name": "derive_default_view",
+      "module": "mcp::account_state",
+      "implTy": null,
+      "rustdoc": "Default MCP widget view from account facts and enabled views.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "string"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::mcp::account_state::merge_plan": {
+      "name": "merge_plan",
+      "module": "mcp::account_state",
+      "implTy": null,
+      "rustdoc": "Merge a live catalog plan over a frozen snapshot. `isMetered` comes\nonly from the snapshot — the catalog never carries it.",
+      "params": [
+        {
+          "rustName": "snapshot",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "catalog",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::mcp::account_state::resolve_account_state": {
+      "name": "resolve_account_state",
+      "module": "mcp::account_state",
+      "implTy": null,
+      "rustdoc": "Resolve account state A–J.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::mcp::account_state::resolve_narrator_plan_shape": {
+      "name": "resolve_narrator_plan_shape",
+      "module": "mcp::account_state",
+      "implTy": null,
+      "rustdoc": "Resolve the narrator plan shape from a priced plan / snapshot.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "NarratorPlanShape"
+        }
+      }
+    },
     "solvapay_core::mcp::descriptors::build_prompt_descriptor_metadata": {
       "name": "build_prompt_descriptor_metadata",
       "module": "mcp::descriptors",
@@ -7656,6 +9086,29 @@
         }
       }
     },
+    "solvapay_core::mcp::display_mode::resolve_display_mode": {
+      "name": "resolve_display_mode",
+      "module": "mcp::display_mode",
+      "implTy": null,
+      "rustdoc": "Pull display-mode fields out of a host-context object.",
+      "params": [
+        {
+          "rustName": "ctx",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "McpDisplayModeState"
+        }
+      }
+    },
     "solvapay_core::mcp::envelope::assert_response_result": {
       "name": "assert_response_result",
       "module": "mcp::envelope",
@@ -7730,7 +9183,7 @@
       "name": "build_payable_tool_result",
       "module": "mcp::payable_tool_result",
       "implTy": null,
-      "rustdoc": "Unwrap a branded [`ResponseEnvelope`] into an MCP allow-path tool result.\n\n# Arguments\n\n* `envelope` - Branded handler return (`make_response_result`).\n\n# Returns\n\n[`McpPayableToolResult`] with `isError` omitted, `structuredContent` = `data`.\n`options.units` is accepted and ignored (V1 billing stays one unit).\nCompact JSON of `data` keeps insertion order via workspace `serde_json`\n`preserve_order`.",
+      "rustdoc": "Unwrap a branded [`ResponseEnvelope`] into an MCP allow-path tool result.\n\nEmits merchant/emitted blocks, primary text (with optional nudge suffix),\na trailing JSON text block unless `options.dataInText` is `false`, and a\n`solvapay://nudge` resource when a nudge is present.\n\n# Arguments\n\n* `envelope` - Branded handler return (`make_response_result`).\n\n# Returns\n\n[`McpPayableToolResult`] with `isError` omitted, `structuredContent` = `data`.\n`options.units` is accepted and ignored (V1 billing stays one unit).\nCompact JSON of `data` keeps insertion order via workspace `serde_json`\n`preserve_order`.",
       "params": [
         {
           "rustName": "envelope",
@@ -7754,7 +9207,7 @@
       "name": "paywall_tool_result",
       "module": "mcp::paywall_tool_result",
       "implTy": null,
-      "rustdoc": "Build a text-only MCP paywall tool result.\n\n# Arguments\n\n* `narration` - Text placed in `content[0].text` (typically the gate message).\n* `gate` - Structured gate echoed on `structuredContent`.\n\n# Returns\n\n[`McpPaywallToolResult`] with `isError: false` and a single text content block.",
+      "rustdoc": "Build a text-only MCP paywall tool result.\n\nThe gate is independently complete on both host families: `content[0].text`\ncarries the human narration (text-first hosts) and `structuredContent`\ncarries the machine-readable [`PaywallGate`] (structuredContent-first\nhosts). Trailing JSON / nudge resource lanes belong to the allow-path\nunwrap in [`crate::mcp::build_payable_tool_result`], not to a gate.\n\n# Arguments\n\n* `narration` - Text placed in `content[0].text` (typically the gate message).\n* `gate` - Structured gate echoed on `structuredContent`.\n\n# Returns\n\n[`McpPaywallToolResult`] with `isError: false` and a single text content block.",
       "params": [
         {
           "rustName": "narration",
@@ -7782,6 +9235,59 @@
         }
       }
     },
+    "solvapay_core::mcp::plan_consequence::plan_consequence": {
+      "name": "plan_consequence",
+      "module": "mcp::plan_consequence",
+      "implTy": null,
+      "rustdoc": "Ladder consequence line for a catalog plan or frozen snapshot.\n\n# Errors\n\n[`HelperErrorResult`] when a free/trial plan has no finite cap.",
+      "params": [
+        {
+          "rustName": "plan",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "locale",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "balance",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "merchant_name",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "string"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::mcp::tool_names::mcp_tool_names_json": {
       "name": "mcp_tool_names_json",
       "module": "mcp::tool_names",
@@ -7806,6 +9312,35 @@
         "ty": {
           "kind": "named",
           "name": "McpViewMaps"
+        }
+      }
+    },
+    "solvapay_core::money_format::format_compact_credits": {
+      "name": "format_compact_credits",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Compact credit labels for preset tiles (`100K credits`, `1M credits`).\n\nGrouping is locale-independent (comma thousands).\n\n# Errors\n\n[`HelperErrorResult`] when `credits` is not a finite non-negative number.",
+      "params": [
+        {
+          "rustName": "credits",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "string"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
         }
       }
     },
@@ -8270,6 +9805,45 @@
         "ty": {
           "kind": "named",
           "name": "CachedLimitsEvaluation"
+        }
+      }
+    },
+    "solvapay_core::paywall_decision::evaluate_claimed_limits": {
+      "name": "evaluate_claimed_limits",
+      "module": "paywall_decision",
+      "implTy": null,
+      "rustdoc": "Evaluate a concurrent claim against a fresh `checkLimits` remaining.\n\nHosts increment `claimed` (1-based) and never decide locally. Unlimited\n(`remaining == -1`) and throttle/overage (`within_limits && remaining == 0`)\nmust not gate.",
+      "params": [
+        {
+          "rustName": "within_limits",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "bool"
+          }
+        },
+        {
+          "rustName": "remaining",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "claimed",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "FreshLimitsEvaluation"
         }
       }
     },
@@ -8830,6 +10404,29 @@
         }
       }
     },
+    "solvapay_core::pricing_options::plan_pricing_shape": {
+      "name": "plan_pricing_shape",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "Derive the pricing shape a plan-row or narration surface should branch on.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PlanPricingShape"
+        }
+      }
+    },
     "solvapay_core::pricing_options::tier_bands": {
       "name": "tier_bands",
       "module": "pricing_options",
@@ -9023,6 +10620,40 @@
         "ty": {
           "kind": "named",
           "name": "ProductReadinessResult"
+        }
+      }
+    },
+    "solvapay_core::purchase::derive_active_products": {
+      "name": "derive_active_products",
+      "module": "purchase",
+      "implTy": null,
+      "rustdoc": "Filter purchases to active plan rows for the account widget.",
+      "params": [
+        {
+          "rustName": "purchases",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "product_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "named",
+            "name": "ActiveProduct"
+          }
         }
       }
     },
@@ -9596,7 +11227,7 @@
       "name": "project_usage_snapshot",
       "module": "usage",
       "implTy": null,
-      "rustdoc": "Project an active purchase (and optional limits) into [`UsageSnapshot`].\n\nConsumption (`used`, period window, `purchaseRef`) comes from the purchase.\nThe cap (`total`, `remaining`, `meterRef`) comes from `limits` when present —\n`planSnapshot` no longer carries `limit` / `meterRef` on the wire.\n\n`limits.remaining < 0` is the backend's uncapped sentinel.\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n* `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.\n\n# Returns\n\nNormalized usage snapshot (empty when no active purchase).",
+      "rustdoc": "Project an active purchase (and optional limits) into [`UsageSnapshot`].\n\nConsumption comes from `limits.used` when present, else\n`max(0, total - remaining)` when both are known, else the purchase `used`.\nThe cap (`total`) is `limits.limit` when `> 0` — never `used + remaining`.\n`limits` absent means the cap is unknown, not unlimited. Unlimited is only\n`limits.remaining == -1`.\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n* `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.\n\n# Returns\n\nNormalized usage snapshot (empty when no active purchase).",
       "params": [
         {
           "rustName": "active_purchase",
@@ -9649,7 +11280,7 @@
       "name": "build_usage_request",
       "module": "usage_request",
       "implTy": null,
-      "rustdoc": "Render the complete `trackUsage` body, including request ID and timestamp.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref billed for this event.\n* `product` - Product reference.\n* `meter_name` - Usage meter (`metadata.action`).\n* `outcome` - `success` / `fail` / `paywall`.\n* `duration_ms` - Elapsed milliseconds.\n* `now_ms` - Host clock (authoritative timestamp + request id).\n* `random_unit` - Host `Math.random()` unit interval for the request id.\n* `error_message` - Optional fail-path message.",
+      "rustdoc": "Render the complete `trackUsage` body, including request ID and timestamp.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref billed for this event.\n* `product` - Product reference.\n* `meter_name` - Usage meter (`metadata.action`).\n* `outcome` - `success` / `fail` / `paywall`.\n* `duration_ms` - Elapsed milliseconds.\n* `now_ms` - Host clock (authoritative timestamp).\n* `request_id` - Id minted at decide time by [`mint_request_id`].\n* `tool_name` - Optional MCP tool that triggered the call.\n* `error_message` - Optional fail-path message.",
       "params": [
         {
           "rustName": "customer_ref",
@@ -9700,11 +11331,19 @@
           }
         },
         {
-          "rustName": "random_unit",
-          "byRef": false,
+          "rustName": "request_id",
+          "byRef": true,
           "optional": false,
           "ty": {
-            "kind": "f64"
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "tool_name",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
           }
         },
         {
@@ -9720,6 +11359,124 @@
         "optional": false,
         "ty": {
           "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::usage_request::mint_request_id": {
+      "name": "mint_request_id",
+      "module": "usage_request",
+      "implTy": null,
+      "rustdoc": "Mint a request id from the frozen `solvapay_{epochMs}_{random9}` template.\n\nDrivers mint once at decide time and thread the result through every\n`trackUsage` body for that request, so the decision and the eventual\nsuccess / fail event share one idempotency key.\n\n# Arguments\n\n* `now_ms` - Host clock at mint time.\n* `random_unit` - Host `Math.random()` unit interval.",
+      "params": [
+        {
+          "rustName": "now_ms",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "i64"
+          }
+        },
+        {
+          "rustName": "random_unit",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::utc::format_credit_when": {
+      "name": "format_credit_when",
+      "module": "utc",
+      "implTy": null,
+      "rustdoc": "`Sep 5, 14:22`",
+      "params": [
+        {
+          "rustName": "iso",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::utc::format_short_date": {
+      "name": "format_short_date",
+      "module": "utc",
+      "implTy": null,
+      "rustdoc": "`Oct 1`",
+      "params": [
+        {
+          "rustName": "iso",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::utc::format_since": {
+      "name": "format_since",
+      "module": "utc",
+      "implTy": null,
+      "rustdoc": "`Sep 3, 2026`",
+      "params": [
+        {
+          "rustName": "iso",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::utc::rfc3339_utc_ms": {
+      "name": "rfc3339_utc_ms",
+      "module": "utc",
+      "implTy": null,
+      "rustdoc": "Parse an RFC3339 / ISO-8601 UTC timestamp to milliseconds since epoch.",
+      "params": [
+        {
+          "rustName": "iso",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "f64"
         }
       }
     },

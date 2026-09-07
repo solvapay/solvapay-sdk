@@ -374,6 +374,20 @@ expectTypeOf<AssertArity>().toEqualTypeOf<true>()
       type R = ReturnType<NonNullable<SolvaPayClient['getAutoRecharge']>>
 expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
 })
+    it('getCreditActivity presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['getCreditActivity']>().toEqualTypeOf<
+SolvaPayClientGenerated['getCreditActivity']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['getCreditActivity']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['getCreditActivity']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
     it('getCustomer presence / arity / sync', () => {
 expectTypeOf<SolvaPayClient['getCustomer']>().toEqualTypeOf<
 SolvaPayClientGenerated['getCustomer']
@@ -498,6 +512,20 @@ type AssertArity = ExpectedArity extends P['length'] ? true : false
 expectTypeOf<AssertArity>().toEqualTypeOf<true>()
 // required param count (IR): 0
       type R = ReturnType<NonNullable<SolvaPayClient['listProducts']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('listPurchases presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['listPurchases']>().toEqualTypeOf<
+SolvaPayClientGenerated['listPurchases']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['listPurchases']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['listPurchases']>>
 expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
 })
     it('mcpBootstrap presence / arity / sync', () => {

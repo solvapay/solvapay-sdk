@@ -516,6 +516,136 @@ pub fn credits_per_unit_from_balance(
     (credits > 0).then_some(credits)
 }
 
+/// Pricing shape a plan-row or narration surface should branch on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PricingShape {
+    /// `requiresPayment == false`.
+    Free,
+    /// Recurring plus a billable metered rate.
+    Hybrid,
+    /// Recurring without billable metering.
+    Recurring,
+    /// Metered without a billing cycle.
+    Usage,
+    /// One-time charge.
+    #[serde(rename = "oneTime")]
+    OneTime,
+}
+
+/// Derived plan pricing presentation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanPricingShape {
+    /// Branch key for plan-row / narration surfaces.
+    pub shape: PricingShape,
+    /// Headline price in minor units.
+    #[serde(serialize_with = "serialize_whole_f64")]
+    pub headline_minor: f64,
+    /// ISO currency, uppercased.
+    pub currency: String,
+    /// Recurring cycle when the shape is recurring or hybrid.
+    pub cycle: Option<BillingCycle>,
+    /// Metered rate when the plan is metered.
+    pub rate: Option<UsageRate>,
+}
+
+/// Whether the plan has a per-unit charge or any tier bands.
+fn is_metered(priced: Option<&Value>) -> bool {
+    per_unit_charge(priced, None).is_some() || !tier_bands(priced, None).is_empty()
+}
+
+/// Whether any metered charge or tier band has a positive amount.
+fn is_billable_metered(priced: Option<&Value>) -> bool {
+    if usage_rate(priced, None).is_some_and(|rate| rate.amount_minor > 0.0) {
+        return true;
+    }
+    tier_bands(priced, None)
+        .into_iter()
+        .any(|band| band.charge.amount_minor > 0.0)
+}
+
+/// Map recurring / metered flags onto the public pricing-shape enum.
+fn derive_pricing_shape(recurring: bool, metered: bool, billable_metered: bool) -> PricingShape {
+    if recurring && billable_metered {
+        return PricingShape::Hybrid;
+    }
+    if recurring {
+        return PricingShape::Recurring;
+    }
+    if metered {
+        return PricingShape::Usage;
+    }
+    PricingShape::OneTime
+}
+
+/// Headline amount in minor units: recurring flat, else first flat charge.
+fn headline_price_minor(priced: Option<&Value>) -> f64 {
+    if billing_cycle(priced).is_some() {
+        return charges(priced)
+            .into_iter()
+            .find(|charge| charge.per == ChargePer::Flat && charge.one_time != Some(true))
+            .map(|charge| charge.amount_minor)
+            .unwrap_or(0.0);
+    }
+    charges(priced)
+        .into_iter()
+        .find(|charge| charge.per == ChargePer::Flat)
+        .map(|charge| charge.amount_minor)
+        .unwrap_or(0.0)
+}
+
+/// Derive the pricing shape a plan-row or narration surface should branch on.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 56
+)]
+pub fn plan_pricing_shape(priced: Option<&Value>) -> PlanPricingShape {
+    let currency_fallback = priced
+        .and_then(|v| v.get("currency"))
+        .and_then(Value::as_str)
+        .unwrap_or("USD")
+        .to_ascii_uppercase();
+    let Some(priced_value) = priced.filter(|v| !v.is_null()) else {
+        return PlanPricingShape {
+            shape: PricingShape::OneTime,
+            headline_minor: 0.0,
+            currency: currency_fallback,
+            cycle: None,
+            rate: None,
+        };
+    };
+    if priced_value.get("requiresPayment") == Some(&Value::Bool(false)) {
+        return PlanPricingShape {
+            shape: PricingShape::Free,
+            headline_minor: 0.0,
+            currency: currency_fallback,
+            cycle: billing_cycle(Some(priced_value)),
+            rate: usage_rate(Some(priced_value), None),
+        };
+    }
+    let recurring = billing_cycle(Some(priced_value)).is_some();
+    let metered = is_metered(Some(priced_value));
+    let billable_metered = is_billable_metered(Some(priced_value));
+    let headline = headline_charges(Some(priced_value)).into_iter().next();
+    PlanPricingShape {
+        shape: derive_pricing_shape(recurring, metered, billable_metered),
+        headline_minor: headline_price_minor(Some(priced_value)),
+        currency: headline
+            .as_ref()
+            .map(|charge| charge.currency.to_ascii_uppercase())
+            .unwrap_or(currency_fallback),
+        cycle: recurring
+            .then(|| billing_cycle(Some(priced_value)))
+            .flatten(),
+        rate: metered
+            .then(|| usage_rate(Some(priced_value), None))
+            .flatten(),
+    }
+}
+
 /// First `kind: limit` option, optionally scoped to a meter.
 struct LimitCap {
     /// Included-unit cap from the plan option.

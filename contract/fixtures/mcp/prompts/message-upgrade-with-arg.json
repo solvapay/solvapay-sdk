@@ -17,7 +17,7 @@
           "role": "user",
           "content": {
             "type": "text",
-            "text": "Activate plan pln_pro for me."
+            "text": "Call the `account` tool with view: \"checkout\", then activate plan pln_pro."
           }
         }
       ]

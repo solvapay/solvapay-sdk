@@ -1,0 +1,17 @@
+{
+  "suite": "credit-display",
+  "case": "compact-negative",
+  "input": {
+    "fn": "formatCompactCredits",
+    "args": {
+      "credits": -1
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Transport",
+      "status": 400,
+      "details": "formatCompactCredits: credits must be a finite non-negative number, got -1"
+    }
+  }
+}

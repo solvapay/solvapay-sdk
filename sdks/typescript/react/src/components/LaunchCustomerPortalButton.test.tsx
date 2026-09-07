@@ -228,9 +228,7 @@ describe('LaunchCustomerPortalButton', () => {
       </SolvaPayContext.Provider>,
     )
 
-    await waitFor(() =>
-      expect(screen.getByRole('link').getAttribute('data-state')).toBe('ready'),
-    )
+    await waitFor(() => expect(screen.getByRole('link').getAttribute('data-state')).toBe('ready'))
 
     const event = new MouseEvent('click', { bubbles: true, cancelable: true })
     fireEvent(screen.getByRole('link'), event)
@@ -239,9 +237,7 @@ describe('LaunchCustomerPortalButton', () => {
     // navigation itself is suppressed: an MCP host sandbox without
     // `allow-popups` would drop it silently.
     expect(event.defaultPrevented).toBe(true)
-    await waitFor(() =>
-      expect(open).toHaveBeenCalledWith('https://portal.solvapay.test/hosted'),
-    )
+    await waitFor(() => expect(open).toHaveBeenCalledWith('https://portal.solvapay.test/hosted'))
     expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/hosted')
   })
 

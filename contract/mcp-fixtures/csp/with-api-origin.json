@@ -18,6 +18,7 @@
         "https://js.stripe.com",
         "https://*.stripe.com",
         "https://b.stripecdn.com",
+        "https://assets.claude.ai",
         "https://cdn.example",
         "https://api.solvapay.com"
       ],

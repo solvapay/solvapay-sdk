@@ -19,10 +19,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::{ClientShell, FetchTransport, SharedTransport, SolvaPayClient};
 use wasm_bindgen::prelude::*;
@@ -496,6 +497,17 @@ impl WasmClient {
         .await
     }
 
+    /// `GET /v1/sdk/purchases`
+    #[wasm_bindgen(js_name = "listPurchases")]
+    pub async fn list_purchases(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: ListPurchasesParams = parse_args_json(&args_json)?;
+            client.list_purchases(params).await
+        })
+        .await
+    }
+
     // --- MCP composite -------------------------------------------------------
 
     /// `mcpBootstrap`
@@ -508,6 +520,21 @@ impl WasmClient {
         })
         .await
     }
+
+    // --- Group C -------------------------------------------------------------
+
+    /// `GET /v1/sdk/credits/activity`
+    #[wasm_bindgen(js_name = "getCreditActivity")]
+    pub async fn get_credit_activity(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+            client.get_credit_activity(params).await
+        })
+        .await
+    }
+
+    // --- MCP composite -------------------------------------------------------
 
     /// `mcpCallBuiltinTool`
     #[wasm_bindgen(js_name = "mcpCallBuiltinTool")]

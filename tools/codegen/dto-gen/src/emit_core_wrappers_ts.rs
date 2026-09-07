@@ -513,6 +513,11 @@ fn dispatch_expr(sym: &IrBindingSymbol, func: &IrCoreFn, wrap: &IrTsWrapper) -> 
             GenError::Parse(format!("bindings.{} object dispatch missing param", sym.id))
         })?;
         let name = camel(&p.rust_name);
+        // A lone boundary arg named after the param means the shim reads
+        // `args[name]` as the whole struct, so it must be sent keyed, not at root.
+        if sym.args.len() == 1 && sym.args[0].name == name {
+            return Ok(object_literal(&[name]));
+        }
         if wrap.pass_through || sym.args.is_empty() || sym.args.iter().all(|a| a.required) {
             return Ok(name);
         }

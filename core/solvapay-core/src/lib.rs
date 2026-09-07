@@ -24,6 +24,7 @@ pub mod fixture_host;
 pub mod fuzz_oracle;
 pub mod gate_driver;
 pub mod helper_error;
+pub mod history;
 #[cfg(feature = "hmac-crypto")]
 mod hmac_util;
 pub mod invoke_payable;
@@ -50,6 +51,7 @@ pub mod tax_summary;
 pub mod topup_process;
 pub mod usage;
 pub mod usage_request;
+pub mod utc;
 #[cfg(feature = "webhook-verify")]
 pub mod webhook;
 
@@ -63,11 +65,16 @@ pub use balance_poll::{
     TOPUP_BALANCE_POLL_DELAYS_MS,
 };
 pub use business_details::{
-    derive_tax_id_type, get_business_country_options, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, is_supported_business_country, resolve_tax_behavior,
-    validate_business_details, BusinessCountryOption, BusinessDetails, BusinessDetailsInput,
-    BusinessDetailsValidationError, BusinessDetailsValidationIssue, TaxIdType,
-    ValidateBusinessDetailsResult, TAX_BEHAVIORS, TAX_EXCLUSIVE_CURRENCIES, TAX_ID_TYPES,
+    derive_tax_id_type, get_business_country_options, get_customer_address_field_errors,
+    get_postal_code_field_label, get_postal_code_placeholder, get_state_field_label,
+    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text,
+    is_customer_address_complete, is_postal_code_required, is_state_required,
+    is_supported_business_country, postal_code_required_countries, resolve_buyer_country,
+    resolve_tax_behavior, state_required_countries, validate_business_details,
+    BusinessCountryOption, BusinessDetails, BusinessDetailsInput, BusinessDetailsValidationError,
+    BusinessDetailsValidationIssue, TaxIdType, ValidateBusinessDetailsResult,
+    POSTAL_CODE_REQUIRED_COUNTRIES, STATE_REQUIRED_COUNTRIES, TAX_BEHAVIORS,
+    TAX_EXCLUSIVE_CURRENCIES, TAX_ID_TYPES,
 };
 pub use checkout::{resolve_return_url, validate_checkout_session_params};
 pub use credit_display::{
@@ -95,6 +102,10 @@ pub use gate_driver::{
     GateCacheOp, GateDriverState, GateNextOutput,
 };
 pub use helper_error::HelperErrorResult;
+pub use history::{
+    get_history_next, history_rows, GetHistoryAction, GetHistoryNextOutput, GetHistoryPending,
+    GetHistoryState, HistoryChargeRow, HistoryCreditRow, HistoryRows,
+};
 pub use invoke_payable::{
     invoke_payable_next, InvokePayableAction, InvokePayableNextOutput, InvokePayableState,
     InvokePayableTrack,
@@ -102,16 +113,18 @@ pub use invoke_payable::{
 pub use limits::{is_unlimited_remaining, resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
     assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
-    build_prompt_user_message, build_tool_descriptor_metadata, derive_icons, make_response_result,
-    mcp_tool_names_json, mcp_view_maps, paywall_tool_result, validate_public_base_url,
-    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, McpContentBlock,
-    McpPayableToolResult, McpPaywallToolResult, McpViewMaps, MerchantBranding,
-    PromptDescriptorMetadata, PromptUserMessage, ResponseEnvelope, ToolAnnotations,
-    ToolDescriptorMetadata, ToolIcon, MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW,
-    VIEW_FOR_TOOL,
+    build_prompt_user_message, build_tool_descriptor_metadata, derive_default_view, derive_icons,
+    make_response_result, mcp_tool_names_json, mcp_view_maps, merge_plan, paywall_tool_result,
+    plan_consequence, resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape,
+    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+    BuildToolDescriptorMetadataOptions, McpContentBlock, McpDisplayModeState, McpPayableToolResult,
+    McpPaywallToolResult, McpViewMaps, MerchantBranding, PromptDescriptorMetadata,
+    PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
+    MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
 };
 pub use money_format::{
-    format_grouped_major, format_major_fixed, format_money_intl, format_price, to_major_units,
+    format_compact_credits, format_grouped_major, format_major_fixed, format_money_intl,
+    format_price, to_major_units,
 };
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,
@@ -121,8 +134,8 @@ pub use payment::{
     TopupProcessOutcome,
 };
 pub use paywall_decision::{
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, require_product_ref,
-    resolve_fallback_gate_limits, resolve_product_ref, CachedLimitsEvaluation,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    require_product_ref, resolve_fallback_gate_limits, resolve_product_ref, CachedLimitsEvaluation,
     FreshLimitsEvaluation, PaywallOutcome, MISSING_PRODUCT_REF_MESSAGE,
 };
 pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
@@ -134,9 +147,9 @@ pub use paywall_state::{
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{
     billing_cycle, charges, counts_usage, credits_per_unit_from_balance, headline_charges,
-    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, tier_bands, tier_meters,
-    trial_days, usage_rate, BillingCycle, BillingInterval, Charge, ChargePer, Tier, TierMode,
-    UsageRate,
+    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, plan_pricing_shape,
+    tier_bands, tier_meters, trial_days, usage_rate, BillingCycle, BillingInterval, Charge,
+    ChargePer, PlanPricingShape, PricingShape, Tier, TierMode, UsageRate,
 };
 pub use product::validate_get_product_params;
 pub use product_readiness::{
@@ -144,7 +157,8 @@ pub use product_readiness::{
     ProductReadinessPlan, ProductReadinessResult, SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
 };
 pub use purchase::{
-    is_cached_customer_ref_valid, resolve_purchase_customer_ref, select_active_purchases,
+    derive_active_products, is_cached_customer_ref_valid, resolve_purchase_customer_ref,
+    select_active_purchases, ActiveProduct,
 };
 pub use random::{iso8601_millis, random9_from_f64};
 pub use renewal::{

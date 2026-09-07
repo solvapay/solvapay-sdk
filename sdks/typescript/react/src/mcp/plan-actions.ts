@@ -24,6 +24,7 @@ import {
   planTrialDays,
   type PlanDisplayBlock,
 } from '../utils/planDisplay'
+import type { PlanPricingOption } from '../utils/planPricing'
 
 export type PlanShape =
   | 'free'
@@ -49,6 +50,14 @@ export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
  * a snapshot may not. Usage-counting and the rest come out of `options[]`.
  */
 export interface PlanLike {
+  /** Catalog / snapshot identifier used to match a purchase back to a live plan. */
+  reference?: string | null
+  /** Display name. Catalog plans carry it; thin snapshots may not. */
+  name?: string | null
+  /** Backend-derived pricing label, e.g. `'usage-based'` or `'hybrid'`. */
+  type?: string | null
+  /** Frozen on snapshots; usage-based when `options[]` is missing. */
+  isMetered?: boolean | null
   /** Composable pricing options: charges, billing cycle, limit, trial. */
   options?: PricingOptionLike[] | null
   /** `false` marks a free plan. Only present on a plan, not a snapshot. */
@@ -57,7 +66,7 @@ export interface PlanLike {
   price?: number | null
   currency?: string | null
   display?: PlanDisplayBlock | null
-  pricingOptions?: Array<{ price: number }>
+  pricingOptions?: PlanPricingOption[] | null
 }
 
 export interface PurchaseSnapshotLike {
@@ -117,6 +126,39 @@ export function resolvePlanShape(plan: PlanLike | null | undefined): PlanShape |
  * plan needs no separate branch: it resolves to `'free'`, because
  * charging nothing is what makes a plan free.
  */
+/**
+ * Overlay a live catalog plan onto a (possibly thin) purchase snapshot.
+ * Snapshots frozen without `options[]` collapse PAYG to `{ price: 0 }`,
+ * which `resolvePlanShape` reads as `'free'`. Prefer the snapshot's
+ * `options[]` when present; otherwise take them from the catalog match.
+ */
+export function mergePlanSnapshot(
+  snapshot: PlanLike | null | undefined,
+  catalog: PlanLike | null | undefined,
+): PlanLike | null {
+  if (!snapshot && !catalog) return null
+  if (!catalog) return snapshot ?? null
+  if (!snapshot) return catalog
+  const snapshotHasOptions = Array.isArray(snapshot.options) && snapshot.options.length > 0
+  return {
+    ...catalog,
+    ...snapshot,
+    options: snapshotHasOptions ? snapshot.options : catalog.options,
+    requiresPayment: snapshot.requiresPayment ?? catalog.requiresPayment,
+    isMetered: snapshot.isMetered ?? catalog.isMetered,
+  }
+}
+
+export function findCatalogPlan(
+  plans: readonly PlanLike[] | undefined,
+  snapshot: PlanLike | null | undefined,
+  planRef?: string | null,
+): PlanLike | undefined {
+  const ref = snapshot?.reference ?? planRef
+  if (!ref || !plans) return undefined
+  return plans.find(p => p.reference === ref)
+}
+
 export function resolveActivationStrategy(plan: PlanLike | null | undefined): ActivationStrategy {
   const shape = resolvePlanShape(plan)
   if (shape === 'usage-based') return 'topup-first'

@@ -1,0 +1,31 @@
+{
+  "suite": "helper-usage",
+  "case": "limit-authoritative",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": {
+        "reference": "pur_1",
+        "usage": {
+          "used": 0
+        }
+      },
+      "limits": {
+        "meterName": "requests",
+        "remaining": 3800,
+        "used": 6200,
+        "limit": 10000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "requests",
+      "total": 10000,
+      "used": 6200,
+      "remaining": 3800,
+      "percentUsed": 62,
+      "purchaseRef": "pur_1"
+    }
+  }
+}

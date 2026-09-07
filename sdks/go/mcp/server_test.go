@@ -126,8 +126,8 @@ func trimForErr(s string) string {
 	return s
 }
 
-func TestBuiltinUpgradeToolCall(t *testing.T) {
-	env := loadFixtureJSON(t, "builtin-tools/upgrade.json")
+func TestBuiltinAccountToolCall(t *testing.T) {
+	env := loadFixtureJSON(t, "builtin-tools/account.json")
 	backend := fixtureHTTP(t, env)
 	if backend == nil {
 		t.Fatal("expected fixture HTTP stubs")
@@ -145,8 +145,8 @@ func TestBuiltinUpgradeToolCall(t *testing.T) {
 	}
 	handler := NewStreamableHandler(srv)
 	rec := postMCP(t, handler, "tools/call", map[string]any{
-		"name":      "upgrade",
-		"arguments": map[string]any{"mode": "text"},
+		"name":      "account",
+		"arguments": map[string]any{"view": "checkout", "mode": "text"},
 	}, map[string]string{
 		"Authorization": testBearerCus1,
 	})
@@ -188,8 +188,8 @@ func TestPayableToolsListContainsBoth(t *testing.T) {
 	for _, tool := range listed.Tools {
 		have[tool.Name] = tool.Title
 	}
-	if _, ok := have["upgrade"]; !ok {
-		t.Fatal("missing builtin upgrade")
+	if _, ok := have["account"]; !ok {
+		t.Fatal("missing builtin account")
 	}
 	if title := have["get_current_weather"]; title == "" {
 		t.Fatalf("payable missing or empty title: %#v", have)

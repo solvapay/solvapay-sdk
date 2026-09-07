@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "AT",
         "taxId": "ATU12345678",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "AT"
       }
     }
   }

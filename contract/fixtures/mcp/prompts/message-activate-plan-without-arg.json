@@ -15,7 +15,7 @@
           "role": "user",
           "content": {
             "type": "text",
-            "text": "What plans can I activate on my SolvaPay account?"
+            "text": "Call the `account` tool with view: \"checkout\" to list plans I can activate."
           }
         }
       ]

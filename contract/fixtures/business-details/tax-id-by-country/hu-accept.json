@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "HU",
         "taxId": "HU12345678",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "HU"
       }
     }
   }

@@ -99,6 +99,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                         "product": state.get("product"),
                         "meterName": state.get("meterName"),
                         "limits": limits,
+                        "requestId": "solvapay_test",
                         "cache": {
                             "op": "updateRemaining",
                             "key": state.get("limitsKey"),
@@ -137,6 +138,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                         "product": state.get("product"),
                         "meterName": state.get("meterName"),
                         "limits": limits,
+                        "requestId": "solvapay_test",
                         "cache": {
                             "op": "set",
                             "key": state.get("limitsKey"),
@@ -202,6 +204,21 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             "withinLimits": bool(args.get("withinLimits")),
             "remaining": args.get("remaining", 0),
         }
+    if name == "evaluate_claimed_limits":
+        remaining = float(args.get("remaining", 0) or 0)
+        claimed = float(args.get("claimed", 0) or 0)
+        within = bool(args.get("withinLimits"))
+        if remaining == -1.0:
+            return {"withinLimits": True, "remaining": -1.0, "shouldCache": False}
+        if within and remaining == 0.0:
+            return {"withinLimits": True, "remaining": 0.0, "shouldCache": False}
+        if claimed <= remaining:
+            return {
+                "withinLimits": True,
+                "remaining": max(0.0, remaining - claimed),
+                "shouldCache": True,
+            }
+        return {"withinLimits": False, "remaining": 0.0, "shouldCache": False}
     if name == "decide_paywall_outcome":
         if args.get("withinLimits"):
             return {"outcome": "allow", "limits": args.get("limits") or {}}

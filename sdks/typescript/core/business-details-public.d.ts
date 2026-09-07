@@ -47,9 +47,9 @@ export declare function getTaxIdExample(country: SupportedBusinessCountry): stri
 
 export declare function getTaxIdHelperText(country: SupportedBusinessCountry): string
 
-export declare const POSTAL_CODE_REQUIRED_COUNTRIES: readonly ['US', 'CA', 'GB']
+export declare function POSTAL_CODE_REQUIRED_COUNTRIES(): string[]
 
-export declare const STATE_REQUIRED_COUNTRIES: readonly ['US', 'CA', 'IN']
+export declare function STATE_REQUIRED_COUNTRIES(): string[]
 
 export declare function isPostalCodeRequired(country: string): boolean
 
@@ -65,7 +65,7 @@ export declare function resolveBuyerCountry(input: {
   isBusiness: boolean
   country?: string
   customerCountry?: string
-}): string | undefined
+}): string | null
 
 export declare function isCustomerAddressComplete(input: {
   isBusiness: boolean

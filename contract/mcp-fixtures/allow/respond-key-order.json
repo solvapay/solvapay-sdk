@@ -32,6 +32,10 @@
           {
             "type": "text",
             "text": "{\"zebra\":1,\"apple\":2}"
+          },
+          {
+            "type": "text",
+            "text": "{\"zebra\":1,\"apple\":2}"
           }
         ],
         "structuredContent": { "zebra": 1, "apple": 2 }

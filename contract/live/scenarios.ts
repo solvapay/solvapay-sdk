@@ -180,6 +180,16 @@ export const LIVE_SCENARIOS: LiveScenario[] = [
     args: { customerRef: '{customerRef}' },
   },
   {
+    id: 'listPurchases',
+    op: 'listPurchases',
+    args: { customerRef: '{customerRef}', productRef: '{productRef}' },
+  },
+  {
+    id: 'getCreditActivity',
+    op: 'getCreditActivity',
+    args: { customerRef: '{customerRef}', productRef: '{productRef}' },
+  },
+  {
     id: 'getUserInfo',
     op: 'getUserInfo',
     args: { customerRef: '{customerRef}', productRef: '{productRef}' },

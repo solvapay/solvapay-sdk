@@ -322,10 +322,7 @@ function EmbeddedTopup({
         />
       )}
       <PresetAmountGrid currencyDisplay={currencyDisplay} locale={locale} />
-      <CustomAmountRow
-        rowClassName={cx.amountCustom}
-        currencyDisplay={currencyDisplay}
-      />
+      <CustomAmountRow rowClassName={cx.amountCustom} currencyDisplay={currencyDisplay} />
       <div className="solvapay-mcp-auto-recharge-inline">
         <SplitRow>
           <p>{copy.autoRechargeView.heading}</p>
@@ -416,13 +413,7 @@ function EmbeddedTopup({
   )
 }
 
-function TopupChargeAmount({
-  amountMinor,
-  currency,
-}: {
-  amountMinor: number
-  currency: string
-}) {
+function TopupChargeAmount({ amountMinor, currency }: { amountMinor: number; currency: string }) {
   const locale = useHostLocale()
   const { taxBreakdown } = useTopupForm()
   const minor = chargeAmountMinor(taxBreakdown, amountMinor)
@@ -453,9 +444,7 @@ function AmountStepHeader({
       {rail ? (
         <>
           <Eyebrow variant="rail">Add credits</Eyebrow>
-          {formattedBalance ? (
-            <p className={cx.muted}>Balance {formattedBalance} credits</p>
-          ) : null}
+          {formattedBalance ? <p className={cx.muted}>Balance {formattedBalance} credits</p> : null}
         </>
       ) : (
         <div className={cx.balanceRow}>
@@ -491,8 +480,7 @@ function PresetAmountGrid({
   currencyDisplay: 'symbol' | 'code'
   locale: string
 }) {
-  const { quickAmounts, currency, creditsPerMinorUnit, displayExchangeRate } =
-    useAmountPicker()
+  const { quickAmounts, currency, creditsPerMinorUnit, displayExchangeRate } = useAmountPicker()
   const { displayCurrency } = useBalance()
   return (
     <div className="solvapay-mcp-preset-grid" aria-label="Quick amounts">
@@ -514,9 +502,7 @@ function PresetAmountGrid({
           <AmountPicker.Option key={amount} amount={amount} className="solvapay-mcp-preset-tile">
             <span className="solvapay-mcp-preset-tile-amount">{label}</span>
             <span className="solvapay-mcp-preset-tile-credits">
-              {estimate.kind === 'available'
-                ? formatCompactCredits(estimate.credits, locale)
-                : ''}
+              {estimate.kind === 'available' ? formatCompactCredits(estimate.credits) : ''}
             </span>
           </AmountPicker.Option>
         )

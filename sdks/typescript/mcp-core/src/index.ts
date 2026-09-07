@@ -87,6 +87,7 @@ export {
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
   assertValidProductRef,
   creditsToDisplayMinorUnits,
+  deriveDefaultView,
   evaluateProductReadiness,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
@@ -104,7 +105,6 @@ export {
   balanceSummary,
 } from './narrate'
 export type { NarratorOutput } from './narrate'
-export { deriveDefaultView } from './derive-view'
 
 // ---- Paywall envelope builders ----
 //
@@ -124,7 +124,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // Used by `ctx.respond(...)` / `buildPayableHandler`. Not part of the
 // merchant-facing `@solvapay/mcp` public entry — exported here so the
 // contract harness and adapters can share the same constructors.
-export { assertResponseResult, makeResponseResult } from './native-mcp'
+export { assertResponseResult, buildPayableToolResult, makeResponseResult } from './native-mcp'
 export { callMcpSyncOp, getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
 export { mcpWidgetResource } from './native-mcp.generated'
 export { runMcpEngineRequest } from './engine-dispatch'

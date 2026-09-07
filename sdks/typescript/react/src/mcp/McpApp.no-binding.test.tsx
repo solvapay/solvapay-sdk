@@ -119,7 +119,10 @@ describe('<McpApp> with no native core binding', () => {
 
     expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
     expect(
-      screen.getByText('core sync API not installed (creditsToDisplayMinorUnits)'),
+      // `McpApp` resolves the host display mode in the shell, before any
+      // view renders, so with no binding installed that is always the first
+      // sync call to fail — whichever view the host asked for.
+      screen.getByText('core sync API not installed (resolveDisplayMode)'),
     ).toBeTruthy()
   })
 
@@ -181,14 +184,17 @@ describe('<McpApp> with no native core binding', () => {
     render(<McpApp app={app} />)
 
     expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
-    expect(screen.getByText('core sync API not installed (formatPrice)')).toBeTruthy()
+    expect(screen.getByText('core sync API not installed (resolveDisplayMode)')).toBeTruthy()
   })
 
-  it('should render a diagnostic when a child throws', async () => {
+  // With no binding the shell fails at display-mode resolution during
+  // init, so a view override never mounts and the render-time error
+  // boundary is unreachable here. What this still pins is that a view
+  // override does not mask the init diagnostic.
+  it('should render a diagnostic instead of a view override', async () => {
     function Boom(): React.ReactElement {
       throw new Error('core sync API not installed (headlineCharges)')
     }
-    const log = vi.fn()
     const app = makeApp({
       view: 'account',
       productRef: 'prd_1',
@@ -217,12 +223,9 @@ describe('<McpApp> with no native core binding', () => {
         usage: null,
       },
     })
-    app.log = log
-
     render(<McpApp app={app} views={{ account: Boom }} />)
 
     expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
-    expect(screen.getByText(/core sync API not installed \(headlineCharges\)/)).toBeTruthy()
-    expect(log).toHaveBeenCalledWith('core sync API not installed (headlineCharges)')
+    expect(screen.getByText(/core sync API not installed \(resolveDisplayMode\)/)).toBeTruthy()
   })
 })

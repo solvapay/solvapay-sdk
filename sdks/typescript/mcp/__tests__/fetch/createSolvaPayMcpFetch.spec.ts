@@ -124,22 +124,15 @@ async function initialize(handler: (req: Request) => Promise<Response>) {
   })
 }
 
-const INTENT_TOOLS = [
-  MCP_TOOL_NAMES.upgrade,
-  MCP_TOOL_NAMES.manageAccount,
-  MCP_TOOL_NAMES.topup,
-  MCP_TOOL_NAMES.activatePlan,
-]
+const INTENT_TOOLS = [MCP_TOOL_NAMES.account, MCP_TOOL_NAMES.activatePlan]
 
 const UI_TOOLS = [
-  MCP_TOOL_NAMES.createCheckoutSession,
+  MCP_TOOL_NAMES.createHostedSession,
   MCP_TOOL_NAMES.createPayment,
   MCP_TOOL_NAMES.processPayment,
-  MCP_TOOL_NAMES.createCustomerSession,
-  MCP_TOOL_NAMES.createTopupPayment,
   MCP_TOOL_NAMES.attachBusinessDetails,
-  MCP_TOOL_NAMES.cancelRenewal,
-  MCP_TOOL_NAMES.reactivateRenewal,
+  MCP_TOOL_NAMES.setRenewal,
+  MCP_TOOL_NAMES.getHistory,
 ]
 
 interface ToolsListResult {
@@ -213,7 +206,7 @@ describe('createSolvaPayMcpFetch', () => {
         jsonrpc: '2.0',
         id: 3,
         method: 'tools/call',
-        params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+        params: { name: MCP_TOOL_NAMES.account, arguments: {} },
       })
       expect(call.status).toBe(401)
       expect(call.json.error?.code).toBe(-32001)
@@ -243,7 +236,7 @@ describe('createSolvaPayMcpFetch', () => {
           jsonrpc: '2.0',
           id: 4,
           method: 'tools/call',
-          params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+          params: { name: MCP_TOOL_NAMES.account, arguments: {} },
         },
         auth,
       )
@@ -272,7 +265,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(res.json.result?.serverInfo?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
   })
 
-  it('tools/list returns all 12 SolvaPay tools by default', async () => {
+  it('tools/list returns all 8 SolvaPay tools by default', async () => {
     const handler = buildHandler()
     const init = await initialize(handler)
     expect(init.status).toBe(200)
@@ -381,7 +374,7 @@ describe('createSolvaPayMcpFetch', () => {
       jsonrpc: '2.0',
       id: 4,
       method: 'tools/call',
-      params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+      params: { name: MCP_TOOL_NAMES.account, arguments: {} },
     })
     // The handler may return either a success envelope (narrated +
     // structured bootstrap payload) or a 401 wrapped in the error

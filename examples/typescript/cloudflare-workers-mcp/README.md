@@ -61,11 +61,11 @@ Note: SolvaPay's OAuth server accepts any port on loopback (`127.0.0.1`, `::1`, 
 
 Three isolated Workers share this example. Deploying one does not replace the others — each has its own Worker name, custom domain, secret store, and dotenv file.
 
-| Command | Worker | MCP URL | Backend |
-| --- | --- | --- | --- |
-| `pnpm deploy` | `solvapay-mcp-workers-example` | `https://mcp-workers-example.solvapay.com/mcp` | optional via `.env` |
-| `pnpm deploy:dev` | `solvapay-mcp-goldberg-dev` | `https://goldberg-demo-dev.solvapay.app/mcp` | `https://api-dev.solvapay.com` |
-| `pnpm deploy:prod` | `solvapay-mcp-goldberg-prod` | `https://goldberg-demo.solvapay.app/mcp` | `https://api.solvapay.com` |
+| Command            | Worker                         | MCP URL                                        | Backend                        |
+| ------------------ | ------------------------------ | ---------------------------------------------- | ------------------------------ |
+| `pnpm deploy`      | `solvapay-mcp-workers-example` | `https://mcp-workers-example.solvapay.com/mcp` | optional via `.env`            |
+| `pnpm deploy:dev`  | `solvapay-mcp-goldberg-dev`    | `https://goldberg-demo-dev.solvapay.app/mcp`   | `https://api-dev.solvapay.com` |
+| `pnpm deploy:prod` | `solvapay-mcp-goldberg-prod`   | `https://goldberg-demo.solvapay.app/mcp`       | `https://api.solvapay.com`     |
 
 Use **separate** MCP host connectors for dev and prod — ChatGPT caches `tools/list` per connector.
 
@@ -175,7 +175,7 @@ through to `wrangler deploy --var KEY:VALUE` for:
 Overrides land on the matching Worker's vars.
 
 Your `SOLVAPAY_SECRET_KEY` stays in `.env` / `.env.dev` / `.env.prod` for
-`wrangler dev` but is *not* re-uploaded on every deploy — it lives
+`wrangler dev` but is _not_ re-uploaded on every deploy — it lives
 on the Worker as a proper Secret (via the one-time `wrangler secret
 put` above; use `--env dev` or `--env production` for the goldberg
 targets) and persists across deploys. Rotating it is a single

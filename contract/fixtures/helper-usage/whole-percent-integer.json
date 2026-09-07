@@ -12,7 +12,8 @@
       },
       "limits": {
         "meterName": "mtr_requests",
-        "remaining": 1
+        "remaining": 1,
+        "limit": 2
       }
     }
   },

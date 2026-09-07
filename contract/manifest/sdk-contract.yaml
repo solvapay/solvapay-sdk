@@ -182,6 +182,82 @@ operations:
       go: blocking
       rust: [async, blocking]
       c: blocking
+  getCreditActivity:
+    route:
+      method: GET
+      path: /v1/sdk/credits/activity
+    names:
+      ts: getCreditActivity
+      py: get_credit_activity
+      rb: get_credit_activity
+      go: GetCreditActivity
+      rust: get_credit_activity
+      c: getCreditActivity
+    optionalOnClient: true
+    request: GetCreditActivityParams
+    response: CreditActivityResponseDto
+    overlays: [GetCreditActivityParams]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get credit activity failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: GetCreditActivityParams
+        required: true
+    docs:
+      summary: 'List account-wide credit activity for a customer, newest first.'
+      params:
+        params: 'Customer reference and optional page size.'
+      returns: 'Credit activity page.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  listPurchases:
+    route:
+      method: GET
+      path: /v1/sdk/purchases
+    names:
+      ts: listPurchases
+      py: list_purchases
+      rb: list_purchases
+      go: ListPurchases
+      rust: list_purchases
+      c: listPurchases
+    optionalOnClient: true
+    request: ListPurchasesParams
+    response: ListPurchasesResult
+    overlays: [ListPurchasesParams, ListPurchasesResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'List purchases failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: ListPurchasesParams
+        required: true
+    docs:
+      summary: 'List purchases for the authenticated provider, optionally filtered by customer, product, or status.'
+      params:
+        params: 'Optional purchase list filters.'
+      returns: 'Purchase list wrapper.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
   trackUsage:
     route:
       method: POST
@@ -2202,6 +2278,15 @@ overlays:
       customerRef:
         type: string
         required: true
+  GetCreditActivityParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      limit:
+        type: number
+        required: false
   GetCustomerBalanceParams:
     kind: synthetic
     fields:
@@ -2332,6 +2417,28 @@ overlays:
   ListPlansResult:
     kind: synthetic
     arrayOf: Plan
+  ListPurchasesParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: false
+      productRef:
+        type: string
+        required: false
+      status:
+        type: string
+        required: false
+      includeFree:
+        type: boolean
+        required: false
+  ListPurchasesResult:
+    kind: synthetic
+    fields:
+      purchases:
+        array:
+          ref: SdkPurchaseResponse
+        required: false
   ListProductsResult:
     kind: synthetic
     arrayOf: ListProductItem
@@ -3045,6 +3152,147 @@ coreHelpers:
       params:
         options: 'Country for the tax ID helper text.'
       returns: 'Helper text string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isPostalCodeRequired:
+    names:
+      ts: isPostalCodeRequired
+      py: is_postal_code_required
+      rb: is_postal_code_required
+      go: IsPostalCodeRequired
+      rust: is_postal_code_required
+      c: isPostalCodeRequired
+    params: []
+    docs:
+      summary: 'Whether Stripe Tax requires a postal or ZIP code for a country.'
+      params:
+        options: 'Country whose postal-code requirement is requested.'
+      returns: 'True when a postal or ZIP code is required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isStateRequired:
+    names:
+      ts: isStateRequired
+      py: is_state_required
+      rb: is_state_required
+      go: IsStateRequired
+      rust: is_state_required
+      c: isStateRequired
+    params: []
+    docs:
+      summary: 'Whether Stripe Tax requires a state or province for a country.'
+      params:
+        options: 'Country whose state requirement is requested.'
+      returns: 'True when a state or province is required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getStateFieldLabel:
+    names:
+      ts: getStateFieldLabel
+      py: get_state_field_label
+      rb: get_state_field_label
+      go: GetStateFieldLabel
+      rust: get_state_field_label
+      c: getStateFieldLabel
+    params: []
+    docs:
+      summary: 'Return the state or province field label for a country.'
+      params:
+        options: 'Country for the state or province field label.'
+      returns: 'Field label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getPostalCodeFieldLabel:
+    names:
+      ts: getPostalCodeFieldLabel
+      py: get_postal_code_field_label
+      rb: get_postal_code_field_label
+      go: GetPostalCodeFieldLabel
+      rust: get_postal_code_field_label
+      c: getPostalCodeFieldLabel
+    params: []
+    docs:
+      summary: 'Return the postal or ZIP code field label for a country.'
+      params:
+        options: 'Country for the postal or ZIP field label.'
+      returns: 'Field label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getPostalCodePlaceholder:
+    names:
+      ts: getPostalCodePlaceholder
+      py: get_postal_code_placeholder
+      rb: get_postal_code_placeholder
+      go: GetPostalCodePlaceholder
+      rust: get_postal_code_placeholder
+      c: getPostalCodePlaceholder
+    params: []
+    docs:
+      summary: 'Return the postal or ZIP code field placeholder for a country.'
+      params:
+        options: 'Country for the postal or ZIP placeholder.'
+      returns: 'Placeholder string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  POSTAL_CODE_REQUIRED_COUNTRIES:
+    names:
+      ts: POSTAL_CODE_REQUIRED_COUNTRIES
+      py: postal_code_required_countries
+      rb: postal_code_required_countries
+      go: POSTAL_CODE_REQUIRED_COUNTRIES
+      rust: postal_code_required_countries
+      c: POSTAL_CODE_REQUIRED_COUNTRIES
+    docs:
+      summary: 'Countries that require a postal or ZIP code for Stripe Tax.'
+      returns: 'Country code list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  STATE_REQUIRED_COUNTRIES:
+    names:
+      ts: STATE_REQUIRED_COUNTRIES
+      py: state_required_countries
+      rb: state_required_countries
+      go: STATE_REQUIRED_COUNTRIES
+      rust: state_required_countries
+      c: STATE_REQUIRED_COUNTRIES
+    docs:
+      summary: 'Countries that require a state or province for Stripe Tax.'
+      returns: 'Country code list.'
     sync:
       ts: sync
       py: sync
@@ -4026,6 +4274,27 @@ coreHelpers:
       params:
         options: 'A catalog plan or frozen planSnapshot carrying options[].'
       returns: 'Whether the plan has a usage counter even without a per-unit rate.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  planPricingShape:
+    names:
+      ts: planPricingShape
+      py: plan_pricing_shape
+      rb: plan_pricing_shape
+      go: PlanPricingShape
+      rust: plan_pricing_shape
+      c: planPricingShape
+    params: []
+    docs:
+      summary: 'Derive the pricing shape a plan-row or narration surface should branch on.'
+      params:
+        priced: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Shape, headline, currency, cycle, and usage rate.'
     sync:
       ts: sync
       py: sync

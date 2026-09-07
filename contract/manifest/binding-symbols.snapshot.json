@@ -34,6 +34,42 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "POSTAL_CODE_REQUIRED_COUNTRIES": {
+      "core": "solvapay_core::business_details::postal_code_required_countries",
+      "names": {
+        "ts": "POSTAL_CODE_REQUIRED_COUNTRIES",
+        "py": "POSTAL_CODE_REQUIRED_COUNTRIES",
+        "rb": "POSTAL_CODE_REQUIRED_COUNTRIES",
+        "go": "POSTAL_CODE_REQUIRED_COUNTRIES",
+        "rust": "POSTAL_CODE_REQUIRED_COUNTRIES",
+        "c": "POSTAL_CODE_REQUIRED_COUNTRIES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "POSTAL_CODE_REQUIRED_COUNTRIES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 15,
+      "section": "business-details",
+      "doc": "Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.",
+      "docWasm": null,
+      "rustFnName": "postal_code_required_countries_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "postal_code_required_countries",
+      "clientCallArgs": []
+    },
     "REVERSE_CHARGE_NOTE": {
       "core": "solvapay_core::tax_summary::reverse_charge_note",
       "names": {
@@ -102,6 +138,42 @@
       "verbatimBodyWasm": "let _args = args_map(&args_json)?;\n        let mut map = serde_json::Map::new();\n        for (key, label) in seller_tax_identifier_display_label_by_type() {\n            map.insert((*key).to_owned(), Value::String((*label).to_owned()));\n        }\n        Ok(Value::Object(map))",
       "dtoType": null,
       "coreCall": null,
+      "clientCallArgs": []
+    },
+    "STATE_REQUIRED_COUNTRIES": {
+      "core": "solvapay_core::business_details::state_required_countries",
+      "names": {
+        "ts": "STATE_REQUIRED_COUNTRIES",
+        "py": "STATE_REQUIRED_COUNTRIES",
+        "rb": "STATE_REQUIRED_COUNTRIES",
+        "go": "STATE_REQUIRED_COUNTRIES",
+        "rust": "STATE_REQUIRED_COUNTRIES",
+        "c": "STATE_REQUIRED_COUNTRIES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "STATE_REQUIRED_COUNTRIES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 16,
+      "section": "business-details",
+      "doc": "Binding for `STATE_REQUIRED_COUNTRIES`.",
+      "docWasm": null,
+      "rustFnName": "state_required_countries_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "state_required_countries",
       "clientCallArgs": []
     },
     "TAX_NOT_COLLECTED_NOTE": {
@@ -2183,6 +2255,113 @@
         "&refs[0]"
       ]
     },
+    "deriveActiveProducts": {
+      "core": "solvapay_core::purchase::derive_active_products",
+      "names": {
+        "ts": "deriveActiveProducts",
+        "py": "derive_active_products",
+        "rb": "derive_active_products",
+        "go": "DeriveActiveProducts",
+        "rust": "derive_active_products",
+        "c": "deriveActiveProducts"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "purchases",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "productRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "product_ref"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 20,
+      "section": "purchase",
+      "doc": "Binding for `deriveActiveProducts`.",
+      "docWasm": null,
+      "rustFnName": "derive_active_products_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "purchases.as_ref()",
+          "product_ref.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "derive_active_products",
+      "clientCallArgs": []
+    },
+    "deriveDefaultView": {
+      "core": "solvapay_core::mcp::derive_default_view",
+      "names": {
+        "ts": "deriveDefaultView",
+        "py": "derive_default_view",
+        "rb": "derive_default_view",
+        "go": "DeriveDefaultView",
+        "rust": "derive_default_view",
+        "c": "deriveDefaultView"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 62,
+      "section": "mcp-account",
+      "doc": "Binding for `deriveDefaultView`.",
+      "docWasm": null,
+      "rustFnName": "derive_default_view_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "input.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "derive_default_view",
+      "clientCallArgs": []
+    },
     "deriveIcons": {
       "core": "solvapay_core::mcp::derive_icons",
       "names": {
@@ -2474,6 +2653,76 @@
       "coreCall": "evaluate_cached_limits",
       "clientCallArgs": []
     },
+    "evaluateClaimedLimits": {
+      "core": "solvapay_core::paywall_decision::evaluate_claimed_limits",
+      "names": {
+        "ts": "evaluateClaimedLimits",
+        "py": "evaluate_claimed_limits",
+        "rb": "evaluate_claimed_limits",
+        "go": "EvaluateClaimedLimits",
+        "rust": "evaluate_claimed_limits",
+        "c": "evaluateClaimedLimits"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "withinLimits",
+          "type": "bool",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireBool",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "within_limits"
+        },
+        {
+          "name": "remaining",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "claimed",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 59,
+      "section": "paywall-decision",
+      "doc": "Binding for `evaluateClaimedLimits`.",
+      "docWasm": null,
+      "rustFnName": "evaluate_claimed_limits_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "within_limits",
+          "remaining",
+          "claimed"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "evaluate_claimed_limits",
+      "clientCallArgs": []
+    },
     "evaluateFreshLimits": {
       "core": "solvapay_core::paywall_decision::evaluate_fresh_limits",
       "names": {
@@ -2660,6 +2909,54 @@
       "verbatimBodyWasm": null,
       "dtoType": "solvapay_transport::FetchJwksParams",
       "coreCall": "fetch_jwks",
+      "clientCallArgs": []
+    },
+    "formatCompactCredits": {
+      "core": "solvapay_core::money_format::format_compact_credits",
+      "names": {
+        "ts": "formatCompactCredits",
+        "py": "format_compact_credits",
+        "rb": "format_compact_credits",
+        "go": "FormatCompactCredits",
+        "rust": "format_compact_credits",
+        "c": "formatCompactCredits"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "credits",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 65,
+      "section": "money-format",
+      "doc": "Binding for `formatCompactCredits`.",
+      "docWasm": null,
+      "rustFnName": "format_compact_credits_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "credits"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "format_compact_credits",
       "clientCallArgs": []
     },
     "formatPrice": {
@@ -3005,6 +3302,42 @@
       "coreCall": "get_business_country_options",
       "clientCallArgs": []
     },
+    "getCreditActivity": {
+      "core": "solvapay_transport::SolvaPayClient::get_credit_activity",
+      "names": {
+        "ts": "getCreditActivity",
+        "py": "get_credit_activity",
+        "rb": "get_credit_activity",
+        "go": "GetCreditActivity",
+        "rust": "get_credit_activity",
+        "c": "getCreditActivity"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "getCreditActivity"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 37,
+      "section": "Group C",
+      "doc": "`GET /v1/sdk/credits/activity`",
+      "docWasm": null,
+      "rustFnName": "get_credit_activity",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "GetCreditActivityParams",
+      "coreCall": "get_credit_activity",
+      "clientCallArgs": []
+    },
     "getCustomer": {
       "core": "solvapay_transport::SolvaPayClient::get_customer",
       "names": {
@@ -3041,6 +3374,54 @@
       "coreCall": "get_customer",
       "clientCallArgs": []
     },
+    "getCustomerAddressFieldErrors": {
+      "core": "solvapay_core::business_details::get_customer_address_field_errors",
+      "names": {
+        "ts": "getCustomerAddressFieldErrors",
+        "py": "get_customer_address_field_errors",
+        "rb": "get_customer_address_field_errors",
+        "go": "GetCustomerAddressFieldErrors",
+        "rust": "get_customer_address_field_errors",
+        "c": "getCustomerAddressFieldErrors"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "BusinessDetailsInput",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 8,
+      "section": "business-details",
+      "doc": "Binding for `getCustomerAddressFieldErrors`.",
+      "docWasm": null,
+      "rustFnName": "get_customer_address_field_errors_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&input"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "get_customer_address_field_errors",
+      "clientCallArgs": []
+    },
     "getCustomerBalance": {
       "core": "solvapay_transport::SolvaPayClient::get_customer_balance",
       "names": {
@@ -3075,6 +3456,65 @@
       "verbatimBodyWasm": null,
       "dtoType": "GetCustomerBalanceParams",
       "coreCall": "get_customer_balance",
+      "clientCallArgs": []
+    },
+    "getHistoryNext": {
+      "core": "solvapay_core::history::get_history_next",
+      "names": {
+        "ts": "getHistoryNext",
+        "py": "get_history_next",
+        "rb": "get_history_next",
+        "go": "GetHistoryNext",
+        "rust": "get_history_next",
+        "c": "getHistoryNext"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "event",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 58,
+      "section": "history",
+      "doc": "Binding for `getHistoryNext`.",
+      "docWasm": null,
+      "rustFnName": "get_history_next_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "state.as_ref()",
+          "event.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "get_history_next",
       "clientCallArgs": []
     },
     "getMerchant": {
@@ -3185,6 +3625,104 @@
       "coreCall": "get_platform_config",
       "clientCallArgs": []
     },
+    "getPostalCodeFieldLabel": {
+      "core": "solvapay_core::business_details::get_postal_code_field_label",
+      "names": {
+        "ts": "getPostalCodeFieldLabel",
+        "py": "get_postal_code_field_label",
+        "rb": "get_postal_code_field_label",
+        "go": "GetPostalCodeFieldLabel",
+        "rust": "get_postal_code_field_label",
+        "c": "getPostalCodeFieldLabel"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "getPostalCodeFieldLabel"
+      },
+      "args": [
+        {
+          "name": "country",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 13,
+      "section": "business-details",
+      "doc": "Binding for `getPostalCodeFieldLabel`.",
+      "docWasm": null,
+      "rustFnName": "get_postal_code_field_label_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&country"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "get_postal_code_field_label",
+      "clientCallArgs": []
+    },
+    "getPostalCodePlaceholder": {
+      "core": "solvapay_core::business_details::get_postal_code_placeholder",
+      "names": {
+        "ts": "getPostalCodePlaceholder",
+        "py": "get_postal_code_placeholder",
+        "rb": "get_postal_code_placeholder",
+        "go": "GetPostalCodePlaceholder",
+        "rust": "get_postal_code_placeholder",
+        "c": "getPostalCodePlaceholder"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "getPostalCodePlaceholder"
+      },
+      "args": [
+        {
+          "name": "country",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 14,
+      "section": "business-details",
+      "doc": "Binding for `getPostalCodePlaceholder`.",
+      "docWasm": null,
+      "rustFnName": "get_postal_code_placeholder_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&country"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "get_postal_code_placeholder",
+      "clientCallArgs": []
+    },
     "getProduct": {
       "core": "solvapay_transport::SolvaPayClient::get_product",
       "names": {
@@ -3272,6 +3810,55 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "get_seller_tax_identifier_display_label",
+      "clientCallArgs": []
+    },
+    "getStateFieldLabel": {
+      "core": "solvapay_core::business_details::get_state_field_label",
+      "names": {
+        "ts": "getStateFieldLabel",
+        "py": "get_state_field_label",
+        "rb": "get_state_field_label",
+        "go": "GetStateFieldLabel",
+        "rust": "get_state_field_label",
+        "c": "getStateFieldLabel"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "getStateFieldLabel"
+      },
+      "args": [
+        {
+          "name": "country",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 12,
+      "section": "business-details",
+      "doc": "Binding for `getStateFieldLabel`.",
+      "docWasm": null,
+      "rustFnName": "get_state_field_label_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&country"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "get_state_field_label",
       "clientCallArgs": []
     },
     "getTaxIdExample": {
@@ -3494,6 +4081,54 @@
       "coreCall": "headline_charges",
       "clientCallArgs": []
     },
+    "historyRows": {
+      "core": "solvapay_core::history::history_rows",
+      "names": {
+        "ts": "historyRows",
+        "py": "history_rows",
+        "rb": "history_rows",
+        "go": "HistoryRows",
+        "rust": "history_rows",
+        "c": "historyRows"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 59,
+      "section": "history",
+      "doc": "Binding for `historyRows`.",
+      "docWasm": null,
+      "rustFnName": "history_rows_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "input.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "history_rows",
+      "clientCallArgs": []
+    },
     "includedUnits": {
       "core": "solvapay_core::pricing_options::included_units",
       "names": {
@@ -3683,6 +4318,54 @@
       "coreCall": "is_cached_customer_ref_valid",
       "clientCallArgs": []
     },
+    "isCustomerAddressComplete": {
+      "core": "solvapay_core::business_details::is_customer_address_complete",
+      "names": {
+        "ts": "isCustomerAddressComplete",
+        "py": "is_customer_address_complete",
+        "rb": "is_customer_address_complete",
+        "go": "IsCustomerAddressComplete",
+        "rust": "is_customer_address_complete",
+        "c": "isCustomerAddressComplete"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "BusinessDetailsInput",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 9,
+      "section": "business-details",
+      "doc": "Binding for `isCustomerAddressComplete`.",
+      "docWasm": null,
+      "rustFnName": "is_customer_address_complete_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&input"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_customer_address_complete",
+      "clientCallArgs": []
+    },
     "isEmailConflict": {
       "core": "solvapay_core::customer_sync::is_email_conflict",
       "names": {
@@ -3777,6 +4460,104 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "is_error_result",
+      "clientCallArgs": []
+    },
+    "isPostalCodeRequired": {
+      "core": "solvapay_core::business_details::is_postal_code_required",
+      "names": {
+        "ts": "isPostalCodeRequired",
+        "py": "is_postal_code_required",
+        "rb": "is_postal_code_required",
+        "go": "IsPostalCodeRequired",
+        "rust": "is_postal_code_required",
+        "c": "isPostalCodeRequired"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "isPostalCodeRequired"
+      },
+      "args": [
+        {
+          "name": "country",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 10,
+      "section": "business-details",
+      "doc": "Binding for `isPostalCodeRequired`.",
+      "docWasm": null,
+      "rustFnName": "is_postal_code_required_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&country"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_postal_code_required",
+      "clientCallArgs": []
+    },
+    "isStateRequired": {
+      "core": "solvapay_core::business_details::is_state_required",
+      "names": {
+        "ts": "isStateRequired",
+        "py": "is_state_required",
+        "rb": "is_state_required",
+        "go": "IsStateRequired",
+        "rust": "is_state_required",
+        "c": "isStateRequired"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "isStateRequired"
+      },
+      "args": [
+        {
+          "name": "country",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 11,
+      "section": "business-details",
+      "doc": "Binding for `isStateRequired`.",
+      "docWasm": null,
+      "rustFnName": "is_state_required_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&country"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_state_required",
       "clientCallArgs": []
     },
     "isUnlimitedRemaining": {
@@ -3951,6 +4732,42 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "list_products",
+      "clientCallArgs": []
+    },
+    "listPurchases": {
+      "core": "solvapay_transport::SolvaPayClient::list_purchases",
+      "names": {
+        "ts": "listPurchases",
+        "py": "list_purchases",
+        "rb": "list_purchases",
+        "go": "ListPurchases",
+        "rust": "list_purchases",
+        "c": "listPurchases"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "listPurchases"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 36,
+      "section": "Group C",
+      "doc": "`GET /v1/sdk/purchases`",
+      "docWasm": null,
+      "rustFnName": "list_purchases",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "ListPurchasesParams",
+      "coreCall": "list_purchases",
       "clientCallArgs": []
     },
     "makeResponseResult": {
@@ -4791,6 +5608,136 @@
       "coreCall": "per_unit_charge",
       "clientCallArgs": []
     },
+    "planConsequence": {
+      "core": "solvapay_core::mcp::plan_consequence",
+      "names": {
+        "ts": "planConsequence",
+        "py": "plan_consequence",
+        "rb": "plan_consequence",
+        "go": "PlanConsequence",
+        "rust": "plan_consequence",
+        "c": "planConsequence"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "plan",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "locale",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "balance",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "merchantName",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "merchant_name"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 64,
+      "section": "mcp-account",
+      "doc": "Binding for `planConsequence`.",
+      "docWasm": null,
+      "rustFnName": "plan_consequence_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "plan.as_ref()",
+          "locale.as_deref()",
+          "balance.as_ref()",
+          "merchant_name.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "plan_consequence",
+      "clientCallArgs": []
+    },
+    "planPricingShape": {
+      "core": "solvapay_core::pricing_options::plan_pricing_shape",
+      "names": {
+        "ts": "planPricingShape",
+        "py": "plan_pricing_shape",
+        "rb": "plan_pricing_shape",
+        "go": "PlanPricingShape",
+        "rust": "plan_pricing_shape",
+        "c": "planPricingShape"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "planPricingShape"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 56,
+      "section": "plans",
+      "doc": "Binding for `planPricingShape`.",
+      "docWasm": null,
+      "rustFnName": "plan_pricing_shape_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "plan_pricing_shape",
+      "clientCallArgs": []
+    },
     "processPaymentIntent": {
       "core": "solvapay_transport::SolvaPayClient::process_payment_intent",
       "names": {
@@ -5115,6 +6062,54 @@
       "coreCall": "require_product_ref",
       "clientCallArgs": []
     },
+    "resolveAccountState": {
+      "core": "solvapay_core::mcp::resolve_account_state",
+      "names": {
+        "ts": "resolveAccountState",
+        "py": "resolve_account_state",
+        "rb": "resolve_account_state",
+        "go": "ResolveAccountState",
+        "rust": "resolve_account_state",
+        "c": "resolveAccountState"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 61,
+      "section": "mcp-account",
+      "doc": "Binding for `resolveAccountState`.",
+      "docWasm": null,
+      "rustFnName": "resolve_account_state_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "input.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_account_state",
+      "clientCallArgs": []
+    },
     "resolveAuthenticatedUser": {
       "core": "solvapay_core::auth_resolution::resolve_authenticated_user",
       "names": {
@@ -5161,6 +6156,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "resolve_authenticated_user",
+      "clientCallArgs": []
+    },
+    "resolveBuyerCountry": {
+      "core": "solvapay_core::business_details::resolve_buyer_country",
+      "names": {
+        "ts": "resolveBuyerCountry",
+        "py": "resolve_buyer_country",
+        "rb": "resolve_buyer_country",
+        "go": "ResolveBuyerCountry",
+        "rust": "resolve_buyer_country",
+        "c": "resolveBuyerCountry"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "BusinessDetailsInput",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 7,
+      "section": "business-details",
+      "doc": "Binding for `resolveBuyerCountry`.",
+      "docWasm": null,
+      "rustFnName": "resolve_buyer_country_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&input"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_buyer_country",
       "clientCallArgs": []
     },
     "resolveCheckLimitsParams": {
@@ -5347,6 +6390,54 @@
       "coreCall": "resolve_customer_ref",
       "clientCallArgs": []
     },
+    "resolveDisplayMode": {
+      "core": "solvapay_core::mcp::resolve_display_mode",
+      "names": {
+        "ts": "resolveDisplayMode",
+        "py": "resolve_display_mode",
+        "rb": "resolve_display_mode",
+        "go": "ResolveDisplayMode",
+        "rust": "resolve_display_mode",
+        "c": "resolveDisplayMode"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "ctx",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 63,
+      "section": "mcp-account",
+      "doc": "Binding for `resolveDisplayMode`.",
+      "docWasm": null,
+      "rustFnName": "resolve_display_mode_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "ctx.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_display_mode",
+      "clientCallArgs": []
+    },
     "resolveFallbackGateLimits": {
       "core": "solvapay_core::paywall_decision::resolve_fallback_gate_limits",
       "names": {
@@ -5393,6 +6484,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "resolve_fallback_gate_limits",
+      "clientCallArgs": []
+    },
+    "resolvePlanShape": {
+      "core": "solvapay_core::mcp::resolve_narrator_plan_shape",
+      "names": {
+        "ts": "resolvePlanShape",
+        "py": "resolve_plan_shape",
+        "rb": "resolve_plan_shape",
+        "go": "ResolvePlanShape",
+        "rust": "resolve_plan_shape",
+        "c": "resolvePlanShape"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 60,
+      "section": "mcp-account",
+      "doc": "Binding for `resolvePlanShape`.",
+      "docWasm": null,
+      "rustFnName": "resolve_plan_shape_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_narrator_plan_shape",
       "clientCallArgs": []
     },
     "resolveProductRef": {

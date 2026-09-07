@@ -23,14 +23,20 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::derive_active_products_binding;
+use crate::decisions::derive_default_view_binding;
 use crate::decisions::ensure_customer_next_binding;
 use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
+use crate::decisions::evaluate_claimed_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::format_compact_credits_binding;
 use crate::decisions::gate_next_binding;
+use crate::decisions::get_history_next_binding;
 use crate::decisions::headline_charges_binding;
+use crate::decisions::history_rows_binding;
 use crate::decisions::included_units_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
@@ -42,14 +48,19 @@ use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
 use crate::decisions::per_unit_charge_binding;
+use crate::decisions::plan_consequence_binding;
+use crate::decisions::plan_pricing_shape_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
 use crate::decisions::require_product_ref_binding;
+use crate::decisions::resolve_account_state_binding;
 use crate::decisions::resolve_authenticated_user_binding;
 use crate::decisions::resolve_check_limits_params_binding;
 use crate::decisions::resolve_customer_ref_binding;
+use crate::decisions::resolve_display_mode_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
+use crate::decisions::resolve_plan_shape_binding;
 use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
@@ -82,11 +93,18 @@ use crate::payload_builders::format_price_binding;
 use crate::payload_builders::format_subtotal_label_binding;
 use crate::payload_builders::format_vat_summary_label_binding;
 use crate::payload_builders::get_business_country_options_binding;
+use crate::payload_builders::get_customer_address_field_errors_binding;
+use crate::payload_builders::get_postal_code_field_label_binding;
+use crate::payload_builders::get_postal_code_placeholder_binding;
 use crate::payload_builders::get_seller_tax_identifier_display_label_binding;
+use crate::payload_builders::get_state_field_label_binding;
 use crate::payload_builders::get_tax_id_example_binding;
 use crate::payload_builders::get_tax_id_field_label_binding;
 use crate::payload_builders::get_tax_id_helper_text_binding;
 use crate::payload_builders::invoke_payable_next_binding;
+use crate::payload_builders::is_customer_address_complete_binding;
+use crate::payload_builders::is_postal_code_required_binding;
+use crate::payload_builders::is_state_required_binding;
 use crate::payload_builders::is_unlimited_remaining_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
@@ -94,12 +112,15 @@ use crate::payload_builders::mcp_tool_names_binding;
 use crate::payload_builders::mcp_view_maps_binding;
 use crate::payload_builders::minor_units_per_major_binding;
 use crate::payload_builders::paywall_tool_result_binding;
+use crate::payload_builders::postal_code_required_countries_binding;
+use crate::payload_builders::resolve_buyer_country_binding;
 use crate::payload_builders::resolve_seller_identity_display_binding;
 use crate::payload_builders::resolve_tax_behavior_binding;
 use crate::payload_builders::resolve_tax_treatment_note_binding;
 use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
+use crate::payload_builders::state_required_countries_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
 use crate::payload_builders::validate_business_details_binding;
@@ -151,6 +172,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(resolve_purchase_customer_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(select_active_purchases_binding, m)?)?;
     m.add_function(wrap_pyfunction!(classify_cancel_error_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(derive_active_products_binding, m)?)?;
     m.add_function(wrap_pyfunction!(classify_reactivate_error_binding, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_cancel_response_binding, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_reactivate_response_binding, m)?)?;
@@ -197,7 +219,17 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tier_bands_binding, m)?)?;
     m.add_function(wrap_pyfunction!(tier_meters_binding, m)?)?;
     m.add_function(wrap_pyfunction!(usage_rate_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(plan_pricing_shape_binding, m)?)?;
     m.add_function(wrap_pyfunction!(build_customer_snapshot_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(get_history_next_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_claimed_limits_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(history_rows_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_plan_shape_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_account_state_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(derive_default_view_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_display_mode_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(plan_consequence_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(format_compact_credits_binding, m)?)?;
     m.add_function(wrap_pyfunction!(format_price_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_show_tax_row_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_business_details_binding, m)?)?;
@@ -214,8 +246,15 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_tax_id_helper_text_binding, m)?)?;
     m.add_function(wrap_pyfunction!(get_business_country_options_binding, m)?)?;
     m.add_function(wrap_pyfunction!(credits_to_display_minor_units_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_buyer_country_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        get_customer_address_field_errors_binding,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(is_zero_decimal_currency_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(is_customer_address_complete_binding, m)?)?;
     m.add_function(wrap_pyfunction!(minor_units_per_major_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(is_postal_code_required_binding, m)?)?;
     m.add_function(wrap_pyfunction!(
         resolve_seller_identity_display_binding,
         m
@@ -224,15 +263,21 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
         get_seller_tax_identifier_display_label_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(is_state_required_binding, m)?)?;
     m.add_function(wrap_pyfunction!(
         seller_tax_identifier_display_label_by_type_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(get_state_field_label_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(get_postal_code_field_label_binding, m)?)?;
     m.add_function(wrap_pyfunction!(is_unlimited_remaining_binding, m)?)?;
     m.add_function(wrap_pyfunction!(paywall_tool_result_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(get_postal_code_placeholder_binding, m)?)?;
     m.add_function(wrap_pyfunction!(make_response_result_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(postal_code_required_countries_binding, m)?)?;
     m.add_function(wrap_pyfunction!(assert_response_result_binding, m)?)?;
     m.add_function(wrap_pyfunction!(mcp_tool_names_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(state_required_countries_binding, m)?)?;
     m.add_function(wrap_pyfunction!(mcp_view_maps_binding, m)?)?;
     m.add_function(wrap_pyfunction!(derive_icons_binding, m)?)?;
     m.add_function(wrap_pyfunction!(build_tool_descriptor_metadata_binding, m)?)?;

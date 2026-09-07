@@ -114,6 +114,7 @@ impl Client {
             "product": opts.product,
             "usageType": opts.usage_type,
             "startedMs": started_ms,
+            "randomUnit": self.random_unit(),
             "limitsCacheTTLMs": self.inner.limits_cache_ttl_ms,
         });
         loop {
@@ -148,14 +149,12 @@ impl Client {
                             "limits": limits,
                             "timestampMs": timestamp_ms,
                             "nowMs": now,
-                            "randomUnit": self.random_unit(),
                         });
                     } else {
                         event = serde_json::json!({
                             "kind": "limitsCacheEntry",
                             "found": false,
                             "nowMs": now,
-                            "randomUnit": self.random_unit(),
                         });
                     }
                 }
@@ -182,7 +181,6 @@ impl Client {
                         "kind": "limitsResult",
                         "limits": limits,
                         "nowMs": now_ms(),
-                        "randomUnit": self.random_unit(),
                     });
                 }
                 GateAction::Allow {
@@ -193,6 +191,7 @@ impl Client {
                     customer,
                     consequence,
                     cache,
+                    request_id,
                 } => {
                     self.apply_gate_cache(cache).await;
                     return Ok(GateOutcome::Allow(Allow {
@@ -203,6 +202,7 @@ impl Client {
                         limits,
                         customer: Allow::from_core_customer(customer),
                         consequence,
+                        request_id,
                         driver_state: state.clone().unwrap_or(Value::Null),
                     }));
                 }

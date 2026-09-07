@@ -42,6 +42,7 @@ const ResponseOptions = z
     text: z.string().optional(),
     nudge: NudgeSpec.optional(),
     units: z.number().optional(),
+    dataInText: z.boolean().optional(),
   })
   .strict()
 

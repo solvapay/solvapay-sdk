@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildDefaultCheckoutPlanFilter, formatPaygRate, formatPlanPriceLabel, planMeterName } from './shared'
+import {
+  buildDefaultCheckoutPlanFilter,
+  formatPaygRate,
+  formatPlanPriceLabel,
+  planMeterName,
+} from './shared'
 import type { Plan } from '../../types'
 
 /**

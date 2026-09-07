@@ -128,8 +128,12 @@ export declare class NativeClient {
   saveAutoRecharge(argsJson: string): Promise<string>
   /** `DELETE /v1/sdk/auto-recharge` */
   disableAutoRecharge(argsJson: string): Promise<string>
+  /** `GET /v1/sdk/purchases` */
+  listPurchases(argsJson: string): Promise<string>
   /** `mcpBootstrap` */
   mcpBootstrap(argsJson: string): Promise<string>
+  /** `GET /v1/sdk/credits/activity` */
+  getCreditActivity(argsJson: string): Promise<string>
   /** `mcpCallBuiltinTool` */
   mcpCallBuiltinTool(argsJson: string): Promise<string>
   /** `mcpReadResource` */
@@ -222,6 +226,12 @@ export declare function creditsToDisplayMinorUnits(argsJson: string): string
 /** Binding for `decidePaywallOutcome`. */
 export declare function decidePaywallOutcome(argsJson: string): string
 
+/** Binding for `deriveActiveProducts`. */
+export declare function deriveActiveProducts(argsJson: string): string
+
+/** Binding for `deriveDefaultView`. */
+export declare function deriveDefaultView(argsJson: string): string
+
 /** Binding for `deriveIcons` — absent/empty branding → JSON `null`. */
 export declare function deriveIcons(argsJson: string): string
 
@@ -237,6 +247,9 @@ export declare function evaluateBalanceObservation(argsJson: string): string
 /** Binding for `evaluateCachedLimits`. */
 export declare function evaluateCachedLimits(argsJson: string): string
 
+/** Binding for `evaluateClaimedLimits`. */
+export declare function evaluateClaimedLimits(argsJson: string): string
+
 /** Binding for `evaluateFreshLimits`. */
 export declare function evaluateFreshLimits(argsJson: string): string
 
@@ -245,6 +258,9 @@ export declare function evaluateProductReadiness(argsJson: string): string
 
 /** Binding for `extractBackendCustomerRef`. */
 export declare function extractBackendCustomerRef(argsJson: string): string
+
+/** Binding for `formatCompactCredits`. */
+export declare function formatCompactCredits(argsJson: string): string
 
 /** Binding for `formatPrice`. */
 export declare function formatPrice(argsJson: string): string
@@ -261,8 +277,23 @@ export declare function gateNext(argsJson: string): string
 /** Binding for `getBusinessCountryOptions`. */
 export declare function getBusinessCountryOptions(argsJson: string): string
 
+/** Binding for `getCustomerAddressFieldErrors`. */
+export declare function getCustomerAddressFieldErrors(argsJson: string): string
+
+/** Binding for `getHistoryNext`. */
+export declare function getHistoryNext(argsJson: string): string
+
+/** Binding for `getPostalCodeFieldLabel`. */
+export declare function getPostalCodeFieldLabel(argsJson: string): string
+
+/** Binding for `getPostalCodePlaceholder`. */
+export declare function getPostalCodePlaceholder(argsJson: string): string
+
 /** Binding for `getSellerTaxIdentifierDisplayLabel`. */
 export declare function getSellerTaxIdentifierDisplayLabel(argsJson: string): string
+
+/** Binding for `getStateFieldLabel`. */
+export declare function getStateFieldLabel(argsJson: string): string
 
 /** Binding for `getTaxIdExample`. */
 export declare function getTaxIdExample(argsJson: string): string
@@ -276,6 +307,9 @@ export declare function getTaxIdHelperText(argsJson: string): string
 /** Binding for `headlineCharges`. */
 export declare function headlineCharges(argsJson: string): string
 
+/** Binding for `historyRows`. */
+export declare function historyRows(argsJson: string): string
+
 /** Binding for `includedUnits`. */
 export declare function includedUnits(argsJson: string): string
 
@@ -285,11 +319,20 @@ export declare function invokePayableNext(argsJson: string): string
 /** Binding for `isCachedCustomerRefValid`. */
 export declare function isCachedCustomerRefValid(argsJson: string): string
 
+/** Binding for `isCustomerAddressComplete`. */
+export declare function isCustomerAddressComplete(argsJson: string): string
+
 /** Binding for `isEmailConflict`. */
 export declare function isEmailConflict(argsJson: string): string
 
 /** Binding for `isErrorResult`. */
 export declare function isErrorResult(argsJson: string): string
+
+/** Binding for `isPostalCodeRequired`. */
+export declare function isPostalCodeRequired(argsJson: string): string
+
+/** Binding for `isStateRequired`. */
+export declare function isStateRequired(argsJson: string): string
 
 /** Binding for `isUnlimitedRemaining`. */
 export declare function isUnlimitedRemaining(argsJson: string): string
@@ -356,6 +399,15 @@ export declare function peggedCreditsPerUnit(argsJson: string): string
 /** Binding for `perUnitCharge`. */
 export declare function perUnitCharge(argsJson: string): string
 
+/** Binding for `planConsequence`. */
+export declare function planConsequence(argsJson: string): string
+
+/** Binding for `planPricingShape`. */
+export declare function planPricingShape(argsJson: string): string
+
+/** Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`. */
+export declare function POSTAL_CODE_REQUIRED_COUNTRIES(argsJson: string): string
+
 /** Binding for `projectPaymentIntentResult`. */
 export declare function projectPaymentIntentResult(argsJson: string): string
 
@@ -368,8 +420,14 @@ export declare function projectUsageSnapshot(argsJson: string): string
 /** Binding for `requireProductRef`. Throws when neither source is set. */
 export declare function requireProductRef(argsJson: string): string
 
+/** Binding for `resolveAccountState`. */
+export declare function resolveAccountState(argsJson: string): string
+
 /** Binding for `resolveAuthenticatedUser`. */
 export declare function resolveAuthenticatedUser(argsJson: string): string
+
+/** Binding for `resolveBuyerCountry`. */
+export declare function resolveBuyerCountry(argsJson: string): string
 
 /**
  * Binding for `resolveCheckLimitsParams`.
@@ -381,8 +439,14 @@ export declare function resolveCheckLimitsParams(argsJson: string): string
 /** Binding for `resolveCustomerRef`. */
 export declare function resolveCustomerRef(argsJson: string): string
 
+/** Binding for `resolveDisplayMode`. */
+export declare function resolveDisplayMode(argsJson: string): string
+
 /** Binding for `resolveFallbackGateLimits`. */
 export declare function resolveFallbackGateLimits(argsJson: string): string
+
+/** Binding for `resolvePlanShape`. */
+export declare function resolvePlanShape(argsJson: string): string
 
 /** Binding for `resolveProductRef`. */
 export declare function resolveProductRef(argsJson: string): string
@@ -427,6 +491,9 @@ export declare function shouldShowTaxRow(argsJson: string): string
 
 /** Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`. */
 export declare function solvapayCall(argsJson: string): string
+
+/** Binding for `STATE_REQUIRED_COUNTRIES`. */
+export declare function STATE_REQUIRED_COUNTRIES(argsJson: string): string
 
 /** Binding for `TAX_NOT_COLLECTED_NOTE`. */
 export declare function TAX_NOT_COLLECTED_NOTE(argsJson: string): string

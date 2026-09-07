@@ -13,13 +13,18 @@
 #![cfg(feature = "browser")]
 
 use solvapay_core::{
-    billing_cycle, charges, credits_per_unit_from_balance, headline_charges, included_units,
-    pegged_credits_per_unit, per_unit_charge, trial_days,
+    billing_cycle, charges, credits_per_unit_from_balance, derive_active_products,
+    derive_default_view, format_compact_credits, headline_charges, history_rows, included_units,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
+    resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape, trial_days,
 };
 use wasm_bindgen::prelude::*;
 
-use crate::args::{args_map, optional_f64, optional_string, optional_value, require_f64, to_value};
+use crate::args::{
+    args_map, optional_f64, optional_string, optional_value, require_f64, result_as_value, to_value,
+};
 use crate::error::run_envelope_sync;
+use serde_json::Value;
 
 /// Binding for `charges`.
 #[wasm_bindgen(js_name = "charges")]
@@ -112,5 +117,107 @@ pub fn credits_per_unit_from_balance_binding(args_json: String) -> String {
             balance.as_ref(),
             meter.as_deref(),
         ))
+    })
+}
+
+/// Binding for `planPricingShape`.
+#[wasm_bindgen(js_name = "planPricingShape")]
+pub fn plan_pricing_shape_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&plan_pricing_shape(priced.as_ref()))
+    })
+}
+
+/// Binding for `resolvePlanShape`.
+#[wasm_bindgen(js_name = "resolvePlanShape")]
+pub fn resolve_plan_shape_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&resolve_narrator_plan_shape(priced.as_ref()))
+    })
+}
+
+/// Binding for `resolveAccountState`.
+#[wasm_bindgen(js_name = "resolveAccountState")]
+pub fn resolve_account_state_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        Ok(Value::String(resolve_account_state(input.as_ref())))
+    })
+}
+
+/// Binding for `deriveDefaultView`.
+#[wasm_bindgen(js_name = "deriveDefaultView")]
+pub fn derive_default_view_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(derive_default_view(input.as_ref()))
+    })
+}
+
+/// Binding for `planConsequence`.
+#[wasm_bindgen(js_name = "planConsequence")]
+pub fn plan_consequence_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let plan = optional_value(&args, "plan");
+        let locale = optional_string(&args, "locale")?;
+        let balance = optional_value(&args, "balance");
+        let merchant_name = optional_string(&args, "merchantName")?;
+        result_as_value(plan_consequence(
+            plan.as_ref(),
+            locale.as_deref(),
+            balance.as_ref(),
+            merchant_name.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `deriveActiveProducts`.
+#[wasm_bindgen(js_name = "deriveActiveProducts")]
+pub fn derive_active_products_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchases = optional_value(&args, "purchases");
+        let product_ref = optional_string(&args, "productRef")?;
+        to_value(&derive_active_products(
+            purchases.as_ref(),
+            product_ref.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `historyRows`.
+#[wasm_bindgen(js_name = "historyRows")]
+pub fn history_rows_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(history_rows(input.as_ref()))
+    })
+}
+
+/// Binding for `resolveDisplayMode`.
+#[wasm_bindgen(js_name = "resolveDisplayMode")]
+pub fn resolve_display_mode_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let ctx = optional_value(&args, "ctx");
+        to_value(&resolve_display_mode(ctx.as_ref()))
+    })
+}
+
+/// Binding for `formatCompactCredits`.
+#[wasm_bindgen(js_name = "formatCompactCredits")]
+pub fn format_compact_credits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let credits = require_f64(&args, "credits")?;
+        result_as_value(format_compact_credits(credits))
     })
 }

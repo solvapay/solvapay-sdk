@@ -11,7 +11,8 @@
         }
       },
       "limits": {
-        "remaining": 40
+        "remaining": 40,
+        "limit": 50
       }
     }
   },

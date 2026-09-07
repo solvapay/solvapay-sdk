@@ -478,6 +478,18 @@ pub struct GetAutoRechargeParams {
     pub customer_ref: String,
 }
 
+/// SDK-only type `GetCreditActivityParams`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GetCreditActivityParams {
+    /// Overlay field.
+    #[serde(rename = "customerRef")]
+    pub customer_ref: String,
+    /// Overlay field.
+    #[serde(rename = "limit")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<f64>,
+}
+
 /// SDK-only type `GetCustomerBalanceParams`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GetCustomerBalanceParams {
@@ -553,6 +565,36 @@ pub struct ListProductItem {
 
 /// List of `ListProductItem`.
 pub type ListProductsResult = Vec<ListProductItem>;
+
+/// SDK-only type `ListPurchasesParams`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListPurchasesParams {
+    /// Overlay field.
+    #[serde(rename = "customerRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_ref: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "includeFree")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub include_free: Option<bool>,
+    /// Overlay field.
+    #[serde(rename = "productRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product_ref: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// SDK-only type `ListPurchasesResult`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ListPurchasesResult {
+    /// Overlay field.
+    #[serde(rename = "purchases")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purchases: Option<Vec<schemas::SdkPurchaseResponse>>,
+}
 
 /// SDK-only type `McpBillingCycleDisplay`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

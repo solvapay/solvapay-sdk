@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "SI",
         "taxId": "SI12345678",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "SI"
       }
     }
   }

@@ -32,7 +32,7 @@
               "role": "user",
               "content": {
                 "type": "text",
-                "text": "Show me the upgrade options for my SolvaPay account."
+                "text": "Call the `account` tool with view: \"checkout\" to show upgrade options."
               }
             }
           ]

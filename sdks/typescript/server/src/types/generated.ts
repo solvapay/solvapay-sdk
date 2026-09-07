@@ -76,6 +76,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/credits/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List account-wide credit activity for a customer
+         * @description Every credit event on the customer account, newest first, including other products and top-ups. Credits are shared, so the balance only makes sense account-wide.
+         */
+        get: operations["CreditActivitySdkController_getActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/customers": {
         parameters: {
             query?: never;
@@ -1126,13 +1146,6 @@ export interface components {
                     label?: string;
                     /** @enum {string} */
                     onEnd: "convert" | "cancel" | "downgrade";
-                    requireCard?: boolean;
-                } | {
-                    /** @enum {string} */
-                    kind: "prepaid";
-                    label?: string;
-                    lowBalanceUnits?: number;
-                    minTopUpMinor?: number;
                 } | {
                     /** @enum {string} */
                     appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -1329,13 +1342,6 @@ export interface components {
                 label?: string;
                 /** @enum {string} */
                 onEnd: "convert" | "cancel" | "downgrade";
-                requireCard?: boolean;
-            } | {
-                /** @enum {string} */
-                kind: "prepaid";
-                label?: string;
-                lowBalanceUnits?: number;
-                minTopUpMinor?: number;
             } | {
                 /** @enum {string} */
                 appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -1417,6 +1423,42 @@ export interface components {
             timestamp: string;
             /** @default 1 */
             units: number;
+        };
+        CreditActivityEntryDto: {
+            /**
+             * Signed credit units on the USD peg (100 credits = 1 USD cent)
+             * @example -200
+             */
+            amount: number;
+            /**
+             * Running credit balance after this event
+             * @example 599800
+             */
+            balance: number;
+            /** @description Product display name when the event is product-scoped */
+            productName?: string;
+            /** @description Product reference when the event is product-scoped */
+            productRef?: string;
+            /** @description Machine-readable reason when the ledger stored one */
+            reason?: string;
+            /**
+             * ISO-8601 timestamp
+             * @example 2026-09-05T14:22:00.000Z
+             */
+            timestamp: string;
+            /**
+             * Ledger event type
+             * @enum {string}
+             */
+            type: "USAGE" | "TOPUP" | "GRANT" | "REFUND" | "ADJUSTMENT";
+        };
+        CreditActivityResponseDto: {
+            entries: components["schemas"]["CreditActivityEntryDto"][];
+            /**
+             * True when more events exist beyond this page
+             * @example false
+             */
+            hasMore: boolean;
         };
         CreditDebitSkippedResponse: {
             /** @enum {number} */
@@ -1649,6 +1691,8 @@ export interface components {
             creditsPerUnit?: number;
             /** @description ISO 4217 currency code for credit fields */
             currency?: string;
+            /** @description The effective finite cap for this meter. Present only when the backend measured a finite cap. */
+            limit?: number;
             /**
              * The meter name to use when tracking usage events
              * @example requests
@@ -1673,6 +1717,8 @@ export interface components {
             throttled?: boolean;
             /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
             upgraded?: boolean;
+            /** @description Consumed usage units this period. Present only when the backend measured a finite cap. */
+            used?: number;
             /**
              * Whether the customer is within their usage limits
              * @example true
@@ -1760,13 +1806,6 @@ export interface components {
                     label?: string;
                     /** @enum {string} */
                     onEnd: "convert" | "cancel" | "downgrade";
-                    requireCard?: boolean;
-                } | {
-                    /** @enum {string} */
-                    kind: "prepaid";
-                    label?: string;
-                    lowBalanceUnits?: number;
-                    minTopUpMinor?: number;
                 } | {
                     /** @enum {string} */
                     appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -2085,6 +2124,11 @@ export interface components {
         };
         SdkMerchantResponseDto: {
             /**
+             * City from the legal entity address
+             * @example London
+             */
+            city?: string;
+            /**
              * Company registration number (EIN, Companies House No, Org No)
              * @example HRB12345
              */
@@ -2122,6 +2166,11 @@ export interface components {
             /** @example https://acme.com/privacy */
             privacyUrl?: string;
             /**
+             * State, county, or region from the legal entity address. Free text — values like "Greater London" are valid.
+             * @example Greater London
+             */
+            stateOrCounty?: string;
+            /**
              * Descriptor appearing on the customer card statement
              * @example ACME INC
              */
@@ -2151,6 +2200,11 @@ export interface components {
              * @example DE123456789
              */
             vatNumber?: string;
+            /**
+             * Merchant public website. Distinct from supportUrl so the same URL is not emitted twice.
+             * @example https://acme.com
+             */
+            websiteUrl?: string;
         };
         SdkPaymentIntentListItem: {
             /**
@@ -2668,13 +2722,6 @@ export interface components {
                 label?: string;
                 /** @enum {string} */
                 onEnd: "convert" | "cancel" | "downgrade";
-                requireCard?: boolean;
-            } | {
-                /** @enum {string} */
-                kind: "prepaid";
-                label?: string;
-                lowBalanceUnits?: number;
-                minTopUpMinor?: number;
             } | {
                 /** @enum {string} */
                 appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -3073,6 +3120,43 @@ export interface operations {
             };
             /** @description Missing customerRef or productRef */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreditActivitySdkController_getActivity: {
+        parameters: {
+            query: {
+                customerRef: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account-wide credit ledger page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditActivityResponseDto"];
+                };
+            };
+            /** @description customerRef is required, or limit is invalid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3727,6 +3811,8 @@ export interface operations {
                         kind: "card";
                         /** @example 4242 */
                         last4: string;
+                        /** @example true */
+                        reusable: boolean;
                     } | {
                         /** @enum {string} */
                         kind: "none";

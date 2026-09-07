@@ -464,7 +464,7 @@ pub enum IrSerializeKind {
     ToValue,
     /// `Ok(Value::Bool(core(..)))`
     ValueBool,
-    /// `Ok(Value::String(core(..)))`
+    /// `Ok(Value::String(core(..).to_owned()))`
     ValueString,
     /// `Ok(Value::Array(core(..)))`
     ValueArray,

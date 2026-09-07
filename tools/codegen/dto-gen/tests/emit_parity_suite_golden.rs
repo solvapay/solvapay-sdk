@@ -98,7 +98,7 @@ fn parity_suites_match_committed() {
             emit: emit_parity_suite_rb,
             generated_key: "rbParity",
             compare: Compare::Full,
-            must_contain: &["assert_equal 43"],
+            must_contain: &["assert_equal 45"],
             must_not_contain: &["2 == 2", "or true"],
         },
         Case {
@@ -108,7 +108,7 @@ fn parity_suites_match_committed() {
             generated_key: "goParity",
             compare: Compare::Full,
             must_contain: &[
-                "len(operationSignatures); got != 43",
+                "len(operationSignatures); got != 45",
                 "expectedLimitsCacheTTLMs = 10000",
                 "expectedMaxRetries = 2",
                 "expectedInitialDelayMs = 500",
@@ -127,7 +127,7 @@ fn parity_suites_match_committed() {
             generated_key: "rsParity",
             compare: Compare::Rustfmt,
             must_contain: &[
-                "assert_eq!(OPERATION_SIGNATURES.len(), 43)",
+                "assert_eq!(OPERATION_SIGNATURES.len(), 45)",
                 "_assert_typed_surface",
                 "_parity_sink",
             ],
@@ -140,7 +140,7 @@ fn parity_suites_match_committed() {
             generated_key: "cParity",
             compare: Compare::Full,
             must_contain: &[
-                "nops != 43",
+                "nops != 45",
                 "(void)&solvapay_client_call",
                 "solvapay_abi_version() != SOLVAPAY_ABI_VERSION",
                 "unknown op",

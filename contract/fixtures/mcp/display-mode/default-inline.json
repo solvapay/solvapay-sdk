@@ -1,0 +1,17 @@
+{
+  "suite": "mcp",
+  "case": "display-mode-default-inline",
+  "input": {
+    "fn": "resolveDisplayMode",
+    "args": {
+      "ctx": null
+    }
+  },
+  "expect": {
+    "result": {
+      "displayMode": "inline",
+      "availableDisplayModes": [],
+      "hostedRail": "inline"
+    }
+  }
+}

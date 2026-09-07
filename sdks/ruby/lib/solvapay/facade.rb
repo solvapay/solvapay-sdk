@@ -35,6 +35,7 @@ module SolvaPay
         "product" => product,
         "usageType" => usage_type,
         "startedMs" => started_ms,
+        "randomUnit" => random_unit,
         "limitsCacheTTLMs" => @limits_cache_ttl,
       }
       action = {} #: Hash[String, untyped]
@@ -67,14 +68,12 @@ module SolvaPay
                       "limits" => cached[:limits],
                       "timestampMs" => cached.fetch(:timestamp),
                       "nowMs" => now,
-                      "randomUnit" => random_unit,
                     }
                   else
                     {
                       "kind" => "limitsCacheEntry",
                       "found" => false,
                       "nowMs" => now,
-                      "randomUnit" => random_unit,
                     }
                   end
         when "checkLimits"
@@ -97,7 +96,6 @@ module SolvaPay
             "kind" => "limitsResult",
             "limits" => limits,
             "nowMs" => @clock.call,
-            "randomUnit" => random_unit,
           }
         when "allow", "gate"
           apply_gate_cache(action["cache"])
@@ -118,7 +116,11 @@ module SolvaPay
         return PayablePaywallResult.new(content: gate)
       end
 
-      decision = { "outcome" => "allow", "limits" => action["limits"] }
+      decision = {
+        "outcome" => "allow",
+        "limits" => action["limits"],
+        "request_id" => action["requestId"],
+      }
       consequence = action["consequence"]
       decision["consequence"] = consequence if %w[throttled overage].include?(consequence)
       build_allow_result(
@@ -394,7 +396,6 @@ module SolvaPay
             "kind" => "handlerSucceeded",
             "durationMs" => duration.nil? ? 0 : duration,
             "nowMs" => @clock.call,
-            "randomUnit" => random_unit,
           },
         )
         nil
@@ -407,7 +408,6 @@ module SolvaPay
             "kind" => "handlerFailed",
             "durationMs" => duration.nil? ? 0 : duration,
             "nowMs" => @clock.call,
-            "randomUnit" => random_unit,
             "errorMessage" => error.to_s,
             "isPaywallError" => error.is_a?(PaywallError),
           },

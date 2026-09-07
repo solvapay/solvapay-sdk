@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "IE",
         "taxId": "IE1234567AB",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "IE"
       }
     }
   }

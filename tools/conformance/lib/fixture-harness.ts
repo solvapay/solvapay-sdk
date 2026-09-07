@@ -52,10 +52,27 @@ import {
   countsUsage,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
+  planPricingShape,
+  isCustomerAddressComplete,
+  isPostalCodeRequired,
+  isStateRequired,
+  getStateFieldLabel,
+  getPostalCodeFieldLabel,
+  getPostalCodePlaceholder,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
+  resolveBuyerCountry,
+  resolveAccountState,
+  formatCompactCredits,
+  planConsequence,
+  deriveActiveProducts,
+  historyRows,
+  resolveDisplayMode,
 } from '@solvapay/core'
 import {
   assertResponseResult,
   buildPayableHandler,
+  buildPayableToolResult,
   buildPromptDescriptorMetadata,
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
@@ -70,6 +87,7 @@ import {
   type ContentBlock,
   type McpToolName,
   type ResponseOptions,
+  type ResponseResult,
   type SolvaPayMerchantBranding,
   type SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
@@ -96,7 +114,9 @@ import {
   evaluateBalanceObservation,
   evaluateCachedLimits,
   gateNext,
+  getHistoryNext,
   evaluateFreshLimits,
+  evaluateClaimedLimits,
   extractBackendCustomerRef,
   getAuthenticatedUserCore,
   isCachedCustomerRefValid,
@@ -540,6 +560,18 @@ function isPaywallToolResultArgs(
   args: Record<string, unknown>,
 ): args is { message: string; structuredContent: PaywallStructuredContent } {
   return typeof args.message === 'string' && isPaywallStructuredContentValue(args.structuredContent)
+}
+
+function isBuildPayableToolResultArgs(args: Record<string, unknown>): args is {
+  envelope: ResponseResult<unknown>
+} {
+  const envelope = args.envelope
+  return (
+    typeof envelope === 'object' &&
+    envelope !== null &&
+    !Array.isArray(envelope) &&
+    (envelope as { __solvapayResponse?: unknown }).__solvapayResponse === true
+  )
 }
 
 function isMakeResponseResultArgs(args: Record<string, unknown>): args is {
@@ -1216,6 +1248,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     if (!client.listProducts) throw new Error('listProducts is not available on SolvaPayClient')
     return client.listProducts()
   })
+  registerClient('listPurchases', args => {
+    if (!client.listPurchases) throw new Error('listPurchases is not available on SolvaPayClient')
+    return client.listPurchases(coerceArgs(args))
+  })
+  registerClient('getCreditActivity', args => {
+    if (!client.getCreditActivity) {
+      throw new Error('getCreditActivity is not available on SolvaPayClient')
+    }
+    return client.getCreditActivity(coerceArgs(args))
+  })
   registerClient('createProduct', args => {
     if (!client.createProduct) throw new Error('createProduct is not available on SolvaPayClient')
     return client.createProduct(coerceArgs(args))
@@ -1532,6 +1574,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('buildPayableToolResult', {
+    id: 'mcp-core',
+    invoke: args => {
+      if (!isBuildPayableToolResultArgs(args)) {
+        throw new Error('buildPayableToolResult args must include envelope')
+      }
+      return buildPayableToolResult(args.envelope)
+    },
+  })
+
   registry.register('makeResponseResult', {
     id: 'mcp-core',
     invoke: args => {
@@ -1631,6 +1683,121 @@ export function createDefaultRegistry(): FixtureRegistry {
       }
       return validateBusinessDetails(args)
     },
+  })
+
+  registry.register('isCustomerAddressComplete', {
+    id: 'core',
+    invoke: args => isCustomerAddressComplete((args.input ?? args) as never),
+  })
+
+  registry.register('resolveBuyerCountry', {
+    id: 'core',
+    invoke: args => resolveBuyerCountry((args.input ?? args) as never),
+  })
+
+  registry.register('isPostalCodeRequired', {
+    id: 'core',
+    invoke: args => {
+      if (!isCountryArg(args)) {
+        throw new Error('isPostalCodeRequired args must include string country')
+      }
+      return isPostalCodeRequired(args.country)
+    },
+  })
+
+  registry.register('isStateRequired', {
+    id: 'core',
+    invoke: args => {
+      if (!isCountryArg(args)) {
+        throw new Error('isStateRequired args must include string country')
+      }
+      return isStateRequired(args.country)
+    },
+  })
+
+  registry.register('getStateFieldLabel', {
+    id: 'core',
+    invoke: args => {
+      if (!isCountryArg(args)) {
+        throw new Error('getStateFieldLabel args must include string country')
+      }
+      return getStateFieldLabel(args.country)
+    },
+  })
+
+  registry.register('getPostalCodeFieldLabel', {
+    id: 'core',
+    invoke: args => {
+      if (!isCountryArg(args)) {
+        throw new Error('getPostalCodeFieldLabel args must include string country')
+      }
+      return getPostalCodeFieldLabel(args.country)
+    },
+  })
+
+  registry.register('getPostalCodePlaceholder', {
+    id: 'core',
+    invoke: args => {
+      if (!isCountryArg(args)) {
+        throw new Error('getPostalCodePlaceholder args must include string country')
+      }
+      return getPostalCodePlaceholder(args.country)
+    },
+  })
+
+  registry.register('POSTAL_CODE_REQUIRED_COUNTRIES', {
+    id: 'core',
+    invoke: () => POSTAL_CODE_REQUIRED_COUNTRIES(),
+  })
+
+  registry.register('STATE_REQUIRED_COUNTRIES', {
+    id: 'core',
+    invoke: () => STATE_REQUIRED_COUNTRIES(),
+  })
+
+  registry.register('resolveAccountState', {
+    id: 'core',
+    invoke: args => resolveAccountState(args.input ?? args),
+  })
+
+  registry.register('formatCompactCredits', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.credits !== 'number') {
+        throw new Error('formatCompactCredits args.credits must be a number')
+      }
+      return formatCompactCredits(args.credits)
+    },
+  })
+
+  registry.register('planConsequence', {
+    id: 'core',
+    invoke: args =>
+      planConsequence(
+        args.plan ?? null,
+        typeof args.locale === 'string' ? args.locale : null,
+        args.balance ?? null,
+        typeof args.merchantName === 'string' ? args.merchantName : null,
+      ),
+  })
+
+  registry.register('deriveActiveProducts', {
+    id: 'core',
+    invoke: args =>
+      deriveActiveProducts(
+        args.purchases ?? null,
+        typeof args.productRef === 'string' ? args.productRef : null,
+      ),
+  })
+
+  registry.register('historyRows', {
+    id: 'core',
+    invoke: args => historyRows(args.input ?? args),
+  })
+
+  registry.register('resolveDisplayMode', {
+    id: 'core',
+    invoke: args => resolveDisplayMode(args.ctx ?? null),
   })
 
   registry.register('deriveTaxIdType', {
@@ -2228,6 +2395,10 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args => headlineCharges((args.priced ?? null) as Record<string, unknown> | null),
   })
+  registry.register('planPricingShape', {
+    id: 'core',
+    invoke: args => planPricingShape((args.priced ?? null) as Record<string, unknown> | null),
+  })
   registry.register('perUnitCharge', {
     id: 'core',
     invoke: args =>
@@ -2446,6 +2617,22 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('evaluateClaimedLimits', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.withinLimits !== 'boolean') {
+        throw new Error('evaluateClaimedLimits args.withinLimits must be a boolean')
+      }
+      if (typeof args.remaining !== 'number') {
+        throw new Error('evaluateClaimedLimits args.remaining must be a number')
+      }
+      if (typeof args.claimed !== 'number') {
+        throw new Error('evaluateClaimedLimits args.claimed must be a number')
+      }
+      return evaluateClaimedLimits(args.withinLimits, args.remaining, args.claimed)
+    },
+  })
+
   registry.register('decidePaywallOutcome', {
     id: 'core',
     invoke: args => {
@@ -2512,6 +2699,11 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('gateNext', {
     id: 'core',
     invoke: args => gateNext(args.state, args.event),
+  })
+
+  registry.register('getHistoryNext', {
+    id: 'core',
+    invoke: args => getHistoryNext(args.state, args.event),
   })
 
   registry.register('invokePayableNext', {

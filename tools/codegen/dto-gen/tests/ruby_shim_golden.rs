@@ -77,7 +77,7 @@ fn ruby_full_surface_matches_committed() {
         .expect("rubyBindings");
 
     let client_names = names_for(&ir, IrBindingArtifact::Client);
-    assert_eq!(client_names.len(), 43);
+    assert_eq!(client_names.len(), 45);
     for name in &client_names {
         assert!(
             emitted.client_rs.contains(&format!("fn {name}")),
@@ -87,8 +87,8 @@ fn ruby_full_surface_matches_committed() {
 
     let decisions = names_for(&ir, IrBindingArtifact::Decisions);
     let payloads = names_for(&ir, IrBindingArtifact::PayloadBuilders);
-    assert_eq!(decisions.len(), 66);
-    assert_eq!(payloads.len(), 34);
+    assert_eq!(decisions.len(), 77);
+    assert_eq!(payloads.len(), 44);
     assert!(emitted.args_rs.contains("fn args_map"));
     for name in decisions.iter().chain(payloads.iter()) {
         assert!(

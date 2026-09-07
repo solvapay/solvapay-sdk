@@ -28,7 +28,10 @@
   "expect": {
     "result": {
       "toolResult": {
-        "content": [{ "type": "text", "text": "{\"ok\":true}" }],
+        "content": [
+          { "type": "text", "text": "{\"ok\":true}" },
+          { "type": "text", "text": "{\"ok\":true}" }
+        ],
         "structuredContent": { "ok": true }
       },
       "usage": [

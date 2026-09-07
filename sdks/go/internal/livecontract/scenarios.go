@@ -90,6 +90,14 @@ var SCENARIOS = []Scenario{
 	},
 	{ID: "getCustomerBalance", Op: "getCustomerBalance", Args: map[string]any{"customerRef": "{customerRef}"}},
 	{
+		ID: "listPurchases", Op: "listPurchases",
+		Args: map[string]any{"customerRef": "{customerRef}", "productRef": "{productRef}"},
+	},
+	{
+		ID: "getCreditActivity", Op: "getCreditActivity",
+		Args: map[string]any{"customerRef": "{customerRef}", "productRef": "{productRef}"},
+	},
+	{
 		ID: "getUserInfo", Op: "getUserInfo",
 		Args: map[string]any{"customerRef": "{customerRef}", "productRef": "{productRef}"},
 	},

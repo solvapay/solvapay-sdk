@@ -18,7 +18,6 @@ export function hideToolsByAudience(
   audiences: readonly string[],
   userAgent?: string,
 ): HideToolsByAudienceResult {
-  if (audiences.length === 0) return { tools }
   return callMcpSyncOp('mcpHideToolsByAudience', {
     tools,
     audiences: [...audiences],

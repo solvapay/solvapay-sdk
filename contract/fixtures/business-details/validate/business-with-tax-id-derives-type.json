@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "GB",
         "taxId": "GB123456789",
-        "taxIdType": "gb_vat"
+        "taxIdType": "gb_vat",
+        "customerCountry": "GB"
       }
     }
   }

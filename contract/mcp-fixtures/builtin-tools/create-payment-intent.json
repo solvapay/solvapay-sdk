@@ -7,7 +7,8 @@
       "name": "create_payment_intent",
       "args": {
         "planRef": "pln_pro",
-        "productRef": "prd_demo"
+        "productRef": "prd_demo",
+        "purpose": "plan"
       },
       "config": {
         "productRef": "prd_demo",

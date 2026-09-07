@@ -206,14 +206,14 @@ describe('copyDir + applyOverlay (round-trip)', () => {
 })
 
 const COLOR_SCHEME_META = '<meta name="color-scheme" content="light dark"'
-const REPO_ROOT = path.join(BASE_TEMPLATE_DIR, '..', '..', '..', '..', '..')
+const REPO_ROOT = path.join(BASE_TEMPLATE_DIR, '..', '..', '..', '..', '..', '..')
 
 const MCP_APP_HTML_FILES = [
   path.join(BASE_TEMPLATE_DIR, 'mcp-app.html'),
-  path.join(REPO_ROOT, 'examples', 'mcp-checkout-app', 'mcp-app.html'),
-  path.join(REPO_ROOT, 'examples', 'supabase-edge-mcp', 'mcp-app.html'),
-  path.join(REPO_ROOT, 'examples', 'cloudflare-workers-mcp', 'mcp-app.html'),
-  path.join(REPO_ROOT, 'examples', 'mcp-time-app', 'mcp-app.html'),
+  path.join(REPO_ROOT, 'examples', 'typescript', 'mcp-checkout-app', 'mcp-app.html'),
+  path.join(REPO_ROOT, 'examples', 'typescript', 'supabase-edge-mcp', 'mcp-app.html'),
+  path.join(REPO_ROOT, 'examples', 'typescript', 'cloudflare-workers-mcp', 'mcp-app.html'),
+  path.join(REPO_ROOT, 'examples', 'typescript', 'mcp-time-app', 'mcp-app.html'),
 ] as const
 
 describe('mcp-app.html color-scheme meta', () => {

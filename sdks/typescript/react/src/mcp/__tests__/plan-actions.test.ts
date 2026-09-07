@@ -181,10 +181,7 @@ describe('resolvePlanActions', () => {
   })
 
   it('thin PAYG snapshot + catalog plan is usage-based (Change plan), not free (Upgrade)', () => {
-    const merged = mergePlanSnapshot(
-      { price: 0, isMetered: true, reference: 'pln_payg' },
-      paygPlan,
-    )
+    const merged = mergePlanSnapshot({ price: 0, isMetered: true, reference: 'pln_payg' }, paygPlan)
     expect(resolvePlanShape(merged)).toBe('usage-based')
     const actions = resolvePlanActions({
       purchase: { planSnapshot: merged },

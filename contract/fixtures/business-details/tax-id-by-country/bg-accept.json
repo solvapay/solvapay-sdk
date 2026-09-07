@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "BG",
         "taxId": "BG0123456789",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "BG"
       }
     }
   }

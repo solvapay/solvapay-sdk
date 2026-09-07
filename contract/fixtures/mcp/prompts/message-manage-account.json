@@ -15,7 +15,7 @@
           "role": "user",
           "content": {
             "type": "text",
-            "text": "Show me my SolvaPay account."
+            "text": "Call the `account` tool with view: \"account\" to show my SolvaPay account."
           }
         }
       ]

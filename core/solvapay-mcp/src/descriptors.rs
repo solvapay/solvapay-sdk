@@ -108,7 +108,7 @@ fn mode_schema() -> Value {
 
 fn output_schema_for(name: &str) -> Option<Value> {
     match name {
-        "upgrade" | "manage_account" | "topup" | "activate_plan" => Some(bootstrap_output_schema()),
+        "account" => Some(bootstrap_output_schema()),
         _ => None,
     }
 }
@@ -133,8 +133,8 @@ fn bootstrap_output_schema() -> Value {
 /// Gate `structuredContent` schema. Payable tools must not default to this —
 /// a success payload would fail host validation. Pass it explicitly when a
 /// tool only ever returns a gate.
-#[allow(dead_code)]
-pub(crate) fn paywall_structured_content_schema() -> Value {
+#[must_use]
+pub fn paywall_structured_content_schema() -> Value {
     json!({
         "oneOf": [
             {
@@ -198,22 +198,61 @@ pub(crate) fn paywall_structured_content_schema() -> Value {
     })
 }
 
-fn input_schema_for(name: &str) -> Value {
+/// Union a merchant `outputSchema` with the paywall gate schema so hosts that
+/// validate `structuredContent` accept both success payloads and gates.
+#[must_use]
+pub fn union_payable_output_schema(merchant: &Value) -> Value {
+    json!({
+        "oneOf": [merchant, paywall_structured_content_schema()]
+    })
+}
+
+fn view_schema(views: Option<&[String]>) -> Value {
+    let default = [
+        "checkout".to_owned(),
+        "account".to_owned(),
+        "topup".to_owned(),
+        "auto-recharge".to_owned(),
+    ];
+    let enabled: Vec<String> = views
+        .map(|items| {
+            items
+                .iter()
+                .filter(|view| default.iter().any(|known| known == *view))
+                .cloned()
+                .collect()
+        })
+        .unwrap_or(default.to_vec());
+    json!({ "type": "string", "enum": enabled })
+}
+
+fn input_schema_for(name: &str, views: Option<&[String]>) -> Value {
     match name {
-        "upgrade" | "manage_account" | "topup" => {
-            json_schema(json!({ "mode": mode_schema() }), &[])
-        }
-        "create_checkout_session" => json_schema(
-            json!({ "planRef": { "type": "string" }, "productRef": { "type": "string" } }),
+        "account" => json_schema(
+            json!({
+                "view": view_schema(views),
+                "mode": mode_schema()
+            }),
             &[],
+        ),
+        "create_hosted_session" => json_schema(
+            json!({
+                "kind": { "type": "string", "enum": ["checkout", "portal"] },
+                "planRef": { "type": "string" },
+                "productRef": { "type": "string" }
+            }),
+            &["kind"],
         ),
         "create_payment_intent" => json_schema(
             json!({
+                "purpose": { "type": "string", "enum": ["plan", "topup"] },
                 "planRef": { "type": "string" },
                 "productRef": { "type": "string" },
-                "currency": { "type": "string" }
+                "currency": { "type": "string" },
+                "amount": { "type": "integer" },
+                "description": { "type": "string" }
             }),
-            &["planRef", "productRef"],
+            &["purpose"],
         ),
         "process_payment" => json_schema(
             json!({
@@ -223,47 +262,48 @@ fn input_schema_for(name: &str) -> Value {
             }),
             &["paymentIntentId", "productRef"],
         ),
-        "create_customer_session" => json_schema(json!({}), &[]),
-        "create_topup_payment_intent" => json_schema(
-            json!({
-                "amount": { "type": "integer" },
-                "currency": { "type": "string" },
-                "description": { "type": "string" }
-            }),
-            &["amount", "currency"],
-        ),
         "attach_business_details" => json_schema(
             json!({
                 "paymentIntentId": { "type": "string" },
                 "isBusiness": { "type": "boolean" },
                 "businessName": { "type": "string" },
                 "country": { "type": "string" },
+                "customerCountry": { "type": "string" },
+                "customerName": { "type": "string" },
+                "customerState": { "type": "string" },
+                "customerPostalCode": { "type": "string" },
                 "taxId": { "type": "string" },
                 "taxIdType": { "type": "string", "enum": ["eu_vat", "gb_vat", "us_ein"] }
             }),
             &["paymentIntentId", "isBusiness"],
         ),
-        "cancel_renewal" => json_schema(
-            json!({ "purchaseRef": { "type": "string" }, "reason": { "type": "string" } }),
-            &["purchaseRef"],
+        "set_renewal" => json_schema(
+            json!({
+                "purchaseRef": { "type": "string" },
+                "enabled": { "type": "boolean" },
+                "reason": { "type": "string" }
+            }),
+            &["purchaseRef", "enabled"],
         ),
-        "reactivate_renewal" => json_schema(
-            json!({ "purchaseRef": { "type": "string" } }),
-            &["purchaseRef"],
+        "get_history" => json_schema(
+            json!({
+                "productRef": { "type": "string" },
+                "limit": { "type": "integer" }
+            }),
+            &[],
         ),
         "activate_plan" => json_schema(
             json!({
-                "productRef": { "type": "string" },
                 "planRef": { "type": "string" },
-                "mode": mode_schema()
+                "productRef": { "type": "string" }
             }),
-            &[],
+            &["planRef"],
         ),
         _ => json_schema(json!({}), &[]),
     }
 }
 
-fn tool_from_meta(meta: ToolDescriptorMetadata) -> McpToolDescriptor {
+fn tool_from_meta(meta: ToolDescriptorMetadata, views: Option<&[String]>) -> McpToolDescriptor {
     let name = meta.name.clone();
     let annotations = serde_json::to_value(&meta.annotations).unwrap_or_else(|_| json!({}));
     let icons = meta
@@ -276,7 +316,7 @@ fn tool_from_meta(meta: ToolDescriptorMetadata) -> McpToolDescriptor {
         annotations,
         meta: meta.meta,
         icons,
-        input_schema: input_schema_for(&name),
+        input_schema: input_schema_for(&name, views),
         output_schema: output_schema_for(&name),
     }
 }
@@ -305,7 +345,7 @@ pub fn mcp_descriptors(input: &McpDescriptorsInput) -> Result<McpDescriptors, St
     };
     let tools = build_tool_descriptor_metadata(&options)
         .into_iter()
-        .map(tool_from_meta)
+        .map(|meta| tool_from_meta(meta, input.views.as_deref()))
         .collect();
     let prompts = build_prompt_descriptor_metadata(&BuildPromptDescriptorMetadataOptions {
         views: input.views.clone(),

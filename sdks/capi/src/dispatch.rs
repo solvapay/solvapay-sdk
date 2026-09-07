@@ -11,10 +11,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::SolvaPayClient;
 
@@ -200,9 +201,17 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
             let params: DisableAutoRechargeParams = parse_args_json(&args_json)?;
             client.disable_auto_recharge(params).await
         })),
+        "listPurchases" => runtime::runtime().block_on(run_envelope(async move {
+            let params: ListPurchasesParams = parse_args_json(&args_json)?;
+            client.list_purchases(params).await
+        })),
         "mcpBootstrap" => runtime::runtime().block_on(run_envelope(async move {
             let params: solvapay_transport::McpBootstrapParams = parse_args_json(&args_json)?;
             client.mcp_bootstrap(params).await
+        })),
+        "getCreditActivity" => runtime::runtime().block_on(run_envelope(async move {
+            let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+            client.get_credit_activity(params).await
         })),
         "mcpCallBuiltinTool" => runtime::runtime().block_on(run_envelope(async move {
             let params: solvapay_transport::McpCallBuiltinToolParams = parse_args_json(&args_json)?;

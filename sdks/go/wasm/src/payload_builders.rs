@@ -3,19 +3,26 @@
 
 use serde_json::{Map, Value};
 use solvapay_core::{
+    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
+    CreditsToDisplayInput, MerchantBranding, PaywallGate, ResponseEnvelope, SdkError,
+    SellerIdentityInput,
+};
+
+use solvapay_core::{
     assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
     build_prompt_user_message, build_tool_descriptor_metadata, credits_to_display_minor_units,
     derive_icons, derive_tax_id_type, format_price, format_subtotal_label,
-    format_vat_summary_label, get_business_country_options,
-    get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, invoke_payable_next, is_unlimited_remaining, is_zero_decimal_currency,
-    make_response_result, mcp_tool_names_json, mcp_view_maps, minor_units_per_major,
-    paywall_tool_result, resolve_seller_identity_display, resolve_tax_behavior,
+    format_vat_summary_label, get_business_country_options, get_customer_address_field_errors,
+    get_postal_code_field_label, get_postal_code_placeholder,
+    get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
+    get_tax_id_field_label, get_tax_id_helper_text, invoke_payable_next,
+    is_customer_address_complete, is_postal_code_required, is_state_required,
+    is_unlimited_remaining, is_zero_decimal_currency, make_response_result, mcp_tool_names_json,
+    mcp_view_maps, minor_units_per_major, paywall_tool_result, postal_code_required_countries,
+    resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, tax_not_collected_note, to_major_units, validate_business_details,
-    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
-    BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
-    MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
+    should_show_tax_row, state_required_countries, tax_not_collected_note, to_major_units,
+    validate_business_details, validate_public_base_url,
 };
 
 use crate::abi::{pack, read_string};
@@ -42,14 +49,17 @@ pub unsafe extern "C" fn sv_format_price_binding(args_ptr: *mut u8, args_len: us
         let interval_count = optional_f64(&args, "intervalCount")?;
         let free = optional_string(&args, "free")?;
         let currency_display = optional_string(&args, "currencyDisplay")?;
-        Ok(Value::String(format_price(
-            amount_minor,
-            &currency,
-            interval.as_deref(),
-            interval_count,
-            free.as_deref(),
-            currency_display.as_deref(),
-        )))
+        Ok(Value::String(
+            format_price(
+                amount_minor,
+                &currency,
+                interval.as_deref(),
+                interval_count,
+                free.as_deref(),
+                currency_display.as_deref(),
+            )
+            .to_owned(),
+        ))
     }))
 }
 
@@ -128,7 +138,9 @@ pub unsafe extern "C" fn sv_format_subtotal_label_binding(
     pack(run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let treatment = optional_string(&args, "treatment")?;
-        Ok(Value::String(format_subtotal_label(treatment.as_deref())))
+        Ok(Value::String(
+            format_subtotal_label(treatment.as_deref()).to_owned(),
+        ))
     }))
 }
 
@@ -167,10 +179,9 @@ pub unsafe extern "C" fn sv_format_vat_summary_label_binding(
         let args = args_map(&args_json)?;
         let treatment = optional_string(&args, "treatment")?;
         let tax_rate = require_f64(&args, "taxRate")?;
-        Ok(Value::String(format_vat_summary_label(
-            treatment.as_deref(),
-            tax_rate,
-        )))
+        Ok(Value::String(
+            format_vat_summary_label(treatment.as_deref(), tax_rate).to_owned(),
+        ))
     }))
 }
 
@@ -252,7 +263,7 @@ pub unsafe extern "C" fn sv_reverse_charge_note_binding(args_ptr: *mut u8, args_
     let args_json = read_string(args_ptr, args_len);
     pack(run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
-        Ok(Value::String(reverse_charge_note()))
+        Ok(Value::String(reverse_charge_note().to_owned()))
     }))
 }
 
@@ -297,7 +308,7 @@ pub unsafe extern "C" fn sv_tax_not_collected_note_binding(
     let args_json = read_string(args_ptr, args_len);
     pack(run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
-        Ok(Value::String(tax_not_collected_note()))
+        Ok(Value::String(tax_not_collected_note().to_owned()))
     }))
 }
 
@@ -372,6 +383,46 @@ pub unsafe extern "C" fn sv_credits_to_display_minor_units_binding(
     }))
 }
 
+// --- business-details ---
+
+/// Binding for `resolveBuyerCountry`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_resolve_buyer_country_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        to_value(&resolve_buyer_country(&input))
+    }))
+}
+
+/// Binding for `getCustomerAddressFieldErrors`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_get_customer_address_field_errors_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        to_value(&get_customer_address_field_errors(&input))
+    }))
+}
+
+// --- credit-display ---
+
 /// Binding for `isZeroDecimalCurrency`.
 ///
 /// # Safety
@@ -390,6 +441,28 @@ pub unsafe extern "C" fn sv_is_zero_decimal_currency_binding(
     }))
 }
 
+// --- business-details ---
+
+/// Binding for `isCustomerAddressComplete`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_is_customer_address_complete_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        Ok(Value::Bool(is_customer_address_complete(&input)))
+    }))
+}
+
+// --- credit-display ---
+
 /// Binding for `minorUnitsPerMajor`.
 ///
 /// # Safety
@@ -405,6 +478,26 @@ pub unsafe extern "C" fn sv_minor_units_per_major_binding(
         let args = args_map(&args_json)?;
         let currency = require_string(&args, "currency")?;
         Ok(Value::from(minor_units_per_major(&currency)))
+    }))
+}
+
+// --- business-details ---
+
+/// Binding for `isPostalCodeRequired`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_is_postal_code_required_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::Bool(is_postal_code_required(&country)))
     }))
 }
 
@@ -447,11 +540,30 @@ pub unsafe extern "C" fn sv_get_seller_tax_identifier_display_label_binding(
     pack(run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let country = optional_string(&args, "country")?;
-        Ok(Value::String(get_seller_tax_identifier_display_label(
-            country.as_deref(),
-        )))
+        Ok(Value::String(
+            get_seller_tax_identifier_display_label(country.as_deref()).to_owned(),
+        ))
     }))
 }
+
+// --- business-details ---
+
+/// Binding for `isStateRequired`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_is_state_required_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::Bool(is_state_required(&country)))
+    }))
+}
+
+// --- seller-identity ---
 
 /// Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
 ///
@@ -471,6 +583,46 @@ pub unsafe extern "C" fn sv_seller_tax_identifier_display_label_by_type_binding(
             map.insert((*key).to_owned(), Value::String((*label).to_owned()));
         }
         Ok(Value::Object(map))
+    }))
+}
+
+// --- business-details ---
+
+/// Binding for `getStateFieldLabel`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_get_state_field_label_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(get_state_field_label(&country).to_owned()))
+    }))
+}
+
+/// Binding for `getPostalCodeFieldLabel`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_get_postal_code_field_label_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(
+            get_postal_code_field_label(&country).to_owned(),
+        ))
     }))
 }
 
@@ -511,6 +663,30 @@ pub unsafe extern "C" fn sv_paywall_tool_result_binding(args_ptr: *mut u8, args_
         to_value(&paywall_tool_result(&message, &gate))
     }))
 }
+
+// --- business-details ---
+
+/// Binding for `getPostalCodePlaceholder`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_get_postal_code_placeholder_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(
+            get_postal_code_placeholder(&country).to_owned(),
+        ))
+    }))
+}
+
+// --- MCP payload / descriptors ---
 
 /// Binding for `makeResponseResult`.
 ///
@@ -562,6 +738,27 @@ pub unsafe extern "C" fn sv_make_response_result_binding(
     }))
 }
 
+// --- business-details ---
+
+/// Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_postal_code_required_countries_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&postal_code_required_countries())
+    }))
+}
+
+// --- MCP payload / descriptors ---
+
 /// Binding for `assertResponseResult` — brand failures are Transport errors
 /// (TS wrapper rethrows as plain `Error` for fixture name parity).
 ///
@@ -600,6 +797,27 @@ pub unsafe extern "C" fn sv_mcp_tool_names_binding(args_ptr: *mut u8, args_len: 
         Ok(mcp_tool_names_json())
     }))
 }
+
+// --- business-details ---
+
+/// Binding for `STATE_REQUIRED_COUNTRIES`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_state_required_countries_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&state_required_countries())
+    }))
+}
+
+// --- MCP payload / descriptors ---
 
 /// Binding for `mcpViewMaps`.
 ///

@@ -24,6 +24,7 @@ import {
   isErrorResult,
   mapRouteError,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
+  evaluateClaimedLimits,
   requireProductRef,
   resolveCheckLimitsParams,
   resolveCustomerRef,
@@ -135,6 +136,30 @@ const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
   maxCacheSize: CUSTOMER_DEDUP_MAX_CACHE_SIZE,
   cacheErrors: false,
 })
+
+const sharedCheckLimitsDeduplicator = createRequestDeduplicator<LimitResponseWithPlan>({
+  cacheTTL: 0,
+  maxCacheSize: CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+  cacheErrors: false,
+})
+
+const sharedCheckLimitsClaims = new Map<string, number>()
+
+function overlayClaimedLimits(
+  limits: LimitResponseWithPlan,
+  claimed: number,
+): LimitResponseWithPlan {
+  const remaining = typeof limits.remaining === 'number' ? limits.remaining : 0
+  const withinLimits = limits.withinLimits === true
+  const evaluation = evaluateClaimedLimits(withinLimits, remaining, claimed)
+  if (remaining === -1 || (withinLimits && remaining === 0)) {
+    return { ...limits, withinLimits: evaluation.withinLimits, remaining: evaluation.remaining }
+  }
+  if (!evaluation.withinLimits) {
+    return { ...limits, withinLimits: false, remaining: 0 }
+  }
+  return { ...limits, withinLimits: true, remaining: evaluation.remaining + 1 }
+}
 
 interface LimitsCacheEntry {
   remaining: number
@@ -287,7 +312,9 @@ export class SolvaPayPaywall {
       product,
       usageType,
       startedMs: startTime,
+      randomUnit: Math.random(),
       limitsCacheTTLMs: this.limitsCacheTTL,
+      ...(metadata.toolName ? { toolName: metadata.toolName } : {}),
     }
 
     for (;;) {
@@ -316,9 +343,8 @@ export class SolvaPayPaywall {
               limits: cached.limits,
               timestampMs: cached.timestamp,
               nowMs: now,
-              randomUnit: Math.random(),
             }
-          : { kind: 'limitsCacheEntry', found: false, nowMs: now, randomUnit: Math.random() }
+          : { kind: 'limitsCacheEntry', found: false, nowMs: now }
         continue
       }
 
@@ -326,17 +352,22 @@ export class SolvaPayPaywall {
         if (typeof action.cacheDeleteKey === 'string') {
           this.limitsCache.delete(action.cacheDeleteKey)
         }
-        const limitsCheck = await this.apiClient.checkLimits({
-          customerRef: String(action.customerRef),
-          productRef: String(action.productRef),
-          meterName: String(action.meterName),
-          includeCheckoutSession: action.includeCheckoutSession === true,
+        const dedupKey = `${String(action.customerRef)}:${String(action.productRef)}:${String(action.meterName)}`
+        const limitsCheck = await sharedCheckLimitsDeduplicator.deduplicate(dedupKey, async () => {
+          sharedCheckLimitsClaims.set(dedupKey, 0)
+          return this.apiClient.checkLimits({
+            customerRef: String(action.customerRef),
+            productRef: String(action.productRef),
+            meterName: String(action.meterName),
+            includeCheckoutSession: action.includeCheckoutSession === true,
+          })
         })
+        const claimed = (sharedCheckLimitsClaims.get(dedupKey) ?? 0) + 1
+        sharedCheckLimitsClaims.set(dedupKey, claimed)
         event = {
           kind: 'limitsResult',
-          limits: limitsCheck,
+          limits: overlayClaimedLimits(limitsCheck, claimed),
           nowMs: Date.now(),
-          randomUnit: Math.random(),
         }
         continue
       }
@@ -353,6 +384,7 @@ export class SolvaPayPaywall {
           gate: action.gate as PaywallStructuredContent,
           limits: action.limits as LimitResponseWithPlan,
           customerRef: String(action.customerRef),
+          requestId: action.requestId,
         }
       }
 
@@ -364,6 +396,7 @@ export class SolvaPayPaywall {
           limits: action.limits as LimitResponseWithPlan,
           customerRef: String(action.customerRef),
           driverState: state,
+          requestId: action.requestId,
           ...(action.consequence !== undefined ? { consequence: action.consequence } : {}),
         }
       }
@@ -417,7 +450,6 @@ export class SolvaPayPaywall {
         kind: 'handlerSucceeded',
         durationMs: latencyMs,
         nowMs: Date.now(),
-        randomUnit: Math.random(),
       })
       return result
     } catch (error) {
@@ -432,7 +464,6 @@ export class SolvaPayPaywall {
         kind: 'handlerFailed',
         durationMs: latencyMs,
         nowMs: Date.now(),
-        randomUnit: Math.random(),
         errorMessage: error instanceof Error ? error.message : String(error),
         isPaywallError: error instanceof PaywallError,
       })

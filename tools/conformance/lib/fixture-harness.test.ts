@@ -123,7 +123,10 @@ describe('paywall bindings', () => {
       product: 'prd_demo',
       plans: [{ reference: 'pl_pro', type: 'usage-based', requiresPayment: true }],
     })
-    expect(result).toHaveProperty('message', expect.stringContaining('`topup`'))
+    expect(result).toHaveProperty(
+      'message',
+      expect.stringContaining("`account` tool with view: 'topup'"),
+    )
   })
 
   it('buildGateMessage returns byte-exact topup copy with url clause', () => {
@@ -140,7 +143,7 @@ describe('paywall bindings', () => {
         },
       }),
     ).toBe(
-      "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+      "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
     )
   })
 

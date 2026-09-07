@@ -29,7 +29,10 @@
   "expect": {
     "result": {
       "toolResult": {
-        "content": [{ "type": "text", "text": "Found 1 result" }],
+        "content": [
+          { "type": "text", "text": "Found 1 result" },
+          { "type": "text", "text": "{\"x\":1}" }
+        ],
         "structuredContent": { "x": 1 }
       },
       "usage": [

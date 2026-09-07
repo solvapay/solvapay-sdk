@@ -124,22 +124,22 @@ curl -s "$WORKER/.well-known/oauth-authorization-server" | jq '.issuer'
 
 In MCPJam Inspector:
 
-| Field | Value |
-| ----- | ----- |
-| **URL** | `https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev` |
-| **Auth** | OAuth |
-| **Protocol** | `2025-06-18` |
-| **Registration** | Dynamic Client Registration (DCR) |
+| Field            | Value                                                          |
+| ---------------- | -------------------------------------------------------------- |
+| **URL**          | `https://supabase-edge-mcp-proxy.<your-subdomain>.workers.dev` |
+| **Auth**         | OAuth                                                          |
+| **Protocol**     | `2025-06-18`                                                   |
+| **Registration** | Dynamic Client Registration (DCR)                              |
 
 Do **not** use the raw Supabase URL in MCPJam — OAuth discovery will fail.
 
 ### Quick reference — what runs where
 
-| Component | URL | Purpose |
-| --------- | --- | ------- |
-| Supabase function | `https://<ref>.supabase.co/functions/v1/mcp` | MCP server + OAuth bridge (backend) |
-| Cloudflare proxy | `https://supabase-edge-mcp-proxy.<sub>.workers.dev` | Root URL for MCP clients + RFC 9728 discovery |
-| MCPJam | proxy URL above | Browser MCP client |
+| Component         | URL                                                 | Purpose                                       |
+| ----------------- | --------------------------------------------------- | --------------------------------------------- |
+| Supabase function | `https://<ref>.supabase.co/functions/v1/mcp`        | MCP server + OAuth bridge (backend)           |
+| Cloudflare proxy  | `https://supabase-edge-mcp-proxy.<sub>.workers.dev` | Root URL for MCP clients + RFC 9728 discovery |
+| MCPJam            | proxy URL above                                     | Browser MCP client                            |
 
 ## Setup (Supabase only — no MCPJam)
 
@@ -174,11 +174,11 @@ curl -s http://localhost:54321/functions/v1/mcp/.well-known/oauth-authorization-
 
 The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`), so the import map alone decides where `@solvapay/*` resolves. Three configs cover three genuinely different jobs:
 
-| File                                     | Job                                            | `@solvapay/*` resolves to                                                        |
-| ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| File                                     | Job                                            | `@solvapay/*` resolves to                                                           |
+| ---------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `supabase/functions/mcp/deno.json`       | production `supabase functions deploy`         | `npm:@solvapay/mcp@preview` — the deployed function must consume published packages |
-| `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check  | same `@preview` pins                                                             |
-| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `packages/*`                                              |
+| `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check | same `@preview` pins                                                                |
+| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `packages/*`                                                 |
 
 `deno.local.json` stays on `@preview` for `serve:local` because the Supabase CLI runs the function inside a Docker edge runtime that mounts only `supabase/functions` — symlinks escaping to `../../../../packages/*` are unreachable from inside the container.
 
@@ -196,12 +196,12 @@ Because the workspace gate reads the branch rather than a dist-tag, a feature br
 
 `createSolvaPayMcpFetchHandler` is a single `(req: Request) => Promise<Response>` function that internally routes on `new URL(req.url).pathname`:
 
-| Path prefix                                                    | Behaviour                                                                                            |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/.well-known/openid-configuration` | Serves the issuer-scoped OAuth discovery JSON (mirror of `buildOAuthDiscovery()` in `@solvapay/mcp-core`). |
-| `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`  | Proxies to the SolvaPay OAuth backend with byte-verbatim body forwarding (so `+` vs `%20` in form-encoded bodies survives unchanged) and normalised error shapes. |
-| `/mcp` (or whatever you set `mcpPath` to)                      | JSON-RPC MCP transport. Bearer-authenticated; 401 + `WWW-Authenticate` challenge on missing/invalid token. |
-| `OPTIONS *`                                                    | CORS preflight. Mirrors `Origin` only when it matches `/^(cursor|vscode|vscode-webview|claude):\/\/.+$/` — native-scheme clients only. |
+| Path prefix                                                                                                             | Behaviour                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------- | ----------------------------------------------- |
+| `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/.well-known/openid-configuration` | Serves the issuer-scoped OAuth discovery JSON (mirror of `buildOAuthDiscovery()` in `@solvapay/mcp-core`).                                                        |
+| `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`                                                  | Proxies to the SolvaPay OAuth backend with byte-verbatim body forwarding (so `+` vs `%20` in form-encoded bodies survives unchanged) and normalised error shapes. |
+| `/mcp` (or whatever you set `mcpPath` to)                                                                               | JSON-RPC MCP transport. Bearer-authenticated; 401 + `WWW-Authenticate` challenge on missing/invalid token.                                                        |
+| `OPTIONS *`                                                                                                             | CORS preflight. Mirrors `Origin` only when it matches `/^(cursor                                                                                                  | vscode | vscode-webview | claude):\/\/.+$/` — native-scheme clients only. |
 
 See [`packages/mcp-fetch/src/handler.ts`](../../packages/mcp-fetch/src/handler.ts) for the exact implementation.
 
@@ -233,13 +233,13 @@ supabase secrets set DEMO_TOOLS=false
 
 This example is type-checked under a real Deno binary in three places — not a test, an actual `deno check`. **Any change that breaks the canonical Supabase Edge consumer blocks the merge.**
 
-| Workflow                                                                     | Step                    | Reads                     |
-| ---------------------------------------------------------------------------- | ----------------------- | ------------------------- |
-| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`    | workspace source          |
-| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`)  | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
-| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                 | `validate:workspace`    | workspace source          |
+| Workflow                                                                     | Step                                                                         | Reads                                          |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
+| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`                                                         | workspace source                               |
+| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`) | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
+| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                | `validate:workspace`                                                         | workspace source                               |
 
-The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only *after* `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
+The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only _after_ `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
 
 `publish.yml` has no dist-tag-pinned gate at all: it ships `@latest`, so `@preview` would validate an artifact the run did not produce and `@latest` would validate the previous release.
 

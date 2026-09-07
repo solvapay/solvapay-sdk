@@ -15,13 +15,37 @@ pub struct McpPayableToolResult {
     /// Omitted on the allow path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_error: Option<bool>,
-    /// Emitted blocks, then one `{ type: "text", text }` primary block.
+    /// Emitted blocks, primary text, optional trailing JSON, optional nudge resource.
     pub content: Vec<Value>,
     /// Raw merchant `data` (not the branded envelope).
     pub structured_content: Value,
 }
 
+/// Compact JSON of `value`, preserving insertion order.
+fn compact_json(value: &Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "null".to_owned())
+}
+
+/// Resolve nudge copy from an explicit message, else [`build_nudge_message`].
+fn resolve_nudge_text(nudge: &Value) -> String {
+    let message = nudge.get("message").and_then(Value::as_str).unwrap_or("");
+    if !message.is_empty() {
+        return message.to_owned();
+    }
+    let kind = nudge.get("kind").and_then(Value::as_str).unwrap_or("");
+    let state = if kind == "low-balance" {
+        PaywallState::TopupRequired
+    } else {
+        PaywallState::UpgradeRequired
+    };
+    build_nudge_message(&state, None)
+}
+
 /// Unwrap a branded [`ResponseEnvelope`] into an MCP allow-path tool result.
+///
+/// Emits merchant/emitted blocks, primary text (with optional nudge suffix),
+/// a trailing JSON text block unless `options.dataInText` is `false`, and a
+/// `solvapay://nudge` resource when a nudge is present.
 ///
 /// # Arguments
 ///
@@ -41,37 +65,39 @@ pub struct McpPayableToolResult {
 )]
 pub fn build_payable_tool_result(envelope: &ResponseEnvelope) -> McpPayableToolResult {
     let options = envelope.options.as_ref().and_then(Value::as_object);
+    let compact_data = compact_json(&envelope.data);
     let text_override = options.and_then(|o| o.get("text")).and_then(Value::as_str);
     let base_text = match text_override {
         Some(text) => text.to_owned(),
-        None => serde_json::to_string(&envelope.data).unwrap_or_else(|_| "null".to_owned()),
+        None => compact_data.clone(),
     };
 
-    let primary_text = match options.and_then(|o| o.get("nudge")) {
-        Some(nudge) => {
-            let message = nudge.get("message").and_then(Value::as_str).unwrap_or("");
-            let nudge_text = if !message.is_empty() {
-                message.to_owned()
-            } else {
-                let kind = nudge.get("kind").and_then(Value::as_str).unwrap_or("");
-                let state = if kind == "low-balance" {
-                    PaywallState::TopupRequired
-                } else {
-                    PaywallState::UpgradeRequired
-                };
-                build_nudge_message(&state, None)
-            };
-            if base_text.is_empty() {
-                nudge_text
-            } else {
-                format!("{base_text}\n\n{nudge_text}")
-            }
-        }
+    let nudge_text = options.and_then(|o| o.get("nudge")).map(resolve_nudge_text);
+    let primary_text = match nudge_text.as_deref() {
+        Some(nudge) if base_text.is_empty() => nudge.to_owned(),
+        Some(nudge) => format!("{base_text}\n\n{nudge}"),
         None => base_text,
     };
+    let data_in_text = options
+        .and_then(|o| o.get("dataInText"))
+        .and_then(Value::as_bool)
+        != Some(false);
 
     let mut content = envelope.emitted_blocks.clone();
     content.push(json!({ "type": "text", "text": primary_text }));
+    if data_in_text {
+        content.push(json!({ "type": "text", "text": compact_data }));
+    }
+    if let Some(nudge) = nudge_text {
+        content.push(json!({
+            "type": "resource",
+            "resource": {
+                "uri": "solvapay://nudge",
+                "mimeType": "text/plain",
+                "text": nudge,
+            }
+        }));
+    }
 
     McpPayableToolResult {
         is_error: None,
@@ -93,22 +119,16 @@ mod tests {
     use crate::mcp::envelope::make_response_result;
     use serde_json::json;
 
-    fn text_of(result: &McpPayableToolResult) -> &str {
-        result
-            .content
-            .last()
-            .unwrap()
-            .get("text")
-            .unwrap()
-            .as_str()
-            .unwrap()
+    fn text_at(result: &McpPayableToolResult, index: usize) -> &str {
+        result.content[index].get("text").unwrap().as_str().unwrap()
     }
 
     #[test]
     fn minimal_respond_compacts_data() {
         let env = make_response_result(json!({ "foo": "bar", "list": [1, 2, 3] }), None, vec![]);
         let result = build_payable_tool_result(&env);
-        assert_eq!(text_of(&result), r#"{"foo":"bar","list":[1,2,3]}"#);
+        assert_eq!(text_at(&result, 0), r#"{"foo":"bar","list":[1,2,3]}"#);
+        assert_eq!(text_at(&result, 1), r#"{"foo":"bar","list":[1,2,3]}"#);
         assert_eq!(
             result.structured_content,
             json!({ "foo": "bar", "list": [1, 2, 3] })
@@ -125,8 +145,21 @@ mod tests {
             vec![],
         );
         let result = build_payable_tool_result(&env);
-        assert_eq!(text_of(&result), "Found 1 result");
+        assert_eq!(text_at(&result, 0), "Found 1 result");
+        assert_eq!(text_at(&result, 1), r#"{"x":1}"#);
         assert_eq!(result.structured_content, json!({ "x": 1 }));
+    }
+
+    #[test]
+    fn data_in_text_false_omits_trailing_json() {
+        let env = make_response_result(
+            json!({ "foo": "bar" }),
+            Some(json!({ "dataInText": false })),
+            vec![],
+        );
+        let result = build_payable_tool_result(&env);
+        assert_eq!(result.content.len(), 1);
+        assert_eq!(text_at(&result, 0), r#"{"foo":"bar"}"#);
     }
 
     #[test]
@@ -139,7 +172,19 @@ mod tests {
             vec![],
         );
         let result = build_payable_tool_result(&env);
-        assert_eq!(text_of(&result), "{\"y\":2}\n\nRunning low on credits");
+        assert_eq!(text_at(&result, 0), "{\"y\":2}\n\nRunning low on credits");
+        assert_eq!(text_at(&result, 1), "{\"y\":2}");
+        assert_eq!(
+            result.content[2],
+            json!({
+                "type": "resource",
+                "resource": {
+                    "uri": "solvapay://nudge",
+                    "mimeType": "text/plain",
+                    "text": "Running low on credits"
+                }
+            })
+        );
         assert_eq!(result.structured_content, json!({ "y": 2 }));
     }
 
@@ -160,6 +205,7 @@ mod tests {
                 json!({ "type": "text", "text": "intermediate 1" }),
                 json!({ "type": "text", "text": "intermediate 2" }),
                 json!({ "type": "text", "text": "{\"final\":true}" }),
+                json!({ "type": "text", "text": "{\"final\":true}" }),
             ]
         );
     }
@@ -173,14 +219,16 @@ mod tests {
         );
         let result = build_payable_tool_result(&env);
         let expected = build_nudge_message(&PaywallState::TopupRequired, None);
-        assert_eq!(text_of(&result), format!("{{\"z\":3}}\n\n{expected}"));
+        assert_eq!(text_at(&result, 0), format!("{{\"z\":3}}\n\n{expected}"));
+        assert_eq!(text_at(&result, 1), r#"{"z":3}"#);
     }
 
     #[test]
     fn key_order_is_insertion_not_sorted() {
         let env = make_response_result(json!({ "zebra": 1, "apple": 2 }), None, vec![]);
         let result = build_payable_tool_result(&env);
-        assert_eq!(text_of(&result), r#"{"zebra":1,"apple":2}"#);
-        assert_ne!(text_of(&result), r#"{"apple":2,"zebra":1}"#);
+        assert_eq!(text_at(&result, 0), r#"{"zebra":1,"apple":2}"#);
+        assert_eq!(text_at(&result, 1), r#"{"zebra":1,"apple":2}"#);
+        assert_ne!(text_at(&result, 0), r#"{"apple":2,"zebra":1}"#);
     }
 }

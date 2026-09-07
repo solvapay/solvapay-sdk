@@ -17,7 +17,7 @@
           "role": "user",
           "content": {
             "type": "text",
-            "text": "Activate plan pln_free on my SolvaPay account."
+            "text": "Call the `activate_plan` tool with planRef pln_free."
           }
         }
       ]

@@ -8,74 +8,63 @@ import {
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
   deriveIcons,
+  MCP_PROMPT_NAMES,
   MCP_TOOL_NAMES,
   PUBLIC_BASE_URL_ERROR,
   validatePublicBaseUrl,
 } from '../src'
 
+const ALL_TOOLS = [
+  MCP_TOOL_NAMES.account,
+  MCP_TOOL_NAMES.createHostedSession,
+  MCP_TOOL_NAMES.createPayment,
+  MCP_TOOL_NAMES.processPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
+  MCP_TOOL_NAMES.setRenewal,
+  MCP_TOOL_NAMES.getHistory,
+  MCP_TOOL_NAMES.activatePlan,
+] as const
+
+const TRANSPORT_PLUS_ACTIVATE = [
+  MCP_TOOL_NAMES.createHostedSession,
+  MCP_TOOL_NAMES.createPayment,
+  MCP_TOOL_NAMES.processPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
+  MCP_TOOL_NAMES.setRenewal,
+  MCP_TOOL_NAMES.getHistory,
+  MCP_TOOL_NAMES.activatePlan,
+] as const
+
 describe('buildToolDescriptorMetadata', () => {
-  it('emits all 12 tools in registration order by default', () => {
+  it('emits all 8 tools in registration order by default', () => {
     const tools = buildToolDescriptorMetadata({ resourceUri: 'ui://test/view.html' })
-    expect(tools.map(t => t.name)).toEqual([
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createPayment,
-      MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createCustomerSession,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.activatePlan,
-    ])
+    expect(tools.map(t => t.name)).toEqual([...ALL_TOOLS])
   })
 
-  it('filters intent tools by views and keeps transport + activate_plan', () => {
+  it('keeps the unified account viewer when views is checkout-only', () => {
     const checkoutOnly = buildToolDescriptorMetadata({
       resourceUri: 'ui://test/view.html',
       views: ['checkout'],
     })
-    expect(checkoutOnly.map(t => t.name)).toEqual([
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createPayment,
-      MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createCustomerSession,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.activatePlan,
-    ])
+    expect(checkoutOnly.map(t => t.name)).toEqual([...ALL_TOOLS])
 
     const empty = buildToolDescriptorMetadata({
       resourceUri: 'ui://test/view.html',
       views: [],
     })
-    expect(empty.map(t => t.name)).toEqual([
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createPayment,
-      MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createCustomerSession,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.activatePlan,
-    ])
+    expect(empty.map(t => t.name)).toEqual([...TRANSPORT_PLUS_ACTIVATE])
   })
 
   it('stamps toolMeta vs uiToolMeta correctly', () => {
     const tools = buildToolDescriptorMetadata({ resourceUri: 'ui://x' })
-    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
-    const createPayment = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)!
-    expect(upgrade.meta).toEqual({ ui: { resourceUri: 'ui://x' } })
-    expect(createPayment.meta).toEqual({
+    const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+    const createPayment = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)
+    expect(account?.meta).toEqual({ ui: { resourceUri: 'ui://x' } })
+    expect(createPayment?.meta).toEqual({
       ui: { resourceUri: 'ui://x', visibility: ['app'] },
       audience: 'ui',
       'openai/widgetAccessible': true,
+      'openai/visibility': 'private',
     })
   })
 
@@ -93,25 +82,36 @@ describe('buildToolDescriptorMetadata', () => {
 describe('buildPromptDescriptorMetadata / buildPromptUserMessage', () => {
   it('emits four prompts for all views and drops checkout prompts when disabled', () => {
     expect(buildPromptDescriptorMetadata().map(p => p.name)).toEqual([
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.activatePlan,
+      MCP_PROMPT_NAMES.upgrade,
+      MCP_PROMPT_NAMES.manageAccount,
+      MCP_PROMPT_NAMES.topup,
+      MCP_PROMPT_NAMES.activatePlan,
     ])
-    expect(buildPromptDescriptorMetadata({ views: ['account'] }).map(p => p.name)).toEqual([
-      MCP_TOOL_NAMES.manageAccount,
-    ])
+    expect(buildPromptDescriptorMetadata({ views: ['account', 'topup'] }).map(p => p.name)).toEqual(
+      [MCP_PROMPT_NAMES.manageAccount, MCP_PROMPT_NAMES.topup, MCP_PROMPT_NAMES.activatePlan],
+    )
   })
 
   it('builds exact user messages', () => {
-    expect(buildPromptUserMessage(MCP_TOOL_NAMES.upgrade, { planRef: 'pln_x' })).toEqual({
-      messages: [{ role: 'user', content: { type: 'text', text: 'Activate plan pln_x for me.' } }],
-    })
-    expect(buildPromptUserMessage(MCP_TOOL_NAMES.topup, {})).toEqual({
+    expect(buildPromptUserMessage(MCP_PROMPT_NAMES.upgrade, { planRef: 'pln_pro' })).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'I want to top up my SolvaPay credits.' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "checkout", then activate plan pln_pro.',
+          },
+        },
+      ],
+    })
+    expect(buildPromptUserMessage(MCP_PROMPT_NAMES.topup, {})).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "topup" to add SolvaPay credits.',
+          },
         },
       ],
     })

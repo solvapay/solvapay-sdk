@@ -199,13 +199,14 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const appearanceReady = appearance !== undefined || rootEl !== null
     const shouldRenderElements = !!(stripePromise && clientSecret && appearanceReady)
 
-    const dataState = !hasPlanOrProduct || checkoutError
-      ? 'error'
-      : isFreePlan && resolvedPlan
-        ? 'ready'
-        : shouldRenderElements
+    const dataState =
+      !hasPlanOrProduct || checkoutError
+        ? 'error'
+        : isFreePlan && resolvedPlan
           ? 'ready'
-          : 'loading'
+          : shouldRenderElements
+            ? 'ready'
+            : 'loading'
     const dataVariant =
       isFreePlan && resolvedPlan ? 'free' : shouldRenderElements ? 'paid' : undefined
 
@@ -379,7 +380,12 @@ const PaidInner: React.FC<{
 
   useEffect(() => {
     const stripeApi = stripeRef.current
-    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+    if (
+      !stripeAvailable ||
+      !stripeApi ||
+      returnResumeStarted.current ||
+      typeof window === 'undefined'
+    ) {
       return
     }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
@@ -540,7 +546,9 @@ const PaidInner: React.FC<{
         billingDetails: buildConfirmBillingDetails({
           name: customerName.trim() || customer.name,
           email: customer.email ?? prefillCustomer?.email,
-          country: resolveBuyerCountry(businessDetails),
+          // Core returns `null` for "no country resolved"; the billing-details
+          // builder treats the field as optional, so bridge the conventions here.
+          country: resolveBuyerCountry(businessDetails) ?? undefined,
           state: businessDetails.customerState,
           postalCode: businessDetails.customerPostalCode,
         }),

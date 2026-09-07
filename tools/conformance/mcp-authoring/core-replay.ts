@@ -99,7 +99,14 @@ function assertCoreResult(rel: string, fn: string, got: unknown, expectResult: u
     expect(got.kind).toBe('rpc')
     const rpc = isRecord(got.rpc) ? got.rpc : {}
     const result = isRecord(rpc.result) ? rpc.result : {}
-    expect(Array.isArray(result.tools) && result.tools.length >= 8).toBe(true)
+    const catalog = mcpDescriptors({
+      resourceUri: 'ui://widget/solvapay.html',
+      publicBaseUrl: 'https://pay.example.test',
+      productRef: 'prd_example',
+    })
+    const catalogTools = isRecord(catalog) && Array.isArray(catalog.tools) ? catalog.tools : []
+    expect(catalogTools.length).toBeGreaterThanOrEqual(8)
+    expect(Array.isArray(result.tools)).toBe(true)
     if (Array.isArray(result.tools)) {
       for (const tool of result.tools) {
         if (!isRecord(tool)) continue

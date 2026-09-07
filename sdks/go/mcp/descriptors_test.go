@@ -55,11 +55,11 @@ func TestDescriptorsViewsCheckoutOnlyDropsAccountAndTopup(t *testing.T) {
 	for _, tool := range got.Tools {
 		names[tool.Name] = true
 	}
-	if !names["upgrade"] {
-		t.Fatal("expected upgrade tool")
+	if !names["account"] {
+		t.Fatal("expected account tool")
 	}
-	if names["manage_account"] || names["topup"] {
-		t.Fatalf("checkout-only views must drop account/topup tools, got %v", names)
+	if names["upgrade"] || names["manage_account"] || names["topup"] {
+		t.Fatalf("checkout-only views must drop retired viewer tools, got %v", names)
 	}
 }
 

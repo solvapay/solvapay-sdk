@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "account-state-activation-required",
+  "input": {
+    "fn": "resolveAccountState",
+    "args": {
+      "input": {
+        "purchase": { "planSnapshot": { "requiresPayment": false } },
+        "limits": { "activationRequired": true, "remaining": 0, "withinLimits": false }
+      }
+    }
+  },
+  "expect": {
+    "result": "H"
+  }
+}

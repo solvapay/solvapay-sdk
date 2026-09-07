@@ -88,9 +88,7 @@ function Wrap({ value, children }: { value: SolvaPayContextValue; children: Reac
 
 async function selectBuyerCountry(value = 'SE') {
   await waitFor(() => {
-    expect(
-      document.querySelector('[data-solvapay-topup-form][data-state="ready"]'),
-    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-topup-form][data-state="ready"]')).toBeTruthy()
   })
   const country = await screen.findByRole('combobox', { name: /country/i })
   await act(async () => {

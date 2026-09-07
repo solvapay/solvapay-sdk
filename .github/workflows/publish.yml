@@ -22,9 +22,16 @@ name: Publish Stable Releases
 # Manual `workflow_dispatch` defaults to dry-run: full pre-publish gates, then
 # `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN, skips
 # changesets/action). Set `dry_run=false` to take the real publish/PR path.
-# Push-to-main is always the real path. `workflow_dispatch` inputs resolve
-# against the default branch — a dry-run dispatch of this new input is a
-# post-merge action item until this lands on `main`.
+# Push-to-main is always the real path. Inputs resolve against the dispatched
+# ref (the workflow only has to exist on the default branch for dispatch to
+# be enabled), so a feature branch can be dry-run before merge. `force_native`
+# is dry-run only: it runs the 8-target native matrix even when changesets
+# are pending. It cannot enable a real native publish.
+#
+# Publish-leg (`.changeset/` has no pending `*.md` besides README.md): build
+# the 8 native targets, rewrite `file:` pins, publish the platform packages,
+# then run changesets. The Version Packages PR leg skips the native matrix
+# unless a dry-run dispatch sets `force_native`.
 on:
   push:
     branches:
@@ -36,13 +43,62 @@ on:
         required: false
         type: boolean
         default: true
+      force_native:
+        description: 'Dry-run only: run the 8-target native matrix even with pending changesets'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: publish-stable
   cancel-in-progress: false
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      publish_leg: ${{ steps.detect.outputs.publish_leg }}
+      native_leg: ${{ steps.detect.outputs.native_leg }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Detect publish leg
+        id: detect
+        shell: bash
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          FORCE_NATIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_native }}
+        run: |
+          set -euo pipefail
+          extras="$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print)"
+          if [ -n "${extras}" ]; then
+            publish_leg=false
+          else
+            publish_leg=true
+          fi
+          echo "publish_leg=${publish_leg}" >> "$GITHUB_OUTPUT"
+          if [ "${publish_leg}" = "true" ] || { [ "${DRY_RUN}" = "true" ] && [ "${FORCE_NATIVE}" = "true" ]; }; then
+            native_leg=true
+          else
+            native_leg=false
+          fi
+          echo "native_leg=${native_leg}" >> "$GITHUB_OUTPUT"
+          echo "pending changeset files:"
+          echo "${extras:-<none>}"
+
+  native-build:
+    needs: detect
+    if: needs.detect.outputs.native_leg == 'true'
+    uses: ./.github/workflows/native-build.yml
+
   release:
+    needs: [detect, native-build]
+    if: ${{ !cancelled() && needs.detect.result == 'success' && needs.native-build.result != 'failure' }}
     runs-on: ubuntu-latest
     env:
       SOLVAPAY_CORE_SHA: ${{ github.sha }}
@@ -140,6 +196,63 @@ jobs:
       # validate the *previous* release.
       - name: Validate fetch-runtime — Deno gate (workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
+
+      - name: Install native binding deps
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: npx napi create-npm-dirs
+
+      - name: Download native binding artifacts
+        if: needs.detect.outputs.native_leg == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/node-native/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: |
+          mkdir -p artifacts
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: node scripts/check-artifacts.mjs
+
+      - name: Prepare native publish pins
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm exec tsx tools/repo/prepare-native-publish.ts
+
+      - name: Publish native platform packages
+        if: needs.detect.outputs.native_leg == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts --dry-run
+          else
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts
+          fi
+
+      - name: Verify native platform packages landed on npm
+        if: ${{ needs.detect.outputs.native_leg == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: pnpm exec tsx tools/repo/verify-native-platform-publishes.ts
+
+      - name: Assert no local-path production deps
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --assert-no-local-paths
 
       - name: Dry-run npm publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}

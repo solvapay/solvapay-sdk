@@ -32,6 +32,10 @@
           {
             "type": "text",
             "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}"
+          },
+          {
+            "type": "text",
+            "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}"
           }
         ],
         "structuredContent": { "foo": "bar", "list": [1, 2, 3] }

@@ -10,12 +10,12 @@ use solvapay_dto::{
     CreateCustomerSessionResponse, CreatePaymentIntentParams, CreatePaymentIntentResult,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
     CreateTopupPaymentIntentResult, CustomerResponseMapped, DisableAutoRechargeParams,
-    GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, GrantCustomerCreditsResponse, McpBootstrapDto,
-    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
-    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
-    UserInfoResponse,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams,
+    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams,
+    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
+    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
 };
 
 use super::Client;
@@ -310,6 +310,22 @@ impl Client {
         self.inner.api.get_auto_recharge(params).await
     }
 
+    /// List account-wide credit activity for a customer, newest first.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Customer reference and optional page size.
+    ///
+    /// # Returns
+    ///
+    /// Credit activity page.
+    pub async fn get_credit_activity(
+        &self,
+        params: GetCreditActivityParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.get_credit_activity(params).await
+    }
+
     /// Fetch a customer by reference.
     ///
     /// # Arguments
@@ -417,6 +433,19 @@ impl Client {
     /// Product list projection.
     pub async fn list_products(&self) -> Result<Value, SdkError> {
         self.inner.api.list_products().await
+    }
+
+    /// List purchases for the authenticated provider, optionally filtered by customer, product, or status.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Optional purchase list filters.
+    ///
+    /// # Returns
+    ///
+    /// Purchase list wrapper.
+    pub async fn list_purchases(&self, params: ListPurchasesParams) -> Result<Value, SdkError> {
+        self.inner.api.list_purchases(params).await
     }
 
     /// Fan out merchant, product, plans, and customer snapshots for the MCP widget.

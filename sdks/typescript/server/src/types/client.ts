@@ -463,10 +463,7 @@ export interface SolvaPayClient {
   }): Promise<{ purchases: PurchaseInfo[] }>
 
   // GET: /v1/sdk/credits/activity?customerRef=&limit=
-  getCreditActivity?(params: {
-    customerRef: string
-    limit?: number
-  }): Promise<CreditActivityResult>
+  getCreditActivity?(params: { customerRef: string; limit?: number }): Promise<CreditActivityResult>
 
   // GET: /v1/sdk/auto-recharge?customerRef=...
   getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>

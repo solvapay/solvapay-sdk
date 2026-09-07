@@ -141,6 +141,8 @@ fn core_root_reexport_names() -> BTreeSet<&'static str> {
         "Tier",
         "TierMode",
         "UsageRate",
+        "PlanPricingShape",
+        "PricingShape",
         "CachedLimitsEvaluation",
         "FreshLimitsEvaluation",
         "PaywallOutcome",

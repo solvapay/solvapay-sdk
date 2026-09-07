@@ -20,10 +20,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::SolvaPayClient;
 
@@ -34,6 +35,8 @@ pub const GROUP_A_FNS: &[&str] = &[
     "getCustomer",
     "assignCredits",
     "getCustomerBalance",
+    "getCreditActivity",
+    "listPurchases",
     "getUserInfo",
     "createCheckoutSession",
     "createCustomerSession",
@@ -41,8 +44,8 @@ pub const GROUP_A_FNS: &[&str] = &[
     "getPlatformConfig",
 ];
 
-/// Expected inventory: 32 wire fixtures + `get-customer-missing-params`.
-pub const GROUP_A_FIXTURE_COUNT: usize = 33;
+/// Expected inventory: 36 wire fixtures + `get-customer-missing-params`.
+pub const GROUP_A_FIXTURE_COUNT: usize = 37;
 
 /// Group B `input.fn` names covered by step 23.
 pub const GROUP_B_FNS: &[&str] = &[
@@ -143,6 +146,14 @@ pub async fn dispatch_group_a(
         "createCustomerSession" => {
             let params: CreateCustomerSessionRequest = parse_args(args)?;
             serialize_result(client.create_customer_session(params).await?)
+        }
+        "listPurchases" => {
+            let params: ListPurchasesParams = parse_args(args)?;
+            serialize_result(client.list_purchases(params).await?)
+        }
+        "getCreditActivity" => {
+            let params: GetCreditActivityParams = parse_args(args)?;
+            serialize_result(client.get_credit_activity(params).await?)
         }
         "getMerchant" => serialize_result(client.get_merchant().await?),
         "getPlatformConfig" => serialize_result(client.get_platform_config().await?),

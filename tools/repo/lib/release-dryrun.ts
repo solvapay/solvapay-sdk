@@ -5,6 +5,8 @@
  * requires every `workspace:*` / `workspace:^` / `workspace:~` production
  * dep of a publishable package to resolve inside the publish batch, and
  * requires all six publish workflows to expose a dry-run default.
+ * When `assertNoLocalPaths` is set, publishable packages may not carry
+ * `file:` / `link:` / `portal:` production deps (publish-time only).
  */
 
 import { readFileSync, statSync } from 'node:fs'
@@ -34,6 +36,7 @@ export const PUBLISH_WORKFLOW_FILES = [
 export const PRERELEASE_RE = /-(?:preview|canary|rc|alpha|beta|next|snapshot)\b/i
 
 const WORKSPACE_PROTOCOL_RE = /^workspace:/
+export const LOCAL_PATH_PROTOCOL_RE = /^(?:file:|link:|portal:)/
 
 function workspacePackageRels(): string[] {
   const rels = [
@@ -54,6 +57,7 @@ export type ReleaseDryrunIssueKind =
   | 'prerelease-version'
   | 'unresolved-workspace-dep'
   | 'unpublished-workspace-dep'
+  | 'local-path-dep'
   | 'missing-dry-run-default'
 
 export type ReleaseDryrunIssue = {
@@ -99,12 +103,18 @@ export type PublishWorkflowDoc = {
   yaml: string
 }
 
+export type RegistryVersionProbe = (
+  packageName: string,
+  version: string,
+) => Promise<RegistryProbeResult>
+
 export type ReleaseDryrunInput = {
   packages: readonly WorkspacePackage[]
   changesetIgnore: readonly string[]
   workflows: readonly PublishWorkflowDoc[]
   registryProbe?: RegistryProbe
   unpublishedDepAllowlist?: readonly UnpublishedDepAllowlistEntry[]
+  assertNoLocalPaths?: boolean
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -138,16 +148,29 @@ export function isPublishablePackage(
   return Boolean(pkg.name) && !isIgnoredPackage(pkg, changesetIgnore)
 }
 
-function productionWorkspaceDeps(pkg: WorkspacePackage): Array<{ name: string; spec: string }> {
+function productionDepsMatching(
+  pkg: WorkspacePackage,
+  specRe: RegExp,
+): Array<{ name: string; spec: string }> {
   const out: Array<{ name: string; spec: string }> = []
   const groups = [pkg.dependencies, pkg.peerDependencies, pkg.optionalDependencies]
   for (const group of groups) {
     if (!group) continue
     for (const [name, spec] of Object.entries(group)) {
-      if (WORKSPACE_PROTOCOL_RE.test(spec)) out.push({ name, spec })
+      if (specRe.test(spec)) out.push({ name, spec })
     }
   }
   return out
+}
+
+function productionWorkspaceDeps(pkg: WorkspacePackage): Array<{ name: string; spec: string }> {
+  return productionDepsMatching(pkg, WORKSPACE_PROTOCOL_RE)
+}
+
+export function productionLocalPathDeps(
+  pkg: WorkspacePackage,
+): Array<{ name: string; spec: string }> {
+  return productionDepsMatching(pkg, LOCAL_PATH_PROTOCOL_RE)
 }
 
 export function workflowHasDryRunDefault(yamlText: string): boolean {
@@ -209,6 +232,16 @@ export async function checkReleaseDryrun(input: ReleaseDryrunInput): Promise<Rel
         dependencyName: dep.name,
         message: `${pkg.name} depends on ${dep.name} via ${dep.spec}, which is not in the publish batch`,
       })
+    }
+    if (input.assertNoLocalPaths) {
+      for (const dep of productionLocalPathDeps(pkg)) {
+        issues.push({
+          kind: 'local-path-dep',
+          packageName: pkg.name,
+          dependencyName: dep.name,
+          message: `${pkg.name} depends on ${dep.name} via ${dep.spec}; publish-time specs must be registry versions`,
+        })
+      }
     }
   }
 
@@ -333,15 +366,50 @@ export function npmRegistryProbe(fetchImpl: typeof fetch = fetch): RegistryProbe
   }
 }
 
+export function npmRegistryUrl(registry = 'https://registry.npmjs.org/'): string {
+  return registry.replace(/\/$/, '')
+}
+
+export function npmPackageVersionUrl(
+  packageName: string,
+  version: string,
+  registry = 'https://registry.npmjs.org/',
+): string {
+  return `${npmRegistryUrl(registry)}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`
+}
+
+export function npmRegistryVersionProbe(
+  fetchImpl: typeof fetch = fetch,
+  registry = 'https://registry.npmjs.org/',
+): RegistryVersionProbe {
+  return async (packageName, version) => {
+    const url = npmPackageVersionUrl(packageName, version, registry)
+    const response = await fetchImpl(url, { method: 'GET' })
+    if (response.status === 404) return { present: false }
+    if (!response.ok) {
+      throw new Error(
+        `npm registry version probe for ${packageName}@${version} failed: HTTP ${response.status}`,
+      )
+    }
+    return { present: true }
+  }
+}
+
+export type RunReleaseDryrunOptions = {
+  assertNoLocalPaths?: boolean
+}
+
 export async function runReleaseDryrunCheck(
   repoRoot: string,
   registryProbe?: RegistryProbe,
+  options?: RunReleaseDryrunOptions,
 ): Promise<ReleaseDryrunIssue[]> {
   return checkReleaseDryrun({
     packages: loadWorkspacePackages(repoRoot),
     changesetIgnore: loadChangesetIgnore(repoRoot),
     workflows: loadPublishWorkflows(repoRoot),
     registryProbe,
+    assertNoLocalPaths: options?.assertNoLocalPaths,
   })
 }
 

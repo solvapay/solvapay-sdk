@@ -10,6 +10,7 @@ import {
   buildSolvaPayDescriptors,
   buildSolvaPayPrompts,
   deriveIcons,
+  MCP_PROMPT_NAMES,
   MCP_TOOL_NAMES,
   OPEN_TOOL_FOR_VIEW,
   TOOL_FOR_VIEW,
@@ -86,35 +87,27 @@ describe('buildSolvaPayDescriptors', () => {
     const names = tools.map(t => t.name).sort()
     expect(names).toEqual(
       [
+        MCP_TOOL_NAMES.account,
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.attachBusinessDetails,
-        MCP_TOOL_NAMES.cancelRenewal,
-        MCP_TOOL_NAMES.createCheckoutSession,
-        MCP_TOOL_NAMES.createCustomerSession,
+        MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
-        MCP_TOOL_NAMES.createTopupPayment,
-        MCP_TOOL_NAMES.manageAccount,
+        MCP_TOOL_NAMES.getHistory,
         MCP_TOOL_NAMES.processPayment,
-        MCP_TOOL_NAMES.reactivateRenewal,
-        MCP_TOOL_NAMES.topup,
-        MCP_TOOL_NAMES.upgrade,
+        MCP_TOOL_NAMES.setRenewal,
       ].sort(),
     )
 
     for (const tool of tools) {
       expect(tool.description).toBeTypeOf('string')
       expect(tool.description.length).toBeGreaterThan(10)
-      expect(tool.meta).toMatchObject({ ui: { resourceUri: 'ui://test/view.html' } })
     }
 
-    // Intent tools (LLM-callable, dual-audience) carry the plain
-    // `{ ui: { resourceUri } }` meta with no audience tag.
-    const intentTools = [
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.activatePlan,
-    ]
+    const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+    expect(account?.meta).toMatchObject({ ui: { resourceUri: 'ui://test/view.html' } })
+
+    // Intent tools (LLM-callable, dual-audience) carry no audience tag.
+    const intentTools = [MCP_TOOL_NAMES.account, MCP_TOOL_NAMES.activatePlan]
     for (const name of intentTools) {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
@@ -128,11 +121,9 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createCustomerSession,
+      MCP_TOOL_NAMES.createHostedSession,
+      MCP_TOOL_NAMES.setRenewal,
+      MCP_TOOL_NAMES.getHistory,
     ]
     for (const name of uiOnlyTools) {
       const tool = tools.find(t => t.name === name)
@@ -143,17 +134,6 @@ describe('buildSolvaPayDescriptors', () => {
       ])
       expect((tool!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
       expect(tool!.description).toMatch(/UI-only/i)
-    }
-
-    for (const name of intentTools) {
-      const tool = tools.find(t => t.name === name)
-      expect(tool?.outputSchema).toMatchObject({
-        type: 'object',
-        properties: {
-          checkoutUrl: { type: ['string', 'null'] },
-          portalUrl: { type: ['string', 'null'] },
-        },
-      })
     }
 
     expect(resource.uri).toBe('ui://test/view.html')
@@ -171,19 +151,13 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
 
-    for (const name of [
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.manageAccount,
-    ]) {
-      const tool = tools.find(t => t.name === name)!
-      expect(tool.annotations).toMatchObject({
-        openWorldHint: true,
-        readOnlyHint: true,
-        idempotentHint: true,
-      })
-      expect(tool.annotations?.destructiveHint).toBeUndefined()
-    }
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.account)!
+    expect(tool.annotations).toMatchObject({
+      openWorldHint: true,
+      readOnlyHint: true,
+      idempotentHint: true,
+    })
+    expect(tool.annotations?.destructiveHint).toBeUndefined()
   })
 
   it('does not register tools removed/renamed in the Phase 2 trim', () => {
@@ -232,9 +206,10 @@ describe('buildSolvaPayDescriptors', () => {
       views: ['checkout'],
     })
     const names = tools.map(t => t.name)
-    expect(names).toContain(MCP_TOOL_NAMES.upgrade)
-    expect(names).not.toContain(MCP_TOOL_NAMES.manageAccount)
-    expect(names).not.toContain(MCP_TOOL_NAMES.topup)
+    expect(names).toContain(MCP_TOOL_NAMES.account)
+    expect(names).not.toContain('upgrade')
+    expect(names).not.toContain('manage_account')
+    expect(names).not.toContain('topup')
   })
 
   it('rejects non-http publicBaseUrl with the frozen message', () => {
@@ -261,10 +236,8 @@ describe('buildSolvaPayDescriptors', () => {
       views: [],
     })
     const names = tools.map(t => t.name)
-    expect(names).not.toContain(MCP_TOOL_NAMES.upgrade)
-    expect(names).not.toContain(MCP_TOOL_NAMES.manageAccount)
-    expect(names).not.toContain(MCP_TOOL_NAMES.topup)
-    expect(names).toContain(MCP_TOOL_NAMES.createCheckoutSession)
+    expect(names).not.toContain(MCP_TOOL_NAMES.account)
+    expect(names).toContain(MCP_TOOL_NAMES.createHostedSession)
     expect(names).toContain(MCP_TOOL_NAMES.activatePlan)
   })
 
@@ -293,7 +266,7 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
     const byName = Object.fromEntries(tools.map(t => [t.name, t.annotations]))
-    expect(byName[MCP_TOOL_NAMES.upgrade]).toEqual({
+    expect(byName[MCP_TOOL_NAMES.account]).toEqual({
       openWorldHint: true,
       readOnlyHint: true,
       idempotentHint: true,
@@ -302,17 +275,23 @@ describe('buildSolvaPayDescriptors', () => {
       openWorldHint: true,
       destructiveHint: true,
     })
-    expect(byName[MCP_TOOL_NAMES.cancelRenewal]).toEqual({
+    expect(byName[MCP_TOOL_NAMES.setRenewal]).toEqual({
       openWorldHint: true,
       destructiveHint: true,
       idempotentHint: true,
     })
-    expect(byName[MCP_TOOL_NAMES.reactivateRenewal]).toEqual({
+    expect(byName[MCP_TOOL_NAMES.createHostedSession]).toEqual({
       openWorldHint: true,
+      readOnlyHint: false,
+      destructiveHint: false,
       idempotentHint: true,
     })
-    expect(byName[MCP_TOOL_NAMES.createCheckoutSession]).toEqual({ openWorldHint: true })
-    expect(byName[MCP_TOOL_NAMES.activatePlan]).toEqual({ openWorldHint: true })
+    expect(byName[MCP_TOOL_NAMES.activatePlan]).toEqual({
+      openWorldHint: true,
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    })
   })
 
   it('emits tools in registration order (intent → transport → activate_plan)', () => {
@@ -324,17 +303,13 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
     expect(tools.map(t => t.name)).toEqual([
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.createCheckoutSession,
+      MCP_TOOL_NAMES.account,
+      MCP_TOOL_NAMES.createHostedSession,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createCustomerSession,
-      MCP_TOOL_NAMES.createTopupPayment,
       MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
+      MCP_TOOL_NAMES.setRenewal,
+      MCP_TOOL_NAMES.getHistory,
       MCP_TOOL_NAMES.activatePlan,
     ])
   })
@@ -462,14 +437,13 @@ describe('deriveIcons', () => {
 describe('TOOL_FOR_VIEW / VIEW_FOR_TOOL', () => {
   it('maps each view to its intent tool and inverts cleanly', () => {
     expect(TOOL_FOR_VIEW).toEqual({
-      checkout: 'upgrade',
-      account: 'manage_account',
-      topup: 'topup',
+      checkout: 'account',
+      account: 'account',
+      topup: 'account',
+      'auto-recharge': 'account',
     })
     expect(VIEW_FOR_TOOL).toEqual({
-      upgrade: 'checkout',
-      manage_account: 'account',
-      topup: 'topup',
+      account: 'account',
     })
     expect(OPEN_TOOL_FOR_VIEW).toBe(TOOL_FOR_VIEW)
     expect(VIEW_FOR_OPEN_TOOL).toBe(VIEW_FOR_TOOL)
@@ -480,69 +454,102 @@ describe('buildSolvaPayPrompts', () => {
   it('emits all four prompts when every view is enabled', () => {
     const prompts = buildSolvaPayPrompts()
     expect(prompts.map(p => p.name)).toEqual([
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.activatePlan,
+      MCP_PROMPT_NAMES.upgrade,
+      MCP_PROMPT_NAMES.manageAccount,
+      MCP_PROMPT_NAMES.topup,
+      MCP_PROMPT_NAMES.activatePlan,
     ])
   })
 
-  it('drops upgrade + activate_plan prompts when checkout is disabled', () => {
+  it('drops upgrade prompt when checkout is disabled', () => {
     const prompts = buildSolvaPayPrompts({
       enabledViews: new Set(['account', 'topup']),
     })
-    expect(prompts.map(p => p.name)).toEqual([MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.topup])
+    expect(prompts.map(p => p.name)).toEqual([
+      MCP_PROMPT_NAMES.manageAccount,
+      MCP_PROMPT_NAMES.topup,
+      MCP_PROMPT_NAMES.activatePlan,
+    ])
   })
 
   it('renders exact user-message text with and without args', async () => {
     const prompts = buildSolvaPayPrompts()
     const byName = Object.fromEntries(prompts.map(p => [p.name, p]))
 
-    expect(await byName[MCP_TOOL_NAMES.upgrade]!.handler({ planRef: 'pln_pro' })).toEqual({
-      messages: [
-        { role: 'user', content: { type: 'text', text: 'Activate plan pln_pro for me.' } },
-      ],
-    })
-    expect(await byName[MCP_TOOL_NAMES.upgrade]!.handler({})).toEqual({
+    expect(await byName[MCP_PROMPT_NAMES.upgrade]!.handler({ planRef: 'pln_pro' })).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'Show me the upgrade options for my SolvaPay account.' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "checkout", then activate plan pln_pro.',
+          },
         },
       ],
     })
-    expect(await byName[MCP_TOOL_NAMES.manageAccount]!.handler({})).toEqual({
-      messages: [{ role: 'user', content: { type: 'text', text: 'Show me my SolvaPay account.' } }],
-    })
-    expect(await byName[MCP_TOOL_NAMES.topup]!.handler({ amount: '10' })).toEqual({
+    expect(await byName[MCP_PROMPT_NAMES.upgrade]!.handler({})).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'Top up my SolvaPay credits by 10.' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "checkout" to show upgrade options.',
+          },
         },
       ],
     })
-    expect(await byName[MCP_TOOL_NAMES.topup]!.handler({})).toEqual({
+    expect(await byName[MCP_PROMPT_NAMES.manageAccount]!.handler({})).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'I want to top up my SolvaPay credits.' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "account" to show my SolvaPay account.',
+          },
         },
       ],
     })
-    expect(await byName[MCP_TOOL_NAMES.activatePlan]!.handler({ planRef: 'pln_free' })).toEqual({
+    expect(await byName[MCP_PROMPT_NAMES.topup]!.handler({ amount: '25' })).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'Activate plan pln_free on my SolvaPay account.' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "topup" and top up my credits by 25.',
+          },
         },
       ],
     })
-    expect(await byName[MCP_TOOL_NAMES.activatePlan]!.handler({})).toEqual({
+    expect(await byName[MCP_PROMPT_NAMES.topup]!.handler({})).toEqual({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: 'What plans can I activate on my SolvaPay account?' },
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "topup" to add SolvaPay credits.',
+          },
+        },
+      ],
+    })
+    expect(await byName[MCP_PROMPT_NAMES.activatePlan]!.handler({ planRef: 'pln_free' })).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: 'Call the `activate_plan` tool with planRef pln_free.',
+          },
+        },
+      ],
+    })
+    expect(await byName[MCP_PROMPT_NAMES.activatePlan]!.handler({})).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: 'Call the `account` tool with view: "checkout" to list plans I can activate.',
+          },
         },
       ],
     })

@@ -69,9 +69,10 @@ Gate `content[0].text` and `structuredContent` are layer-2 output
 | ----------------------------------- | --------------------------------------- |
 | `allow/custom-usage-type.json`      | custom `usageType` reaches `metadata.action` |
 | `allow/customer-outcome-flags.json` | `ctx.customer` carries `throttled` / `overage` |
-| `allow/respond-minimal.json`        | `ctx.respond(data)`                     |
-| `allow/respond-text-option.json`    | `options.text`                          |
-| `allow/respond-nudge.json`          | nudge suffix; structured data unchanged |
+| `allow/respond-minimal.json`        | `ctx.respond(data)` plus trailing JSON  |
+| `allow/respond-text-option.json`    | `options.text` plus trailing JSON       |
+| `allow/respond-nudge.json`          | nudge suffix, trailing JSON, resource   |
+| `allow/respond-data-in-text-false.json` | omit trailing JSON when `dataInText: false` |
 | `allow/respond-emitted-blocks.json` | `ctx.emit` blocks precede text          |
 | `allow/respond-key-order.json`      | compact JSON text preserves key order   |
 | `gate/payment-required.json`        | pre-check `payment_required`            |

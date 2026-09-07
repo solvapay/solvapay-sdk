@@ -26,6 +26,7 @@ export type NativeClientMethod =
   | 'disableAutoRecharge'
   | 'fetchJwks'
   | 'getAutoRecharge'
+  | 'getCreditActivity'
   | 'getCustomer'
   | 'getCustomerBalance'
   | 'getMerchant'
@@ -35,6 +36,7 @@ export type NativeClientMethod =
   | 'getUserInfo'
   | 'listPlans'
   | 'listProducts'
+  | 'listPurchases'
   | 'mcpBootstrap'
   | 'mcpCallBuiltinTool'
   | 'mcpDispatch'
@@ -116,6 +118,9 @@ export function createGeneratedClientOperations(
     async getAutoRecharge(params) {
       return dispatchClient('getAutoRecharge', params)
     },
+    async getCreditActivity(params) {
+      return dispatchClient('getCreditActivity', params)
+    },
     async getCustomer(params) {
       return dispatchClient('getCustomer', params)
     },
@@ -142,6 +147,9 @@ export function createGeneratedClientOperations(
     },
     async listProducts() {
       return dispatchClient('listProducts', {})
+    },
+    async listPurchases(params) {
+      return dispatchClient('listPurchases', params)
     },
     async mcpBootstrap(params) {
       return dispatchClient('mcpBootstrap', params)

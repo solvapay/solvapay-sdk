@@ -401,6 +401,25 @@ func (c *Client) GetAutoRecharge(ctx context.Context, params map[string]any) (an
 	return out, nil
 }
 
+// GetCreditActivity list account-wide credit activity for a customer, newest first.
+// The params parameter is Customer reference and optional page size.
+// Returns Credit activity page.
+func (c *Client) GetCreditActivity(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_get_credit_activity", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GetCustomer fetch a customer by reference.
 // The params parameter is Lookup options including the customer reference.
 // Returns The customer projection.
@@ -549,6 +568,25 @@ func (c *Client) ListPlans(ctx context.Context, productRef string) (any, error) 
 // Returns Product list projection.
 func (c *Client) ListProducts(ctx context.Context) (any, error) {
 	envelope, err := c.rt.CallEnvelope(ctx, "sv_list_products", "{}")
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ListPurchases list purchases for the authenticated provider, optionally filtered by customer, product, or status.
+// The params parameter is Optional purchase list filters.
+// Returns Purchase list wrapper.
+func (c *Client) ListPurchases(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_list_purchases", string(args))
 	if err != nil {
 		return nil, err
 	}

@@ -527,7 +527,7 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_basic",
-                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
     }
@@ -543,7 +543,7 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "",
                 "planRef": "pl_basic",
-                "message": "You've reached the included usage for this period. Call the `upgrade` tool. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
     }
@@ -561,7 +561,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+                "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
     }
@@ -615,7 +615,7 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
@@ -650,7 +650,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
                 "plans": [
@@ -681,7 +681,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_basic",
                 "creditBalance": 0.0,
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
@@ -712,7 +712,7 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_basic",
-                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
     }

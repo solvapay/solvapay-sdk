@@ -19,12 +19,13 @@ use solvapay_dto::{
     CreateCustomerSessionRequest, CreateCustomerSessionResponse, CreatePaymentIntentParams,
     CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
     CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, CustomerResponseMapped,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams,
-    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    GrantCustomerCreditsResponse, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
-    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams,
+    GetUserInfoParams, GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
+    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
+    UserInfoResponse,
 };
 
 use crate::auth_cache::AuthCaches;
@@ -1117,6 +1118,59 @@ impl SolvaPayClient {
         .await
     }
 
+    /// `GET /v1/sdk/purchases` — list purchases with optional filters.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 36,
+        dto_type = "ListPurchasesParams"
+    )]
+    pub async fn list_purchases(&self, params: ListPurchasesParams) -> Result<Value, SdkError> {
+        let mut query = BTreeMap::new();
+        insert_opt_query(&mut query, "customerRef", params.customer_ref.as_deref());
+        insert_opt_query(&mut query, "productRef", params.product_ref.as_deref());
+        insert_opt_query(&mut query, "status", params.status.as_deref());
+        if let Some(include_free) = params.include_free {
+            query.insert("includeFree".to_owned(), bool_query(include_free));
+        }
+        self.execute_json::<()>(
+            Method::Get,
+            "/v1/sdk/purchases".to_owned(),
+            query,
+            None,
+            Idempotency::None,
+            operations::list_purchases::DEFAULT,
+        )
+        .await
+    }
+
+    /// `GET /v1/sdk/credits/activity` — account-wide credit ledger page.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 37,
+        dto_type = "GetCreditActivityParams"
+    )]
+    pub async fn get_credit_activity(
+        &self,
+        params: GetCreditActivityParams,
+    ) -> Result<Value, SdkError> {
+        let mut query = BTreeMap::new();
+        query.insert("customerRef".to_owned(), params.customer_ref);
+        if let Some(limit) = params.limit {
+            query.insert("limit".to_owned(), number_query(limit));
+        }
+        self.execute_json::<()>(
+            Method::Get,
+            "/v1/sdk/credits/activity".to_owned(),
+            query,
+            None,
+            Idempotency::None,
+            operations::get_credit_activity::DEFAULT,
+        )
+        .await
+    }
+
     /// Executes a shell request and deserializes the JSON body into `R`.
     async fn execute_typed<B, R>(
         &self,
@@ -1178,6 +1232,31 @@ impl SolvaPayClient {
                 error_template,
             })
             .await
+    }
+}
+
+/// Insert `key` when `value` is a non-empty string.
+fn insert_opt_query(query: &mut BTreeMap<String, String>, key: &str, value: Option<&str>) {
+    if let Some(value) = value.filter(|s| !s.is_empty()) {
+        query.insert(key.to_owned(), value.to_owned());
+    }
+}
+
+/// Format a boolean query parameter as `"true"` / `"false"`.
+fn bool_query(value: bool) -> String {
+    if value {
+        "true".to_owned()
+    } else {
+        "false".to_owned()
+    }
+}
+
+/// Format a numeric query parameter without a trailing `.0` for whole values.
+fn number_query(value: f64) -> String {
+    if value.fract() == 0.0 && value.is_finite() {
+        format!("{}", value as i64)
+    } else {
+        value.to_string()
     }
 }
 

@@ -8,14 +8,13 @@
   "expect": {
     "result": {
       "TOOL_FOR_VIEW": {
-        "checkout": "upgrade",
-        "account": "manage_account",
-        "topup": "topup"
+        "checkout": "account",
+        "account": "account",
+        "topup": "account",
+        "auto-recharge": "account"
       },
       "VIEW_FOR_TOOL": {
-        "upgrade": "checkout",
-        "manage_account": "account",
-        "topup": "topup"
+        "account": "account"
       }
     }
   }

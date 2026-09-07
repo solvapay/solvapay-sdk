@@ -10,10 +10,15 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
-      "event": { "kind": "limitsCacheEntry", "found": false, "nowMs": 1000 }
+      "event": {
+        "kind": "limitsCacheEntry",
+        "found": false,
+        "nowMs": 1000
+      }
     }
   },
   "expect": {
@@ -24,6 +29,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },

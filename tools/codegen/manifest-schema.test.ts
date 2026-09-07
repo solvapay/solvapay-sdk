@@ -499,10 +499,12 @@ describe('coverage and collisions', () => {
     expect(issues.some(i => /collision/i.test(i) && /ts/.test(i))).toBe(true)
   })
 
-  it('requires exactly 36 routed operations', () => {
+  it(`requires exactly ${EXPECTED_ROUTED_OPERATION_COUNT} routed operations`, () => {
     const manifest = minimalManifest()
     delete manifest.operations.op35
-    expect(assertOperationCount(manifest).some(i => /36/.test(i))).toBe(true)
+    expect(
+      assertOperationCount(manifest).some(i => i.includes(String(EXPECTED_ROUTED_OPERATION_COUNT))),
+    ).toBe(true)
   })
 
   it('requires exactly 6 routeless MCP composite operations', () => {

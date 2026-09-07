@@ -16,12 +16,12 @@ Four MCP examples ship in this repo. Start here if your product has a
 full self-serve surface (plans, credit balance, top-up, usage); hop to
 a sibling if you need less:
 
-| Example                        | Runtime           | What it shows                                                        | Use when                                                                                           |
-| ------------------------------ | ----------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `examples/mcp-checkout-app`    | Node + Express    | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall                  |
-| `examples/supabase-edge-mcp`   | Deno (Supabase)   | Same full toolbox as `mcp-checkout-app`, deployed to Supabase Edge   | You want the complete story running at the network edge with `createSolvaPayMcpFetchHandler`       |
-| `examples/mcp-oauth-bridge`    | Node + Express    | Paywall-only, no UI, virtual tools only                              | You just need to gate a text-only tool behind SolvaPay usage limits                                |
-| `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
+| Example                      | Runtime         | What it shows                                                        | Use when                                                                                     |
+| ---------------------------- | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `examples/mcp-checkout-app`  | Node + Express  | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall            |
+| `examples/supabase-edge-mcp` | Deno (Supabase) | Same full toolbox as `mcp-checkout-app`, deployed to Supabase Edge   | You want the complete story running at the network edge with `createSolvaPayMcpFetchHandler` |
+| `examples/mcp-oauth-bridge`  | Node + Express  | Paywall-only, no UI, virtual tools only                              | You just need to gate a text-only tool behind SolvaPay usage limits                          |
+| `examples/mcp-time-app`      | Node + Express  | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                          |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
 8-tool surface: 2 intent tools (`account`, `activate_plan`) plus 6
@@ -153,7 +153,7 @@ A gated or account call on a text-only host must still:
    the right `view`, or `activate_plan` when a `planRef` is known)
    plus a https URL in the same sentence.
 3. **Find capabilities and user info** — `resources/read
-   docs://solvapay/overview.md` for what the app can do;
+docs://solvapay/overview.md` for what the app can do;
    `account` with `view: "account"` for the signed-in customer's plan,
    remaining, and payment method.
 
@@ -261,20 +261,20 @@ sequenceDiagram
 
 **Intent tools (LLM-callable, dual-audience):**
 
-| Tool | Purpose |
-| --- | --- |
-| `account` | Single viewer. Pass `view: "checkout"` (upgrade / change plan), `view: "account"` (plan, balance, cancel), or `view: "topup"` (add credits). Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot, stripePublishableKey). Slash prompts `/upgrade`, `/manage_account`, `/topup` remap onto this tool. |
-| `activate_plan` | With `planRef`: activates a free/usage-based plan or returns a checkout URL for paid plans. Without `planRef`: list plans via `account` with `view: "checkout"`. |
+| Tool            | Purpose                                                                                                                                                                                                                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account`       | Single viewer. Pass `view: "checkout"` (upgrade / change plan), `view: "account"` (plan, balance, cancel), or `view: "topup"` (add credits). Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot, stripePublishableKey). Slash prompts `/upgrade`, `/manage_account`, `/topup` remap onto this tool. |
+| `activate_plan` | With `planRef`: activates a free/usage-based plan or returns a checkout URL for paid plans. Without `planRef`: list plans via `account` with `view: "checkout"`.                                                                                                                                                             |
 
 **UI-only state-change tools (tagged `_meta.audience: 'ui'`):**
 
-| Tool | Purpose |
-| --- | --- |
+| Tool                    | Purpose                                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `create_hosted_session` | Returns `{ sessionId, checkoutUrl \| customerUrl }` for hosted checkout (`kind: "checkout"`) or customer portal (`kind: "portal"`) |
-| `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
-| `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
-| `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
-| `get_history` | Product charges + account-wide credit activity for the fullscreen history section |
+| `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`)                                     |
+| `process_payment`       | Records the Stripe-side confirmation after `confirmPayment` resolves                                                               |
+| `set_renewal`           | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate)                                                   |
+| `get_history`           | Product charges + account-wide credit activity for the fullscreen history section                                                  |
 
 `returnUrl` on hosted checkout is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the
@@ -308,13 +308,13 @@ The example registers five paywalled demo data tools
 story — call a business tool → hit the gate → resolve in the iframe →
 retry — without hand-rolling a gated tool.
 
-| Tool | Purpose |
-| --- | --- |
-| `search_knowledge` | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit. |
-| `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
-| `query_sales_trends` | Returns deterministic sales rows for a date range. When the customer is low on credits, appends a **plain-text `low-balance` nudge** to `content[0].text` that names `account` with `view: "topup"` — the data still rides on `structuredContent` and a trailing JSON text block. Exercises the text-only nudge suffix on `ctx.respond(options.nudge)`. |
-| `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart. |
-| `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Same seeded model as `predict_price_chart`. Declares an `outputSchema`. |
+| Tool                  | Purpose                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_knowledge`    | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit.                                                                                                                                                                                                                              |
+| `get_market_quote`    | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`.                                                                                                                                                                                                                                                          |
+| `query_sales_trends`  | Returns deterministic sales rows for a date range. When the customer is low on credits, appends a **plain-text `low-balance` nudge** to `content[0].text` that names `account` with `view: "topup"` — the data still rides on `structuredContent` and a trailing JSON text block. Exercises the text-only nudge suffix on `ctx.respond(options.nudge)`. |
+| `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart.                                                                                                          |
+| `predict_direction`   | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Same seeded model as `predict_price_chart`. Declares an `outputSchema`.                                                                                                                                                                                |
 
 All five are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
 when you copy this example to your own repo — the demo tools and their
@@ -362,10 +362,10 @@ handler: async ({ range }, ctx) => {
       { range, results },
       {
         units: results.length, // reserved for V1.1 — V1 ignores this
-          nudge: {
-            kind: 'low-balance',
-            message: 'Low on credits. Call `account` with view: "topup".',
-          },
+        nudge: {
+          kind: 'low-balance',
+          message: 'Low on credits. Call `account` with view: "topup".',
+        },
       },
     )
   }
@@ -525,7 +525,7 @@ sequenceDiagram
   nested iframes (MCPJam Inspector currently reports a runtime mismatch between
   its effective CSP model and the browser's enforced policy). When the probe
   blocks, check the widget console for `[solvapay-mcp] host CSP refused the
-  Stripe iframe` — the logged `originalPolicy` names the policy that refused
+Stripe iframe` — the logged `originalPolicy` names the policy that refused
   the frame. Adding entries to `_meta.ui.csp` cannot help when the host's
   sandbox proxy or iframe chain strips or overrides `frame-src`.
 

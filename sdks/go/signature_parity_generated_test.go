@@ -39,6 +39,7 @@ var operationSignatures = []operationSignature{
 	{"DisableAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
 	{"FetchJwks", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetCreditActivity", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetCustomer", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetCustomerBalance", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetMerchant", nil, nil},
@@ -48,6 +49,7 @@ var operationSignatures = []operationSignature{
 	{"GetUserInfo", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ListPlans", []string{"productRef"}, []string{"string"}},
 	{"ListProducts", nil, nil},
+	{"ListPurchases", []string{"params"}, []string{"map[string]interface {}"}},
 	{"McpBootstrap", []string{"params"}, []string{"map[string]interface {}"}},
 	{"McpCallBuiltinTool", []string{"params"}, []string{"map[string]interface {}"}},
 	{"McpDispatch", []string{"params"}, []string{"map[string]interface {}"}},
@@ -117,6 +119,7 @@ var (
 	_ = (*solvapay.Client).DisableAutoRecharge
 	_ = (*solvapay.Client).FetchJwks
 	_ = (*solvapay.Client).GetAutoRecharge
+	_ = (*solvapay.Client).GetCreditActivity
 	_ = (*solvapay.Client).GetCustomer
 	_ = (*solvapay.Client).GetCustomerBalance
 	_ = (*solvapay.Client).GetMerchant
@@ -126,6 +129,7 @@ var (
 	_ = (*solvapay.Client).GetUserInfo
 	_ = (*solvapay.Client).ListPlans
 	_ = (*solvapay.Client).ListProducts
+	_ = (*solvapay.Client).ListPurchases
 	_ = (*solvapay.Client).McpBootstrap
 	_ = (*solvapay.Client).McpCallBuiltinTool
 	_ = (*solvapay.Client).McpDispatch
@@ -142,10 +146,10 @@ var (
 	_ = (*solvapay.Client).UpdateProduct
 )
 
-func TestOperationSignaturesCountIs43(t *testing.T) {
+func TestOperationSignaturesCountIs45(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 43 {
-		t.Fatalf("operationSignatures len = %d, want 43", got)
+	if got := len(operationSignatures); got != 45 {
+		t.Fatalf("operationSignatures len = %d, want 45", got)
 	}
 }
 

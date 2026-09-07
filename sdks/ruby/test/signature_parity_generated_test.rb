@@ -28,6 +28,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     "disable_auto_recharge" => [[:keyreq, :params]],
     "fetch_jwks" => [[:keyreq, :params]],
     "get_auto_recharge" => [[:keyreq, :params]],
+    "get_credit_activity" => [[:keyreq, :params]],
     "get_customer" => [[:keyreq, :params]],
     "get_customer_balance" => [[:keyreq, :params]],
     "get_merchant" => [],
@@ -37,6 +38,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     "get_user_info" => [[:keyreq, :params]],
     "list_plans" => [[:keyreq, :product_ref]],
     "list_products" => [],
+    "list_purchases" => [[:keyreq, :params]],
     "mcp_bootstrap" => [[:keyreq, :params]],
     "mcp_call_builtin_tool" => [[:keyreq, :params]],
     "mcp_dispatch" => [[:keyreq, :params]],
@@ -70,12 +72,17 @@ class SignatureParityGeneratedTest < Minitest::Test
     format_price
     format_subtotal_label
     format_vat_summary_label
+    get_postal_code_field_label
+    get_postal_code_placeholder
     get_seller_tax_identifier_display_label
+    get_state_field_label
     get_tax_id_example
     get_tax_id_field_label
     get_tax_id_helper_text
     headline_charges
     included_units
+    is_postal_code_required
+    is_state_required
     is_unlimited_remaining
     is_zero_decimal_currency
     meter_name
@@ -83,11 +90,14 @@ class SignatureParityGeneratedTest < Minitest::Test
     paywall_error_to_client_payload
     pegged_credits_per_unit
     per_unit_charge
+    plan_pricing_shape
+    postal_code_required_countries
     require_product_ref
     resolve_seller_identity_display
     resolve_tax_behavior
     resolve_tax_treatment_note
     should_show_tax_row
+    state_required_countries
     tier_bands
     tier_meters
     to_major_units
@@ -105,8 +115,8 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_REQUEST_ID_FORMAT = "solvapay_{epochMs}_{random9}"
   EXPECTED_USAGE_ACTION_TYPE = "api_call"
 
-  def test_all_43_client_operations_have_exact_keyword_signatures
-    assert_equal 43, OPERATION_SIGNATURES.length
+  def test_all_45_client_operations_have_exact_keyword_signatures
+    assert_equal 45, OPERATION_SIGNATURES.length
     OPERATION_SIGNATURES.each do |name, expected|
       method = SolvaPay::Client.instance_method(name)
       assert_equal expected, method.parameters, name

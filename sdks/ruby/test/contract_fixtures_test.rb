@@ -17,7 +17,7 @@ class ContractFixturesTest < Minitest::Test
     block = manifest.match(/^operations:\n(.*?)(?=^\S|\z)/m)&.captures&.first
     refute_nil block, "manifest missing operations"
     names = block.scan(/^    names:\n      ts:\s*(\S+)\s*$/).flatten
-    assert_equal 43, names.length
+    assert_equal 45, names.length
 
     relative = FIXTURE_FILES.map { |path| Pathname(path).relative_path_from(FIXTURES_ROOT).to_s }
     routed = 0
@@ -33,7 +33,7 @@ class ContractFixturesTest < Minitest::Test
       error = stems.any? { |stem| Contract::Names.error_case?(stem) }
       "#{name}: success=#{success} error=#{error} files=#{stems.inspect}" unless success && error
     end
-    assert_equal 36, routed
+    assert_equal 38, routed
     assert_empty missing, missing.join("\n")
   end
 

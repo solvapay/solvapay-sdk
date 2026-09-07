@@ -35,6 +35,7 @@
         "content": [
           { "type": "text", "text": "intermediate 1" },
           { "type": "text", "text": "intermediate 2" },
+          { "type": "text", "text": "{\"final\":true}" },
           { "type": "text", "text": "{\"final\":true}" }
         ],
         "structuredContent": { "final": true }

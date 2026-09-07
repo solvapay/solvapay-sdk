@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "CY",
         "taxId": "CY12345678Z",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "CY"
       }
     }
   }

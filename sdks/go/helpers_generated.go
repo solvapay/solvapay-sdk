@@ -9,6 +9,12 @@ import (
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
+// POSTAL_CODE_REQUIRED_COUNTRIES countries that require a postal or ZIP code for Stripe Tax.
+// Returns Country code list.
+func POSTAL_CODE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_postal_code_required_countries_binding", mustJSON(map[string]any{}))
+}
+
 // REVERSE_CHARGE_NOTE buyer-facing note when VAT reverse charge applies.
 func REVERSE_CHARGE_NOTE(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_reverse_charge_note_binding", "{}")
@@ -17,6 +23,12 @@ func REVERSE_CHARGE_NOTE(ctx context.Context) (any, error) {
 // SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE map of seller tax identifier types to display labels.
 func SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_seller_tax_identifier_display_label_by_type_binding", "{}")
+}
+
+// STATE_REQUIRED_COUNTRIES countries that require a state or province for Stripe Tax.
+// Returns Country code list.
+func STATE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_state_required_countries_binding", mustJSON(map[string]any{}))
 }
 
 // TAX_NOT_COLLECTED_NOTE buyer-facing note when tax is not collected on the purchase.
@@ -166,10 +178,34 @@ func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any
 	}))
 }
 
+// GetPostalCodeFieldLabel return the postal or ZIP code field label for a country.
+// Returns Field label string.
+func GetPostalCodeFieldLabel(ctx context.Context, country any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_get_postal_code_field_label_binding", mustJSON(map[string]any{
+		"country": country,
+	}))
+}
+
+// GetPostalCodePlaceholder return the postal or ZIP code field placeholder for a country.
+// Returns Placeholder string.
+func GetPostalCodePlaceholder(ctx context.Context, country any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_get_postal_code_placeholder_binding", mustJSON(map[string]any{
+		"country": country,
+	}))
+}
+
 // GetSellerTaxIdentifierDisplayLabel return the display label for a seller tax identifier type.
 // Returns Display label string.
 func GetSellerTaxIdentifierDisplayLabel(ctx context.Context, country any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_get_seller_tax_identifier_display_label_binding", mustJSON(map[string]any{
+		"country": country,
+	}))
+}
+
+// GetStateFieldLabel return the state or province field label for a country.
+// Returns Field label string.
+func GetStateFieldLabel(ctx context.Context, country any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_get_state_field_label_binding", mustJSON(map[string]any{
 		"country": country,
 	}))
 }
@@ -212,6 +248,22 @@ func IncludedUnits(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_included_units_binding", mustJSON(map[string]any{
 		"priced": priced,
 		"meter":  meter,
+	}))
+}
+
+// IsPostalCodeRequired whether Stripe Tax requires a postal or ZIP code for a country.
+// Returns True when a postal or ZIP code is required.
+func IsPostalCodeRequired(ctx context.Context, country any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_is_postal_code_required_binding", mustJSON(map[string]any{
+		"country": country,
+	}))
+}
+
+// IsStateRequired whether Stripe Tax requires a state or province for a country.
+// Returns True when a state or province is required.
+func IsStateRequired(ctx context.Context, country any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_is_state_required_binding", mustJSON(map[string]any{
+		"country": country,
 	}))
 }
 
@@ -272,6 +324,14 @@ func PerUnitCharge(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_per_unit_charge_binding", mustJSON(map[string]any{
 		"priced": priced,
 		"meter":  meter,
+	}))
+}
+
+// PlanPricingShape derive the pricing shape a plan-row or narration surface should branch on.
+// Returns Shape, headline, currency, cycle, and usage rate.
+func PlanPricingShape(ctx context.Context, priced any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_plan_pricing_shape_binding", mustJSON(map[string]any{
+		"priced": priced,
 	}))
 }
 

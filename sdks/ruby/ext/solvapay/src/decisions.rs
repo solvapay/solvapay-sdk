@@ -12,20 +12,22 @@ use solvapay_core::{
     build_paywall_gate, charges, classify_cancel_error, classify_create_error,
     classify_customer_ref, classify_lookup_error, classify_paywall_state,
     classify_reactivate_error, coerce_customer_options, counts_usage,
-    credits_per_unit_from_balance, decide_paywall_outcome, ensure_customer_next,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, gate_next, headline_charges,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
-    map_route_error, meter_name, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, pegged_credits_per_unit, per_unit_charge,
-    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
-    require_product_ref, resolve_authenticated_user, resolve_check_limits_params,
-    resolve_customer_ref, resolve_fallback_gate_limits, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
-    should_retry_usage_error, tier_bands, tier_meters, topup_process_next, trial_days, usage_rate,
-    validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
+    credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
+    derive_default_view, ensure_customer_next, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, format_compact_credits, gate_next,
+    get_history_next, headline_charges, history_rows, included_units, is_cached_customer_ref_valid,
+    is_email_conflict, is_error_result, map_route_error, meter_name, normalize_cancel_response,
+    normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_pricing_shape, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, require_product_ref,
+    resolve_account_state, resolve_authenticated_user, resolve_check_limits_params,
+    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
+    resolve_narrator_plan_shape, resolve_product_ref, resolve_purchase_customer_ref,
+    resolve_return_url, select_active_purchases, should_retry_usage_error, tier_bands, tier_meters,
+    topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_checkout_session_params,
+    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, Backoff, GateContent,
     PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
@@ -87,9 +89,9 @@ pub fn extract_backend_customer_ref_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let response = require_object(&args, "response")?;
         let fallback = require_string(&args, "fallback")?;
-        Ok(Value::String(extract_backend_customer_ref(
-            response, &fallback,
-        )))
+        Ok(Value::String(
+            extract_backend_customer_ref(response, &fallback).to_owned(),
+        ))
     })
 }
 
@@ -298,10 +300,9 @@ pub fn resolve_purchase_customer_ref_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let customer_ref = optional_string(&args, "customerRef")?;
         let user_id = require_string(&args, "userId")?;
-        Ok(Value::String(resolve_purchase_customer_ref(
-            customer_ref.as_deref(),
-            &user_id,
-        )))
+        Ok(Value::String(
+            resolve_purchase_customer_ref(customer_ref.as_deref(), &user_id).to_owned(),
+        ))
     })
 }
 
@@ -324,6 +325,23 @@ pub fn classify_cancel_error_binding(args_json: String) -> String {
         to_value(&classify_cancel_error(&message))
     })
 }
+
+// --- purchase ---
+
+/// Binding for `deriveActiveProducts`.
+pub fn derive_active_products_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchases = optional_value(&args, "purchases");
+        let product_ref = optional_string(&args, "productRef")?;
+        to_value(&derive_active_products(
+            purchases.as_ref(),
+            product_ref.as_deref(),
+        ))
+    })
+}
+
+// --- renewal ---
 
 /// Binding for `classifyReactivateError`.
 pub fn classify_reactivate_error_binding(args_json: String) -> String {
@@ -489,15 +507,18 @@ pub fn resolve_customer_ref_binding(args_json: String) -> String {
         let mcp_extra_customer_ref = optional_string(&args, "mcpExtraCustomerRef")?;
         let args_auth_customer_ref = optional_string(&args, "argsAuthCustomerRef")?;
         let args_customer_ref = optional_string(&args, "argsCustomerRef")?;
-        Ok(Value::String(resolve_customer_ref(
-            hook_ref.as_deref(),
-            verified_jwt_sub.as_deref(),
-            header_user_id.as_deref(),
-            header_customer_ref.as_deref(),
-            mcp_extra_customer_ref.as_deref(),
-            args_auth_customer_ref.as_deref(),
-            args_customer_ref.as_deref(),
-        )))
+        Ok(Value::String(
+            resolve_customer_ref(
+                hook_ref.as_deref(),
+                verified_jwt_sub.as_deref(),
+                header_user_id.as_deref(),
+                header_customer_ref.as_deref(),
+                mcp_extra_customer_ref.as_deref(),
+                args_auth_customer_ref.as_deref(),
+                args_customer_ref.as_deref(),
+            )
+            .to_owned(),
+        ))
     })
 }
 
@@ -578,7 +599,7 @@ pub fn build_gate_message_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let state = require_typed::<PaywallState>(&args, "state")?;
         let gate = require_typed::<GateContent>(&args, "gate")?;
-        Ok(Value::String(build_gate_message(&state, &gate)))
+        Ok(Value::String(build_gate_message(&state, &gate).to_owned()))
     })
 }
 
@@ -588,7 +609,9 @@ pub fn build_nudge_message_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let state = require_typed::<PaywallState>(&args, "state")?;
         let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
-        Ok(Value::String(build_nudge_message(&state, limits.as_ref())))
+        Ok(Value::String(
+            build_nudge_message(&state, limits.as_ref()).to_owned(),
+        ))
     })
 }
 
@@ -885,6 +908,15 @@ pub fn usage_rate_binding(args_json: String) -> String {
     })
 }
 
+/// Binding for `planPricingShape`.
+pub fn plan_pricing_shape_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&plan_pricing_shape(priced.as_ref()))
+    })
+}
+
 // --- paywall state / gate / payload ---
 
 /// Binding for `buildCustomerSnapshot`.
@@ -894,6 +926,110 @@ pub fn build_customer_snapshot_binding(args_json: String) -> String {
         let customer_ref = require_string(&args, "customerRef")?;
         let limits = optional_value(&args, "limits");
         to_value(&build_customer_snapshot(&customer_ref, limits.as_ref()))
+    })
+}
+
+// --- history ---
+
+/// Binding for `getHistoryNext`.
+pub fn get_history_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(get_history_next(state.as_ref(), event.as_ref()))
+    })
+}
+
+// --- paywall-decision ---
+
+/// Binding for `evaluateClaimedLimits`.
+pub fn evaluate_claimed_limits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let within_limits = require_bool(&args, "withinLimits")?;
+        let remaining = require_f64(&args, "remaining")?;
+        let claimed = require_f64(&args, "claimed")?;
+        to_value(&evaluate_claimed_limits(within_limits, remaining, claimed))
+    })
+}
+
+// --- history ---
+
+/// Binding for `historyRows`.
+pub fn history_rows_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(history_rows(input.as_ref()))
+    })
+}
+
+// --- mcp-account ---
+
+/// Binding for `resolvePlanShape`.
+pub fn resolve_plan_shape_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&resolve_narrator_plan_shape(priced.as_ref()))
+    })
+}
+
+/// Binding for `resolveAccountState`.
+pub fn resolve_account_state_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        Ok(Value::String(
+            resolve_account_state(input.as_ref()).to_owned(),
+        ))
+    })
+}
+
+/// Binding for `deriveDefaultView`.
+pub fn derive_default_view_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(derive_default_view(input.as_ref()))
+    })
+}
+
+/// Binding for `resolveDisplayMode`.
+pub fn resolve_display_mode_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let ctx = optional_value(&args, "ctx");
+        to_value(&resolve_display_mode(ctx.as_ref()))
+    })
+}
+
+/// Binding for `planConsequence`.
+pub fn plan_consequence_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let plan = optional_value(&args, "plan");
+        let locale = optional_string(&args, "locale")?;
+        let balance = optional_value(&args, "balance");
+        let merchant_name = optional_string(&args, "merchantName")?;
+        result_as_value(plan_consequence(
+            plan.as_ref(),
+            locale.as_deref(),
+            balance.as_ref(),
+            merchant_name.as_deref(),
+        ))
+    })
+}
+
+// --- money-format ---
+
+/// Binding for `formatCompactCredits`.
+pub fn format_compact_credits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let credits = require_f64(&args, "credits")?;
+        result_as_value(format_compact_credits(credits))
     })
 }
 

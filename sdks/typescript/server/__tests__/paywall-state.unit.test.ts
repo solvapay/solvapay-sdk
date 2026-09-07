@@ -233,23 +233,25 @@ describe('buildGateMessage', () => {
     expect(msg).not.toMatch(/activate_plan/)
   })
 
-  it('upgrade_required names upgrade tool and inlines checkoutUrl', () => {
+  it('upgrade_required points at the account checkout view and inlines checkoutUrl', () => {
     const msg = buildGateMessage(
       { kind: 'upgrade_required' } satisfies PaywallState,
       gate({ checkoutUrl }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool/)
+    expect(msg).toMatch(/view: 'checkout'/)
     expect(msg).toContain(checkoutUrl)
     expect(msg).not.toMatch(/topup/)
   })
 
-  it('reactivation_required names manage_account and upgrade tools', () => {
+  it('reactivation_required points at account and checkout views', () => {
     const msg = buildGateMessage(
       { kind: 'reactivation_required' } satisfies PaywallState,
       gate({ checkoutUrl }),
     )
-    expect(msg).toMatch(/manage_account/)
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool/)
+    expect(msg).toMatch(/view: 'account'/)
+    expect(msg).toMatch(/view: 'checkout'/)
   })
 
   it('omits "open {url}" clause when checkoutUrl is empty for non-reactivation states', () => {
@@ -257,7 +259,8 @@ describe('buildGateMessage', () => {
       { kind: 'upgrade_required' } satisfies PaywallState,
       gate({ checkoutUrl: '' }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool/)
+    expect(msg).toMatch(/view: 'checkout'/)
     expect(msg).not.toContain('{checkoutUrl}')
   })
 })

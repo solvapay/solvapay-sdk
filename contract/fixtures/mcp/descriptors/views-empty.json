@@ -11,142 +11,126 @@
   "expect": {
     "result": [
       {
-        "name": "create_checkout_session",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.",
+        "name": "create_hosted_session",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a SolvaPay hosted session and return its URL. Pass kind: \"checkout\" for a hosted checkout URL (fallback when Stripe Elements is blocked) or kind: \"portal\" for the customer portal URL.",
+        "annotations": {
+          "openWorldHint": true,
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
             "visibility": ["app"]
           },
           "audience": "ui",
-          "openai/widgetAccessible": true
-        },
-        "annotations": {
-          "openWorldHint": true
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
         }
       },
       {
         "name": "create_payment_intent",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation).",
+        "annotations": {
+          "openWorldHint": true,
+          "readOnlyHint": false,
+          "destructiveHint": false
+        },
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
             "visibility": ["app"]
           },
           "audience": "ui",
-          "openai/widgetAccessible": true
-        },
-        "annotations": {
-          "openWorldHint": true
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
         }
       },
       {
         "name": "process_payment",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.",
-        "meta": {
-          "ui": {
-            "resourceUri": "ui://test/view.html",
-            "visibility": ["app"]
-          },
-          "audience": "ui",
-          "openai/widgetAccessible": true
-        },
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.",
         "annotations": {
           "openWorldHint": true,
           "destructiveHint": true
-        }
-      },
-      {
-        "name": "create_customer_session",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.",
+        },
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
             "visibility": ["app"]
           },
           "audience": "ui",
-          "openai/widgetAccessible": true
-        },
-        "annotations": {
-          "openWorldHint": true,
-          "readOnlyHint": true,
-          "idempotentHint": true
-        }
-      },
-      {
-        "name": "create_topup_payment_intent",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.",
-        "meta": {
-          "ui": {
-            "resourceUri": "ui://test/view.html",
-            "visibility": ["app"]
-          },
-          "audience": "ui",
-          "openai/widgetAccessible": true
-        },
-        "annotations": {
-          "openWorldHint": true
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
         }
       },
       {
         "name": "attach_business_details",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Attach business purchase details to a payment intent and retrieve the computed tax breakdown.",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Attach business purchase details to a payment intent and retrieve the computed tax breakdown.",
+        "annotations": {
+          "openWorldHint": true,
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
             "visibility": ["app"]
           },
           "audience": "ui",
-          "openai/widgetAccessible": true
-        },
-        "annotations": {
-          "openWorldHint": true
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
         }
       },
       {
-        "name": "cancel_renewal",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.",
-        "meta": {
-          "ui": {
-            "resourceUri": "ui://test/view.html",
-            "visibility": ["app"]
-          },
-          "audience": "ui",
-          "openai/widgetAccessible": true
-        },
+        "name": "set_renewal",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Toggle auto-renewal on an active purchase. Pass enabled: false to cancel (access continues until period end) or enabled: true to undo a pending cancellation.",
         "annotations": {
           "openWorldHint": true,
           "destructiveHint": true,
           "idempotentHint": true
-        }
-      },
-      {
-        "name": "reactivate_renewal",
-        "description": "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
+        },
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
             "visibility": ["app"]
           },
           "audience": "ui",
-          "openai/widgetAccessible": true
-        },
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
+        }
+      },
+      {
+        "name": "get_history",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Load product charge history and account-wide credit activity for the authenticated customer. Charges come from purchases for this product; credit activity is every credit event on the account.",
         "annotations": {
           "openWorldHint": true,
+          "readOnlyHint": true,
           "idempotentHint": true
+        },
+        "meta": {
+          "ui": {
+            "resourceUri": "ui://test/view.html",
+            "visibility": ["app"]
+          },
+          "audience": "ui",
+          "openai/widgetAccessible": true,
+          "openai/visibility": "private"
         }
       },
       {
         "name": "activate_plan",
         "title": "Activate plan",
-        "description": "Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits). By default (`mode: 'auto'`) returns a markdown summary with plan refs and a checkout URL and still opens the UI iframe on hosts that support it; pass `mode: 'text'` for markdown only, or `mode: 'ui'` for the iframe plus a one-line placeholder.",
-        "meta": {
-          "ui": {
-            "resourceUri": "ui://test/view.html"
-          }
-        },
+        "description": "Call when the user says \"activate\" and a specific `planRef` is known. Free plans activate immediately; usage-based plans activate when the balance covers usage; paid plans open checkout. Requires `planRef` — to list or pick a plan, call `account` with view: \"checkout\".",
         "annotations": {
-          "openWorldHint": true
+          "openWorldHint": true,
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "meta": {
+          "openai/widgetAccessible": true
         }
       }
     ]

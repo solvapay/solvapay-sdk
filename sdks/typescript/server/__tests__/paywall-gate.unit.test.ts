@@ -15,8 +15,9 @@ describe('buildPaywallGate', () => {
     expect(gate.kind).toBe('payment_required')
     expect(gate.product).toBe('prd_x')
     expect(gate.checkoutUrl).toBe('https://pay.example.com/checkout')
-    // Message names a recovery tool for terminal-first hosts.
-    expect(gate.message).toMatch(/upgrade/i)
+    // Text hosts recover via the `account` tool (checkout view) plus a pasteable URL.
+    expect(gate.message).toMatch(/`account` tool/)
+    expect(gate.message).toMatch(/view: 'checkout'/)
     expect(gate.message).toContain('https://pay.example.com/checkout')
   })
 

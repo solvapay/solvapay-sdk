@@ -17,7 +17,13 @@ import { seedUsageSnapshot } from '../../../hooks/useUsage'
 import type { TransportLimitsResult } from '../../../transport/types'
 import { createTransportCacheKey } from '../../../transport/cache-key'
 import type { AutoRechargeConfig, PaymentMethodInfo } from '@solvapay/server'
-import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
+import type {
+  SolvaPayContextValue,
+  SolvaPayConfig,
+  PurchaseInfo,
+  PurchaseStatus,
+  Merchant,
+} from '../../../types'
 import type { PlanLike } from '../../plan-actions'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
@@ -45,7 +51,9 @@ function makeTransport(
 }
 
 function buildCtx(
-  overrides: Partial<SolvaPayContextValue> = {},
+  overrides: Partial<Omit<SolvaPayContextValue, 'purchase'>> & {
+    purchase?: Partial<PurchaseStatus>
+  } = {},
   purchases: PurchaseInfo[] = [],
   credits: number | null = null,
 ): SolvaPayContextValue {
@@ -103,6 +111,7 @@ function renderAccount(
         value={{
           displayMode,
           availableDisplayModes: ['inline', 'fullscreen'],
+          hostedRail: displayMode === 'fullscreen' ? 'hosted' : 'inline',
         }}
       >
         <McpAccountView {...props} />
@@ -205,7 +214,7 @@ const freePurchase: PurchaseInfo = {
     price: 0,
     isMetered: true,
   },
-  usage: { used: 2, periodEnd: '2026-10-01T00:00:00Z' },
+  usage: { used: 2, overageCost: 0, overageUnits: 0, periodEnd: '2026-10-01T00:00:00Z' },
 }
 
 const starterPurchase: PurchaseInfo = {
@@ -227,7 +236,7 @@ const starterPurchase: PurchaseInfo = {
     price: 3000,
     isMetered: true,
   },
-  usage: { used: 6200, periodEnd: '2026-09-12T00:00:00Z' },
+  usage: { used: 6200, overageCost: 0, overageUnits: 0, periodEnd: '2026-09-12T00:00:00Z' },
 }
 
 const unlimitedPurchase: PurchaseInfo = {
@@ -257,11 +266,11 @@ function seedLimits(partial: Partial<TransportLimitsResult> & { remaining: numbe
       withinLimits: true,
       meterName: 'requests',
       activationRequired: false,
-      throttled: null,
-      overage: null,
-      needsTopUp: null,
-      needsUpgrade: null,
-      upgraded: null,
+      throttled: undefined,
+      overage: undefined,
+      needsTopUp: undefined,
+      needsUpgrade: undefined,
+      upgraded: undefined,
       ...partial,
     },
     timestamp: Date.now(),
@@ -514,10 +523,10 @@ describe('McpAccountView', () => {
   })
 
   it('shows a busy label on the clicked ladder row only', async () => {
-    let resolveActivate: ((value: { status: string }) => void) | undefined
+    let resolveActivate: ((value: { status: 'activated' }) => void) | undefined
     const activatePlan = vi.fn(
       () =>
-        new Promise<{ status: string }>(resolve => {
+        new Promise<{ status: 'activated' }>(resolve => {
           resolveActivate = resolve
         }),
     )
@@ -658,7 +667,7 @@ describe('McpAccountView', () => {
     })
     renderAccount(ctx, {
       plans: catalogPlans,
-      product: { name: 'Widget API', description: null },
+      product: { name: 'Widget API' },
       productRef: 'prd_widget',
     })
     expect(
@@ -693,10 +702,10 @@ describe('McpAccountView', () => {
         needsTopUp: true,
         meterName: 'requests',
         activationRequired: false,
-        throttled: null,
-        overage: null,
-        needsUpgrade: null,
-        upgraded: null,
+        throttled: undefined,
+        overage: undefined,
+        needsUpgrade: undefined,
+        upgraded: undefined,
       },
       timestamp: Date.now(),
       promise: null,
@@ -945,7 +954,7 @@ describe('McpAccountView', () => {
     seedLimits({ remaining: 10000, withinLimits: true })
     const firstRun: PurchaseInfo = {
       ...starterPurchase,
-      usage: { used: 0 },
+      usage: { used: 0, overageCost: 0, overageUnits: 0 },
     }
     const ctx = buildCtx({}, [firstRun], 0)
     renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
@@ -1001,7 +1010,7 @@ describe('McpAccountView', () => {
     const ctx = buildCtx({}, [starterPurchase], 0)
     renderAccount(ctx, {
       plans: catalogPlans,
-      product: { name: 'Widget API', description: null },
+      product: { name: 'Widget API' },
       productRef: 'prd_widget',
       onChangePlan,
     })
@@ -1049,7 +1058,7 @@ describe('McpAccountView', () => {
     const onChangePlan = vi.fn()
     const overagePurchase: PurchaseInfo = {
       ...starterPurchase,
-      usage: { used: 11240, periodEnd: '2026-09-12T00:00:00Z' },
+      usage: { used: 11240, overageCost: 0, overageUnits: 0, periodEnd: '2026-09-12T00:00:00Z' },
     }
     const ctx = buildCtx({}, [overagePurchase], 0)
     renderAccount(ctx, {
@@ -1205,7 +1214,7 @@ describe('McpAccountView', () => {
       ctx,
       {
         plans: catalogPlans,
-        product: { name: 'Widget API', description: null },
+        product: { name: 'Widget API' },
         productRef: 'prd_widget',
       },
       'fullscreen',

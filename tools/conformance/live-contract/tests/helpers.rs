@@ -10,10 +10,10 @@ use std::collections::BTreeMap;
 
 #[test]
 fn scenarios_cover_thirty_six_ops_in_dependency_order() {
-    // Python/Ruby live drivers ship 38 scenarios (36 unique ops + 2 bogus probes).
-    assert_eq!(SCENARIOS.len(), 38);
+    // Live drivers ship 40 scenarios (38 unique ops + 2 bogus probes).
+    assert_eq!(SCENARIOS.len(), 40);
     let unique_ops: std::collections::BTreeSet<&str> = SCENARIOS.iter().map(|s| s.op).collect();
-    assert_eq!(unique_ops.len(), 36);
+    assert_eq!(unique_ops.len(), 38);
     assert_eq!(SCENARIOS[0].id, "getMerchant");
     assert_eq!(SCENARIOS[0].op, "getMerchant");
     assert_eq!(SCENARIOS[SCENARIOS.len() - 1].id, "deleteProduct");

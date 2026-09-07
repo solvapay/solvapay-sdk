@@ -10,7 +10,7 @@ export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust', 'c'] as const
 export type Language = (typeof LANGUAGES)[number]
 
 /** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
-export const EXPECTED_ROUTED_OPERATION_COUNT = 36
+export const EXPECTED_ROUTED_OPERATION_COUNT = 38
 export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 7
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
@@ -410,7 +410,7 @@ export type BindingResidue = z.infer<typeof BindingResidueSchema>
  * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
  */
 export const SHIM_JS_NAMES = [
-  // Client dispatch (36 routed + 6 MCP composite)
+  // Client dispatch (38 routed + 6 MCP composite)
   'activatePlan',
   'assignCredits',
   'attachBusinessDetails',
@@ -431,6 +431,7 @@ export const SHIM_JS_NAMES = [
   'disableAutoRecharge',
   'fetchJwks',
   'getAutoRecharge',
+  'getCreditActivity',
   'getCustomer',
   'getCustomerBalance',
   'getMerchant',
@@ -440,6 +441,7 @@ export const SHIM_JS_NAMES = [
   'getUserInfo',
   'listPlans',
   'listProducts',
+  'listPurchases',
   'mcpBootstrap',
   'mcpCallBuiltinTool',
   'mcpDispatch',
@@ -519,6 +521,17 @@ export const SHIM_JS_NAMES = [
   'countsUsage',
   'peggedCreditsPerUnit',
   'creditsPerUnitFromBalance',
+  'deriveActiveProducts',
+  'deriveDefaultView',
+  'evaluateClaimedLimits',
+  'formatCompactCredits',
+  'getHistoryNext',
+  'historyRows',
+  'planConsequence',
+  'planPricingShape',
+  'resolveAccountState',
+  'resolveDisplayMode',
+  'resolvePlanShape',
   'validateProcessPaymentIntentParams',
   'validatePurchaseRef',
   'validateTopupPaymentIntentParams',
@@ -534,10 +547,19 @@ export const SHIM_JS_NAMES = [
   'formatSubtotalLabel',
   'formatVatSummaryLabel',
   'getBusinessCountryOptions',
+  'getCustomerAddressFieldErrors',
+  'getPostalCodeFieldLabel',
+  'getPostalCodePlaceholder',
+  'getStateFieldLabel',
+  'isPostalCodeRequired',
+  'isStateRequired',
+  'POSTAL_CODE_REQUIRED_COUNTRIES',
+  'STATE_REQUIRED_COUNTRIES',
   'getSellerTaxIdentifierDisplayLabel',
   'getTaxIdExample',
   'getTaxIdFieldLabel',
   'getTaxIdHelperText',
+  'isCustomerAddressComplete',
   'isUnlimitedRemaining',
   'isZeroDecimalCurrency',
   'buildPayableToolResult',
@@ -547,6 +569,7 @@ export const SHIM_JS_NAMES = [
   'minorUnitsPerMajor',
   'paywallToolResult',
   'REVERSE_CHARGE_NOTE',
+  'resolveBuyerCountry',
   'resolveSellerIdentityDisplay',
   'resolveTaxBehavior',
   'resolveTaxTreatmentNote',

@@ -16,17 +16,32 @@ pub struct HideToolsInput {
     pub user_agent: Option<String>,
 }
 
-/// True when `tool._meta.audience` is one of `audiences`.
+/// True when the tool's audience is one of `audiences`.
+///
+/// `_meta["openai/visibility"] = "private"` marks a tool as app-only and counts
+/// as the `ui` audience even when `_meta.audience` is absent. It is never a hide
+/// signal on its own: app-only transport tools must stay in `tools/list` so the
+/// widget can call them, and the host is what excludes them from the model's list.
 #[must_use]
 pub fn is_hidden_by_audience(tool: &Value, audiences: &[String]) -> bool {
     if audiences.is_empty() {
         return false;
     }
-    let audience = tool
-        .get("_meta")
+    let meta = tool.get("_meta");
+    let audience = meta
         .and_then(|m| m.get("audience"))
         .and_then(Value::as_str)
-        .unwrap_or("");
+        .unwrap_or_else(|| {
+            let private = meta
+                .and_then(|m| m.get("openai/visibility"))
+                .and_then(Value::as_str)
+                == Some("private");
+            if private {
+                "ui"
+            } else {
+                ""
+            }
+        });
     audiences.iter().any(|hidden| hidden == audience)
 }
 
@@ -34,9 +49,6 @@ pub fn is_hidden_by_audience(tool: &Value, audiences: &[String]) -> bool {
 #[must_use]
 pub fn mcp_hide_tools_by_audience(input: &HideToolsInput) -> Value {
     let _ = &input.user_agent;
-    if input.audiences.is_empty() {
-        return json!({ "tools": input.tools });
-    }
     let tools: Vec<Value> = input
         .tools
         .iter()

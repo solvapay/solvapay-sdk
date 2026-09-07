@@ -6,15 +6,29 @@
 pub use solvapay_core::{
     BillingCycle, BusinessDetailsInput, Charge, CreditsToDisplayInput, CustomerSnapshot,
     GateContent, PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
-    ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput,
-    TaxIdType, UsageRate, ValidateBusinessDetailsResult,
+    PlanPricingShape, ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay,
+    SellerIdentityInput, TaxIdType, UsageRate, ValidateBusinessDetailsResult,
 };
+
+/// Countries that require a postal or ZIP code for Stripe Tax.
+///
+/// # Returns
+///
+/// Country code list.
+pub use solvapay_core::business_details::postal_code_required_countries;
 
 /// Buyer-facing note when VAT reverse charge applies.
 pub use solvapay_core::tax_summary::reverse_charge_note as REVERSE_CHARGE_NOTE;
 
 /// Map of seller tax identifier types to display labels.
 pub use solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type as SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE;
+
+/// Countries that require a state or province for Stripe Tax.
+///
+/// # Returns
+///
+/// Country code list.
+pub use solvapay_core::business_details::state_required_countries;
 
 /// Buyer-facing note when tax is not collected on the purchase.
 pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_NOTE;
@@ -131,12 +145,33 @@ pub use solvapay_core::tax_summary::format_subtotal_label;
 /// VAT label string.
 pub use solvapay_core::tax_summary::format_vat_summary_label;
 
+/// Return the postal or ZIP code field label for a country.
+///
+/// # Returns
+///
+/// Field label string.
+pub use solvapay_core::business_details::get_postal_code_field_label;
+
+/// Return the postal or ZIP code field placeholder for a country.
+///
+/// # Returns
+///
+/// Placeholder string.
+pub use solvapay_core::business_details::get_postal_code_placeholder;
+
 /// Return the display label for a seller tax identifier type.
 ///
 /// # Returns
 ///
 /// Display label string.
 pub use solvapay_core::seller_identity::get_seller_tax_identifier_display_label;
+
+/// Return the state or province field label for a country.
+///
+/// # Returns
+///
+/// Field label string.
+pub use solvapay_core::business_details::get_state_field_label;
 
 /// Return an example tax ID string for a country.
 ///
@@ -172,6 +207,20 @@ pub use solvapay_core::pricing_options::headline_charges;
 ///
 /// Cap (0 means unlimited), or null when no limit is configured.
 pub use solvapay_core::pricing_options::included_units;
+
+/// Whether Stripe Tax requires a postal or ZIP code for a country.
+///
+/// # Returns
+///
+/// True when a postal or ZIP code is required.
+pub use solvapay_core::business_details::is_postal_code_required;
+
+/// Whether Stripe Tax requires a state or province for a country.
+///
+/// # Returns
+///
+/// True when a state or province is required.
+pub use solvapay_core::business_details::is_state_required;
 
 /// Return whether remaining is the backend unlimited sentinel (-1).
 ///
@@ -221,6 +270,13 @@ pub use solvapay_core::pricing_options::pegged_credits_per_unit;
 ///
 /// The metered charge, or null when the plan does not meter usage.
 pub use solvapay_core::pricing_options::per_unit_charge;
+
+/// Derive the pricing shape a plan-row or narration surface should branch on.
+///
+/// # Returns
+///
+/// Shape, headline, currency, cycle, and usage rate.
+pub use solvapay_core::pricing_options::plan_pricing_shape;
 
 /// Resolve a product ref from metadata or env, or throw a named missing-ref error.
 ///

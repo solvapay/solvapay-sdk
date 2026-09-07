@@ -37,7 +37,8 @@
                   "resourceDomains": [
                     "https://js.stripe.com",
                     "https://*.stripe.com",
-                    "https://b.stripecdn.com"
+                    "https://b.stripecdn.com",
+                    "https://assets.claude.ai"
                   ],
                   "connectDomains": [
                     "https://api.stripe.com",
@@ -56,14 +57,14 @@
           }
         ],
         "resultType": "complete",
-        "ttlMs": 60000,
-        "cacheScope": "public",
         "_meta": {
           "io.modelcontextprotocol/serverInfo": {
             "name": "solvapay-mcp",
             "version": "0.1.0"
           }
-        }
+        },
+        "ttlMs": 60000,
+        "cacheScope": "public"
       }
     }
   }

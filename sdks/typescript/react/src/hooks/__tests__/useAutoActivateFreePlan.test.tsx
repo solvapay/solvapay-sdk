@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useAutoActivateFreePlan } from '../useAutoActivateFreePlan'
-import { useActivation } from '../useActivation'
+import { useActivation, type ActivationState } from '../useActivation'
 import { useCustomer } from '../useCustomer'
 import { useLimits } from '../useLimits'
 import { usePlans } from '../usePlans'
@@ -82,7 +82,7 @@ function setPlans(plans: Plan[] = [freePlan]) {
   })
 }
 
-type ActivateFn = (params: { productRef: string; planRef: string }) => Promise<void>
+type ActivateFn = (params: { productRef: string; planRef: string }) => Promise<ActivationState>
 
 interface SetActivationOpts {
   activate?: ActivateFn

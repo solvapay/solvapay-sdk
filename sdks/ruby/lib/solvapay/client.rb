@@ -179,6 +179,14 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "get_auto_recharge", args)
     end
 
+    # List account-wide credit activity for a customer, newest first.
+    # @param params Customer reference and optional page size.
+    # @return Credit activity page.
+    def get_credit_activity(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "get_credit_activity", args)
+    end
+
     # Fetch a customer by reference.
     # @param params Lookup options including the customer reference.
     # @return The customer projection.
@@ -246,6 +254,14 @@ module SolvaPay
     def list_products
       args = {} #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "list_products", args)
+    end
+
+    # List purchases for the authenticated provider, optionally filtered by customer, product, or status.
+    # @param params Optional purchase list filters.
+    # @return Purchase list wrapper.
+    def list_purchases(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "list_purchases", args)
     end
 
     # Fan out merchant, product, plans, and customer snapshots for the MCP widget.

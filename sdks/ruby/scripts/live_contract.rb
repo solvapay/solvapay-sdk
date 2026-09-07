@@ -115,6 +115,16 @@ module SolvaPay
         args: { "customerRef" => "{customerRef}" },
       ),
       Scenario.new(
+        id: "listPurchases",
+        op: "listPurchases",
+        args: { "customerRef" => "{customerRef}", "productRef" => "{productRef}" },
+      ),
+      Scenario.new(
+        id: "getCreditActivity",
+        op: "getCreditActivity",
+        args: { "customerRef" => "{customerRef}", "productRef" => "{productRef}" },
+      ),
+      Scenario.new(
         id: "getUserInfo",
         op: "getUserInfo",
         args: { "customerRef" => "{customerRef}", "productRef" => "{productRef}" },

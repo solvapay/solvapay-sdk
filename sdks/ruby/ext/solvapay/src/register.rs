@@ -24,14 +24,20 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::derive_active_products_binding;
+use crate::decisions::derive_default_view_binding;
 use crate::decisions::ensure_customer_next_binding;
 use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
+use crate::decisions::evaluate_claimed_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::format_compact_credits_binding;
 use crate::decisions::gate_next_binding;
+use crate::decisions::get_history_next_binding;
 use crate::decisions::headline_charges_binding;
+use crate::decisions::history_rows_binding;
 use crate::decisions::included_units_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
@@ -43,14 +49,19 @@ use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
 use crate::decisions::per_unit_charge_binding;
+use crate::decisions::plan_consequence_binding;
+use crate::decisions::plan_pricing_shape_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
 use crate::decisions::require_product_ref_binding;
+use crate::decisions::resolve_account_state_binding;
 use crate::decisions::resolve_authenticated_user_binding;
 use crate::decisions::resolve_check_limits_params_binding;
 use crate::decisions::resolve_customer_ref_binding;
+use crate::decisions::resolve_display_mode_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
+use crate::decisions::resolve_plan_shape_binding;
 use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
@@ -83,11 +94,18 @@ use crate::payload_builders::format_price_binding;
 use crate::payload_builders::format_subtotal_label_binding;
 use crate::payload_builders::format_vat_summary_label_binding;
 use crate::payload_builders::get_business_country_options_binding;
+use crate::payload_builders::get_customer_address_field_errors_binding;
+use crate::payload_builders::get_postal_code_field_label_binding;
+use crate::payload_builders::get_postal_code_placeholder_binding;
 use crate::payload_builders::get_seller_tax_identifier_display_label_binding;
+use crate::payload_builders::get_state_field_label_binding;
 use crate::payload_builders::get_tax_id_example_binding;
 use crate::payload_builders::get_tax_id_field_label_binding;
 use crate::payload_builders::get_tax_id_helper_text_binding;
 use crate::payload_builders::invoke_payable_next_binding;
+use crate::payload_builders::is_customer_address_complete_binding;
+use crate::payload_builders::is_postal_code_required_binding;
+use crate::payload_builders::is_state_required_binding;
 use crate::payload_builders::is_unlimited_remaining_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
@@ -95,12 +113,15 @@ use crate::payload_builders::mcp_tool_names_binding;
 use crate::payload_builders::mcp_view_maps_binding;
 use crate::payload_builders::minor_units_per_major_binding;
 use crate::payload_builders::paywall_tool_result_binding;
+use crate::payload_builders::postal_code_required_countries_binding;
+use crate::payload_builders::resolve_buyer_country_binding;
 use crate::payload_builders::resolve_seller_identity_display_binding;
 use crate::payload_builders::resolve_tax_behavior_binding;
 use crate::payload_builders::resolve_tax_treatment_note_binding;
 use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
+use crate::payload_builders::state_required_countries_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
 use crate::payload_builders::validate_business_details_binding;
@@ -192,6 +213,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "classify_cancel_error",
         function!(classify_cancel_error_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "derive_active_products",
+        function!(derive_active_products_binding, 1),
     )?;
     native.define_singleton_method(
         "classify_reactivate_error",
@@ -321,8 +346,39 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method("tier_meters", function!(tier_meters_binding, 1))?;
     native.define_singleton_method("usage_rate", function!(usage_rate_binding, 1))?;
     native.define_singleton_method(
+        "plan_pricing_shape",
+        function!(plan_pricing_shape_binding, 1),
+    )?;
+    native.define_singleton_method(
         "build_customer_snapshot",
         function!(build_customer_snapshot_binding, 1),
+    )?;
+    native.define_singleton_method("get_history_next", function!(get_history_next_binding, 1))?;
+    native.define_singleton_method(
+        "evaluate_claimed_limits",
+        function!(evaluate_claimed_limits_binding, 1),
+    )?;
+    native.define_singleton_method("history_rows", function!(history_rows_binding, 1))?;
+    native.define_singleton_method(
+        "resolve_plan_shape",
+        function!(resolve_plan_shape_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "resolve_account_state",
+        function!(resolve_account_state_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "derive_default_view",
+        function!(derive_default_view_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "resolve_display_mode",
+        function!(resolve_display_mode_binding, 1),
+    )?;
+    native.define_singleton_method("plan_consequence", function!(plan_consequence_binding, 1))?;
+    native.define_singleton_method(
+        "format_compact_credits",
+        function!(format_compact_credits_binding, 1),
     )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
@@ -383,12 +439,28 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(credits_to_display_minor_units_binding, 1),
     )?;
     native.define_singleton_method(
+        "resolve_buyer_country",
+        function!(resolve_buyer_country_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "get_customer_address_field_errors",
+        function!(get_customer_address_field_errors_binding, 1),
+    )?;
+    native.define_singleton_method(
         "is_zero_decimal_currency",
         function!(is_zero_decimal_currency_binding, 1),
     )?;
     native.define_singleton_method(
+        "is_customer_address_complete",
+        function!(is_customer_address_complete_binding, 1),
+    )?;
+    native.define_singleton_method(
         "minor_units_per_major",
         function!(minor_units_per_major_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "is_postal_code_required",
+        function!(is_postal_code_required_binding, 1),
     )?;
     native.define_singleton_method(
         "resolve_seller_identity_display",
@@ -398,9 +470,18 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "get_seller_tax_identifier_display_label",
         function!(get_seller_tax_identifier_display_label_binding, 1),
     )?;
+    native.define_singleton_method("is_state_required", function!(is_state_required_binding, 1))?;
     native.define_singleton_method(
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         function!(seller_tax_identifier_display_label_by_type_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "get_state_field_label",
+        function!(get_state_field_label_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "get_postal_code_field_label",
+        function!(get_postal_code_field_label_binding, 1),
     )?;
     native.define_singleton_method(
         "is_unlimited_remaining",
@@ -411,14 +492,26 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(paywall_tool_result_binding, 1),
     )?;
     native.define_singleton_method(
+        "get_postal_code_placeholder",
+        function!(get_postal_code_placeholder_binding, 1),
+    )?;
+    native.define_singleton_method(
         "make_response_result",
         function!(make_response_result_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "POSTAL_CODE_REQUIRED_COUNTRIES",
+        function!(postal_code_required_countries_binding, 1),
     )?;
     native.define_singleton_method(
         "assert_response_result",
         function!(assert_response_result_binding, 1),
     )?;
     native.define_singleton_method("MCP_TOOL_NAMES", function!(mcp_tool_names_binding, 1))?;
+    native.define_singleton_method(
+        "STATE_REQUIRED_COUNTRIES",
+        function!(state_required_countries_binding, 1),
+    )?;
     native.define_singleton_method("mcp_view_maps", function!(mcp_view_maps_binding, 1))?;
     native.define_singleton_method("derive_icons", function!(derive_icons_binding, 1))?;
     native.define_singleton_method(
@@ -538,7 +631,12 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "disable_auto_recharge",
         method!(SolvaPayClient::disable_auto_recharge, 1),
     )?;
+    client.define_method("list_purchases", method!(SolvaPayClient::list_purchases, 1))?;
     client.define_method("mcp_bootstrap", method!(SolvaPayClient::mcp_bootstrap, 1))?;
+    client.define_method(
+        "get_credit_activity",
+        method!(SolvaPayClient::get_credit_activity, 1),
+    )?;
     client.define_method(
         "mcp_call_builtin_tool",
         method!(SolvaPayClient::mcp_call_builtin_tool, 1),

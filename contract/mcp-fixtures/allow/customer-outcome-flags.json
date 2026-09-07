@@ -34,6 +34,10 @@
           {
             "type": "text",
             "text": "{\"throttled\":true,\"overage\":false}"
+          },
+          {
+            "type": "text",
+            "text": "{\"throttled\":true,\"overage\":false}"
           }
         ],
         "structuredContent": { "throttled": true, "overage": false }

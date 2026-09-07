@@ -80,7 +80,7 @@ async fn group_c_inventory_is_sixty_seven_fixtures() {
 }
 
 #[tokio::test]
-async fn all_thirty_six_operations_are_dispatchable() {
+async fn all_thirty_eight_operations_are_dispatchable() {
     let mut covered: BTreeSet<&str> = BTreeSet::new();
     covered.extend(GROUP_A_FNS.iter().copied());
     covered.extend(GROUP_B_FNS.iter().copied());
@@ -95,7 +95,7 @@ async fn all_thirty_six_operations_are_dispatchable() {
         covered, expected,
         "GROUP_A ∪ GROUP_B ∪ GROUP_C must equal routed OPERATION_NAMES"
     );
-    assert_eq!(covered.len(), 36, "expected 36 routed client methods");
+    assert_eq!(covered.len(), 38, "expected 38 routed client methods");
 
     let root = client_fixtures_root();
     let mut missing = Vec::new();

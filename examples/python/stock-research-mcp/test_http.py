@@ -217,7 +217,7 @@ async def test_in_process_lists_builtins_and_bills_token_customer() -> None:
             listed = await mcp_client.list_tools()
             names = [tool.name for tool in listed.tools]
             assert "top_ranked_assets" in names
-            assert "upgrade" in names
+            assert "account" in names
             result = await mcp_client.call_tool("top_ranked_assets", {})
     finally:
         reset_request_customer_ref(token)

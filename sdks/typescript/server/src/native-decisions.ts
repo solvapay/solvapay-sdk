@@ -19,6 +19,7 @@
 import { SolvaPayError } from '@solvapay/core'
 import type {
   ActivatePlanValidationError,
+  ActiveProduct,
   AuthResolutionInput,
   CachedLimitsEvaluation,
   CheckoutHelperError,
@@ -30,11 +31,14 @@ import type {
   FreshLimitsEvaluation,
   LimitsHelperError,
   LookupErrorKind,
+  McpDisplayModeState,
+  NarratorPlanShape,
   PaymentHelperError,
   PaymentIntentProjection,
   PaymentIntentSource,
   PaywallDecisionLimits,
   PaywallOutcome,
+  PlanPricingShape,
   PlansHelperError,
   ProductHelperError,
   RenewalHelperError,
@@ -619,10 +623,79 @@ export function gateNext(
   return dispatchSync('gateNext', { state: state ?? null, event: event ?? null })
 }
 
+export function getHistoryNext(
+  state: unknown | null | undefined,
+  event: unknown | null | undefined,
+): unknown {
+  return dispatchSync('getHistoryNext', { state: state ?? null, event: event ?? null })
+}
+
+/**
+ * Derive the pricing shape a plan-row or narration surface should branch on.
+ * @returns Shape, headline, currency, cycle, and usage rate.
+ */
+export function planPricingShape(priced: unknown | null | undefined): PlanPricingShape {
+  return dispatchSync('planPricingShape', { priced: priced ?? null })
+}
+
+export function evaluateClaimedLimits(
+  withinLimits: boolean,
+  remaining: number,
+  claimed: number,
+): FreshLimitsEvaluation {
+  return dispatchSync('evaluateClaimedLimits', { withinLimits, remaining, claimed })
+}
+
+export function resolvePlanShape(priced: unknown | null | undefined): NarratorPlanShape | null {
+  return dispatchSync('resolvePlanShape', { priced: priced ?? null })
+}
+
+export function resolveAccountState(input: unknown | null | undefined): string {
+  return dispatchSync('resolveAccountState', { input: input ?? null })
+}
+
+export function deriveDefaultView(input: unknown | null | undefined): unknown {
+  return dispatchSync('deriveDefaultView', { input: input ?? null })
+}
+
 export function resolveAuthenticatedUser(input: AuthResolutionInput): unknown {
-  return dispatchSync('resolveAuthenticatedUser', {
-    input,
+  return dispatchSync('resolveAuthenticatedUser', { input })
+}
+
+export function planConsequence(
+  plan: unknown | null | undefined,
+  locale: string | null | undefined,
+  balance: unknown | null | undefined,
+  merchantName: string | null | undefined,
+): unknown {
+  return dispatchSync('planConsequence', {
+    plan: plan ?? null,
+    locale: locale ?? null,
+    balance: balance ?? null,
+    merchantName: merchantName ?? null,
   })
+}
+
+export function deriveActiveProducts(
+  purchases: unknown | null | undefined,
+  productRef: string | null | undefined,
+): ActiveProduct[] {
+  return dispatchSync('deriveActiveProducts', {
+    purchases: purchases ?? null,
+    productRef: productRef ?? null,
+  })
+}
+
+export function historyRows(input: unknown | null | undefined): unknown {
+  return dispatchSync('historyRows', { input: input ?? null })
+}
+
+export function resolveDisplayMode(ctx: unknown | null | undefined): McpDisplayModeState {
+  return dispatchSync('resolveDisplayMode', { ctx: ctx ?? null })
+}
+
+export function formatCompactCredits(credits: number): unknown {
+  return dispatchSync('formatCompactCredits', { credits })
 }
 
 // --- paywall state / gate / payload ---

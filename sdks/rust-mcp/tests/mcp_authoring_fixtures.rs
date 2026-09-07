@@ -28,6 +28,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "allow/custom-usage-type.json",
     "allow/customer-outcome-flags.json",
+    "allow/respond-data-in-text-false.json",
     "allow/respond-emitted-blocks.json",
     "allow/respond-key-order.json",
     "allow/respond-minimal.json",
@@ -44,27 +45,28 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "bearer-verify/wrong-key.json",
     "bootstrap/authenticated.json",
     "bootstrap/unauthenticated.json",
+    "builtin-tools/account-topup.json",
+    "builtin-tools/account-view-account.json",
+    "builtin-tools/account.json",
     "builtin-tools/activate-plan-no-ref.json",
     "builtin-tools/activate-plan.json",
     "builtin-tools/attach-business-details-unauth.json",
     "builtin-tools/attach-business-details.json",
-    "builtin-tools/cancel-renewal-unauth.json",
-    "builtin-tools/cancel-renewal.json",
-    "builtin-tools/create-checkout-session-unauth.json",
-    "builtin-tools/create-checkout-session.json",
-    "builtin-tools/create-customer-session-unauth.json",
-    "builtin-tools/create-customer-session.json",
+    "builtin-tools/create-hosted-session-portal-unauth.json",
+    "builtin-tools/create-hosted-session-portal.json",
+    "builtin-tools/create-hosted-session-unauth.json",
+    "builtin-tools/create-hosted-session.json",
+    "builtin-tools/create-payment-intent-topup-unauth.json",
+    "builtin-tools/create-payment-intent-topup.json",
     "builtin-tools/create-payment-intent-unauth.json",
     "builtin-tools/create-payment-intent.json",
-    "builtin-tools/create-topup-payment-intent-unauth.json",
-    "builtin-tools/create-topup-payment-intent.json",
-    "builtin-tools/manage-account.json",
+    "builtin-tools/get-history-unauth.json",
+    "builtin-tools/get-history.json",
     "builtin-tools/process-payment-unauth.json",
     "builtin-tools/process-payment.json",
-    "builtin-tools/reactivate-renewal-unauth.json",
-    "builtin-tools/reactivate-renewal.json",
-    "builtin-tools/topup.json",
-    "builtin-tools/upgrade.json",
+    "builtin-tools/set-renewal-cancel.json",
+    "builtin-tools/set-renewal-reactivate.json",
+    "builtin-tools/set-renewal-unauth.json",
     "config-log/once.json",
     "csp/default.json",
     "csp/with-api-origin.json",
@@ -103,6 +105,8 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "gate/payment-required.json",
     "hide-tools/filter-ui-audience.json",
     "hide-tools/hidden-tool-invoked.json",
+    "hide-tools/keeps-private-without-audiences.json",
+    "hide-tools/openai-visibility-private.json",
     "hide-tools/ua-spoof.json",
     "narrate/activate-plan.json",
     "narrate/manage-account-active.json",
@@ -287,7 +291,10 @@ fn replays_core_ops() {
         if fn_name == "mcpHandleRequest" && rel.contains("tools-list") {
             assert_eq!(got["kind"], "rpc", "{rel}");
             let tools = got["rpc"]["result"]["tools"].as_array().unwrap();
-            assert!(tools.len() >= 8, "{rel}");
+            assert!(
+                tools.iter().any(|tool| tool["name"] == "account"),
+                "{rel} must advertise the account viewer"
+            );
             for tool in tools {
                 let title = tool.get("title");
                 assert!(

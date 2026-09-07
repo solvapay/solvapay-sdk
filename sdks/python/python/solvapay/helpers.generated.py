@@ -10,6 +10,20 @@ from typing import Any
 from solvapay._native import call_native_sync
 
 
+def postal_code_required_countries() -> Any:
+    """Countries that require a postal or ZIP code for Stripe Tax.
+    @returns Country code list.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("POSTAL_CODE_REQUIRED_COUNTRIES", json.dumps(payload))
+
+def state_required_countries() -> Any:
+    """Countries that require a state or province for Stripe Tax.
+    @returns Country code list.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("STATE_REQUIRED_COUNTRIES", json.dumps(payload))
+
 def assert_valid_product_ref(product_ref: str, context: str) -> Any:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.
@@ -184,6 +198,22 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
     payload["taxRate"] = tax_rate
     return call_native_sync("format_vat_summary_label", json.dumps(payload))
 
+def get_postal_code_field_label(country: str) -> Any:
+    """Return the postal or ZIP code field label for a country.
+    @returns Field label string.
+    """
+    payload: dict[str, Any] = {}
+    payload["country"] = country
+    return call_native_sync("get_postal_code_field_label", json.dumps(payload))
+
+def get_postal_code_placeholder(country: str) -> Any:
+    """Return the postal or ZIP code field placeholder for a country.
+    @returns Placeholder string.
+    """
+    payload: dict[str, Any] = {}
+    payload["country"] = country
+    return call_native_sync("get_postal_code_placeholder", json.dumps(payload))
+
 def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
     """Return the display label for a seller tax identifier type.
     @returns Display label string.
@@ -192,6 +222,14 @@ def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
     if country is not None:
         payload["country"] = country
     return call_native_sync("get_seller_tax_identifier_display_label", json.dumps(payload))
+
+def get_state_field_label(country: str) -> Any:
+    """Return the state or province field label for a country.
+    @returns Field label string.
+    """
+    payload: dict[str, Any] = {}
+    payload["country"] = country
+    return call_native_sync("get_state_field_label", json.dumps(payload))
 
 def get_tax_id_example(country: str) -> Any:
     """Return an example tax ID string for a country.
@@ -236,6 +274,22 @@ def included_units(priced: Any | None = None, meter: str | None = None) -> Any:
     if meter is not None:
         payload["meter"] = meter
     return call_native_sync("included_units", json.dumps(payload))
+
+def is_postal_code_required(country: str) -> Any:
+    """Whether Stripe Tax requires a postal or ZIP code for a country.
+    @returns True when a postal or ZIP code is required.
+    """
+    payload: dict[str, Any] = {}
+    payload["country"] = country
+    return call_native_sync("is_postal_code_required", json.dumps(payload))
+
+def is_state_required(country: str) -> Any:
+    """Whether Stripe Tax requires a state or province for a country.
+    @returns True when a state or province is required.
+    """
+    payload: dict[str, Any] = {}
+    payload["country"] = country
+    return call_native_sync("is_state_required", json.dumps(payload))
 
 def is_unlimited_remaining(remaining: float) -> Any:
     """Return whether remaining is the backend unlimited sentinel (-1).
@@ -304,6 +358,15 @@ def per_unit_charge(priced: Any | None = None, meter: str | None = None) -> Any:
     if meter is not None:
         payload["meter"] = meter
     return call_native_sync("per_unit_charge", json.dumps(payload))
+
+def plan_pricing_shape(priced: Any | None = None) -> Any:
+    """Derive the pricing shape a plan-row or narration surface should branch on.
+    @returns Shape, headline, currency, cycle, and usage rate.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    return call_native_sync("plan_pricing_shape", json.dumps(payload))
 
 def require_product_ref(metadata_product: str | None = None, env_product: str | None = None) -> Any:
     """Resolve a product ref from metadata or env, or throw a named missing-ref error.

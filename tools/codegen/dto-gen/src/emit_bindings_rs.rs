@@ -369,7 +369,7 @@ fn python_client_section(section: &str) -> String {
 /// Sync-only surface: each method releases the GVL via `without_gvl` while
 /// `block_on`-ing the shared tokio runtime. Bodies reuse [`client_call_body`].
 fn emit_ruby_client(ir: &Ir, art: &Value) -> GenResult<String> {
-    let header = ruby_client_header(chrome_str(art, &["client", "header"])?);
+    let header = ruby_client_header(chrome_str(art, &["client", "header"])?, ir);
     let preamble = ruby_client_preamble(
         &chrome_str(art, &["client", "preamble"])?
             .replace("SolvaPay::Client", "SolvaPay::Native::Client"),
@@ -393,8 +393,8 @@ fn emit_ruby_client(ir: &Ir, art: &Value) -> GenResult<String> {
     ))
 }
 
-fn ruby_client_header(header: &str) -> String {
-    let dto_imports = "use solvapay_dto::{\n    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,\n    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,\n    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,\n    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,\n    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,\n    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,\n    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,\n    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,\n};\n";
+fn ruby_client_header(header: &str, ir: &Ir) -> String {
+    let dto_imports = solvapay_dto_import_block(ir);
     header
         .replace(
             "Magnus [`SolvaPayClient`] — Step 43 hello-world scaffold (`getMerchant`).",
@@ -842,22 +842,7 @@ pub unsafe extern "C" fn sv_verify_webhook(args_ptr: *mut u8, args_len: usize) -
 /// Emits the Go guest `client.rs` (full Groups A–C surface).
 fn emit_go_client(ir: &Ir) -> GenResult<String> {
     let symbols = symbols_for(ir, IrBindingArtifact::Client);
-    let mut dto_types: Vec<String> = symbols
-        .iter()
-        .filter_map(|sym| sym.dto_type.as_deref().and_then(solvapay_dto_import_ident))
-        .map(str::to_owned)
-        .collect();
-    dto_types.sort();
-    dto_types.dedup();
-
-    let dto_import = if dto_types.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "use solvapay_dto::{{\n    {},\n}};\n",
-            dto_types.join(",\n    ")
-        )
-    };
+    let dto_import = solvapay_dto_import_block(ir);
 
     let header = format!("{GO_CLIENT_HEADER_PREFIX}{dto_import}{GO_CLIENT_HEADER_SUFFIX}");
 
@@ -905,31 +890,9 @@ const GO_DECISIONS_HEADER: &str = r#"//! WASI guest decision / paywall / retry s
 
 use serde_json::Value;
 use solvapay_core::{
-    assert_valid_product_ref, attach_business_details_validation_error,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate,
-    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
-    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
-    decide_paywall_outcome, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
-    ensure_customer_next, gate_next, should_retry_usage_error, is_cached_customer_ref_valid, resolve_authenticated_user,
-    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
-    normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
-    billing_cycle, charges, credits_per_unit_from_balance, headline_charges,
-    counts_usage, included_units, meter_name, pegged_credits_per_unit, per_unit_charge,
-    tier_bands, tier_meters, usage_rate,
-    project_topup_process_outcome, project_usage_snapshot, require_product_ref,
-    topup_process_next,
-    trial_days,
-    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
-    resolve_customer_ref, resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
-    validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
-    validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, AuthResolutionInput, Backoff, GateContent,
-    PaymentIntentSource, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
-    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    AuthResolutionInput, Backoff, GateContent, PaymentIntentSource, PaywallGate, PaywallGateLimits,
+    PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy, RouteErrorInput,
+    RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
 
 use crate::abi::{pack, read_string};
@@ -946,25 +909,15 @@ const GO_PAYLOAD_HEADER: &str = r#"//! WASI guest payload-builder shims.
 
 use serde_json::{Map, Value};
 use solvapay_core::{
-    assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
-    build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
-    derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
-    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_unlimited_remaining, is_zero_decimal_currency,
-    build_payable_tool_result, invoke_payable_next, make_response_result, mcp_tool_names_json,
-    mcp_view_maps,
-    minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
-    resolve_tax_behavior, resolve_tax_treatment_note, reverse_charge_note, should_show_tax_row,
-    seller_tax_identifier_display_label_by_type, format_price, format_subtotal_label,
-    format_vat_summary_label, tax_not_collected_note, to_major_units, validate_business_details,
-    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
-    BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
-    MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
+    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
+    CreditsToDisplayInput, MerchantBranding, PaywallGate, ResponseEnvelope, SdkError,
+    SellerIdentityInput,
 };
 
 use crate::abi::{pack, read_string};
 use crate::args::{
-    args_map, optional_f64, optional_string, optional_value, require_f64, require_string,
-    require_typed, result_as_value, to_value,
+    args_map, optional_f64, optional_string, optional_value, require_f64,
+    require_string, require_typed, result_as_value, to_value,
 };
 use crate::error::run_envelope_sync;
 "#;
@@ -1045,6 +998,14 @@ fn emit_go_sync_artifact(
     header: &str,
     helpers: &str,
 ) -> String {
+    let header = header.replace(
+        "use crate::abi::{pack, read_string};",
+        &format!(
+            "{}\nuse crate::abi::{{pack, read_string}};",
+            solvapay_core_fn_import_block(ir, artifact)
+        ),
+    );
+    let header = header.as_str();
     let symbols = symbols_for(ir, artifact);
     let mut chunks: Vec<String> = Vec::new();
     let mut prev_section: Option<&str> = None;
@@ -1092,22 +1053,7 @@ fn emit_c_client(ir: &Ir) -> GenResult<String> {
     let chrome: Value = serde_json::from_str(C_SNAPSHOT)
         .map_err(|e| GenError::Parse(format!("invalid c-emit snapshot: {e}")))?;
     let symbols = symbols_for(ir, IrBindingArtifact::Client);
-    let mut dto_types: Vec<String> = symbols
-        .iter()
-        .filter_map(|sym| sym.dto_type.as_deref().and_then(solvapay_dto_import_ident))
-        .map(str::to_owned)
-        .collect();
-    dto_types.sort();
-    dto_types.dedup();
-
-    let dto_import = if dto_types.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "use solvapay_dto::{{\n    {},\n}};\n",
-            dto_types.join(",\n    ")
-        )
-    };
+    let dto_import = solvapay_dto_import_block(ir);
 
     let header = chrome_str(&chrome, &["header"])?;
     let uses_prefix = chrome_str(&chrome, &["usesPrefix"])?;
@@ -1391,7 +1337,7 @@ pub(crate) fn serialize_expr(kind: IrSerializeKind, core: &str, args: &str) -> S
     match kind {
         IrSerializeKind::ToValue => format!("to_value(&{core}({args}))"),
         IrSerializeKind::ValueBool => format!("Ok(Value::Bool({core}({args})))"),
-        IrSerializeKind::ValueString => format!("Ok(Value::String({core}({args})))"),
+        IrSerializeKind::ValueString => format!("Ok(Value::String({core}({args}).to_owned()))"),
         IrSerializeKind::ValueArray => format!("Ok(Value::Array({core}({args})))"),
         IrSerializeKind::OptionHelperErr => format!("option_helper_err({core}({args}))"),
         IrSerializeKind::ResultAsValue => format!("result_as_value({core}({args}))"),
@@ -1632,6 +1578,59 @@ fn solvapay_dto_import_ident(dto: &str) -> Option<&str> {
     } else {
         Some(dto)
     }
+}
+
+/// `use solvapay_core::{…};` covering every core fn the artifact's shims call.
+///
+/// Derived from each symbol's fully-qualified `core` path so new exports never
+/// need a hand-edited import list. Type imports stay in the artifact header —
+/// they come from signatures, not from the call graph.
+///
+/// Associated items (`…::RetryPolicy::next_delay`) are skipped: the shim
+/// reaches them through the receiver, so only the type needs importing.
+///
+/// Emitted one ident per line; rustfmt rewraps it when the file is written.
+fn solvapay_core_fn_import_block(ir: &Ir, artifact: IrBindingArtifact) -> String {
+    let mut fns: Vec<&str> = symbols_for(ir, artifact)
+        .iter()
+        .filter_map(|sym| sym.core.strip_prefix("solvapay_core::"))
+        .filter_map(|path| {
+            let mut segments = path.rsplit("::");
+            let name = segments.next()?;
+            let owner_is_type = segments
+                .next()
+                .and_then(|owner| owner.chars().next())
+                .is_some_and(char::is_uppercase);
+            (!owner_is_type).then_some(name)
+        })
+        .collect();
+    fns.sort_unstable();
+    fns.dedup();
+
+    if fns.is_empty() {
+        return String::new();
+    }
+    format!("use solvapay_core::{{\n    {},\n}};\n", fns.join(",\n    "))
+}
+
+/// `use solvapay_dto::{…};` covering every DTO the client symbols parse into.
+///
+/// Emitted one ident per line; rustfmt rewraps it when the file is written.
+fn solvapay_dto_import_block(ir: &Ir) -> String {
+    let mut dto_types: Vec<&str> = symbols_for(ir, IrBindingArtifact::Client)
+        .iter()
+        .filter_map(|sym| sym.dto_type.as_deref().and_then(solvapay_dto_import_ident))
+        .collect();
+    dto_types.sort_unstable();
+    dto_types.dedup();
+
+    if dto_types.is_empty() {
+        return String::new();
+    }
+    format!(
+        "use solvapay_dto::{{\n    {},\n}};\n",
+        dto_types.join(",\n    ")
+    )
 }
 
 fn mcp_symbol_ids(chrome: &Value) -> GenResult<Vec<String>> {

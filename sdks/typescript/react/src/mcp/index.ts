@@ -83,6 +83,8 @@ export {
   resolveActivationStrategy,
   resolvePlanActions,
   resolveActivityStrip,
+  mergePlanSnapshot,
+  findCatalogPlan,
 } from './plan-actions'
 export type {
   PlanShape,
@@ -110,23 +112,55 @@ export {
   type McpHostInfoProviderProps,
 } from './hooks/useHostInfo'
 
+export {
+  McpDisplayModeProvider,
+  useDisplayMode,
+  type McpDisplayModeProviderProps,
+} from './hooks/useDisplayMode'
+
+export {
+  DEFAULT_DISPLAY_MODE_STATE,
+  MCP_DISPLAY_MODES,
+  MCP_HOSTED_MIN_WIDTH,
+  SOLVAPAY_MCP_APP_CAPABILITIES,
+  hostSafeAreaPadding,
+  hostWidthPx,
+  isMcpDisplayMode,
+  readDisplayModeState,
+  resolveHostedRail,
+} from './display-mode'
+export type {
+  McpContainerDimensions,
+  McpDisplayMode,
+  McpDisplayModeState,
+  McpHostedRail,
+  McpSafeAreaInsets,
+} from './display-mode'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
-export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-export type { McpCustomerDetailsCardProps, McpSellerDetailsCardProps } from './views/detail-cards'
+export { McpPayingAs } from './views/McpPayingAs'
+export type { McpPayingAsProps } from './views/McpPayingAs'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
+
+export { McpAutoRechargeView } from './views/McpAutoRechargeView'
+export type { McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 
 // Paywall / nudge surfaces were removed as part of the text-only
 // paywall refactor. Merchant paywall / nudge responses are plain
 // narrations now — hosts render them in text and the widget iframe is
 // reserved for deliberate intent-tool calls (`upgrade` /
 // `manage_account` / `topup`).
+//
+// `McpSellerDetailsCard` / `McpCustomerDetailsCard` and
+// `McpAccountView.hideDetailCards` were removed with the sidebar.
+// Identity is `McpPayingAs` inside the payment form.
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

@@ -11,7 +11,19 @@ export interface NarratorOutput {
   links?: Array<{ uri: string; name: string }>
 }
 
-export type IntentTool = 'upgrade' | 'manage_account' | 'topup' | 'activate_plan'
+/**
+ * Narration key. The viewer is one tool, so narration is keyed by view
+ * (`checkout` / `account` / `topup` / `auto-recharge`); the pre-consolidation
+ * tool names stay accepted as aliases.
+ */
+export type IntentTool =
+  | 'checkout'
+  | 'account'
+  | 'topup'
+  | 'auto-recharge'
+  | 'activate_plan'
+  | 'upgrade'
+  | 'manage_account'
 
 type NarrateEnvelope = {
   text?: unknown
@@ -54,15 +66,22 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   return narrate('topup', data)
 }
 
+export function narrateAutoRecharge(data: BootstrapPayload): NarratorOutput {
+  return narrate('auto-recharge', data)
+}
+
 export function narrateActivatePlan(data: BootstrapPayload): NarratorOutput {
   return narrate('activate_plan', data)
 }
 
 export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorOutput> = {
+  checkout: narrateUpgrade,
+  account: narrateManageAccount,
+  topup: narrateTopup,
+  'auto-recharge': narrateAutoRecharge,
+  activate_plan: narrateActivatePlan,
   upgrade: narrateUpgrade,
   manage_account: narrateManageAccount,
-  topup: narrateTopup,
-  activate_plan: narrateActivatePlan,
 }
 
 export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string {

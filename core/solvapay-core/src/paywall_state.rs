@@ -257,12 +257,12 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
             let next_line = price.map_or(String::new(), |p| format!(" The next call is {p}."));
             format!(
                 "{used_line}{next_line}{} {DOCS_HINT}",
-                recover_clause(url, "continue", "upgrade")
+                recover_clause(url, "continue", "account", Some("checkout"))
             )
         }
         PaywallState::ActivationRequired => format!(
             "Your plan needs activation.{} {DOCS_HINT}",
-            recover_clause(url, "activate", "activate_plan")
+            recover_clause(url, "activate", "activate_plan", None)
         ),
         PaywallState::TopupRequired => {
             let currency = gate
@@ -277,15 +277,15 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
                 .join(" · ");
             format!(
                 "You're out of credits. Top up first ({presets}).{} {DOCS_HINT}",
-                recover_clause(url, "add credits", "topup")
+                recover_clause(url, "add credits", "account", Some("topup"))
             )
         }
         PaywallState::UpgradeRequired => format!(
             "You don't have an active plan for this tool.{} {DOCS_HINT}",
-            recover_clause(url, "pick a plan", "upgrade")
+            recover_clause(url, "pick a plan", "account", Some("checkout"))
         ),
         PaywallState::ReactivationRequired => format!(
-            "Your previous plan is no longer active. Call the `manage_account` tool to reactivate it, or the `upgrade` tool to pick a new plan. {DOCS_HINT}"
+            "Your previous plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or with view: 'checkout' to pick a new plan. {DOCS_HINT}"
         ),
     }
 }
@@ -296,13 +296,17 @@ fn named_checkout_markdown(url: &str) -> String {
 }
 
 /// URL + TTL clause, or a tool-only fallback when no checkout URL exists.
-fn recover_clause(url: Option<&str>, verb: &str, tool: &str) -> String {
+fn recover_clause(url: Option<&str>, verb: &str, tool: &str, view: Option<&str>) -> String {
+    let tool_call = match view {
+        Some(view) => format!("the `{tool}` tool with view: '{view}'"),
+        None => format!("the `{tool}` tool"),
+    };
     match url {
         Some(url) => format!(
-            " {} to {verb} (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or call the `{tool}` tool.",
+            " {} to {verb} (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or call {tool_call}.",
             named_checkout_markdown(url)
         ),
-        None => format!(" Call the `{tool}` tool."),
+        None => format!(" Call {tool_call}."),
     }
 }
 
@@ -684,27 +688,27 @@ mod tests {
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &with_url),
-            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md."
+            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &no_url),
-            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). Call the `topup` tool. See docs://solvapay/overview.md."
+            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). Call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::UpgradeRequired, &with_url),
-            "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+            "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::UpgradeRequired, &empty_url),
-            "You don't have an active plan for this tool. Call the `upgrade` tool. See docs://solvapay/overview.md."
+            "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::LimitReached, &at_cap),
-            "You've used 3 of 3 included merchant lookups this period. The next call is $0.02. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+            "You've used 3 of 3 included merchant lookups this period. The next call is $0.02. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::ReactivationRequired, &with_url),
-            "Your previous plan is no longer active. Call the `manage_account` tool to reactivate it, or the `upgrade` tool to pick a new plan. See docs://solvapay/overview.md."
+            "Your previous plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or with view: 'checkout' to pick a new plan. See docs://solvapay/overview.md."
         );
     }
 

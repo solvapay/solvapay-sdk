@@ -10,6 +10,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
@@ -17,7 +18,11 @@
         "kind": "limitsCacheEntry",
         "found": true,
         "remaining": 5,
-        "limits": { "withinLimits": true, "remaining": 5, "checkoutUrl": "https://pay" },
+        "limits": {
+          "withinLimits": true,
+          "remaining": 5,
+          "checkoutUrl": "https://pay"
+        },
         "timestampMs": 1000,
         "nowMs": 10999
       }
@@ -31,6 +36,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
@@ -39,7 +45,11 @@
         "customerRef": "cus_abc",
         "product": "prd_1",
         "meterName": "requests",
-        "limits": { "withinLimits": true, "remaining": 5, "checkoutUrl": "https://pay" },
+        "limits": {
+          "withinLimits": true,
+          "remaining": 5,
+          "checkoutUrl": "https://pay"
+        },
         "customer": {
           "ref": "cus_abc",
           "balance": 0,
@@ -52,7 +62,8 @@
           "op": "updateRemaining",
           "key": "cus_abc:prd_1:requests",
           "remaining": 4
-        }
+        },
+        "requestId": "solvapay_1000_i"
       }
     }
   }

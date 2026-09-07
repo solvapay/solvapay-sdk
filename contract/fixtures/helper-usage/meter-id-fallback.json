@@ -12,7 +12,9 @@
       },
       "limits": {
         "meterName": "mtr_legacy",
-        "remaining": 8
+        "remaining": 8,
+        "limit": 10,
+        "used": 2
       }
     }
   },

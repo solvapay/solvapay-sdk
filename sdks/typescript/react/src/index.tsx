@@ -68,6 +68,8 @@ export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
 export { useLimits, isUnlimited } from './hooks/useLimits'
 export type { UseLimitsOptions, UseLimitsReturn } from './hooks/useLimits'
+export { useHistory } from './hooks/useHistory'
+export type { UseHistoryOptions, UseHistoryReturn } from './hooks/useHistory'
 export { useAutoActivateFreePlan } from './hooks/useAutoActivateFreePlan'
 export type {
   UseAutoActivateFreePlanOptions,

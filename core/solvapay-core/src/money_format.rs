@@ -6,6 +6,7 @@
 //! `de-DE`-style `10,00 €` are intentionally not reproduced.
 
 use crate::credit_display::{is_zero_decimal_currency, minor_units_per_major};
+use crate::helper_error::HelperErrorResult;
 
 /// How the currency is shown next to the amount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -500,6 +501,34 @@ pub fn format_price(
         interval.to_owned()
     };
     format!("{formatted} / {suffix}")
+}
+
+/// Compact credit labels for preset tiles (`100K credits`, `1M credits`).
+///
+/// Grouping is locale-independent (comma thousands).
+///
+/// # Errors
+///
+/// [`HelperErrorResult`] when `credits` is not a finite non-negative number.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "money-format",
+    emit_order = 65
+)]
+pub fn format_compact_credits(credits: f64) -> Result<String, HelperErrorResult> {
+    if !credits.is_finite() || credits < 0.0 {
+        return Err(HelperErrorResult::transport(format!(
+            "formatCompactCredits: credits must be a finite non-negative number, got {credits}"
+        )));
+    }
+    if credits >= 1_000_000.0 && (credits % 1_000_000.0).abs() < f64::EPSILON {
+        return Ok(format!("{}M credits", credits / 1_000_000.0));
+    }
+    if credits >= 1_000.0 && (credits % 1_000.0).abs() < f64::EPSILON {
+        return Ok(format!("{}K credits", credits / 1_000.0));
+    }
+    Ok(format!("{} credits", format_grouped_major(credits, 0)))
 }
 
 #[cfg(test)]

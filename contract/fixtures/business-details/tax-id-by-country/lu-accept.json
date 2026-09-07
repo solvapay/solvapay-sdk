@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "LU",
         "taxId": "LU12345678",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "LU"
       }
     }
   }

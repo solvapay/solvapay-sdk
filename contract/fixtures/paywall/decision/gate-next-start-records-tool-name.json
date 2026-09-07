@@ -1,0 +1,37 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-start-records-tool-name",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "anonymous",
+        "product": "prd_1",
+        "usageType": "requests",
+        "startedMs": 1000,
+        "randomUnit": 0.5,
+        "toolName": "search_flights"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "anonymous",
+        "backendRef": "anonymous",
+        "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
+        "toolName": "search_flights",
+        "limitsKey": "anonymous:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "readLimitsCache",
+        "key": "anonymous:prd_1:requests"
+      }
+    }
+  }
+}

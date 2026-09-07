@@ -76,6 +76,7 @@ class FacadeTest < Minitest::Test
             "product" => state["product"],
             "meterName" => state["meterName"],
             "limits" => limits,
+            "requestId" => "solvapay_test",
             "cache" => {
               "op" => "updateRemaining",
               "key" => state["limitsKey"],
@@ -115,6 +116,7 @@ class FacadeTest < Minitest::Test
             "product" => state["product"],
             "meterName" => state["meterName"],
             "limits" => limits,
+            "requestId" => "solvapay_test",
             "cache" => {
               "op" => "set",
               "key" => state["limitsKey"],
@@ -298,6 +300,19 @@ class FacadeTest < Minitest::Test
         { "withinLimits" => remaining.positive?, "remaining" => [remaining - 1, 0].max, "evict" => remaining <= 0 }
       when "evaluate_fresh_limits"
         { "withinLimits" => args["withinLimits"], "remaining" => args["remaining"] }
+      when "evaluate_claimed_limits"
+        remaining = args["remaining"].to_f
+        claimed = args["claimed"].to_f
+        within = args["withinLimits"]
+        if remaining == -1.0
+          { "withinLimits" => true, "remaining" => -1.0, "shouldCache" => false }
+        elsif within && remaining == 0.0
+          { "withinLimits" => true, "remaining" => 0.0, "shouldCache" => false }
+        elsif claimed <= remaining
+          { "withinLimits" => true, "remaining" => [remaining - claimed, 0.0].max, "shouldCache" => true }
+        else
+          { "withinLimits" => false, "remaining" => 0.0, "shouldCache" => false }
+        end
       when "decide_paywall_outcome"
         if args["withinLimits"]
           { "outcome" => "allow", "limits" => args["limits"] }

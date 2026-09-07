@@ -4,7 +4,6 @@
 '@solvapay/mcp': minor
 '@solvapay/core': minor
 'solvapay': minor
-'solvapay-mcp': minor
 'create-solvapay': patch
 ---
 

@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "CZ",
         "taxId": "CZ1234567890",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "CZ"
       }
     }
   }

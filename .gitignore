@@ -49,9 +49,6 @@ research-tmp/
 # Scratch design explorations — internal, not for the public repo
 tmp-designs/
 
-# Contract / snapshot CLI test scratch
-tools/.tmp/
-
 # Live-contract report output
 contract/live/output/
 

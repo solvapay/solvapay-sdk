@@ -25,7 +25,7 @@
       {
         "name": "activate_plan",
         "title": "Activate plan",
-        "description": "Pick a plan to activate, or activate a specific plan by ref."
+        "description": "Activate a specific plan by ref, or list plans to pick from."
       }
     ]
   }

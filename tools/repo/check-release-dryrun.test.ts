@@ -16,11 +16,17 @@ import {
   UNPUBLISHED_DEP_ALLOWLIST,
   checkReleaseDryrun,
   formatReleaseDryrunReport,
+  npmRegistryVersionProbe,
   runReleaseDryrunCheck,
   type PublishWorkflowDoc,
   type RegistryProbe,
   type WorkspacePackage,
 } from './lib/release-dryrun.js'
+import { nativePlatformPackageNames, loadSupportMatrix } from './lib/support-matrix.js'
+import {
+  collectNativePlatformPublishTargets,
+  verifyNativePlatformPublishes,
+} from './lib/native-platform-publish.js'
 import { WORKFLOWS_DIR, REPO_ROOT } from '../shared/paths.js'
 
 const pkg = (
@@ -145,6 +151,30 @@ on:
       workflows: [
         workflow('publish.yml', DRY_RUN_WORKFLOW),
         workflow('publish-rust.yml', PUBLISH_FLAG_WORKFLOW),
+      ],
+    })
+    expect(issues.filter(i => i.kind === 'missing-dry-run-default')).toEqual([])
+  })
+
+  it('still accepts dry_run default true when force_native is also declared', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [pkg('@solvapay/server', '2.1.0')],
+      changesetIgnore: [],
+      workflows: [
+        workflow(
+          'publish.yml',
+          `
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: true
+      force_native:
+        type: boolean
+        default: false
+`,
+        ),
       ],
     })
     expect(issues.filter(i => i.kind === 'missing-dry-run-default')).toEqual([])
@@ -303,7 +333,183 @@ describe('unpublished-workspace-dep', () => {
   })
 })
 
+describe('local-path-dep', () => {
+  it('does not fail file: production deps unless assertNoLocalPaths is set', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [
+        pkg('@solvapay/server-native', '0.1.0', {
+          optionalDependencies: { '@solvapay/server-native-darwin-arm64': 'file:npm/darwin-arm64' },
+        }),
+      ],
+      changesetIgnore: [],
+      workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
+    })
+    expect(issues.filter(i => i.kind === 'local-path-dep')).toEqual([])
+  })
+
+  it('fails file:, link:, and portal: production deps when assertNoLocalPaths is set', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [
+        pkg('@solvapay/server', '2.1.0', {
+          dependencies: { '@solvapay/helper': 'file:../helper' },
+          peerDependencies: { '@solvapay/plugin': 'link:../plugin' },
+          optionalDependencies: {
+            '@solvapay/server-native-darwin-arm64': 'portal:./npm/darwin-arm64',
+          },
+        }),
+      ],
+      changesetIgnore: [],
+      workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
+      assertNoLocalPaths: true,
+    })
+    const names = issues
+      .filter(i => i.kind === 'local-path-dep')
+      .map(i => i.dependencyName)
+      .sort()
+    expect(names).toEqual([
+      '@solvapay/helper',
+      '@solvapay/plugin',
+      '@solvapay/server-native-darwin-arm64',
+    ])
+    expect(formatReleaseDryrunReport(issues)).toMatch(/file:|link:|portal:/)
+  })
+
+  it('ignores private and changeset-ignored packages for the local-path check', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [
+        pkg('@solvapay/server', '2.1.0'),
+        pkg('@solvapay/test-utils', '0.0.0', {
+          private: true,
+          dependencies: { helper: 'file:../helper' },
+        }),
+        pkg('@example/checkout', '1.0.0', {
+          optionalDependencies: { native: 'file:./npm/darwin-arm64' },
+        }),
+      ],
+      changesetIgnore: ['@example/*'],
+      workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
+      assertNoLocalPaths: true,
+    })
+    expect(issues.filter(i => i.kind === 'local-path-dep')).toEqual([])
+  })
+
+  it('passes when publishable optionalDependencies are semver pins', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [
+        pkg('@solvapay/server-native', '0.1.0', {
+          optionalDependencies: { '@solvapay/server-native-darwin-arm64': '0.1.0' },
+        }),
+      ],
+      changesetIgnore: [],
+      workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
+      assertNoLocalPaths: true,
+    })
+    expect(issues.filter(i => i.kind === 'local-path-dep')).toEqual([])
+  })
+
+  it('flags the live loader file: pins when assertNoLocalPaths is set', async () => {
+    const issues = await runReleaseDryrunCheck(REPO_ROOT, undefined, { assertNoLocalPaths: true })
+    expect(
+      issues.some(
+        i =>
+          i.kind === 'local-path-dep' &&
+          i.packageName === '@solvapay/server-native' &&
+          i.dependencyName === '@solvapay/server-native-darwin-arm64',
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('verify-native-platform-publishes', () => {
+  it('collects all 8 platform packages at the loader version', () => {
+    const targets = collectNativePlatformPublishTargets(REPO_ROOT)
+    const matrix = loadSupportMatrix(REPO_ROOT)
+    expect(targets).toHaveLength(8)
+    expect(targets.map(t => t.name)).toEqual(nativePlatformPackageNames(matrix))
+    expect(new Set(targets.map(t => t.version)).size).toBe(1)
+    expect(targets[0]?.version).toMatch(/\d+\.\d+\.\d+/)
+  })
+
+  it('passes when every name@version is fetchable', async () => {
+    const result = await verifyNativePlatformPublishes({
+      packages: [
+        { name: '@solvapay/server-native-darwin-arm64', version: '0.1.0' },
+        { name: '@solvapay/server-native-linux-x64-gnu', version: '0.1.0' },
+      ],
+      probe: async () => ({ kind: 'found' }),
+      sleep: async () => undefined,
+    })
+    expect(result.missing).toEqual([])
+  })
+
+  it('fails when a version-aware probe never finds a package', async () => {
+    const result = await verifyNativePlatformPublishes({
+      packages: [
+        { name: '@solvapay/server-native-darwin-arm64', version: '0.1.0' },
+        { name: '@solvapay/server-native-linux-x64-gnu', version: '0.1.0' },
+      ],
+      probe: async name =>
+        name === '@solvapay/server-native-linux-x64-gnu' ? { kind: 'missing' } : { kind: 'found' },
+      deadlineMs: 30,
+      backoffMs: [1],
+      sleep: async () => undefined,
+      now: (() => {
+        let t = 0
+        return () => {
+          t += 20
+          return t
+        }
+      })(),
+    })
+    expect(result.missing).toEqual([
+      { name: '@solvapay/server-native-linux-x64-gnu', version: '0.1.0' },
+    ])
+  })
+
+  it('retries a transient probe then accepts the version', async () => {
+    let calls = 0
+    const result = await verifyNativePlatformPublishes({
+      packages: [{ name: '@solvapay/server-native-darwin-arm64', version: '0.1.0' }],
+      probe: async () => {
+        calls += 1
+        return calls === 1 ? { kind: 'transient-error', message: '503' } : { kind: 'found' }
+      },
+      deadlineMs: 1_000,
+      backoffMs: [1],
+      sleep: async () => undefined,
+    })
+    expect(result.missing).toEqual([])
+    expect(calls).toBe(2)
+  })
+
+  it('probes GET /name/version and treats 404 as absent', async () => {
+    const seen: string[] = []
+    const probe = npmRegistryVersionProbe(async url => {
+      seen.push(url)
+      return new Response(null, { status: 404 })
+    })
+    expect(await probe('@solvapay/server-native-darwin-arm64', '0.1.0')).toEqual({
+      present: false,
+    })
+    expect(seen).toEqual([
+      'https://registry.npmjs.org/%40solvapay%2Fserver-native-darwin-arm64/0.1.0',
+    ])
+  })
+})
+
 describe('release-dryrun live tree', () => {
+  it('exposes dry-run-only force_native on the npm publish workflows', () => {
+    const publishYml = readFileSync(path.join(WORKFLOWS_DIR, 'publish.yml'), 'utf8')
+    const previewYml = readFileSync(path.join(WORKFLOWS_DIR, 'publish-preview.yml'), 'utf8')
+    expect(publishYml).toMatch(/force_native:\n(?: {2,}.*\n)* {8}default: false/)
+    expect(previewYml).toMatch(/force_native:\n(?: {2,}.*\n)* {8}default: false/)
+    expect(publishYml).toMatch(/native_leg:/)
+    expect(publishYml).toContain("needs.detect.result == 'success'")
+    expect(publishYml).toContain("needs.detect.outputs.native_leg == 'true'")
+    expect(previewYml).toContain('!inputs.dry_run || inputs.force_native')
+    expect(previewYml).toContain('publish-native-platform-packages.ts --dry-run')
+  })
+
   it('requires a dry-run default on all six publish workflows', async () => {
     const workflows: PublishWorkflowDoc[] = PUBLISH_WORKFLOW_FILES.map(fileName => ({
       fileName,
@@ -318,6 +524,7 @@ describe('release-dryrun live tree', () => {
     ).filter(i => i.kind === 'missing-dry-run-default')
     expect(issues).toEqual([])
     expect(workflows).toHaveLength(6)
+    expect(PUBLISH_WORKFLOW_FILES).not.toContain('native-build.yml')
   })
 
   it('passes the live workspace (stable versions, workspace:* batch, dry-run defaults)', async () => {

@@ -51,6 +51,101 @@ class _InflightWaiter:
         return self._result
 
 
+class _LimitsWaiter:
+    """Thread-safe leader/follower cell for one in-flight checkLimits call."""
+
+    def __init__(self) -> None:
+        self._event = threading.Event()
+        self._result: dict[str, Any] | None = None
+        self._error: BaseException | None = None
+
+    def set_result(self, value: dict[str, Any]) -> None:
+        self._result = value
+        self._event.set()
+
+    def set_error(self, error: BaseException) -> None:
+        self._error = error
+        self._event.set()
+
+    def wait(self) -> dict[str, Any]:
+        self._event.wait()
+        if self._error is not None:
+            raise self._error
+        if self._result is None:
+            raise SolvaPayError("checkLimits failed")
+        return self._result
+
+
+class _LimitsDeduplicator:
+    """Share one checkLimits fetch and assign 1-based claims per waiter."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._inflight: dict[str, _LimitsWaiter] = {}
+        self._async_inflight: dict[str, asyncio.Future[dict[str, Any]]] = {}
+        self._claims: dict[str, int] = {}
+
+    def next_claim(self, key: str) -> int:
+        with self._lock:
+            claimed = self._claims.get(key, 0) + 1
+            self._claims[key] = claimed
+            return claimed
+
+    def run_blocking(self, key: str, factory: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+        with self._lock:
+            waiter = self._inflight.get(key)
+            if waiter is None:
+                waiter = _LimitsWaiter()
+                self._inflight[key] = waiter
+                self._claims[key] = 0
+                leader = True
+            else:
+                leader = False
+        if not leader:
+            return waiter.wait()
+        try:
+            value = factory()
+            waiter.set_result(value)
+            return value
+        except BaseException as err:
+            waiter.set_error(err)
+            raise
+        finally:
+            with self._lock:
+                if self._inflight.get(key) is waiter:
+                    del self._inflight[key]
+
+    async def run_async(
+        self, key: str, factory: Callable[[], Awaitable[dict[str, Any]]]
+    ) -> dict[str, Any]:
+        loop = asyncio.get_running_loop()
+        with self._lock:
+            existing = self._async_inflight.get(key)
+            if existing is None:
+                future: asyncio.Future[dict[str, Any]] = loop.create_future()
+                self._async_inflight[key] = future
+                self._claims[key] = 0
+                leader = True
+            else:
+                future = existing
+                leader = False
+        if not leader:
+            return await future
+        try:
+            value = await factory()
+            if not future.done():
+                future.set_result(value)
+            return value
+        except BaseException as err:
+            if not future.done():
+                future.set_exception(err)
+            raise
+        finally:
+            with self._lock:
+                if self._async_inflight.get(key) is future:
+                    del self._async_inflight[key]
+
+
 class ApiClient(Protocol):
     """Minimal client surface used by the facade (async + blocking twins)."""
 
@@ -207,6 +302,32 @@ class _CustomerDeduplicator:
 
 
 _shared_customer_dedup = _CustomerDeduplicator()
+_shared_limits_dedup = _LimitsDeduplicator()
+
+
+def _overlay_claimed_limits(limits: dict[str, Any], claimed: int) -> dict[str, Any]:
+    remaining = limits.get("remaining")
+    remaining_f = float(remaining) if isinstance(remaining, (int, float)) else 0.0
+    within = limits.get("withinLimits") is True
+    evaluation = _call_sync_decision(
+        "evaluate_claimed_limits",
+        {"withinLimits": within, "remaining": remaining_f, "claimed": float(claimed)},
+    )
+    if not isinstance(evaluation, dict):
+        raise SolvaPayError("evaluate_claimed_limits returned unexpected value")
+    overlaid = dict(limits)
+    if remaining_f == -1.0 or (within and remaining_f == 0.0):
+        overlaid["withinLimits"] = evaluation.get("withinLimits")
+        overlaid["remaining"] = evaluation.get("remaining")
+        return overlaid
+    if evaluation.get("withinLimits") is not True:
+        overlaid["withinLimits"] = False
+        overlaid["remaining"] = 0
+        return overlaid
+    rem = evaluation.get("remaining")
+    overlaid["withinLimits"] = True
+    overlaid["remaining"] = (float(rem) if isinstance(rem, (int, float)) else 0.0) + 1.0
+    return overlaid
 
 
 class SolvaPay:
@@ -350,6 +471,7 @@ class SolvaPay:
             "product": product,
             "usageType": usage_type,
             "startedMs": started_ms,
+            "randomUnit": random.random(),
             "limitsCacheTTLMs": self._limits_cache_ttl,
         }
         action: dict[str, Any]
@@ -383,14 +505,12 @@ class SolvaPay:
                         "limits": cached.get("limits"),
                         "timestampMs": cached["timestamp"],
                         "nowMs": now,
-                        "randomUnit": random.random(),
                     }
                 else:
                     event = {
                         "kind": "limitsCacheEntry",
                         "found": False,
                         "nowMs": now,
-                        "randomUnit": random.random(),
                     }
                 continue
             if kind == "checkLimits":
@@ -406,17 +526,31 @@ class SolvaPay:
                     }
                 )
                 client = self.get_api_client()
+                dedup_key = (
+                    f"{action.get('customerRef')}:{action.get('productRef')}:"
+                    f"{action.get('meterName')}"
+                )
                 if blocking:
-                    limits_value = _unwrap_envelope(client.check_limits_blocking(args_json))
+                    limits_value = _shared_limits_dedup.run_blocking(
+                        dedup_key,
+                        lambda: _unwrap_envelope(client.check_limits_blocking(args_json)),
+                    )
                 else:
-                    limits_value = _unwrap_envelope(await client.check_limits(args_json))
+
+                    async def _fetch_limits() -> dict[str, Any]:
+                        fetched = _unwrap_envelope(await client.check_limits(args_json))
+                        if not isinstance(fetched, dict):
+                            raise SolvaPayError("checkLimits returned a non-object body")
+                        return fetched
+
+                    limits_value = await _shared_limits_dedup.run_async(dedup_key, _fetch_limits)
                 if not isinstance(limits_value, dict):
                     raise SolvaPayError("checkLimits returned a non-object body")
+                claimed = _shared_limits_dedup.next_claim(dedup_key)
                 event = {
                     "kind": "limitsResult",
-                    "limits": limits_value,
+                    "limits": _overlay_claimed_limits(limits_value, claimed),
                     "nowMs": _now_ms(),
-                    "randomUnit": random.random(),
                 }
                 continue
             if kind in ("allow", "gate"):
@@ -435,7 +569,11 @@ class SolvaPay:
                 raise SolvaPayError("gate_next gate action missing gate payload")
             return PayablePaywallResult(kind="paywall", content=gate)
 
-        decision: dict[str, Any] = {"outcome": "allow", "limits": last_limits}
+        decision: dict[str, Any] = {
+            "outcome": "allow",
+            "limits": last_limits,
+            "request_id": action["requestId"],
+        }
         consequence = action.get("consequence")
         if consequence in ("throttled", "overage"):
             decision["consequence"] = consequence
@@ -454,7 +592,6 @@ class SolvaPay:
                     "kind": "handlerSucceeded",
                     "durationMs": 0 if duration is None else duration,
                     "nowMs": _now_ms(),
-                    "randomUnit": random.random(),
                 },
             )
 
@@ -472,7 +609,6 @@ class SolvaPay:
                     "kind": "handlerFailed",
                     "durationMs": 0 if duration is None else duration,
                     "nowMs": _now_ms(),
-                    "randomUnit": random.random(),
                     "errorMessage": str(err),
                     "isPaywallError": isinstance(err, PaywallError),
                 },

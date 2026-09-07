@@ -1,6 +1,6 @@
 ---
 title: 'Publishing & Releasing'
-description: 'This document describes the automated publishing and release process for SolvaPay SDK packages.'
+description: 'How SolvaPay SDK packages reach npm, PyPI, RubyGems, crates.io and the Go module proxy.'
 ---
 
 ## Overview
@@ -10,14 +10,22 @@ npm packages in this monorepo publish on **independent per-package semver** via
 Go share a lockstep version owned by the private sentinel
 [`@solvapay/release-train`](../internal/release-train/package.json).
 
-- **Preview** — dispatch [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) with `dry_run=false` to ship snapshot versions on the `@preview` dist-tag. Pushing to `dev` does not publish.
-- **Stable npm** — push to `main` runs [`.github/workflows/publish.yml`](../.github/workflows/publish.yml). Pending changesets open a "Version Packages" PR; merging that PR with an empty `.changeset/` publishes to `@latest` and pushes npm tags.
-- **Lockstep train** — that same Version Packages PR bumps `@solvapay/release-train`. `pnpm changeset:version` stamps Cargo / `pyproject.toml` / `version.rb`. After npm verify, `publish.yml` pushes `solvapay-<lang>-v*` when the sentinel moved and `vars.RELEASE_PROD_*` is on. Runbook: [production-release.md](./contributing/production-release.md).
-- **Rehearsal** — [`.github/workflows/push-rehearsal-tags.yml`](../.github/workflows/push-rehearsal-tags.yml) pushes `rehearsal/solvapay-<lang>-v*` tags. Runbook: [language-previews.md](./contributing/language-previews.md). A private sandbox fork is a separate setup: [release-sandbox.md](./contributing/release-sandbox.md).
+- **Preview** — dispatch [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) with `dry_run=false`. One dispatch previews all five ecosystems. Pushing to `dev` does not publish.
+- **Production** — merge work into `main`, then merge the "Version Packages" PR that [`.github/workflows/publish.yml`](../.github/workflows/publish.yml) opens.
 
-Authoring rules (bump levels, `workspace:^` peers, `pnpm changeset status --verbose`) live in [`CONTRIBUTING.md`](../CONTRIBUTING.md) and [`.cursor/rules/monorepo-versioning.mdc`](../.cursor/rules/monorepo-versioning.mdc). Do not duplicate them here.
+**The canonical spec is
+[release-and-publishing.md](./contributing/release-and-publishing.md).** It
+covers both channels end to end: the channel matrix, per-ecosystem registries
+and version grammars, every pre-publish gate, click-by-click trusted-publisher
+setup, and the ordered enablement checklist. Everything below is either a
+pointer or detail that spec does not own.
 
-## Versioning
+Changeset authoring rules (bump levels, `workspace:^` peers,
+`pnpm changeset status --verbose`) live in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) and
+[`.cursor/rules/monorepo-versioning.mdc`](../.cursor/rules/monorepo-versioning.mdc).
+
+## Versioning config
 
 [`.changeset/config.json`](../.changeset/config.json) is the source of truth:
 
@@ -30,7 +38,8 @@ Authoring rules (bump levels, `workspace:^` peers, `pnpm changeset status --verb
 | `updateInternalDependencies` | `patch`                         | Workspace dep bumps are patches                  |
 | `ignore`                     | examples and demo apps          | Those packages never publish                     |
 
-`.changeset/config.json` does **not** ignore `@solvapay/server-wasm`, and that package is not `"private": true`.
+`.changeset/config.json` does **not** ignore `@solvapay/server-wasm`, and that
+package is not `"private": true`.
 
 ## Authoring a change
 
@@ -40,115 +49,14 @@ pnpm changeset status --verbose
 ```
 
 Pick patch / minor / major per package. Internal peer dependencies use
-`workspace:^` so a peer patch does not cascade a major. See CONTRIBUTING for the
-full table.
+`workspace:^` so a peer patch does not cascade a major.
 
-## Preview (`workflow_dispatch`)
+## Hold the pending npm changesets
 
-`publish-preview.yml` is manual. Dispatch with `dry_run=false` to produce
-Changesets snapshot versions and publish them to the `@preview` dist-tag.
-
-The unpublished-dependency registry gate (`check-release-dryrun --registry`)
-does **not** run in `publish-preview.yml`.
-
-## Stable (`main`)
-
-Pushing to `main` fires `publish.yml` in two modes:
-
-1. **Pending changesets** — `changesets/action` opens or updates a "Version Packages" PR (commit `chore: version packages`).
-2. **Empty `.changeset/` after that PR merges** — the same workflow publishes to `@latest` and pushes matching git tags.
-
-Identity for the Version Packages PR is the `solvapay-release-bot` GitHub App
-(`RELEASE_APP_ID` / `RELEASE_APP_KEY`). Org policy blocks `GITHUB_TOKEN` from
-opening PRs (`can_approve_pull_request_reviews: false`). npm auth is `NPM_TOKEN`.
-
-Manual `workflow_dispatch` defaults to dry-run (`dry_run: true`): gates plus
-`changeset status` and `pnpm -r publish --dry-run`, no `NPM_TOKEN`, no
-`changesets/action`. Push-to-`main` is always the real path.
-
-### Pre-publish gates, in order
-
-These steps run in `publish.yml` before `changesets/action`:
-
-1. `pnpm install --frozen-lockfile`
-2. `pnpm exec tsx tools/repo/check-release-dryrun.ts --registry`
-3. `pnpm deps:check`
-4. `pnpm build:packages`
-5. `pnpm test`
-6. `pnpm validate:fetch-runtime`
-7. Deno workspace gate: `pnpm --filter @example/supabase-edge-mcp validate:workspace`
-
-After a real publish, `tools/repo/verify-npm-publishes.mjs` confirms each
-package landed on npm.
-
-### The unpublished-dependency gate
-
-[`tools/repo/lib/release-dryrun.ts`](../tools/repo/lib/release-dryrun.ts) refuses
-to publish a package whose production `workspace:*` dependency is neither in the
-same batch, nor already on npm, nor on `UNPUBLISHED_DEP_ALLOWLIST`.
-
-`UNPUBLISHED_DEP_ALLOWLIST` is empty. `@solvapay/server-native` is in the
-publish batch. Its eight platform packages are stamped from
-`file:npm/*` to real versions by `tools/repo/prepare-native-publish.ts` at
-pack time and must be published **before** `@solvapay/server-native` /
-`@solvapay/server`. Empty reasons are rejected — this is an explicit
-deferral list, not a silent skip.
-
-A workspace dependency that is in the same publish batch is allowed even
-when it is not on the registry yet.
-
-This registry probe runs **only** in `publish.yml`. It does not run in
-`publish-preview.yml` or `ci.yml`. That gap is named, not hidden. Locally,
-`pnpm checks:release-dryrun` is offline (no `--registry`).
-
-## Non-npm release trains
-
-Version source: `@solvapay/release-train`. `pnpm changeset:version` runs
-`tools/repo/sync-release-train.ts`. PRs that touch `core/**` or a
-non-TypeScript `sdks/**` surface must include a `@solvapay/release-train`
-changeset (`pnpm checks:release-train-changeset`).
-
-These workflows default to dry-run. A real **production** publish requires a
-`workflow_dispatch` input or a `solvapay-<lang>-v*` tag. A `rehearsal/` tag
-publishes only to the sandbox host for that ecosystem.
-
-| Workflow             | Production                                  | Rehearsal                                      |
-| -------------------- | ------------------------------------------- | ---------------------------------------------- |
-| `publish-rust.yml`   | crates.io                                   | local `cargo-http-registry`                    |
-| `publish-go.yml`     | `sdks/go/v*` on this repo                   | `sdks/go/v*-rehearsal.<run>` on this repo      |
-| `publish-python.yml` | PyPI (`skip-existing: true`)                | TestPyPI                                       |
-| `publish-ruby.yml`   | RubyGems (pre-check before `gem push`)      | GitHub Packages                                |
-
-Publish order for crates: `solvapay-export` → `solvapay-dto` → `solvapay-core` → `solvapay-mcp-core` → `solvapay-transport` → `solvapay`.
-Python and Ruby also publish `solvapay-mcp` after the core package.
-
-### How to run a rehearsal
-
-See [language-previews.md](./contributing/language-previews.md) for
-prerequisites, dispatch (including `--replace`), and per-language preview
-install. Short version:
-
-1. Merge the Version Packages PR on a sandbox repo, or stamp locally with the sentinel version you want.
-2. Run **Push rehearsal tags** (`push-rehearsal-tags.yml`) on that SHA.
-3. Watch the four language workflows plus `rehearsal-npm.yml` if you want a Verdaccio npm snapshot.
-4. Each language job ends with an install smoke from its sandbox registry.
-
-Tier A (no network writes): `workflow_dispatch` `publish.yml` with `dry_run=true`. It prints the four tags and fails if any already exist on `origin`.
-
-### Hold the pending npm changesets
-
-`.changeset/` already contains a large backlog, including a `major` of
-`@solvapay/core` and the first `@solvapay/server-wasm` release. Merging this
-work to `main` opens a Version Packages PR that will publish **all of it**
-when that PR merges. Review that PR as a conscious release, not a side
-effect of the train work.
-
-### Phase 3 (production tags)
-
-See [production-release.md](./contributing/production-release.md). The
-publish leg of `publish.yml` pushes production language tags after npm
-verify when the sentinel moved. Flip `vars.RELEASE_PROD_*` one ecosystem
-at a time after rehearsal is green; crates.io last.
+`.changeset/` carries a large backlog, including a `major` of `@solvapay/core`
+and the first `@solvapay/server-wasm` release. Merging that work to `main` opens
+a Version Packages PR that will publish **all of it** when the PR merges. Review
+that PR as a conscious release, not a side effect of the train work.
 
 ## Why npm can diverge from this workspace
 
@@ -172,30 +80,13 @@ exists for that first publish.
 [`.changeset/phase4-paywall-parity.md`](../.changeset/phase4-paywall-parity.md)
 carries the paywall parity work.
 
-`@solvapay/server-wasm` is neither `"private": true` nor in the Changesets
-`ignore` list. It is still unpublished. Documenting the ordering constraint is
-not the same as publishing it.
-
 The same constraint applies to `@solvapay/server-native`. The next
-`@solvapay/server` release has no JavaScript fallback on Node. Shipping
-`server` / `server-wasm` without the eight native platform packages gives
-Node consumers a main entry that throws on first call. `prepare-native-publish.ts`
-refuses to pack when a platform `.node` is missing.
+`@solvapay/server` release has no JavaScript fallback on Node, so shipping
+`server` / `server-wasm` without the eight native platform packages gives Node
+consumers a main entry that throws on first call. Both publish workflows now
+build and publish those eight ahead of the Changesets batch, gated by
+`verify-native-platform-publishes.ts` and
+`check-release-dryrun.ts --assert-no-local-paths` — see
+[release-and-publishing.md](./contributing/release-and-publishing.md#the-native-platform-packages).
 
 Platform and ABI coverage: [platform-support.mdx](./platform-support.mdx).
-
-## Local checks
-
-```bash
-pnpm changeset
-pnpm changeset status --verbose
-pnpm dryrun
-pnpm checks:release-dryrun
-pnpm build:packages
-pnpm docs:check
-```
-
-`pnpm dryrun` is the umbrella: npm `release:dryrun` (graph gate, build, test,
-`pnpm -r publish --dry-run`) then language `preview --dry-run --accept-partial`
-(rust / python / ruby / go artifacts on this host). The two halves stay
-separate commands when you only need one.

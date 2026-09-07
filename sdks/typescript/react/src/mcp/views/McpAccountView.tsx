@@ -12,8 +12,8 @@ import { useLocale } from '../../hooks/useCopy'
 import { usePurchase } from '../../hooks/usePurchase'
 import { useLimits } from '../../hooks/useLimits'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
+import { deriveActiveProducts } from '@solvapay/core'
 import { resolveAccountState, type AccountLimitsLike } from '../account-state'
-import { deriveActiveProducts } from '../derive-active-products'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import {
   findCatalogPlan,

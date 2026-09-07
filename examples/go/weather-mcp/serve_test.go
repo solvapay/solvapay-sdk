@@ -64,7 +64,7 @@ func TestStdioServerListsSolvaPayIntentTools(t *testing.T) {
 	for _, tool := range listed.Tools {
 		have[tool.Name] = true
 	}
-	for _, name := range []string{"upgrade", "manage_account", "topup", "activate_plan"} {
+	for _, name := range []string{"account", "activate_plan"} {
 		if !have[name] {
 			t.Fatalf("stdio tools/list missing %s; have %v", name, have)
 		}

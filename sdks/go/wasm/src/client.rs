@@ -15,10 +15,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient as CoreClient};
@@ -662,6 +663,22 @@ pub unsafe extern "C" fn sv_disable_auto_recharge(args_ptr: *mut u8, args_len: u
     }))
 }
 
+/// `GET /v1/sdk/purchases`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_list_purchases(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: ListPurchasesParams = parse_args_json(&args_json)?;
+            client.list_purchases(params).await
+        }))
+    }))
+}
+
 /// `mcpBootstrap`
 ///
 /// # Safety
@@ -674,6 +691,22 @@ pub unsafe extern "C" fn sv_mcp_bootstrap(args_ptr: *mut u8, args_len: usize) ->
         pollster::block_on(run_envelope(async move {
             let params: solvapay_transport::McpBootstrapParams = parse_args_json(&args_json)?;
             client.mcp_bootstrap(params).await
+        }))
+    }))
+}
+
+/// `GET /v1/sdk/credits/activity`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_get_credit_activity(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+            client.get_credit_activity(params).await
         }))
     }))
 }

@@ -13,7 +13,8 @@
       "success": true,
       "data": {
         "isBusiness": true,
-        "country": "SE"
+        "country": "SE",
+        "customerCountry": "SE"
       }
     }
   }

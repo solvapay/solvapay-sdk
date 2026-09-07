@@ -4,6 +4,7 @@
 //! per-country tax-ID patterns are hand-rolled matchers (step 9).
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// Tax ID type discriminants (Stripe-aligned).
 pub const TAX_ID_TYPES: [&str; 4] = ["eu_vat", "gb_vat", "us_ein", "jp_trn"];
@@ -917,7 +918,7 @@ pub struct BusinessCountryOption {
 }
 
 /// Input shape for [`validate_business_details`] (parity with `BusinessDetailsInput` in TS).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BusinessDetailsInput {
     /// Whether the purchaser is buying as a business.
@@ -940,6 +941,12 @@ pub struct BusinessDetailsInput {
     /// Explicit tax-ID type override (normally derived from country).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tax_id_type: Option<TaxIdType>,
+    /// Buyer state/province (required for US, CA, IN).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_state: Option<String>,
+    /// Buyer postal/ZIP code (required for US, CA, GB).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_postal_code: Option<String>,
 }
 
 /// Normalized business-details output (absent fields omitted in JSON).
@@ -966,6 +973,12 @@ pub struct BusinessDetails {
     /// Trimmed customer display name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub customer_name: Option<String>,
+    /// Trimmed buyer state/province.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_state: Option<String>,
+    /// Trimmed buyer postal/ZIP code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_postal_code: Option<String>,
 }
 
 /// Contract issue shape — React form errors must not change.
@@ -1035,6 +1048,208 @@ fn failure(issues: Vec<BusinessDetailsValidationIssue>) -> ValidateBusinessDetai
         success: false,
         error: BusinessDetailsValidationError { issues },
     }
+}
+
+/// Countries that require a postal/ZIP code for Stripe Tax.
+pub const POSTAL_CODE_REQUIRED_COUNTRIES: &[&str] = &["US", "CA", "GB"];
+/// Countries that require a state/province for Stripe Tax.
+pub const STATE_REQUIRED_COUNTRIES: &[&str] = &["US", "CA", "IN"];
+
+/// Whether `country` is in `list`, compared case-insensitively.
+fn country_in(list: &[&str], country: &str) -> bool {
+    let needle = country.trim().to_ascii_uppercase();
+    list.iter().any(|item| *item == needle)
+}
+
+/// Resolve the buyer country used for address completeness.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "business-details",
+    emit_order = 7
+)]
+pub fn resolve_buyer_country(input: &BusinessDetailsInput) -> Option<String> {
+    if let Some(customer) = input
+        .customer_country
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return Some(customer.to_ascii_uppercase());
+    }
+    if input.is_business {
+        if let Some(business) = input
+            .country
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            return Some(business.to_ascii_uppercase());
+        }
+    }
+    None
+}
+
+/// Whether Stripe Tax requires a postal/ZIP code for `country`.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 10
+)]
+pub fn is_postal_code_required(country: &str) -> bool {
+    country_in(POSTAL_CODE_REQUIRED_COUNTRIES, country)
+}
+
+/// Whether Stripe Tax requires a state/province for `country`.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 11
+)]
+pub fn is_state_required(country: &str) -> bool {
+    country_in(STATE_REQUIRED_COUNTRIES, country)
+}
+
+/// Field label for the buyer state/province input.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 12
+)]
+pub fn get_state_field_label(country: &str) -> &'static str {
+    if country.trim().eq_ignore_ascii_case("US") {
+        "State"
+    } else {
+        "Province"
+    }
+}
+
+/// Field label for the buyer postal/ZIP input.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 13
+)]
+pub fn get_postal_code_field_label(country: &str) -> &'static str {
+    if country.trim().eq_ignore_ascii_case("US") {
+        "ZIP code"
+    } else {
+        "Postal code"
+    }
+}
+
+/// Placeholder for the buyer postal/ZIP input.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 14
+)]
+pub fn get_postal_code_placeholder(country: &str) -> &'static str {
+    if country.trim().eq_ignore_ascii_case("US") {
+        "94103"
+    } else {
+        "Required"
+    }
+}
+
+/// Countries that require a postal/ZIP code for Stripe Tax.
+#[must_use]
+#[crate::solvapay_export(
+    id = "POSTAL_CODE_REQUIRED_COUNTRIES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 15
+)]
+pub fn postal_code_required_countries() -> &'static [&'static str] {
+    POSTAL_CODE_REQUIRED_COUNTRIES
+}
+
+/// Countries that require a state/province for Stripe Tax.
+#[must_use]
+#[crate::solvapay_export(
+    id = "STATE_REQUIRED_COUNTRIES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 16
+)]
+pub fn state_required_countries() -> &'static [&'static str] {
+    STATE_REQUIRED_COUNTRIES
+}
+
+/// Field-level buyer address errors.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "business-details",
+    emit_order = 8
+)]
+pub fn get_customer_address_field_errors(input: &BusinessDetailsInput) -> Value {
+    let Some(country) = resolve_buyer_country(input) else {
+        return if input.is_business {
+            serde_json::json!({ "country": "Country is required" })
+        } else {
+            serde_json::json!({ "customerCountry": "Country is required" })
+        };
+    };
+    let mut errors = serde_json::Map::new();
+    if is_postal_code_required(&country)
+        && input
+            .customer_postal_code
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .is_none()
+    {
+        errors.insert(
+            "customerPostalCode".to_owned(),
+            Value::String(format!(
+                "{} is required",
+                get_postal_code_field_label(&country)
+            )),
+        );
+    }
+    if is_state_required(&country)
+        && input
+            .customer_state
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .is_none()
+    {
+        errors.insert(
+            "customerState".to_owned(),
+            Value::String(format!("{} is required", get_state_field_label(&country))),
+        );
+    }
+    Value::Object(errors)
+}
+
+/// True when buyer address fields required for the country are present.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "business-details",
+    emit_order = 9
+)]
+pub fn is_customer_address_complete(input: &BusinessDetailsInput) -> bool {
+    get_customer_address_field_errors(input)
+        .as_object()
+        .is_some_and(serde_json::Map::is_empty)
 }
 
 /// Wrap normalized data in a success result (`success: true`).
@@ -1116,6 +1331,8 @@ pub fn validate_business_details(input: &BusinessDetailsInput) -> ValidateBusine
             tax_id_type: None,
             customer_country,
             customer_name,
+            customer_state: trimmed_nonempty(input.customer_state.as_deref()),
+            customer_postal_code: trimmed_nonempty(input.customer_postal_code.as_deref()),
         });
     }
 
@@ -1152,6 +1369,13 @@ pub fn validate_business_details(input: &BusinessDetailsInput) -> ValidateBusine
         .map(normalize_tax_id);
     let tax_id_type = tax_id.as_ref().map(|_| entry.tax_id_type);
     let customer_name = trimmed_nonempty(input.customer_name.as_deref());
+    let customer_country = input
+        .customer_country
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_uppercase())
+        .or_else(|| Some(country_upper.clone()));
 
     success(BusinessDetails {
         is_business: true,
@@ -1159,8 +1383,10 @@ pub fn validate_business_details(input: &BusinessDetailsInput) -> ValidateBusine
         business_name,
         tax_id,
         tax_id_type,
-        customer_country: None,
+        customer_country,
         customer_name,
+        customer_state: trimmed_nonempty(input.customer_state.as_deref()),
+        customer_postal_code: trimmed_nonempty(input.customer_postal_code.as_deref()),
     })
 }
 
@@ -1367,6 +1593,8 @@ mod tests {
             customer_name: None,
             tax_id: None,
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         match result {
             ValidateBusinessDetailsResult::Success { data, .. } => {
@@ -1387,6 +1615,8 @@ mod tests {
             customer_name: None,
             tax_id: Some("T1234567891234".into()),
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         match result {
             ValidateBusinessDetailsResult::Success { data, .. } => {
@@ -1406,6 +1636,8 @@ mod tests {
             customer_name: None,
             tax_id: Some("DE12".into()),
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         match result {
             ValidateBusinessDetailsResult::Failure { error, .. } => {
@@ -1426,6 +1658,8 @@ mod tests {
             customer_name: None,
             tax_id: Some("de123 456789".into()),
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         match result {
             ValidateBusinessDetailsResult::Success { data, .. } => {
@@ -1448,6 +1682,8 @@ mod tests {
             customer_name: Some("a".repeat(101)),
             tax_id: None,
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         match result {
             ValidateBusinessDetailsResult::Failure { error, .. } => {
@@ -1471,6 +1707,8 @@ mod tests {
                 customer_name: None,
                 tax_id: Some(entry.example.into()),
                 tax_id_type: None,
+                customer_state: None,
+                customer_postal_code: None,
             });
             assert!(
                 matches!(result, ValidateBusinessDetailsResult::Success { .. }),
@@ -1503,6 +1741,63 @@ mod tests {
     }
 
     #[test]
+    fn buyer_address_helpers() {
+        assert!(is_postal_code_required("US"));
+        assert!(!is_postal_code_required("SE"));
+        assert!(is_state_required("IN"));
+        assert!(!is_state_required("GB"));
+        assert_eq!(get_state_field_label("US"), "State");
+        assert_eq!(get_state_field_label("CA"), "Province");
+        assert_eq!(get_postal_code_field_label("US"), "ZIP code");
+        assert_eq!(get_postal_code_field_label("GB"), "Postal code");
+        assert_eq!(get_postal_code_placeholder("US"), "94103");
+        assert_eq!(get_postal_code_placeholder("gb"), "Required");
+        assert_eq!(
+            postal_code_required_countries(),
+            POSTAL_CODE_REQUIRED_COUNTRIES
+        );
+        assert_eq!(state_required_countries(), STATE_REQUIRED_COUNTRIES);
+        assert_eq!(
+            resolve_buyer_country(&BusinessDetailsInput {
+                is_business: false,
+                customer_country: Some("se".into()),
+                ..BusinessDetailsInput::default()
+            })
+            .as_deref(),
+            Some("SE")
+        );
+        assert_eq!(
+            resolve_buyer_country(&BusinessDetailsInput {
+                is_business: true,
+                country: Some("DE".into()),
+                ..BusinessDetailsInput::default()
+            })
+            .as_deref(),
+            Some("DE")
+        );
+        assert!(resolve_buyer_country(&BusinessDetailsInput {
+            is_business: false,
+            ..BusinessDetailsInput::default()
+        })
+        .is_none());
+    }
+
+    #[test]
+    fn business_validation_mirrors_country_onto_customer_country() {
+        let result = validate_business_details(&BusinessDetailsInput {
+            is_business: true,
+            country: Some("SE".into()),
+            ..BusinessDetailsInput::default()
+        });
+        match result {
+            ValidateBusinessDetailsResult::Success { data, .. } => {
+                assert_eq!(data.customer_country.as_deref(), Some("SE"));
+            }
+            ValidateBusinessDetailsResult::Failure { .. } => panic!("expected success"),
+        }
+    }
+
+    #[test]
     fn derive_and_labels() {
         assert_eq!(derive_tax_id_type("SE"), Some(TaxIdType::EuVat));
         assert_eq!(derive_tax_id_type("GB"), Some(TaxIdType::GbVat));
@@ -1524,13 +1819,15 @@ mod tests {
             customer_name: None,
             tax_id: None,
             tax_id_type: None,
+            customer_state: None,
+            customer_postal_code: None,
         });
         let value = serde_json::to_value(&result).unwrap();
         assert_eq!(
             value,
             json!({
                 "success": true,
-                "data": { "isBusiness": true, "country": "SE" }
+                "data": { "isBusiness": true, "country": "SE", "customerCountry": "SE" }
             })
         );
     }

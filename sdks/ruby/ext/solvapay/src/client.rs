@@ -18,10 +18,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::{
     mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient as CoreClient,
@@ -648,6 +649,20 @@ impl SolvaPayClient {
         })
     }
 
+    /// `GET /v1/sdk/purchases`
+    pub(crate) fn list_purchases(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: ListPurchasesParams = parse_args_json(&args_json)?;
+                    client.list_purchases(params).await
+                })
+                .await
+            })
+        })
+    }
+
     // --- MCP composite ---
 
     /// `mcpBootstrap`
@@ -664,6 +679,24 @@ impl SolvaPayClient {
             })
         })
     }
+
+    // --- Group C ---
+
+    /// `GET /v1/sdk/credits/activity`
+    pub(crate) fn get_credit_activity(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+                    client.get_credit_activity(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    // --- MCP composite ---
 
     /// `mcpCallBuiltinTool`
     pub(crate) fn mcp_call_builtin_tool(&self, args_json: String) -> String {

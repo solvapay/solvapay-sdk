@@ -19,12 +19,12 @@ use solvapay_dto::{
     CreateCustomerSessionResponse, CreatePaymentIntentParams, CreatePaymentIntentResult,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
     CreateTopupPaymentIntentResult, CustomerResponseMapped, DisableAutoRechargeParams,
-    GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, GrantCustomerCreditsResponse, McpBootstrapDto,
-    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
-    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
-    UserInfoResponse,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams,
+    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams,
+    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
+    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
 };
 
 /// Catalogued client operation signatures: name → &[(param_name, required)].
@@ -55,6 +55,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("disable_auto_recharge", &[("params", true)]),
     ("fetch_jwks", &[("params", true)]),
     ("get_auto_recharge", &[("params", true)]),
+    ("get_credit_activity", &[("params", true)]),
     ("get_customer", &[("params", true)]),
     ("get_customer_balance", &[("params", true)]),
     ("get_merchant", &[]),
@@ -64,6 +65,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("get_user_info", &[("params", true)]),
     ("list_plans", &[("product_ref", true)]),
     ("list_products", &[]),
+    ("list_purchases", &[("params", true)]),
     ("mcp_bootstrap", &[("params", true)]),
     ("mcp_call_builtin_tool", &[("params", true)]),
     ("mcp_dispatch", &[("params", true)]),
@@ -170,6 +172,9 @@ async fn _assert_typed_surface(c: &Client) {
     let _: Result<Value, SdkError> = c
         .get_auto_recharge(_parity_sink::<GetAutoRechargeParams>())
         .await;
+    let _: Result<Value, SdkError> = c
+        .get_credit_activity(_parity_sink::<GetCreditActivityParams>())
+        .await;
     let _: Result<CustomerResponseMapped, SdkError> =
         c.get_customer(_parity_sink::<GetCustomerParams>()).await;
     let _: Result<GetCustomerBalanceResult, SdkError> = c
@@ -185,6 +190,9 @@ async fn _assert_typed_surface(c: &Client) {
         c.get_user_info(_parity_sink::<GetUserInfoParams>()).await;
     let _: Result<Value, SdkError> = c.list_plans(_parity_sink::<&str>()).await;
     let _: Result<Value, SdkError> = c.list_products().await;
+    let _: Result<Value, SdkError> = c
+        .list_purchases(_parity_sink::<ListPurchasesParams>())
+        .await;
     let _: Result<Value, SdkError> = c
         .mcp_bootstrap(_parity_sink::<solvapay_transport::McpBootstrapParams>())
         .await;
@@ -276,6 +284,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
     let _: Result<Value, SdkError> =
         c.fetch_jwks(_parity_sink::<solvapay_transport::FetchJwksParams>());
     let _: Result<Value, SdkError> = c.get_auto_recharge(_parity_sink::<GetAutoRechargeParams>());
+    let _: Result<Value, SdkError> =
+        c.get_credit_activity(_parity_sink::<GetCreditActivityParams>());
     let _: Result<CustomerResponseMapped, SdkError> =
         c.get_customer(_parity_sink::<GetCustomerParams>());
     let _: Result<GetCustomerBalanceResult, SdkError> =
@@ -288,6 +298,7 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         c.get_user_info(_parity_sink::<GetUserInfoParams>());
     let _: Result<Value, SdkError> = c.list_plans(_parity_sink::<&str>());
     let _: Result<Value, SdkError> = c.list_products();
+    let _: Result<Value, SdkError> = c.list_purchases(_parity_sink::<ListPurchasesParams>());
     let _: Result<Value, SdkError> =
         c.mcp_bootstrap(_parity_sink::<solvapay_transport::McpBootstrapParams>());
     let _: Result<Value, SdkError> =
@@ -323,8 +334,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
 }
 
 #[test]
-fn operation_signatures_count_is_43() {
-    assert_eq!(OPERATION_SIGNATURES.len(), 43);
+fn operation_signatures_count_is_45() {
+    assert_eq!(OPERATION_SIGNATURES.len(), 45);
 }
 
 #[test]

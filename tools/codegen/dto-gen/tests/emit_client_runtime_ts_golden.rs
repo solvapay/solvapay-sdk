@@ -20,7 +20,7 @@ fn emit_client_runtime_ts_matches_committed() {
     .expect("committed client.runtime.generated.ts");
     assert_eq!(emitted, committed);
 
-    assert_eq!(emitted.matches("async ").count(), 43);
+    assert_eq!(emitted.matches("async ").count(), 45);
     assert!(emitted.contains("async mcpDispatch(params)"));
     assert!(emitted.contains("async updateCustomer(customerRef, params)"));
     assert!(emitted.contains("{ customerRef, ...params }"));

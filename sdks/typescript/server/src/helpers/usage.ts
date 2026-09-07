@@ -2,6 +2,7 @@ import { countsUsage, projectUsageSnapshot } from '../native-decisions'
 import { trackUsageWithRetry } from '../track-usage-retry'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
+import type { UsageSnapshotPurchase } from '@solvapay/core'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
@@ -37,10 +38,32 @@ export interface GetUsageResult {
  *
  * Returns `null` values when no metered plan is active.
  */
+export type UsageLimitsInput = {
+  remaining: number
+  meterName?: string | null
+  used?: number
+  limit?: number
+}
+
+/**
+ * Derive a usage snapshot from an active purchase plus an optional cap.
+ *
+ * Pass `limits` when you already hold a `checkLimits` response to avoid the
+ * extra round trip {@link getUsageCore} makes for metered plans.
+ */
+/** @deprecated Use {@link projectUsageSnapshot}. */
+export function deriveUsageSnapshot(
+  activePurchase: UsageSnapshotPurchase | null | undefined,
+  limits: UsageLimitsInput | null | undefined,
+): GetUsageResult {
+  return projectUsageSnapshot(activePurchase, limits)
+}
+
 export async function getUsageCore(
   request: Request,
   options: {
     solvaPay?: SolvaPay
+    limits?: UsageLimitsInput | null
   } = {},
 ): Promise<GetUsageResult | ErrorResult> {
   const purchaseResult = await checkPurchaseCore(request, options)
@@ -48,7 +71,11 @@ export async function getUsageCore(
 
   const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
   if (!activePurchase) {
-    return projectUsageSnapshot(null, null)
+    return projectUsageSnapshot(null, options.limits ?? null)
+  }
+
+  if ('limits' in options) {
+    return projectUsageSnapshot(activePurchase, options.limits ?? null)
   }
 
   const snapshot = activePurchase.planSnapshot

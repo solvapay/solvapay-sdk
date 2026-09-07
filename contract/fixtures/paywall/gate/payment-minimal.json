@@ -18,7 +18,7 @@
       "product": "prd_demo",
       "checkoutUrl": "https://pay.test/x",
       "planRef": "pl_basic",
-      "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
+      "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
       "shortMessage": "Payment required"
     }
   }

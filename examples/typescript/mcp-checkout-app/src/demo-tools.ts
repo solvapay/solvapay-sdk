@@ -87,8 +87,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 
   registerPayable('get_market_quote', {
     title: 'Get market quote (demo)',
-    description:
-      `Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as \`search_knowledge\`: one unit of usage per call, and the gate response narrates the recovery viewer (\`${VIEWER_TOOL_NAME}\` with \`view\`) inline on \`content[0].text\`. Use \`/get_market_quote\` to try the paywall on a second tool.`,
+    description: `Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as \`search_knowledge\`: one unit of usage per call, and the gate response narrates the recovery viewer (\`${VIEWER_TOOL_NAME}\` with \`view\`) inline on \`content[0].text\`. Use \`/get_market_quote\` to try the paywall on a second tool.`,
     schema: { symbol: z.string().min(1).max(8) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol }, ctx) => {
@@ -112,8 +111,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   // into `trackUsage` without requiring any merchant code changes.
   registerPayable('query_sales_trends', {
     title: 'Query sales trends (demo)',
-    description:
-      `Demo data tool that exercises the \`ctx.respond()\` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response \`content[0].text\` carries a plain-text \`low-balance\` nudge pointing at \`${VIEWER_TOOL_NAME}\` with view: "topup" — hosts render it inline with the data, no widget iframe.`,
+    description: `Demo data tool that exercises the \`ctx.respond()\` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response \`content[0].text\` carries a plain-text \`low-balance\` nudge pointing at \`${VIEWER_TOOL_NAME}\` with view: "topup" — hosts render it inline with the data, no widget iframe.`,
     schema: { range: z.string().min(1) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ range }, ctx) => {
@@ -174,8 +172,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
-    description:
-      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
+    description: `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
@@ -219,8 +216,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 
   registerPayable('predict_direction', {
     title: 'Predict direction (Oracle demo)',
-    description:
-      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
+    description: `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
@@ -444,8 +440,7 @@ function registerDemoPrompts(server: McpServer): void {
     'search_knowledge',
     {
       title: 'Search knowledge (demo)',
-      description:
-        `Call the demo \`search_knowledge\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
+      description: `Call the demo \`search_knowledge\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
       argsSchema: { query: z.string().optional() },
     },
     async ({ query }: { query?: string }) => ({
@@ -467,8 +462,7 @@ function registerDemoPrompts(server: McpServer): void {
     'get_market_quote',
     {
       title: 'Get market quote (demo)',
-      description:
-        `Call the demo \`get_market_quote\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
+      description: `Call the demo \`get_market_quote\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
       argsSchema: { symbol: z.string().optional() },
     },
     async ({ symbol }: { symbol?: string }) => ({

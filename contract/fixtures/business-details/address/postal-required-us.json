@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "postal-required-us",
+  "input": {
+    "fn": "isPostalCodeRequired",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

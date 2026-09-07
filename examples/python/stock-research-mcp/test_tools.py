@@ -105,7 +105,7 @@ async def test_top_ranked_assets_gate_round_trip() -> None:
     result = await _call("top_ranked_assets", within_limits=False)
     assert result["isError"] is False
     assert result["structuredContent"]["kind"] == "payment_required"
-    assert "upgrade" in result["content"][0]["text"]
+    assert "account" in result["content"][0]["text"]
 
 
 @pytest.mark.asyncio
@@ -120,11 +120,11 @@ async def test_company_brief_allow_round_trip() -> None:
 
 
 @pytest.mark.asyncio
-async def test_company_brief_gate_mentions_upgrade() -> None:
+async def test_company_brief_gate_mentions_account() -> None:
     result = await _call("company_brief", {"symbol": "AAPL"}, within_limits=False)
     assert result["isError"] is False
     assert result["structuredContent"]["kind"] == "payment_required"
-    assert "upgrade" in result["content"][0]["text"]
+    assert "account" in result["content"][0]["text"]
 
 
 @pytest.mark.asyncio

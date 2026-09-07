@@ -58,6 +58,7 @@ pub const OPERATION_NAMES: &[&str] = &[
     "disableAutoRecharge",
     "fetchJwks",
     "getAutoRecharge",
+    "getCreditActivity",
     "getCustomer",
     "getCustomerBalance",
     "getMerchant",
@@ -67,6 +68,7 @@ pub const OPERATION_NAMES: &[&str] = &[
     "getUserInfo",
     "listPlans",
     "listProducts",
+    "listPurchases",
     "mcpBootstrap",
     "mcpCallBuiltinTool",
     "mcpDispatch",
@@ -193,6 +195,11 @@ pub mod operations {
         /// Default failure template.
         pub const DEFAULT: &str = "Get auto-recharge failed ({status}): {body}";
     }
+    /// Templates for `getCreditActivity`.
+    pub mod get_credit_activity {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Get credit activity failed ({status}): {body}";
+    }
     /// Templates for `getCustomer`.
     pub mod get_customer {
         /// Default failure template.
@@ -242,6 +249,11 @@ pub mod operations {
     pub mod list_products {
         /// Default failure template.
         pub const DEFAULT: &str = "List products failed ({status}): {body}";
+    }
+    /// Templates for `listPurchases`.
+    pub mod list_purchases {
+        /// Default failure template.
+        pub const DEFAULT: &str = "List purchases failed ({status}): {body}";
     }
     /// Templates for `mcpBootstrap`.
     pub mod mcp_bootstrap {

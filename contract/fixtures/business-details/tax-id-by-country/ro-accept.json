@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "RO",
         "taxId": "RO1234567891",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "RO"
       }
     }
   }

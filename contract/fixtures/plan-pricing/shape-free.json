@@ -1,0 +1,22 @@
+{
+  "suite": "plan-pricing",
+  "case": "shape-free",
+  "input": {
+    "fn": "planPricingShape",
+    "args": {
+      "priced": {
+        "requiresPayment": false,
+        "currency": "USD"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "shape": "free",
+      "headlineMinor": 0,
+      "currency": "USD",
+      "cycle": null,
+      "rate": null
+    }
+  }
+}

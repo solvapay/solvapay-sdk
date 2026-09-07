@@ -9,7 +9,8 @@
         "customerRef": "user-1",
         "product": "prd_1",
         "usageType": "requests",
-        "startedMs": 1000
+        "startedMs": 1000,
+        "randomUnit": 0.5
       }
     }
   },
@@ -20,6 +21,7 @@
         "meterName": "requests",
         "originalCustomerRef": "user-1",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsCacheTTLMs": 10000
       },
       "action": {

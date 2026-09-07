@@ -5,6 +5,48 @@
 import type { SupportedBusinessCountry, TaxIdType } from '../business-details'
 
 /**
+ * Active plan purchase projected for the MCP account widget.
+ */
+export type ActiveProduct = {
+  /**
+   * Purchase reference.
+   */
+  reference: string
+  /**
+   * Product display name.
+   */
+  productName: string
+  /**
+   * Product ref when present.
+   */
+  productRef: string | null
+  /**
+   * Frozen plan name.
+   */
+  planName: string | null
+  /**
+   * Plan ref from the purchase or snapshot.
+   */
+  planRef: string | null
+  /**
+   * Purchase start date.
+   */
+  since: string | null
+  /**
+   * Snapshot `isMetered` flag.
+   */
+  isMetered: boolean
+  /**
+   * Purchase amount in minor units.
+   */
+  amount: number
+  /**
+   * Purchase currency.
+   */
+  currency: string
+}
+
+/**
  * Degraded allow reason. Absent on a plain allow.
  */
 export type AllowConsequence = 'throttled' | 'overage'
@@ -112,6 +154,14 @@ export type BusinessDetailsInput = {
    * Explicit tax-ID type override (normally derived from country).
    */
   taxIdType?: unknown
+  /**
+   * Buyer state/province (required for US, CA, IN).
+   */
+  customerState?: string
+  /**
+   * Buyer postal/ZIP code (required for US, CA, GB).
+   */
+  customerPostalCode?: string
 }
 
 /**
@@ -400,8 +450,8 @@ export type GateAction =
   | { kind: 'ensureCustomer'; customerRef: string }
   | { kind: 'readLimitsCache'; key: string }
   | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
-  | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; consequence?: AllowConsequence; cache?: GateCacheOp }
-  | { kind: 'gate'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; gate: unknown; cache?: GateCacheOp; request: unknown }
+  | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; consequence?: AllowConsequence; cache?: GateCacheOp; requestId: string }
+  | { kind: 'gate'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; gate: unknown; cache?: GateCacheOp; request: unknown; requestId: string }
   | { kind: 'emitUsage'; request: unknown }
   | { kind: 'skipUsage' }
 
@@ -438,6 +488,16 @@ export type GateDriverState = {
    */
   startedMs: number
   /**
+   * Minted at `start` and reused by every `trackUsage` body for this
+   * request, so the decision and its success / fail event share one
+   * idempotency key.
+   */
+  requestId: string
+  /**
+   * MCP tool that triggered the call, echoed into `metadata.toolName`.
+   */
+  toolName?: string
+  /**
    * `backendRef:product:meterName` once the backend ref is known.
    */
   limitsKey?: string
@@ -459,6 +519,120 @@ export type GateNextOutput = {
    * Host action or terminal result.
    */
   action: GateAction
+}
+
+/**
+ * Next host action or a terminal resolve.
+ */
+export type GetHistoryAction =
+  | { kind: 'fetch'; listPurchases: unknown; getCreditActivity: unknown }
+  | { kind: 'resolved'; charges: unknown[]; creditActivity: unknown }
+
+/**
+ * Driver output.
+ */
+export type GetHistoryNextOutput = {
+  /**
+   * State to pass into the next call.
+   */
+  state: GetHistoryState
+  /**
+   * Host action or terminal result.
+   */
+  action: GetHistoryAction
+}
+
+/**
+ * In-flight step the next host event must complete.
+ */
+export type GetHistoryPending = 'none' | 'fetch'
+
+/**
+ * Driver state between history steps.
+ */
+export type GetHistoryState = {
+  /**
+   * Product whose purchases become `charges`.
+   */
+  productRef: string
+  /**
+   * Backend customer ref for both fetches.
+   */
+  customerRef: string
+  /**
+   * Optional credit-activity page size.
+   */
+  limit?: number
+  /**
+   * In-flight step the next host event must complete.
+   */
+  pending: GetHistoryPending
+}
+
+/**
+ * One charge table row.
+ */
+export type HistoryChargeRow = {
+  /**
+   * Plan or product name plus qualifier.
+   */
+  charge: string
+  /**
+   * UTC purchase date.
+   */
+  date: string
+  /**
+   * Formatted amount.
+   */
+  amount: string
+}
+
+/**
+ * One credit-activity table row.
+ */
+export type HistoryCreditRow = {
+  /**
+   * Product name or type label.
+   */
+  title: string
+  /**
+   * Humanized reason.
+   */
+  subtitle: string | null
+  /**
+   * UTC day + time.
+   */
+  when: string
+  /**
+   * Signed credit delta.
+   */
+  credits: string
+  /**
+   * Running balance.
+   */
+  balance: string
+}
+
+/**
+ * Mapped history tables plus merchant chrome.
+ */
+export type HistoryRows = {
+  /**
+   * Product-scoped charges.
+   */
+  charges: HistoryChargeRow[]
+  /**
+   * Account-wide credit activity.
+   */
+  creditActivity: HistoryCreditRow[]
+  /**
+   * City / state line.
+   */
+  merchantPlace?: string
+  /**
+   * Website host without `www.`.
+   */
+  websiteHost?: string
 }
 
 /**
@@ -547,6 +721,64 @@ export type InvokePayableTrack = {
 export type LookupErrorKind = 'expectedMissing' | 'unexpected'
 
 /**
+ * Host-reported container size.
+ */
+export type McpContainerDimensions = {
+  /**
+   * Width in CSS pixels.
+   */
+  width?: number
+  /**
+   * Height in CSS pixels.
+   */
+  height?: number
+  /**
+   * Max width in CSS pixels.
+   */
+  maxWidth?: number
+  /**
+   * Max height in CSS pixels.
+   */
+  maxHeight?: number
+}
+
+/**
+ * MCP host display mode.
+ */
+export type McpDisplayMode = 'inline' | 'fullscreen' | 'pip'
+
+/**
+ * Display-mode snapshot plus derived hosted rail.
+ */
+export type McpDisplayModeState = {
+  /**
+   * Current host mode.
+   */
+  displayMode: McpDisplayMode
+  /**
+   * Modes the host advertised.
+   */
+  availableDisplayModes: McpDisplayMode[]
+  /**
+   * Host container size when reported.
+   */
+  containerDimensions?: McpContainerDimensions
+  /**
+   * Host insets when reported.
+   */
+  safeAreaInsets?: McpSafeAreaInsets
+  /**
+   * Payment geometry for `data-rail`.
+   */
+  hostedRail: McpHostedRail
+}
+
+/**
+ * Payment geometry stamped on `data-rail`.
+ */
+export type McpHostedRail = 'hosted' | 'inline'
+
+/**
  * MCP tool result for an allowed payable handler (`SolvaPayCallToolResult` allow path).
  * 
  * `is_error` is omitted (`skip_serializing_if`) — allow is not a tool error.
@@ -557,13 +789,35 @@ export type McpPayableToolResult = {
    */
   isError?: boolean
   /**
-   * Emitted blocks, then one `{ type: "text", text }` primary block.
+   * Emitted blocks, primary text, optional trailing JSON, optional nudge resource.
    */
   content: unknown[]
   /**
    * Raw merchant `data` (not the branded envelope).
    */
   structuredContent: unknown
+}
+
+/**
+ * Host composer insets.
+ */
+export type McpSafeAreaInsets = {
+  /**
+   * Top inset.
+   */
+  top: number
+  /**
+   * Right inset.
+   */
+  right: number
+  /**
+   * Bottom inset.
+   */
+  bottom: number
+  /**
+   * Left inset.
+   */
+  left: number
 }
 
 /**
@@ -591,6 +845,37 @@ export type PaymentIntentProjection = {
    */
   customerRef: string
 }
+
+/**
+ * Derived plan pricing presentation.
+ */
+export type PlanPricingShape = {
+  /**
+   * Branch key for plan-row / narration surfaces.
+   */
+  shape: PricingShape
+  /**
+   * Headline price in minor units.
+   */
+  headlineMinor: number
+  /**
+   * ISO currency, uppercased.
+   */
+  currency: string
+  /**
+   * Recurring cycle when the shape is recurring or hybrid.
+   */
+  cycle: BillingCycle | null
+  /**
+   * Metered rate when the plan is metered.
+   */
+  rate: UsageRate | null
+}
+
+/**
+ * Pricing shape a plan-row or narration surface should branch on.
+ */
+export type PricingShape = 'free' | 'hybrid' | 'recurring' | 'usage' | 'oneTime'
 
 /**
  * Result of [`evaluate_product_readiness`].
@@ -767,7 +1052,7 @@ export type UsageSnapshot = {
    */
   meterRef: string | null
   /**
-   * `used + remaining` when the meter has a finite cap; else `null`.
+   * `limits.limit` when that value is `> 0`; else `null`. Never `used + remaining`.
    */
   total: number | null
   /**

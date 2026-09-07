@@ -89,6 +89,7 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'checkPurchaseCore',
   'trackUsageCore',
   'getUsageCore',
+  'deriveUsageSnapshot',
   'listPlansCore',
   'checkLimitsCore',
   'getMerchantCore',

@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "postal-label-us",
+  "input": {
+    "fn": "getPostalCodeFieldLabel",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "ZIP code"
+  }
+}

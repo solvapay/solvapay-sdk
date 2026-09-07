@@ -342,6 +342,14 @@ export type GetAutoRechargeParams = {
 }
 
 /**
+ * SDK-only type `GetCreditActivityParams`.
+ */
+export type GetCreditActivityParams = {
+  customerRef: string
+  limit?: number
+}
+
+/**
  * SDK-only type `GetCustomerBalanceParams`.
  */
 export type GetCustomerBalanceParams = {
@@ -411,6 +419,23 @@ export type ListProductItem = {
  * List of `ListProductItem`.
  */
 export type ListProductsResult = Array<ListProductItem>
+
+/**
+ * SDK-only type `ListPurchasesParams`.
+ */
+export type ListPurchasesParams = {
+  customerRef?: string
+  includeFree?: boolean
+  productRef?: string
+  status?: string
+}
+
+/**
+ * SDK-only type `ListPurchasesResult`.
+ */
+export type ListPurchasesResult = {
+  purchases?: Array<components['schemas']['SdkPurchaseResponse']>
+}
 
 /**
  * SDK-only type `McpBillingCycleDisplay`.

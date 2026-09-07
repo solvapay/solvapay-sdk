@@ -10,12 +10,12 @@ use solvapay_dto::{
     CreateCustomerSessionResponse, CreatePaymentIntentParams, CreatePaymentIntentResult,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
     CreateTopupPaymentIntentResult, CustomerResponseMapped, DisableAutoRechargeParams,
-    GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, GrantCustomerCreditsResponse, McpBootstrapDto,
-    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
-    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
-    UserInfoResponse,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams,
+    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams,
+    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
+    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
 };
 
 use super::{runtime, BlockingClient};
@@ -304,6 +304,19 @@ impl BlockingClient {
         runtime().block_on(self.inner.get_auto_recharge(params))
     }
 
+    /// List account-wide credit activity for a customer, newest first.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Customer reference and optional page size.
+    ///
+    /// # Returns
+    ///
+    /// Credit activity page.
+    pub fn get_credit_activity(&self, params: GetCreditActivityParams) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.get_credit_activity(params))
+    }
+
     /// Fetch a customer by reference.
     ///
     /// # Arguments
@@ -405,6 +418,19 @@ impl BlockingClient {
     /// Product list projection.
     pub fn list_products(&self) -> Result<Value, SdkError> {
         runtime().block_on(self.inner.list_products())
+    }
+
+    /// List purchases for the authenticated provider, optionally filtered by customer, product, or status.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Optional purchase list filters.
+    ///
+    /// # Returns
+    ///
+    /// Purchase list wrapper.
+    pub fn list_purchases(&self, params: ListPurchasesParams) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.list_purchases(params))
     }
 
     /// Fan out merchant, product, plans, and customer snapshots for the MCP widget.

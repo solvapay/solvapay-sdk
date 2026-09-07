@@ -20,7 +20,7 @@ let cachedBranding: SolvaPayMerchantBranding | undefined
 const REQUIRED_TRANSPORT_TOOLS = [
   MCP_TOOL_NAMES.createPayment,
   MCP_TOOL_NAMES.processPayment,
-  MCP_TOOL_NAMES.createTopupPayment,
+  MCP_TOOL_NAMES.createHostedSession,
   MCP_TOOL_NAMES.attachBusinessDetails,
 ] as const
 

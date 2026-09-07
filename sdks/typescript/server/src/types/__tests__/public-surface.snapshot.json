@@ -64,6 +64,7 @@
     "PaywallMetadata",
     "PaywallState",
     "PaywallStructuredContent",
+    "PaywallStructuredContentSchema",
     "PricedLike",
     "PricingOptionLike",
     "ProcessPaymentResult",

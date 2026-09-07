@@ -13,7 +13,7 @@ use crate::mcp::{
 };
 use crate::paywall_gate::PaywallGate;
 use crate::serde_util::serialize_whole_f64;
-use crate::usage_request::build_usage_request;
+use crate::usage_request::{build_usage_request, mint_request_id};
 
 /// Driver state between payable steps.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -219,7 +219,8 @@ fn on_handler_ok(
         "success",
         duration_ms,
         now_ms,
-        random_unit,
+        &mint_request_id(now_ms, random_unit),
+        None,
         None,
     );
     Ok(done(
@@ -263,7 +264,8 @@ fn on_handler_err(
         "fail",
         duration_ms,
         now_ms,
-        random_unit,
+        &mint_request_id(now_ms, random_unit),
+        None,
         Some(message.to_owned()),
     );
     Ok(done(

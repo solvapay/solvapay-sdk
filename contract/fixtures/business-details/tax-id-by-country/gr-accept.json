@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "GR",
         "taxId": "EL123456789",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "GR"
       }
     }
   }

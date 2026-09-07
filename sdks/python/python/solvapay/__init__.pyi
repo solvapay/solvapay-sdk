@@ -257,6 +257,18 @@ class SolvaPayClient:
         @returns Auto-recharge configuration projection.
         """
         ...
+    async def get_credit_activity(self, args_json: str) -> str:
+        """List account-wide credit activity for a customer, newest first.
+        @param params Customer reference and optional page size.
+        @returns Credit activity page.
+        """
+        ...
+    def get_credit_activity_blocking(self, args_json: str) -> str:
+        """List account-wide credit activity for a customer, newest first.
+        @param params Customer reference and optional page size.
+        @returns Credit activity page.
+        """
+        ...
     async def get_customer(self, args_json: str) -> str:
         """Fetch a customer by reference.
         @param params Lookup options including the customer reference.
@@ -353,6 +365,20 @@ class SolvaPayClient:
     def list_products_blocking(self, args_json: str) -> str:
         """List products for the current merchant.
         @returns Product list projection.
+        """
+        ...
+    async def list_purchases(self, args_json: str) -> str:
+        """List purchases for the authenticated provider, optionally filtered by customer, product, or
+        status.
+        @param params Optional purchase list filters.
+        @returns Purchase list wrapper.
+        """
+        ...
+    def list_purchases_blocking(self, args_json: str) -> str:
+        """List purchases for the authenticated provider, optionally filtered by customer, product, or
+        status.
+        @param params Optional purchase list filters.
+        @returns Purchase list wrapper.
         """
         ...
     async def mcp_bootstrap(self, args_json: str) -> str:
@@ -542,10 +568,20 @@ def _verify_webhook_at(
     body: str, signature: str, secret: str, now_unix_secs: int
 ) -> str: ...
 
+def postal_code_required_countries() -> list[str]:
+    """Countries that require a postal or ZIP code for Stripe Tax.
+    @returns Country code list.
+    """
+    ...
 REVERSE_CHARGE_NOTE: str
 """Buyer-facing note when VAT reverse charge applies."""
 SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: list[tuple[str, str]]
 """Map of seller tax identifier types to display labels."""
+def state_required_countries() -> list[str]:
+    """Countries that require a state or province for Stripe Tax.
+    @returns Country code list.
+    """
+    ...
 TAX_NOT_COLLECTED_NOTE: str
 """Buyer-facing note when tax is not collected on the purchase."""
 def assert_valid_product_ref(product_ref: str, context: str) -> None:
@@ -644,9 +680,24 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> str:
     @returns VAT label string.
     """
     ...
+def get_postal_code_field_label(country: str) -> str:
+    """Return the postal or ZIP code field label for a country.
+    @returns Field label string.
+    """
+    ...
+def get_postal_code_placeholder(country: str) -> str:
+    """Return the postal or ZIP code field placeholder for a country.
+    @returns Placeholder string.
+    """
+    ...
 def get_seller_tax_identifier_display_label(country: str | None = None) -> str:
     """Return the display label for a seller tax identifier type.
     @returns Display label string.
+    """
+    ...
+def get_state_field_label(country: str) -> str:
+    """Return the state or province field label for a country.
+    @returns Field label string.
     """
     ...
 def get_tax_id_example(country: str) -> str | None:
@@ -672,6 +723,16 @@ def headline_charges(priced: object | None = None) -> list[object]:
 def included_units(priced: object | None = None, meter: str | None = None) -> int | None:
     """Read the included-unit cap for a meter from the limit option.
     @returns Cap (0 means unlimited), or null when no limit is configured.
+    """
+    ...
+def is_postal_code_required(country: str) -> bool:
+    """Whether Stripe Tax requires a postal or ZIP code for a country.
+    @returns True when a postal or ZIP code is required.
+    """
+    ...
+def is_state_required(country: str) -> bool:
+    """Whether Stripe Tax requires a state or province for a country.
+    @returns True when a state or province is required.
     """
     ...
 def is_unlimited_remaining(remaining: float) -> bool:
@@ -711,6 +772,11 @@ def pegged_credits_per_unit(
 def per_unit_charge(priced: object | None = None, meter: str | None = None) -> object | None:
     """Return the first per-unit charge, optionally scoped to one meter.
     @returns The metered charge, or null when the plan does not meter usage.
+    """
+    ...
+def plan_pricing_shape(priced: object | None = None) -> object:
+    """Derive the pricing shape a plan-row or narration surface should branch on.
+    @returns Shape, headline, currency, cycle, and usage rate.
     """
     ...
 def require_product_ref(metadata_product: str | None = None, env_product: str | None = None) -> str:

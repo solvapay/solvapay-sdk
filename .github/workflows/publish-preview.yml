@@ -4,12 +4,29 @@ name: Publish Preview Snapshot
 # gates, then `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN).
 # Set `dry_run=false` to cut a real `@preview` snapshot
 # (`@solvapay/<pkg>@0.0.0-preview-<shortsha>` plus a mutable `@preview`
-# pointer). `workflow_dispatch` inputs resolve against the default branch.
+# pointer). Inputs resolve against the dispatched ref (the workflow only
+# has to exist on the default branch for dispatch to be enabled), so a
+# feature branch can be dry-run before merge. `force_native` is dry-run
+# only: it runs the 8-target native matrix without publishing.
+#
+# Non-dry-run also builds and publishes the 8 native platform packages, then
+# (when `include_languages` is true) pushes the four rehearsal tags with the
+# release-bot App token so language preview workflows fire.
 on:
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Skip snapshot publish; run gates + pnpm -r publish --dry-run (no NPM_TOKEN)'
+        required: false
+        type: boolean
+        default: true
+      force_native:
+        description: 'Dry-run only: run the 8-target native matrix even with pending changesets'
+        required: false
+        type: boolean
+        default: false
+      include_languages:
+        description: 'After npm preview, push rehearsal language tags (Python, Ruby, Rust, Go)'
         required: false
         type: boolean
         default: true
@@ -19,7 +36,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-build:
+    if: ${{ !inputs.dry_run || inputs.force_native }}
+    uses: ./.github/workflows/native-build.yml
+
   publish-preview:
+    needs: native-build
+    if: ${{ !cancelled() && needs.native-build.result != 'failure' }}
     runs-on: ubuntu-latest
     env:
       SOLVAPAY_CORE_SHA: ${{ github.sha }}
@@ -27,6 +50,14 @@ jobs:
       contents: read
 
     steps:
+      - name: Generate release-bot token
+        id: app-token
+        if: ${{ !inputs.dry_run && inputs.include_languages }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
@@ -65,6 +96,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read release-train sentinel
+        id: sentinel
+        run: echo "sentinel=$(node -p "require('./internal/release-train/package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Check dependency health
         run: pnpm deps:check
 
@@ -92,9 +127,84 @@ jobs:
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 
+      - name: Tier A — print rehearsal tags (no writes)
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        env:
+          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
+        run: |
+          set -euo pipefail
+          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
+          pnpm exec tsx tools/repo/resolve-release-channel.ts \
+            --ref refs/heads/main \
+            --channel rehearsal \
+            --version "${SENTINEL}" \
+            --run "${GITHUB_RUN_NUMBER}" \
+            --ecosystem npm \
+            --assert-tags \
+            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
+          echo "Tier A: rehearsal tags for ${SENTINEL}"
+
       - name: Version snapshot
         if: ${{ !inputs.dry_run }}
         run: pnpm changeset version --snapshot preview
+
+      - name: Install native binding deps
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: npx napi create-npm-dirs
+
+      - name: Download native binding artifacts
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/node-native/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: |
+          mkdir -p artifacts
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: node scripts/check-artifacts.mjs
+
+      - name: Prepare native publish pins
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        run: pnpm exec tsx tools/repo/prepare-native-publish.ts
+
+      - name: Publish native platform packages
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts --dry-run
+          else
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts
+          fi
+
+      - name: Verify native platform packages landed on npm
+        if: ${{ !inputs.dry_run }}
+        run: pnpm exec tsx tools/repo/verify-native-platform-publishes.ts
+
+      - name: Assert no local-path production deps
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --assert-no-local-paths
 
       - name: Publish snapshot to @preview
         id: publish
@@ -130,3 +240,12 @@ jobs:
       - name: Validate fetch-runtime — Deno gate (published @preview tarballs)
         if: ${{ !inputs.dry_run }}
         run: pnpm --filter @example/supabase-edge-mcp validate
+
+      - name: Push rehearsal tags
+        if: ${{ !inputs.dry_run && inputs.include_languages }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pnpm exec tsx tools/repo/push-rehearsal-tags.ts --version "${SENTINEL}" --replace

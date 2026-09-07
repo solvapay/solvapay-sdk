@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "SE",
         "taxId": "SE123456789123",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "SE"
       }
     }
   }

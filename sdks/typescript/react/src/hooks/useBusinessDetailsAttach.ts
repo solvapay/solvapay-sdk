@@ -1,13 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   TAX_ID_TYPES,
+  getCustomerAddressFieldErrors,
+  isCustomerAddressComplete,
+  validateBusinessDetails,
   type BusinessDetailsInput,
   type TaxBreakdown,
   type TaxIdType,
 } from '@solvapay/core'
-import { mapAttachFieldErrors } from '../components/businessCheckoutParts'
+import { mapAttachFieldErrors, mapBusinessFieldErrors } from '../components/businessCheckoutParts'
 
 export const defaultBusinessDetails: BusinessDetailsInput = { isBusiness: false }
+
+type BusinessFieldErrors = Partial<Record<keyof BusinessDetailsInput, string>>
+
+/**
+ * The core binding declares this `unknown`, so narrow it once here. A
+ * non-record answer is a broken binding contract, not a "no errors"
+ * answer, so it throws rather than degrading to `{}`.
+ */
+function customerAddressFieldErrors(input: BusinessDetailsInput): BusinessFieldErrors {
+  const errors = getCustomerAddressFieldErrors(input)
+  if (errors === null || typeof errors !== 'object' || Array.isArray(errors)) {
+    throw new TypeError(
+      `getCustomerAddressFieldErrors returned ${typeof errors}, expected a field-error record`,
+    )
+  }
+  const narrowed: Record<string, string> = {}
+  for (const [key, value] of Object.entries(errors)) {
+    if (typeof value === 'string') narrowed[key] = value
+  }
+  return narrowed
+}
 
 function taxIdTypeFromInput(value: unknown): TaxIdType | undefined {
   return TAX_ID_TYPES.find(candidate => candidate === value)
@@ -68,7 +92,18 @@ export function useBusinessDetailsAttach(
     setBusinessDetailsState(prev => {
       const next = { ...prev, ...patch }
       if (patch.isBusiness === false) {
-        return { isBusiness: false }
+        // Leaving business mode drops the business fields but keeps the
+        // buyer's own address: they still bought from somewhere.
+        return {
+          isBusiness: false,
+          ...(next.customerCountry && { customerCountry: next.customerCountry }),
+          ...(next.customerState && { customerState: next.customerState }),
+          ...(next.customerPostalCode && { customerPostalCode: next.customerPostalCode }),
+          ...(next.customerName && { customerName: next.customerName }),
+        }
+      }
+      if (patch.isBusiness === true && !next.country && next.customerCountry) {
+        return { ...next, country: next.customerCountry }
       }
       return next
     })
@@ -128,6 +163,23 @@ export function useBusinessDetailsAttach(
 
   useEffect(() => {
     if (!processorPaymentId || !attachBusinessDetails) return
+
+    // Auto-attach is a background tax lookup, so it waits for a payload the
+    // backend can actually price. `runAttach` stays ungated: an explicit
+    // submit must reach the server and surface its field errors.
+    const validation = validateBusinessDetails(businessDetails)
+    if (!validation.success || !isCustomerAddressComplete(businessDetails)) {
+      const countrySelected = !!(
+        businessDetails.customerCountry?.trim() ||
+        (businessDetails.isBusiness && businessDetails.country?.trim())
+      )
+      setFieldErrors({
+        ...mapBusinessFieldErrors(businessDetails),
+        ...(countrySelected ? customerAddressFieldErrors(businessDetails) : {}),
+      })
+      setBusinessDetailsAttached(false)
+      return
+    }
 
     setFieldErrors({})
     const timer = setTimeout(() => {

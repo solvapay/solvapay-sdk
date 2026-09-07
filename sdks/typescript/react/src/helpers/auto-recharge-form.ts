@@ -242,19 +242,6 @@ export function validateAutoRechargeForm(
   }
   payload.topupAmountMajor = amountMajor
 
-  // The top-up must clear the threshold, otherwise the recharge leaves the
-  // balance below it and re-triggers on the next check.
-  if (amountMajor < payload.thresholdAmountMajor) {
-    return {
-      ok: false,
-      error: interpolate(messages.topupBelowThreshold, {
-        amount: formatPrice(Math.round(payload.thresholdAmountMajor * minorPerMajor), currency, {
-          free: '',
-        }),
-      }),
-    }
-  }
-
   if (form.maxMonthlySpendMajor.trim().length > 0) {
     const max = parsePositiveNumber(form.maxMonthlySpendMajor)
     if (max == null) {

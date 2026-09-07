@@ -1,0 +1,33 @@
+{
+  "suite": "mcp",
+  "case": "nudge-resource",
+  "input": {
+    "fn": "buildPayableToolResult",
+    "args": {
+      "envelope": {
+        "__solvapayResponse": true,
+        "data": { "y": 2 },
+        "options": {
+          "nudge": { "kind": "low-balance", "message": "Running low on credits" }
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        { "type": "text", "text": "{\"y\":2}\n\nRunning low on credits" },
+        { "type": "text", "text": "{\"y\":2}" },
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "solvapay://nudge",
+            "mimeType": "text/plain",
+            "text": "Running low on credits"
+          }
+        }
+      ],
+      "structuredContent": { "y": 2 }
+    }
+  }
+}

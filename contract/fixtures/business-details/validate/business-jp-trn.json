@@ -18,7 +18,8 @@
         "businessName": "K.K. Example",
         "country": "JP",
         "taxId": "T1234567891234",
-        "taxIdType": "jp_trn"
+        "taxIdType": "jp_trn",
+        "customerCountry": "JP"
       }
     }
   }

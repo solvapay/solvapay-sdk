@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "postal-placeholder-us",
+  "input": {
+    "fn": "getPostalCodePlaceholder",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "94103"
+  }
+}

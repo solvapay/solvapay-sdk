@@ -10,17 +10,22 @@
 use serde_json::Value;
 use solvapay_core::{
     credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
-    format_vat_summary_label, get_business_country_options,
-    get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, is_unlimited_remaining, is_zero_decimal_currency,
-    minor_units_per_major, resolve_seller_identity_display, resolve_tax_behavior,
-    resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, tax_not_collected_note, to_major_units, validate_business_details,
+    format_vat_summary_label, get_business_country_options, get_customer_address_field_errors,
+    get_postal_code_field_label, get_postal_code_placeholder,
+    get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
+    get_tax_id_field_label, get_tax_id_helper_text, is_customer_address_complete,
+    is_postal_code_required, is_state_required, is_unlimited_remaining, is_zero_decimal_currency,
+    minor_units_per_major, postal_code_required_countries, resolve_buyer_country,
+    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
+    reverse_charge_note, seller_tax_identifier_display_label_by_type, should_show_tax_row,
+    state_required_countries, tax_not_collected_note, to_major_units, validate_business_details,
     BusinessDetailsInput, CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
-use crate::args::{args_map, optional_f64, optional_string, require_f64, require_string, to_value};
+use crate::args::{
+    args_map, optional_f64, optional_string, require_f64, require_string, require_typed, to_value,
+};
 use crate::error::run_envelope_sync;
 
 // --- money-format (public-safe) ---
@@ -36,14 +41,17 @@ pub fn format_price_binding(args_json: String) -> String {
         let interval_count = optional_f64(&args, "intervalCount")?;
         let free = optional_string(&args, "free")?;
         let currency_display = optional_string(&args, "currencyDisplay")?;
-        Ok(Value::String(format_price(
-            amount_minor,
-            &currency,
-            interval.as_deref(),
-            interval_count,
-            free.as_deref(),
-            currency_display.as_deref(),
-        )))
+        Ok(Value::String(
+            format_price(
+                amount_minor,
+                &currency,
+                interval.as_deref(),
+                interval_count,
+                free.as_deref(),
+                currency_display.as_deref(),
+            )
+            .to_owned(),
+        ))
     })
 }
 
@@ -96,7 +104,9 @@ pub fn format_subtotal_label_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let treatment = optional_string(&args, "treatment")?;
-        Ok(Value::String(format_subtotal_label(treatment.as_deref())))
+        Ok(Value::String(
+            format_subtotal_label(treatment.as_deref()).to_owned(),
+        ))
     })
 }
 
@@ -122,10 +132,9 @@ pub fn format_vat_summary_label_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let treatment = optional_string(&args, "treatment")?;
         let tax_rate = require_f64(&args, "taxRate")?;
-        Ok(Value::String(format_vat_summary_label(
-            treatment.as_deref(),
-            tax_rate,
-        )))
+        Ok(Value::String(
+            format_vat_summary_label(treatment.as_deref(), tax_rate).to_owned(),
+        ))
     })
 }
 
@@ -181,7 +190,7 @@ pub fn resolve_tax_treatment_note_binding(args_json: String) -> String {
 pub fn reverse_charge_note_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
-        Ok(Value::String(reverse_charge_note()))
+        Ok(Value::String(reverse_charge_note().to_owned()))
     })
 }
 
@@ -210,7 +219,7 @@ pub fn get_tax_id_field_label_binding(args_json: String) -> String {
 pub fn tax_not_collected_note_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
-        Ok(Value::String(tax_not_collected_note()))
+        Ok(Value::String(tax_not_collected_note().to_owned()))
     })
 }
 
@@ -261,6 +270,30 @@ pub fn credits_to_display_minor_units_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details (public-safe) ---
+
+/// Binding for `resolveBuyerCountry`.
+#[wasm_bindgen(js_name = "resolveBuyerCountry")]
+pub fn resolve_buyer_country_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        to_value(&resolve_buyer_country(&input))
+    })
+}
+
+/// Binding for `getCustomerAddressFieldErrors`.
+#[wasm_bindgen(js_name = "getCustomerAddressFieldErrors")]
+pub fn get_customer_address_field_errors_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        to_value(&get_customer_address_field_errors(&input))
+    })
+}
+
+// --- credit-display (public-safe) ---
+
 /// Binding for `isZeroDecimalCurrency`.
 #[wasm_bindgen(js_name = "isZeroDecimalCurrency")]
 pub fn is_zero_decimal_currency_binding(args_json: String) -> String {
@@ -271,6 +304,20 @@ pub fn is_zero_decimal_currency_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details (public-safe) ---
+
+/// Binding for `isCustomerAddressComplete`.
+#[wasm_bindgen(js_name = "isCustomerAddressComplete")]
+pub fn is_customer_address_complete_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+        Ok(Value::Bool(is_customer_address_complete(&input)))
+    })
+}
+
+// --- credit-display (public-safe) ---
+
 /// Binding for `minorUnitsPerMajor`.
 #[wasm_bindgen(js_name = "minorUnitsPerMajor")]
 pub fn minor_units_per_major_binding(args_json: String) -> String {
@@ -278,6 +325,18 @@ pub fn minor_units_per_major_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let currency = require_string(&args, "currency")?;
         Ok(Value::from(minor_units_per_major(&currency)))
+    })
+}
+
+// --- business-details (public-safe) ---
+
+/// Binding for `isPostalCodeRequired`.
+#[wasm_bindgen(js_name = "isPostalCodeRequired")]
+pub fn is_postal_code_required_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::Bool(is_postal_code_required(&country)))
     })
 }
 
@@ -304,11 +363,25 @@ pub fn get_seller_tax_identifier_display_label_binding(args_json: String) -> Str
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let country = optional_string(&args, "country")?;
-        Ok(Value::String(get_seller_tax_identifier_display_label(
-            country.as_deref(),
-        )))
+        Ok(Value::String(
+            get_seller_tax_identifier_display_label(country.as_deref()).to_owned(),
+        ))
     })
 }
+
+// --- business-details (public-safe) ---
+
+/// Binding for `isStateRequired`.
+#[wasm_bindgen(js_name = "isStateRequired")]
+pub fn is_state_required_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::Bool(is_state_required(&country)))
+    })
+}
+
+// --- seller-identity (public-safe) ---
 
 /// Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
 #[wasm_bindgen(js_name = "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE")]
@@ -323,6 +396,30 @@ pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) ->
     })
 }
 
+// --- business-details (public-safe) ---
+
+/// Binding for `getStateFieldLabel`.
+#[wasm_bindgen(js_name = "getStateFieldLabel")]
+pub fn get_state_field_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(get_state_field_label(&country).to_owned()))
+    })
+}
+
+/// Binding for `getPostalCodeFieldLabel`.
+#[wasm_bindgen(js_name = "getPostalCodeFieldLabel")]
+pub fn get_postal_code_field_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(
+            get_postal_code_field_label(&country).to_owned(),
+        ))
+    })
+}
+
 // --- credit-display (public-safe) ---
 
 /// Binding for `isUnlimitedRemaining`.
@@ -332,6 +429,38 @@ pub fn is_unlimited_remaining_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let remaining = require_f64(&args, "remaining")?;
         Ok(Value::Bool(is_unlimited_remaining(remaining)))
+    })
+}
+
+// --- business-details (public-safe) ---
+
+/// Binding for `getPostalCodePlaceholder`.
+#[wasm_bindgen(js_name = "getPostalCodePlaceholder")]
+pub fn get_postal_code_placeholder_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        Ok(Value::String(
+            get_postal_code_placeholder(&country).to_owned(),
+        ))
+    })
+}
+
+/// Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.
+#[wasm_bindgen(js_name = "POSTAL_CODE_REQUIRED_COUNTRIES")]
+pub fn postal_code_required_countries_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&postal_code_required_countries())
+    })
+}
+
+/// Binding for `STATE_REQUIRED_COUNTRIES`.
+#[wasm_bindgen(js_name = "STATE_REQUIRED_COUNTRIES")]
+pub fn state_required_countries_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&state_required_countries())
     })
 }
 

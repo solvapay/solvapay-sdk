@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "state-required-in",
+  "input": {
+    "fn": "isStateRequired",
+    "args": {
+      "country": "IN"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

@@ -31,6 +31,12 @@ pub struct McpPaywallToolResult {
 
 /// Build a text-only MCP paywall tool result.
 ///
+/// The gate is independently complete on both host families: `content[0].text`
+/// carries the human narration (text-first hosts) and `structuredContent`
+/// carries the machine-readable [`PaywallGate`] (structuredContent-first
+/// hosts). Trailing JSON / nudge resource lanes belong to the allow-path
+/// unwrap in [`crate::mcp::build_payable_tool_result`], not to a gate.
+///
 /// # Arguments
 ///
 /// * `narration` - Text placed in `content[0].text` (typically the gate message).

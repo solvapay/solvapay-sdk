@@ -10,10 +10,13 @@
 import React, { memo } from 'react'
 import { useBalance } from '../../../../hooks/useBalance'
 import { MandateText } from '../../../../primitives/MandateText'
-import { TopupForm } from '../../../../primitives/TopupForm'
+import { TopupForm, useTopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
+import { useDisplayMode } from '../../../hooks/useDisplayMode'
 import { useHostLocale } from '../../../useHostLocale'
-import { BackLink } from '../../BackLink'
+import { chargeAmountMinor } from '../../chargeAmount'
+import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
+import { McpPaymentHeader } from '../../McpPaymentHeader'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -41,6 +44,8 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
   const currency = (topupCurrency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
   const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
   // `creditsPerMinorUnit` is the mint rate the backend surfaces on the
   // balance DTO (credits granted per paid minor unit). Unlike
   // `plan.creditsPerUnit` — which is the *debit* rate (credits
@@ -54,68 +59,66 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
       : null
 
   return (
-    <>
-      <BackLink label="Change amount" onClick={onBack} />
+    <TopupForm.Root
+      amount={amountMinor}
+      currency={currency}
+      returnUrl={returnUrl}
+      onSuccess={(_intent, extras) => onSuccess(extras)}
+    >
+      <McpHostedLayout>
+        <McpSummaryRail>
+          <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
+            <div className="solvapay-mcp-checkout-order-summary-row">
+              <span className={cx.muted}>
+                {creditsAdded != null
+                  ? `${creditsAdded.toLocaleString(locale)} credits`
+                  : formatPrice(amountMinor, currency, { locale })}
+              </span>
+              {creditsAdded != null ? (
+                <span>{formatPrice(amountMinor, currency, { locale })}</span>
+              ) : null}
+            </div>
+            <div className="solvapay-mcp-checkout-order-summary-row">
+              <span className={cx.muted}>One-time</span>
+            </div>
+            {isFullscreen ? (
+              <TopupForm.Summary.Rows className={cx.taxSummary} />
+            ) : (
+              <TopupForm.Summary.TaxNote className={cx.muted} />
+            )}
+          </div>
+        </McpSummaryRail>
 
-      <h2 className={cx.heading}>Payment</h2>
-
-      <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
-        <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>
-            {creditsAdded != null
-              ? `${creditsAdded.toLocaleString(locale)} credits`
-              : formatPrice(amountMinor, currency, { locale })}
-          </span>
-          {creditsAdded != null ? (
-            <span>{formatPrice(amountMinor, currency, { locale })}</span>
-          ) : null}
-        </div>
-        <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>One-time</span>
-        </div>
-      </div>
-
-      <TopupForm.Root
-        amount={amountMinor}
-        currency={currency}
-        returnUrl={returnUrl}
-        className={cx.topupForm}
-        onSuccess={(_intent, extras) => onSuccess(extras)}
-      >
-        <TopupForm.Loading />
-        <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
-          <label className={cx.businessToggle}>
-            <TopupForm.BusinessDetails.Toggle />
-            I&apos;m purchasing as a business
-          </label>
-          <TopupForm.BusinessDetails.BusinessName
-            className={cx.businessField}
-            placeholder="Business name"
+        <McpHostedBody>
+          <McpPaymentHeader
+            backLabel="Change amount"
+            onBack={onBack}
+            heading="Payment"
+            headingClassName={cx.heading}
           />
-          <TopupForm.BusinessDetails.Country className={cx.businessField} />
-          <TopupForm.BusinessDetails.TaxId
-            className={cx.businessField}
-            placeholder="Tax / VAT ID"
-          />
-        </TopupForm.BusinessDetails.Root>
-        <TopupForm.Summary.Rows className={cx.taxSummary} />
-        <TopupForm.PaymentElement />
-        <TopupForm.Error className={cx.error} />
 
-        {/* Per brief §4: optional "Save card for future top-ups"
-            checkbox below the Stripe element. Purely informational
-            today — Stripe's default `setup_future_usage` from the
-            intent dictates whether the card actually gets saved. */}
-        <label className="solvapay-mcp-checkout-save-card">
-          <input type="checkbox" defaultChecked />
-          <span className={cx.muted}>Save card for future top-ups</span>
-        </label>
+          <div className={cx.topupForm}>
+            <TopupForm.Loading />
+            <TopupForm.PaymentElement />
+            <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
+              <TopupForm.BusinessDetails.Fields />
+            </TopupForm.BusinessDetails.Root>
+            <TopupForm.Error className={cx.error} />
 
-        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
-        <TopupForm.SubmitButton className={cx.button}>
-          Pay {formatPrice(amountMinor, currency, { locale })}
-        </TopupForm.SubmitButton>
-      </TopupForm.Root>
-    </>
+            <TopupForm.SubmitButton className={cx.button}>
+              <PaygChargeCta amountMinor={amountMinor} currency={currency} />
+            </TopupForm.SubmitButton>
+            <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
+          </div>
+        </McpHostedBody>
+      </McpHostedLayout>
+    </TopupForm.Root>
   )
 })
+
+function PaygChargeCta({ amountMinor, currency }: { amountMinor: number; currency: string }) {
+  const locale = useHostLocale()
+  const { taxBreakdown } = useTopupForm()
+  const minor = chargeAmountMinor(taxBreakdown, amountMinor)
+  return <>Pay {formatPrice(minor, taxBreakdown?.currency ?? currency, { locale })}</>
+}

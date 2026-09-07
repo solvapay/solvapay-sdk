@@ -182,6 +182,22 @@ pub static SCENARIOS: LazyLock<Vec<Scenario>> = LazyLock::new(|| {
             skip_reason: None,
         },
         Scenario {
+            id: "listPurchases",
+            op: "listPurchases",
+            args: json!({"customerRef": "{customerRef}", "productRef": "{productRef}"}),
+            requires: None,
+            expect_error: false,
+            skip_reason: None,
+        },
+        Scenario {
+            id: "getCreditActivity",
+            op: "getCreditActivity",
+            args: json!({"customerRef": "{customerRef}", "productRef": "{productRef}"}),
+            requires: None,
+            expect_error: false,
+            skip_reason: None,
+        },
+        Scenario {
             id: "getUserInfo",
             op: "getUserInfo",
             args: json!({"customerRef": "{customerRef}", "productRef": "{productRef}"}),

@@ -2,11 +2,12 @@
  * TypeScript type definitions for @solvapay/react
  */
 
-import type { PaymentIntent } from '@stripe/stripe-js'
+import type { Appearance, PaymentIntent } from '@stripe/stripe-js'
 import type {
   ProcessPaymentResult,
   TopupProcessResult,
   ActivatePlanResult,
+  LimitResponseWithPlan,
   PaymentMethodInfo,
   CustomerBalanceResult,
   GetUsageResult,
@@ -48,6 +49,12 @@ export interface Merchant {
   termsUrl?: string
   privacyUrl?: string
   country?: string
+  /** City from the legal entity address. */
+  city?: string
+  /** State, county, or region from the legal entity address. Free text. */
+  stateOrCounty?: string
+  /** Merchant public website. Distinct from `supportUrl`. */
+  websiteUrl?: string
   /** Company registration number (EIN, Companies House No, Org No). */
   companyNumber?: string
   /** Tax identification number (US: EIN). */
@@ -185,6 +192,12 @@ export interface TopupFormProps {
   submitButtonText?: string
   className?: string
   buttonClassName?: string
+  /**
+   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * tokens from the form root and builds a host-matched appearance. Pass
+   * `null` to restore Stripe's default theme.
+   */
+  appearance?: Appearance | null
 }
 
 export interface PurchaseStatus {
@@ -270,6 +283,7 @@ export interface SolvaPayProviderInitial {
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null
   usage: GetUsageResult | null
+  limits: LimitResponseWithPlan | null
   merchant: Merchant
   product: Product
   plans: Plan[]
@@ -749,6 +763,12 @@ export interface PaymentFormProps {
   requireTermsAcceptance?: boolean
   /** Fired when business-details attach returns an updated tax breakdown. */
   onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
+  /**
+   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * tokens from the form root and builds a host-matched appearance. Pass
+   * `null` to restore Stripe's default theme.
+   */
+  appearance?: Appearance | null
 }
 
 export interface UseTopupAmountSelectorOptions {

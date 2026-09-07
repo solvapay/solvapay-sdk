@@ -102,6 +102,7 @@ module SolvaPay
     def disable_auto_recharge: (params: Hash[String, untyped]) -> untyped
     def fetch_jwks: (params: Hash[String, untyped]) -> untyped
     def get_auto_recharge: (params: Hash[String, untyped]) -> untyped
+    def get_credit_activity: (params: Hash[String, untyped]) -> untyped
     def get_customer: (params: Hash[String, untyped]) -> untyped
     def get_customer_balance: (params: Hash[String, untyped]) -> untyped
     def get_merchant: () -> untyped
@@ -111,6 +112,7 @@ module SolvaPay
     def get_user_info: (params: Hash[String, untyped]) -> untyped
     def list_plans: (product_ref: String) -> untyped
     def list_products: () -> untyped
+    def list_purchases: (params: Hash[String, untyped]) -> untyped
     def mcp_bootstrap: (params: Hash[String, untyped]) -> untyped
     def mcp_call_builtin_tool: (params: Hash[String, untyped]) -> untyped
     def mcp_dispatch: (params: Hash[String, untyped]) -> untyped
@@ -203,12 +205,17 @@ module SolvaPay
   def self.format_price: (amount_minor: Float, currency: String, ?interval: String, ?interval_count: Float, ?free: String, ?currency_display: String) -> untyped
   def self.format_subtotal_label: (?treatment: String) -> untyped
   def self.format_vat_summary_label: (treatment: String?, tax_rate: Float) -> untyped
+  def self.get_postal_code_field_label: (country: String) -> untyped
+  def self.get_postal_code_placeholder: (country: String) -> untyped
   def self.get_seller_tax_identifier_display_label: (?country: String) -> untyped
+  def self.get_state_field_label: (country: String) -> untyped
   def self.get_tax_id_example: (country: String) -> untyped
   def self.get_tax_id_field_label: (country: String) -> untyped
   def self.get_tax_id_helper_text: (country: String) -> untyped
   def self.headline_charges: (?priced: untyped) -> untyped
   def self.included_units: (?priced: untyped, ?meter: String) -> untyped
+  def self.is_postal_code_required: (country: String) -> untyped
+  def self.is_state_required: (country: String) -> untyped
   def self.is_unlimited_remaining: (remaining: Float) -> untyped
   def self.is_zero_decimal_currency: (currency: String) -> untyped
   def self.meter_name: (?priced: untyped) -> untyped
@@ -216,11 +223,14 @@ module SolvaPay
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped
   def self.per_unit_charge: (?priced: untyped, ?meter: String) -> untyped
+  def self.plan_pricing_shape: (?priced: untyped) -> untyped
+  def self.postal_code_required_countries: () -> untyped
   def self.require_product_ref: (?metadata_product: String, ?env_product: String) -> untyped
   def self.resolve_seller_identity_display: (?country: String, ?vat_number: String, ?tax_id: String, ?company_number: String) -> untyped
   def self.resolve_tax_behavior: (behavior: String, currency: String) -> untyped
   def self.resolve_tax_treatment_note: (?treatment: String) -> untyped
   def self.should_show_tax_row: (?treatment: String) -> untyped
+  def self.state_required_countries: () -> untyped
   def self.tier_bands: (?priced: untyped, ?meter: String) -> untyped
   def self.tier_meters: (?priced: untyped) -> untyped
   def self.to_major_units: (amount_minor: Float, currency: String) -> untyped

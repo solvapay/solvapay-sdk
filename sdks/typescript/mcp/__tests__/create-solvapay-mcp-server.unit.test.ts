@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { z } from 'zod'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
+import { MCP_PROMPT_NAMES, MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpServer } from '../src'
@@ -128,18 +128,14 @@ describe('createSolvaPayMcpServer', () => {
     const { server } = buildTestServer()
     const toolNames = await listedToolNames(server)
     const expected = [
+      MCP_TOOL_NAMES.account,
+      MCP_TOOL_NAMES.createHostedSession,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.activatePlan,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createCustomerSession,
       MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.setRenewal,
+      MCP_TOOL_NAMES.getHistory,
+      MCP_TOOL_NAMES.activatePlan,
     ]
     for (const name of expected) {
       expect(toolNames).toContain(name)
@@ -158,8 +154,9 @@ describe('createSolvaPayMcpServer', () => {
   it('gates intent tools on the views option', async () => {
     const { server } = buildTestServer({ views: ['checkout'] })
     const toolNames = await listedToolNames(server)
-    expect(toolNames).toContain(MCP_TOOL_NAMES.upgrade)
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.manageAccount)
+    expect(toolNames).toContain(MCP_TOOL_NAMES.account)
+    expect(toolNames).not.toContain('upgrade')
+    expect(toolNames).not.toContain('manage_account')
     expect(toolNames).not.toContain('open_paywall')
   })
 
@@ -230,10 +227,10 @@ describe('createSolvaPayMcpServer', () => {
     const { prompts } = await listedPrompts(server)
     expect(prompts.map(p => p.name).sort()).toEqual(
       [
-        MCP_TOOL_NAMES.activatePlan,
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.topup,
-        MCP_TOOL_NAMES.upgrade,
+        MCP_PROMPT_NAMES.activatePlan,
+        MCP_PROMPT_NAMES.manageAccount,
+        MCP_PROMPT_NAMES.topup,
+        MCP_PROMPT_NAMES.upgrade,
       ].sort(),
     )
   })
@@ -260,7 +257,7 @@ describe('createSolvaPayMcpServer', () => {
     })
     const { prompts } = await listedPrompts(server)
     const names = prompts.map(p => p.name)
-    expect(names).toContain(MCP_TOOL_NAMES.upgrade)
+    expect(names).toContain(MCP_PROMPT_NAMES.upgrade)
     expect(names).toContain('search_knowledge')
   })
 
@@ -289,7 +286,11 @@ describe('createSolvaPayMcpServer', () => {
     const { server } = buildTestServer({ views: ['checkout', 'account'] })
     const { prompts } = await listedPrompts(server)
     expect(prompts.map(p => p.name).sort()).toEqual(
-      [MCP_TOOL_NAMES.activatePlan, MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.upgrade].sort(),
+      [
+        MCP_PROMPT_NAMES.activatePlan,
+        MCP_PROMPT_NAMES.manageAccount,
+        MCP_PROMPT_NAMES.upgrade,
+      ].sort(),
     )
   })
 
@@ -341,7 +342,7 @@ describe('createSolvaPayMcpServer', () => {
     const result = (await invokeHandler(
       server,
       'tools/call',
-      { name: MCP_TOOL_NAMES.manageAccount, arguments: {} },
+      { name: MCP_TOOL_NAMES.account, arguments: {} },
       {
         request: new Request('https://example.com/mcp', {
           headers: { authorization: 'Bearer host-token' },
@@ -356,24 +357,20 @@ describe('createSolvaPayMcpServer', () => {
     expect(result._meta?.ui?.resourceUri).toBe('ui://solvapay/mcp-app.html')
   })
 
-  it('mentions sibling intent tools in the upgrade description', async () => {
+  it('documents view landings in the account description', async () => {
     const { server } = buildTestServer()
     const { tools } = await listedTools(server)
-    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
-    expect(upgrade?.description).toContain('Also available')
-    expect(upgrade?.description).toContain('manage_account')
-    expect(upgrade?.description).toContain('activate_plan')
+    const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+    expect(account?.description).toContain('view')
+    expect(account?.description).toContain('checkout')
+    expect(account?.description).toContain('topup')
   })
 
   describe('tool annotations', () => {
     it('flows readOnly + idempotent annotations on all intent tools', async () => {
       const { server } = buildTestServer()
       const { tools } = await listedTools(server)
-      for (const name of [
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.upgrade,
-        MCP_TOOL_NAMES.topup,
-      ]) {
+      for (const name of [MCP_TOOL_NAMES.account]) {
         const tool = tools.find(t => t.name === name)
         expect(tool?.annotations).toEqual({
           readOnlyHint: true,
@@ -439,9 +436,9 @@ describe('createSolvaPayMcpServer', () => {
       const payable = tools.find(t => t.name === 'search_knowledge')
       const ui = (payable?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
       expect(ui?.resourceUri).toBeUndefined()
-      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
-      const upgradeUi = (upgrade?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
-      expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
+      const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+      const accountUi = (account?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
+      expect(accountUi?.resourceUri).toBe('ui://test/view.html')
     })
 
     it('stamps _meta.ui.visibility and openai/widgetAccessible on UI-only transport tools but not intent tools', async () => {
@@ -456,12 +453,12 @@ describe('createSolvaPayMcpServer', () => {
         (createPayment?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
       ).toBe(true)
 
-      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
-      const intentUi = (upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined)
+      const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+      const intentUi = (account?._meta as { ui?: { visibility?: readonly string[] } } | undefined)
         ?.ui
       expect(intentUi?.visibility).not.toEqual(['app'])
       expect(
-        (upgrade?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
+        (account?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
       ).toBeUndefined()
     })
 
@@ -474,9 +471,8 @@ describe('createSolvaPayMcpServer', () => {
         },
       })
       const { tools } = await listedTools(server)
-      const manageAccount = tools.find(t => t.name === MCP_TOOL_NAMES.manageAccount)
-      const ui = (manageAccount?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)
-        ?.ui
+      const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+      const ui = (account?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
     })
 
@@ -488,8 +484,8 @@ describe('createSolvaPayMcpServer', () => {
         },
       })
       const { tools } = await listedTools(server)
-      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
-      const ui = (upgrade?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
+      const account = tools.find(t => t.name === MCP_TOOL_NAMES.account)
+      const ui = (account?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/logo.png')
     })
 

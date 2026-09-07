@@ -20,10 +20,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::{ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient};
 
@@ -495,6 +496,17 @@ impl NativeClient {
         .await
     }
 
+    /// `GET /v1/sdk/purchases`
+    #[napi(js_name = "listPurchases")]
+    pub async fn list_purchases(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: ListPurchasesParams = parse_args_json(&args_json)?;
+            client.list_purchases(params).await
+        })
+        .await
+    }
+
     // --- MCP composite -------------------------------------------------------
 
     /// `mcpBootstrap`
@@ -507,6 +519,21 @@ impl NativeClient {
         })
         .await
     }
+
+    // --- Group C -------------------------------------------------------------
+
+    /// `GET /v1/sdk/credits/activity`
+    #[napi(js_name = "getCreditActivity")]
+    pub async fn get_credit_activity(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+            client.get_credit_activity(params).await
+        })
+        .await
+    }
+
+    // --- MCP composite -------------------------------------------------------
 
     /// `mcpCallBuiltinTool`
     #[napi(js_name = "mcpCallBuiltinTool")]

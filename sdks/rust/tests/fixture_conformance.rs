@@ -48,6 +48,7 @@ const ALL_OPS: &[&str] = &[
     "deleteProduct",
     "disableAutoRecharge",
     "getAutoRecharge",
+    "getCreditActivity",
     "getCustomer",
     "getCustomerBalance",
     "getMerchant",
@@ -57,6 +58,7 @@ const ALL_OPS: &[&str] = &[
     "getUserInfo",
     "listPlans",
     "listProducts",
+    "listPurchases",
     "processPaymentIntent",
     "reactivatePurchase",
     "saveAutoRecharge",
@@ -70,10 +72,10 @@ const ALL_OPS: &[&str] = &[
 #[tokio::test]
 async fn facade_inventory_has_success_and_error_per_operation() {
     let fixtures = load_all_client_fixtures(&client_fixtures_root());
-    assert_eq!(ALL_OPS.len(), 36);
+    assert_eq!(ALL_OPS.len(), 38);
     assert_eq!(
         GROUP_A_FNS.len() + GROUP_B_FNS.len() + GROUP_C_FNS.len(),
-        36
+        38
     );
 
     let mut success: BTreeSet<&str> = BTreeSet::new();

@@ -7,6 +7,11 @@
 export function MCP_TOOL_NAMES(args_json: string): string;
 
 /**
+ * Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.
+ */
+export function POSTAL_CODE_REQUIRED_COUNTRIES(args_json: string): string;
+
+/**
  * Binding for `REVERSE_CHARGE_NOTE`.
  */
 export function REVERSE_CHARGE_NOTE(args_json: string): string;
@@ -15,6 +20,11 @@ export function REVERSE_CHARGE_NOTE(args_json: string): string;
  * Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
  */
 export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): string;
+
+/**
+ * Binding for `STATE_REQUIRED_COUNTRIES`.
+ */
+export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
 
 /**
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
@@ -119,6 +129,10 @@ export class WasmClient {
      */
     getAutoRecharge(args_json: string): Promise<string>;
     /**
+     * `GET /v1/sdk/credits/activity`
+     */
+    getCreditActivity(args_json: string): Promise<string>;
+    /**
      * Customer lookup by ref / externalRef / email.
      */
     getCustomer(args_json: string): Promise<string>;
@@ -158,6 +172,10 @@ export class WasmClient {
      * `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
      */
     listProducts(_args_json: string): Promise<string>;
+    /**
+     * `GET /v1/sdk/purchases`
+     */
+    listPurchases(args_json: string): Promise<string>;
     /**
      * `mcpBootstrap`
      */
@@ -358,6 +376,16 @@ export function creditsToDisplayMinorUnits(args_json: string): string;
 export function decidePaywallOutcome(args_json: string): string;
 
 /**
+ * Binding for `deriveActiveProducts`.
+ */
+export function deriveActiveProducts(args_json: string): string;
+
+/**
+ * Binding for `deriveDefaultView`.
+ */
+export function deriveDefaultView(args_json: string): string;
+
+/**
  * Binding for `deriveIcons` — absent/empty branding → JSON `null`.
  */
 export function deriveIcons(args_json: string): string;
@@ -383,6 +411,11 @@ export function evaluateBalanceObservation(args_json: string): string;
 export function evaluateCachedLimits(args_json: string): string;
 
 /**
+ * Binding for `evaluateClaimedLimits`.
+ */
+export function evaluateClaimedLimits(args_json: string): string;
+
+/**
  * Binding for `evaluateFreshLimits`.
  */
 export function evaluateFreshLimits(args_json: string): string;
@@ -396,6 +429,11 @@ export function evaluateProductReadiness(args_json: string): string;
  * Binding for `extractBackendCustomerRef`.
  */
 export function extractBackendCustomerRef(args_json: string): string;
+
+/**
+ * Binding for `formatCompactCredits`.
+ */
+export function formatCompactCredits(args_json: string): string;
 
 /**
  * Binding for `formatPrice`.
@@ -423,9 +461,34 @@ export function gateNext(args_json: string): string;
 export function getBusinessCountryOptions(args_json: string): string;
 
 /**
+ * Binding for `getCustomerAddressFieldErrors`.
+ */
+export function getCustomerAddressFieldErrors(args_json: string): string;
+
+/**
+ * Binding for `getHistoryNext`.
+ */
+export function getHistoryNext(args_json: string): string;
+
+/**
+ * Binding for `getPostalCodeFieldLabel`.
+ */
+export function getPostalCodeFieldLabel(args_json: string): string;
+
+/**
+ * Binding for `getPostalCodePlaceholder`.
+ */
+export function getPostalCodePlaceholder(args_json: string): string;
+
+/**
  * Binding for `getSellerTaxIdentifierDisplayLabel`.
  */
 export function getSellerTaxIdentifierDisplayLabel(args_json: string): string;
+
+/**
+ * Binding for `getStateFieldLabel`.
+ */
+export function getStateFieldLabel(args_json: string): string;
 
 /**
  * Binding for `getTaxIdExample`.
@@ -448,6 +511,11 @@ export function getTaxIdHelperText(args_json: string): string;
 export function headlineCharges(args_json: string): string;
 
 /**
+ * Binding for `historyRows`.
+ */
+export function historyRows(args_json: string): string;
+
+/**
  * Binding for `includedUnits`.
  */
 export function includedUnits(args_json: string): string;
@@ -463,6 +531,11 @@ export function invokePayableNext(args_json: string): string;
 export function isCachedCustomerRefValid(args_json: string): string;
 
 /**
+ * Binding for `isCustomerAddressComplete`.
+ */
+export function isCustomerAddressComplete(args_json: string): string;
+
+/**
  * Binding for `isEmailConflict`.
  */
 export function isEmailConflict(args_json: string): string;
@@ -471,6 +544,16 @@ export function isEmailConflict(args_json: string): string;
  * Binding for `isErrorResult`.
  */
 export function isErrorResult(args_json: string): string;
+
+/**
+ * Binding for `isPostalCodeRequired`.
+ */
+export function isPostalCodeRequired(args_json: string): string;
+
+/**
+ * Binding for `isStateRequired`.
+ */
+export function isStateRequired(args_json: string): string;
 
 /**
  * Binding for `isUnlimitedRemaining`.
@@ -538,6 +621,16 @@ export function peggedCreditsPerUnit(args_json: string): string;
 export function perUnitCharge(args_json: string): string;
 
 /**
+ * Binding for `planConsequence`.
+ */
+export function planConsequence(args_json: string): string;
+
+/**
+ * Binding for `planPricingShape`.
+ */
+export function planPricingShape(args_json: string): string;
+
+/**
  * Binding for `projectPaymentIntentResult`.
  */
 export function projectPaymentIntentResult(args_json: string): string;
@@ -558,9 +651,19 @@ export function projectUsageSnapshot(args_json: string): string;
 export function requireProductRef(args_json: string): string;
 
 /**
+ * Binding for `resolveAccountState`.
+ */
+export function resolveAccountState(args_json: string): string;
+
+/**
  * Binding for `resolveAuthenticatedUser`.
  */
 export function resolveAuthenticatedUser(args_json: string): string;
+
+/**
+ * Binding for `resolveBuyerCountry`.
+ */
+export function resolveBuyerCountry(args_json: string): string;
 
 /**
  * Binding for `resolveCheckLimitsParams`.
@@ -573,9 +676,19 @@ export function resolveCheckLimitsParams(args_json: string): string;
 export function resolveCustomerRef(args_json: string): string;
 
 /**
+ * Binding for `resolveDisplayMode`.
+ */
+export function resolveDisplayMode(args_json: string): string;
+
+/**
  * Binding for `resolveFallbackGateLimits`.
  */
 export function resolveFallbackGateLimits(args_json: string): string;
+
+/**
+ * Binding for `resolvePlanShape`.
+ */
+export function resolvePlanShape(args_json: string): string;
 
 /**
  * Binding for `resolveProductRef`.
@@ -755,8 +868,10 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly MCP_TOOL_NAMES: (a: number, b: number) => [number, number];
+    readonly POSTAL_CODE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
     readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+    readonly STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly __wbg_wasmclient_free: (a: number, b: number) => void;
     readonly assertResponseResult: (a: number, b: number) => [number, number];
@@ -784,29 +899,42 @@ export interface InitOutput {
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
+    readonly deriveActiveProducts: (a: number, b: number) => [number, number];
+    readonly deriveDefaultView: (a: number, b: number) => [number, number];
     readonly deriveIcons: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
     readonly ensureCustomerNext: (a: number, b: number) => [number, number];
     readonly evaluateBalanceObservation: (a: number, b: number) => [number, number];
     readonly evaluateCachedLimits: (a: number, b: number) => [number, number];
+    readonly evaluateClaimedLimits: (a: number, b: number) => [number, number];
     readonly evaluateFreshLimits: (a: number, b: number) => [number, number];
     readonly evaluateProductReadiness: (a: number, b: number) => [number, number];
     readonly extractBackendCustomerRef: (a: number, b: number) => [number, number];
+    readonly formatCompactCredits: (a: number, b: number) => [number, number];
     readonly formatPrice: (a: number, b: number) => [number, number];
     readonly formatSubtotalLabel: (a: number, b: number) => [number, number];
     readonly formatVatSummaryLabel: (a: number, b: number) => [number, number];
     readonly gateNext: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
+    readonly getCustomerAddressFieldErrors: (a: number, b: number) => [number, number];
+    readonly getHistoryNext: (a: number, b: number) => [number, number];
+    readonly getPostalCodeFieldLabel: (a: number, b: number) => [number, number];
+    readonly getPostalCodePlaceholder: (a: number, b: number) => [number, number];
     readonly getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [number, number];
+    readonly getStateFieldLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdExample: (a: number, b: number) => [number, number];
     readonly getTaxIdFieldLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdHelperText: (a: number, b: number) => [number, number];
     readonly headlineCharges: (a: number, b: number) => [number, number];
+    readonly historyRows: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
     readonly invokePayableNext: (a: number, b: number) => [number, number];
     readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
+    readonly isCustomerAddressComplete: (a: number, b: number) => [number, number];
     readonly isEmailConflict: (a: number, b: number) => [number, number];
     readonly isErrorResult: (a: number, b: number) => [number, number];
+    readonly isPostalCodeRequired: (a: number, b: number) => [number, number];
+    readonly isStateRequired: (a: number, b: number) => [number, number];
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly makeResponseResult: (a: number, b: number) => [number, number];
@@ -820,14 +948,20 @@ export interface InitOutput {
     readonly paywallToolResult: (a: number, b: number) => [number, number];
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
     readonly perUnitCharge: (a: number, b: number) => [number, number];
+    readonly planConsequence: (a: number, b: number) => [number, number];
+    readonly planPricingShape: (a: number, b: number) => [number, number];
     readonly projectPaymentIntentResult: (a: number, b: number) => [number, number];
     readonly projectTopupProcessOutcome: (a: number, b: number) => [number, number];
     readonly projectUsageSnapshot: (a: number, b: number) => [number, number];
     readonly requireProductRef: (a: number, b: number) => [number, number];
+    readonly resolveAccountState: (a: number, b: number) => [number, number];
     readonly resolveAuthenticatedUser: (a: number, b: number) => [number, number];
+    readonly resolveBuyerCountry: (a: number, b: number) => [number, number];
     readonly resolveCheckLimitsParams: (a: number, b: number) => [number, number];
     readonly resolveCustomerRef: (a: number, b: number) => [number, number];
+    readonly resolveDisplayMode: (a: number, b: number) => [number, number];
     readonly resolveFallbackGateLimits: (a: number, b: number) => [number, number];
+    readonly resolvePlanShape: (a: number, b: number) => [number, number];
     readonly resolveProductRef: (a: number, b: number) => [number, number];
     readonly resolvePurchaseCustomerRef: (a: number, b: number) => [number, number];
     readonly resolveReturnUrl: (a: number, b: number) => [number, number];
@@ -879,6 +1013,7 @@ export interface InitOutput {
     readonly wasmclient_disableAutoRecharge: (a: number, b: number, c: number) => any;
     readonly wasmclient_fetchJwks: (a: number, b: number, c: number) => any;
     readonly wasmclient_getAutoRecharge: (a: number, b: number, c: number) => any;
+    readonly wasmclient_getCreditActivity: (a: number, b: number, c: number) => any;
     readonly wasmclient_getCustomer: (a: number, b: number, c: number) => any;
     readonly wasmclient_getCustomerBalance: (a: number, b: number, c: number) => any;
     readonly wasmclient_getMerchant: (a: number, b: number, c: number) => any;
@@ -888,6 +1023,7 @@ export interface InitOutput {
     readonly wasmclient_getUserInfo: (a: number, b: number, c: number) => any;
     readonly wasmclient_listPlans: (a: number, b: number, c: number) => any;
     readonly wasmclient_listProducts: (a: number, b: number, c: number) => any;
+    readonly wasmclient_listPurchases: (a: number, b: number, c: number) => any;
     readonly wasmclient_mcpBootstrap: (a: number, b: number, c: number) => any;
     readonly wasmclient_mcpCallBuiltinTool: (a: number, b: number, c: number) => any;
     readonly wasmclient_mcpDispatch: (a: number, b: number, c: number) => any;

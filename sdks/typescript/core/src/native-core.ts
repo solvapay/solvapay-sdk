@@ -44,6 +44,74 @@ export function validateBusinessDetails(
   return dispatchSync('validateBusinessDetails', input)
 }
 
+export function resolveBuyerCountry(input: BusinessDetailsInput): string | null {
+  return dispatchSync('resolveBuyerCountry', { input })
+}
+
+export function getCustomerAddressFieldErrors(input: BusinessDetailsInput): unknown {
+  return dispatchSync('getCustomerAddressFieldErrors', { input })
+}
+
+export function isCustomerAddressComplete(input: BusinessDetailsInput): boolean {
+  return dispatchSync('isCustomerAddressComplete', { input })
+}
+
+/**
+ * Whether Stripe Tax requires a postal or ZIP code for a country.
+ * @returns True when a postal or ZIP code is required.
+ */
+export function isPostalCodeRequired(country: string): boolean {
+  return dispatchSync('isPostalCodeRequired', { country })
+}
+
+/**
+ * Whether Stripe Tax requires a state or province for a country.
+ * @returns True when a state or province is required.
+ */
+export function isStateRequired(country: string): boolean {
+  return dispatchSync('isStateRequired', { country })
+}
+
+/**
+ * Return the state or province field label for a country.
+ * @returns Field label string.
+ */
+export function getStateFieldLabel(country: string): string {
+  return dispatchSync('getStateFieldLabel', { country })
+}
+
+/**
+ * Return the postal or ZIP code field label for a country.
+ * @returns Field label string.
+ */
+export function getPostalCodeFieldLabel(country: string): string {
+  return dispatchSync('getPostalCodeFieldLabel', { country })
+}
+
+/**
+ * Return the postal or ZIP code field placeholder for a country.
+ * @returns Placeholder string.
+ */
+export function getPostalCodePlaceholder(country: string): string {
+  return dispatchSync('getPostalCodePlaceholder', { country })
+}
+
+/**
+ * Countries that require a postal or ZIP code for Stripe Tax.
+ * @returns Country code list.
+ */
+export function POSTAL_CODE_REQUIRED_COUNTRIES(): string[] {
+  return dispatchSync('POSTAL_CODE_REQUIRED_COUNTRIES', {})
+}
+
+/**
+ * Countries that require a state or province for Stripe Tax.
+ * @returns Country code list.
+ */
+export function STATE_REQUIRED_COUNTRIES(): string[] {
+  return dispatchSync('STATE_REQUIRED_COUNTRIES', {})
+}
+
 /**
  * Derive the tax ID type for a business country.
  * @returns Tax ID type string when known.

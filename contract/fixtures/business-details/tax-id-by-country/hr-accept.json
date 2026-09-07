@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "HR",
         "taxId": "HR12345678912",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "HR"
       }
     }
   }

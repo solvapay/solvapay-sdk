@@ -4,10 +4,24 @@
 # Generated portable helper forwarding.
 
 module SolvaPay
+  # Countries that require a postal or ZIP code for Stripe Tax.
+  # @return Country code list.
+  def self.postal_code_required_countries
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("POSTAL_CODE_REQUIRED_COUNTRIES", args)
+  end
+
   # Buyer-facing note when VAT reverse charge applies.
   REVERSE_CHARGE_NOTE = NativeDispatch.call_sync("REVERSE_CHARGE_NOTE", {}).freeze
   # Map of seller tax identifier types to display labels.
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = NativeDispatch.call_sync("SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE", {}).freeze
+  # Countries that require a state or province for Stripe Tax.
+  # @return Country code list.
+  def self.state_required_countries
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("STATE_REQUIRED_COUNTRIES", args)
+  end
+
   # Buyer-facing note when tax is not collected on the purchase.
   TAX_NOT_COLLECTED_NOTE = NativeDispatch.call_sync("TAX_NOT_COLLECTED_NOTE", {}).freeze
   # Reject empty, placeholder, or non-prd_ product refs at construction time.
@@ -149,12 +163,36 @@ module SolvaPay
     NativeDispatch.call_sync("format_vat_summary_label", args)
   end
 
+  # Return the postal or ZIP code field label for a country.
+  # @return Field label string.
+  def self.get_postal_code_field_label(country:)
+    args = {} #: Hash[String, untyped]
+    args["country"] = country
+    NativeDispatch.call_sync("get_postal_code_field_label", args)
+  end
+
+  # Return the postal or ZIP code field placeholder for a country.
+  # @return Placeholder string.
+  def self.get_postal_code_placeholder(country:)
+    args = {} #: Hash[String, untyped]
+    args["country"] = country
+    NativeDispatch.call_sync("get_postal_code_placeholder", args)
+  end
+
   # Return the display label for a seller tax identifier type.
   # @return Display label string.
   def self.get_seller_tax_identifier_display_label(country: nil)
     args = {} #: Hash[String, untyped]
     args["country"] = country unless country.nil?
     NativeDispatch.call_sync("get_seller_tax_identifier_display_label", args)
+  end
+
+  # Return the state or province field label for a country.
+  # @return Field label string.
+  def self.get_state_field_label(country:)
+    args = {} #: Hash[String, untyped]
+    args["country"] = country
+    NativeDispatch.call_sync("get_state_field_label", args)
   end
 
   # Return an example tax ID string for a country.
@@ -196,6 +234,22 @@ module SolvaPay
     args["priced"] = priced unless priced.nil?
     args["meter"] = meter unless meter.nil?
     NativeDispatch.call_sync("included_units", args)
+  end
+
+  # Whether Stripe Tax requires a postal or ZIP code for a country.
+  # @return True when a postal or ZIP code is required.
+  def self.is_postal_code_required(country:)
+    args = {} #: Hash[String, untyped]
+    args["country"] = country
+    NativeDispatch.call_sync("is_postal_code_required", args)
+  end
+
+  # Whether Stripe Tax requires a state or province for a country.
+  # @return True when a state or province is required.
+  def self.is_state_required(country:)
+    args = {} #: Hash[String, untyped]
+    args["country"] = country
+    NativeDispatch.call_sync("is_state_required", args)
   end
 
   # Return whether remaining is the backend unlimited sentinel (-1).
@@ -255,6 +309,14 @@ module SolvaPay
     args["priced"] = priced unless priced.nil?
     args["meter"] = meter unless meter.nil?
     NativeDispatch.call_sync("per_unit_charge", args)
+  end
+
+  # Derive the pricing shape a plan-row or narration surface should branch on.
+  # @return Shape, headline, currency, cycle, and usage rate.
+  def self.plan_pricing_shape(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("plan_pricing_shape", args)
   end
 
   # Resolve a product ref from metadata or env, or throw a named missing-ref error.

@@ -141,6 +141,7 @@ export { PaywallError } from './paywall'
 export { paywallErrorToClientPayload } from './native-decisions'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
+export { PaywallStructuredContentSchema } from './types/paywall-schema'
 
 // Pure helper to build paywall gates from a `LimitResponse(WithPlan)`.
 // Useful for streaming / SSE / multi-step handlers that can't fit the
@@ -249,8 +250,10 @@ export {
   ensureCustomerNext,
   evaluateBalanceObservation,
   evaluateCachedLimits,
+  evaluateClaimedLimits,
   evaluateFreshLimits,
   gateNext,
+  getHistoryNext,
   extractBackendCustomerRef,
   isCachedCustomerRefValid,
   isEmailConflict,

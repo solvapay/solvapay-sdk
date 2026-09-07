@@ -33,7 +33,8 @@
                   "resourceDomains": [
                     "https://js.stripe.com",
                     "https://*.stripe.com",
-                    "https://b.stripecdn.com"
+                    "https://b.stripecdn.com",
+                    "https://assets.claude.ai"
                   ],
                   "connectDomains": [
                     "https://api.stripe.com",

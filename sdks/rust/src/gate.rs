@@ -87,6 +87,7 @@ pub struct Allow {
     pub(crate) limits: Value,
     pub(crate) customer: CustomerSnapshot,
     pub(crate) consequence: Option<solvapay_core::AllowConsequence>,
+    pub(crate) request_id: String,
     pub(crate) driver_state: Value,
 }
 
@@ -173,6 +174,12 @@ impl Allow {
         &self.meter_name
     }
 
+    /// Id minted when this allow was decided. The eventual success / fail
+    /// usage event reuses it, so both share one idempotency key.
+    pub fn request_id(&self) -> &str {
+        &self.request_id
+    }
+
     /// Limits payload from the last successful check.
     pub fn limits(&self) -> &Value {
         &self.limits
@@ -192,7 +199,6 @@ impl Allow {
                     "kind": "handlerSucceeded",
                     "durationMs": opts.duration.unwrap_or(0.0),
                     "nowMs": crate::client::now_ms(),
-                    "randomUnit": self.client.random_unit(),
                 }),
             )
             .await
@@ -211,7 +217,6 @@ impl Allow {
                     "kind": "handlerFailed",
                     "durationMs": opts.duration.unwrap_or(0.0),
                     "nowMs": crate::client::now_ms(),
-                    "randomUnit": self.client.random_unit(),
                     "errorMessage": error.track_fail_message(),
                     "isPaywallError": error.is_paywall_error(),
                 }),

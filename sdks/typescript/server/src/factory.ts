@@ -1018,6 +1018,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         product,
         meterName: options.meterName,
         usageType: options.usageType,
+        ...(options.toolName ? { toolName: options.toolName } : {}),
       }
 
       return {
@@ -1096,7 +1097,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
           const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
 
-          const decideMetadata = gateOptions.metadata ?? metadata
+          const decideMetadata = { ...metadata, ...gateOptions.metadata }
           const decision = await paywall.decide(
             args,
             decideMetadata,
@@ -1146,13 +1147,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
                     kind: 'handlerSucceeded',
                     durationMs: opts?.duration ?? 0,
                     nowMs: Date.now(),
-                    randomUnit: Math.random(),
                   }
                 : {
                     kind: 'handlerFailed',
                     durationMs: opts?.duration ?? 0,
                     nowMs: Date.now(),
-                    randomUnit: Math.random(),
                     errorMessage:
                       opts?.error instanceof Error ? opts.error.message : String(opts?.error ?? ''),
                     isPaywallError: opts?.error instanceof PaywallError,

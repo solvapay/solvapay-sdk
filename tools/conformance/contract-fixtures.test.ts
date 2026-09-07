@@ -50,6 +50,16 @@ function isErrorCase(fileName: string): boolean {
 const fixtureFiles = discoverFixtureFiles(FIXTURES_ROOT)
 
 const NON_CLIENT_FIXTURES = [
+  'business-details/address/postal-countries.json',
+  'business-details/address/postal-label-us.json',
+  'business-details/address/postal-placeholder-us.json',
+  'business-details/address/postal-required-se.json',
+  'business-details/address/postal-required-us.json',
+  'business-details/address/resolve-business-fallback.json',
+  'business-details/address/state-countries.json',
+  'business-details/address/state-label-us.json',
+  'business-details/address/state-required-in.json',
+  'business-details/address/us-incomplete.json',
   'business-details/country-options.json',
   'business-details/derive-tax-id-type/de.json',
   'business-details/derive-tax-id-type/gb.json',
@@ -150,6 +160,10 @@ const NON_CLIENT_FIXTURES = [
   'business-details/validate/non-business-with-customer-country.json',
   'business-details/validate/non-business-with-customer-name.json',
   'business-details/validate/normalize-tax-id-and-country.json',
+  'credit-display/compact/grouped.json',
+  'credit-display/compact/millions.json',
+  'credit-display/compact/negative.json',
+  'credit-display/compact/thousands.json',
   'credit-display/convert/cpm-negative-null.json',
   'credit-display/convert/cpm-zero-null.json',
   'credit-display/convert/eur-0.92.json',
@@ -270,6 +284,10 @@ const NON_CLIENT_FIXTURES = [
   'helper-error/solvapay-with-status.json',
   'helper-error/unknown-throw.json',
   'helper-error/valid.json',
+  'helper-history/missing-product-ref.json',
+  'helper-history/results-resolved.json',
+  'helper-history/rows-credit-and-charge.json',
+  'helper-history/start-fetch.json',
   'helper-limits/both-present.json',
   'helper-limits/is-unlimited-finite-positive.json',
   'helper-limits/is-unlimited-finite.json',
@@ -318,6 +336,8 @@ const NON_CLIENT_FIXTURES = [
   'helper-purchase/cache-missing-customer-ref.json',
   'helper-purchase/cache-missing-external-ref.json',
   'helper-purchase/cache-valid-match.json',
+  'helper-purchase/derive-active-products-scoped.json',
+  'helper-purchase/derive-active-products.json',
   'helper-purchase/ref-fallback-userid.json',
   'helper-purchase/ref-uses-customer-ref.json',
   'helper-purchase/select-active-empty.json',
@@ -353,6 +373,7 @@ const NON_CLIENT_FIXTURES = [
   'helper-usage/fractional-percent.json',
   'helper-usage/full-snapshot.json',
   'helper-usage/limit-absent.json',
+  'helper-usage/limit-authoritative.json',
   'helper-usage/meter-fields-absent.json',
   'helper-usage/meter-id-fallback.json',
   'helper-usage/no-active-purchase.json',
@@ -363,6 +384,7 @@ const NON_CLIENT_FIXTURES = [
   'helper-usage/uncapped-sentinel.json',
   'helper-usage/used-absent.json',
   'helper-usage/whole-percent-integer.json',
+  'mcp/account-state/activation-required.json',
   'mcp/assert-response-envelope/brand-false.json',
   'mcp/assert-response-envelope/null.json',
   'mcp/assert-response-envelope/primitive.json',
@@ -377,6 +399,12 @@ const NON_CLIENT_FIXTURES = [
   'mcp/descriptors/views-checkout-only.json',
   'mcp/descriptors/views-empty.json',
   'mcp/descriptors/with-branding-icons.json',
+  'mcp/display-mode/default-inline.json',
+  'mcp/display-mode/fullscreen.json',
+  'mcp/payable-tool-result/data-in-text-false.json',
+  'mcp/payable-tool-result/minimal-trailing-json.json',
+  'mcp/payable-tool-result/nudge-resource.json',
+  'mcp/payable-tool-result/text-override.json',
   'mcp/paywall-tool-result/activation-confirmation-url-empty-string.json',
   'mcp/paywall-tool-result/activation-full.json',
   'mcp/paywall-tool-result/activation-minimal.json',
@@ -446,6 +474,8 @@ const NON_CLIENT_FIXTURES = [
   'paywall/decision/cached-remaining-0-block-evict.json',
   'paywall/decision/cached-remaining-1-evict.json',
   'paywall/decision/cached-remaining-5.json',
+  'paywall/decision/claimed-allow-first.json',
+  'paywall/decision/claimed-remaining-3.json',
   'paywall/decision/decide-allow.json',
   'paywall/decision/decide-gate-activation.json',
   'paywall/decision/decide-gate-fallback-with-checkout.json',
@@ -464,11 +494,13 @@ const NON_CLIENT_FIXTURES = [
   'paywall/decision/gate-next-handler-failed-emit-usage.json',
   'paywall/decision/gate-next-handler-failed-paywall-error-skips.json',
   'paywall/decision/gate-next-handler-succeeded-emit-usage.json',
+  'paywall/decision/gate-next-handler-succeeded-tool-name.json',
   'paywall/decision/gate-next-limits-result-allow-caches.json',
   'paywall/decision/gate-next-limits-result-gate-no-cache.json',
   'paywall/decision/gate-next-start-anonymous-lookup-cache.json',
   'paywall/decision/gate-next-start-app-ref-ensure.json',
   'paywall/decision/gate-next-start-null-usage-type.json',
+  'paywall/decision/gate-next-start-records-tool-name.json',
   'paywall/decision/invoke-payable-next-start-run-gate.json',
   'paywall/decision/resolve-default.json',
   'paywall/decision/resolve-empty-string-falls-through.json',
@@ -521,6 +553,10 @@ const NON_CLIENT_FIXTURES = [
   'plan-pricing/billing-cycle-month.json',
   'plan-pricing/billing-cycle-payg-null.json',
   'plan-pricing/charges-unknown-kind-still-renders.json',
+  'plan-pricing/consequence-free.json',
+  'plan-pricing/consequence-metered.json',
+  'plan-pricing/consequence-one-time.json',
+  'plan-pricing/consequence-payg.json',
   'plan-pricing/counts-usage-from-limit.json',
   'plan-pricing/counts-usage-payg.json',
   'plan-pricing/counts-usage-pro-false.json',
@@ -549,6 +585,8 @@ const NON_CLIENT_FIXTURES = [
   'plan-pricing/per-unit-payg.json',
   'plan-pricing/per-unit-pro-null.json',
   'plan-pricing/per-unit-wrong-meter.json',
+  'plan-pricing/shape-free.json',
+  'plan-pricing/shape-hybrid.json',
   'plan-pricing/tier-bands-grouped.json',
   'plan-pricing/trial-days-14.json',
   'plan-pricing/trial-days-pro-null.json',
@@ -641,7 +679,7 @@ describe('contract fixtures', () => {
       operations: Record<string, { names: { ts: string } }>
     }
     const operationIds = Object.keys(manifest.operations)
-    expect(operationIds.length).toBe(43)
+    expect(operationIds.length).toBe(45)
 
     const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
     const missing: string[] = []
@@ -668,7 +706,7 @@ describe('contract fixtures', () => {
       const methodDir = camelToKebab(manifest.operations[opId]?.names.ts ?? opId)
       return relative.some(f => f.startsWith(`client/${methodDir}/`))
     })
-    expect(routed.length).toBe(36)
+    expect(routed.length).toBe(38)
   })
 
   it.each(fixtureFiles.map(file => [path.relative(FIXTURES_ROOT, file), file]))(

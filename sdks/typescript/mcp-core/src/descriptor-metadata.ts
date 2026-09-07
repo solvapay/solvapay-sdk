@@ -31,6 +31,7 @@ export const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPa
     account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
     topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
     checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+    'auto-recharge': solvapayTool({ readOnlyHint: true, idempotentHint: true }),
   }
 
 /** Tool metadata without `inputSchema` / `handler` (pure registration surface). */

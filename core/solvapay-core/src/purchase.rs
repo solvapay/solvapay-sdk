@@ -1,6 +1,11 @@
 //! Pure purchase helper decision cores (Step 29).
 
+#![allow(clippy::missing_docs_in_private_items)]
+
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::serde_util::serialize_whole_f64;
 
 /// JS-truthiness for JSON values (present, non-null, non-false, non-empty-string, non-zero).
 pub(crate) fn is_truthy(value: &Value) -> bool {
@@ -94,6 +99,117 @@ pub fn resolve_purchase_customer_ref(customer_ref: Option<&str>, user_id: &str) 
         Some(r) if !r.is_empty() => r.to_owned(),
         _ => user_id.to_owned(),
     }
+}
+
+/// Active plan purchase projected for the MCP account widget.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveProduct {
+    /// Purchase reference.
+    pub reference: String,
+    /// Product display name.
+    pub product_name: String,
+    /// Product ref when present.
+    pub product_ref: Option<String>,
+    /// Frozen plan name.
+    pub plan_name: Option<String>,
+    /// Plan ref from the purchase or snapshot.
+    pub plan_ref: Option<String>,
+    /// Purchase start date.
+    pub since: Option<String>,
+    /// Snapshot `isMetered` flag.
+    pub is_metered: bool,
+    /// Purchase amount in minor units.
+    #[serde(serialize_with = "serialize_whole_f64")]
+    pub amount: f64,
+    /// Purchase currency.
+    pub currency: String,
+}
+
+fn is_plan_purchase(purchase: &Value) -> bool {
+    if purchase.get("origin").and_then(Value::as_str) == Some("credit_topup") {
+        return false;
+    }
+    !purchase.get("planSnapshot").is_none_or(Value::is_null)
+        || purchase
+            .get("planRef")
+            .and_then(Value::as_str)
+            .is_some_and(|s| !s.is_empty())
+}
+
+/// Filter purchases to active plan rows for the account widget.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "purchase",
+    emit_order = 20
+)]
+pub fn derive_active_products(
+    purchases: Option<&Value>,
+    product_ref: Option<&str>,
+) -> Vec<ActiveProduct> {
+    let Some(Value::Array(items)) = purchases.filter(|v| !v.is_null()) else {
+        return Vec::new();
+    };
+    let scope = product_ref.map(str::trim).filter(|s| !s.is_empty());
+    items
+        .iter()
+        .filter(|purchase| is_plan_purchase(purchase))
+        .filter(|purchase| {
+            scope
+                .is_none_or(|want| purchase.get("productRef").and_then(Value::as_str) == Some(want))
+        })
+        .map(|purchase| {
+            let snapshot = purchase.get("planSnapshot").filter(|v| !v.is_null());
+            ActiveProduct {
+                reference: purchase
+                    .get("reference")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
+                product_name: purchase
+                    .get("productName")
+                    .and_then(Value::as_str)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("Product")
+                    .to_owned(),
+                product_ref: purchase
+                    .get("productRef")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                plan_name: snapshot
+                    .and_then(|s| s.get("name"))
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                plan_ref: purchase
+                    .get("planRef")
+                    .and_then(Value::as_str)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_owned)
+                    .or_else(|| {
+                        snapshot
+                            .and_then(|s| s.get("reference"))
+                            .and_then(Value::as_str)
+                            .map(str::to_owned)
+                    }),
+                since: purchase
+                    .get("startDate")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                is_metered: snapshot.and_then(|s| s.get("isMetered")) == Some(&Value::Bool(true)),
+                amount: purchase
+                    .get("amount")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.0),
+                currency: purchase
+                    .get("currency")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

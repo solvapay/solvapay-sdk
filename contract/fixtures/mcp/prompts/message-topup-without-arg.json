@@ -15,7 +15,7 @@
           "role": "user",
           "content": {
             "type": "text",
-            "text": "I want to top up my SolvaPay credits."
+            "text": "Call the `account` tool with view: \"topup\" to add SolvaPay credits."
           }
         }
       ]

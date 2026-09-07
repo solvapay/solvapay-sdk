@@ -12,21 +12,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
     billing_cycle, counts_usage, credits_per_unit_from_balance, credits_to_display_minor_units,
-    format_money_intl, get_business_country_options, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, headline_charges, included_units, is_error_result, meter_name,
-    minor_units_per_major, normalize_cancel_response, normalize_reactivate_response,
-    per_unit_charge, project_topup_process_outcome, project_usage_snapshot,
-    resolve_purchase_customer_ref, resolve_seller_identity_display, select_active_purchases,
-    trial_days, validate_activate_plan_params, validate_attach_business_details_params,
-    validate_create_payment_intent_params, validate_process_payment_intent_params,
-    validate_purchase_ref, validate_topup_payment_intent_params, CreditsToDisplayInput, SdkError,
+    derive_default_view, format_money_intl, get_business_country_options, get_history_next,
+    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, headline_charges,
+    included_units, is_error_result, meter_name, minor_units_per_major, normalize_cancel_response,
+    normalize_reactivate_response, per_unit_charge, project_topup_process_outcome,
+    project_usage_snapshot, resolve_purchase_customer_ref, resolve_seller_identity_display,
+    select_active_purchases, trial_days, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_create_payment_intent_params,
+    validate_process_payment_intent_params, validate_purchase_ref,
+    validate_topup_payment_intent_params, CreditsToDisplayInput, GetHistoryAction, SdkError,
     SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
     CreateCheckoutSessionRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreateTopupPaymentIntentParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    CreateTopupPaymentIntentParams, GetCreditActivityParams, GetCustomerBalanceParams,
+    GetCustomerParams, GetPaymentMethodParams, ListPurchasesParams, ProcessPaymentIntentParams,
+    ReactivatePurchaseParams,
 };
 use solvapay_mcp_core::{
     is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
@@ -215,6 +217,35 @@ fn unauthenticated() -> Value {
 
 fn require_customer(customer_ref: Option<&str>) -> Result<&str, Value> {
     customer_ref.ok_or_else(unauthenticated)
+}
+
+fn default_mcp_views() -> Vec<String> {
+    vec![
+        "checkout".to_owned(),
+        "account".to_owned(),
+        "topup".to_owned(),
+        "auto-recharge".to_owned(),
+    ]
+}
+
+fn default_view_input(payload: &Value, enabled: &[String]) -> Value {
+    let purchases = payload
+        .pointer("/customer/purchase/purchases")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let has_active_plan = purchases.iter().any(|purchase| {
+        purchase.get("planSnapshot").is_some()
+            && purchase
+                .pointer("/metadata/purpose")
+                .and_then(Value::as_str)
+                != Some("credit_topup")
+    });
+    json!({
+        "hasActivePlan": has_active_plan,
+        "credits": payload.pointer("/customer/balance/credits"),
+        "enabledViews": enabled,
+    })
 }
 
 fn helper_error_tool(err: &solvapay_core::HelperErrorResult) -> Value {
@@ -621,22 +652,52 @@ impl SolvaPayClient {
             .clone()
             .unwrap_or_else(new_widget_session_id);
         match params.name.as_str() {
-            "upgrade" | "manage_account" | "topup" => {
-                let view = match params.name.as_str() {
-                    "upgrade" => "checkout",
-                    "manage_account" => "account",
-                    _ => "topup",
-                };
-                let payload: Value = self
+            "account" => {
+                let enabled = params
+                    .config
+                    .views
+                    .clone()
+                    .unwrap_or_else(default_mcp_views);
+                let requested = args.get("view").and_then(Value::as_str).filter(|view| {
+                    *view == "checkout"
+                        || *view == "account"
+                        || *view == "topup"
+                        || *view == "auto-recharge"
+                });
+                if let Some(view) = requested {
+                    if !enabled.iter().any(|item| item == view) {
+                        return Ok(tool_error_result(
+                            &format!("view '{view}' is not enabled on this server"),
+                            400,
+                            Some(&format!(
+                                "Enabled views: {}. Pass one of those, or omit view to let the server pick.",
+                                enabled.join(", ")
+                            )),
+                        ));
+                    }
+                }
+                let bootstrap_view = requested.unwrap_or("account");
+                let mut payload: Value = self
                     .mcp_bootstrap(McpBootstrapParams {
-                        view: view.to_owned(),
+                        view: bootstrap_view.to_owned(),
                         product_ref: product_ref.to_owned(),
                         public_base_url: params.config.public_base_url.clone(),
                         customer_ref: params.customer_ref.clone(),
                     })
                     .await?;
+                let view = if let Some(view) = requested {
+                    view.to_owned()
+                } else {
+                    match derive_default_view(Some(&default_view_input(&payload, &enabled))) {
+                        Ok(view) => view,
+                        Err(err) => return Ok(helper_error_tool(&err)),
+                    }
+                };
+                if let Some(obj) = payload.as_object_mut() {
+                    obj.insert("view".to_owned(), Value::String(view.clone()));
+                }
                 Ok(narrated_tool_result(
-                    params.name.as_str(),
+                    &view,
                     &payload,
                     mode,
                     Some(&widget_meta(
@@ -645,64 +706,105 @@ impl SolvaPayClient {
                     )),
                 ))
             }
-            "create_checkout_session" => {
+            "create_hosted_session" => {
                 let customer_ref = match require_customer(customer_ref) {
                     Ok(v) => v,
                     Err(err) => return Ok(err),
                 };
-                let plan_ref = args
-                    .get("planRef")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned);
-                let session = self
-                    .create_checkout_session_json(CreateCheckoutSessionRequest {
-                        customer_ref: Some(customer_ref.to_owned()),
-                        plan_ref,
-                        product_ref: Some(product_ref.to_owned()),
-                        purpose: None,
-                        return_url: Some(params.config.public_base_url.clone()),
-                    })
-                    .await?;
-                Ok(wrap_ok(session))
-            }
-            "create_customer_session" => {
-                let customer_ref = match require_customer(customer_ref) {
-                    Ok(v) => v,
-                    Err(err) => return Ok(err),
-                };
-                let session = self
-                    .create_customer_session_json(CreateCustomerSessionRequest {
-                        customer_ref: Some(customer_ref.to_owned()),
-                        product_ref: Some(product_ref.to_owned()),
-                    })
-                    .await?;
-                Ok(wrap_ok(session))
+                let kind = args.get("kind").and_then(Value::as_str);
+                match kind {
+                    Some("portal") => {
+                        let session = self
+                            .create_customer_session_json(CreateCustomerSessionRequest {
+                                customer_ref: Some(customer_ref.to_owned()),
+                                product_ref: Some(product_ref.to_owned()),
+                            })
+                            .await?;
+                        Ok(wrap_ok(session))
+                    }
+                    Some("checkout") => {
+                        let plan_ref = args
+                            .get("planRef")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned);
+                        let session = self
+                            .create_checkout_session_json(CreateCheckoutSessionRequest {
+                                customer_ref: Some(customer_ref.to_owned()),
+                                plan_ref,
+                                product_ref: Some(product_ref.to_owned()),
+                                purpose: None,
+                                return_url: Some(params.config.public_base_url.clone()),
+                            })
+                            .await?;
+                        Ok(wrap_ok(session))
+                    }
+                    _ => Ok(tool_error_result(
+                        "create_hosted_session requires kind",
+                        400,
+                        Some("Pass kind: \"checkout\" or kind: \"portal\"."),
+                    )),
+                }
             }
             "create_payment_intent" => {
                 let customer_ref = match require_customer(customer_ref) {
                     Ok(v) => v,
                     Err(err) => return Ok(err),
                 };
-                if let Some(err) = validate_create_payment_intent_params(
-                    args.get("planRef").and_then(Value::as_str),
-                    Some(product_ref),
-                ) {
-                    return Ok(helper_error_tool(&err));
+                match args.get("purpose").and_then(Value::as_str) {
+                    Some("topup") => {
+                        if let Some(err) = validate_topup_payment_intent_params(
+                            args.get("amount").and_then(Value::as_f64),
+                            args.get("currency").and_then(Value::as_str),
+                        ) {
+                            return Ok(helper_error_tool(&err));
+                        }
+                        let created = self
+                            .create_topup_payment_intent_json(CreateTopupPaymentIntentParams {
+                                amount: args.get("amount").and_then(Value::as_f64).unwrap_or(0.0),
+                                currency: args
+                                    .get("currency")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("")
+                                    .to_owned(),
+                                customer_ref: customer_ref.to_owned(),
+                                description: args
+                                    .get("description")
+                                    .and_then(Value::as_str)
+                                    .map(str::to_owned),
+                                auto_recharge: None,
+                                idempotency_key: None,
+                            })
+                            .await?;
+                        Ok(wrap_ok(created))
+                    }
+                    Some("plan") => {
+                        if let Some(err) = validate_create_payment_intent_params(
+                            args.get("planRef").and_then(Value::as_str),
+                            Some(product_ref),
+                        ) {
+                            return Ok(helper_error_tool(&err));
+                        }
+                        let plan_ref = args.get("planRef").and_then(Value::as_str).unwrap_or("");
+                        let created = self
+                            .create_payment_intent_json(CreatePaymentIntentParams {
+                                plan_ref: plan_ref.to_owned(),
+                                product_ref: product_ref.to_owned(),
+                                customer_ref: customer_ref.to_owned(),
+                                currency: args
+                                    .get("currency")
+                                    .and_then(Value::as_str)
+                                    .map(str::to_owned),
+                                idempotency_key: None,
+                            })
+                            .await?;
+                        Ok(wrap_ok(created))
+                    }
+                    _ => Ok(tool_error_result(
+                        "create_payment_intent requires purpose",
+                        400,
+                        Some("Pass purpose: \"plan\" or purpose: \"topup\"."),
+                    )),
                 }
-                let plan_ref = args.get("planRef").and_then(Value::as_str).unwrap_or("");
-                let created = self
-                    .create_payment_intent_json(CreatePaymentIntentParams {
-                        plan_ref: plan_ref.to_owned(),
-                        product_ref: product_ref.to_owned(),
-                        customer_ref: customer_ref.to_owned(),
-                        currency: args
-                            .get("currency")
-                            .and_then(Value::as_str)
-                            .map(str::to_owned),
-                        idempotency_key: None,
-                    })
-                    .await?;
-                Ok(wrap_ok(created))
             }
             "process_payment" => {
                 let customer_ref = match require_customer(customer_ref) {
@@ -742,36 +844,6 @@ impl SolvaPayClient {
                 }
                 Ok(wrap_ok(out))
             }
-            "create_topup_payment_intent" => {
-                let customer_ref = match require_customer(customer_ref) {
-                    Ok(v) => v,
-                    Err(err) => return Ok(err),
-                };
-                if let Some(err) = validate_topup_payment_intent_params(
-                    args.get("amount").and_then(Value::as_f64),
-                    args.get("currency").and_then(Value::as_str),
-                ) {
-                    return Ok(helper_error_tool(&err));
-                }
-                let created = self
-                    .create_topup_payment_intent_json(CreateTopupPaymentIntentParams {
-                        amount: args.get("amount").and_then(Value::as_f64).unwrap_or(0.0),
-                        currency: args
-                            .get("currency")
-                            .and_then(Value::as_str)
-                            .unwrap_or("")
-                            .to_owned(),
-                        customer_ref: customer_ref.to_owned(),
-                        description: args
-                            .get("description")
-                            .and_then(Value::as_str)
-                            .map(str::to_owned),
-                        auto_recharge: None,
-                        idempotency_key: None,
-                    })
-                    .await?;
-                Ok(wrap_ok(created))
-            }
             "attach_business_details" => {
                 let customer_ref = match require_customer(customer_ref) {
                     Ok(v) => v,
@@ -804,13 +876,19 @@ impl SolvaPayClient {
                             .and_then(Value::as_str)
                             .map(str::to_owned),
                         customer_ref: Some(customer_ref.to_owned()),
-                        customer_country: None,
-                        customer_name: None,
+                        customer_country: args
+                            .get("customerCountry")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
+                        customer_name: args
+                            .get("customerName")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
                     })
                     .await?;
                 Ok(wrap_ok(attached))
             }
-            "cancel_renewal" => {
+            "set_renewal" => {
                 if let Err(err) = require_customer(customer_ref) {
                     return Ok(err);
                 }
@@ -819,10 +897,35 @@ impl SolvaPayClient {
                 {
                     return Ok(helper_error_tool(&err));
                 }
+                let Some(enabled) = args.get("enabled").and_then(Value::as_bool) else {
+                    return Ok(tool_error_result(
+                        "set_renewal requires enabled",
+                        400,
+                        Some(
+                            "Pass enabled: true to reactivate auto-renewal or enabled: false to cancel.",
+                        ),
+                    ));
+                };
                 let purchase_ref = args
                     .get("purchaseRef")
                     .and_then(Value::as_str)
                     .unwrap_or("");
+                if enabled {
+                    let reactivated = self
+                        .reactivate_purchase(ReactivatePurchaseParams {
+                            purchase_ref: purchase_ref.to_owned(),
+                        })
+                        .await?;
+                    return match normalize_reactivate_response(&reactivated) {
+                        Ok(value) => {
+                            self.shell()
+                                .delay(std::time::Duration::from_millis(500))
+                                .await;
+                            Ok(wrap_ok(value))
+                        }
+                        Err(err) => Ok(helper_error_tool(&err)),
+                    };
+                }
                 let cancelled = self
                     .cancel_purchase(CancelPurchaseParams {
                         purchase_ref: purchase_ref.to_owned(),
@@ -842,31 +945,82 @@ impl SolvaPayClient {
                     Err(err) => Ok(helper_error_tool(&err)),
                 }
             }
-            "reactivate_renewal" => {
-                if let Err(err) = require_customer(customer_ref) {
-                    return Ok(err);
+            "get_history" => {
+                let customer_ref = match require_customer(customer_ref) {
+                    Ok(v) => v,
+                    Err(err) => return Ok(err),
+                };
+                let limit = args.get("limit").and_then(Value::as_f64);
+                let mut start = json!({
+                    "kind": "start",
+                    "customerRef": customer_ref,
+                    "productRef": product_ref,
+                });
+                if let Some(limit) = limit {
+                    start["limit"] = json!(limit);
                 }
-                if let Some(err) =
-                    validate_purchase_ref(args.get("purchaseRef").and_then(Value::as_str))
-                {
-                    return Ok(helper_error_tool(&err));
-                }
-                let purchase_ref = args
-                    .get("purchaseRef")
-                    .and_then(Value::as_str)
-                    .unwrap_or("");
-                let reactivated = self
-                    .reactivate_purchase(ReactivatePurchaseParams {
-                        purchase_ref: purchase_ref.to_owned(),
+                let first = match get_history_next(None, Some(&start)) {
+                    Ok(step) => step,
+                    Err(err) => return Ok(helper_error_tool(&err)),
+                };
+                let GetHistoryAction::Fetch {
+                    list_purchases,
+                    get_credit_activity,
+                } = first.action
+                else {
+                    return Ok(tool_error_result(
+                        "get_history_next start did not request a fetch",
+                        500,
+                        None,
+                    ));
+                };
+                let purchases = self
+                    .list_purchases(ListPurchasesParams {
+                        customer_ref: list_purchases
+                            .get("customerRef")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
+                        product_ref: list_purchases
+                            .get("productRef")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
+                        status: None,
+                        include_free: None,
                     })
                     .await?;
-                match normalize_reactivate_response(&reactivated) {
-                    Ok(value) => {
-                        self.shell()
-                            .delay(std::time::Duration::from_millis(500))
-                            .await;
-                        Ok(wrap_ok(value))
-                    }
+                let activity = self
+                    .get_credit_activity(GetCreditActivityParams {
+                        customer_ref: get_credit_activity
+                            .get("customerRef")
+                            .and_then(Value::as_str)
+                            .unwrap_or(customer_ref)
+                            .to_owned(),
+                        limit: get_credit_activity.get("limit").and_then(Value::as_f64),
+                    })
+                    .await?;
+                let state = serde_json::to_value(&first.state).map_err(|err| {
+                    SdkError::transport(format!("serialize history state: {err}"), false)
+                })?;
+                let results = json!({
+                    "kind": "results",
+                    "purchases": purchases,
+                    "creditActivity": activity,
+                });
+                match get_history_next(Some(&state), Some(&results)) {
+                    Ok(step) => match step.action {
+                        GetHistoryAction::Resolved {
+                            charges,
+                            credit_activity,
+                        } => Ok(wrap_ok(json!({
+                            "charges": charges,
+                            "creditActivity": credit_activity,
+                        }))),
+                        GetHistoryAction::Fetch { .. } => Ok(tool_error_result(
+                            "get_history_next results requested another fetch",
+                            500,
+                            None,
+                        )),
+                    },
                     Err(err) => Ok(helper_error_tool(&err)),
                 }
             }
@@ -874,38 +1028,15 @@ impl SolvaPayClient {
                 let plan_ref = args
                     .get("planRef")
                     .and_then(Value::as_str)
+                    .map(str::trim)
                     .filter(|s| !s.is_empty());
                 if plan_ref.is_none() {
-                    let views = params.config.views.clone().unwrap_or_else(|| {
-                        vec![
-                            "checkout".to_owned(),
-                            "account".to_owned(),
-                            "topup".to_owned(),
-                        ]
-                    });
-                    if !views.iter().any(|v| v == "checkout") {
-                        return Ok(tool_error_result(
-                            "activate_plan requires a planRef on this server",
-                            400,
-                            Some("The checkout view (where the plan picker lives) is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the \"checkout\" view via the `views` option."),
-                        ));
-                    }
-                    let payload: Value = self
-                        .mcp_bootstrap(McpBootstrapParams {
-                            view: "checkout".to_owned(),
-                            product_ref: product_ref.to_owned(),
-                            public_base_url: params.config.public_base_url.clone(),
-                            customer_ref: params.customer_ref.clone(),
-                        })
-                        .await?;
-                    return Ok(narrated_tool_result(
-                        "activate_plan",
-                        &payload,
-                        mode,
-                        Some(&widget_meta(
-                            &session,
-                            params.config.resource_uri.as_deref(),
-                        )),
+                    return Ok(tool_error_result(
+                        "activate_plan requires a planRef",
+                        400,
+                        Some(
+                            "Pass `planRef` to activate a specific plan. To list plans, call `account` with view: \"checkout\".",
+                        ),
                     ));
                 }
                 let customer_ref = match require_customer(customer_ref) {

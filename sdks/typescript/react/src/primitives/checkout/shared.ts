@@ -8,8 +8,11 @@
  */
 
 import {
+  billingCycle,
+  planPricingShape,
   usageRate,
   type BalancePegLike,
+  type BillingCycleLike,
   type BillingInterval,
   type PricingOptionLike,
 } from '@solvapay/core'
@@ -36,24 +39,19 @@ export const CHECKOUT_STEPS = ['plan', 'amount', 'payment', 'success'] as const
  *
  * Mirrors what the API actually sends: pricing lives in `options[]`, and
  * the only derived scalars on the wire are `type`, `price`, `currency`
- * and `requiresPayment`.
+ * and `requiresPayment`. Every field admits `null` because frozen plan
+ * snapshots send it explicitly; it is read as "absent" throughout.
  */
 export interface BootstrapPlanLike {
-  reference?: string
-  name?: string
-  type?: string
-  price?: number
-  currency?: string
-  requiresPayment?: boolean
-  options?: PricingOptionLike[]
-  pricingOptions?: Array<{
-    currency: string
-    price: number
-    basePrice?: number
-    setupFee?: number
-    default?: boolean
-  }>
-  display?: PlanDisplayBlock
+  reference?: string | null
+  name?: string | null
+  type?: string | null
+  price?: number | null
+  currency?: string | null
+  requiresPayment?: boolean | null
+  options?: PricingOptionLike[] | null
+  pricingOptions?: PlanPricingOption[] | null
+  display?: PlanDisplayBlock | null
 }
 
 export type SuccessMeta =
@@ -159,20 +157,75 @@ export function formatContinueLabel(
  * usage-based plans. Sourced from the `billingCycle` option — a plan on
  * the wire has no scalar `billingCycle`.
  */
+export function planBillingCycle(plan: BootstrapPlanLike): BillingCycleLike | null {
+  return billingCycle(plan)
+}
+
 export function planBillingInterval(plan: BootstrapPlanLike): BillingInterval | null {
   return planBillingCycleInterval(plan)
+}
+
+/** Compact cycle suffix for a price label, e.g. `/mo` or `/3 mo`. */
+export function formatCycleSuffix(cycle: BillingCycleLike | null): string {
+  if (!cycle) return ''
+  const short = shortCycle(cycle.interval)
+  if (cycle.count && cycle.count > 1) return `/${cycle.count} ${short}`
+  return `/${short}`
+}
+
+/**
+ * The fixed-commitment price label for a plan row or CTA.
+ * Usage rates belong on the description line, not here.
+ */
+export function formatPlanPriceLabel(
+  plan: BootstrapPlanLike,
+  locale: string,
+  pricingOption?: PlanPricingOption,
+): string {
+  const shape = planPricingShape(plan)
+  switch (shape.shape) {
+    case 'free':
+      return 'Free'
+    case 'usage':
+      return 'Pay per use'
+    case 'recurring':
+    case 'hybrid': {
+      const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
+      const amount = option.price ?? shape.headlineMinor
+      const currency = option.currency.toUpperCase()
+      const priceLabel = formatPrice(amount, currency, { locale, free: '' })
+      return `${priceLabel}${formatCycleSuffix(shape.cycle)}`
+    }
+    case 'oneTime': {
+      const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
+      const amount = option.price ?? shape.headlineMinor
+      const currency = option.currency.toUpperCase()
+      const priceLabel = formatPrice(amount, currency, { locale, free: '' })
+      return `${priceLabel} once`
+    }
+  }
+}
+
+/** The meter noun in the singular, so a rate reads "/ request", not "/ requests". */
+function singularMeterNoun(unit: string): string {
+  if (unit.endsWith('ies')) return `${unit.slice(0, -3)}y`
+  if (unit.endsWith('s') && !unit.endsWith('ss')) return unit.slice(0, -1)
+  return unit
 }
 
 /**
  * What one metered call costs, as a label.
  *
+ * The unit is the plan's own meter noun ("/ request"), not a generic
+ * "/ call": a rate is only legible against the thing being counted.
+ *
  * Credits need the USD→charge-currency peg, which only `balance` carries,
  * so without one — or when the plan is priced in a different currency
- * than the balance — this falls back to the charge itself (`$0.02 / call`)
+ * than the balance — this falls back to the charge itself (`$0.02 / request`)
  * rather than inventing a credit figure.
  *
  * A tier-priced plan is read through `usageRate`, so it labels its ENTRY
- * band and says so ("from $0.02 / call"): later units are priced by their
+ * band and says so ("from $0.02 / request"): later units are priced by their
  * own bands, and presenting the first band's rate bare would understate
  * a rising stack. Reading `perUnitCharge` alone — as this did — found
  * nothing on a tiered plan and rendered no rate at all.
@@ -185,13 +238,14 @@ export function formatPaygRate(
   const rate = usageRate(plan)
   if (!rate || !(rate.amountMinor > 0)) return null
   const prefix = rate.tiered ? 'from ' : ''
+  const unit = singularMeterNoun(rate.meter ?? planMeterNameValue(plan) ?? 'unit')
 
   const credits = planCreditsPerUnit(plan, balance)
   if (credits != null) {
-    return `${prefix}${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
+    return `${prefix}${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / ${unit}`
   }
 
-  return `${prefix}${formatPrice(rate.amountMinor, rate.currency.toUpperCase(), { locale })} / call`
+  return `${prefix}${formatPrice(rate.amountMinor, rate.currency.toUpperCase(), { locale })} / ${unit}`
 }
 
 /**

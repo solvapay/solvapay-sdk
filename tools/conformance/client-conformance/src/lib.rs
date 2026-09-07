@@ -21,10 +21,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::{
     BoxFuture, ClientShell, HttpRequest, HttpResponse, ReqwestTransport, SharedTransport,
@@ -174,6 +175,7 @@ const DISPATCH_FNS: &[&str] = &[
     "deleteProduct",
     "disableAutoRecharge",
     "getAutoRecharge",
+    "getCreditActivity",
     "getCustomer",
     "getCustomerBalance",
     "getMerchant",
@@ -183,6 +185,7 @@ const DISPATCH_FNS: &[&str] = &[
     "getUserInfo",
     "listPlans",
     "listProducts",
+    "listPurchases",
     "processPaymentIntent",
     "reactivatePurchase",
     "saveAutoRecharge",
@@ -333,6 +336,14 @@ pub async fn dispatch(
             let params: ConfigureMcpPlansDto = parse_args(&body)?;
             client.configure_mcp_plans(&product_ref, params).await
         }
+        "listPurchases" => {
+            let params: ListPurchasesParams = parse_args(&map)?;
+            serialize_result(client.list_purchases(params).await?)
+        }
+        "getCreditActivity" => {
+            let params: GetCreditActivityParams = parse_args(&map)?;
+            serialize_result(client.get_credit_activity(params).await?)
+        }
         "listPlans" => {
             let product_ref = require_str(&map, "productRef")?;
             client.list_plans(&product_ref).await
@@ -478,6 +489,6 @@ mod coverage_tests {
             "DISPATCH_FNS must equal routed error_templates::OPERATION_NAMES"
         );
         assert!(dispatch_covers_all_operations());
-        assert_eq!(DISPATCH_FNS.len(), 36);
+        assert_eq!(DISPATCH_FNS.len(), 38);
     }
 }

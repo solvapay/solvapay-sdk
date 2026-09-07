@@ -31,6 +31,7 @@ export {
   customerBalance,
   disableAutoRecharge,
   getAutoRecharge,
+  getHistory,
   getMerchant,
   getPaymentMethod,
   getProduct,

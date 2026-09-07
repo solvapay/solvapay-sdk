@@ -10,24 +10,31 @@ use solvapay_core::{
     build_paywall_gate, charges, classify_cancel_error, classify_create_error,
     classify_customer_ref, classify_lookup_error, classify_paywall_state,
     classify_reactivate_error, coerce_customer_options, counts_usage,
-    credits_per_unit_from_balance, decide_paywall_outcome, ensure_customer_next,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
-    extract_backend_customer_ref, format_price, format_subtotal_label, format_vat_summary_label,
-    gate_next, get_business_country_options, get_seller_tax_identifier_display_label,
-    headline_charges, included_units, invoke_payable_next, is_cached_customer_ref_valid,
-    is_email_conflict, is_error_result, is_unlimited_remaining, is_zero_decimal_currency,
+    credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
+    derive_default_view, ensure_customer_next, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    extract_backend_customer_ref, format_compact_credits, format_price, format_subtotal_label,
+    format_vat_summary_label, gate_next, get_business_country_options,
+    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
+    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
+    headline_charges, history_rows, included_units, invoke_payable_next,
+    is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
+    is_postal_code_required, is_state_required, is_unlimited_remaining, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
-    project_topup_process_outcome, resolve_check_limits_params, resolve_customer_ref,
-    resolve_fallback_gate_limits, resolve_product_ref, resolve_purchase_customer_ref,
-    resolve_tax_treatment_note, reverse_charge_note, should_retry_usage_error, should_show_tax_row,
+    plan_consequence, plan_pricing_shape, postal_code_required_countries,
+    project_topup_process_outcome, resolve_account_state, resolve_buyer_country,
+    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
+    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
+    should_retry_usage_error, should_show_tax_row, state_required_countries,
     tax_not_collected_note, tier_bands, tier_meters, to_major_units, topup_process_next,
     trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallState, ResponseEnvelope,
+    validate_topup_payment_intent_params, BusinessDetailsInput, GateContent, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -35,14 +42,24 @@ use crate::extract::*;
 use crate::model::FixtureInput;
 use crate::runner::{Binding, BindingError, BindingRegistry};
 
+fn invoke_postal_code_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&postal_code_required_countries())
+}
+
 fn invoke_reverse_charge_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
-    Ok(Value::String(reverse_charge_note()))
+    Ok(Value::String(reverse_charge_note().to_owned()))
+}
+
+fn invoke_state_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&state_required_countries())
 }
 
 fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
-    Ok(Value::String(tax_not_collected_note()))
+    Ok(Value::String(tax_not_collected_note().to_owned()))
 }
 
 fn invoke_attach_business_details_validation_error(
@@ -88,14 +105,16 @@ fn invoke_build_gate_message(input: &FixtureInput) -> Result<Value, BindingError
     let args = args_map(input);
     let state = require_typed::<PaywallState>(&args, "state")?;
     let gate = require_typed::<GateContent>(&args, "gate")?;
-    Ok(Value::String(build_gate_message(&state, &gate)))
+    Ok(Value::String(build_gate_message(&state, &gate).to_owned()))
 }
 
 fn invoke_build_nudge_message(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let state = require_typed::<PaywallState>(&args, "state")?;
     let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
-    Ok(Value::String(build_nudge_message(&state, limits.as_ref())))
+    Ok(Value::String(
+        build_nudge_message(&state, limits.as_ref()).to_owned(),
+    ))
 }
 
 fn invoke_build_payable_tool_result(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -192,6 +211,22 @@ fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingE
     ))
 }
 
+fn invoke_derive_active_products(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let purchases = optional_value(&args, "purchases");
+    let product_ref = optional_string(&args, "productRef")?;
+    to_value(&derive_active_products(
+        purchases.as_ref(),
+        product_ref.as_deref(),
+    ))
+}
+
+fn invoke_derive_default_view(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(derive_default_view(input.as_ref()))
+}
+
 fn invoke_ensure_customer_next(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let state = optional_value(&args, "state");
@@ -212,6 +247,14 @@ fn invoke_evaluate_cached_limits(input: &FixtureInput) -> Result<Value, BindingE
     to_value(&evaluate_cached_limits(remaining))
 }
 
+fn invoke_evaluate_claimed_limits(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let within_limits = require_bool(&args, "withinLimits")?;
+    let remaining = require_f64(&args, "remaining")?;
+    let claimed = require_f64(&args, "claimed")?;
+    to_value(&evaluate_claimed_limits(within_limits, remaining, claimed))
+}
+
 fn invoke_evaluate_fresh_limits(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let within_limits = require_bool(&args, "withinLimits")?;
@@ -223,9 +266,15 @@ fn invoke_extract_backend_customer_ref(input: &FixtureInput) -> Result<Value, Bi
     let args = args_map(input);
     let response = require_object(&args, "response")?;
     let fallback = require_string(&args, "fallback")?;
-    Ok(Value::String(extract_backend_customer_ref(
-        response, &fallback,
-    )))
+    Ok(Value::String(
+        extract_backend_customer_ref(response, &fallback).to_owned(),
+    ))
+}
+
+fn invoke_format_compact_credits(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let credits = require_f64(&args, "credits")?;
+    result_as_value(format_compact_credits(credits))
 }
 
 fn invoke_format_price(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -236,30 +285,34 @@ fn invoke_format_price(input: &FixtureInput) -> Result<Value, BindingError> {
     let interval_count = optional_f64(&args, "intervalCount")?;
     let free = optional_string(&args, "free")?;
     let currency_display = optional_string(&args, "currencyDisplay")?;
-    Ok(Value::String(format_price(
-        amount_minor,
-        &currency,
-        interval.as_deref(),
-        interval_count,
-        free.as_deref(),
-        currency_display.as_deref(),
-    )))
+    Ok(Value::String(
+        format_price(
+            amount_minor,
+            &currency,
+            interval.as_deref(),
+            interval_count,
+            free.as_deref(),
+            currency_display.as_deref(),
+        )
+        .to_owned(),
+    ))
 }
 
 fn invoke_format_subtotal_label(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
-    Ok(Value::String(format_subtotal_label(treatment.as_deref())))
+    Ok(Value::String(
+        format_subtotal_label(treatment.as_deref()).to_owned(),
+    ))
 }
 
 fn invoke_format_vat_summary_label(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
     let tax_rate = require_f64(&args, "taxRate")?;
-    Ok(Value::String(format_vat_summary_label(
-        treatment.as_deref(),
-        tax_rate,
-    )))
+    Ok(Value::String(
+        format_vat_summary_label(treatment.as_deref(), tax_rate).to_owned(),
+    ))
 }
 
 fn invoke_gate_next(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -274,20 +327,61 @@ fn invoke_get_business_country_options(input: &FixtureInput) -> Result<Value, Bi
     to_value(&get_business_country_options())
 }
 
+fn invoke_get_customer_address_field_errors(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+    to_value(&get_customer_address_field_errors(&input))
+}
+
+fn invoke_get_history_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = optional_value(&args, "state");
+    let event = optional_value(&args, "event");
+    result_as_value(get_history_next(state.as_ref(), event.as_ref()))
+}
+
+fn invoke_get_postal_code_field_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let country = require_string(&args, "country")?;
+    Ok(Value::String(
+        get_postal_code_field_label(&country).to_owned(),
+    ))
+}
+
+fn invoke_get_postal_code_placeholder(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let country = require_string(&args, "country")?;
+    Ok(Value::String(
+        get_postal_code_placeholder(&country).to_owned(),
+    ))
+}
+
 fn invoke_get_seller_tax_identifier_display_label(
     input: &FixtureInput,
 ) -> Result<Value, BindingError> {
     let args = args_map(input);
     let country = optional_string(&args, "country")?;
-    Ok(Value::String(get_seller_tax_identifier_display_label(
-        country.as_deref(),
-    )))
+    Ok(Value::String(
+        get_seller_tax_identifier_display_label(country.as_deref()).to_owned(),
+    ))
+}
+
+fn invoke_get_state_field_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let country = require_string(&args, "country")?;
+    Ok(Value::String(get_state_field_label(&country).to_owned()))
 }
 
 fn invoke_headline_charges(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     to_value(&headline_charges(priced.as_ref()))
+}
+
+fn invoke_history_rows(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(history_rows(input.as_ref()))
 }
 
 fn invoke_included_units(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -316,6 +410,12 @@ fn invoke_is_cached_customer_ref_valid(input: &FixtureInput) -> Result<Value, Bi
     )))
 }
 
+fn invoke_is_customer_address_complete(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+    Ok(Value::Bool(is_customer_address_complete(&input)))
+}
+
 fn invoke_is_email_conflict(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let message = require_string(&args, "message")?;
@@ -326,6 +426,18 @@ fn invoke_is_error_result(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let value = args.get("result").cloned().unwrap_or(Value::Null);
     Ok(Value::Bool(is_error_result(&value)))
+}
+
+fn invoke_is_postal_code_required(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let country = require_string(&args, "country")?;
+    Ok(Value::Bool(is_postal_code_required(&country)))
+}
+
+fn invoke_is_state_required(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let country = require_string(&args, "country")?;
+    Ok(Value::Bool(is_state_required(&country)))
 }
 
 fn invoke_is_unlimited_remaining(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -396,6 +508,26 @@ fn invoke_per_unit_charge(input: &FixtureInput) -> Result<Value, BindingError> {
     to_value(&per_unit_charge(priced.as_ref(), meter.as_deref()))
 }
 
+fn invoke_plan_consequence(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let plan = optional_value(&args, "plan");
+    let locale = optional_string(&args, "locale")?;
+    let balance = optional_value(&args, "balance");
+    let merchant_name = optional_string(&args, "merchantName")?;
+    result_as_value(plan_consequence(
+        plan.as_ref(),
+        locale.as_deref(),
+        balance.as_ref(),
+        merchant_name.as_deref(),
+    ))
+}
+
+fn invoke_plan_pricing_shape(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&plan_pricing_shape(priced.as_ref()))
+}
+
 fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let status = optional_string(&args, "status")?;
@@ -404,6 +536,20 @@ fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, B
         status.as_deref(),
         message.as_deref(),
     ))
+}
+
+fn invoke_resolve_account_state(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    Ok(Value::String(
+        resolve_account_state(input.as_ref()).to_owned(),
+    ))
+}
+
+fn invoke_resolve_buyer_country(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = require_typed::<BusinessDetailsInput>(&args, "input")?;
+    to_value(&resolve_buyer_country(&input))
 }
 
 fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -427,21 +573,36 @@ fn invoke_resolve_customer_ref(input: &FixtureInput) -> Result<Value, BindingErr
     let mcp_extra_customer_ref = optional_string(&args, "mcpExtraCustomerRef")?;
     let args_auth_customer_ref = optional_string(&args, "argsAuthCustomerRef")?;
     let args_customer_ref = optional_string(&args, "argsCustomerRef")?;
-    Ok(Value::String(resolve_customer_ref(
-        hook_ref.as_deref(),
-        verified_jwt_sub.as_deref(),
-        header_user_id.as_deref(),
-        header_customer_ref.as_deref(),
-        mcp_extra_customer_ref.as_deref(),
-        args_auth_customer_ref.as_deref(),
-        args_customer_ref.as_deref(),
-    )))
+    Ok(Value::String(
+        resolve_customer_ref(
+            hook_ref.as_deref(),
+            verified_jwt_sub.as_deref(),
+            header_user_id.as_deref(),
+            header_customer_ref.as_deref(),
+            mcp_extra_customer_ref.as_deref(),
+            args_auth_customer_ref.as_deref(),
+            args_customer_ref.as_deref(),
+        )
+        .to_owned(),
+    ))
+}
+
+fn invoke_resolve_display_mode(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let ctx = optional_value(&args, "ctx");
+    to_value(&resolve_display_mode(ctx.as_ref()))
 }
 
 fn invoke_resolve_fallback_gate_limits(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let checkout_url = optional_string(&args, "checkoutUrl")?;
     to_value(&resolve_fallback_gate_limits(checkout_url.as_deref()))
+}
+
+fn invoke_resolve_plan_shape(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&resolve_narrator_plan_shape(priced.as_ref()))
 }
 
 fn invoke_resolve_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -458,10 +619,9 @@ fn invoke_resolve_purchase_customer_ref(input: &FixtureInput) -> Result<Value, B
     let args = args_map(input);
     let customer_ref = optional_string(&args, "customerRef")?;
     let user_id = require_string(&args, "userId")?;
-    Ok(Value::String(resolve_purchase_customer_ref(
-        customer_ref.as_deref(),
-        &user_id,
-    )))
+    Ok(Value::String(
+        resolve_purchase_customer_ref(customer_ref.as_deref(), &user_id).to_owned(),
+    ))
 }
 
 fn invoke_resolve_tax_treatment_note(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1220,10 +1380,24 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "POSTAL_CODE_REQUIRED_COUNTRIES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_postal_code_required_countries),
+        },
+    );
+    registry.register(
         "REVERSE_CHARGE_NOTE",
         Binding {
             id: "core",
             invoke: Box::new(invoke_reverse_charge_note),
+        },
+    );
+    registry.register(
+        "STATE_REQUIRED_COUNTRIES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_state_required_countries),
         },
     );
     registry.register(
@@ -1248,6 +1422,20 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "deriveActiveProducts",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_derive_active_products),
+        },
+    );
+    registry.register(
+        "deriveDefaultView",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_derive_default_view),
+        },
+    );
+    registry.register(
         "ensureCustomerNext",
         Binding {
             id: "core",
@@ -1259,6 +1447,20 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_evaluate_balance_observation),
+        },
+    );
+    registry.register(
+        "evaluateClaimedLimits",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_evaluate_claimed_limits),
+        },
+    );
+    registry.register(
+        "formatCompactCredits",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_format_compact_credits),
         },
     );
     registry.register(
@@ -1290,10 +1492,73 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "getCustomerAddressFieldErrors",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_get_customer_address_field_errors),
+        },
+    );
+    registry.register(
+        "getHistoryNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_get_history_next),
+        },
+    );
+    registry.register(
+        "getPostalCodeFieldLabel",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_get_postal_code_field_label),
+        },
+    );
+    registry.register(
+        "getPostalCodePlaceholder",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_get_postal_code_placeholder),
+        },
+    );
+    registry.register(
+        "getStateFieldLabel",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_get_state_field_label),
+        },
+    );
+    registry.register(
+        "historyRows",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_history_rows),
+        },
+    );
+    registry.register(
         "invokePayableNext",
         Binding {
             id: "core",
             invoke: Box::new(invoke_invoke_payable_next),
+        },
+    );
+    registry.register(
+        "isCustomerAddressComplete",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_is_customer_address_complete),
+        },
+    );
+    registry.register(
+        "isPostalCodeRequired",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_is_postal_code_required),
+        },
+    );
+    registry.register(
+        "isStateRequired",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_is_state_required),
         },
     );
     registry.register(
@@ -1304,10 +1569,52 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "planConsequence",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_plan_consequence),
+        },
+    );
+    registry.register(
+        "planPricingShape",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_plan_pricing_shape),
+        },
+    );
+    registry.register(
+        "resolveAccountState",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_account_state),
+        },
+    );
+    registry.register(
+        "resolveBuyerCountry",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_buyer_country),
+        },
+    );
+    registry.register(
+        "resolveDisplayMode",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_display_mode),
+        },
+    );
+    registry.register(
         "resolveFallbackGateLimits",
         Binding {
             id: "core",
             invoke: Box::new(invoke_resolve_fallback_gate_limits),
+        },
+    );
+    registry.register(
+        "resolvePlanShape",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_plan_shape),
         },
     );
     registry.register(

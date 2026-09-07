@@ -8,7 +8,8 @@
         "kind": "start",
         "customerRef": "anonymous",
         "product": "prd_1",
-        "startedMs": 1000
+        "startedMs": 1000,
+        "randomUnit": 0.5
       }
     }
   },
@@ -20,6 +21,7 @@
         "originalCustomerRef": "anonymous",
         "backendRef": "anonymous",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "anonymous:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },

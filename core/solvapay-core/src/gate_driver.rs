@@ -16,7 +16,7 @@ use crate::paywall_decision::{
 };
 use crate::paywall_gate::PaywallGate;
 use crate::serde_util::serialize_whole_f64;
-use crate::usage_request::build_usage_request;
+use crate::usage_request::{build_usage_request, mint_request_id};
 
 /// Opaque-enough driver state passed back on every step.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,6 +33,13 @@ pub struct GateDriverState {
     pub backend_ref: Option<String>,
     /// Host clock at `start` (ms). Used for paywall `track` duration.
     pub started_ms: i64,
+    /// Minted at `start` and reused by every `trackUsage` body for this
+    /// request, so the decision and its success / fail event share one
+    /// idempotency key.
+    pub request_id: String,
+    /// MCP tool that triggered the call, echoed into `metadata.toolName`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
     /// `backendRef:product:meterName` once the backend ref is known.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limits_key: Option<String>,
@@ -166,6 +173,9 @@ pub enum GateAction {
         /// Optional cache mutation.
         #[serde(skip_serializing_if = "Option::is_none")]
         cache: Option<GateCacheOp>,
+        /// Request id minted at `start`; the host reuses it when tracking the
+        /// handler outcome.
+        request_id: String,
     },
     /// Terminal gate. Host applies `cache` / `track` then returns the gate.
     #[serde(rename_all = "camelCase")]
@@ -187,6 +197,8 @@ pub enum GateAction {
         cache: Option<GateCacheOp>,
         /// Complete `trackUsage` body (`outcome: "paywall"`). Host POSTs this.
         request: Value,
+        /// Request id minted at `start`, matching `request.metadata.requestId`.
+        request_id: String,
     },
     /// Host POSTs `request` as `trackUsage` (success / fail / paywall).
     #[serde(rename_all = "camelCase")]
@@ -263,6 +275,7 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
     let product = require_str(event, "product")?;
     let usage_type = event.get("usageType").and_then(Value::as_str);
     let started_ms = event.get("startedMs").and_then(Value::as_i64).unwrap_or(0);
+    let random_unit = require_f64(event, "randomUnit")?;
     let limits_cache_ttl_ms = event
         .get("limitsCacheTTLMs")
         .and_then(Value::as_i64)
@@ -274,6 +287,12 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
         original_customer_ref: customer_ref.clone(),
         backend_ref: None,
         started_ms,
+        request_id: mint_request_id(started_ms, random_unit),
+        tool_name: event
+            .get("toolName")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned),
         limits_key: None,
         limits_cache_ttl_ms,
     };
@@ -336,7 +355,7 @@ fn on_limits_cache_entry(
     } else {
         None
     };
-    finish(state, eval.within_limits, limits, cache, now_ms, event)
+    finish(state, eval.within_limits, limits, cache, now_ms)
 }
 
 /// Ask the host to call `checkLimits`, optionally deleting a stale cache key first.
@@ -392,7 +411,7 @@ fn on_limits_result(
     } else {
         None
     };
-    finish(state, eval.within_limits, limits, cache, now_ms, event)
+    finish(state, eval.within_limits, limits, cache, now_ms)
 }
 
 /// Handle a successful handler run: emit a complete `trackUsage` body.
@@ -402,7 +421,6 @@ fn on_handler_succeeded(
 ) -> Result<GateNextOutput, HelperErrorResult> {
     let duration_ms = require_f64(event, "durationMs")?;
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
-    let random_unit = require_f64(event, "randomUnit")?;
     let customer_ref = state
         .backend_ref
         .clone()
@@ -414,7 +432,8 @@ fn on_handler_succeeded(
         "success",
         duration_ms,
         now_ms,
-        random_unit,
+        &state.request_id,
+        state.tool_name.as_deref(),
         None,
     );
     Ok(GateNextOutput {
@@ -440,7 +459,6 @@ fn on_handler_failed(
     }
     let duration_ms = require_f64(event, "durationMs")?;
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
-    let random_unit = require_f64(event, "randomUnit")?;
     let error_message = event
         .get("errorMessage")
         .and_then(Value::as_str)
@@ -457,7 +475,8 @@ fn on_handler_failed(
         "fail",
         duration_ms,
         now_ms,
-        random_unit,
+        &state.request_id,
+        state.tool_name.as_deref(),
         error_message,
     );
     Ok(GateNextOutput {
@@ -473,7 +492,6 @@ fn finish(
     limits: Value,
     cache: Option<GateCacheOp>,
     now_ms: i64,
-    event: &Value,
 ) -> Result<GateNextOutput, HelperErrorResult> {
     let checkout_url = limits.get("checkoutUrl").and_then(Value::as_str);
     let decision = decide_paywall_outcome(
@@ -502,11 +520,11 @@ fn finish(
                 customer,
                 consequence: allow_consequence(&limits),
                 cache,
+                request_id: state.request_id.clone(),
             },
             state,
         }),
         crate::paywall_decision::PaywallOutcome::Gate { gate } => {
-            let random_unit = require_f64(event, "randomUnit")?;
             let request = build_usage_request(
                 &customer_ref,
                 &state.product,
@@ -514,7 +532,8 @@ fn finish(
                 "paywall",
                 duration_ms,
                 now_ms,
-                random_unit,
+                &state.request_id,
+                state.tool_name.as_deref(),
                 None,
             );
             Ok(GateNextOutput {
@@ -527,6 +546,7 @@ fn finish(
                     gate,
                     cache,
                     request,
+                    request_id: state.request_id.clone(),
                 },
                 state,
             })
@@ -644,6 +664,7 @@ mod tests {
             "product": "prd_1",
             "usageType": "requests",
             "startedMs": 1_000,
+            "randomUnit": 0.5,
         })
     }
 
@@ -739,7 +760,6 @@ mod tests {
                 "limits": { "withinLimits": false, "remaining": 0 },
                 "timestampMs": 1_000,
                 "nowMs": 1_250,
-                "randomUnit": 0.5,
             })),
         )
         .unwrap();
@@ -758,7 +778,8 @@ mod tests {
                 assert_eq!(request["duration"], 250);
                 assert_eq!(request["actionType"], "api_call");
                 assert_eq!(request["metadata"]["action"], "requests");
-                assert_eq!(request["metadata"]["requestId"], "solvapay_1250_i");
+                assert_eq!(request["metadata"]["requestId"], "solvapay_1000_i");
+                assert_eq!(request["idempotencyKey"], "solvapay_1000_i:paywall");
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -839,7 +860,6 @@ mod tests {
                 "kind": "limitsResult",
                 "limits": { "withinLimits": false, "remaining": 0 },
                 "nowMs": 1_000,
-                "randomUnit": 0.5,
             })),
         )
         .unwrap();
@@ -865,7 +885,6 @@ mod tests {
                 "kind": "handlerSucceeded",
                 "durationMs": 40,
                 "nowMs": 1_040,
-                "randomUnit": 0.5,
             })),
         )
         .unwrap();
@@ -878,7 +897,8 @@ mod tests {
                 assert_eq!(request["customerRef"], "cus_abc");
                 assert_eq!(request["productRef"], "prd_1");
                 assert_eq!(request["metadata"]["action"], "requests");
-                assert_eq!(request["metadata"]["requestId"], "solvapay_1040_i");
+                assert_eq!(request["metadata"]["requestId"], "solvapay_1000_i");
+                assert_eq!(request["idempotencyKey"], "solvapay_1000_i:success");
                 assert_eq!(request["timestamp"], "1970-01-01T00:00:01.040Z");
             }
             other => panic!("unexpected {other:?}"),
@@ -893,7 +913,6 @@ mod tests {
                 "kind": "handlerFailed",
                 "durationMs": 12,
                 "nowMs": 1_012,
-                "randomUnit": 0.5,
                 "errorMessage": "boom",
                 "isPaywallError": false,
             })),
@@ -903,7 +922,8 @@ mod tests {
             GateAction::EmitUsage { request } => {
                 assert_eq!(request["outcome"], "fail");
                 assert_eq!(request["errorMessage"], "boom");
-                assert_eq!(request["metadata"]["requestId"], "solvapay_1012_i");
+                assert_eq!(request["metadata"]["requestId"], "solvapay_1000_i");
+                assert_eq!(request["idempotencyKey"], "solvapay_1000_i:fail");
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -917,7 +937,6 @@ mod tests {
                 "kind": "handlerFailed",
                 "durationMs": 12,
                 "nowMs": 1_012,
-                "randomUnit": 0.5,
                 "isPaywallError": true,
             })),
         )
@@ -934,6 +953,7 @@ mod tests {
                 "customerRef": "anonymous",
                 "product": "prd_1",
                 "startedMs": 1_000,
+                "randomUnit": 0.5,
             })),
         )
         .unwrap();

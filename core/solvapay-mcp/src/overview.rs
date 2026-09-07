@@ -35,7 +35,7 @@ pub fn mcp_overview_resource() -> OverviewResource {
         mime_type: "text/markdown".to_owned(),
         name: "SolvaPay MCP — overview".to_owned(),
         title: "SolvaPay overview".to_owned(),
-        description: "Agent-facing \"start here\" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.".to_owned(),
+        description: "Agent-facing \"start here\" doc — explains the two intent tools, dual-audience fallback, and auth model before any tool is called.".to_owned(),
         body: OVERVIEW_BODY.to_owned(),
     }
 }

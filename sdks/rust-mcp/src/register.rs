@@ -12,6 +12,7 @@ use solvapay_core::{
     build_customer_snapshot, invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op,
     HelperErrorResult, InvokePayableAction, PaywallGate,
 };
+use solvapay_mcp_core::union_payable_output_schema;
 use thiserror::Error;
 
 use crate::layer2::{assert_response_result, format_gate, json_to_call_tool_result};
@@ -97,6 +98,13 @@ pub fn register_payable_tool<S: Send + Sync + 'static>(
     let mut attr = Tool::new(tool.name.clone(), description, Arc::new(schema));
     if let Some(title) = tool.title.clone() {
         attr = attr.with_title(title);
+    }
+    if let Some(output_schema) = &tool.output_schema {
+        let unioned = union_payable_output_schema(output_schema);
+        let obj = unioned.as_object().cloned().ok_or_else(|| {
+            PayableError::Handler("unioned outputSchema must be a JSON object".to_owned())
+        })?;
+        attr = attr.with_raw_output_schema(Arc::new(obj));
     }
     let usage_type = tool
         .usage_type

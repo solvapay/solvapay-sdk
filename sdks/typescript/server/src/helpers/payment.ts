@@ -307,6 +307,8 @@ export async function attachBusinessDetailsCore(
       country: body.country,
       customerCountry: body.customerCountry,
       customerName: body.customerName,
+      customerState: body.customerState,
+      customerPostalCode: body.customerPostalCode,
       taxId: body.taxId,
       taxIdType: body.taxIdType,
     })
@@ -330,6 +332,9 @@ export async function attachBusinessDetailsCore(
       paymentIntentId: body.paymentIntentId,
       ...(body.customerRef !== undefined && { customerRef: body.customerRef }),
       ...details,
+      ...(body.customerCountry !== undefined && { customerCountry: body.customerCountry }),
+      ...(body.customerState !== undefined && { customerState: body.customerState }),
+      ...(body.customerPostalCode !== undefined && { customerPostalCode: body.customerPostalCode }),
     })
 
     return result

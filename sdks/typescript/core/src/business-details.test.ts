@@ -4,8 +4,6 @@ import {
   BUSINESS_COUNTRY_DISPLAY_NAMES,
   BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
-  POSTAL_CODE_REQUIRED_COUNTRIES,
-  STATE_REQUIRED_COUNTRIES,
   SUPPORTED_BUSINESS_COUNTRIES,
 } from './business-details'
 import {
@@ -14,13 +12,15 @@ import {
   getPostalCodeFieldLabel,
   getPostalCodePlaceholder,
   getStateFieldLabel,
+  isPostalCodeRequired,
+  isStateRequired,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  resolveBuyerCountry,
+  STATE_REQUIRED_COUNTRIES,
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
   isCustomerAddressComplete,
-  isPostalCodeRequired,
-  isStateRequired,
-  resolveBuyerCountry,
   resolveTaxBehavior,
   validateBusinessDetails,
 } from './native-core'
@@ -310,7 +310,7 @@ describe('BusinessDetailsSchema', () => {
 
     expect(result).toEqual({
       isBusiness: false,
-      customerCountry: 'US',
+      customerCountry: 'us',
       customerState: 'CA',
       customerPostalCode: '94103',
     })
@@ -326,7 +326,7 @@ describe('BusinessDetailsSchema', () => {
     ).toEqual({
       isBusiness: true,
       country: 'DE',
-      customerCountry: 'SE',
+      customerCountry: 'se',
     })
   })
 
@@ -340,19 +340,17 @@ describe('BusinessDetailsSchema', () => {
 
     expect(result).toEqual({
       isBusiness: true,
-      country: 'US',
-      customerCountry: 'US',
+      country: 'us',
       customerState: 'NY',
       customerPostalCode: '10001',
     })
   })
-
 })
 
 describe('buyer address helpers', () => {
   it('keeps postal and state requirement tables aligned with hosted checkout', () => {
-    expect([...POSTAL_CODE_REQUIRED_COUNTRIES]).toEqual(['US', 'CA', 'GB'])
-    expect([...STATE_REQUIRED_COUNTRIES]).toEqual(['US', 'CA', 'IN'])
+    expect(POSTAL_CODE_REQUIRED_COUNTRIES()).toEqual(['US', 'CA', 'GB'])
+    expect(STATE_REQUIRED_COUNTRIES()).toEqual(['US', 'CA', 'IN'])
   })
 
   it('uses hosted labels for state and postal fields', () => {
@@ -374,7 +372,7 @@ describe('buyer address helpers', () => {
       'SE',
     )
     expect(resolveBuyerCountry({ isBusiness: true, country: 'DE' })).toBe('DE')
-    expect(resolveBuyerCountry({ isBusiness: false })).toBeUndefined()
+    expect(resolveBuyerCountry({ isBusiness: false })).toBeNull()
   })
 
   it('treats the address as complete only when required state and postal are present', () => {

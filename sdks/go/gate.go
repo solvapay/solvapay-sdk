@@ -38,6 +38,7 @@ type Allow struct {
 	limits      map[string]any
 	customer    CustomerSnapshot
 	consequence string
+	requestID   string
 	driverState any
 }
 
@@ -84,6 +85,15 @@ func (a *Allow) Consequence() string {
 	return a.consequence
 }
 
+// RequestID is the id minted when this allow was decided. The eventual success
+// or fail usage event reuses it, so both share one idempotency key.
+func (a *Allow) RequestID() string {
+	if a == nil {
+		return ""
+	}
+	return a.requestID
+}
+
 func customerSnapshotFromAction(action map[string]any, backendRef string) (CustomerSnapshot, error) {
 	raw, ok := action["customer"].(map[string]any)
 	if !ok {
@@ -114,7 +124,6 @@ func (a *Allow) TrackSuccess(ctx context.Context, opts TrackOpts) error {
 		"kind":       "handlerSucceeded",
 		"durationMs": duration,
 		"nowMs":      time.Now().UnixMilli(),
-		"randomUnit": mustRandomUnit(),
 	})
 }
 
@@ -132,7 +141,6 @@ func (a *Allow) TrackFail(ctx context.Context, cause error, opts TrackOpts) erro
 		"kind":           "handlerFailed",
 		"durationMs":     duration,
 		"nowMs":          time.Now().UnixMilli(),
-		"randomUnit":     mustRandomUnit(),
 		"errorMessage":   msg,
 		"isPaywallError": IsPaywallError(cause),
 	})
@@ -161,9 +169,17 @@ func (p *Payable) Gate(ctx context.Context, customerRef string) (GateOutcome, er
 type gateState struct {
 	mu sync.Mutex
 
-	customerCache    map[string]customerCacheEntry
-	customerInflight map[string]*customerInflight
-	limitsCache      map[string]limitsCacheEntry
+	customerCache       map[string]customerCacheEntry
+	customerInflight    map[string]*customerInflight
+	limitsCache         map[string]limitsCacheEntry
+	checkLimitsInflight map[string]*limitsInflight
+	checkLimitsClaims   map[string]int
+}
+
+type limitsInflight struct {
+	done   chan struct{}
+	limits map[string]any
+	err    error
 }
 
 type customerCacheEntry struct {
@@ -185,9 +201,11 @@ type limitsCacheEntry struct {
 
 func newGateState() *gateState {
 	return &gateState{
-		customerCache:    map[string]customerCacheEntry{},
-		customerInflight: map[string]*customerInflight{},
-		limitsCache:      map[string]limitsCacheEntry{},
+		customerCache:       map[string]customerCacheEntry{},
+		customerInflight:    map[string]*customerInflight{},
+		limitsCache:         map[string]limitsCacheEntry{},
+		checkLimitsInflight: map[string]*limitsInflight{},
+		checkLimitsClaims:   map[string]int{},
 	}
 }
 
@@ -210,6 +228,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 		"product":          opts.Product,
 		"usageType":        opts.UsageType,
 		"startedMs":        startedMs,
+		"randomUnit":       mustRandomUnit(),
 		"limitsCacheTTLMs": defaultLimitsCacheTTL.Milliseconds(),
 	}
 	var action map[string]any
@@ -252,7 +271,6 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 			if hit {
 				event = map[string]any{
 					"kind":        "limitsCacheEntry",
-					"randomUnit":  mustRandomUnit(),
 					"found":       true,
 					"remaining":   cached.remaining,
 					"limits":      cached.limits,
@@ -261,10 +279,9 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				}
 			} else {
 				event = map[string]any{
-					"kind":       "limitsCacheEntry",
-					"found":      false,
-					"nowMs":      now,
-					"randomUnit": mustRandomUnit(),
+					"kind":  "limitsCacheEntry",
+					"found": false,
+					"nowMs": now,
 				}
 			}
 		case "checkLimits":
@@ -273,7 +290,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				delete(c.gate.limitsCache, deleteKey)
 				c.gate.mu.Unlock()
 			}
-			raw, err := c.CheckLimits(ctx, map[string]any{
+			raw, err := c.sharedCheckLimits(ctx, map[string]any{
 				"customerRef":            action["customerRef"],
 				"productRef":             action["productRef"],
 				"meterName":              action["meterName"],
@@ -286,11 +303,15 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 			if !ok {
 				return nil, fmt.Errorf("solvapay: checkLimits returned a non-object body")
 			}
+			claimed := c.nextCheckLimitsClaim(fmt.Sprintf("%v:%v:%v", action["customerRef"], action["productRef"], action["meterName"]))
+			overlaid, err := overlayClaimedLimits(ctx, limits, claimed)
+			if err != nil {
+				return nil, err
+			}
 			event = map[string]any{
-				"kind":       "limitsResult",
-				"limits":     limits,
-				"nowMs":      time.Now().UnixMilli(),
-				"randomUnit": mustRandomUnit(),
+				"kind":   "limitsResult",
+				"limits": overlaid,
+				"nowMs":  time.Now().UnixMilli(),
 			}
 		case "allow":
 			if err := c.applyGateCache(action["cache"]); err != nil {
@@ -303,6 +324,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				return nil, err
 			}
 			consequence, _ := action["consequence"].(string)
+			requestID, _ := action["requestId"].(string)
 			return &Allow{
 				client:      c,
 				backendRef:  backendRef,
@@ -311,6 +333,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				limits:      asObject(action["limits"]),
 				customer:    customer,
 				consequence: consequence,
+				requestID:   requestID,
 				driverState: state,
 			}, nil
 		case "gate":
@@ -361,6 +384,82 @@ func (c *Client) applyGateCache(raw any) error {
 		}
 	}
 	return nil
+}
+
+func (c *Client) sharedCheckLimits(ctx context.Context, params map[string]any) (any, error) {
+	key := fmt.Sprintf("%v:%v:%v", params["customerRef"], params["productRef"], params["meterName"])
+	c.gate.mu.Lock()
+	if inf, ok := c.gate.checkLimitsInflight[key]; ok {
+		c.gate.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-inf.done:
+			return inf.limits, inf.err
+		}
+	}
+	inf := &limitsInflight{done: make(chan struct{})}
+	c.gate.checkLimitsInflight[key] = inf
+	c.gate.checkLimitsClaims[key] = 0
+	c.gate.mu.Unlock()
+
+	raw, err := c.CheckLimits(ctx, params)
+	if err == nil {
+		if limits, ok := raw.(map[string]any); ok {
+			inf.limits = limits
+		}
+	}
+	inf.err = err
+	c.gate.mu.Lock()
+	delete(c.gate.checkLimitsInflight, key)
+	c.gate.mu.Unlock()
+	close(inf.done)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func (c *Client) nextCheckLimitsClaim(key string) int {
+	c.gate.mu.Lock()
+	defer c.gate.mu.Unlock()
+	claimed := c.gate.checkLimitsClaims[key] + 1
+	c.gate.checkLimitsClaims[key] = claimed
+	return claimed
+}
+
+func overlayClaimedLimits(ctx context.Context, limits map[string]any, claimed int) (map[string]any, error) {
+	remaining := asFloat(limits["remaining"])
+	within, _ := limits["withinLimits"].(bool)
+	raw, err := callDecisionJSON(ctx, "sv_evaluate_claimed_limits_binding", map[string]any{
+		"withinLimits": within,
+		"remaining":    remaining,
+		"claimed":      float64(claimed),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var evaluation map[string]any
+	if err := json.Unmarshal(raw, &evaluation); err != nil {
+		return nil, fmt.Errorf("solvapay: evaluate_claimed_limits: %w", err)
+	}
+	overlaid := map[string]any{}
+	for k, v := range limits {
+		overlaid[k] = v
+	}
+	if remaining == -1 || (within && remaining == 0) {
+		overlaid["withinLimits"] = evaluation["withinLimits"]
+		overlaid["remaining"] = evaluation["remaining"]
+		return overlaid, nil
+	}
+	if withinEval, _ := evaluation["withinLimits"].(bool); !withinEval {
+		overlaid["withinLimits"] = false
+		overlaid["remaining"] = 0.0
+		return overlaid, nil
+	}
+	overlaid["withinLimits"] = true
+	overlaid["remaining"] = asFloat(evaluation["remaining"]) + 1
+	return overlaid, nil
 }
 
 func callDecisionJSON(ctx context.Context, fn string, args map[string]any) (json.RawMessage, error) {

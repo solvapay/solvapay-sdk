@@ -19,7 +19,7 @@
   "expect": {
     "result": {
       "meterRef": "mtr_requests",
-      "total": 0,
+      "total": null,
       "used": 0,
       "remaining": 0,
       "percentUsed": null,

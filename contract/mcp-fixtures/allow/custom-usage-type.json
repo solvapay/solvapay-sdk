@@ -33,6 +33,10 @@
           {
             "type": "text",
             "text": "{\"ok\":true}"
+          },
+          {
+            "type": "text",
+            "text": "{\"ok\":true}"
           }
         ],
         "structuredContent": { "ok": true }

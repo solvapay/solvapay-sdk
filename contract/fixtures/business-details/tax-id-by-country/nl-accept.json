@@ -16,7 +16,8 @@
         "isBusiness": true,
         "country": "NL",
         "taxId": "NL123456789B12",
-        "taxIdType": "eu_vat"
+        "taxIdType": "eu_vat",
+        "customerCountry": "NL"
       }
     }
   }

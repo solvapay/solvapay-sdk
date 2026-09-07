@@ -10,6 +10,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
@@ -17,7 +18,10 @@
         "kind": "limitsCacheEntry",
         "found": true,
         "remaining": 5,
-        "limits": { "withinLimits": true, "remaining": 5 },
+        "limits": {
+          "withinLimits": true,
+          "remaining": 5
+        },
         "timestampMs": 1000,
         "nowMs": 11000
       }
@@ -31,6 +35,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },

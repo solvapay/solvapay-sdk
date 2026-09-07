@@ -155,6 +155,12 @@ export interface SolvaPayClientGenerated {
  */
   getAutoRecharge?(params: overlays.GetAutoRechargeParams): Promise<AutoRechargeResponse>
 /**
+ * List account-wide credit activity for a customer, newest first.
+ * @param params Customer reference and optional page size.
+ * @returns Credit activity page.
+ */
+  getCreditActivity?(params: overlays.GetCreditActivityParams): Promise<components['schemas']['CreditActivityResponseDto']>
+/**
  * Fetch a customer by reference.
  * @param params Lookup options including the customer reference.
  * @returns The customer projection.
@@ -203,6 +209,12 @@ export interface SolvaPayClientGenerated {
  * @returns Product list projection.
  */
   listProducts?(): Promise<overlays.ListProductsResult>
+/**
+ * List purchases for the authenticated provider, optionally filtered by customer, product, or status.
+ * @param params Optional purchase list filters.
+ * @returns Purchase list wrapper.
+ */
+  listPurchases?(params: overlays.ListPurchasesParams): Promise<overlays.ListPurchasesResult>
 /**
  * Fan out merchant, product, plans, and customer snapshots for the MCP widget.
  * @param params View, product ref, public base URL, and optional customer ref.

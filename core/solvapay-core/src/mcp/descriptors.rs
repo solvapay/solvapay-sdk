@@ -5,22 +5,21 @@
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use super::tool_names::{MCP_TOOL_NAMES, TOOL_FOR_VIEW};
+use super::tool_names::{MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME};
 
 /// Frozen validation message for non-http(s) `publicBaseUrl`.
 pub const PUBLIC_BASE_URL_ERROR: &str =
     "buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`).";
 
 /// Prefix stamped on UI-only transport tool descriptions.
-const UI_ONLY_PREFIX: &str =
-    "UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. ";
+const UI_ONLY_PREFIX: &str = "UI-only; agents should prefer `account` / `activate_plan`. ";
 
-/// Trailing mode hint appended to intent-tool / activate_plan descriptions.
-const MODE_HINT: &str =
-    " By default (`mode: 'auto'`) returns a markdown summary with plan refs and a checkout URL and still opens the UI iframe on hosts that support it; pass `mode: 'text'` for markdown only, or `mode: 'ui'` for the iframe plus a one-line placeholder.";
+/// Viewer description (byte-exact with origin/dev `VIEWER_DESCRIPTION`).
+const VIEWER_DESCRIPTION: &str =
+    "Call when the user says \"upgrade\", \"change plan\", \"buy\", \"subscribe\", \"my account\", \"current plan\", \"cancel\", \"billing\", \"top up\", \"add credits\", or \"buy credits\". Opens the SolvaPay billing surface. Pass `view` to pick the landing screen; omit it to let the server pick (no plan → checkout, out of credits → topup, else account). Read-only snapshot — charges happen after the customer confirms. Always include the Manage and Checkout markdown links from the tool result in your reply to the user. To change something, call this tool again with `view`: `account` (manage or cancel), `topup` (add credits), or `checkout` (change plan).";
 
 /// Default enabled views when the caller omits `views`.
-const DEFAULT_VIEWS: &[&str] = &["checkout", "account", "topup"];
+const DEFAULT_VIEWS: &[&str] = &["checkout", "account", "topup", "auto-recharge"];
 
 /// Merchant branding input for icon projection.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -203,13 +202,19 @@ fn tool_meta(resource_uri: &str) -> Value {
     json!({ "ui": { "resourceUri": resource_uri } })
 }
 
-/// Transport-tool meta (`ui.visibility`, `audience`, `openai/widgetAccessible`).
+/// Transport-tool meta (`ui.visibility`, `audience`, ChatGPT visibility).
 fn ui_tool_meta(resource_uri: &str) -> Value {
     json!({
         "ui": { "resourceUri": resource_uri, "visibility": ["app"] },
         "audience": "ui",
-        "openai/widgetAccessible": true
+        "openai/widgetAccessible": true,
+        "openai/visibility": "private"
     })
+}
+
+/// Dual-audience mutator meta — iframe-callable, no widget resource.
+fn activate_plan_meta() -> Value {
+    json!({ "openai/widgetAccessible": true })
 }
 
 /// Look up a snake_case tool name by its camelCase `MCP_TOOL_NAMES` key.
@@ -259,37 +264,16 @@ pub fn build_tool_descriptor_metadata(
         tools.push(meta);
     };
 
-    for (view, tool_name) in TOOL_FOR_VIEW {
-        if !view_enabled(&views, view) {
-            continue;
-        }
-        let (title, description) = match *view {
-            "checkout" => (
-                "Upgrade plan",
-                format!(
-                    "Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. This tool only returns a read-only snapshot or opens the UI — actual charges happen later in the embedded checkout after the customer confirms. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).{MODE_HINT}"
-                ),
-            ),
-            "account" => (
-                "Manage account",
-                format!(
-                    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits).{MODE_HINT}"
-                ),
-            ),
-            "topup" => (
-                "Top up credits",
-                format!(
-                    "Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. This tool only returns a read-only snapshot or opens the UI — credits are not charged until the customer confirms payment in the embedded flow. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).{MODE_HINT}"
-                ),
-            ),
-            _ => continue,
-        };
+    if views
+        .iter()
+        .any(|view| DEFAULT_VIEWS.contains(&view.as_str()))
+    {
         push(
             &mut tools,
             ToolDescriptorMetadata {
-                name: (*tool_name).to_owned(),
-                title: Some(title.to_owned()),
-                description,
+                name: VIEWER_TOOL_NAME.to_owned(),
+                title: Some("Account".to_owned()),
+                description: VIEWER_DESCRIPTION.to_owned(),
                 annotations: intent_annotations(),
                 meta: tool_meta(resource_uri),
                 icons: None,
@@ -299,14 +283,14 @@ pub fn build_tool_descriptor_metadata(
 
     let transport: &[(&str, &str, ToolAnnotations)] = &[
         (
-            "createCheckoutSession",
-            "Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.",
-            solvapay_tool(None, None, None),
+            "createHostedSession",
+            "Create a SolvaPay hosted session and return its URL. Pass kind: \"checkout\" for a hosted checkout URL (fallback when Stripe Elements is blocked) or kind: \"portal\" for the customer portal URL.",
+            solvapay_tool(Some(false), Some(false), Some(true)),
         ),
         (
             "createPayment",
-            "Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.",
-            solvapay_tool(None, None, None),
+            "Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation).",
+            solvapay_tool(Some(false), Some(false), None),
         ),
         (
             "processPayment",
@@ -314,29 +298,19 @@ pub fn build_tool_descriptor_metadata(
             solvapay_tool(None, Some(true), None),
         ),
         (
-            "createCustomerSession",
-            "Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.",
-            solvapay_tool(Some(true), None, Some(true)),
-        ),
-        (
-            "createTopupPayment",
-            "Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.",
-            solvapay_tool(None, None, None),
-        ),
-        (
             "attachBusinessDetails",
             "Attach business purchase details to a payment intent and retrieve the computed tax breakdown.",
-            solvapay_tool(None, None, None),
+            solvapay_tool(Some(false), Some(false), Some(true)),
         ),
         (
-            "cancelRenewal",
-            "Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.",
+            "setRenewal",
+            "Toggle auto-renewal on an active purchase. Pass enabled: false to cancel (access continues until period end) or enabled: true to undo a pending cancellation.",
             solvapay_tool(None, Some(true), Some(true)),
         ),
         (
-            "reactivateRenewal",
-            "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
-            solvapay_tool(None, None, Some(true)),
+            "getHistory",
+            "Load product charge history and account-wide credit activity for the authenticated customer. Charges come from purchases for this product; credit activity is every credit event on the account.",
+            solvapay_tool(Some(true), None, Some(true)),
         ),
     ];
 
@@ -359,11 +333,9 @@ pub fn build_tool_descriptor_metadata(
         ToolDescriptorMetadata {
             name: require_tool_name("activatePlan"),
             title: Some("Activate plan".to_owned()),
-            description: format!(
-                "Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).{MODE_HINT}"
-            ),
-            annotations: solvapay_tool(None, None, None),
-            meta: tool_meta(resource_uri),
+            description: "Call when the user says \"activate\" and a specific `planRef` is known. Free plans activate immediately; usage-based plans activate when the balance covers usage; paid plans open checkout. Requires `planRef` — to list or pick a plan, call `account` with view: \"checkout\".".to_owned(),
+            annotations: solvapay_tool(Some(false), Some(false), Some(true)),
+            meta: activate_plan_meta(),
             icons: None,
         },
     );
@@ -390,14 +362,14 @@ pub fn build_prompt_descriptor_metadata(
 
     if view_enabled(&views, "checkout") {
         prompts.push(PromptDescriptorMetadata {
-            name: require_tool_name("upgrade"),
+            name: prompt_name("upgrade"),
             title: "Upgrade plan".to_owned(),
             description: "Start or change a paid plan for the current customer.".to_owned(),
         });
     }
     if view_enabled(&views, "account") {
         prompts.push(PromptDescriptorMetadata {
-            name: require_tool_name("manageAccount"),
+            name: prompt_name("manageAccount"),
             title: "Manage account".to_owned(),
             description:
                 "Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer."
@@ -406,18 +378,16 @@ pub fn build_prompt_descriptor_metadata(
     }
     if view_enabled(&views, "topup") {
         prompts.push(PromptDescriptorMetadata {
-            name: require_tool_name("topup"),
+            name: prompt_name("topup"),
             title: "Top up credits".to_owned(),
             description: "Add SolvaPay credits to the current customer.".to_owned(),
         });
     }
-    if view_enabled(&views, "checkout") {
-        prompts.push(PromptDescriptorMetadata {
-            name: require_tool_name("activatePlan"),
-            title: "Activate plan".to_owned(),
-            description: "Pick a plan to activate, or activate a specific plan by ref.".to_owned(),
-        });
-    }
+    prompts.push(PromptDescriptorMetadata {
+        name: prompt_name("activatePlan"),
+        title: "Activate plan".to_owned(),
+        description: "Activate a specific plan by ref, or list plans to pick from.".to_owned(),
+    });
 
     prompts
 }
@@ -456,20 +426,41 @@ fn prompt_user_message_text(prompt_name: &str, args: &Value) -> String {
 
     match prompt_name {
         "upgrade" => match plan_ref {
-            Some(r) => format!("Activate plan {r} for me."),
-            None => "Show me the upgrade options for my SolvaPay account.".to_owned(),
+            Some(r) => format!(
+                "Call the `{VIEWER_TOOL_NAME}` tool with view: \"checkout\", then activate plan {r}."
+            ),
+            None => format!(
+                "Call the `{VIEWER_TOOL_NAME}` tool with view: \"checkout\" to show upgrade options."
+            ),
         },
-        "manage_account" => "Show me my SolvaPay account.".to_owned(),
+        "manage_account" => format!(
+            "Call the `{VIEWER_TOOL_NAME}` tool with view: \"account\" to show my SolvaPay account."
+        ),
         "topup" => match amount {
-            Some(a) => format!("Top up my SolvaPay credits by {a}."),
-            None => "I want to top up my SolvaPay credits.".to_owned(),
+            Some(a) => format!(
+                "Call the `{VIEWER_TOOL_NAME}` tool with view: \"topup\" and top up my credits by {a}."
+            ),
+            None => format!(
+                "Call the `{VIEWER_TOOL_NAME}` tool with view: \"topup\" to add SolvaPay credits."
+            ),
         },
         "activate_plan" => match plan_ref {
-            Some(r) => format!("Activate plan {r} on my SolvaPay account."),
-            None => "What plans can I activate on my SolvaPay account?".to_owned(),
+            Some(r) => format!("Call the `activate_plan` tool with planRef {r}."),
+            None => format!(
+                "Call the `{VIEWER_TOOL_NAME}` tool with view: \"checkout\" to list plans I can activate."
+            ),
         },
         _ => String::new(),
     }
+}
+
+/// Look up a slash-prompt name by its camelCase `MCP_PROMPT_NAMES` key.
+fn prompt_name(camel_key: &str) -> String {
+    MCP_PROMPT_NAMES
+        .iter()
+        .find(|(k, _)| *k == camel_key)
+        .map(|(_, v)| (*v).to_owned())
+        .unwrap_or_else(|| camel_key.to_owned())
 }
 
 #[cfg(test)]
@@ -523,41 +514,43 @@ mod tests {
     }
 
     #[test]
-    fn default_tool_order_is_twelve() {
+    fn default_tool_order_is_eight() {
         let tools = build_tool_descriptor_metadata(&BuildToolDescriptorMetadataOptions {
             resource_uri: "ui://x".into(),
             ..Default::default()
         });
-        assert_eq!(tools.len(), 12);
-        assert_eq!(tools[0].name, "upgrade");
-        assert_eq!(tools[11].name, "activate_plan");
-        assert!(tools[0].description.contains(MODE_HINT.trim_start()));
-        assert!(tools[3].description.starts_with(UI_ONLY_PREFIX));
+        assert_eq!(tools.len(), 8);
+        assert_eq!(tools[0].name, "account");
+        assert_eq!(tools[1].name, "create_hosted_session");
+        assert_eq!(tools[7].name, "activate_plan");
+        assert!(tools[1].description.starts_with(UI_ONLY_PREFIX));
+        assert_eq!(tools[1].meta["openai/visibility"], json!("private"));
+        assert!(tools[7].meta.get("ui").is_none());
     }
 
     #[test]
-    fn views_empty_drops_intent_keeps_transport() {
+    fn views_empty_drops_viewer_keeps_transport() {
         let tools = build_tool_descriptor_metadata(&BuildToolDescriptorMetadataOptions {
             resource_uri: "ui://x".into(),
             views: Some(vec![]),
             ..Default::default()
         });
-        assert_eq!(tools.len(), 9);
-        assert_eq!(tools[0].name, "create_checkout_session");
-        assert_eq!(tools[8].name, "activate_plan");
+        assert_eq!(tools.len(), 7);
+        assert_eq!(tools[0].name, "create_hosted_session");
+        assert_eq!(tools[6].name, "activate_plan");
     }
 
     #[test]
-    fn prompt_messages_byte_exact() {
+    fn prompt_messages_remap_onto_account() {
         let with_arg = build_prompt_user_message("upgrade", &json!({ "planRef": "pln_pro" }));
         assert_eq!(
             with_arg.messages[0].content.text,
-            "Activate plan pln_pro for me."
+            "Call the `account` tool with view: \"checkout\", then activate plan pln_pro."
         );
         let without = build_prompt_user_message("topup", &json!({}));
         assert_eq!(
             without.messages[0].content.text,
-            "I want to top up my SolvaPay credits."
+            "Call the `account` tool with view: \"topup\" to add SolvaPay credits."
         );
     }
 
@@ -566,8 +559,9 @@ mod tests {
         let prompts = build_prompt_descriptor_metadata(&BuildPromptDescriptorMetadataOptions {
             views: Some(vec!["account".into(), "topup".into()]),
         });
-        assert_eq!(prompts.len(), 2);
+        assert_eq!(prompts.len(), 3);
         assert_eq!(prompts[0].name, "manage_account");
         assert_eq!(prompts[1].name, "topup");
+        assert_eq!(prompts[2].name, "activate_plan");
     }
 }

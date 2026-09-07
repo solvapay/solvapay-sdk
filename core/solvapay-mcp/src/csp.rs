@@ -23,6 +23,7 @@ fn default_csp() -> SolvaPayMcpCsp {
             "https://js.stripe.com".to_owned(),
             "https://*.stripe.com".to_owned(),
             "https://b.stripecdn.com".to_owned(),
+            "https://assets.claude.ai".to_owned(),
         ],
         connect_domains: vec![
             "https://api.stripe.com".to_owned(),

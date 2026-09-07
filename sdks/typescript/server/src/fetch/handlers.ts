@@ -43,6 +43,7 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   getCustomerBalanceCore,
+  getHistoryCore,
   disableAutoRechargeCore,
   getAutoRechargeCore,
   getMerchantCore,
@@ -251,6 +252,35 @@ export async function createCustomerSession(req: Request): Promise<Response> {
   if (corsResponse) return corsResponse
 
   const result = await createCustomerSessionCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getHistory(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const url = new URL(req.url)
+  const body = req.method === 'GET' ? {} : await parseJsonBody(req)
+  const productRef =
+    (typeof body.productRef === 'string' && body.productRef) ||
+    url.searchParams.get('productRef') ||
+    ''
+  const limitRaw = body.limit ?? url.searchParams.get('limit')
+  const limit =
+    typeof limitRaw === 'number'
+      ? limitRaw
+      : typeof limitRaw === 'string' && limitRaw.length > 0
+        ? Number(limitRaw)
+        : undefined
+  const result = await getHistoryCore(req, {
+    productRef,
+    ...(limit !== undefined && Number.isFinite(limit) ? { limit } : {}),
+  })
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

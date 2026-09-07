@@ -116,9 +116,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
   // Goes through `resource_domains` because `img-src` / `style-src`
   // live there; `connect_domains` would only help for `fetch()` /
   // `XHR`, not `<img>` tags.
-  const resourceDomains = Array.from(
-    new Set([solvapayApiOrigin, ...mcpAssetOrigins]),
-  )
+  const resourceDomains = Array.from(new Set([solvapayApiOrigin, ...mcpAssetOrigins]))
 
   const server = createSolvaPayMcpServer({
     solvaPay,
@@ -131,8 +129,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       resourceDomains,
     },
     branding,
-    hideToolsByAudience:
-      process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
+    hideToolsByAudience: process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
     additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
     onToolCall: (name, args) => {
       if (process.env.SOLVAPAY_DEBUG === 'true') {

@@ -14,7 +14,8 @@
       "success": true,
       "data": {
         "isBusiness": true,
-        "country": "US"
+        "country": "US",
+        "customerCountry": "US"
       }
     }
   }

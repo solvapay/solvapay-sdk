@@ -18,6 +18,11 @@
         "name": "topup",
         "title": "Top up credits",
         "description": "Add SolvaPay credits to the current customer."
+      },
+      {
+        "name": "activate_plan",
+        "title": "Activate plan",
+        "description": "Activate a specific plan by ref, or list plans to pick from."
       }
     ]
   }

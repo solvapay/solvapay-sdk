@@ -162,6 +162,8 @@ export const BusinessDetailsSchema = z.object({
   country: z.string().optional(),
   customerCountry: z.string().optional(),
   customerName: z.string().max(100).optional(),
+  customerState: z.string().optional(),
+  customerPostalCode: z.string().optional(),
   taxId: z.string().optional(),
   taxIdType: z.enum(TAX_ID_TYPES).optional(),
 })

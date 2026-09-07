@@ -1014,9 +1014,6 @@ requireProductRef:
       extract: optionalString
       local: env_product
 resolveAuthenticatedUser:
-  tsWrapper:
-    dispatchArgs: |-
-      input
   args:
     - name: input
       type: value

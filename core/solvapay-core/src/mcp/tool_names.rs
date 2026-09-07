@@ -6,35 +6,40 @@
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-/// CamelCase key → snake_case tool-name value (12 entries).
+/// Canonical viewer tool (checkout / account / topup / auto-recharge).
+pub const VIEWER_TOOL_NAME: &str = "account";
+
+/// CamelCase key → snake_case tool-name value (8 entries).
 pub const MCP_TOOL_NAMES: &[(&str, &str)] = &[
     ("createPayment", "create_payment_intent"),
     ("processPayment", "process_payment"),
-    ("createTopupPayment", "create_topup_payment_intent"),
-    ("cancelRenewal", "cancel_renewal"),
-    ("reactivateRenewal", "reactivate_renewal"),
+    ("createHostedSession", "create_hosted_session"),
+    ("setRenewal", "set_renewal"),
     ("activatePlan", "activate_plan"),
-    ("createCheckoutSession", "create_checkout_session"),
-    ("createCustomerSession", "create_customer_session"),
     ("attachBusinessDetails", "attach_business_details"),
+    ("getHistory", "get_history"),
+    ("account", VIEWER_TOOL_NAME),
+];
+
+/// Slash-command prompt names. Independent of the tool catalogue.
+pub const MCP_PROMPT_NAMES: &[(&str, &str)] = &[
     ("upgrade", "upgrade"),
     ("manageAccount", "manage_account"),
     ("topup", "topup"),
+    ("activatePlan", "activate_plan"),
 ];
 
-/// View → intent-tool map (`TOOL_FOR_VIEW`).
+/// View → intent-tool map (`TOOL_FOR_VIEW`). Every surface lands on `account`.
 pub const TOOL_FOR_VIEW: &[(&str, &str)] = &[
-    ("checkout", "upgrade"),
-    ("account", "manage_account"),
-    ("topup", "topup"),
+    ("checkout", VIEWER_TOOL_NAME),
+    ("account", VIEWER_TOOL_NAME),
+    ("topup", VIEWER_TOOL_NAME),
+    ("auto-recharge", VIEWER_TOOL_NAME),
 ];
 
-/// Intent-tool → view map (`VIEW_FOR_TOOL`).
-pub const VIEW_FOR_TOOL: &[(&str, &str)] = &[
-    ("upgrade", "checkout"),
-    ("manage_account", "account"),
-    ("topup", "topup"),
-];
+/// Intent-tool → view map (`VIEW_FOR_TOOL`). The viewer cannot recover the
+/// landing view from the name alone — default to `account`.
+pub const VIEW_FOR_TOOL: &[(&str, &str)] = &[(VIEWER_TOOL_NAME, "account")];
 
 /// JSON object for the `MCP_TOOL_NAMES` fixture binding.
 #[must_use]
@@ -100,22 +105,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tool_names_has_twelve_entries() {
-        assert_eq!(MCP_TOOL_NAMES.len(), 12);
+    fn tool_names_has_eight_entries() {
+        assert_eq!(MCP_TOOL_NAMES.len(), 8);
         let json = mcp_tool_names_json();
-        assert_eq!(json.as_object().unwrap().len(), 12);
+        assert_eq!(json.as_object().unwrap().len(), 8);
         assert_eq!(json["createPayment"], "create_payment_intent");
-        assert_eq!(json["upgrade"], "upgrade");
+        assert_eq!(json["account"], "account");
+        assert_eq!(json["createHostedSession"], "create_hosted_session");
+        assert_eq!(json["getHistory"], "get_history");
     }
 
     #[test]
-    fn view_maps_invert() {
+    fn view_maps_collapse_onto_account() {
         let maps = mcp_view_maps();
-        assert_eq!(maps.tool_for_view["checkout"], "upgrade");
-        assert_eq!(maps.view_for_tool["upgrade"], "checkout");
-        assert_eq!(maps.tool_for_view["account"], "manage_account");
-        assert_eq!(maps.view_for_tool["manage_account"], "account");
-        assert_eq!(maps.tool_for_view["topup"], "topup");
-        assert_eq!(maps.view_for_tool["topup"], "topup");
+        assert_eq!(maps.tool_for_view["checkout"], "account");
+        assert_eq!(maps.tool_for_view["account"], "account");
+        assert_eq!(maps.tool_for_view["topup"], "account");
+        assert_eq!(maps.tool_for_view["auto-recharge"], "account");
+        assert_eq!(maps.view_for_tool["account"], "account");
     }
 }

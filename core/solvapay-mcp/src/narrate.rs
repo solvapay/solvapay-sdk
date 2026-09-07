@@ -414,6 +414,27 @@ pub fn narrate_upgrade(data: &Value) -> Value {
     narrator_output(lines.join("\n"), recovery_links(data))
 }
 
+/// Narrate the auto-recharge viewer.
+#[must_use]
+pub fn narrate_auto_recharge(data: &Value) -> Value {
+    let mut lines = vec![
+        format!("**Auto-recharge — {}**", product_name(data)),
+        String::new(),
+    ];
+    if let Some(bal) = balance_row(data.get("customer")) {
+        lines.push(bal);
+    }
+    lines.push(
+        "Tops your balance up automatically so calls do not fail. Nothing is charged today."
+            .to_owned(),
+    );
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
+    }
+    lines.push(docs_line());
+    narrator_output(lines.join("\n"), recovery_links(data))
+}
+
 /// Narrate `topup`.
 #[must_use]
 pub fn narrate_topup(data: &Value) -> Value {
@@ -468,29 +489,46 @@ pub fn narrate_activate_plan(data: &Value) -> Value {
     narrator_output(lines.join("\n"), recovery_links(data))
 }
 
-fn opened_verb(tool: &str, name: &str) -> String {
-    match tool {
+fn opened_verb(view: &str, name: &str) -> String {
+    match view {
         "topup" => format!("Opened {name} top-up."),
-        "upgrade" => format!("Opened {name} upgrade."),
-        "manage_account" => format!("Opened your {name} account."),
+        "upgrade" | "checkout" => format!("Opened {name} upgrade."),
+        "auto-recharge" => format!("Opened {name} auto-recharge."),
+        "manage_account" | "account" => format!("Opened your {name} account."),
         "activate_plan" => format!("Opened {name} plan picker."),
         _ => format!("Opened {name}."),
     }
 }
 
+fn first_selectable_plan(data: &Value) -> Option<&Value> {
+    let plans = data.get("plans").and_then(Value::as_array)?;
+    plans
+        .iter()
+        .find(|plan| !is_free_plan(plan))
+        .or_else(|| plans.first())
+}
+
+fn plan_for_placeholder<'a>(view: &str, data: &'a Value) -> Option<&'a Value> {
+    if view == "account" || view == "manage_account" {
+        if let Some(snap) = active_purchase(data.get("customer"))
+            .and_then(|purchase| purchase.get("planSnapshot"))
+            .filter(|snap| !snap.is_null())
+        {
+            return Some(snap);
+        }
+    }
+    first_selectable_plan(data)
+}
+
 /// One-line UI placeholder with plan, price, and checkout URL.
 #[must_use]
-pub fn ui_placeholder(tool: &str, data: &Value) -> String {
+pub fn ui_placeholder(view: &str, data: &Value) -> String {
     let name = product_name(data);
-    let mut parts = vec![opened_verb(tool, &name)];
-    if let Some(plan) = data
-        .get("plans")
-        .and_then(Value::as_array)
-        .and_then(|plans| plans.first())
-    {
+    let mut parts = vec![opened_verb(view, &name)];
+    if let Some(plan) = plan_for_placeholder(view, data) {
         let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
         let price = format_plan_prices(plan);
-        if price.is_empty() {
+        if price.is_empty() || is_free_plan(plan) {
             parts.push(format!("{plan_name}."));
         } else {
             parts.push(format!("{plan_name} · {price}."));
@@ -507,10 +545,11 @@ pub fn ui_placeholder(tool: &str, data: &Value) -> String {
     parts.join(" ")
 }
 
-fn narrator_for(tool: &str, data: &Value) -> Option<Value> {
-    match tool {
-        "upgrade" => Some(narrate_upgrade(data)),
-        "manage_account" => Some(narrate_manage_account(data)),
+fn narrator_for(view: &str, data: &Value) -> Option<Value> {
+    match view {
+        "upgrade" | "checkout" => Some(narrate_upgrade(data)),
+        "manage_account" | "account" => Some(narrate_manage_account(data)),
+        "auto-recharge" => Some(narrate_auto_recharge(data)),
         "topup" => Some(narrate_topup(data)),
         "activate_plan" => Some(narrate_activate_plan(data)),
         "virtual_upgrade" => Some(narrate_virtual_upgrade(data)),
@@ -657,13 +696,12 @@ pub fn narrated_tool_result(
         "type": "text",
         "text": ui_placeholder(tool, data),
     });
-    let content = if mode == "ui" {
+    let mut content = if mode == "ui" {
         vec![placeholder_block, narrated_block]
     } else {
-        let mut blocks = vec![narrated_block];
-        blocks.extend(resource_links);
-        blocks
+        vec![narrated_block]
     };
+    content.extend(resource_links);
     let meta = if mode == "text" {
         strip_ui_meta(base_meta)
     } else {

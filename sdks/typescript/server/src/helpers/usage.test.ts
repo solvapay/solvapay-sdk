@@ -81,7 +81,12 @@ describe('getUsageCore', () => {
         },
       ],
     })
-    mockCheckLimits.mockResolvedValue({ meterName: 'mtr_requests', remaining: 75 })
+    mockCheckLimits.mockResolvedValue({
+      meterName: 'mtr_requests',
+      remaining: 75,
+      limit: 100,
+      used: 25,
+    })
 
     const result = await getUsageCore(fakeRequest())
 
@@ -125,7 +130,7 @@ describe('getUsageCore', () => {
         },
       ],
     })
-    mockCheckLimits.mockResolvedValue({ meterName: 'tokens', remaining: 2 })
+    mockCheckLimits.mockResolvedValue({ meterName: 'tokens', remaining: 2, limit: 3, used: 1 })
 
     const result = await getUsageCore(fakeRequest())
 
@@ -182,7 +187,12 @@ describe('getUsageCore', () => {
         },
       ],
     })
-    mockCheckLimits.mockResolvedValue({ meterName: 'mtr_requests', remaining: 0 })
+    mockCheckLimits.mockResolvedValue({
+      meterName: 'mtr_requests',
+      remaining: 0,
+      limit: 50,
+      used: 50,
+    })
 
     const result = await getUsageCore(fakeRequest())
 

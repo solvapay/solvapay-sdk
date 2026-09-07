@@ -10,14 +10,14 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
       "event": {
         "kind": "handlerSucceeded",
         "durationMs": 40,
-        "nowMs": 1040,
-        "randomUnit": 0.5
+        "nowMs": 1040
       }
     }
   },
@@ -29,6 +29,7 @@
         "originalCustomerRef": "cus_abc",
         "backendRef": "cus_abc",
         "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
         "limitsCacheTTLMs": 10000
       },
@@ -41,9 +42,10 @@
           "outcome": "success",
           "productRef": "prd_1",
           "duration": 40,
+          "idempotencyKey": "solvapay_1000_i:success",
           "metadata": {
             "action": "requests",
-            "requestId": "solvapay_1040_i"
+            "requestId": "solvapay_1000_i"
           },
           "timestamp": "1970-01-01T00:00:01.040Z"
         }

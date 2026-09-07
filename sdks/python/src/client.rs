@@ -17,10 +17,11 @@ use solvapay_dto::{
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
     CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
     CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCustomerBalanceParams, GetCustomerParams,
-    GetPaymentMethodParams, GetUserInfoParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
-    UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
+    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
+    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
+    UpdatePlanRequest, UpdateProductRequest,
 };
 use solvapay_transport::{
     mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient as CoreClient,
@@ -1312,6 +1313,39 @@ impl SolvaPayClient {
         })
     }
 
+    /// `GET /v1/sdk/purchases`
+    fn list_purchases<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: ListPurchasesParams = parse_args_json(&args_json)?;
+                    client.list_purchases(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::list_purchases`] (interpreter detached while awaiting).
+    #[pyo3(name = "list_purchases_blocking")]
+    fn list_purchases_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: ListPurchasesParams = parse_args_json(&args_json)?;
+                    client.list_purchases(params).await
+                })
+                .await
+            })
+        })
+    }
+
     // --- MCP composite ---
 
     /// `mcpBootstrap`
@@ -1348,6 +1382,43 @@ impl SolvaPayClient {
             })
         })
     }
+
+    // --- Group C ---
+
+    /// `GET /v1/sdk/credits/activity`
+    fn get_credit_activity<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+                    client.get_credit_activity(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::get_credit_activity`] (interpreter detached while awaiting).
+    #[pyo3(name = "get_credit_activity_blocking")]
+    fn get_credit_activity_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: GetCreditActivityParams = parse_args_json(&args_json)?;
+                    client.get_credit_activity(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    // --- MCP composite ---
 
     /// `mcpCallBuiltinTool`
     fn mcp_call_builtin_tool<'py>(

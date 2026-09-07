@@ -1908,42 +1908,12 @@
                               "downgrade"
                             ],
                             "type": "string"
-                          },
-                          "requireCard": {
-                            "type": "boolean"
                           }
                         },
                         "required": [
                           "kind",
                           "days",
                           "onEnd"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "prepaid"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "lowBalanceUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "minTopUpMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        },
-                        "required": [
-                          "kind"
                         ],
                         "type": "object"
                       },
@@ -2646,42 +2616,12 @@
                               "downgrade"
                             ],
                             "type": "string"
-                          },
-                          "requireCard": {
-                            "type": "boolean"
                           }
                         },
                         "required": [
                           "kind",
                           "days",
                           "onEnd"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "prepaid"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "lowBalanceUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "minTopUpMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        },
-                        "required": [
-                          "kind"
                         ],
                         "type": "object"
                       },
@@ -3320,42 +3260,12 @@
                         "downgrade"
                       ],
                       "type": "string"
-                    },
-                    "requireCard": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
                     "kind",
                     "days",
                     "onEnd"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "kind": {
-                      "enum": [
-                        "prepaid"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "lowBalanceUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "minTopUpMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "kind"
                   ],
                   "type": "object"
                 },
@@ -3958,6 +3868,75 @@
         },
         "required": [
           "url"
+        ],
+        "type": "object"
+      },
+      "CreditActivityEntryDto": {
+        "properties": {
+          "amount": {
+            "description": "Signed credit units on the USD peg (100 credits = 1 USD cent)",
+            "example": -200,
+            "type": "number"
+          },
+          "balance": {
+            "description": "Running credit balance after this event",
+            "example": 599800,
+            "type": "number"
+          },
+          "productName": {
+            "description": "Product display name when the event is product-scoped",
+            "type": "string"
+          },
+          "productRef": {
+            "description": "Product reference when the event is product-scoped",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Machine-readable reason when the ledger stored one",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO-8601 timestamp",
+            "example": "2026-09-05T14:22:00.000Z",
+            "type": "string"
+          },
+          "type": {
+            "description": "Ledger event type",
+            "enum": [
+              "USAGE",
+              "TOPUP",
+              "GRANT",
+              "REFUND",
+              "ADJUSTMENT"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "amount",
+          "balance",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "CreditActivityResponseDto": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/CreditActivityEntryDto"
+            },
+            "type": "array"
+          },
+          "hasMore": {
+            "description": "True when more events exist beyond this page",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entries",
+          "hasMore"
         ],
         "type": "object"
       },
@@ -4727,42 +4706,12 @@
                               "downgrade"
                             ],
                             "type": "string"
-                          },
-                          "requireCard": {
-                            "type": "boolean"
                           }
                         },
                         "required": [
                           "kind",
                           "days",
                           "onEnd"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "prepaid"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "lowBalanceUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "minTopUpMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        },
-                        "required": [
-                          "kind"
                         ],
                         "type": "object"
                       },
@@ -5409,6 +5358,10 @@
             "description": "ISO 4217 currency code for credit fields",
             "type": "string"
           },
+          "limit": {
+            "description": "The effective finite cap for this meter. Present only when the backend measured a finite cap.",
+            "type": "number"
+          },
           "meterName": {
             "description": "The meter name to use when tracking usage events",
             "example": "requests",
@@ -5453,6 +5406,10 @@
           "upgraded": {
             "description": "The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded.",
             "type": "boolean"
+          },
+          "used": {
+            "description": "Consumed usage units this period. Present only when the backend measured a finite cap.",
+            "type": "number"
           },
           "withinLimits": {
             "description": "Whether the customer is within their usage limits",
@@ -5795,42 +5752,12 @@
                               "downgrade"
                             ],
                             "type": "string"
-                          },
-                          "requireCard": {
-                            "type": "boolean"
                           }
                         },
                         "required": [
                           "kind",
                           "days",
                           "onEnd"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "kind": {
-                            "enum": [
-                              "prepaid"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "lowBalanceUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "minTopUpMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          }
-                        },
-                        "required": [
-                          "kind"
                         ],
                         "type": "object"
                       },
@@ -6991,42 +6918,12 @@
                             "downgrade"
                           ],
                           "type": "string"
-                        },
-                        "requireCard": {
-                          "type": "boolean"
                         }
                       },
                       "required": [
                         "kind",
                         "days",
                         "onEnd"
-                      ],
-                      "type": "object"
-                    },
-                    {
-                      "properties": {
-                        "kind": {
-                          "enum": [
-                            "prepaid"
-                          ],
-                          "type": "string"
-                        },
-                        "label": {
-                          "type": "string"
-                        },
-                        "lowBalanceUnits": {
-                          "exclusiveMinimum": false,
-                          "minimum": 0,
-                          "type": "integer"
-                        },
-                        "minTopUpMinor": {
-                          "exclusiveMinimum": false,
-                          "minimum": 0,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "kind"
                       ],
                       "type": "object"
                     },
@@ -8523,6 +8420,11 @@
       },
       "SdkMerchantResponseDto": {
         "properties": {
+          "city": {
+            "description": "City from the legal entity address",
+            "example": "London",
+            "type": "string"
+          },
           "companyNumber": {
             "description": "Company registration number (EIN, Companies House No, Org No)",
             "example": "HRB12345",
@@ -8562,6 +8464,11 @@
             "example": "https://acme.com/privacy",
             "type": "string"
           },
+          "stateOrCounty": {
+            "description": "State, county, or region from the legal entity address. Free text — values like \"Greater London\" are valid.",
+            "example": "Greater London",
+            "type": "string"
+          },
           "statementDescriptor": {
             "description": "Descriptor appearing on the customer card statement",
             "example": "ACME INC",
@@ -8599,6 +8506,11 @@
           "vatNumber": {
             "description": "VAT identification number (UK/EU)",
             "example": "DE123456789",
+            "type": "string"
+          },
+          "websiteUrl": {
+            "description": "Merchant public website. Distinct from supportUrl so the same URL is not emitted twice.",
+            "example": "https://acme.com",
             "type": "string"
           }
         },
@@ -10794,42 +10706,12 @@
                         "downgrade"
                       ],
                       "type": "string"
-                    },
-                    "requireCard": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
                     "kind",
                     "days",
                     "onEnd"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "kind": {
-                      "enum": [
-                        "prepaid"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "lowBalanceUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "minTopUpMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "kind"
                   ],
                   "type": "object"
                 },
@@ -11405,6 +11287,12 @@
           "metadata": {
             "additionalProperties": {},
             "type": "object"
+          },
+          "minTopUpMinor": {
+            "exclusiveMinimum": false,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
           },
           "supportEmail": {
             "format": "email",
@@ -12599,6 +12487,57 @@
         ]
       }
     },
+    "/v1/sdk/credits/activity": {
+      "get": {
+        "description": "Every credit event on the customer account, newest first, including other products and top-ups. Credits are shared, so the balance only makes sense account-wide.",
+        "operationId": "CreditActivitySdkController_getActivity",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "customerRef",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditActivityResponseDto"
+                }
+              }
+            },
+            "description": "Account-wide credit ledger page."
+          },
+          "400": {
+            "description": "customerRef is required, or limit is invalid"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        },
+        "security": [
+          {
+            "SecretKey": []
+          }
+        ],
+        "summary": "List account-wide credit activity for a customer",
+        "tags": [
+          "Credits"
+        ]
+      }
+    },
     "/v1/sdk/customers": {
       "get": {
         "description": "Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.",
@@ -13731,6 +13670,10 @@
                         "last4": {
                           "example": "4242",
                           "type": "string"
+                        },
+                        "reusable": {
+                          "example": true,
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -13738,7 +13681,8 @@
                         "brand",
                         "last4",
                         "expMonth",
-                        "expYear"
+                        "expYear",
+                        "reusable"
                       ],
                       "type": "object"
                     },

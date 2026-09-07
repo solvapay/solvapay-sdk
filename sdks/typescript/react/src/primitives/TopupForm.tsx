@@ -45,7 +45,7 @@ import { MissingProviderError } from '../utils/errors'
 import { type BusinessDetailsInput, type TaxBreakdown } from '@solvapay/core'
 import type { TopupFormProps } from '../types'
 import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
-import { useBusinessDetailsAttach, defaultBusinessDetails } from '../hooks/useBusinessDetailsAttach'
+import { useBusinessDetailsAttach } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
   createTaxSummaryParts,
@@ -173,6 +173,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const canMountElements = !!(stripePromise && clientSecret && elementsOptions)
 
+  const businessAttach = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+  })
+
   const innerCommon = {
     amount,
     currency,
@@ -183,10 +190,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     state: dataState,
     onSuccess,
     onError,
-    onTaxChange,
     processTopupPayment,
-    attachBusinessDetails,
-    customerRef,
+    businessAttach,
   }
 
   const shell = (
@@ -222,7 +227,7 @@ type InnerProps = {
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
-  onTaxChange?: TopupFormProps['onTaxChange']
+  businessAttach: ReturnType<typeof useBusinessDetailsAttach>
   /**
    * Provider-side backend confirmation hook. When present, `submit`
    * awaits it before firing `onSuccess` so the customer is fully
@@ -246,16 +251,6 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
-  attachBusinessDetails?: (params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }) => Promise<{ taxBreakdown: TaxBreakdown }>
-  customerRef?: string
   children?: React.ReactNode
 }
 
@@ -269,10 +264,8 @@ const Inner: React.FC<InnerProps> = ({
   state,
   onSuccess,
   onError,
-  onTaxChange,
   processTopupPayment,
-  attachBusinessDetails,
-  customerRef,
+  businessAttach,
   children,
 }) => {
   const stripe = useStripe()
@@ -376,12 +369,7 @@ const Inner: React.FC<InnerProps> = ({
     businessDetailsError,
     requiresBusinessAttach,
     runAttach,
-  } = useBusinessDetailsAttach({
-    processorPaymentId,
-    attachBusinessDetails,
-    customerRef,
-    onTaxChange,
-  })
+  } = businessAttach
 
   const isReady = !!(stripe && elements)
   const canSubmit =
@@ -548,11 +536,11 @@ const OfflineInner: React.FC<InnerProps> = ({
   returnUrl,
   outerError,
   state,
+  businessAttach,
   children,
 }) => {
   const noopSubmit = useCallback(async () => {}, [])
   const noopSet = useCallback(() => {}, [])
-  const noopBusinessSet = useCallback(() => {}, [])
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
       amount,
@@ -568,13 +556,13 @@ const OfflineInner: React.FC<InnerProps> = ({
       canSubmit: false,
       error: outerError,
       returnUrl,
-      businessDetails: defaultBusinessDetails,
-      taxBreakdown: null,
-      businessDetailsAttached: false,
-      businessDetailsAttaching: false,
-      businessDetailsError: null,
-      fieldErrors: {},
-      setBusinessDetails: noopBusinessSet,
+      businessDetails: businessAttach.businessDetails,
+      taxBreakdown: businessAttach.taxBreakdown,
+      businessDetailsAttached: businessAttach.businessDetailsAttached,
+      businessDetailsAttaching: businessAttach.businessDetailsAttaching,
+      businessDetailsError: businessAttach.businessDetailsError,
+      fieldErrors: businessAttach.fieldErrors,
+      setBusinessDetails: businessAttach.setBusinessDetails,
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
@@ -586,9 +574,9 @@ const OfflineInner: React.FC<InnerProps> = ({
       processorPaymentId,
       outerError,
       returnUrl,
+      businessAttach,
       noopSet,
       noopSubmit,
-      noopBusinessSet,
     ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>

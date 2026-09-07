@@ -1,0 +1,47 @@
+{
+  "suite": "builtin-tools",
+  "case": "set_renewal_reactivate",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "set_renewal",
+      "args": {
+        "purchaseRef": "pur_1",
+        "enabled": true
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/pur_1/reactivate",
+      "status": 200,
+      "body": {
+        "reference": "pur_1",
+        "status": "active",
+        "cancelledAt": null
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"reference\":\"pur_1\",\"status\":\"active\",\"cancelledAt\":null}"
+        }
+      ],
+      "structuredContent": {
+        "reference": "pur_1",
+        "status": "active",
+        "cancelledAt": null
+      }
+    }
+  }
+}

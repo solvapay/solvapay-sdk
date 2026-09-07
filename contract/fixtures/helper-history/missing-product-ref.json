@@ -1,0 +1,20 @@
+{
+  "suite": "helper-history",
+  "case": "missing-product-ref",
+  "input": {
+    "fn": "getHistoryNext",
+    "args": {
+      "state": null,
+      "event": {
+        "kind": "start",
+        "customerRef": "cus_123"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "getHistory requires productRef",
+      "status": 400
+    }
+  }
+}

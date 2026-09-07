@@ -114,6 +114,16 @@ SCENARIOS: list[Scenario] = [
     Scenario("assignCredits", "assignCredits", {"customerRef": "{customerRef}", "credits": 25}),
     Scenario("getCustomerBalance", "getCustomerBalance", {"customerRef": "{customerRef}"}),
     Scenario(
+        "listPurchases",
+        "listPurchases",
+        {"customerRef": "{customerRef}", "productRef": "{productRef}"},
+    ),
+    Scenario(
+        "getCreditActivity",
+        "getCreditActivity",
+        {"customerRef": "{customerRef}", "productRef": "{productRef}"},
+    ),
+    Scenario(
         "getUserInfo",
         "getUserInfo",
         {"customerRef": "{customerRef}", "productRef": "{productRef}"},
