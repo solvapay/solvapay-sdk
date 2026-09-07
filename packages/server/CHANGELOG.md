@@ -1,5 +1,24 @@
 # @solvapay/server changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- f994f1a: MCP server contract and paywall hardening for the account widget release.
+
+  Seed bootstrap `limits` on the MCP bootstrap payload so clients can render remaining allowance without a second `checkLimits` call. Add `getCreditActivity` / fetch handler for account-wide credit ledger rows. Expose `reusable` on the payment-method contract so clients can tell a chargeable saved card from a one-off card on file.
+
+  Paywall: put measured `used`/`limit` on `LimitResponse` when the backend measured a finite cap; coalesce concurrent `checkLimits` calls; send `idempotencyKey` on `trackUsage` from the `decide()` request id so retries do not double-count. Record `toolName` on usage events when the payable handler knows it.
+
+  Accept `customerCountry`, `customerState`, and `customerPostalCode` on attach/confirm so the MCP widget owns billing country instead of Stripe PaymentElement.
+
+- 5d37370: Make MCP gate and intent-tool results usable on text-only hosts. Default `mode` is `auto`, the paywall gate names included usage and a pasteable https checkout URL, and narrators emit plan refs so recovery no longer depends on an iframe.
+
+### Patch Changes
+
+- Updated dependencies [f994f1a]
+  - @solvapay/core@1.7.0
+
 ## 2.3.1
 
 ### Patch Changes
