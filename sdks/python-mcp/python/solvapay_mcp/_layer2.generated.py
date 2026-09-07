@@ -532,7 +532,8 @@ def mcp_widget_resource(
     api_base_url: object | None = None,
     branding: object | None = None,
 ) -> object:
-    """Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+    """Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to
+    splice.
     @param rpc JSON-RPC request object.
     @param resource_uri UI resource URI this host serves.
     @param public_base_url Public http(s) origin of the MCP server.

@@ -42,8 +42,9 @@ async fn group_a_typed_methods_round_trip_through_fetch() {
 
     assert_eq!(
         wire_cases.len(),
-        32,
-        "expected 32 Group A wire fixtures from {base}/__fixtures, found {}",
+        GROUP_A_FIXTURE_COUNT - 1,
+        "expected {} Group A wire fixtures from {base}/__fixtures, found {}",
+        GROUP_A_FIXTURE_COUNT - 1,
         wire_cases.len()
     );
 
@@ -79,7 +80,7 @@ async fn group_a_typed_methods_round_trip_through_fetch() {
         )),
     }
 
-    // Inventory check: 32 wire + 1 local validation.
+    // Inventory check: wire fixtures + 1 local validation.
     assert_eq!(
         wire_cases.len() + 1,
         GROUP_A_FIXTURE_COUNT,

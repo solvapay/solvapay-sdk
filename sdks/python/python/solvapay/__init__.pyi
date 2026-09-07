@@ -368,15 +368,15 @@ class SolvaPayClient:
         """
         ...
     async def list_purchases(self, args_json: str) -> str:
-        """List purchases for the authenticated provider, optionally filtered by customer, product, or
-        status.
+        """List purchases for the authenticated provider, optionally filtered by customer, product,
+        or status.
         @param params Optional purchase list filters.
         @returns Purchase list wrapper.
         """
         ...
     def list_purchases_blocking(self, args_json: str) -> str:
-        """List purchases for the authenticated provider, optionally filtered by customer, product, or
-        status.
+        """List purchases for the authenticated provider, optionally filtered by customer, product,
+        or status.
         @param params Optional purchase list filters.
         @returns Purchase list wrapper.
         """

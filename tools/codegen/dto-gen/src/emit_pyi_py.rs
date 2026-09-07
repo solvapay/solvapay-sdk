@@ -168,7 +168,9 @@ pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
     if trimmed.is_empty() {
         return;
     }
-    let wrapped = wrap_pydoc_lines(trimmed, indent.len());
+    // Opening `"""` shares the first rendered line; reserve those 3 columns so
+    // ruff E501 (100) still holds after `write_pydoc_block` prefixes quotes.
+    let wrapped = wrap_pydoc_lines(trimmed, indent.len(), 3);
     if wrapped.len() == 1 {
         let _ = writeln!(out, "{indent}\"\"\"{first}\"\"\"", first = wrapped[0]);
         return;
@@ -184,26 +186,35 @@ pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
     let _ = writeln!(out, "{indent}\"\"\"");
 }
 
-fn wrap_pydoc_lines(doc: &str, indent_len: usize) -> Vec<String> {
-    let budget = PYDOC_WIDTH.saturating_sub(indent_len).max(20);
+fn wrap_pydoc_lines(doc: &str, indent_len: usize, first_line_overhead: usize) -> Vec<String> {
+    let base_budget = PYDOC_WIDTH.saturating_sub(indent_len).max(20);
     let mut out = Vec::new();
+    let mut first_content = true;
     for raw in doc.lines() {
         if raw.is_empty() {
             out.push(String::new());
             continue;
         }
+        let budget = if first_content {
+            first_content = false;
+            base_budget.saturating_sub(first_line_overhead).max(20)
+        } else {
+            base_budget
+        };
         if raw.len() <= budget {
             out.push(raw.to_string());
             continue;
         }
         let mut rest = raw;
-        while rest.len() > budget {
-            let split_at = rest[..budget]
+        let mut line_budget = budget;
+        while rest.len() > line_budget {
+            let split_at = rest[..line_budget]
                 .rfind(' ')
                 .filter(|idx| *idx > 0)
-                .unwrap_or(budget);
+                .unwrap_or(line_budget);
             out.push(rest[..split_at].to_string());
             rest = rest[split_at..].trim_start();
+            line_budget = base_budget;
         }
         if !rest.is_empty() {
             out.push(rest.to_string());
@@ -417,19 +428,17 @@ mod tests {
 
     #[test]
     fn wraps_pydoc_lines_within_ruff_e501_width() {
-        let long = "@param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.";
-        let indent_len = 8;
-        let lines = wrap_pydoc_lines(long, indent_len);
-        assert!(
-            lines.len() > 1,
-            "expected a wrap for a line longer than the ruff budget"
-        );
-        assert!(
-            lines
-                .iter()
-                .all(|line| indent_len + line.len() <= PYDOC_WIDTH),
-            "wrapped lines must stay within ruff E501 width: {lines:?}"
-        );
+        let long = "List purchases for the authenticated provider, optionally filtered by customer, product, or status.";
+        let indent = "        ";
+        let mut rendered = String::new();
+        write_pydoc_block(&mut rendered, long, indent);
+        for (idx, line) in rendered.lines().enumerate() {
+            assert!(
+                line.len() <= PYDOC_WIDTH,
+                "rendered pydoc line {idx} is {} cols (E501 max {PYDOC_WIDTH}): {line:?}",
+                line.len()
+            );
+        }
     }
 
     #[test]

@@ -30,10 +30,10 @@
       "note": "Re-recorded from CI run 33603152099. The previous darwin/arm64 baseline (13.6 ms) is too fast for ubuntu-latest and failed wasm-binding cold-start."
     },
     "edge": {
-      "rawBytes": 1464319,
-      "gzipBytes": 506530,
+      "rawBytes": 1595836,
+      "gzipBytes": 568287,
       "coldStartMs": 34.2054114,
-      "note": "CI-enforced alongside browser; §7.8 headline metric remains browser"
+      "note": "Re-recorded edge gzip from CI run 34139844302 after listPurchases landed on the wasm client. Cold-start baseline kept; §7.8 headline metric remains browser"
     }
   },
   "maxAllowed": {
@@ -42,7 +42,7 @@
       "coldStartMs": 40.871278800000004
     },
     "edge": {
-      "gzipBytes": 557183,
+      "gzipBytes": 625115,
       "coldStartMs": 51.3081171
     }
   }

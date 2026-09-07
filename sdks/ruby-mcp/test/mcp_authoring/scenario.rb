@@ -29,7 +29,7 @@ module McpAuthoring
   RESPOND_KEYS = %w[kind data options emit].freeze
   GATE_KEYS = %w[kind reason].freeze
   THROW_KEYS = %w[kind message].freeze
-  OPTIONS_KEYS = %w[text nudge units].freeze
+  OPTIONS_KEYS = %w[text nudge units dataInText].freeze
   NUDGE_KEYS = %w[kind message].freeze
   OBSERVATION_KEYS = %w[toolResult usage].freeze
   TOOL_RESULT_KEYS = %w[content structuredContent isError _meta].freeze

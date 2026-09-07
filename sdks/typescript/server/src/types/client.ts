@@ -18,6 +18,8 @@ import type {
   DisableAutoRechargeParams,
   DisableAutoRechargeSdkResponse,
   ListProductsResult,
+  ListPurchasesParams,
+  ListPurchasesResult,
   ProcessPaymentIntentParams,
   ReactivatePurchaseParams,
   SaveAutoRechargeParams,
@@ -38,6 +40,8 @@ export type {
   DisableAutoRechargeParams,
   DisableAutoRechargeSdkResponse,
   ListProductsResult,
+  ListPurchasesParams,
+  ListPurchasesResult,
   ProcessPaymentIntentParams,
   ReactivatePurchaseParams,
   UpdateCustomerParams,
@@ -447,20 +451,7 @@ export interface SolvaPayClient {
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
 
   // GET: /v1/sdk/purchases?customerRef=&productRef=
-  listPurchases?(params: {
-    customerRef?: string
-    productRef?: string
-    status?:
-      | 'pending'
-      | 'active'
-      | 'trialing'
-      | 'past_due'
-      | 'cancelled'
-      | 'expired'
-      | 'suspended'
-      | 'refunded'
-    includeFree?: boolean
-  }): Promise<{ purchases: PurchaseInfo[] }>
+  listPurchases?(params: ListPurchasesParams): Promise<ListPurchasesResult>
 
   // GET: /v1/sdk/credits/activity?customerRef=&limit=
   getCreditActivity?(params: { customerRef: string; limit?: number }): Promise<CreditActivityResult>
