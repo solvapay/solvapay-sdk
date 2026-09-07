@@ -62,13 +62,14 @@ export function installFromBinding(binding: BrowserBinding): void {
   })
 }
 
-function decodeBase64ToBytes(encoded: string): Uint8Array {
+function decodeBase64ToBytes(encoded: string): ArrayBuffer {
   const binary = atob(encoded)
-  const bytes = new Uint8Array(binary.length)
+  const buffer = new ArrayBuffer(binary.length)
+  const bytes = new Uint8Array(buffer)
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i)
   }
-  return bytes
+  return buffer
 }
 
 function wrapInitError(err: unknown): SolvaPayError {
