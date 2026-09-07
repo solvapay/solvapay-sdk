@@ -598,7 +598,7 @@ def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:
 
 
 _INTENT_UI_TOOLS = frozenset({"upgrade", "manage_account", "topup", "activate_plan"})
-_CONTENT_BLOCK = TypeAdapter(ContentBlock)
+_CONTENT_BLOCK: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
 
 
 def _intent_tool_arguments(name: str, arguments: object) -> dict[str, object]:
