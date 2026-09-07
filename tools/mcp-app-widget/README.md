@@ -12,5 +12,7 @@ pnpm exec tsx tools/mcp-app-widget/vendor.ts
 ```
 
 `check.ts` fails CI when any SDK copy drifts from the canonical file,
-or when the artifact is a stub (no bundled script / bootstrap URI / too
-small).
+when the artifact is a stub (no bundled script / bootstrap URI / too
+small), or when the inlined browser WebAssembly core is missing. The
+bundle inlines the public-safe WASM as a base64 string — never a
+`data:` URL.

@@ -13,10 +13,11 @@
 #![cfg(feature = "browser")]
 
 use solvapay_core::{
-    billing_cycle, charges, credits_per_unit_from_balance, derive_active_products,
+    billing_cycle, charges, counts_usage, credits_per_unit_from_balance, derive_active_products,
     derive_default_view, format_compact_credits, headline_charges, history_rows, included_units,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
+    meter_name, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
     resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape, trial_days,
+    usage_rate,
 };
 use wasm_bindgen::prelude::*;
 
@@ -85,6 +86,37 @@ pub fn included_units_binding(args_json: String) -> String {
         let priced = optional_value(&args, "priced");
         let meter = optional_string(&args, "meter")?;
         to_value(&included_units(priced.as_ref(), meter.as_deref()))
+    })
+}
+
+/// Binding for `countsUsage`.
+#[wasm_bindgen(js_name = "countsUsage")]
+pub fn counts_usage_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        Ok(Value::Bool(counts_usage(priced.as_ref())))
+    })
+}
+
+/// Binding for `meterName`.
+#[wasm_bindgen(js_name = "meterName")]
+pub fn meter_name_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&meter_name(priced.as_ref()))
+    })
+}
+
+/// Binding for `usageRate`.
+#[wasm_bindgen(js_name = "usageRate")]
+pub fn usage_rate_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&usage_rate(priced.as_ref(), meter.as_deref()))
     })
 }
 

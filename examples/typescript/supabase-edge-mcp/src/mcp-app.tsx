@@ -13,6 +13,7 @@
  * ("Demo is not the SDK") and `tools/repo/example-widget-parity.test.ts`.
  */
 
+import { installSolvaPayWidgetCore } from './install-widget-core'
 import { createRoot } from 'react-dom/client'
 import {
   App,
@@ -42,4 +43,5 @@ if (!rootEl) {
   throw new Error('#root element missing from mcp-app.html')
 }
 
+await installSolvaPayWidgetCore()
 createRoot(rootEl).render(<McpApp app={app} applyContext={applyContext} />)

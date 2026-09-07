@@ -48,6 +48,9 @@ import init, {
   billingCycle,
   trialDays,
   includedUnits,
+  countsUsage,
+  meterName,
+  usageRate,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
   planPricingShape,
@@ -103,6 +106,9 @@ export {
   billingCycle,
   trialDays,
   includedUnits,
+  countsUsage,
+  meterName,
+  usageRate,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
   planPricingShape,
@@ -127,7 +133,20 @@ export {
 let initPromise
 let syncInitDone = false
 
-export function ready() {
+export function readyFromBytes(bytes) {
+  if (!initPromise) {
+    initPromise = init({ module_or_path: bytes }).then(() => {
+      syncInitDone = true
+      return undefined
+    })
+  }
+  return initPromise
+}
+
+export function ready(source) {
+  if (source !== undefined) {
+    return readyFromBytes(source)
+  }
   if (!initPromise) {
     initPromise = init({
       module_or_path: new URL('../pkg/browser/solvapay_wasm_bg.wasm', import.meta.url),

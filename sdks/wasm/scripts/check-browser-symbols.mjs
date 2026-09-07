@@ -26,7 +26,7 @@ const FORBIDDEN_SEMANTIC = [
 ]
 
 const BINDGEN_RUNTIME = new Set(['initSync', 'init', '__wbg_init'])
-const WRAPPER_EXPORTS = new Set(['initSync', 'ready', 'ensureReadySync'])
+const WRAPPER_EXPORTS = new Set(['initSync', 'ready', 'readyFromBytes', 'ensureReadySync'])
 
 /** Internal wasm-bindgen / allocator exports may match these patterns. */
 const INTERNAL_EXPORT_PATTERNS = [

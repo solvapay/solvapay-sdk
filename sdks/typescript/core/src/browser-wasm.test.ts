@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { validateBusinessDetails } from './native-core'
 import {
+  installBrowserCoreFromBase64,
+  installBrowserCoreFromBytes,
   resetBrowserCoreWasmForTests,
   warmBrowserCoreWasm,
   whenBrowserCoreWasmReady,
@@ -8,7 +10,8 @@ import {
 
 // Fake public-safe browser binding: `ready()` resolves, and each envelope fn
 // returns a sentinel so we can prove dispatch flipped to WASM.
-const readyMock = vi.fn(async () => undefined)
+const readyMock = vi.fn(async (_source?: BufferSource) => undefined)
+const readyFromBytesMock = vi.fn(async (_bytes: BufferSource) => undefined)
 const ensureReadySyncMock = vi.fn(() => {
   throw new Error('no precompiled module in unit test')
 })
@@ -17,7 +20,8 @@ const validateBusinessDetailsMock = vi.fn((_argsJson: string) =>
 )
 
 vi.mock('@solvapay/server-wasm/browser', () => ({
-  ready: () => readyMock(),
+  ready: (source?: BufferSource) => readyMock(source),
+  readyFromBytes: (bytes: BufferSource) => readyFromBytesMock(bytes),
   ensureReadySync: () => ensureReadySyncMock(),
   validateBusinessDetails: (argsJson: string) => validateBusinessDetailsMock(argsJson),
 }))
@@ -26,6 +30,7 @@ describe('browser-wasm eager install (Step 52)', () => {
   afterEach(() => {
     resetBrowserCoreWasmForTests()
     readyMock.mockClear()
+    readyFromBytesMock.mockClear()
     ensureReadySyncMock.mockClear()
     validateBusinessDetailsMock.mockClear()
   })
@@ -102,6 +107,7 @@ describe('browser-wasm eager install (Step 52)', () => {
       ready: async () => {
         throw new Error('simulated fetch(file://) failure')
       },
+      readyFromBytes: (bytes: BufferSource) => readyFromBytesMock(bytes),
       ensureReadySync: () => {
         throw new Error('no precompiled module in unit test')
       },
@@ -123,5 +129,51 @@ describe('browser-wasm eager install (Step 52)', () => {
     } finally {
       process.off('unhandledRejection', onUnhandled)
     }
+  })
+})
+
+describe('browser-wasm bytes install', () => {
+  beforeEach(() => {
+    vi.doMock('@solvapay/server-wasm/browser', () => ({
+      ready: (source?: BufferSource) => readyMock(source),
+      readyFromBytes: (bytes: BufferSource) => readyFromBytesMock(bytes),
+      ensureReadySync: () => ensureReadySyncMock(),
+      validateBusinessDetails: (argsJson: string) => validateBusinessDetailsMock(argsJson),
+    }))
+  })
+
+  afterEach(() => {
+    resetBrowserCoreWasmForTests()
+    readyMock.mockClear()
+    readyFromBytesMock.mockClear()
+    validateBusinessDetailsMock.mockClear()
+  })
+
+  it('installs from inlined bytes without calling the URL ready() path', async () => {
+    resetBrowserCoreWasmForTests()
+    const bytes = new Uint8Array([0, 97, 115, 109])
+    await installBrowserCoreFromBytes(bytes)
+    expect(readyFromBytesMock).toHaveBeenCalledWith(bytes)
+    expect(readyMock).not.toHaveBeenCalled()
+    expect(
+      validateBusinessDetails({
+        isBusiness: true,
+        country: 'US',
+        businessName: 'Acme',
+        taxId: '12-3456789',
+      }),
+    ).toEqual({ valid: true, sentinel: 'from-wasm' })
+  })
+
+  it('words a bytes init failure distinctly from an uninstalled binding', async () => {
+    resetBrowserCoreWasmForTests()
+    readyFromBytesMock.mockRejectedValueOnce(new Error('instantiate blocked'))
+    await expect(installBrowserCoreFromBase64('AGFzbQ==')).rejects.toThrow(
+      /SolvaPay widget WASM failed to initialize: instantiate blocked/,
+    )
+  })
+
+  it('rejects an empty base64 payload before instantiate', async () => {
+    await expect(installBrowserCoreFromBase64('')).rejects.toThrow(/missing inlined browser core/)
   })
 })

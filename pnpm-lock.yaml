@@ -292,6 +292,9 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../../sdks/typescript/core
       '@solvapay/mcp':
         specifier: workspace:*
         version: link:../../../sdks/typescript/mcp
@@ -304,6 +307,9 @@ importers:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../../sdks/typescript/server
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../sdks/wasm
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -538,6 +544,9 @@ importers:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../../sdks/typescript/server
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../sdks/wasm
       '@stripe/stripe-js':
         specifier: ^9.0.0
         version: 9.1.0
@@ -912,7 +921,7 @@ importers:
         version: link:../../../sdks/typescript/core
       '@solvapay/server':
         specifier: ^2.0.0
-        version: link:../../../sdks/typescript/server
+        version: 2.3.1(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
 
   examples/typescript/supabase-edge-mcp:
     devDependencies:
@@ -925,6 +934,9 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../../sdks/typescript/core
       '@solvapay/mcp':
         specifier: workspace:*
         version: link:../../../sdks/typescript/mcp
@@ -937,6 +949,9 @@ importers:
       '@solvapay/server':
         specifier: workspace:*
         version: link:../../../sdks/typescript/server
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../sdks/wasm
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -1469,6 +1484,9 @@ importers:
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../sdks/typescript/react
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../sdks/wasm
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -4374,6 +4392,9 @@ packages:
     resolution: {integrity: sha512-oTt3OP9NcJkrySCSCCdSbP6XLSMNgOmt/ulaiYtb0Ng6tfEWtXQ1mwfyqmLd+GapmDUjbU2mgkf7QIq9H4ij/g==}
     engines: {node: '>=18.0.0'}
 
+  '@solvapay/core@1.6.0':
+    resolution: {integrity: sha512-MVlKzxkWWkDGmOdQdPcS1Jl1L16Geeti7fl7lRlQAJKXKSpVDJAO9XSqZXy2BKUInjvVL7pOYo92EiZlmIy3tA==}
+
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     resolution: {directory: sdks/node-native/npm/darwin-arm64, type: directory}
     engines: {node: '>= 18'}
@@ -4425,6 +4446,16 @@ packages:
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [win32]
+
+  '@solvapay/server@2.3.1':
+    resolution: {integrity: sha512-oU2+ApzVNfHH+xeOrIYh5+TXaVA6c3stQXGQ5qzXxY8T+ZIpuiBGvnLq4JQscrh6p/C+I5zW8C+KWIuL6iSB7Q==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@solvapay/auth': ^1.1.0
+      zod: ^4.2.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
@@ -11157,6 +11188,10 @@ snapshots:
       '@smithy/core': 3.24.6
       tslib: 2.8.1
 
+  '@solvapay/core@1.6.0':
+    dependencies:
+      zod: 4.3.6
+
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     optional: true
 
@@ -11180,6 +11215,13 @@ snapshots:
 
   '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     optional: true
+
+  '@solvapay/server@2.3.1(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)':
+    dependencies:
+      '@solvapay/auth': link:sdks/typescript/auth
+      '@solvapay/core': 1.6.0
+    optionalDependencies:
+      zod: 4.3.6
 
   '@speed-highlight/core@1.2.15': {}
 

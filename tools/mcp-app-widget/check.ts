@@ -6,7 +6,38 @@ import { fileURLToPath } from 'node:url'
 import { joinRel, REPO_ROOT } from '../shared/paths.js'
 import { mcpAppWidgetLayout } from '../shared/repo-paths.js'
 
-const MIN_BUNDLE_BYTES = 100 * 1024
+const MIN_BUNDLE_BYTES = 900 * 1024
+
+function parseNativeCoreSyncMethods(source: string): Set<string> {
+  return new Set([...source.matchAll(/\|\s*'([A-Za-z0-9_]+)'/g)].map(match => match[1]))
+}
+
+export function checkWidgetCoreCoverage({ root }: { root: string }): string[] {
+  const symbols = JSON.parse(
+    readFileSync(joinRel(root, 'sdks/wasm/browser-symbols.generated.json'), 'utf8'),
+  ) as { browserSafe: string[] }
+  const methods = parseNativeCoreSyncMethods(
+    readFileSync(joinRel(root, 'sdks/typescript/core/src/native-dispatch.ts'), 'utf8'),
+  )
+  const runtime = readFileSync(joinRel(root, 'sdks/wasm/runtime/browser-web.js'), 'utf8')
+  const install = readFileSync(
+    joinRel(root, 'sdks/typescript/core/src/browser-wasm-install.ts'),
+    'utf8',
+  )
+  const problems: string[] = []
+  if (!install.includes('installFromBinding') || !install.includes('readyFromBytes')) {
+    problems.push(
+      'Widget install must use the browser WASM binding (installFromBinding + readyFromBytes)',
+    )
+  }
+  for (const name of symbols.browserSafe) {
+    if (!methods.has(name)) continue
+    if (!runtime.includes(name)) {
+      problems.push(`browser WASM runtime missing ${name} required by widget core coverage`)
+    }
+  }
+  return problems
+}
 
 export function checkVendoredWidget({ root }: { root: string }): string[] {
   const layout = mcpAppWidgetLayout()
@@ -44,8 +75,8 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
   if (html.includes('href="data:')) {
     problems.push('Canonical widget must not load data: URLs (host connect-src rejects them)')
   }
-  if (html.includes('WebAssembly') || html.includes('application/wasm')) {
-    problems.push('Canonical widget must not embed WebAssembly')
+  if (!html.includes('WebAssembly') && !html.includes('application/wasm')) {
+    problems.push('Canonical widget must embed the inlined browser WebAssembly core')
   }
   if (canonical.length < MIN_BUNDLE_BYTES) {
     problems.push(
@@ -57,7 +88,10 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
 }
 
 function main(): void {
-  const problems = checkVendoredWidget({ root: REPO_ROOT })
+  const problems = [
+    ...checkVendoredWidget({ root: REPO_ROOT }),
+    ...checkWidgetCoreCoverage({ root: REPO_ROOT }),
+  ]
   if (problems.length > 0) {
     console.error('Vendored MCP App widget check failed:')
     for (const problem of problems) console.error(`  ${problem}`)

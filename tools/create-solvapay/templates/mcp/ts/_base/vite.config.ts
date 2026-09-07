@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import react from '@vitejs/plugin-react'
+import { inlineBrowserWasmBase64 } from '@solvapay/server-wasm/vite'
 
 const input = process.env.INPUT
 if (!input) {
@@ -38,7 +39,7 @@ function stripZodEvalCheck(): Plugin {
 // Stripe forbids bundling it. `@solvapay/react/mcp` externalises the
 // script via `loadStripe`, so nothing extra is needed here.
 export default defineConfig({
-  plugins: [stripZodEvalCheck(), react(), viteSingleFile()],
+  plugins: [stripZodEvalCheck(), inlineBrowserWasmBase64(), react(), viteSingleFile()],
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
   },

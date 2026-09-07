@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { joinRel, REPO_ROOT } from '../../shared/paths.js'
 import { lookupPath, mcpAppWidgetLayout } from '../../shared/repo-paths.js'
-import { checkVendoredWidget } from '../check.js'
+import { checkVendoredWidget, checkWidgetCoreCoverage } from '../check.js'
 import { vendorWidget } from '../vendor.js'
 
 const layout = mcpAppWidgetLayout()
@@ -27,9 +27,9 @@ describe('canonical MCP App widget artifact', () => {
     expect(html).toContain('solvapay://bootstrap.json')
   })
 
-  it('does not embed WebAssembly', () => {
+  it('embeds the inlined browser WebAssembly core', () => {
     const html = readFileSync(canonicalPath, 'utf8')
-    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(false)
+    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(true)
   })
 
   it('does not fetch data: URLs (host connect-src rejects them)', () => {
@@ -47,6 +47,10 @@ describe('canonical MCP App widget artifact', () => {
 
   it('matches dist when the widget build output is present', () => {
     expect(checkVendoredWidget({ root: REPO_ROOT })).toEqual([])
+  })
+
+  it('covers every browserSafe name that is a NativeCoreSyncMethod', () => {
+    expect(checkWidgetCoreCoverage({ root: REPO_ROOT })).toEqual([])
   })
 })
 

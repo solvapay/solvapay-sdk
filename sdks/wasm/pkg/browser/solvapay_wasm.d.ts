@@ -37,6 +37,11 @@ export function billingCycle(args_json: string): string;
 export function charges(args_json: string): string;
 
 /**
+ * Binding for `countsUsage`.
+ */
+export function countsUsage(args_json: string): string;
+
+/**
  * Binding for `creditsPerUnitFromBalance`.
  */
 export function creditsPerUnitFromBalance(args_json: string): string;
@@ -167,6 +172,11 @@ export function isUnlimitedRemaining(args_json: string): string;
 export function isZeroDecimalCurrency(args_json: string): string;
 
 /**
+ * Binding for `meterName`.
+ */
+export function meterName(args_json: string): string;
+
+/**
  * Binding for `minorUnitsPerMajor`.
  */
 export function minorUnitsPerMajor(args_json: string): string;
@@ -242,6 +252,11 @@ export function toMajorUnits(args_json: string): string;
 export function trialDays(args_json: string): string;
 
 /**
+ * Binding for `usageRate`.
+ */
+export function usageRate(args_json: string): string;
+
+/**
  * Binding for `validateBusinessDetails`.
  */
 export function validateBusinessDetails(args_json: string): string;
@@ -272,6 +287,7 @@ export interface InitOutput {
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly charges: (a: number, b: number) => [number, number];
+    readonly countsUsage: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly deriveActiveProducts: (a: number, b: number) => [number, number];
@@ -298,6 +314,7 @@ export interface InitOutput {
     readonly isStateRequired: (a: number, b: number) => [number, number];
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
+    readonly meterName: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
     readonly perUnitCharge: (a: number, b: number) => [number, number];
@@ -313,6 +330,7 @@ export interface InitOutput {
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
+    readonly usageRate: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
     readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];

@@ -40,6 +40,11 @@
       "import": "./runtime/browser-web.js",
       "default": "./runtime/browser-web.js"
     },
+    "./vite": {
+      "types": "./runtime/vite-inline-wasm.d.ts",
+      "import": "./runtime/vite-inline-wasm.js",
+      "default": "./runtime/vite-inline-wasm.js"
+    },
     "./package.json": "./package.json"
   },
   "engines": {

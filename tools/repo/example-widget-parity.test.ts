@@ -67,6 +67,20 @@ describe('example widget parity', () => {
     }
   })
 
+  it('keeps install-widget-core.ts byte-identical across the four integrator copies', () => {
+    const paths = WIDGET_TSX_KEYS.map(key =>
+      lookupPath(key).replace(/mcp-app\.tsx$/, 'install-widget-core.ts'),
+    )
+    const rels = WIDGET_TSX_KEYS.map(key =>
+      lookupRel(key).replace(/mcp-app\.tsx$/, 'install-widget-core.ts'),
+    )
+    const bodies = paths.map(filePath => readFileSync(filePath, 'utf8'))
+    const first = bodies[0]
+    for (let i = 1; i < bodies.length; i += 1) {
+      expect(bodies[i], intendedDuplicationMessage('install-widget-core.ts', rels)).toBe(first)
+    }
+  })
+
   it('keeps mcp-app.tsx identical from the first import across the four copies', () => {
     const rels = WIDGET_TSX_KEYS.map(key => lookupRel(key))
     const bodies = WIDGET_TSX_KEYS.map((key, index) => {

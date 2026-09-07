@@ -40,6 +40,9 @@ export {
   billingCycle,
   trialDays,
   includedUnits,
+  countsUsage,
+  meterName,
+  usageRate,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
   planPricingShape,
@@ -61,8 +64,17 @@ export {
   TAX_NOT_COLLECTED_NOTE,
 } from '../pkg/browser/solvapay_wasm'
 
-/** Resolves when the browser WASM module has been instantiated (async). */
-export function ready(): Promise<void>
+/**
+ * Instantiates from inlined WASM bytes. Pass a `BufferSource` straight
+ * through to wasm-bindgen — no fetch, no `data:` URL.
+ */
+export function readyFromBytes(bytes: BufferSource): Promise<void>
+
+/**
+ * Resolves when the browser WASM module has been instantiated (async).
+ * When `source` is omitted, fetches the sibling `.wasm` URL.
+ */
+export function ready(source?: BufferSource): Promise<void>
 
 /**
  * Synchronously instantiates from an already-compiled `WebAssembly.Module`.

@@ -8,10 +8,8 @@
  * `<McpApp>` from `@solvapay/react/mcp`.
  */
 
-import { installWidgetCoreSync } from './install-widget-core-sync'
+import { installSolvaPayWidgetCore } from './install-widget-core'
 import { createRoot } from 'react-dom/client'
-
-installWidgetCoreSync()
 import {
   App,
   applyDocumentTheme,
@@ -46,4 +44,5 @@ if (!rootEl) {
   throw new Error('#root element missing from mcp-app.html')
 }
 
+await installSolvaPayWidgetCore()
 createRoot(rootEl).render(<McpApp app={app} applyContext={applyContext} />)

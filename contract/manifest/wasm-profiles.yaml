@@ -40,6 +40,9 @@ browserSafe:
   - billingCycle
   - trialDays
   - includedUnits
+  - countsUsage
+  - meterName
+  - usageRate
   - peggedCreditsPerUnit
   - creditsPerUnitFromBalance
   - planPricingShape

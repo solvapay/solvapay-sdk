@@ -1284,8 +1284,7 @@
         "exposed": true
       },
       "wasm-browser": {
-        "exposed": false,
-        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+        "exposed": true
       }
     },
     "createCheckoutSession": {
@@ -4453,8 +4452,7 @@
         "exposed": true
       },
       "wasm-browser": {
-        "exposed": false,
-        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+        "exposed": true
       }
     },
     "minorUnitsPerMajor": {
@@ -6590,8 +6588,7 @@
         "exposed": true
       },
       "wasm-browser": {
-        "exposed": false,
-        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+        "exposed": true
       }
     },
     "validateActivatePlanParams": {
