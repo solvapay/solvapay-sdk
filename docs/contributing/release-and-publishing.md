@@ -211,10 +211,11 @@ default `GITHUB_TOKEN` does not fire `on: push` tag workflows.** The job keeps
 `permissions: contents: read`; the App token carries the write.
 
 With `dry_run=true` the workflow runs the gates, then `changeset status` plus
-`pnpm -r publish --dry-run`, and prints the four rehearsal tags via
-`resolve-release-channel.ts --assert-tags` instead of pushing them. No
-`NPM_TOKEN`, no App token. The native matrix stays skipped unless
-`force_native=true`, which still publishes those packages with `--dry-run`.
+`pnpm -r publish --dry-run`, and prints the four rehearsal tags. It does not
+push them and does not fail if they already exist on origin — the npm dry-run
+never posts language previews. No `NPM_TOKEN`, no App token. The native matrix
+stays skipped unless `force_native=true`, which still publishes those packages
+with `--dry-run`.
 
 **Cost.** A non-dry-run preview with languages on runs 8 native builds, 7 Python
 wheel platforms and 4 Ruby dock gems. `include_languages=false` opts out of the

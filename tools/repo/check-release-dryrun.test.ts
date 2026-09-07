@@ -512,6 +512,12 @@ describe('release-dryrun live tree', () => {
     expect(previewYml).toContain('pnpm install --no-frozen-lockfile --ignore-scripts')
     expect(publishYml).toContain('git fetch --no-tags origin +main:main')
     expect(previewYml).toContain('git fetch --no-tags origin +main:main')
+    const previewTierA = previewYml.slice(
+      previewYml.indexOf('Tier A — print rehearsal tags'),
+      previewYml.indexOf('Publish snapshot to @preview'),
+    )
+    expect(previewTierA).not.toContain('--assert-tags')
+    expect(publishYml).toContain('--assert-tags')
   })
 
   it('requires a dry-run default on all six publish workflows', async () => {

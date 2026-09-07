@@ -196,6 +196,8 @@ jobs:
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 
+      # Print only. Dry-run does not post language rehearsal tags (the npm
+      # path never does), so colliding origin tags must not fail the job.
       - name: Tier A — print rehearsal tags (no writes)
         if: ${{ inputs.dry_run }}
         shell: bash
@@ -203,16 +205,13 @@ jobs:
           SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
         run: |
           set -euo pipefail
-          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
           pnpm exec tsx tools/repo/resolve-release-channel.ts \
             --ref refs/heads/main \
             --channel rehearsal \
             --version "${SENTINEL}" \
             --run "${GITHUB_RUN_NUMBER}" \
-            --ecosystem npm \
-            --assert-tags \
-            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
-          echo "Tier A: rehearsal tags for ${SENTINEL}"
+            --ecosystem npm
+          echo "Tier A: rehearsal tags for ${SENTINEL} (printed only; dry-run does not post language previews)"
 
       - name: Publish snapshot to @preview
         id: publish
