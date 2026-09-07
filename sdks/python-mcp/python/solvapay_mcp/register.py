@@ -14,7 +14,6 @@ from mcp.types import (
     CallToolRequestParams,
     CallToolResult,
     ContentBlock,
-    EmbeddedResource,
     ListPromptsResult,
     ListResourcesResult,
     ListToolsResult,
@@ -25,6 +24,7 @@ from mcp.types import (
     TextContent,
     Tool,
 )
+from pydantic import TypeAdapter
 from solvapay import build_customer_snapshot
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import SolvaPay
@@ -598,6 +598,7 @@ def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:
 
 
 _INTENT_UI_TOOLS = frozenset({"upgrade", "manage_account", "topup", "activate_plan"})
+_CONTENT_BLOCK = TypeAdapter(ContentBlock)
 
 
 def _intent_tool_arguments(name: str, arguments: object) -> dict[str, object]:
@@ -638,30 +639,8 @@ def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:
     raw_content = payload.get("content")
     if isinstance(raw_content, list):
         for block in raw_content:
-            if isinstance(block, dict) and block.get("type") == "text":
-                raw_ann = block.get("annotations")
-                text_ann = (
-                    Annotations.model_validate(raw_ann) if isinstance(raw_ann, dict) else None
-                )
-                content.append(
-                    TextContent(
-                        type="text",
-                        text=str(block.get("text", "")),
-                        annotations=text_ann,
-                    )
-                )
-            elif isinstance(block, dict) and block.get("type") == "resource_link":
-                raw_ann = block.get("annotations")
-                content.append(
-                    ResourceLink(
-                        type="resource_link",
-                        name=str(block.get("name") or ""),
-                        uri=str(block.get("uri") or ""),
-                        annotations=Annotations(**raw_ann) if isinstance(raw_ann, dict) else None,
-                    )
-                )
-            elif isinstance(block, dict) and block.get("type") == "resource":
-                content.append(EmbeddedResource.model_validate(block))
+            if isinstance(block, dict):
+                content.append(_CONTENT_BLOCK.validate_python(block))
     structured = payload.get("structuredContent")
     meta = payload.get("_meta")
     is_error = payload.get("isError")
