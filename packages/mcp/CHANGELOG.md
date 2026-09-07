@@ -1,5 +1,22 @@
 # @solvapay/mcp changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 5d37370: Make MCP gate and intent-tool results usable on text-only hosts. Default `mode` is `auto`, the paywall gate names included usage and a pasteable https checkout URL, and narrators emit plan refs so recovery no longer depends on an iframe.
+
+### Patch Changes
+
+- 4771b85: Widen the `@solvapay/mcp-core` peer range to accept `^0.4.0`. Existing installs pinned to `^0.3.0` keep resolving to 0.3.x and are unaffected; moving to mcp-core 0.4.x is now an explicit opt-in that no longer forces a peer conflict.
+- f994f1a: MCP core transport and narration for the account widget release.
+
+  Account text-mode narration branches on the nine v3 states (A–F, H–J) and reads `usage.total` / `remaining` / `periodEnd`. Add UI-only `get_history` tool descriptor; auto-recharge view narration. Single-source intent-tool names from `MCP_TOOL_NAMES`; trim duplicated description prose.
+
+  Stamp `_meta["openai/visibility"] = "private"` on UI-only transport tools so ChatGPT does not list them for the model. Make every tool result independently complete on `content[].text` (`dataInText` default on, embedded low-balance nudge, inline manage URL, named recovery calls). `registerPayable` accepts an opt-in `outputSchema`.
+
+  Pass billing-country fields through MCP attach/confirm helpers.
+
 ## 0.3.0
 
 ### Minor Changes
