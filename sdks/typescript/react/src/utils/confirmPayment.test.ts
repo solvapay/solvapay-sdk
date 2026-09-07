@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { confirmPayment } from './confirmPayment'
+import { buildConfirmBillingDetails, confirmPayment } from './confirmPayment'
 import { enCopy } from '../i18n/en'
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 
@@ -231,5 +231,83 @@ describe('confirmPayment', () => {
       copy: enCopy,
     })
     expect(result.status).toBe('error')
+  })
+
+  it('forwards billing address on Payment Element confirm', async () => {
+    const confirmPaymentFn = vi.fn().mockResolvedValue({
+      paymentIntent: { status: 'succeeded', id: 'pi_addr' },
+    })
+    const stripe = makeStripe({ confirmPayment: confirmPaymentFn })
+    const elements = makeElements({ __tag: 'payment' })
+
+    await confirmPayment({
+      stripe,
+      elements,
+      clientSecret: 'cs_addr',
+      returnUrl: 'https://example.com/return',
+      billingDetails: {
+        email: 'a@b.com',
+        name: 'Jane Doe',
+        address: {
+          line1: '',
+          line2: '',
+          city: '',
+          state: 'CA',
+          postal_code: '94103',
+          country: 'US',
+        },
+      },
+      copy: enCopy,
+    })
+
+    expect(confirmPaymentFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmParams: expect.objectContaining({
+          payment_method_data: {
+            billing_details: {
+              email: 'a@b.com',
+              name: 'Jane Doe',
+              address: {
+                line1: '',
+                line2: '',
+                city: '',
+                state: 'CA',
+                postal_code: '94103',
+                country: 'US',
+              },
+            },
+          },
+        }),
+      }),
+    )
+  })
+})
+
+describe('buildConfirmBillingDetails', () => {
+  it('returns undefined when nothing is collected', () => {
+    expect(buildConfirmBillingDetails({})).toBeUndefined()
+  })
+
+  it('adds Stripe-required empty address subfields when a country is present', () => {
+    expect(
+      buildConfirmBillingDetails({
+        email: 'a@b.com',
+        name: 'Jane',
+        country: 'US',
+        state: 'CA',
+        postalCode: '94103',
+      }),
+    ).toEqual({
+      email: 'a@b.com',
+      name: 'Jane',
+      address: {
+        line1: '',
+        line2: '',
+        city: '',
+        state: 'CA',
+        postal_code: '94103',
+        country: 'US',
+      },
+    })
   })
 })

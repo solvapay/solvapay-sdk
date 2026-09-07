@@ -143,6 +143,7 @@ export {
   checkPurchaseCore,
   trackUsageCore,
   getUsageCore,
+  deriveUsageSnapshot,
   listPlansCore,
   checkLimitsCore,
   getMerchantCore,
@@ -151,6 +152,7 @@ export {
   getAutoRechargeCore,
   saveAutoRechargeCore,
   disableAutoRechargeCore,
+  getHistoryCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

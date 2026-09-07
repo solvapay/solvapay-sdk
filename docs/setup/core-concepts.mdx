@@ -1,6 +1,6 @@
 ---
-title: 'Core concepts'
-description: 'Understand products, plans, customers, paywall checks, and usage tracking.'
+title: "Core concepts"
+description: "Understand products, plans, customers, paywall checks, and usage tracking."
 ---
 
 ## Table of contents
@@ -55,12 +55,12 @@ Plans are configured as part of product setup. Customers select a plan during ac
 
 A plan is an `options[]` list. These names are **derived labels**, not a `type` you send:
 
-| Label       | Derived when              | Best for                          |
-| ----------- | ------------------------- | --------------------------------- |
-| Recurring   | Billing cycle, no meter   | SaaS subscriptions                |
-| Usage-based | Metered, no billing cycle | APIs and token services           |
-| Hybrid      | Billing cycle and a meter | Mixed workloads                   |
-| One-time    | Flat charge, no cycle     | Digital goods and lifetime access |
+| Label | Derived when | Best for |
+| --- | --- | --- |
+| Recurring | Billing cycle, no meter | SaaS subscriptions |
+| Usage-based | Metered, no billing cycle | APIs and token services |
+| Hybrid | Billing cycle and a meter | Mixed workloads |
+| One-time | Flat charge, no cycle | Digital goods and lifetime access |
 
 See [Plans](/plans/overview) to compose those options.
 
@@ -88,13 +88,10 @@ const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
 For HTTP adapters, pass customer identity in headers or auth context.
 
 ```typescript
-app.post(
-  '/tasks',
-  payable.http(async req => {
-    const customerRef = req.headers['x-customer-ref']
-    return { ok: true, customerRef }
-  }),
-)
+app.post('/tasks', payable.http(async req => {
+  const customerRef = req.headers['x-customer-ref']
+  return { ok: true, customerRef }
+}))
 ```
 
 ### Create-or-link semantics
@@ -108,23 +105,20 @@ Use `PATCH /v1/sdk/customers/:reference` to backfill or change `externalRef`, `n
 ```typescript
 await fetch(`https://api.solvapay.com/v1/sdk/customers/${ref}`, {
   method: 'PATCH',
-  headers: {
-    Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-  },
+  headers: { Authorization: `Bearer ${process.env.SOLVAPAY_SECRET_KEY}`, 'Content-Type': 'application/json' },
   body: JSON.stringify({ externalRef: 'auth_user_12345' }),
 })
 ```
 
 ## Data helpers
 
-Three read-only endpoints power customer-facing UI without bloating `check_purchase`:
+Three read-only endpoints power customer-facing UI without bloating `checkPurchase`:
 
 - **`GET /v1/sdk/platform-config`** — browser-safe platform values (today: the SolvaPay Stripe publishable key used to initialize the Stripe.js client). Resolves against the sandbox or live environment matching your secret key. Call it once on page load before mounting `<PaymentForm>`; additions will land here rather than in `/sdk/merchant`.
 - **`GET /v1/sdk/merchant`** — provider identity safe to render in checkout and mandate copy: `name`, `legalName`, `supportContact`, `termsUrl`, `privacyUrl`, `iconUrl` (square app icon), and `logoUrl` (absolute URL resolved against `ASSETS_BASE_URL`). Used by SDK components like `MandateText` and `CheckoutSummary`.
-- **`GET /v1/sdk/payment-method?customerRef=…`** — returns `{ kind: 'card', brand, last4, expMonth, expYear }` or `{ kind: 'none' }`. The card brand and last4 are mirrored onto the Customer by the `payment_intent.succeeded` webhook, so this endpoint reads from SolvaPay's database with no Stripe round-trip. Safe to poll alongside `check_purchase`.
+- **`GET /v1/sdk/payment-method?customerRef=…`** — returns `{ kind: 'card', brand, last4, expMonth, expYear, reusable }` or `{ kind: 'none' }`. The card brand and last4 are mirrored onto the Customer by the `payment_intent.succeeded` webhook, so this endpoint reads from SolvaPay's database with no Stripe round-trip. `reusable` distinguishes a chargeable saved card from a card that is only on file. Safe to poll alongside `checkPurchase`.
 
-All three are exposed as route-wrapper helpers in `@solvapay/next` (`getMerchant`, `getProduct`, `getPaymentMethod`) and as fetch handlers in `@solvapay/server/fetch`. On MCP they are **not** tools: `createSolvaPayMcpServer` folds this data into the bootstrap payload that each intent tool returns, so the MCP App UI reads it without a round-trip. See the [MCP App guide](../guides/mcp-app).
+All three are exposed as route-wrapper helpers in `@solvapay/next` (`getMerchant`, `getProduct`, `getPaymentMethod`) and as fetch handlers in `@solvapay/server/fetch`. In an MCP server they are not separate tools — `createSolvaPayMcpServer` delivers the same data on the `account` viewer's bootstrap payload, which seeds the client caches at mount.
 
 ## Paywall protection flow
 
@@ -222,7 +216,7 @@ Usage-based and hybrid plans enforce limits from meter data.
 
 ## Next steps
 
-- [Customer linkage (bring your own client and IdP)](/sdks/typescript/guides/customer-linkage) — `ensureCustomer(customerRef, externalRef?, options?)` from any backend
+- [Customer linkage (bring your own client and IdP)](/sdks/typescript/guides/customer-linkage) — `ensureCustomer(externalRef)` from any backend
 
 - [Quick start](./quick-start)
 - [CLI setup](./cli)

@@ -8,13 +8,8 @@
  * constructs the `App`, and renders `<McpApp>`.
  *
  * All of these components (shell, views, plan-actions helpers,
- * narrator) live in the SDK so a hosted HTTP page can mount the same
- * surface instead of running only inside the iframe.
- *
- * Header comments differ per runtime; the body (from the first
- * `import` onward) is deliberately duplicated across the four
- * integrator-facing copies. See `docs/contributing/mcp-apps-sdk-rules.md`
- * ("Demo is not the SDK") and `tools/repo/example-widget-parity.test.ts`.
+ * narrator) live in the SDK so the Managed MCP surface can mount
+ * the same surface on an HTTP page instead of inside the iframe.
  */
 
 import { createRoot } from 'react-dom/client'
@@ -25,7 +20,7 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
-import { McpApp } from '@solvapay/react/mcp'
+import { McpApp, SOLVAPAY_MCP_APP_CAPABILITIES } from '@solvapay/react/mcp'
 import '@solvapay/react/styles.css'
 import '@solvapay/react/mcp/styles.css'
 
@@ -34,18 +29,12 @@ function applyContext(ctx: McpUiHostContext | undefined) {
   if (ctx.theme) applyDocumentTheme(ctx.theme)
   if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables)
   if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts)
-
-  const root = document.getElementById('root')
-  const insets = ctx.safeAreaInsets
-  if (insets && root) {
-    root.style.paddingTop = `${16 + insets.top}px`
-    root.style.paddingRight = `${16 + insets.right}px`
-    root.style.paddingBottom = `${16 + insets.bottom}px`
-    root.style.paddingLeft = `${16 + insets.left}px`
-  }
 }
 
-const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
+const app = new App(
+  { name: 'SolvaPay checkout', version: '1.0.0' },
+  { availableDisplayModes: [...SOLVAPAY_MCP_APP_CAPABILITIES.availableDisplayModes] },
+)
 
 const rootEl = document.getElementById('root')
 if (!rootEl) {

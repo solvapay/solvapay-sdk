@@ -32,9 +32,11 @@ import {
 } from '@stripe/react-stripe-js'
 import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
+import { composeRefs } from './composeRefs'
 import { composeEventHandlers } from './composeEventHandlers'
 import { LegalFooter } from './LegalFooter'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
+import { useStripeAppearance } from './useStripeAppearance'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import { useCheckout } from '../hooks/useCheckout'
@@ -55,7 +57,7 @@ import {
 import { CheckoutSummary as CheckoutSummaryShim } from '../components/CheckoutSummary'
 import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
-import { confirmPayment } from '../utils/confirmPayment'
+import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
 import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
@@ -75,6 +77,7 @@ import type {
   Plan,
 } from '../types'
 import type { ActivatePlanResult } from '@solvapay/server'
+import { isCustomerAddressComplete, resolveBuyerCountry } from '@solvapay/core'
 
 // ---------- helpers ----------
 
@@ -116,6 +119,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       buttonClassName,
       prefillCustomer,
       requireTermsAcceptance = false,
+      appearance,
       children,
     } = props
 
@@ -175,52 +179,70 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
 
     const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
+    const [rootEl, setRootEl] = useState<HTMLElement | null>(null)
+    const attachRoot = useCallback((node: HTMLElement | null) => {
+      if (!node) return
+      setRootEl(prev => (prev === node ? prev : node))
+    }, [])
+    const sectionRef = composeRefs(forwardedRef, attachRoot)
+    const resolvedAppearance = useStripeAppearance(rootEl, appearance)
+
     const elementsOptions = useMemo(() => {
       if (!clientSecret) return undefined
-      return { clientSecret, locale: toStripeElementLocale(locale) }
-    }, [clientSecret, locale])
+      return {
+        clientSecret,
+        locale: toStripeElementLocale(locale),
+        ...(resolvedAppearance ? { appearance: resolvedAppearance } : {}),
+      }
+    }, [clientSecret, locale, resolvedAppearance])
 
-    const shouldRenderElements = !!(stripePromise && clientSecret)
+    const appearanceReady = appearance !== undefined || rootEl !== null
+    const shouldRenderElements = !!(stripePromise && clientSecret && appearanceReady)
 
-    if (!hasPlanOrProduct) {
-      return (
-        <section
-          ref={forwardedRef}
-          className={className}
-          data-solvapay-payment-form=""
-          data-state="error"
-        >
+    const dataState = !hasPlanOrProduct || checkoutError
+      ? 'error'
+      : isFreePlan && resolvedPlan
+        ? 'ready'
+        : shouldRenderElements
+          ? 'ready'
+          : 'loading'
+    const dataVariant =
+      isFreePlan && resolvedPlan ? 'free' : shouldRenderElements ? 'paid' : undefined
+
+    const pending = (
+      <PendingInner
+        planRef={effectivePlanRef}
+        productRef={effectiveProductRef}
+        resolvedPlanRef={resolvedPlanRef}
+        plan={resolvedPlan ?? null}
+        returnUrl={finalReturnUrl}
+        submitButtonText={submitButtonText}
+        buttonClassName={buttonClassName}
+        error={
+          checkoutError
+            ? `${copy.errors.paymentInitFailed} ${checkoutError.message || copy.errors.unknownError}`
+            : null
+        }
+      >
+        {children}
+      </PendingInner>
+    )
+
+    return (
+      <section
+        ref={sectionRef}
+        className={className}
+        data-solvapay-payment-form=""
+        data-state={dataState}
+        {...(dataVariant ? { 'data-variant': dataVariant } : {})}
+      >
+        {!hasPlanOrProduct ? (
           <p role="alert" data-solvapay-payment-form-error="">
             {copy.errors.configMissingPlanOrProduct}
           </p>
-        </section>
-      )
-    }
-
-    if (checkoutError) {
-      return (
-        <section
-          ref={forwardedRef}
-          className={className}
-          data-solvapay-payment-form=""
-          data-state="error"
-        >
-          <p role="alert" data-solvapay-payment-form-error="">
-            {copy.errors.paymentInitFailed} {checkoutError.message || copy.errors.unknownError}
-          </p>
-        </section>
-      )
-    }
-
-    if (isFreePlan && resolvedPlan) {
-      return (
-        <section
-          ref={forwardedRef}
-          className={className}
-          data-solvapay-payment-form=""
-          data-state="ready"
-          data-variant="free"
-        >
+        ) : checkoutError ? (
+          pending
+        ) : isFreePlan && resolvedPlan ? (
           <FreeInner
             planRef={effectivePlanRef}
             productRef={effectiveProductRef}
@@ -235,28 +257,15 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           >
             {children}
           </FreeInner>
-        </section>
-      )
-    }
-
-    if (shouldRenderElements && elementsOptions && clientSecret) {
-      const resolvedClientSecret = clientSecret
-      return (
-        <section
-          ref={forwardedRef}
-          className={className}
-          data-solvapay-payment-form=""
-          data-state="ready"
-          data-variant="paid"
-        >
-          <Elements key={resolvedClientSecret} stripe={stripePromise} options={elementsOptions}>
+        ) : shouldRenderElements && elementsOptions && clientSecret ? (
+          <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
             <PaidInner
               planRef={effectivePlanRef}
               productRef={effectiveProductRef}
               prefillCustomer={prefillCustomer}
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
-              clientSecret={resolvedClientSecret}
+              clientSecret={clientSecret}
               processorPaymentId={processorPaymentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
@@ -272,20 +281,9 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
               {children}
             </PaidInner>
           </Elements>
-        </section>
-      )
-    }
-
-    return (
-      <section
-        ref={forwardedRef}
-        className={className}
-        data-solvapay-payment-form=""
-        data-state="loading"
-      >
-        <output data-solvapay-payment-form-loading="">
-          <Spinner size="md" />
-        </output>
+        ) : (
+          pending
+        )}
       </section>
     )
   },
@@ -309,15 +307,7 @@ const PaidInner: React.FC<{
   onResult?: PaymentFormProps['onResult']
   onError?: PaymentFormProps['onError']
   onTaxChange?: PaymentFormProps['onTaxChange']
-  attachBusinessDetails?: (params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  attachBusinessDetails?: import('../hooks/useBusinessDetailsAttach').AttachBusinessDetailsFn
   customerRef?: string
   children?: React.ReactNode
 }> = ({
@@ -341,6 +331,8 @@ const PaidInner: React.FC<{
   children,
 }) => {
   const stripe = useStripe()
+  const stripeAvailable = !!stripe
+  const stripeRef = useRef(stripe)
   const elements = useElements()
   const copy = useCopy()
   const customer = useCustomer()
@@ -382,7 +374,14 @@ const PaidInner: React.FC<{
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
-    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    stripeRef.current = stripe
+  })
+
+  useEffect(() => {
+    const stripeApi = stripeRef.current
+    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+      return
+    }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
     if (!returnClientSecret) return
     returnResumeStarted.current = true
@@ -392,7 +391,7 @@ const PaidInner: React.FC<{
       setIsProcessing(true)
       setError(null)
 
-      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
       stripPaymentIntentParams()
 
@@ -404,7 +403,7 @@ const PaidInner: React.FC<{
 
       let paymentIntent = retrieved.paymentIntent
       if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        const actionResult = await stripeApi.handleNextAction({ clientSecret: returnClientSecret })
         if (cancelled) return
         if (actionResult.error || !actionResult.paymentIntent) {
           setError(copy.errors.paymentRequires3ds)
@@ -472,7 +471,7 @@ const PaidInner: React.FC<{
       cancelled = true
     }
   }, [
-    stripe,
+    stripeAvailable,
     copy,
     productRef,
     planRef,
@@ -494,6 +493,7 @@ const PaidInner: React.FC<{
     paymentInputComplete &&
     (!requireTermsAcceptance || termsAccepted) &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
+    isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching &&
     !isProcessing
 
@@ -537,10 +537,13 @@ const PaidInner: React.FC<{
         clientSecret,
         mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
-        billingDetails: {
-          ...(customerName.trim() && { name: customerName.trim() }),
+        billingDetails: buildConfirmBillingDetails({
+          name: customerName.trim() || customer.name,
           email: customer.email ?? prefillCustomer?.email,
-        },
+          country: resolveBuyerCountry(businessDetails),
+          state: businessDetails.customerState,
+          postalCode: businessDetails.customerPostalCode,
+        }),
         copy,
       })
 
@@ -835,6 +838,79 @@ const FreeInner: React.FC<{
       submitButtonText,
       buttonClassName,
       submit,
+    ],
+  )
+
+  return <PaymentFormProvider value={contextValue}>{children}</PaymentFormProvider>
+}
+
+/** Pre-Elements context so Loading / Error slots own chrome while Root stays mounted. */
+const PendingInner: React.FC<{
+  planRef?: string
+  productRef?: string
+  resolvedPlanRef: string | null
+  plan: Plan | null
+  returnUrl: string
+  submitButtonText?: string
+  buttonClassName?: string
+  error: string | null
+  children?: React.ReactNode
+}> = ({
+  planRef,
+  productRef,
+  resolvedPlanRef,
+  plan,
+  returnUrl,
+  submitButtonText,
+  buttonClassName,
+  error,
+  children,
+}) => {
+  const contextValue: PaymentFormContextValue = useMemo(
+    () => ({
+      planRef,
+      productRef,
+      prefillCustomer: undefined,
+      resolvedPlanRef,
+      plan,
+      clientSecret: null,
+      processorPaymentId: null,
+      stripe: null,
+      elements: null,
+      isProcessing: false,
+      isReady: false,
+      paymentInputComplete: false,
+      termsAccepted: false,
+      requireTermsAcceptance: false,
+      canSubmit: false,
+      error,
+      elementKind: null,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: () => {},
+      setElementKind: () => {},
+      setPaymentInputComplete: () => {},
+      setTermsAccepted: () => {},
+      submit: async () => {},
+    }),
+    [
+      planRef,
+      productRef,
+      resolvedPlanRef,
+      plan,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      error,
     ],
   )
 

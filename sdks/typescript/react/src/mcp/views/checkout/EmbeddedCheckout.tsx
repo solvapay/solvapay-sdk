@@ -16,7 +16,7 @@
  * paying the bridge cost.
  */
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { PlanSelector } from '../../../primitives/PlanSelector'
 import { useCheckoutFlow } from '../../../hooks/useCheckoutFlow'
 import { usePurchase } from '../../../hooks/usePurchase'
@@ -62,6 +62,12 @@ export interface EmbeddedCheckoutProps {
    * picker. Forwarded by `<McpCheckoutView>` from the shell.
    */
   onBack?: () => void
+  /**
+   * Pre-select this plan in `PlanSelector`. Combined with
+   * `autoAdvance`, skips the plan step via `flow.advance()`.
+   */
+  initialPlanRef?: string
+  autoAdvance?: boolean
   cx: Cx
   /**
    * Accepted for API stability — earlier revisions rendered
@@ -82,6 +88,8 @@ export function EmbeddedCheckout({
   plans,
   onClose,
   onBack,
+  initialPlanRef,
+  autoAdvance,
   cx,
   children,
 }: EmbeddedCheckoutProps) {
@@ -95,7 +103,7 @@ export function EmbeddedCheckout({
   }, [plans])
   const paygPlanRef = useMemo(() => {
     const payg = paidPlans.find(p => isPayg(p))
-    return payg?.reference
+    return payg?.reference ?? undefined
   }, [paidPlans])
 
   const planFilter = useMemo(
@@ -120,6 +128,7 @@ export function EmbeddedCheckout({
         popularPlanRef={paygPlanRef}
         currentPlanRef={currentPlanRef}
         autoSelectFirstPaid={Boolean(paygPlanRef)}
+        initialPlanRef={initialPlanRef}
         className="solvapay-plan-selector"
       >
         <McpCheckoutBody
@@ -131,6 +140,8 @@ export function EmbeddedCheckout({
           hideUpgradeBanner={hideUpgradeBanner}
           onClose={onClose}
           onBack={onBack}
+          initialPlanRef={initialPlanRef}
+          autoAdvance={autoAdvance}
           cx={cx}
         />
       </PlanSelector.Root>
@@ -148,6 +159,8 @@ interface McpCheckoutBodyProps {
   hideUpgradeBanner?: boolean
   onClose?: () => void
   onBack?: () => void
+  initialPlanRef?: string
+  autoAdvance?: boolean
   cx: Cx
 }
 
@@ -160,6 +173,8 @@ function McpCheckoutBody({
   hideUpgradeBanner,
   onClose,
   onBack,
+  initialPlanRef,
+  autoAdvance,
   cx,
 }: McpCheckoutBodyProps) {
   const bridge = useMcpBridge()
@@ -213,7 +228,24 @@ function McpCheckoutBody({
     void flow.advance()
   }, [bridge, flow, selectedPlanShape])
 
+  const autoAdvancedRef = useRef(false)
+  useEffect(() => {
+    if (!autoAdvance || autoAdvancedRef.current) return
+    if (flow.step !== 'plan') return
+    if (flow.selectedPlanRef !== initialPlanRef) return
+    autoAdvancedRef.current = true
+    onPlanContinue()
+  }, [autoAdvance, flow.selectedPlanRef, flow.step, initialPlanRef, onPlanContinue])
+
   if (flow.step === 'plan') {
+    const waitingForSelection = Boolean(autoAdvance) && !flow.selectedPlanRef
+    const matchingPending =
+      Boolean(autoAdvance) &&
+      flow.selectedPlanRef === initialPlanRef &&
+      flow.status === 'activating'
+    if (waitingForSelection || matchingPending) {
+      return <p>Loading checkout…</p>
+    }
     return (
       <PlanStep
         fromPaywall={fromPaywall}

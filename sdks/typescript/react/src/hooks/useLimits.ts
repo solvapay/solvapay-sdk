@@ -13,9 +13,9 @@
  *
  * Routes through the SDK transport layer (HTTP by default,
  * `transport.getLimits` when overridden). When the transport doesn't
- * implement `getLimits` (e.g. an MCP adapter without the route), the hook
- * returns `null` for `remaining` / `withinLimits` with `loading: false` —
- * matches `useUsage`'s graceful fallback.
+ * implement `getLimits` (MCP adapter), the hook serves a bootstrap-seeded
+ * cache entry if one exists; otherwise `remaining` / `withinLimits` stay
+ * `null` with `loading: false`.
  *
  * Cache: module-level, keyed by `customerRef:productRef:meterName` with a
  * 10 s TTL that mirrors the backend paywall's `limitsCacheTTL`. Multiple
@@ -119,6 +119,16 @@ export interface UseLimitsReturn {
   needsUpgrade: boolean | null
   /** The customer was auto-upgraded and access was restored. `null` while loading. */
   upgraded: boolean | null
+  /**
+   * Consumed units this period. `null` while loading, when disabled, or
+   * when the backend did not measure a finite cap.
+   */
+  used: number | null
+  /**
+   * The effective finite cap for this meter. `null` while loading, when
+   * disabled, or when the backend did not measure a finite cap.
+   */
+  limit: number | null
   loading: boolean
   error: Error | null
   refetch: () => Promise<void>
@@ -220,10 +230,23 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
 
   const fetchLimits = useCallback(
     async (force: boolean): Promise<void> => {
-      if (!productRef || !enabled || !transport.getLimits) {
-        // Graceful fallback when the transport doesn't implement
-        // `getLimits` — clear loading without surfacing an error so
-        // consumers can feature-detect by checking `remaining === null`.
+      if (!productRef || !enabled) {
+        setLoading(false)
+        return
+      }
+
+      if (!transport.getLimits) {
+        // MCP adapters omit `getLimits` — serve a bootstrap-seeded
+        // cache entry when one exists (even past the HTTP TTL; there
+        // is no transport to refresh against). No seed → graceful
+        // null, matching `useUsage` when `getUsage` is absent.
+        const seeded = limitsCache.get(cacheKey(customerRef, productRef, meterName))
+        if (seeded?.data) {
+          setData(seeded.data)
+          setLoading(false)
+          setError(null)
+          return
+        }
         setLoading(false)
         return
       }
@@ -306,6 +329,11 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
         const next: TransportLimitsResult = {
           ...baseline,
           remaining: Math.max(0, baseline.remaining + delta),
+          // Keep `used` self-consistent with the remaining nudge so
+          // a meter that reads both does not flash a collapsing cap.
+          ...(typeof baseline.used === 'number'
+            ? { used: Math.max(0, baseline.used - delta) }
+            : {}),
           // Don't optimistically flip `withinLimits` — paywall gating
           // can hinge on factors beyond `remaining > 0`
           // (activationRequired, etc.). Let the trailing refetch
@@ -339,6 +367,8 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
     needsTopUp: data?.needsTopUp ?? null,
     needsUpgrade: data?.needsUpgrade ?? null,
     upgraded: data?.upgraded ?? null,
+    used: data?.used ?? null,
+    limit: data?.limit ?? null,
     loading,
     error,
     refetch,

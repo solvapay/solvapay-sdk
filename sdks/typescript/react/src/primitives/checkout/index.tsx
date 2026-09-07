@@ -42,9 +42,10 @@ import { usePlans } from '../../hooks/usePlans'
 import {
   buildDefaultCheckoutPlanFilter,
   formatContinueLabel,
+  formatCycleSuffix,
+  planBillingCycle,
   planBillingInterval,
   planSortByPaygFirstThenAsc,
-  shortCycle,
   type BootstrapPlanLike,
   type CheckoutStep,
 } from './shared'
@@ -676,11 +677,11 @@ function PaygPayment({ className }: { className?: string }) {
         </TopupForm.Summary.Root>
         <TopupForm.PaymentElement />
         <TopupForm.Error className="solvapay-checkout-error" />
-        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
         <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <TopupForm.SubmitButton className="solvapay-checkout-pay-button">
           Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>
+        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
       </TopupForm.Root>
     </div>
   )
@@ -699,14 +700,16 @@ function RecurringPayment({ className }: { className?: string }) {
   // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
   const amountMinor = selectedPlanShape.price ?? 0
-  const cycle = planBillingInterval(selectedPlanShape)
+  const cycle = planBillingCycle(selectedPlanShape)
   const planName = selectedPlanShape.name ?? 'Plan'
   // A plan is recurring iff it carries a billing-cycle option. One-time /
   // lifetime plans (no cycle) get `Pay $X` copy + a single-line order
   // summary so they don't read as a subscription.
-  const isRecurring = !!cycle
+  const isRecurring = cycle != null
   const formattedAmount = formatPrice(amountMinor, currency, { locale })
-  const priceLine = isRecurring ? `${formattedAmount}/${shortCycle(cycle)}` : formattedAmount
+  const priceLine = isRecurring
+    ? `${formattedAmount}${formatCycleSuffix(cycle)}`
+    : `${formattedAmount} once`
   return (
     <div className={className ?? 'solvapay-checkout-payment'} data-branch="recurring">
       <div className="solvapay-checkout-order-summary" data-variant="recurring">
@@ -731,11 +734,11 @@ function RecurringPayment({ className }: { className?: string }) {
         </PaymentForm.TaxSummary.Root>
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className="solvapay-checkout-error" />
-        <PaymentForm.MandateText />
         <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <PaymentForm.SubmitButton className="solvapay-checkout-pay-button">
           {isRecurring ? `Subscribe — ${priceLine}` : `Pay ${formattedAmount}`}
         </PaymentForm.SubmitButton>
+        <PaymentForm.MandateText />
       </PaymentForm.Root>
     </div>
   )

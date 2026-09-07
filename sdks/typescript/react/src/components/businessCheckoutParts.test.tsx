@@ -1,6 +1,6 @@
 /// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
 import {
   createBusinessDetailsParts,
@@ -33,13 +33,14 @@ function makeSummaryCtx(overrides?: Partial<TaxSummaryContextSlice>): TaxSummary
 }
 
 describe('createBusinessDetailsParts.Fields', () => {
-  it('renders toggle label and hides business inputs when not purchasing as business', () => {
+  it('renders country for consumers and hides business-only inputs', () => {
     let ctx = makeBusinessCtx()
     const useCtx = () => ctx
     const { Fields } = createBusinessDetailsParts(useCtx, 'payment-form')
 
     const { rerender } = render(<Fields />)
 
+    expect(screen.getByRole('combobox', { name: /country/i })).toBeInTheDocument()
     expect(screen.getByText("I'm purchasing as a business")).toBeInTheDocument()
     expect(screen.queryByText('Business name')).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Acme GmbH')).not.toBeInTheDocument()
@@ -51,8 +52,31 @@ describe('createBusinessDetailsParts.Fields', () => {
 
     expect(screen.getByText('Business name')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Acme GmbH')).toBeInTheDocument()
-    expect(screen.getByText('Country')).toBeInTheDocument()
+    expect(screen.getAllByText('Country').length).toBeGreaterThan(0)
     expect(screen.getByText('Tax ID')).toBeInTheDocument()
+  })
+
+  it('writes customerCountry for consumers and shows US state and ZIP', async () => {
+    const setBusinessDetails = vi.fn()
+    const ctx = makeBusinessCtx({
+      businessDetails: { isBusiness: false },
+      setBusinessDetails,
+    })
+    const { Fields } = createBusinessDetailsParts(() => ctx, 'payment-form')
+
+    const { rerender } = render(<Fields />)
+    const countrySelect = screen.getByRole('combobox', { name: /country/i })
+    fireEvent.change(countrySelect, { target: { value: 'US' } })
+
+    expect(setBusinessDetails).toHaveBeenCalledWith(
+      expect.objectContaining({ customerCountry: 'US' }),
+    )
+
+    ctx.businessDetails = { isBusiness: false, customerCountry: 'US' }
+    rerender(<Fields />)
+
+    expect(screen.getByLabelText('State')).toBeInTheDocument()
+    expect(screen.getByLabelText('ZIP code')).toBeInTheDocument()
   })
 
   it('uses dynamic tax id label for selected country', () => {

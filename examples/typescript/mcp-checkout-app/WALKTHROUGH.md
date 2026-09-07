@@ -42,12 +42,9 @@ return createSolvaPayMcpServer({
 
 What that line hides (from `@solvapay/mcp`):
 
-- **12 tools registered** — 4 intent tools (`upgrade`, `manage_account`,
-  `topup`, `activate_plan`), 8 UI-only state-change
-  tools (`create_checkout_session`, `create_customer_session`,
-  `create_payment_intent`, `process_payment`,
-  `create_topup_payment_intent`, `attach_business_details`,
-  `cancel_renewal`, `reactivate_renewal`).
+- **8 tools registered** — 2 intent tools (`account`, `activate_plan`), 6
+  UI-only tools (`create_hosted_session`, `create_payment_intent`,
+  `process_payment`, `set_renewal`, `attach_business_details`, `get_history`).
 - **4 slash-command prompts registered** (`/upgrade`,
   `/manage_account`, `/topup`, `/activate_plan`) —
   additive for hosts that support prompts, silently ignored by hosts
@@ -67,8 +64,7 @@ What that line hides (from `@solvapay/mcp`):
 
 The client bundle entrypoint. Creates the `@modelcontextprotocol/ext-apps`
 `App`, mounts `<McpApp app={app} applyContext={...} />`. Everything
-else (provider setup, view routing, the tabbed shell, the responsive
-sidebar) lives inside `<McpApp>`.
+else (provider setup, view routing, the shell) lives inside `<McpApp>`.
 
 ```tsx
 const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
@@ -86,15 +82,17 @@ What that line hides (from `@solvapay/react/mcp`):
   `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod` never
   fire a first-mount fetch.
 - `<McpAppShell>` — surface-routed (account / checkout / topup), no tab
-  strip. Persistent **Seller** + **Your account** sidebar on wide
-  iframes; inline detail cards below the primary card on narrow frames.
+  strip. `Paying as {email}` lives inside the payment form
+  (`<McpPayingAs>`), not a Seller / Your account sidebar.
   `Terms · Privacy · Provided by SolvaPay` footer.
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's
-  `content[0].text` narrates the recovery intent tool (`upgrade` /
-  `topup` / `activate_plan`) and inlines `checkoutUrl`. The iframe
-  mounts only when the user or LLM deliberately calls one of the
-  three intent tools.
+  `content[0].text` states the current limit, names the recovery
+  intent tool (`` `account` `` with the appropriate `view`, or
+  `` `activate_plan` `` when a `planRef` is known), and inlines
+  `checkoutUrl`. Official MCP Apps guidance: the model reads that
+  text, not `structuredContent`. The iframe mounts only when the
+  user or LLM deliberately calls the `account` viewer.
 
 ## `src/demo-tools.ts`
 
@@ -114,7 +112,17 @@ host-specific sandbox policies without booting the whole iframe.
 
 - **Tools are the vocabulary** the agent sees in `tools/list`. One tool
   per user intent.
+- **`content[0].text` is the model and text-only-host lane.** Official
+  MCP Apps / 2026-07-28 tools guidance: `structuredContent` is for the
+  widget and is often hidden from the model when `content` is present.
+  Gate, nudge, and intent results must be self-sufficient in that first
+  text block (limits, recovery tool, https URL) — never
+  `"shown in the panel."` See
+  [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 - **The UI resource is a single shell** — `bootstrap.view` selects the
-  initial tab; every subsequent navigation is in-app.
+  surface; every subsequent navigation is in-app. Text-only hosts never
+  open it.
 - **Prompts + docs resource** are the narration layer. They tell the
   agent and the user what this server is for before they try a tool.
+  `docs://solvapay/overview.md` is how a text host discovers app
+  capabilities; `manage_account` is how it discovers user info.

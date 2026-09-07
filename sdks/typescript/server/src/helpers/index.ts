@@ -44,6 +44,10 @@ export { getPaymentMethodCore } from './payment-method'
 // Export auto-recharge helpers
 export { disableAutoRechargeCore, getAutoRechargeCore, saveAutoRechargeCore } from './auto-recharge'
 
+// Export history helpers
+export { getHistoryCore } from './history'
+export type { GetHistoryInput } from './history'
+
 // Export plans helpers
 export { listPlansCore } from './plans'
 
@@ -59,8 +63,8 @@ export { checkPurchaseCore } from './purchase'
 export type { PurchaseCheckResult } from './purchase'
 
 // Export usage tracking helpers
-export { trackUsageCore, getUsageCore } from './usage'
-export type { GetUsageResult } from './usage'
+export { trackUsageCore, getUsageCore, deriveUsageSnapshot } from './usage'
+export type { GetUsageResult, UsageLimitsInput } from './usage'
 
 // Export balance polling helpers
 export {

@@ -8,34 +8,37 @@
  * (`prd_your_product_ref`, `https://your-worker.example.com`, …) so
  * anyone who clones this repo can deploy without accidentally
  * connecting to someone else's merchant or backend environment. The
- * `[env.production]` block (used for the goldberg-demo live deploy)
- * ships its own placeholders for the same reason.
+ * `[env.dev]` and `[env.production]` blocks ship their own placeholders
+ * for the same reason.
  *
  * For *your* Worker, override those placeholders at deploy time by
  * putting real values in a local dotenv file (gitignored — see
- * `.env.example` / `.env.prod.example` for the full lists). This
+ * `.env.example` / `.env.dev.example` / `.env.prod.example`). This
  * script sources that file and passes the overridable keys as `--var`
  * flags to `wrangler deploy`, so the repo stays clean while your
  * deploys continue pointing at the right merchant + API origin.
  *
- * Two deploy targets:
+ * Three deploy targets:
  *
  *   pnpm deploy           -> wrangler deploy                   (sources `.env`)
+ *   pnpm deploy:dev       -> wrangler deploy --env dev         (sources `.env.dev`)
  *   pnpm deploy:prod      -> wrangler deploy --env production  (sources `.env.prod`)
  *
- * The `--prod` flag (or `DEPLOY_ENV=prod`) selects the prod target.
+ * `--dev` / `DEPLOY_ENV=dev` selects the dev goldberg target.
+ * `--prod` / `DEPLOY_ENV=prod` selects the prod goldberg target.
  *
  * `SOLVAPAY_SECRET_KEY` is managed separately as a Worker secret —
- * for prod, scope it with `--env production`:
+ * scope it per target:
+ *   wrangler secret put SOLVAPAY_SECRET_KEY              # default example
+ *   wrangler secret put SOLVAPAY_SECRET_KEY --env dev
  *   wrangler secret put SOLVAPAY_SECRET_KEY --env production
- * Run once, persists across deploys. It's listed in the dotenv files
- * so `wrangler dev` can use it for local testing, but this script
- * does NOT re-upload it on every deploy; secrets belong out of
- * deploy-time plaintext.
+ * Run once per Worker; persists across deploys. It's listed in the
+ * dotenv files so `wrangler dev` can use it for local testing, but
+ * this script does NOT re-upload it on every deploy.
  *
  * Pass-through: any extra CLI args (e.g. `--dry-run`) are forwarded
- * to `wrangler deploy`. The `--prod` token is stripped before
- * forwarding so it doesn't leak through to wrangler.
+ * to `wrangler deploy`. `--dev` and `--prod` are stripped before
+ * forwarding so they don't leak through to wrangler.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -47,10 +50,17 @@ const here = dirname(fileURLToPath(import.meta.url))
 const exampleRoot = resolve(here, '..')
 
 const passthroughArgs = process.argv.slice(2)
+const isDev = passthroughArgs.includes('--dev') || process.env.DEPLOY_ENV === 'dev'
 const isProd = passthroughArgs.includes('--prod') || process.env.DEPLOY_ENV === 'prod'
-const passthrough = passthroughArgs.filter(arg => arg !== '--prod')
 
-const dotEnvFile = isProd ? '.env.prod' : '.env'
+if (isDev && isProd) {
+  console.error('Cannot pass both --dev and --prod')
+  process.exit(1)
+}
+
+const passthrough = passthroughArgs.filter(arg => arg !== '--dev' && arg !== '--prod')
+
+const dotEnvFile = isProd ? '.env.prod' : isDev ? '.env.dev' : '.env'
 const dotEnvPath = resolve(exampleRoot, dotEnvFile)
 
 const OVERRIDABLE_VARS = [
@@ -93,11 +103,13 @@ function parseDotEnv(contents) {
 const localEnv = existsSync(dotEnvPath) ? parseDotEnv(readFileSync(dotEnvPath, 'utf8')) : {}
 
 if (!existsSync(dotEnvPath)) {
-  const wranglerEnvNote = isProd ? ' [env.production]' : ''
+  const wranglerEnvNote = isProd ? ' [env.production]' : isDev ? ' [env.dev]' : ''
   const secretCmd = isProd
     ? 'wrangler secret put SOLVAPAY_SECRET_KEY --env production'
-    : 'wrangler secret put SOLVAPAY_SECRET_KEY'
-  const exampleFile = isProd ? '.env.prod.example' : '.env.example'
+    : isDev
+      ? 'wrangler secret put SOLVAPAY_SECRET_KEY --env dev'
+      : 'wrangler secret put SOLVAPAY_SECRET_KEY'
+  const exampleFile = isProd ? '.env.prod.example' : isDev ? '.env.dev.example' : '.env.example'
   console.error(
     [
       '',
@@ -114,6 +126,7 @@ if (!existsSync(dotEnvPath)) {
 
 const wranglerArgs = ['exec', 'wrangler', 'deploy']
 if (isProd) wranglerArgs.push('--env', 'production')
+else if (isDev) wranglerArgs.push('--env', 'dev')
 for (const name of OVERRIDABLE_VARS) {
   const value = localEnv[name]
   if (value) wranglerArgs.push('--var', `${name}:${value}`)

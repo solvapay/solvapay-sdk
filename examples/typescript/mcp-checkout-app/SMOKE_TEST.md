@@ -60,9 +60,13 @@ Fresh customer opens the MCP App in `basic-host`.
   **not** repeated inside the account iframe.
 - `bootstrap.view === 'account'` by default → `<McpAccountView>`
   renders one primary card (current plan, credits, or pick-a-plan
-  empty state). Seller + **Your account** detail cards sit in the
-  persistent sidebar on wide iframes (or inline below the card on
-  narrow frames).
+  empty state). Identity is not on this surface — `Paying as {email}`
+  appears only inside the payment form, not as a Seller / Your
+  account sidebar.
+- On an active plan the card opens with a **Your plan** title in the
+  same slot as checkout's **Choose a plan**, then the plan name and
+  the facts captioned **Rate**/**Price** and **Balance**. The plan
+  facts sit flush inside the card — no nested bordered box.
 - Text-only hosts (Claude Code, basic-host stdout) see the narrated
   markdown summary instead of the UI iframe — same data, different
   render.
@@ -136,7 +140,7 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   transition. BackLink reads `← Change amount`.
   The order summary + Stripe Elements render inline; a
   `Save card for future top-ups` checkbox sits below.
-- Complete the card. SDK fires `create_topup_payment_intent`
+- Complete the card. SDK fires `create_payment_intent` with `purpose: "topup"`
   (purpose: `credit_topup`) then `process_payment`, then re-fires
   `activate_plan` to create the active PAYG purchase now that credits
   have landed. `step: 'success'`.
@@ -144,9 +148,9 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   grid (Amount / Credits / Plan / Rate). No CTA — the receipt is
   the terminal state.
 - The SDK has already fired `notifySuccess({ kind: 'topup' })` ->
-  `app.sendMessage` posting `Topped up $18.00. Ready to keep
-working.` to the chat. The agent picks that up and re-invokes
-  the original `/search_knowledge` call automatically.
+  `app.sendMessage` posting `Topped up $18.00. Ready to keep working.`
+  to the chat. The agent picks that up and re-invokes the original
+  `/search_knowledge` call automatically.
 
 ### 5b. Recurring branch — pay → confirm
 
@@ -173,8 +177,8 @@ Alternative path: select **Pro** in step 4 instead of PAYG.
 
 ### 6. Change-plan re-entry — no banner
 
-After activation, type `/manage_account` → `See plans` on the current-
-plan card.
+After activation, type `/manage_account` → `Upgrade` (Free) or
+`Change plan` (PAYG / paid) on the current-plan card.
 
 **Expect**:
 
@@ -182,17 +186,18 @@ plan card.
   the amber banner is **absent** and the `Stay on Free` link is
   hidden. One flag, one visual — same surface, different framing.
 
-### 7. Sidebar stability check
+### 7. Paying as
 
-Open the app on a **wide** iframe (>=816px) from the account view.
-Switch **Account → Top up → Account**.
+Open the app from the account view. Switch **Account → Top up** and
+advance to the payment step. Then go back to the amount step.
 
 **Expect**:
 
-- **Seller** + **Your account** cards stay in the left sidebar on
-  wide frames — widgets do not jump when swapping surfaces.
-- Resize to narrow (<816px): sidebar hides; the primary action card
-  renders first, then **Your account**, then **Seller** inline below.
+- `Paying as {email}` appears only on the payment step, inside the
+  form column — inline shares the back-link row; fullscreen stacks
+  under the heading.
+- The amount step, plan picker, and account surface do not show it.
+- No **Seller** or **Your account** cards, no sidebar rail.
 - No account screen shows product description or a `Current plan and
 usage` overline.
 

@@ -72,8 +72,10 @@ the one-liner route above is all you need.
 | `maxMonthlySpendMajor` | `number` | No | Monthly spend cap in display-currency major units. Omit for unlimited |
 | `currency` | `string` | Yes | ISO 4217 currency, must be a supported top-up currency |
 
-Validation enforces both amounts `<= 10,000` major units and a per-currency Stripe minimum on the
-top-up amount (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP).
+Validation enforces both amounts `<= 10,000` major units and a floor of the higher of Stripe's
+per-currency minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP) and the
+provider's **minimum top-up** (`minTopUpMinor` in SolvaPay Console settings). Amounts below that
+floor are rejected.
 
 `SaveAutoRechargeInput` additionally accepts `deferSetupIntent?: boolean` — see
 [staging with the first top-up](#stage-auto-recharge-with-the-first-top-up).

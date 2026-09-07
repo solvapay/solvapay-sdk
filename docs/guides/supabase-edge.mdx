@@ -87,6 +87,7 @@ The adapter handles CORS preflight, JSON serialization, error formatting, and au
 | `get-merchant` | GET | `getMerchant` | Fetch merchant branding (name, `iconUrl`, `logoUrl`, terms, privacy) |
 | `get-payment-method` | GET | `getPaymentMethod` | Preview mirrored card brand / last4 for a customer |
 | `get-product` | GET | `getProduct` | Fetch product + public plans (used by checkout UI) |
+| `get-history` | GET | `getHistory` | Past charges for a product plus account-wide credit activity (`?productRef=…&limit=…`) |
 
 All handlers are pure `(req: Request) => Promise<Response>` and run on any web-standards runtime (Supabase Edge, Deno, Cloudflare Workers, Bun, Next.js Edge, Vercel Edge Functions).
 

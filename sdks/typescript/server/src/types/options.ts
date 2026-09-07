@@ -110,6 +110,13 @@ export interface PayableOptions {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCustomerRef?: (context: any) => string | Promise<string>
+
+  /**
+   * Tool or handler name recorded on usage events so consumption is
+   * attributable. `registerPayable` / `buildPayableHandler` set this
+   * from the registered tool name.
+   */
+  toolName?: string
 }
 
 /**

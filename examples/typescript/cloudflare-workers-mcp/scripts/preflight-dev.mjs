@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /* global console, process */
 /**
- * Pre-deploy checks for the goldberg-demo prod Worker
- * (`pnpm deploy:prod` -> solvapay-mcp-goldberg-prod).
+ * Pre-deploy checks for the goldberg-demo dev Worker
+ * (`pnpm deploy:dev` -> solvapay-mcp-goldberg-dev).
  *
- * Validates `.env.prod`, build artifacts, and wrangler auth before
- * publishing to https://goldberg-demo.solvapay.app.
+ * Validates `.env.dev`, build artifacts, and wrangler auth before
+ * publishing to https://goldberg-demo-dev.solvapay.app.
  *
  * Usage:
- *   node scripts/preflight-prod.mjs
- *   node scripts/preflight-prod.mjs --allow-sandbox   # warn only on sk_sandbox
+ *   node scripts/preflight-dev.mjs
+ *   node scripts/preflight-dev.mjs --allow-live   # warn only on sk_live
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -19,9 +19,10 @@ import { spawnSync } from 'node:child_process'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const exampleRoot = resolve(here, '..')
-const allowSandbox = process.argv.includes('--allow-sandbox')
+const allowLive = process.argv.includes('--allow-live')
 
 const PLACEHOLDER = /your_|replace_me|sk_test_your|sk_live_your|prd_your/i
+const DEV_PUBLIC_URL = 'https://goldberg-demo-dev.solvapay.app'
 
 function parseDotEnv(contents) {
   const env = {}
@@ -49,49 +50,60 @@ function parseDotEnv(contents) {
 const errors = []
 const warnings = []
 
-const dotEnvPath = resolve(exampleRoot, '.env.prod')
+const dotEnvPath = resolve(exampleRoot, '.env.dev')
 if (!existsSync(dotEnvPath)) {
   errors.push(
-    `${dotEnvPath} missing — copy .env.prod.example to .env.prod and fill in live values`,
+    `${dotEnvPath} missing — copy .env.dev.example to .env.dev and fill in dev values`,
   )
 } else {
   const env = parseDotEnv(readFileSync(dotEnvPath, 'utf8'))
 
-  for (const key of ['SOLVAPAY_SECRET_KEY', 'SOLVAPAY_PRODUCT_REF', 'MCP_PUBLIC_BASE_URL']) {
+  for (const key of [
+    'SOLVAPAY_SECRET_KEY',
+    'SOLVAPAY_PRODUCT_REF',
+    'MCP_PUBLIC_BASE_URL',
+    'SOLVAPAY_API_BASE_URL',
+  ]) {
     const value = env[key]?.trim()
     if (!value) {
-      errors.push(`${key} is not set in .env.prod`)
+      errors.push(`${key} is not set in .env.dev`)
       continue
     }
     if (PLACEHOLDER.test(value)) {
-      errors.push(`${key} still has a placeholder value in .env.prod`)
+      errors.push(`${key} still has a placeholder value in .env.dev`)
     }
   }
 
   const secretKey = env.SOLVAPAY_SECRET_KEY ?? ''
-  if (secretKey.startsWith('sk_sandbox') || secretKey.startsWith('sk_test')) {
+  if (secretKey.startsWith('sk_live')) {
     const msg =
-      'SOLVAPAY_SECRET_KEY looks like sandbox/test — prod demo expects sk_live_… (see .env.prod.example)'
-    if (allowSandbox) warnings.push(msg)
-    else errors.push(`${msg}. Pass --allow-sandbox to proceed anyway.`)
+      'SOLVAPAY_SECRET_KEY looks like live — dev demo expects sk_test_… or sk_sandbox_… (see .env.dev.example)'
+    if (allowLive) warnings.push(msg)
+    else errors.push(`${msg}. Pass --allow-live to proceed anyway.`)
   }
 
   const publicUrl = env.MCP_PUBLIC_BASE_URL ?? ''
-  if (publicUrl && publicUrl !== 'https://goldberg-demo.solvapay.app') {
-    warnings.push(
-      `MCP_PUBLIC_BASE_URL is ${publicUrl} — goldberg prod normally uses https://goldberg-demo.solvapay.app`,
+  if (publicUrl !== DEV_PUBLIC_URL) {
+    errors.push(
+      `MCP_PUBLIC_BASE_URL must be ${DEV_PUBLIC_URL} (got ${publicUrl || '(empty)'})`,
     )
   }
 
-  if (env.SOLVAPAY_API_BASE_URL?.includes('api-dev')) {
-    warnings.push('SOLVAPAY_API_BASE_URL points at api-dev — omit it for production api.solvapay.com')
+  const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? ''
+  if (!apiBaseUrl.includes('api-dev')) {
+    errors.push(
+      `SOLVAPAY_API_BASE_URL must point at api-dev (got ${apiBaseUrl || '(empty)'})`,
+    )
+  }
+  if (apiBaseUrl.includes('api.solvapay.com') && !apiBaseUrl.includes('api-dev')) {
+    errors.push('SOLVAPAY_API_BASE_URL must not point at production api.solvapay.com')
   }
 }
 
 const widgetHtml = resolve(exampleRoot, 'src/assets/mcp-app.html')
 if (!existsSync(widgetHtml)) {
   errors.push(
-    `${widgetHtml} missing — run \`pnpm build\` in examples/typescript/cloudflare-workers-mcp first`,
+    `${widgetHtml} missing — run \`pnpm build\` in examples/cloudflare-workers-mcp first`,
   )
 }
 
@@ -105,19 +117,19 @@ if (whoami.status !== 0) {
 
 const secretList = spawnSync(
   'pnpm',
-  ['exec', 'wrangler', 'secret', 'list', '--env', 'production'],
+  ['exec', 'wrangler', 'secret', 'list', '--env', 'dev'],
   { cwd: exampleRoot, encoding: 'utf8' },
 )
 if (secretList.status !== 0) {
-  errors.push('could not list prod Worker secrets — check Cloudflare access')
+  errors.push('could not list dev Worker secrets — check Cloudflare access')
 } else if (!/SOLVAPAY_SECRET_KEY/.test(secretList.stdout)) {
   errors.push(
-    'SOLVAPAY_SECRET_KEY secret not found on solvapay-mcp-goldberg-prod — run once:\n' +
-      '  pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production',
+    'SOLVAPAY_SECRET_KEY secret not found on solvapay-mcp-goldberg-dev — run once:\n' +
+      '  pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env dev',
   )
 }
 
-console.log('Goldberg prod preflight\n')
+console.log('Goldberg dev preflight\n')
 
 if (warnings.length) {
   console.log('Warnings:')
@@ -130,15 +142,14 @@ if (errors.length) {
   for (const e of errors) console.log(`  ✗  ${e}`)
   console.log('')
   console.log('Fix the blockers above, then run:')
-  console.log('  pnpm preflight:prod && pnpm deploy:prod')
+  console.log('  pnpm preflight:dev && pnpm deploy:dev')
   process.exit(1)
 }
 
-console.log('Ready to deploy goldberg-demo prod.')
+console.log('Ready to deploy goldberg-demo dev.')
 console.log('')
-console.log('  pnpm deploy:prod')
+console.log('  pnpm deploy:dev')
 console.log('')
 console.log('Post-deploy (ChatGPT):')
-console.log('  • Delete and re-add the Custom Connector so tools/list cache refreshes')
-console.log('  • Verify topup: call topup → iframe → create_payment_intent (purpose: topup) succeeds')
-console.log('  • MCP endpoint: https://goldberg-demo.solvapay.app/mcp')
+console.log('  • Add a separate Custom Connector from prod — ChatGPT caches tools/list per connector')
+console.log('  • MCP endpoint: https://goldberg-demo-dev.solvapay.app/mcp')

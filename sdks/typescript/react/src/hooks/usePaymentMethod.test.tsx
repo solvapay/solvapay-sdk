@@ -11,6 +11,7 @@ const card: PaymentMethodInfo = {
   last4: '4242',
   expMonth: 12,
   expYear: 2030,
+  reusable: true,
 }
 
 function makeFetch(payload: unknown, init: { status?: number } = {}) {

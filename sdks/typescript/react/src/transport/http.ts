@@ -12,6 +12,7 @@ import type {
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,
 } from './types'
+import type { GetHistoryResult } from '@solvapay/server'
 import { buildRequestHeaders } from '../utils/headers'
 import { readErrorMessage } from '../utils/readErrorMessage'
 
@@ -66,6 +67,7 @@ export const DEFAULT_ROUTES = {
   autoRecharge: '/api/auto-recharge',
   getUsage: '/api/usage',
   getLimits: '/api/limits',
+  getHistory: '/api/history',
 } as const
 
 function routeFor(config: SolvaPayConfig | undefined, key: keyof typeof DEFAULT_ROUTES): string {
@@ -279,6 +281,8 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         needsTopUp?: boolean
         needsUpgrade?: boolean
         upgraded?: boolean
+        used?: number
+        limit?: number
       }>(config, url, {
         method: 'GET',
         onErrorContext: 'getLimits',
@@ -294,7 +298,22 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         needsTopUp: data.needsTopUp,
         needsUpgrade: data.needsUpgrade,
         upgraded: data.upgraded,
+        ...(data.used !== undefined ? { used: data.used } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
       }
+    },
+
+    getHistory: async (params = {}) => {
+      const base = routeFor(config, 'getHistory')
+      const search = new URLSearchParams()
+      if (params.productRef) search.set('productRef', params.productRef)
+      if (params.limit !== undefined) search.set('limit', String(params.limit))
+      const qs = search.toString()
+      return request<GetHistoryResult>(config, qs ? `${base}?${qs}` : base, {
+        method: 'GET',
+        onErrorContext: 'getHistory',
+        errorPrefix: 'Failed to load history',
+      })
     },
   }
 }

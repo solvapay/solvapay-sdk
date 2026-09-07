@@ -19,6 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useExternalLinkClick } from '../../hooks/useExternalLink'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
@@ -71,6 +72,17 @@ export interface McpCheckoutViewProps {
    * surface routing.
    */
   onBack?: () => void
+  /**
+   * Pre-select this plan and, with `autoAdvance`, skip the plan step
+   * by running `flow.advance()` once the selector has that plan.
+   */
+  initialPlanRef?: string
+  /**
+   * When set with `initialPlanRef`, fire the plan-step Continue path
+   * automatically so a ladder Switch/Activate lands on amount or
+   * payment — not a second plan picker.
+   */
+  autoAdvance?: boolean
   classNames?: McpViewClassNames
   children?: React.ReactNode
 }
@@ -86,6 +98,8 @@ export function McpCheckoutView({
   plans,
   onClose,
   onBack,
+  initialPlanRef,
+  autoAdvance,
   classNames,
   children,
 }: McpCheckoutViewProps) {
@@ -111,6 +125,8 @@ export function McpCheckoutView({
         plans={plans}
         onClose={onClose}
         onBack={onBack}
+        initialPlanRef={initialPlanRef}
+        autoAdvance={autoAdvance}
         cx={cx}
         classNames={classNames}
       >
@@ -194,6 +210,8 @@ const HostedLinkButton = React.memo(function HostedLinkButton({
   onLaunch,
   cx,
 }: HostedLinkButtonProps) {
+  const handleExternalClick = useExternalLinkClick()
+
   if (state.status === 'ready') {
     return (
       <a
@@ -202,7 +220,10 @@ const HostedLinkButton = React.memo(function HostedLinkButton({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${readyLabel} (opens in a new tab)`}
-        onClick={() => onLaunch?.(state.href)}
+        onClick={event => {
+          onLaunch?.(state.href)
+          handleExternalClick(event)
+        }}
       >
         <button type="button" className={cx.button}>
           {readyLabel}
@@ -238,6 +259,7 @@ const AwaitingBody = React.memo(function AwaitingBody({
   onCancel,
   cx,
 }: AwaitingBodyProps) {
+  const handleExternalClick = useExternalLinkClick()
   return (
     <>
       <div className={cx.awaitingHeader}>
@@ -257,7 +279,10 @@ const AwaitingBody = React.memo(function AwaitingBody({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Reopen checkout (opens in a new tab)"
-        onClick={() => onReopen()}
+        onClick={event => {
+          onReopen()
+          handleExternalClick(event)
+        }}
       >
         <button type="button" className={cx.button}>
           Reopen checkout

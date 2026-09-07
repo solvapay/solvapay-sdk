@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
-import { SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 import { McpApp, type McpAppFull } from '../McpApp'
 import type { CallToolResultLike } from '../bootstrap'
 
@@ -38,6 +38,7 @@ function makeApp(opts: {
   readServerResource?: McpAppFull['readServerResource']
   /** When true, `readServerResource` rejects (triggers intent-tool fallback). */
   readServerResourceFails?: boolean
+  hostContext?: Record<string, unknown>
 }): McpAppFull {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const emitInitialToolResult = opts.emitInitialToolResult ?? true
@@ -75,7 +76,11 @@ function makeApp(opts: {
           }))),
     getHostContext: () => {
       if (opts.toolName && !connected) return undefined
-      return opts.toolName ? { toolInfo: { tool: { name: opts.toolName } } } : undefined
+      if (!opts.toolName && !opts.hostContext) return undefined
+      return {
+        ...(opts.toolName ? { toolInfo: { tool: { name: opts.toolName } } } : {}),
+        ...opts.hostContext,
+      }
     },
     connect: opts.connectFails
       ? vi.fn().mockRejectedValue(new Error('connect failed'))
@@ -140,7 +145,7 @@ describe('<McpApp>', () => {
 
   it('calls readServerResource once when a transport tool opened the iframe', async () => {
     const app = makeApp({
-      toolName: 'create_checkout_session',
+      toolName: 'create_hosted_session',
       emitInitialToolResult: false,
       structuredContent: {
         view: 'checkout',
@@ -162,7 +167,7 @@ describe('<McpApp>', () => {
     // opening notification can't be parsed. The shell reads
     // solvapay://bootstrap.json instead of replaying the intent tool.
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -201,14 +206,14 @@ describe('<McpApp>', () => {
     expect(app.readServerResource).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'manage_account',
+      name: VIEWER_TOOL_NAME,
       arguments: {},
     })
   })
 
-  it('does not re-call the intent tool when the host pushes the opening notification', async () => {
+  it('does not re-call the viewer when the host pushes the opening notification', async () => {
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -222,9 +227,9 @@ describe('<McpApp>', () => {
     expect(app.callServerTool).not.toHaveBeenCalled()
   })
 
-  it('routes to the account view when the host invokes manage_account', async () => {
+  it('routes to the account view when the host invokes account', async () => {
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -238,9 +243,9 @@ describe('<McpApp>', () => {
     expect(AccountStub).toHaveBeenCalled()
   })
 
-  it('routes to the topup view when the host invokes topup', async () => {
+  it('routes to the topup view from structuredContent.view', async () => {
     const app = makeApp({
-      toolName: 'topup',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'topup',
         productRef: 'prod_1',
@@ -287,7 +292,7 @@ describe('<McpApp>', () => {
   it('default onClose routes to app.requestTeardown', async () => {
     const requestTeardown = vi.fn().mockResolvedValue(undefined)
     const app = makeApp({
-      toolName: 'upgrade',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -319,7 +324,7 @@ describe('<McpApp>', () => {
   it('accepts an `onClose` override that replaces the default teardown', async () => {
     const requestTeardown = vi.fn().mockResolvedValue(undefined)
     const app = makeApp({
-      toolName: 'upgrade',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -341,5 +346,160 @@ describe('<McpApp>', () => {
       expect(onClose).toHaveBeenCalledTimes(1)
     })
     expect(requestTeardown).not.toHaveBeenCalled()
+  })
+
+  it('account intent with scrubbed opening notification fetches bootstrap exactly once', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      readServerResourceFails: true,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      initialToolResultParams: {
+        content: [{ type: 'text', text: 'Plans ready' }],
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: VIEWER_TOOL_NAME,
+      arguments: {},
+    })
+    expect(app.readServerResource).toHaveBeenCalledTimes(1)
+  })
+
+  it('activate_plan as host entry fetches bootstrap once via resource, not tool replay', async () => {
+    const app = makeApp({
+      toolName: 'activate_plan',
+      emitInitialToolResult: false,
+      structuredContent: undefined,
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(app.readServerResource).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).not.toHaveBeenCalled()
+  })
+
+  it('stamps data-display-mode from the host context', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'inline',
+        availableDisplayModes: ['inline', 'fullscreen'],
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="inline"]')).toBeTruthy()
+  })
+
+  it('fullscreen chrome is footer only — no in-widget header or Close', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+        merchant: { displayName: 'Acme', legalName: 'Acme Inc.' },
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-close')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+  })
+
+  it('applies hostContext.safeAreaInsets as padding on the root container', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'inline',
+        safeAreaInsets: { top: 12, right: 0, bottom: 8, left: 4 },
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    const main = container.querySelector('.solvapay-mcp-main')
+    expect(main).toBeTruthy()
+    expect(main).toHaveStyle({
+      paddingTop: '12px',
+      paddingRight: '0px',
+      paddingBottom: '8px',
+      paddingLeft: '4px',
+    })
+  })
+
+  it('applies hostContext.safeAreaInsets in fullscreen as well as inline', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'account',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        safeAreaInsets: { top: 20, right: 8, bottom: 16, left: 8 },
+      },
+    })
+    const AccountStub = vi.fn(() => <div data-testid="account-stub">stubbed account</div>)
+    const { container } = render(<McpApp app={app} views={{ account: AccountStub }} />)
+    await screen.findByTestId('account-stub')
+    expect(container.querySelector('.solvapay-mcp-main')).toHaveStyle({
+      paddingTop: '20px',
+      paddingRight: '8px',
+      paddingBottom: '16px',
+      paddingLeft: '8px',
+    })
+  })
+
+  it('stamps the hosted rail in fullscreen even when the host reports a stale 720px width', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        containerDimensions: { width: 720 },
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-hosted-layout')).toHaveAttribute(
+      'data-rail',
+      'hosted',
+    )
   })
 })

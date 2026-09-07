@@ -393,6 +393,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       isBusiness: boolean
       businessName?: string
       country?: string
+      customerCountry?: string
+      customerName?: string
+      customerState?: string
+      customerPostalCode?: string
       taxId?: string
       taxIdType?: import('@solvapay/core').TaxIdType
     }) => transportRef.current.attachBusinessDetails!(params),

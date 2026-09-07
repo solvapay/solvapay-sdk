@@ -120,6 +120,36 @@ const usageBasedPurchase: PurchaseInfo = {
   planSnapshot: { reference: 'plan_usage', price: 0, currency: 'USD', isMetered: true },
 }
 
+/** $0 PAYG purchase whose snapshot carries a per-call charge option. */
+const paygWithRate: PurchaseInfo = {
+  reference: 'purchase_payg_rate',
+  customerRef: 'cus_payg',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  amount: 0,
+  currency: 'USD',
+  isRecurring: false,
+  planRef: 'plan_payg',
+  planSnapshot: {
+    reference: 'plan_payg',
+    name: 'Pay as you go',
+    price: 0,
+    currency: 'USD',
+    isMetered: true,
+    options: [
+      {
+        kind: 'charge',
+        per: 'unit',
+        amountMinor: 2,
+        currency: 'usd',
+        meter: 'requests',
+      },
+    ],
+  },
+}
+
 beforeEach(() => {
   paymentMethodCache.clear()
 })
@@ -176,6 +206,7 @@ describe('CurrentPlanCard', () => {
       last4: '4242',
       expMonth: 12,
       expYear: 2030,
+      reusable: true,
     }
     const ctx = buildCtx(recurringPurchase, {
       config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
@@ -397,6 +428,7 @@ describe('CurrentPlanCard', () => {
       last4: '4242',
       expMonth: 12,
       expYear: 2030,
+      reusable: true,
     }
     const ctx = buildCtx(recurringPurchase, {
       config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
@@ -482,5 +514,118 @@ describe('CurrentPlanCard', () => {
     await screen.findByText('Pay as you go')
     expect(screen.queryByText('Unlimited')).toBeNull()
     expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
+  })
+
+  it('renders a usage rate, not Free, for a $0 PAYG plan with per-unit options', async () => {
+    const ctx = buildCtx(paygWithRate, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).toBeTruthy()
+    expect(price?.textContent).not.toMatch(/Free/)
+    expect(price?.textContent).toMatch(/\/ request/)
+  })
+
+  it('omits the price line for a $0 PAYG plan that is metered but has no options', async () => {
+    const paygPurchase: PurchaseInfo = {
+      reference: 'purchase_payg_thin',
+      customerRef: 'cus_payg',
+      productName: 'Widget API',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+      amount: 0,
+      currency: 'USD',
+      isRecurring: false,
+      planRef: 'plan_payg',
+      planSnapshot: {
+        reference: 'plan_payg',
+        name: 'Pay as you go',
+        price: 0,
+        currency: 'USD',
+        isMetered: true,
+      },
+    }
+    const ctx = buildCtx(paygPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price === null || !price.textContent?.includes('Free')).toBe(true)
+  })
+
+  it('still renders Free for a genuine non-metered $0 plan', async () => {
+    const freePurchase: PurchaseInfo = {
+      reference: 'purchase_free',
+      customerRef: 'cus_free',
+      productName: 'Widget API',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+      amount: 0,
+      currency: 'USD',
+      isRecurring: false,
+      planRef: 'plan_free',
+      planSnapshot: {
+        reference: 'plan_free',
+        name: 'Free',
+        price: 0,
+        currency: 'USD',
+        isMetered: false,
+      },
+    }
+    const ctx = buildCtx(freePurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByRole('heading', { name: 'Free' })
+    expect(document.querySelector('[data-solvapay-current-plan-price]')?.textContent).toBe('Free')
+  })
+
+  it('captions the rate and balance values when showFieldLabels is set', async () => {
+    const ctx = buildCtx(paygWithRate, {
+      config: { transport: makeTransport() },
+      balance: mockBalanceStatus({
+        credits: 500,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      }),
+    })
+    render(<Renderer ctx={ctx} props={{ showFieldLabels: true }} />)
+
+    await screen.findByText('Pay as you go')
+    expect(screen.getByText('Rate')).toBeTruthy()
+    expect(screen.getByText('Balance')).toBeTruthy()
+    // The caption is a sibling of the value, so the value node's own
+    // text stays exactly what surfaces already assert against.
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).not.toMatch(/Rate/)
+    expect(price?.textContent).toMatch(/\/ request/)
+  })
+
+  it('captions a non-metered plan price with Price rather than Rate', async () => {
+    const ctx = buildCtx(recurringPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} props={{ showFieldLabels: true }} />)
+
+    await screen.findByText('Your plan')
+    expect(screen.getByText('Price')).toBeTruthy()
+    expect(screen.queryByText('Rate')).toBeNull()
+  })
+
+  it('renders no field captions by default', async () => {
+    const ctx = buildCtx(paygWithRate, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    expect(document.querySelector('[data-solvapay-current-plan-field-label]')).toBeNull()
+  })
+
+  it('omits the actions row when both actions are hidden', async () => {
+    const ctx = buildCtx(recurringPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} props={{ hideCancelButton: true, hideUpdatePaymentButton: true }} />)
+
+    await screen.findByText('Your plan')
+    expect(document.querySelector('[data-solvapay-current-plan-actions]')).toBeNull()
   })
 })

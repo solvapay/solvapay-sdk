@@ -156,6 +156,8 @@ describe('createHttpTransport — default routes', () => {
       needsTopUp: true,
       needsUpgrade: false,
       upgraded: true,
+      used: 3,
+      limit: 3,
     })
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
@@ -171,6 +173,8 @@ describe('createHttpTransport — default routes', () => {
       needsTopUp: true,
       needsUpgrade: false,
       upgraded: true,
+      used: 3,
+      limit: 3,
     })
     expect(result).not.toHaveProperty('plans')
     expect(result).not.toHaveProperty('balance')

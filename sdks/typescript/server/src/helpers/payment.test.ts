@@ -509,6 +509,39 @@ describe('attachBusinessDetailsCore', () => {
     })
   })
 
+  it('forwards customer address fields on the consumer branch', async () => {
+    mockAttachBusinessDetails.mockResolvedValue({
+      taxBreakdown: {
+        subtotal: 1000,
+        taxAmount: 0,
+        taxRate: 0,
+        treatment: 'none',
+        total: 1000,
+        currency: 'USD',
+      },
+    })
+
+    await attachBusinessDetailsCore(
+      fakeRequest(),
+      {
+        paymentIntentId: 'pi_test_123',
+        isBusiness: false,
+        customerCountry: 'US',
+        customerState: 'CA',
+        customerPostalCode: '94103',
+      },
+      { solvaPay: { attachBusinessDetails: mockAttachBusinessDetails } as never },
+    )
+
+    expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_test_123',
+      isBusiness: false,
+      customerCountry: 'US',
+      customerState: 'CA',
+      customerPostalCode: '94103',
+    })
+  })
+
   it('forwards validated business details including tax ID fields', async () => {
     mockAttachBusinessDetails.mockResolvedValue({
       taxBreakdown: {
@@ -538,6 +571,7 @@ describe('attachBusinessDetailsCore', () => {
       isBusiness: true,
       businessName: 'Acme AB',
       country: 'SE',
+      customerCountry: 'SE',
       taxId: 'SE556677889901',
       taxIdType: 'eu_vat',
     })

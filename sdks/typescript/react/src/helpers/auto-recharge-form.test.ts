@@ -255,19 +255,12 @@ describe('validateAutoRechargeForm — per-currency minimums & relationship (DEV
     }
   })
 
-  it('rejects a top-up smaller than the threshold (would immediately re-trigger)', () => {
+  it('accepts a top-up smaller than the threshold (trigger-time multiple clears the deficit)', () => {
     const result = validateAutoRechargeForm(
       form({ thresholdAmountMajor: '10', topupAmountMajor: '5' }),
       'USD',
     )
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error).toBe(
-        interpolate(enCopy.autoRecharge.topupBelowThreshold ?? '', {
-          amount: formatPrice(1000, 'USD', { free: '' }),
-        }),
-      )
-    }
+    expect(result.ok).toBe(true)
   })
 
   it('accepts a top-up exactly equal to the threshold (boundary)', () => {

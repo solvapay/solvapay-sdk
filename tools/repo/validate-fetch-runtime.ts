@@ -61,6 +61,7 @@ const TARGETS: TargetPackage[] = [
       'syncCustomer',
       'createCheckoutSession',
       'createCustomerSession',
+      'getHistory',
       'getMerchant',
       'getProduct',
       'trackUsage',

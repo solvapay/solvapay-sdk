@@ -4,14 +4,14 @@ A minimal fetch-first MCP server that runs on Cloudflare Workers, using the unif
 
 Ships with a toy paywalled demo toolbox (`predict_price_chart`, `predict_direction` — a seeded stock-predictor oracle) so you can see the full paywall + widget flow end-to-end before plugging in your own tools.
 
-> **Sibling:** [`examples/typescript/supabase-edge-mcp/`](../supabase-edge-mcp/) is the same example on the Supabase Edge runtime. The worker entrypoint is the only meaningful difference between the two.
+> **Sibling:** [`examples/supabase-edge-mcp/`](../supabase-edge-mcp/) is the same example on the Supabase Edge runtime. The worker entrypoint is the only meaningful difference between the two.
 
 ## What you get
 
 - OAuth discovery (`/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/.well-known/openid-configuration`)
 - Bridge routes (`/oauth/{register,authorize,token,revoke}`) backed by SolvaPay's hosted OAuth
-- The SolvaPay MCP tool surface (`create_payment_intent`, `process_payment`, `upgrade`, `manage_account`, `topup`, …)
-- A text-only paywall narration when a paywalled tool is called past the customer's plan limit, routing the LLM to the right recovery intent (`upgrade` / `topup` / `activate_plan`)
+- The SolvaPay MCP tool surface (`check_purchase`, `create_payment_intent`, `process_payment`, `upgrade`, `manage_account`, `topup`, …)
+- A text-only paywall narration when a paywalled tool is called past the customer's plan limit. `content[0].text` states the current limit, the reason, and the one recovery intent (`upgrade` / `topup` / `activate_plan`) plus a https URL. Official MCP Apps guidance: `content` is the model and text-only-host lane; `structuredContent` is often hidden from the model when `content` is present. No iframe opens on a gate. See [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 - The SolvaPay MCP widget iframe (`ui://cloudflare-workers-mcp/mcp-app.html`) with CSP auto-including your `apiBaseUrl`
 - Multi-currency plans: configure per-plan `pricingOptions` in the SolvaPay Console; the checkout widget shows a currency switcher automatically when a plan exposes more than one currency
 
@@ -32,7 +32,7 @@ Ships with a toy paywalled demo toolbox (`predict_price_chart`, `predict_directi
 pnpm install
 pnpm -w build:packages
 
-cd examples/typescript/cloudflare-workers-mcp
+cd examples/cloudflare-workers-mcp
 cp .env.example .env
 # Fill in SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT_REF in .env
 
@@ -59,8 +59,20 @@ Note: SolvaPay's OAuth server accepts any port on loopback (`127.0.0.1`, `::1`, 
 
 ## Deploy
 
+Three isolated Workers share this example. Deploying one does not replace the others — each has its own Worker name, custom domain, secret store, and dotenv file.
+
+| Command | Worker | MCP URL | Backend |
+| --- | --- | --- | --- |
+| `pnpm deploy` | `solvapay-mcp-workers-example` | `https://mcp-workers-example.solvapay.com/mcp` | optional via `.env` |
+| `pnpm deploy:dev` | `solvapay-mcp-goldberg-dev` | `https://goldberg-demo-dev.solvapay.app/mcp` | `https://api-dev.solvapay.com` |
+| `pnpm deploy:prod` | `solvapay-mcp-goldberg-prod` | `https://goldberg-demo.solvapay.app/mcp` | `https://api.solvapay.com` |
+
+Use **separate** MCP host connectors for dev and prod — ChatGPT caches `tools/list` per connector.
+
+### Deploy the public example
+
 ```bash
-# From examples/typescript/cloudflare-workers-mcp/
+# From examples/cloudflare-workers-mcp/
 pnpm build
 
 # One-time: upload the merchant secret to the Worker
@@ -78,12 +90,39 @@ $EDITOR .env
 pnpm run deploy
 ```
 
+### Deploy the dev demo
+
+SolvaPay-owned dev goldberg demo at `goldberg-demo-dev.solvapay.app`, gated behind
+`solvapay-mcp-goldberg-dev` so its secrets and observability are isolated from
+prod and the public example. Config lives in the `[env.dev]` block of
+`wrangler.jsonc`.
+
+```bash
+# One-time per dev Worker — secret is scoped to solvapay-mcp-goldberg-dev,
+# separate from prod and the example Worker's secret stores.
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env dev
+
+# Copy .env.dev.example -> .env.dev and fill in dev values
+# (sk_test_… or sk_sandbox_…, dev prd_…, api-dev).
+cp .env.dev.example .env.dev
+$EDITOR .env.dev
+
+pnpm preflight:dev    # checks .env.dev, build artifacts, wrangler auth
+pnpm run deploy:dev   # builds + deploys to goldberg-demo-dev.solvapay.app
+```
+
+MCP endpoint: `https://goldberg-demo-dev.solvapay.app/mcp`. Add a **separate**
+ChatGPT Custom Connector from prod — ChatGPT caches `tools/list` per connector.
+
+`pnpm run deploy:dev` runs `node scripts/deploy.mjs --dev`, which sources
+`.env.dev` and passes `--env dev` to `wrangler deploy`.
+
 ### Deploy the live demo
 
 The same example also ships a prod target for the canonical
 `goldberg-demo.solvapay.app` deploy, gated behind a separate Worker
 name (`solvapay-mcp-goldberg-prod`) so its secrets and observability
-are isolated from the public-safe example deploy above. The prod
+are isolated from the dev and public-safe example deploys above. The prod
 config lives in the `[env.production]` block of `wrangler.jsonc`.
 
 ```bash
@@ -102,8 +141,9 @@ pnpm run deploy:prod   # builds + deploys to goldberg-demo.solvapay.app
 ```
 
 After deploy, **delete and re-add** any ChatGPT Custom Connector pointing at
-this worker — ChatGPT caches `tools/list` per org/connector. Verify the
-top-up iframe flow end-to-end (`topup` → Stripe form mounts).
+this worker — ChatGPT caches `tools/list` per org/connector and won't pick
+up the ChatGPT-aware `hideToolsByAudience` bypass until the cache is busted.
+Verify the top-up iframe flow end-to-end (`topup` → Stripe form mounts).
 
 `pnpm run deploy:prod` runs `node scripts/deploy.mjs --prod`, which
 sources `.env.prod` instead of `.env` and passes `--env production`
@@ -118,8 +158,9 @@ deploy.
 `SOLVAPAY_API_BASE_URL` override — src/worker.ts falls back to
 `https://api.solvapay.com`). This means anyone who clones the repo
 can run `pnpm run deploy` without accidentally connecting to someone
-else's merchant or backend environment. The `[env.production]` block
-ships its own placeholders for the same reason.
+else's merchant or backend environment. The `[env.dev]` and
+`[env.production]` blocks ship their own placeholders for the same
+reason.
 
 `pnpm run deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
 which sources `.env` (gitignored) and passes your real values
@@ -129,28 +170,28 @@ through to `wrangler deploy --var KEY:VALUE` for:
 - `MCP_PUBLIC_BASE_URL`
 - `SOLVAPAY_API_BASE_URL` (optional)
 
-`pnpm run deploy:prod` does the same thing but sources `.env.prod`
-and adds `--env production` to the wrangler invocation, so the
-overrides land on the prod Worker's vars instead of the example
-Worker's.
+`pnpm run deploy:dev` sources `.env.dev` and adds `--env dev`.
+`pnpm run deploy:prod` sources `.env.prod` and adds `--env production`.
+Overrides land on the matching Worker's vars.
 
-Your `SOLVAPAY_SECRET_KEY` stays in `.env` (or `.env.prod`) for
-`wrangler dev` but is _not_ re-uploaded on every deploy — it lives
+Your `SOLVAPAY_SECRET_KEY` stays in `.env` / `.env.dev` / `.env.prod` for
+`wrangler dev` but is *not* re-uploaded on every deploy — it lives
 on the Worker as a proper Secret (via the one-time `wrangler secret
-put` above; use `--env production` for the prod target) and persists
-across deploys. Rotating it is a single `wrangler secret put` +
-editing the dotenv file.
+put` above; use `--env dev` or `--env production` for the goldberg
+targets) and persists across deploys. Rotating it is a single
+`wrangler secret put` + editing the dotenv file.
 
 ## File layout
 
 ```
-examples/typescript/cloudflare-workers-mcp/
+examples/cloudflare-workers-mcp/
 ├── package.json              // deps: @solvapay/server, @solvapay/mcp; devDeps: wrangler, vite, typescript, …
-├── wrangler.jsonc            // Workers config; routes, vars, Text rule for *.html, plus `[env.production]` for goldberg-demo.solvapay.app
+├── wrangler.jsonc            // Workers config; routes, vars, `[env.dev]` + `[env.production]` for goldberg demos
 ├── tsconfig.json             // ES2022, Bundler, @cloudflare/workers-types
 ├── vite.config.ts            // Builds src/mcp-app.tsx -> dist/mcp-app.html (duplicated from supabase-edge-mcp)
 ├── mcp-app.html              // top-level HTML entry
-├── .env.example              // dev/example deploy template
+├── .env.example              // public example deploy template
+├── .env.dev.example          // goldberg-demo dev deploy template
 ├── .env.prod.example         // goldberg-demo prod deploy template
 ├── .gitignore
 └── src/
@@ -196,15 +237,15 @@ const handler = createSolvaPayMcpFetch({
 })
 ```
 
-`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` and rejects those names on `tools/call`, so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own demo tools. A `User-Agent` does not restore hidden tools. MCP Apps hosts hide iframe-only tools via SEP-1865 `_meta.ui.visibility`.
+`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the six UI transport tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`) from `tools/list` so the LLM only sees the two intent tools — `account`, `activate_plan` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
 
 ## Swapping in your own tools
 
 The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.env`.
 
-## Widget source copies
+## Widget source sync
 
-The widget iframe payload (`mcp-app.html` and the body of `src/mcp-app.tsx`) is deliberately duplicated across this example, [`../supabase-edge-mcp/`](../supabase-edge-mcp/), [`../mcp-checkout-app/`](../mcp-checkout-app/), and the `create-solvapay` MCP scaffold. A shared workspace package would make the examples uncopyable. `vite.config.ts` is **not** identical — examples carry a monorepo-only `@solvapay/*` alias block. If you change the HTML or the TSX body, update every copy; `tools/repo/example-widget-parity.test.ts` gates that. Policy: `docs/contributing/mcp-apps-sdk-rules.md` ("Demo is not the SDK").
+The widget iframe payload (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`) is byte-for-byte copied from [`examples/supabase-edge-mcp/`](../supabase-edge-mcp/). If you change the widget, apply the same edit to both examples until we extract a shared package. A TODO in both READMEs tracks this.
 
 ## Known limits
 
@@ -215,6 +256,6 @@ The widget iframe payload (`mcp-app.html` and the body of `src/mcp-app.tsx`) is 
 
 This example lives in the [SolvaPay SDK monorepo](https://github.com/solvapay/solvapay-sdk). File issues, PRs, and `@preview` feedback there. The SDK surfaces it relies on are:
 
-- [`@solvapay/server`](../../../sdks/typescript/server/README.md) — merchant client + paywall runtime
-- [`@solvapay/mcp`](../../../sdks/typescript/mcp/README.md) — MCP toolbox; imported at the `./fetch` subpath
-- [`@solvapay/mcp-core`](../../../sdks/typescript/mcp-core/README.md) — framework-neutral descriptor builder (transitive; rarely imported directly)
+- [`@solvapay/server`](../../packages/server/README.md) — merchant client + paywall runtime
+- [`@solvapay/mcp`](../../packages/mcp/README.md) — MCP toolbox; imported at the `./fetch` subpath
+- [`@solvapay/mcp-core`](../../packages/mcp-core/README.md) — framework-neutral descriptor builder (transitive; rarely imported directly)
