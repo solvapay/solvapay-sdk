@@ -531,18 +531,18 @@ class SolvaPay:
                     f"{action.get('meterName')}"
                 )
                 if blocking:
-                    limits_client = client
-                    limits_args = args_json
                     limits_value = _shared_limits_dedup.run_blocking(
                         dedup_key,
-                        lambda: _unwrap_envelope(limits_client.check_limits_blocking(limits_args)),
+                        lambda c=client, a=args_json: _unwrap_envelope(
+                            c.check_limits_blocking(a)
+                        ),
                     )
                 else:
-                    limits_client = client
-                    limits_args = args_json
 
-                    async def _fetch_limits() -> dict[str, Any]:
-                        fetched = _unwrap_envelope(await limits_client.check_limits(limits_args))
+                    async def _fetch_limits(
+                        c: Any = client, a: str = args_json
+                    ) -> dict[str, Any]:
+                        fetched = _unwrap_envelope(await c.check_limits(a))
                         if not isinstance(fetched, dict):
                             raise SolvaPayError("checkLimits returned a non-object body")
                         return fetched
