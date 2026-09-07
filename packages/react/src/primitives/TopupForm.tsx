@@ -36,16 +36,22 @@ import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
 import { LegalFooter } from './LegalFooter'
+import { composeRefs } from './composeRefs'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
+import { useStripeAppearance } from './useStripeAppearance'
 import { useTopup } from '../hooks/useTopup'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import {
+  isCustomerAddressComplete,
+  resolveBuyerCountry,
   type BusinessDetailsInput,
   type TaxBreakdown,
 } from '@solvapay/core'
+import { useCustomer } from '../hooks/useCustomer'
+import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import type { TopupFormProps } from '../types'
 import {
   readPaymentIntentClientSecret,
@@ -53,7 +59,7 @@ import {
 } from './paymentIntentReturn'
 import {
   useBusinessDetailsAttach,
-  defaultBusinessDetails,
+  type UseBusinessDetailsAttachReturn,
 } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
@@ -115,6 +121,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     returnUrl,
     submitButtonText: _submitButtonText,
     buttonClassName: _buttonClassName,
+    appearance,
     className,
     asChild,
     children,
@@ -161,12 +168,21 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
+  const [rootEl, setRootEl] = useState<HTMLElement | null>(null)
+  const attachRoot = useCallback((node: HTMLElement | null) => {
+    if (!node) return
+    setRootEl(prev => (prev === node ? prev : node))
+  }, [])
+  const resolvedAppearance = useStripeAppearance(rootEl, appearance)
+
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: toStripeElementLocale(locale) }
-  }, [clientSecret, locale])
-
-  const Comp = asChild ? Slot : 'section'
+    return {
+      clientSecret,
+      locale: toStripeElementLocale(locale),
+      ...(resolvedAppearance ? { appearance: resolvedAppearance } : {}),
+    }
+  }, [clientSecret, locale, resolvedAppearance])
 
   const outerError = !hasAmount
     ? copy.errors.configMissingAmount
@@ -180,7 +196,23 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       ? 'ready'
       : 'loading'
 
-  const canMountElements = !!(stripePromise && clientSecret && elementsOptions)
+  const appearanceReady = appearance !== undefined || rootEl !== null
+  const canMountElements = !!(
+    stripePromise &&
+    clientSecret &&
+    elementsOptions &&
+    appearanceReady
+  )
+
+  // Owned on Root so country/state/postal survive the OfflineInner → Inner
+  // swap when the PaymentIntent arrives. OfflineInner used to no-op
+  // `setBusinessDetails`, which dropped the buyer country before attach.
+  const businessAttach = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+  })
 
   const innerCommon = {
     amount,
@@ -192,33 +224,51 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     state: dataState,
     onSuccess,
     onError,
-    onTaxChange,
     processTopupPayment,
-    attachBusinessDetails,
-    customerRef,
+    businessAttach,
   }
 
-  const shell = (
-    <Comp
-      ref={forwardedRef as React.Ref<HTMLElement>}
+  const rootRef = composeRefs(forwardedRef as React.Ref<HTMLElement>, attachRoot)
+
+  if (asChild) {
+    const slotted = (
+      <Slot
+        ref={rootRef}
+        className={className}
+        data-solvapay-topup-form=""
+        data-state={dataState}
+        {...rest}
+      >
+        {children}
+      </Slot>
+    )
+    if (canMountElements) {
+      return (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{slotted}</Inner>
+        </Elements>
+      )
+    }
+    return <OfflineInner {...innerCommon}>{slotted}</OfflineInner>
+  }
+
+  return (
+    <section
+      ref={rootRef}
       className={className}
       data-solvapay-topup-form=""
       data-state={dataState}
       {...rest}
     >
-      {children}
-    </Comp>
+      {canMountElements ? (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{children}</Inner>
+        </Elements>
+      ) : (
+        <OfflineInner {...innerCommon}>{children}</OfflineInner>
+      )}
+    </section>
   )
-
-  if (canMountElements) {
-    return (
-      <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-        <Inner {...innerCommon}>{shell}</Inner>
-      </Elements>
-    )
-  }
-
-  return <OfflineInner {...innerCommon}>{shell}</OfflineInner>
 })
 
 type InnerProps = {
@@ -231,7 +281,6 @@ type InnerProps = {
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
-  onTaxChange?: TopupFormProps['onTaxChange']
   /**
    * Provider-side backend confirmation hook. When present, `submit`
    * awaits it before firing `onSuccess` so the customer is fully
@@ -253,16 +302,7 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
-  attachBusinessDetails?: (params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }) => Promise<{ taxBreakdown: TaxBreakdown }>
-  customerRef?: string
+  businessAttach: UseBusinessDetailsAttachReturn
   children?: React.ReactNode
 }
 
@@ -276,15 +316,16 @@ const Inner: React.FC<InnerProps> = ({
   state,
   onSuccess,
   onError,
-  onTaxChange,
   processTopupPayment,
-  attachBusinessDetails,
-  customerRef,
+  businessAttach,
   children,
 }) => {
   const stripe = useStripe()
+  const stripeAvailable = !!stripe
+  const stripeRef = useRef(stripe)
   const elements = useElements()
   const copy = useCopy()
+  const customer = useCustomer()
 
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -292,7 +333,14 @@ const Inner: React.FC<InnerProps> = ({
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
-    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    stripeRef.current = stripe
+  })
+
+  useEffect(() => {
+    const stripeApi = stripeRef.current
+    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+      return
+    }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
     if (!returnClientSecret) return
     returnResumeStarted.current = true
@@ -302,7 +350,7 @@ const Inner: React.FC<InnerProps> = ({
       setIsProcessing(true)
       setError(null)
 
-      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
       stripPaymentIntentParams()
 
@@ -314,7 +362,7 @@ const Inner: React.FC<InnerProps> = ({
 
       let paymentIntent = retrieved.paymentIntent
       if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        const actionResult = await stripeApi.handleNextAction({ clientSecret: returnClientSecret })
         if (cancelled) return
         if (actionResult.error || !actionResult.paymentIntent) {
           setError(copy.errors.paymentRequires3ds)
@@ -371,7 +419,7 @@ const Inner: React.FC<InnerProps> = ({
     return () => {
       cancelled = true
     }
-  }, [stripe, copy, processTopupPayment, onSuccess, onError])
+  }, [stripeAvailable, copy, processTopupPayment, onSuccess, onError])
 
   const {
     businessDetails,
@@ -383,12 +431,7 @@ const Inner: React.FC<InnerProps> = ({
     businessDetailsError,
     requiresBusinessAttach,
     runAttach,
-  } = useBusinessDetailsAttach({
-    processorPaymentId,
-    attachBusinessDetails,
-    customerRef,
-    onTaxChange,
-  })
+  } = businessAttach
 
   const isReady = !!(stripe && elements)
   const canSubmit =
@@ -397,6 +440,7 @@ const Inner: React.FC<InnerProps> = ({
     !isProcessing &&
     !!clientSecret &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
+    isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching
 
   const submit = useCallback(async () => {
@@ -420,29 +464,37 @@ const Inner: React.FC<InnerProps> = ({
     setError(null)
     setIsProcessing(true)
 
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      const msg = submitError.message || copy.errors.paymentUnexpected
-      setError(msg)
-      setIsProcessing(false)
-      onError?.(new Error(msg))
-      return
-    }
-
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+    const result = await confirmPayment({
+      stripe,
       elements,
       clientSecret,
-      confirmParams: { return_url: returnUrl },
-      redirect: 'if_required',
+      returnUrl,
+      billingDetails: buildConfirmBillingDetails({
+        name: customer.name,
+        email: customer.email,
+        country: resolveBuyerCountry(businessDetails),
+        state: businessDetails.customerState,
+        postalCode: businessDetails.customerPostalCode,
+      }),
+      copy,
     })
 
-    if (confirmError) {
-      const msg = confirmError.message || copy.errors.paymentUnexpected
-      setError(msg)
+    if (result.status === 'error' || result.status === 'requires_action' || result.status === 'other') {
+      setError(result.message)
       setIsProcessing(false)
-      onError?.(new Error(msg))
+      if (result.status === 'error') {
+        onError?.(new Error(result.message))
+      }
       return
     }
+
+    if (result.status === 'pending') {
+      setError(result.message)
+      setIsProcessing(false)
+      return
+    }
+
+    const paymentIntent = result.paymentIntent
 
     let creditsAdded: number | undefined
     if (paymentIntent && processTopupPayment) {
@@ -483,6 +535,7 @@ const Inner: React.FC<InnerProps> = ({
     elements,
     clientSecret,
     returnUrl,
+    customer,
     copy,
     onSuccess,
     onError,
@@ -558,11 +611,11 @@ const OfflineInner: React.FC<InnerProps> = ({
   returnUrl,
   outerError,
   state,
+  businessAttach,
   children,
 }) => {
   const noopSubmit = useCallback(async () => {}, [])
   const noopSet = useCallback(() => {}, [])
-  const noopBusinessSet = useCallback(() => {}, [])
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
       amount,
@@ -578,13 +631,13 @@ const OfflineInner: React.FC<InnerProps> = ({
       canSubmit: false,
       error: outerError,
       returnUrl,
-      businessDetails: defaultBusinessDetails,
-      taxBreakdown: null,
-      businessDetailsAttached: false,
-      businessDetailsAttaching: false,
-      businessDetailsError: null,
-      fieldErrors: {},
-      setBusinessDetails: noopBusinessSet,
+      businessDetails: businessAttach.businessDetails,
+      taxBreakdown: businessAttach.taxBreakdown,
+      businessDetailsAttached: businessAttach.businessDetailsAttached,
+      businessDetailsAttaching: businessAttach.businessDetailsAttaching,
+      businessDetailsError: businessAttach.businessDetailsError,
+      fieldErrors: businessAttach.fieldErrors,
+      setBusinessDetails: businessAttach.setBusinessDetails,
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
@@ -596,9 +649,9 @@ const OfflineInner: React.FC<InnerProps> = ({
       processorPaymentId,
       outerError,
       returnUrl,
+      businessAttach,
       noopSet,
       noopSubmit,
-      noopBusinessSet,
     ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>

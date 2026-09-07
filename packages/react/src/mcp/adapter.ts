@@ -86,32 +86,54 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   const callTool = async <T>(name: string, args: Record<string, unknown> = {}): Promise<T> =>
     unwrap<T>(await app.callServerTool({ name, arguments: args }))
 
-  // Read tools (check_purchase, get_merchant, get_product, list_plans,
-  // get_payment_method, get_customer_balance, get_usage) are intentionally
-  // omitted — their data is folded into the `BootstrapPayload` returned
-  // by every intent tool and seeded into the provider's module-level
-  // caches via `seedMcpCaches`, so the transport never has to fetch.
+  // Read tools for data the bootstrap already holds (purchase, merchant,
+  // product, plans, payment method, balance, usage, limits) are omitted —
+  // `seedMcpCaches` hydrates the provider caches. That invariant is "do
+  // not refetch what bootstrap already has", not a blanket ban on new
+  // read tools (history is the exception).
   return {
-    createPayment: params => callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ ...params })),
+    createPayment: params =>
+      callTool(
+        MCP_TOOL_NAMES.createPayment,
+        pickDefined({ purpose: 'plan', ...params }),
+      ),
 
     processPayment: params => callTool(MCP_TOOL_NAMES.processPayment, pickDefined({ ...params })),
 
     createTopupPayment: params =>
-      callTool(MCP_TOOL_NAMES.createTopupPayment, pickDefined({ ...params })),
+      callTool(
+        MCP_TOOL_NAMES.createPayment,
+        pickDefined({ purpose: 'topup', ...params }),
+      ),
 
     attachBusinessDetails: params =>
       callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
 
-    cancelRenewal: params => callTool(MCP_TOOL_NAMES.cancelRenewal, pickDefined({ ...params })),
+    cancelRenewal: params =>
+      callTool(
+        MCP_TOOL_NAMES.setRenewal,
+        pickDefined({ enabled: false, ...params }),
+      ),
 
     reactivateRenewal: params =>
-      callTool(MCP_TOOL_NAMES.reactivateRenewal, pickDefined({ ...params })),
+      callTool(
+        MCP_TOOL_NAMES.setRenewal,
+        pickDefined({ enabled: true, ...params }),
+      ),
 
     activatePlan: params => callTool(MCP_TOOL_NAMES.activatePlan, pickDefined({ ...params })),
 
     createCheckoutSession: params =>
-      callTool(MCP_TOOL_NAMES.createCheckoutSession, pickDefined({ ...(params ?? {}) })),
+      callTool(
+        MCP_TOOL_NAMES.createHostedSession,
+        pickDefined({ kind: 'checkout', ...(params ?? {}) }),
+      ),
 
-    createCustomerSession: () => callTool(MCP_TOOL_NAMES.createCustomerSession),
+    createCustomerSession: () =>
+      callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
+
+    // History is not on bootstrap (`checkPurchaseCore` is active-only).
+    // This is the documented exception to the reads-from-bootstrap rule.
+    getHistory: params => callTool(MCP_TOOL_NAMES.getHistory, pickDefined({ ...params })),
   }
 }

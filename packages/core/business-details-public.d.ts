@@ -47,23 +47,72 @@ export declare function getTaxIdExample(country: SupportedBusinessCountry): stri
 
 export declare function getTaxIdHelperText(country: SupportedBusinessCountry): string
 
+export declare const POSTAL_CODE_REQUIRED_COUNTRIES: readonly ['US', 'CA', 'GB']
+
+export declare const STATE_REQUIRED_COUNTRIES: readonly ['US', 'CA', 'IN']
+
+export declare function isPostalCodeRequired(country: string): boolean
+
+export declare function isStateRequired(country: string): boolean
+
+export declare function getStateFieldLabel(country: string): string
+
+export declare function getPostalCodeFieldLabel(country: string): string
+
+export declare function getPostalCodePlaceholder(country: string): string
+
+export declare function resolveBuyerCountry(input: {
+  isBusiness: boolean
+  country?: string
+  customerCountry?: string
+}): string | undefined
+
+export declare function isCustomerAddressComplete(input: {
+  isBusiness: boolean
+  country?: string
+  customerCountry?: string
+  customerState?: string
+  customerPostalCode?: string
+}): boolean
+
+export declare function getCustomerAddressFieldErrors(input: {
+  isBusiness: boolean
+  country?: string
+  customerCountry?: string
+  customerState?: string
+  customerPostalCode?: string
+}): Partial<Record<'country' | 'customerCountry' | 'customerState' | 'customerPostalCode', string>>
+
 export type BusinessDetailsInput = {
   isBusiness: boolean
   businessName?: string
   country?: string
   customerCountry?: string
+  customerName?: string
+  customerState?: string
+  customerPostalCode?: string
   taxId?: string
   taxIdType?: TaxIdType
 }
 
 export type BusinessDetails =
-  | { isBusiness: false; customerCountry?: SupportedBusinessCountry }
+  | {
+      isBusiness: false
+      customerCountry?: SupportedBusinessCountry
+      customerName?: string
+      customerState?: string
+      customerPostalCode?: string
+    }
   | {
       isBusiness: true
-      businessName: string
+      businessName?: string
       country: SupportedBusinessCountry
-      taxId: string
-      taxIdType: TaxIdType
+      customerCountry: SupportedBusinessCountry
+      taxId?: string
+      taxIdType?: TaxIdType
+      customerName?: string
+      customerState?: string
+      customerPostalCode?: string
     }
 
 export type BusinessDetailsValidationIssue = {

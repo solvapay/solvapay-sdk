@@ -12,8 +12,10 @@ import {
   creditsPerUnitFromBalance,
   includedUnits,
   meterName,
+  planPricingShape,
   usageRate,
   type BalancePegLike,
+  type BillingCycleLike,
   type PricingOptionLike,
 } from '@solvapay/core'
 import type { Plan } from '../../types'
@@ -32,16 +34,17 @@ export const CHECKOUT_STEPS = ['plan', 'amount', 'payment', 'success'] as const
  *
  * Mirrors what the API actually sends: pricing lives in `options[]`, and
  * the only derived scalars on the wire are `type`, `price`, `currency`
- * and `requiresPayment`.
+ * and `requiresPayment`. Every field admits `null` because frozen plan
+ * snapshots send it explicitly; it is read as "absent" throughout.
  */
 export interface BootstrapPlanLike {
-  reference?: string
-  name?: string
-  type?: string
-  price?: number
-  currency?: string
-  requiresPayment?: boolean
-  options?: PricingOptionLike[]
+  reference?: string | null
+  name?: string | null
+  type?: string | null
+  price?: number | null
+  currency?: string | null
+  requiresPayment?: boolean | null
+  options?: PricingOptionLike[] | null
   pricingOptions?: Array<{
     currency: string
     price: number
@@ -138,24 +141,71 @@ export function formatContinueLabel(
   pricingOption?: PlanPricingOption,
 ): string {
   if (!plan) return 'Continue'
-  if (isPayg(plan)) {
-    return `Continue with ${plan.name ?? 'Pay as you go'}`
-  }
-  const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
-  const currency = option.currency.toUpperCase()
-  const priceLabel = formatPrice(option.price ?? 0, currency, { locale })
-  const interval = planBillingInterval(plan)
-  const cycle = interval ? `/${shortCycle(interval)}` : ''
-  return `Continue with ${plan.name ?? 'Plan'} — ${priceLabel}${cycle}`
+  const priceLabel = formatPlanPriceLabel(plan, locale ?? 'en-US', pricingOption)
+  return `Continue with ${plan.name ?? 'Plan'} — ${priceLabel}`
 }
 
 /**
- * The plan's billing interval, or `null` for one-time and pure
- * usage-based plans. Sourced from the `billingCycle` option — a plan on
- * the wire has no scalar `billingCycle`.
+ * The plan's billing cycle, or `null` for one-time and pure usage-based
+ * plans. Sourced from the `billingCycle` option.
+ */
+export function planBillingCycle(plan: BootstrapPlanLike): BillingCycleLike | null {
+  return readBillingCycle(plan)
+}
+
+/**
+ * @deprecated Prefer `planBillingCycle` when the interval count matters.
+ * Returns only the interval name.
  */
 export function planBillingInterval(plan: BootstrapPlanLike): string | null {
   return readBillingCycle(plan)?.interval ?? null
+}
+
+/** Compact cycle suffix for a price label, e.g. `/mo` or `/3 mo`. */
+export function formatCycleSuffix(cycle: BillingCycleLike | null): string {
+  if (!cycle) return ''
+  const short = shortCycle(cycle.interval)
+  if (cycle.count && cycle.count > 1) return `/${cycle.count} ${short}`
+  return `/${short}`
+}
+
+/**
+ * The fixed-commitment price label for a plan row or CTA.
+ * Usage rates belong on the description line, not here.
+ */
+export function formatPlanPriceLabel(
+  plan: BootstrapPlanLike,
+  locale: string,
+  pricingOption?: PlanPricingOption,
+): string {
+  const shape = planPricingShape(plan)
+  switch (shape.shape) {
+    case 'free':
+      return 'Free'
+    case 'usage':
+      return 'Pay per use'
+    case 'recurring':
+    case 'hybrid': {
+      const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
+      const amount = option.price ?? shape.headlineMinor
+      const currency = option.currency.toUpperCase()
+      const priceLabel = formatPrice(amount, currency, { locale, free: '' })
+      return `${priceLabel}${formatCycleSuffix(shape.cycle)}`
+    }
+    case 'oneTime': {
+      const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
+      const amount = option.price ?? shape.headlineMinor
+      const currency = option.currency.toUpperCase()
+      const priceLabel = formatPrice(amount, currency, { locale, free: '' })
+      return `${priceLabel} once`
+    }
+  }
+}
+
+function singularMeterNoun(unit: string): string {
+  if (unit.endsWith('ies')) return `${unit.slice(0, -3)}y`
+  if (unit.endsWith('s') && !unit.endsWith('ss')) return unit.slice(0, -1)
+  return unit
 }
 
 /**
@@ -182,11 +232,12 @@ export function formatPaygRate(
   const prefix = rate.tiered ? 'from ' : ''
 
   const credits = creditsPerUnitFromBalance(plan, balance)
+  const unit = singularMeterNoun(rate.meter ?? meterName(plan) ?? 'unit')
   if (credits != null) {
-    return `${prefix}${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
+    return `${prefix}${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / ${unit}`
   }
 
-  return `${prefix}${formatPrice(rate.amountMinor, rate.currency.toUpperCase(), { locale })} / call`
+  return `${prefix}${formatPrice(rate.amountMinor, rate.currency.toUpperCase(), { locale })} / ${unit}`
 }
 
 /**
@@ -206,10 +257,11 @@ export function planMeterName(plan: BootstrapPlanLike): string | null {
 }
 
 export function shortCycle(cycle: string | null | undefined): string {
-  if (!cycle) return 'mo'
+  if (!cycle) return ''
   const lc = cycle.toLowerCase()
-  if (lc.startsWith('year') || lc === 'annually' || lc === 'annual') return 'yr'
-  if (lc.startsWith('week')) return 'wk'
-  if (lc.startsWith('day')) return 'd'
-  return 'mo'
+  if (lc === 'week' || lc.startsWith('week')) return 'wk'
+  if (lc === 'year' || lc.startsWith('year') || lc === 'annually' || lc === 'annual') return 'yr'
+  if (lc === 'month' || lc.startsWith('month')) return 'mo'
+  if (lc === 'day' || lc.startsWith('day')) return 'd'
+  return cycle
 }

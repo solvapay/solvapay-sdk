@@ -5,8 +5,8 @@
  *
  * Consumers who just want a drop-in payment form use this component. It
  * renders the primitive's Root with a golden-path default tree composed of
- * `PaymentForm.Summary`, `CustomerFields`, `PaymentElement`, `MandateText`,
- * an optional `TermsCheckbox`, and `SubmitButton`. Free-plan activation
+ * `PaymentForm.Summary`, `CustomerFields`, `PaymentElement`, an optional
+ * `TermsCheckbox`, `SubmitButton`, and `MandateText`. Free-plan activation
  * flows through the same composition — `FreeInner` in the primitive swaps
  * the submit handler so the default tree works identically for paid and
  * free plans.
@@ -55,9 +55,9 @@ const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
     <Primitive.CustomerFields />
     <Primitive.PaymentElement />
     <Primitive.Error />
-    <Primitive.MandateText />
     {requireTermsAcceptance && <Primitive.TermsCheckbox />}
     <Primitive.SubmitButton />
+    <Primitive.MandateText />
   </>
 )
 

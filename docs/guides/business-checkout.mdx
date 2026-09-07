@@ -65,8 +65,10 @@ The helper validates the input, calls
 | `country` | `string` | Business country — required when `isBusiness` is `true`. EU member states, `GB`, and `US` are supported |
 | `taxId` | `string` | VAT number or EIN, validated per country |
 | `taxIdType` | `'eu_vat' \| 'gb_vat' \| 'us_ein'` | Derived from the country on successful validation |
-| `customerCountry` | `string` | Consumer billing country, used for tax when `isBusiness` is `false` |
+| `customerCountry` | `string` | Buyer billing country. Always sent. Copied onto `country` as well when `isBusiness` is `true` |
 | `customerName` | `string` | Consumer name |
+| `customerState` | `string` | Billing state or province. Required for US, CA, and IN |
+| `customerPostalCode` | `string` | Billing postal or ZIP code. Required for US, CA, and GB |
 
 Business details are persisted on the customer, so returning buyers don't re-enter them.
 
@@ -154,16 +156,18 @@ if (result.success) {
 }
 ```
 
-For businesses, the country is required and must be supported; the tax ID format is validated per
-country. For consumers, an optional `customerCountry` must be a supported country.
+For businesses, `country` is required and must be supported; the tax ID format is validated per
+country. `customerCountry` is always sent — copied from `country` when the buyer did not set it
+separately. For consumers, `customerCountry` must be a supported country.
 
 ## MCP tool
 
 MCP apps get the same capability through the `attach_business_details` tool (defined in
 `@solvapay/mcp-core` and registered by the MCP server factory). It takes `paymentIntentId`,
-`isBusiness`, and the optional `businessName` / `country` / `taxId` / `taxIdType` fields, resolves
-the authenticated customer, and returns the `taxBreakdown`. The embedded checkout views in
-`@solvapay/react/mcp` call it automatically — no extra wiring is needed.
+`isBusiness`, and the optional `businessName` / `country` / `customerCountry` / `customerState` /
+`customerPostalCode` / `taxId` / `taxIdType` fields, resolves the authenticated customer, and
+returns the `taxBreakdown`. The embedded checkout views in `@solvapay/react/mcp` call it
+automatically — no extra wiring is needed.
 
 ## Seller VAT on receipts
 

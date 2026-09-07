@@ -30,13 +30,48 @@ export interface PaywallMetadata {
    * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
    */
   usageType?: string
+  /**
+   * Tool or handler name recorded on usage events so consumption is
+   * attributable. Set by `registerPayable` / `buildPayableHandler`.
+   */
+  toolName?: string
 }
 
 /**
  * Structured content for paywall errors (MCP structuredContent and manual handling).
  */
+/**
+ * Fields shared by every `PaywallStructuredContent` kind so a text-only
+ * host can recover from a gate without a second tool call. Every field
+ * other than `kind` / `product` / `checkoutUrl` / `message` is omitted
+ * when the backend did not send it — never defaulted.
+ */
+export type PaywallGateRecoveryFields = {
+  /** Active plan reference from `limits.plan`. */
+  planRef?: string
+  /** Product plans from `checkLimits` (activation already had this). */
+  plans?: LimitPlanSummary[]
+  /** Meter the gated call was charged against. */
+  meterName?: string
+  /** Per-unit charge of the active plan, in minor currency units. */
+  unitPriceMinor?: number
+  /** ISO 4217 currency for `unitPriceMinor`. */
+  currency?: string
+  /**
+   * Included-usage counters. Omitted when `freeUnits` is absent or `0`
+   * (the unlimited sentinel) so we never emit misleading zeros.
+   */
+  included?: {
+    total: number
+    used: number
+    remaining: number
+  }
+  /** Prepaid credit balance, coalesced from nested or top-level fields. */
+  creditBalance?: number
+}
+
 export type PaywallStructuredContent =
-  | {
+  | ({
       kind: 'payment_required'
       /** Product ref from paywall metadata (or env default) */
       product: string
@@ -51,8 +86,8 @@ export type PaywallStructuredContent =
       balance?: LimitActivationBalance
       /** Rich product context from checkLimits (name, ref, provider slug/id) */
       productDetails?: LimitActivationProduct
-    }
-  | {
+    } & PaywallGateRecoveryFields)
+  | ({
       kind: 'activation_required'
       /** Product ref from paywall metadata (or env default) */
       product: string
@@ -62,11 +97,10 @@ export type PaywallStructuredContent =
        */
       checkoutUrl: string
       confirmationUrl?: string
-      plans?: LimitPlanSummary[]
       balance?: LimitActivationBalance
       /** Rich product context from checkLimits (name, ref, provider slug/id) */
       productDetails?: LimitActivationProduct
-    }
+    } & PaywallGateRecoveryFields)
 
 /**
  * MCP tool result with optional paywall information — structural copy
@@ -134,6 +168,11 @@ export type PaywallDecision<T> =
        * wire data.
        */
       consequence?: 'throttled' | 'overage'
+      /**
+       * Id minted by `decide()` and reused by `runAllow()` so success /
+       * fail tracking shares one idempotency key with the decision.
+       */
+      requestId: string
     }
   | {
       outcome: 'gate'
@@ -145,4 +184,5 @@ export type PaywallDecision<T> =
        */
       limits: LimitResponseWithPlan | null
       customerRef: string
+      requestId: string
     }

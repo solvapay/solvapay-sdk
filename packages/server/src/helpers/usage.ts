@@ -26,20 +26,105 @@ export interface GetUsageResult {
   purchaseRef?: string
 }
 
+export interface UsageLimitsInput {
+  remaining: number
+  meterName?: string | null
+  /** Consumed units this period, when the backend measured a finite cap. */
+  used?: number
+  /** The effective finite cap, when the backend measured one. */
+  limit?: number
+}
+
+/**
+ * Project a usage snapshot from consumption + a (possibly pre-fetched)
+ * `LimitResponse`. Extracted so bootstrap can fetch limits once and feed
+ * the same result into usage math — metered plans must not call
+ * `checkLimits` a second time.
+ *
+ * `limits: null` means the cap is unknown (fetch failed or not
+ * attempted), not that the meter is unlimited. Unlimited is only
+ * `remaining === -1` on a real limits object.
+ */
+export function deriveUsageSnapshot(input: {
+  used: number
+  periodStart?: string
+  periodEnd?: string
+  purchaseRef?: string
+  limits: UsageLimitsInput | null
+}): GetUsageResult {
+  const period = {
+    ...(input.periodStart ? { periodStart: input.periodStart } : {}),
+    ...(input.periodEnd ? { periodEnd: input.periodEnd } : {}),
+  }
+  const purchase = input.purchaseRef ? { purchaseRef: input.purchaseRef } : {}
+
+  if (!input.limits) {
+    return {
+      meterRef: null,
+      total: null,
+      used: input.used,
+      remaining: null,
+      percentUsed: null,
+      ...period,
+      ...purchase,
+    }
+  }
+
+  // `remaining: -1` is the backend's "no finite cap" sentinel — any
+  // other negative is not treated as unlimited (that would hide a
+  // backend bug behind a silent "no cap" reading).
+  const hasFiniteCap = input.limits.remaining >= 0
+  const remaining = hasFiniteCap ? input.limits.remaining : null
+  // The cap is authoritative input, never `used + remaining`. When the
+  // backend did not measure a finite cap, leave `total` unknown rather
+  // than fabricating one from the purchase-derived `used` (always 0).
+  const total =
+    typeof input.limits.limit === 'number' && input.limits.limit > 0
+      ? input.limits.limit
+      : null
+  const used =
+    typeof input.limits.used === 'number'
+      ? input.limits.used
+      : total !== null && remaining !== null
+        ? Math.max(0, total - remaining)
+        : input.used
+  const percentUsed =
+    total !== null && total > 0
+      ? Math.min(100, Math.round((used / total) * 10000) / 100)
+      : null
+
+  return {
+    meterRef: input.limits.meterName ?? null,
+    total,
+    used,
+    remaining,
+    percentUsed,
+    ...period,
+    ...purchase,
+  }
+}
+
 /**
  * Fetch the authenticated customer's usage snapshot for the active purchase.
  *
  * Consumption (`used`, period window) comes from `checkPurchaseCore`. The cap
  * (`total`, `remaining`, `meterRef`) comes from `checkLimits` — the plan
  * snapshot no longer carries `limit` or `meterRef` on the wire, so a metered
- * plan costs one extra backend call. Non-metered plans skip it.
+ * plan costs one extra backend call unless the caller already has a
+ * `LimitResponse` (`options.limits`).
  *
- * Returns `null` values when no metered plan is active.
+ * Pass `limits` (including `null` for a failed fetch) to skip the
+ * `checkLimits` call. Non-metered plans still skip it when `limits` is
+ * omitted.
+ *
+ * Returns `null` values when no metered plan is active and no limits
+ * were supplied.
  */
 export async function getUsageCore(
   request: Request,
   options: {
     solvaPay?: SolvaPay
+    limits?: UsageLimitsInput | null
   } = {},
 ): Promise<GetUsageResult | ErrorResult> {
   const purchaseResult = await checkPurchaseCore(request, options)
@@ -47,34 +132,25 @@ export async function getUsageCore(
 
   const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
   if (!activePurchase) {
-    return {
-      meterRef: null,
-      total: null,
-      used: 0,
-      remaining: null,
-      percentUsed: null,
-    }
+    return deriveUsageSnapshot({ used: 0, limits: options.limits ?? null })
   }
 
   const usage = activePurchase.usage
   const used = typeof usage?.used === 'number' ? usage.used : 0
   const period = {
-    ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
-    ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
+    periodStart: usage?.periodStart,
+    periodEnd: usage?.periodEnd,
+    purchaseRef: activePurchase.reference,
+  }
+
+  if ('limits' in options) {
+    return deriveUsageSnapshot({ used, ...period, limits: options.limits ?? null })
   }
 
   const usageCounted =
     countsUsage(activePurchase.planSnapshot) || activePurchase.planSnapshot?.isMetered === true
   if (!usageCounted || !activePurchase.productRef) {
-    return {
-      meterRef: null,
-      total: null,
-      used,
-      remaining: null,
-      percentUsed: null,
-      ...period,
-      purchaseRef: activePurchase.reference,
-    }
+    return deriveUsageSnapshot({ used, ...period, limits: null })
   }
 
   const solvaPay = options.solvaPay || createSolvaPay()
@@ -83,25 +159,7 @@ export async function getUsageCore(
     productRef: activePurchase.productRef,
   })
 
-  // `remaining: -1` is the backend's "no finite cap" sentinel — any
-  // negative value means uncapped, never a real count. An uncapped meter
-  // has no total to report, so `percentUsed` stays null rather than
-  // fabricating a denominator.
-  const hasFiniteCap = limits.remaining >= 0
-  const remaining = hasFiniteCap ? limits.remaining : null
-  const total = remaining === null ? null : used + remaining
-  const percentUsed =
-    total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
-
-  return {
-    meterRef: limits.meterName ?? null,
-    total,
-    used,
-    remaining,
-    percentUsed,
-    ...period,
-    purchaseRef: activePurchase.reference,
-  }
+  return deriveUsageSnapshot({ used, ...period, limits })
 }
 
 export async function trackUsageCore(

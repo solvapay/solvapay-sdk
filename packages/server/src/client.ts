@@ -1020,5 +1020,46 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       return await res.json()
     },
+
+    async listPurchases(params) {
+      const url = new URL(`${base}/v1/sdk/purchases`)
+      if (params.customerRef) url.searchParams.set('customerRef', params.customerRef)
+      if (params.productRef) url.searchParams.set('productRef', params.productRef)
+      if (params.status) url.searchParams.set('status', params.status)
+      if (params.includeFree !== undefined) {
+        url.searchParams.set('includeFree', String(params.includeFree))
+      }
+
+      const res = await fetch(url.toString(), { method: 'GET', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`List purchases failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      const data = (await res.json()) as { purchases?: import('./types/client').PurchaseInfo[] }
+      return { purchases: data.purchases ?? [] }
+    },
+
+    async getCreditActivity(params) {
+      const url = new URL(`${base}/v1/sdk/credits/activity`)
+      url.searchParams.set('customerRef', params.customerRef)
+      if (params.limit !== undefined) url.searchParams.set('limit', String(params.limit))
+
+      const res = await fetch(url.toString(), { method: 'GET', headers })
+
+      if (!res.ok) {
+        const error = await res.text()
+        log(`❌ API Error: ${res.status} - ${error}`)
+        throw new SolvaPayError(`Get credit activity failed (${res.status}): ${error}`, {
+          status: res.status,
+        })
+      }
+
+      return await res.json()
+    },
   }
 }

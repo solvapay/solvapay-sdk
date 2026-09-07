@@ -43,6 +43,7 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   getCustomerBalanceCore,
+  getHistoryCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
@@ -273,6 +274,30 @@ export async function getProduct(req: Request): Promise<Response> {
   if (corsResponse) return corsResponse
 
   const result = await getProductCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getHistory(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const url = new URL(req.url)
+  const productRef = url.searchParams.get('productRef') ?? ''
+  const limitRaw = url.searchParams.get('limit')
+  const limit = limitRaw ? Number(limitRaw) : undefined
+  if (limitRaw && (!Number.isInteger(limit) || Number(limit) < 1)) {
+    return errorResponse({ error: 'limit must be a positive integer', status: 400 }, req)
+  }
+
+  const result = await getHistoryCore(req, {
+    productRef,
+    ...(limit !== undefined ? { limit } : {}),
+  })
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

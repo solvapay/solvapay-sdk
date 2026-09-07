@@ -10,9 +10,11 @@
  * The `paywall` / `nudge` kinds were removed as part of the text-only
  * paywall refactor: merchant paywall / nudge responses are plain text
  * narrations now, not widget surfaces. The iframe is only mounted for
- * the three deliberate intent tools.
+ * the `account` viewer (slash prompts remap onto it with a `view`).
  */
-export type McpViewKind = 'checkout' | 'account' | 'topup'
+import type { SolvaPayMcpViewKind } from '@solvapay/mcp-core'
+
+export type McpViewKind = SolvaPayMcpViewKind
 
 /**
  * @deprecated Use `McpViewKind`. This alias exists for one minor

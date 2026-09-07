@@ -43,7 +43,7 @@ const solvaPay = createSolvaPay({
 
 ### 2. Create the MCP server
 
-`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`upgrade`, `manage_account`, `topup`, `activate_plan`), the UI resource referenced by those tools, the slash-command prompts, the narrated `docs://solvapay/overview.md` resource, and the Stripe CSP baseline. You only supply your product and where the UI bundle lives.
+`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`account`, `activate_plan`), the UI resource referenced by the `account` viewer, slash-command prompts (`/upgrade`, `/manage_account`, `/topup`, `/activate_plan`), the narrated `docs://solvapay/overview.md` resource, and the MCP Apps CSP baseline. You only supply your product and where the UI bundle lives.
 
 ```typescript
 import path from 'node:path'
@@ -99,6 +99,13 @@ registerPayable('submit_order', {
   handler: async ({ sku, quantity }, ctx) => ctx.respond(await placeOrder(sku, quantity)),
 })
 ```
+
+### Usage is metered for you
+
+`registerPayable` records the usage event itself — you do not call `trackUsage` from the handler. Two things come free with that:
+
+- **The tool name is recorded on the event**, so consumption is attributable per tool in the Console rather than being one undifferentiated count.
+- **Retries do not double-count.** The paywall mints a request id during its pre-check and reuses it as the `idempotencyKey` on the usage event, so a retried tool call books once. Concurrent `checkLimits` calls for the same customer, product, and meter are coalesced into one backend round-trip, and each caller claims a distinct unit of the shared allowance.
 
 ## Authentication
 
@@ -179,7 +186,7 @@ Handlers return the `ctx.respond(data, options?)` envelope — never a raw objec
 
 - **Silent** — `ctx.respond(data)`. The merchant's data is the hero. No iframe, no upsell. This is the 90% path for a paying customer.
 - **Nudge** — `ctx.respond(data, { nudge })`. Data is returned *and* something is worth flagging (low balance, cycle ending). The nudge message is appended to `content[0].text` as a plain-text suffix that names the recovery intent tool. Never blocks.
-- **Gate** — fired automatically by the paywall pre-check when the customer can't be served. The transport emits a text-only narration naming the recovery intent tool (`upgrade` / `topup` / `activate_plan`) with the machine-readable gate on `structuredContent`. No iframe opens for a gate — the model reads the narration and calls the recovery tool, which mounts the UI.
+- **Gate** — fired automatically by the paywall pre-check when the customer can't be served. The transport emits a text-only narration naming `` `account` `` with the appropriate `view` (or `` `activate_plan` `` when a `planRef` is known) with the machine-readable gate on `structuredContent`. No iframe opens for a gate — the model reads the narration and calls the recovery tool, which mounts the UI.
 
 ```typescript
 registerPayable('query_sales_trends', {
@@ -201,7 +208,7 @@ registerPayable('query_sales_trends', {
         units: results.length,
         nudge: {
           kind: 'low-balance',
-          message: 'Running low on credits — call the `topup` tool to add more.',
+          message: 'Running low on credits — call the `account` tool with view: "topup" to add more.',
         },
       },
     )
@@ -213,16 +220,36 @@ registerPayable('query_sales_trends', {
 
 - `text` — override `content[0].text` (use this to give the host a render instruction or a one-line summary instead of the SDK's `JSON.stringify(data)` default).
 - `nudge` — the inline upsell suffix shown above.
+- `dataInText` — append the serialized payload as a trailing text block. Defaults to `true`. Set `false` only when the payload is large enough that duplicating it is not worth the tokens.
 - `units` — reserved for V1.1 variable billing. V1 accepts the field for forward-compatible code but bills a fixed one unit per call.
 
 The handler `ctx` also exposes `ctx.customer` (`balance`, `remaining`, `withinLimits`, `plan`, and `.fresh()` for a non-cached round-trip) and `ctx.product` so you can make your own nudge decisions without building any UI.
 
+### Every response has to work without an iframe
+
+Hosts disagree about which field reaches the model: some read only `content`, some prefer `structuredContent` and drop text blocks. So every lane is independently complete. `content[0].text` names the plan, the remaining included usage, the credit balance, the reset date, the recovery tool, and a pasteable `https` checkout URL — never `"see the panel"`. `structuredContent` still carries the bootstrap payload and the gate for the widget and for programmatic consumers.
+
+The `account` viewer takes a `mode` argument for this. `mode: 'auto'` (the default) returns the self-sufficient text summary *and* opens the iframe on UI-capable hosts. `mode: 'text'` strips the iframe; `mode: 'ui'` returns a one-line placeholder that still carries the checkout URL.
+
+### Declaring structured output
+
+`registerPayable` never derives an `outputSchema` for you — declaring one turns a nicety into a spec MUST, because the server then has to return conforming `structuredContent` on every call. Pass `outputSchema` explicitly when you want it, and the SDK unions your schema with the paywall gate shape so a gated call still validates.
+
+```typescript
+registerPayable('search_knowledge', {
+  description: 'Search the knowledge base.',
+  schema: { query: z.string().min(1) },
+  outputSchema: z.object({ query: z.string(), results: z.array(z.string()) }),
+  handler: async ({ query }, ctx) => ctx.respond({ query, results: await search(query) }),
+})
+```
+
 ## Plan Activation
 
-Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. `activate_plan`, `upgrade`, and `topup` already map to the underlying flows:
+Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. The `account` viewer (with optional `view: 'checkout' | 'account' | 'topup'`) and `activate_plan` already map to the underlying flows:
 
 - **Free plan** — activates immediately; the customer can start calling paid tools.
-- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `topup` tool. The plan activates as part of the successful top-up.
+- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `account` viewer with `view: "topup"`. The plan activates as part of the successful top-up.
 - **Recurring / hybrid plan** — returns a hosted `checkoutUrl` when the customer has no balance and no card on file, which the agent surfaces as a checkout link.
 
 Plans are managed on the product in the SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.
@@ -336,7 +363,7 @@ app.listen(3006, () => {
 ### Stateless and text-only deployments
 
 - **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., responseMode: 'json' })` from `@solvapay/mcp/fetch` so each request returns a single JSON body (required on Workers / Supabase Edge).
-- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the four intent tools plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
+- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
 
 ## Low-level Adapter (escape hatch)
 

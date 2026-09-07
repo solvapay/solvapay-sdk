@@ -2,7 +2,7 @@
  * Virtual Tools for MCP Server Monetization
  *
  * Provides the same self-service tools (get_user_info, upgrade, manage_account)
- * that hosted MCP Pay servers get automatically, but for SDK-integrated servers.
+ * that Managed MCP servers get automatically, but for SDK-integrated servers.
  * These tools are NOT usage-tracked and bypass the paywall.
  */
 
@@ -34,7 +34,7 @@ export interface VirtualToolDefinition {
   }>
 }
 
-// ── Tool Definitions (matching hosted MCP Pay) ─────────────────────────
+// ── Tool Definitions (matching Managed MCP) ────────────────────────────
 
 const TOOL_GET_USER_INFO = {
   name: 'get_user_info',

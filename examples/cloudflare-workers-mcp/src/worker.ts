@@ -93,11 +93,11 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     responseMode: 'json',
     // Hide UI-only transport tools from the LLM-facing `tools/list`
     // (text hosts: Claude Desktop, MCPJam, Cursor) — keeps the model's
-    // tool catalogue narrow to the four intent tools (`upgrade`,
-    // `manage_account`, `activate_plan`, `topup`) plus this worker's
+    // tool catalogue narrow to the two intent tools (`account`,
+    // `activate_plan`) plus this worker's
     // demo tools. ChatGPT-originated tools/list requests are
     // auto-detected and receive the full catalog so the iframe's
-    // `create_payment_intent` / `create_topup_payment_intent` calls
+    // `create_payment_intent` calls (plan + topup via `purpose`)
     // pass ChatGPT's gateway catalogue check.
     hideToolsByAudience: ['ui'],
     ...(demoToolsEnabled(env as unknown as Record<string, string | undefined>)

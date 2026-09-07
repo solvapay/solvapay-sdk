@@ -126,7 +126,7 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     // `manage_account`, `activate_plan`, `topup`) plus this worker's
     // generated tools. ChatGPT-originated tools/list requests are
     // auto-detected and receive the full catalog so the iframe's
-    // `create_payment_intent` / `create_topup_payment_intent` calls
+    // `create_payment_intent` calls (plan + topup via `purpose`)
     // pass ChatGPT's gateway catalogue check.
     hideToolsByAudience: ['ui'],
     additionalTools: ctx => registerTools(ctx, env),

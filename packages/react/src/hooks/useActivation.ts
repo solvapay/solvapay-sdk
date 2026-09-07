@@ -12,7 +12,7 @@ export type ActivationState =
   | 'error'
 
 export interface UseActivationReturn {
-  activate: (params: { productRef: string; planRef: string }) => Promise<void>
+  activate: (params: { productRef: string; planRef: string }) => Promise<ActivationState>
   state: ActivationState
   error: string | null
   result: ActivatePlanResult | null
@@ -47,7 +47,7 @@ export function useActivation(): UseActivationReturn {
   const [result, setResult] = useState<ActivatePlanResult | null>(null)
 
   const activate = useCallback(
-    async (params: { productRef: string; planRef: string }) => {
+    async (params: { productRef: string; planRef: string }): Promise<ActivationState> => {
       setState('activating')
       setError(null)
       setResult(null)
@@ -60,25 +60,27 @@ export function useActivation(): UseActivationReturn {
           case 'activated':
           case 'already_active':
             setState('activated')
-            break
+            return 'activated'
           case 'topup_required':
             setState('topup_required')
-            break
+            return 'topup_required'
           case 'payment_required':
             setError(copy.activation.paymentRequired)
             setState('payment_required')
-            break
+            return 'payment_required'
           case 'invalid':
             setError(data.message || copy.activation.invalidConfiguration)
             setState('error')
-            break
+            return 'error'
           default:
             setError(copy.activation.unexpectedResponse)
             setState('error')
+            return 'error'
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : copy.activation.failed)
         setState('error')
+        return 'error'
       }
     },
     [activatePlan, copy],

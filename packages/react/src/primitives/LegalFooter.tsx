@@ -16,6 +16,7 @@
 import React, { forwardRef } from 'react'
 import { Slot } from './slot'
 import { useCopy } from '../hooks/useCopy'
+import { useExternalLinkClick } from '../hooks/useExternalLink'
 import {
   SOLVAPAY_PRIVACY_URL,
   SOLVAPAY_TERMS_URL,
@@ -50,6 +51,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
     forwardedRef,
   ) {
     const copy = useCopy()
+    const handleExternalClick = useExternalLinkClick()
     const attributionLabel =
       attribution === 'provided'
         ? copy.legalFooter.providedBy
@@ -68,6 +70,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
                 href={termsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleExternalClick}
               >
                 {copy.legalFooter.terms}
               </a>
@@ -77,6 +80,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
                 href={privacyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleExternalClick}
               >
                 {copy.legalFooter.privacy}
               </a>
@@ -87,6 +91,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
                 href={SOLVAPAY_WEBSITE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleExternalClick}
               >
                 {attributionLabel}
               </a>

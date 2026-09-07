@@ -55,12 +55,18 @@ vi.mock('../../primitives/TopupForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
+    TaxNote: () => null,
     Rows: () => null,
   }
   return {
     TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
+    useTopupForm: () => ({ taxBreakdown: null, amount: 0, currency: 'USD' }),
   }
 })
+
+vi.mock('../../components/PaymentFormContext', () => ({
+  usePaymentForm: () => ({ taxBreakdown: null }),
+}))
 
 vi.mock('../../primitives/PaymentForm', () => {
   const Root: React.FC<{
@@ -304,7 +310,7 @@ describe('Phase 1 — McpCheckoutView emits on successful payment', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })

@@ -36,3 +36,6 @@ docs/api.json
 
 # Scratch research notes — internal, not for the public repo
 research-tmp/
+
+# Scratch design explorations — internal, not for the public repo
+tmp-designs/

@@ -332,6 +332,107 @@ export interface BalancePegLike {
  * rate and returns `null` rather than publishing a number that would be
  * wrong by the FX ratio.
  */
+/** True when the plan prices per unit (a per-unit charge or tier stack is present). */
+function isMetered(priced: PricedLike | null | undefined): boolean {
+  return perUnitCharge(priced) != null || tierBands(priced).length > 0
+}
+
+/** True when metered usage bills at a positive rate. */
+function isBillableMetered(priced: PricedLike | null | undefined): boolean {
+  const rate = usageRate(priced)
+  if (rate != null && rate.amountMinor > 0) return true
+  return tierBands(priced).some(band => band.charge.amountMinor > 0)
+}
+
+/** The recurring flat charge (minor units). Only meaningful when recurring. */
+function baseRecurringChargeMinor(priced: PricedLike | null | undefined): number | undefined {
+  if (!billingCycle(priced)) return undefined
+  const flat = charges(priced).find(charge => charge.per === 'flat' && !charge.oneTime)
+  return flat?.amountMinor
+}
+
+/** The one-time flat charge (minor units) when the plan has no billing cycle. */
+function oneTimeChargeMinor(priced: PricedLike | null | undefined): number | undefined {
+  if (billingCycle(priced)) return undefined
+  const flat = charges(priced).find(charge => charge.per === 'flat')
+  return flat?.amountMinor
+}
+
+/** Headline price in minor units: base recurring, else one-time flat, else 0. */
+function headlinePriceMinor(priced: PricedLike | null | undefined): number {
+  return baseRecurringChargeMinor(priced) ?? oneTimeChargeMinor(priced) ?? 0
+}
+
+export type PricingShape = 'free' | 'usage' | 'recurring' | 'hybrid' | 'oneTime'
+
+/**
+ * Derived scalars accept `null` because the wire sends them that way on
+ * frozen plan snapshots — an absent value and an explicit `null` mean the
+ * same thing here, and every read below treats them alike.
+ */
+export interface PlanPricingShapeInput extends PricedLike {
+  requiresPayment?: boolean | null
+  type?: string | null
+  currency?: string | null
+  price?: number | null
+}
+
+export interface PlanPricingShape {
+  shape: PricingShape
+  headlineMinor: number
+  currency: string
+  cycle: BillingCycleLike | null
+  rate: UsageRate | null
+}
+
+function derivePricingShape(
+  recurring: boolean,
+  metered: boolean,
+  billableMetered: boolean,
+): Exclude<PricingShape, 'free'> {
+  if (recurring && billableMetered) return 'hybrid'
+  if (recurring) return 'recurring'
+  if (metered) return 'usage'
+  return 'oneTime'
+}
+
+/**
+ * Derives the pricing shape a plan-row or narration surface should branch on.
+ * Mirrors the backend's `derivePlanLabelFromFlags` rule in
+ * `packages/domain/src/contracts/pricing/derive.ts`.
+ */
+export function planPricingShape(
+  priced: PlanPricingShapeInput | null | undefined,
+): PlanPricingShape {
+  const currencyFallback = (priced?.currency ?? 'USD').toUpperCase()
+  if (!priced) {
+    return { shape: 'oneTime', headlineMinor: 0, currency: currencyFallback, cycle: null, rate: null }
+  }
+
+  if (priced.requiresPayment === false) {
+    return {
+      shape: 'free',
+      headlineMinor: 0,
+      currency: currencyFallback,
+      cycle: billingCycle(priced),
+      rate: usageRate(priced),
+    }
+  }
+
+  const recurring = billingCycle(priced) != null
+  const metered = isMetered(priced)
+  const billableMetered = isBillableMetered(priced)
+  const headline = headlineCharges(priced)[0]
+
+  return {
+    shape: derivePricingShape(recurring, metered, billableMetered),
+    headlineMinor: headlinePriceMinor(priced),
+    currency: (headline?.currency ?? priced.currency ?? 'USD').toUpperCase(),
+    cycle: recurring ? billingCycle(priced) : null,
+    rate: metered ? usageRate(priced) : null,
+  }
+}
+
 export function creditsPerUnitFromBalance(
   priced: PricedLike | null | undefined,
   balance: BalancePegLike | null | undefined,

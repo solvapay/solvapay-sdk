@@ -104,6 +104,8 @@ describe('useLimits', () => {
       expect(result.current.withinLimits).toBe(true)
       expect(result.current.meterName).toBe('requests')
       expect(result.current.activationRequired).toBe(false)
+      expect(result.current.used).toBeNull()
+      expect(result.current.limit).toBeNull()
       expect(result.current.error).toBeNull()
       expect(getLimits).toHaveBeenCalledWith({ productRef: 'prd_api', meterName: 'requests' })
     })
@@ -201,6 +203,22 @@ describe('useLimits', () => {
       expect(result.current.remaining).toBeNull()
       expect(result.current.withinLimits).toBeNull()
       expect(result.current.meterName).toBeNull()
+      expect(result.current.error).toBeNull()
+    })
+
+    it('serves a bootstrap-seeded cache entry under the MCP adapter', async () => {
+      setTransport({ getLimits: undefined })
+      limitsCache.set('cus_test:prd_api:requests', {
+        data: limitsResult({ remaining: 3800, withinLimits: true }),
+        timestamp: Date.now(),
+        promise: null,
+      })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.remaining).toBe(3800)
+      expect(result.current.withinLimits).toBe(true)
       expect(result.current.error).toBeNull()
     })
   })
@@ -416,8 +434,34 @@ describe('useLimits', () => {
       })
 
       expect(result.current.remaining).toBe(4)
+      expect(result.current.used).toBeNull()
       // Still only the initial fetch — the trailing refetch happens on the timer.
       expect(getLimits).toHaveBeenCalledTimes(1)
+    })
+
+    it('optimistically increments used alongside the remaining decrement', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 5,
+        meterName: 'requests',
+        activationRequired: false,
+        used: 1,
+        limit: 6,
+      })
+      setTransport({ getLimits })
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await vi.waitFor(() => expect(result.current.remaining).toBe(5))
+
+      act(() => {
+        result.current.adjustRemaining(-1)
+      })
+
+      expect(result.current.remaining).toBe(4)
+      expect(result.current.used).toBe(2)
+      expect(result.current.limit).toBe(6)
     })
 
     it('schedules a trailing refetch after the optimistic grace window', async () => {

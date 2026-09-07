@@ -9,6 +9,28 @@ This example shows an MCP App server with:
 
 The UI remains the same as the original time app example (interactive view with a refresh button).
 
+## Text-only hosts
+
+MCP Apps is optional. Hosts that never mount `ui://` (Claude Code, CLI
+clients, n8n) still have to learn the current limit, recover, and find
+user info from `content[0].text` alone. Official MCP Apps / 2026-07-28
+tools guidance: `content` is the model and text-only-host lane;
+`structuredContent` is for the widget and is often hidden from the
+model when `content` is present.
+
+- A paywalled `get-current-time` call past the plan limit returns a
+  **text-only gate** — no iframe. The first text block names the limit,
+  the reason, and one recovery tool (`upgrade` / `topup` /
+  `activate_plan`) plus a https URL.
+- `manage_account` is the text-host account page (plan, remaining,
+  payment method).
+- `docs://solvapay/overview.md` (when registered by the factory) is
+  how a text host discovers app capabilities.
+
+Do not write `"shown in the panel."` as the first text block. Full
+contract:
+[`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and set values:
