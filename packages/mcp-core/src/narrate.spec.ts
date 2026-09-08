@@ -701,7 +701,7 @@ describe('narrateUpgrade', () => {
 })
 
 describe('narrateTopup', () => {
-  it('shows balance + presets', () => {
+  it('shows balance without invented presets', () => {
     const { text } = narrateTopup(
       basePayload({
         customer: {
@@ -715,7 +715,19 @@ describe('narrateTopup', () => {
     )
     expect(text).toContain('**Top up — Acme Knowledge Base**')
     expect(text).toContain('Balance: 865,500 credits')
-    expect(text).toContain('Top-up presets:')
+    expect(text).not.toContain('Top-up presets:')
+  })
+
+  it('labels a topup checkout URL as Add credits', () => {
+    const { text, links } = narrateTopup(
+      basePayload({
+        checkoutUrl: 'https://customer.solvapay.com/customer/checkout/topup?id=abc',
+      }),
+    )
+    expect(text).toContain('[Add credits](https://customer.solvapay.com/customer/checkout/topup?id=abc)')
+    expect(links).toEqual([
+      { uri: 'https://customer.solvapay.com/customer/checkout/topup?id=abc', name: 'Add credits' },
+    ])
   })
 })
 
@@ -1014,6 +1026,7 @@ describe('text-lane self-sufficiency', () => {
     const checkoutAt = text.indexOf('[Open checkout](https://customer.solvapay.com/checkout?id=def)')
     expect(manageAt).toBeGreaterThanOrEqual(0)
     expect(checkoutAt).toBeGreaterThan(manageAt)
+    expect(text).toContain('(expires in 15 minutes)')
   })
 
   it('no narrator emits the slash-command recovery form', () => {

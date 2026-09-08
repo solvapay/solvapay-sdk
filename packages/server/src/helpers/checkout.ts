@@ -25,6 +25,7 @@ export async function createCheckoutSessionCore(
     productRef: string
     planRef?: string
     returnUrl?: string
+    purpose?: 'credit_topup'
   },
   options: {
     solvaPay?: SolvaPay
@@ -76,6 +77,7 @@ export async function createCheckoutSessionCore(
       customerRef,
       planRef: body.planRef || undefined,
       returnUrl: returnUrl,
+      ...(body.purpose ? { purpose: body.purpose } : {}),
     })
 
     return {
