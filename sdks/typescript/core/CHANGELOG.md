@@ -1,5 +1,17 @@
 # @solvapay/core
 
+## 1.7.0
+
+### Minor Changes
+
+- f994f1a: Add `planPricingShape` and related pricing helpers so MCP plan rows, CTAs, and text narration agree on usage-based vs flat vs free shape instead of treating a $0 metered plan as Free.
+
+## 1.6.0
+
+### Minor Changes
+
+- a98faa9: Publish `usageRate` (and the tier-band readers it uses). `@solvapay/react` and `@solvapay/mcp-core` already import this API, but `core@1.5.0` on npm predates it, so widget builds fail with a missing export.
+
 ## 1.5.0
 
 ### Minor Changes

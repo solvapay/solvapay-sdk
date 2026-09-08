@@ -143,7 +143,7 @@ No released spec says "if a tool returns `structuredContent`, declare an `output
 
 That is why `registerPayable` takes `outputSchema` as opt-in and never auto-derives it. Declaring it is a validation/hydration benefit plus a conformance MUST.
 
-The `account` viewer declares `BootstrapPayloadSchema`. The paywall gate declares `PaywallStructuredContentSchema` (Node entry only — the Zod object is not exported from the edge bundle). Fields the backend omits are optional in the schema, never required-with-a-default.
+The `account` viewer declares `BootstrapPayloadSchema`. The paywall gate declares `PaywallStructuredContentSchema` (re-exported from both the Node and edge bundles so `@solvapay/mcp` can import it on Cloudflare Workers). Fields the backend omits are optional in the schema, never required-with-a-default.
 
 Separately, the tools spec's server-directed SHOULD still stands: a tool that returns structured content SHOULD also return the serialized JSON in a TextContent block. That is `ResponseOptions.dataInText` (default `true`) — a trailing text block after the narration, so `content[0]` stays the human summary and hosts that drop `structuredContent` still receive the payload.
 
