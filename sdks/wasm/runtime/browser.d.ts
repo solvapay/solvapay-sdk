@@ -12,6 +12,8 @@ export {
   wasmBuildInfo,
   validateBusinessDetails,
   deriveTaxIdType,
+  isTaxIdType,
+  TAX_ID_TYPES,
   resolveTaxBehavior,
   getTaxIdExample,
   getTaxIdFieldLabel,

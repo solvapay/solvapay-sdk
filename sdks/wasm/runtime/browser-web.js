@@ -17,6 +17,8 @@ import init, {
   // business-details (public-safe)
   validateBusinessDetails,
   deriveTaxIdType,
+  isTaxIdType,
+  TAX_ID_TYPES,
   resolveTaxBehavior,
   getTaxIdExample,
   getTaxIdFieldLabel,
@@ -78,6 +80,8 @@ export {
   wasmBuildInfo,
   validateBusinessDetails,
   deriveTaxIdType,
+  isTaxIdType,
+  TAX_ID_TYPES,
   resolveTaxBehavior,
   getTaxIdExample,
   getTaxIdFieldLabel,

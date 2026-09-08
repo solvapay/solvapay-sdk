@@ -148,6 +148,9 @@ export declare class NativeClient {
   fetchJwks(argsJson: string): Promise<string>
 }
 
+/** Binding for `appendPaidToolDescription`. */
+export declare function appendPaidToolDescription(argsJson: string): string
+
 /**
  * Binding for `assertResponseResult` — brand failures are Transport errors
  * (TS wrapper rethrows as plain `Error` for fixture name parity).
@@ -216,6 +219,9 @@ export declare function coerceCustomerOptions(argsJson: string): string
 
 /** Binding for `countsUsage`. */
 export declare function countsUsage(argsJson: string): string
+
+/** Binding for `creditSignals`. */
+export declare function creditSignals(argsJson: string): string
 
 /** Binding for `creditsPerUnitFromBalance`. */
 export declare function creditsPerUnitFromBalance(argsJson: string): string
@@ -334,11 +340,17 @@ export declare function isPostalCodeRequired(argsJson: string): string
 /** Binding for `isStateRequired`. */
 export declare function isStateRequired(argsJson: string): string
 
+/** Binding for `isTaxIdType`. */
+export declare function isTaxIdType(argsJson: string): string
+
 /** Binding for `isUnlimitedRemaining`. */
 export declare function isUnlimitedRemaining(argsJson: string): string
 
 /** Binding for `isZeroDecimalCurrency`. */
 export declare function isZeroDecimalCurrency(argsJson: string): string
+
+/** Binding for `linkLabel`. */
+export declare function linkLabel(argsJson: string): string
 
 /** Binding for `makeResponseResult`. */
 export declare function makeResponseResult(argsJson: string): string
@@ -367,6 +379,9 @@ export declare function napiVersion(): string
 
 /** Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics. */
 export declare function nativeBuildInfo(): string
+
+/** Binding for `nextActionFor`. */
+export declare function nextActionFor(argsJson: string): string
 
 /**
  * Binding for `normalizeCancelResponse`.
@@ -404,6 +419,9 @@ export declare function perUnitCharge(argsJson: string): string
 
 /** Binding for `planConsequence`. */
 export declare function planConsequence(argsJson: string): string
+
+/** Binding for `planLadder`. */
+export declare function planLadder(argsJson: string): string
 
 /** Binding for `planPricingShape`. */
 export declare function planPricingShape(argsJson: string): string
@@ -497,6 +515,9 @@ export declare function solvapayCall(argsJson: string): string
 
 /** Binding for `STATE_REQUIRED_COUNTRIES`. */
 export declare function STATE_REQUIRED_COUNTRIES(argsJson: string): string
+
+/** Binding for `TAX_ID_TYPES`. */
+export declare function TAX_ID_TYPES(argsJson: string): string
 
 /** Binding for `TAX_NOT_COLLECTED_NOTE`. */
 export declare function TAX_NOT_COLLECTED_NOTE(argsJson: string): string
