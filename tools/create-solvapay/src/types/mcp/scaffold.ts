@@ -304,17 +304,16 @@ function resolveOverlayDestName(name: string): string {
 
 export type WriteBootstrapEnvOptions = {
   /**
-   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
-   * into the bootstrap `.env`. Lets `wrangler dev` and the deploy
-   * preflight hit the dev backend immediately — before `solvapay init`
-   * runs — so the `--dev` story holds even between scaffold and init.
+   * Resolved API origin. Written as `SOLVAPAY_API_BASE_URL` when it
+   * differs from the production default. The caller resolves precedence
+   * (`--api-base` > `--dev` > env > production) before calling.
    */
-  dev?: boolean
+  apiBaseUrl?: string
   /** Public MCP origin written to MCP_PUBLIC_BASE_URL. Defaults to the TS worker URL. */
   publicBaseUrl?: string
 }
 
-const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
+const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 
 export async function writeBootstrapEnv(
   target: string,
@@ -328,8 +327,9 @@ export async function writeBootstrapEnv(
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${publicBaseUrl}`,
   ]
-  if (options.dev) {
-    lines.push(`SOLVAPAY_API_BASE_URL=${DEV_API_BASE_URL}`)
+  const apiBaseUrl = options.apiBaseUrl?.replace(/\/$/, '')
+  if (apiBaseUrl && apiBaseUrl !== DEFAULT_API_BASE_URL) {
+    lines.push(`SOLVAPAY_API_BASE_URL=${apiBaseUrl}`)
   }
   await writeFile(envPath, `${lines.join('\n')}\n`, 'utf8')
 }

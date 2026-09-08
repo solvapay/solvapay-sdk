@@ -13,6 +13,7 @@ export type {
 } from './browser-auth'
 export {
   ensureEnvInGitignore,
+  isExampleSecretKey,
   readSolvaPayApiBaseUrlFromEnv,
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
@@ -65,6 +66,9 @@ export type {
   ScaffoldLanguage,
   SdkInstallPlan,
 } from './language'
+
+export { DEFAULT_API_BASE_URL, DEV_API_BASE_URL, resolveCliApiBaseUrl } from './api-base'
+export type { ApiBaseResolveOptions } from './api-base'
 
 export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'

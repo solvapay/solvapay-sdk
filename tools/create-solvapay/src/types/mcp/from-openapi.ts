@@ -16,7 +16,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
-import { detectPackageManager, runInitInDirectory } from '@solvapay/init'
+import {
+  DEFAULT_API_BASE_URL,
+  detectPackageManager,
+  resolveCliApiBaseUrl,
+  runInitInDirectory,
+} from '@solvapay/init'
 import type { InitCommandOptions } from '@solvapay/init'
 import {
   assertTargetDirAbsent,
@@ -40,16 +45,13 @@ export type FromOpenapiInput = {
   skipInstall?: boolean
   skipInit?: boolean
   /**
-   * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
-   * into the scaffolded `.env` (via the `apiBaseUrl` field in
-   * `selections.json`). Mirrors the from-scratch `dev` plumbing so
-   * `wrangler dev` and `scripts/deploy.mjs` hit api-dev before
-   * `solvapay init --dev` runs.
+   * When true, rewrite path deps and default the API origin to api-dev
+   * unless `options.apiBaseUrl` is set. The resolved origin is written
+   * into `selections.json` (omitted for production) so `.env` matches
+   * `solvapay init`.
    */
   dev?: boolean
 }
-
-const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
 type Selections = {
   workerName: string
@@ -129,8 +131,9 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   if (upstreamBaseUrl) {
     selections.upstreamBaseUrl = upstreamBaseUrl
   }
-  if (dev) {
-    selections.apiBaseUrl = DEV_API_BASE_URL
+  const apiBaseUrl = resolveCliApiBaseUrl({ ...options, dev: dev || options.dev })
+  if (apiBaseUrl !== DEFAULT_API_BASE_URL) {
+    selections.apiBaseUrl = apiBaseUrl
   }
 
   const tmpSelectionsPath = join(
@@ -172,7 +175,12 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   if (skipInit) {
     process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
   } else {
-    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true, language: 'ts' })
+    await runInitInDirectory({
+      cwd: target,
+      options: { ...options, apiBaseUrl },
+      skipSdkInstall: true,
+      language: 'ts',
+    })
   }
 
   await gitInit(target)

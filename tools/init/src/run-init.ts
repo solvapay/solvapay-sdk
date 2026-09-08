@@ -36,18 +36,7 @@ import { ensureNodeProject, waitForEnter } from './project'
 import { access } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import path from 'node:path'
-
-const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
-const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
-
-const resolveApiBaseUrl = (opts: InitCommandOptions): string => {
-  // `--dev` is the highest-priority signal — when set, it overrides any
-  // leaked `SOLVAPAY_API_BASE_URL` in the shell so the dev-mode story
-  // ("one flag, every layer hits api-dev") holds even on machines that
-  // have an old override lingering in `~/.zshrc` / `.envrc`.
-  if (opts.dev) return DEV_API_BASE_URL
-  return (process.env.SOLVAPAY_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
-}
+import { DEFAULT_API_BASE_URL, DEV_API_BASE_URL, resolveCliApiBaseUrl } from './api-base'
 
 const ASCII_BANNER = ` ____        _            ____
 / ___|  ___ | |_   ____ _|  _ \\ __ _ _   _
@@ -106,11 +95,17 @@ export type InitCommandOptions = {
    * Target the SolvaPay dev backend (`https://api-dev.solvapay.com`) for
    * the browser-auth flow + every downstream `.env`-driven SDK call.
    * Internal testing only — production secret keys are rejected by
-   * `api-dev`. Persisted to `.env` as `SOLVAPAY_API_BASE_URL` so
-   * `wrangler dev` and `scripts/deploy.mjs` pick the same origin without
-   * any further user action.
+   * `api-dev`. Outranked by `--api-base`. Beats a leaked
+   * `SOLVAPAY_API_BASE_URL` so one flag still pins path-deps *and*
+   * api-dev unless the caller names a different origin.
    */
   dev?: boolean
+  /**
+   * Explicit API origin. Highest-priority signal — wins over `--dev`
+   * and `SOLVAPAY_API_BASE_URL`. Use with `--dev` when path-depending
+   * on a checkout but talking to a local platform stack.
+   */
+  apiBaseUrl?: string
   /**
    * Override language detection. Used by `solvapay init --language` and
    * forwarded by `create-solvapay` after the scaffolder already chose one.
@@ -288,10 +283,12 @@ export const runInitInDirectory = async ({
   skipSdkInstall = false,
   language: explicitLanguage,
 }: RunInitInDirectoryOptions): Promise<void> => {
-  const apiBaseUrl = resolveApiBaseUrl(options)
+  const apiBaseUrl = resolveCliApiBaseUrl(options)
   printBanner()
 
-  if (options.dev) {
+  if (options.apiBaseUrl) {
+    process.stdout.write(`🧪 Targeting SolvaPay API at ${apiBaseUrl}.\n`)
+  } else if (options.dev) {
     process.stdout.write(
       `🧪 Targeting SolvaPay dev backend (${DEV_API_BASE_URL}) — internal testing only.\n`,
     )
@@ -424,7 +421,10 @@ export const runInitInDirectory = async ({
     process.stdout.write('🔒 Added .env to .gitignore\n')
   }
 
-  const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, { cwd })
+  const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, {
+    cwd,
+    yes: options.yes === true,
+  })
   const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
   if (
     envWrite.action === 'created' ||
@@ -439,16 +439,14 @@ export const runInitInDirectory = async ({
     process.stdout.write(`⚠️ ${exchange.warning}\n`)
   }
 
-  // Persist `SOLVAPAY_API_BASE_URL=…` when `--dev` is set so subsequent
-  // `wrangler dev` / `scripts/deploy.mjs` preflight + `--var` upload all
-  // hit api-dev without the user re-passing the flag or exporting the
-  // variable. Production (`opts.dev === false`) deliberately does NOT
-  // touch this — leaving the line absent / commented-out keeps the
-  // worker on its built-in `https://api.solvapay.com` default.
-  if (options.dev) {
-    const apiBaseWrite = await writeSolvaPayApiBaseUrlToEnv(DEV_API_BASE_URL, { cwd })
+  // Persist `SOLVAPAY_API_BASE_URL=…` whenever the resolved origin is
+  // not production. `--dev` still pins api-dev; `--api-base` pins that
+  // URL instead. Leaving the line absent keeps the worker on its
+  // built-in `https://api.solvapay.com` default.
+  if (apiBaseUrl !== DEFAULT_API_BASE_URL) {
+    const apiBaseWrite = await writeSolvaPayApiBaseUrlToEnv(apiBaseUrl, { cwd })
     if (apiBaseWrite.action !== 'unchanged') {
-      process.stdout.write(`📝 SOLVAPAY_API_BASE_URL pinned to ${DEV_API_BASE_URL} in .env\n`)
+      process.stdout.write(`📝 SOLVAPAY_API_BASE_URL pinned to ${apiBaseUrl} in .env\n`)
     }
   }
 

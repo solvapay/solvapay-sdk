@@ -105,12 +105,23 @@ describe('writeBootstrapEnv', () => {
     }
   })
 
-  it('appends SOLVAPAY_API_BASE_URL=api-dev when dev is true', async () => {
+  it('appends SOLVAPAY_API_BASE_URL when apiBaseUrl is set', async () => {
     const target = await makeTempDir()
     try {
-      await writeBootstrapEnv(target, 'prd_abc', { dev: true })
+      await writeBootstrapEnv(target, 'prd_abc', { apiBaseUrl: 'http://localhost:3010' })
       const content = await readFile(path.join(target, '.env'), 'utf8')
-      expect(content).toContain('SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com')
+      expect(content).toContain('SOLVAPAY_API_BASE_URL=http://localhost:3010')
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  })
+
+  it('omits SOLVAPAY_API_BASE_URL when apiBaseUrl is the production default', async () => {
+    const target = await makeTempDir()
+    try {
+      await writeBootstrapEnv(target, 'prd_abc', { apiBaseUrl: 'https://api.solvapay.com' })
+      const content = await readFile(path.join(target, '.env'), 'utf8')
+      expect(content).not.toContain('SOLVAPAY_API_BASE_URL=')
     } finally {
       await rm(target, { recursive: true, force: true })
     }
@@ -226,9 +237,15 @@ describe('mcp-app.html color-scheme meta', () => {
 })
 
 describe('SOLVAPAY_RUNTIME_DEPS', () => {
-  it('covers the three @solvapay/* runtime packages with non-empty fallbacks', () => {
+  it('covers the five @solvapay/* runtime packages with non-empty fallbacks', () => {
     const names = SOLVAPAY_RUNTIME_DEPS.map(d => d.name).sort()
-    expect(names).toEqual(['@solvapay/mcp', '@solvapay/react', '@solvapay/server'])
+    expect(names).toEqual([
+      '@solvapay/core',
+      '@solvapay/mcp',
+      '@solvapay/react',
+      '@solvapay/server',
+      '@solvapay/server-wasm',
+    ])
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {
       expect(dep.fallback).toMatch(/^\d+\.\d+\.\d+/)
     }
@@ -259,6 +276,8 @@ describe('resolveLatestSolvapayVersions', () => {
       '@solvapay/mcp': '0.9.9',
       '@solvapay/server': '2.0.0',
       '@solvapay/react': '3.1.4',
+      '@solvapay/core': '1.9.9',
+      '@solvapay/server-wasm': '0.8.0',
     }
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
@@ -277,6 +296,8 @@ describe('resolveLatestSolvapayVersions', () => {
     expect(map.get('@solvapay/mcp')).toBe('0.9.9')
     expect(map.get('@solvapay/server')).toBe('2.0.0')
     expect(map.get('@solvapay/react')).toBe('3.1.4')
+    expect(map.get('@solvapay/core')).toBe('1.9.9')
+    expect(map.get('@solvapay/server-wasm')).toBe('0.8.0')
     expect(onResolve).toHaveBeenCalledTimes(SOLVAPAY_RUNTIME_DEPS.length)
     for (const call of onResolve.mock.calls) {
       expect(call[0].source).toBe('registry')

@@ -7,9 +7,11 @@ export type LanguageDep = {
 
 export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDep[]> = {
   ts: [
-    { name: '@solvapay/mcp', fallback: '0.3.0' },
-    { name: '@solvapay/server', fallback: '1.1.0' },
-    { name: '@solvapay/react', fallback: '1.2.0' },
+    { name: '@solvapay/mcp', fallback: '1.0.0' },
+    { name: '@solvapay/server', fallback: '3.0.0' },
+    { name: '@solvapay/react', fallback: '3.0.0' },
+    { name: '@solvapay/core', fallback: '2.0.0' },
+    { name: '@solvapay/server-wasm', fallback: '0.2.0' },
   ],
   python: [
     { name: 'solvapay', fallback: '0.1.0' },

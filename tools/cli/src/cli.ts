@@ -19,9 +19,13 @@ Flags for init:
   --dev             Target the SolvaPay dev backend (api-dev.solvapay.com).
                     Internal testing only — production secret keys are rejected
                     by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
+  --api-base <url>  Override the API origin. Wins over --dev and
+                    SOLVAPAY_API_BASE_URL. Use with --dev to keep checkout
+                    path deps while talking to a local stack.
 
 Flags for doctor:
   --dev             Target the SolvaPay dev backend (api-dev.solvapay.com)
+  --api-base <url>  Override the API origin (same precedence as init)
 `
 
 const main = async () => {

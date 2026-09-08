@@ -215,6 +215,7 @@ async fn main() {
             title: Some("__TOOL_NAME__".into()),
             description: Some("Placeholder paid tool — echoes the input message.".into()),
             input_schema: Some(fields),
+            output_schema: None,
             usage_type: None,
         },
         placeholder_handler(),

@@ -249,14 +249,14 @@ High-level groups:
 | Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`)                                               |
 | Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                                                                                                   |
 | Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`)            |
-| C ABI                | Generated 42-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
+| C ABI                | Generated 45-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
 
 Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`).
 
 ### C ABI
 
 `sdks/capi/` dispatch is generated (`Toolchain::C`, `--c-bindings-out`). The
-C fixture census (`sdks/capi/ctest/contract.sh`) replays all 550 golden
+C fixture census (`sdks/capi/ctest/contract.sh`) replays all 741 golden
 fixtures via a test-only fixture-host feature. Signature parity is
 `--c-parity-out`.
 

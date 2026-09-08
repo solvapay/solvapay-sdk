@@ -145,7 +145,7 @@ solvapay-sdk/
 | `solvapay-core`      | Validation, retry policy, webhook verify, helper decision cores, paywall, business/credit/seller logic, MCP payload builders, error model | `serde`, `hmac`/`sha2`, `subtle`. **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen` — this is what keeps browser WASM small |
 | `solvapay-dto`       | Generated wire models + SDK overlays                                                                                                      | `serde` only; generated — never hand-edited                                                                                       |
 | `solvapay-export`    | Inert `#[solvapay_export]` marker scanned by dto-gen                                                                                      | Proc-macro crate; no runtime logic                                                                                                |
-| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 36 routed methods + 7 MCP composites (43 total)        | Depends on core + dto; async but runtime-agnostic                                                                                 |
+| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 38 routed methods + 7 MCP composites (45 total)        | Depends on core + dto; async but runtime-agnostic                                                                                 |
 | `solvapay`           | Public crates.io facade: idiomatic re-exports + `blocking` feature                                                                        | Depends on transport + core; ergonomics only, no new logic                                                                        |
 
 ## What's implemented where
@@ -177,7 +177,7 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 
 **HTTP client — `solvapay-transport`:** the `Transport` trait plus the reqwest
 (native) and Fetch (wasm32) implementations and the client shell that wires auth
-headers, idempotency, and retry, with 36 routed client methods plus 7
+headers, idempotency, and retry, with 38 routed client methods plus 7
 routeless MCP composites (`mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`,
 `mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks`) →
 `core/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.

@@ -5,6 +5,15 @@ export type ParsedInitArgs = {
   dev: boolean
   productRef?: string
   language?: ScaffoldLanguage
+  apiBaseUrl?: string
+}
+
+const readApiBaseValue = (argv: string[], index: number): string => {
+  const value = argv[index]
+  if (!value || value.startsWith('-')) {
+    throw new Error('--api-base requires a URL')
+  }
+  return value
 }
 
 export function parseInitArgs(argv: string[]): ParsedInitArgs {
@@ -12,12 +21,15 @@ export function parseInitArgs(argv: string[]): ParsedInitArgs {
   let dev = false
   let productRef: string | undefined
   let language: ScaffoldLanguage | undefined
+  let apiBaseUrl: string | undefined
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--yes' || arg === '-y') {
       yes = true
     } else if (arg === '--dev') {
       dev = true
+    } else if (arg === '--api-base') {
+      apiBaseUrl = readApiBaseValue(argv, ++i)
     } else if (arg === '--language' || arg === '-l') {
       const value = argv[++i]
       if (!value || value.startsWith('-')) {
@@ -35,17 +47,21 @@ export function parseInitArgs(argv: string[]): ParsedInitArgs {
       }
     }
   }
-  return { yes, dev, productRef, language }
+  return { yes, dev, productRef, language, apiBaseUrl }
 }
 
-export function parseDoctorArgs(argv: string[]): { dev: boolean } {
+export function parseDoctorArgs(argv: string[]): { dev: boolean; apiBaseUrl?: string } {
   let dev = false
-  for (const arg of argv) {
+  let apiBaseUrl: string | undefined
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
     if (arg === '--dev') {
       dev = true
+    } else if (arg === '--api-base') {
+      apiBaseUrl = readApiBaseValue(argv, ++i)
     } else if (arg.startsWith('-')) {
       throw new Error(`Unknown doctor flag: ${arg}`)
     }
   }
-  return { dev }
+  return { dev, apiBaseUrl }
 }

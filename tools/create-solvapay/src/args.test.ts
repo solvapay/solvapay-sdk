@@ -71,6 +71,16 @@ describe('parseArgs', () => {
     expect(parseArgs(['--dev']).dev).toBe(true)
   })
 
+  it('parses --api-base', () => {
+    expect(parseArgs(['--api-base', 'http://localhost:3010']).apiBaseUrl).toBe(
+      'http://localhost:3010',
+    )
+  })
+
+  it('flags a missing --api-base value', () => {
+    expect(parseArgs(['--api-base']).unknownFlag).toContain('--api-base requires a value')
+  })
+
   it('parses --help and -h', () => {
     expect(parseArgs(['--help']).help).toBe(true)
     expect(parseArgs(['-h']).help).toBe(true)
@@ -193,6 +203,7 @@ describe('toInitOptions', () => {
       dev: true,
       productRef: undefined,
       language: undefined,
+      apiBaseUrl: undefined,
     })
   })
 
@@ -202,6 +213,7 @@ describe('toInitOptions', () => {
       dev: false,
       productRef: undefined,
       language: undefined,
+      apiBaseUrl: undefined,
     })
   })
 
@@ -211,6 +223,17 @@ describe('toInitOptions', () => {
       dev: false,
       productRef: 'prd_abc',
       language: undefined,
+      apiBaseUrl: undefined,
+    })
+  })
+
+  it('forwards --api-base to the init options', () => {
+    expect(toInitOptions(parseArgs(['--api-base', 'http://localhost:3010']))).toEqual({
+      yes: false,
+      dev: false,
+      productRef: undefined,
+      language: undefined,
+      apiBaseUrl: 'http://localhost:3010',
     })
   })
 })

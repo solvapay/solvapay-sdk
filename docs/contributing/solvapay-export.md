@@ -27,7 +27,7 @@ Spelling differs by crate, and both forms are in-tree:
 
 | Crate                | Call site                                | Why                                                                    |
 | -------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
-| `solvapay-core`      | `#[crate::solvapay_export(...)]`         | re-exported at [`lib.rs`](../../core/solvapay-core/src/lib.rs) line 56 |
+| `solvapay-core`      | `#[crate::solvapay_export(...)]`         | re-exported at [`lib.rs`](../../core/solvapay-core/src/lib.rs) line 58 |
 | `solvapay-transport` | `#[solvapay_core::solvapay_export(...)]` | transport depends on core and reaches the re-export through it         |
 
 The bare form `#[solvapay_export]` parses to all-defaults. Every in-tree call

@@ -164,6 +164,17 @@ def _request_from_ctx(ctx: object) -> object | None:
     return nested
 
 
+def _auth_info_from_request(request: object | None) -> object | None:
+    # Starlette's `Request.auth` is a property that *raises* when
+    # AuthenticationMiddleware is not installed. Never getattr(request, "auth").
+    if request is None:
+        return None
+    scope = getattr(request, "scope", None)
+    if isinstance(scope, Mapping) and "auth" in scope:
+        return scope["auth"]
+    return None
+
+
 def auth_header_from_ctx(ctx: object | None) -> str | None:
     if ctx is None:
         return None
@@ -176,7 +187,7 @@ def auth_header_from_ctx(ctx: object | None) -> str | None:
         return found
     auth_info = getattr(ctx, "auth_info", None)
     if auth_info is None:
-        auth_info = getattr(request, "auth", None) if request is not None else None
+        auth_info = _auth_info_from_request(request)
     token = (
         auth_info.get("token")
         if isinstance(auth_info, Mapping)

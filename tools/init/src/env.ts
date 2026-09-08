@@ -23,9 +23,17 @@ export type GitignoreEnvResult = {
   action: 'created' | 'appended' | 'unchanged'
 }
 
+export const isExampleSecretKey = (value: string): boolean => {
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return true
+  return /your_key_here|replace_me/i.test(trimmed)
+}
+
 type EnvWriteOptions = {
   cwd?: string
   confirmOverwrite?: () => Promise<boolean>
+  yes?: boolean
+  isTty?: boolean
 }
 
 /** Owner-only — `.env` holds `SOLVAPAY_SECRET_KEY`. */
@@ -127,9 +135,21 @@ export const writeSolvaPaySecretToEnv = async (
     return { filePath: envPath, action: 'appended' }
   }
 
-  const shouldOverwrite = options.confirmOverwrite
-    ? await options.confirmOverwrite()
-    : await askOverwrite()
+  const match = currentContent.match(secretKeyRegex)
+  const currentValue = match?.[1] ? parseEnvValue(match[1]) : ''
+  const replaceWithoutPrompt = isExampleSecretKey(currentValue) || options.yes === true
+  let shouldOverwrite = replaceWithoutPrompt
+  if (!shouldOverwrite && options.confirmOverwrite) {
+    shouldOverwrite = await options.confirmOverwrite()
+  } else if (!shouldOverwrite) {
+    const interactive = options.isTty ?? Boolean(stdin.isTTY)
+    if (!interactive) {
+      throw new Error(
+        'Cannot confirm overwrite of SOLVAPAY_SECRET_KEY on a non-TTY. Re-run with --yes.',
+      )
+    }
+    shouldOverwrite = await askOverwrite()
+  }
   if (!shouldOverwrite) {
     await chmod(envPath, ENV_FILE_MODE)
     return { filePath: envPath, action: 'unchanged' }

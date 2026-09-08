@@ -2,17 +2,21 @@ import chalk from 'chalk'
 import { evaluateProductReadiness, SOLVAPAY_PRODUCT_REF_PLACEHOLDER } from '@solvapay/core'
 import { verifyProductRef, verifySecretKey } from './browser-auth'
 import {
+  DEFAULT_API_BASE_URL,
+  DEV_API_BASE_URL,
+  parseExplicitApiBaseUrl,
+} from './api-base'
+import {
   readSolvaPayApiBaseUrlFromEnv,
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
 } from './env'
 
-const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
-const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
-
 export type DoctorCommandOptions = {
   /** Target api-dev.solvapay.com (same as `solvapay init --dev`). */
   dev?: boolean
+  /** Explicit API origin. Wins over `--dev` and env / `.env`. */
+  apiBaseUrl?: string
 }
 
 export type RunDoctorInDirectoryOptions = {
@@ -46,6 +50,7 @@ const preferEnv = (
 }
 
 const resolveApiBaseUrl = async (cwd: string, opts: DoctorCommandOptions): Promise<string> => {
+  if (opts.apiBaseUrl) return parseExplicitApiBaseUrl(opts.apiBaseUrl)
   if (opts.dev) return DEV_API_BASE_URL
   const fromFile = await readSolvaPayApiBaseUrlFromEnv(cwd)
   const resolved = preferEnv(process.env.SOLVAPAY_API_BASE_URL, fromFile)

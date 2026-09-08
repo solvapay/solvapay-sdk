@@ -4,7 +4,7 @@ import pytest
 from solvapay.errors import SolvaPayError
 from solvapay.facade import create_solvapay
 
-from solvapay_mcp.register import _invoke_payable, _PayableTool
+from solvapay_mcp.register import _invoke_payable, _PayableTool, auth_header_from_ctx
 from solvapay_mcp.response_context import ResponseContext
 from tests.mcp_authoring.mock_backend import MockBackend
 
@@ -52,3 +52,25 @@ async def test_unresolvable_customer_ref_does_not_fall_back_to_anonymous() -> No
     assert result["isError"] is True
     assert result["structuredContent"]["status"] == 401
     assert backend.track_usage_calls == []
+
+
+def test_auth_header_from_ctx_without_starlette_auth_middleware() -> None:
+    from starlette.requests import Request
+
+    request = Request(
+        {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/mcp",
+            "raw_path": b"/mcp",
+            "query_string": b"",
+            "headers": [],
+            "client": ("127.0.0.1", 1234),
+            "server": ("127.0.0.1", 13030),
+        }
+    )
+    ctx = type("Ctx", (), {"request": request})()
+    assert auth_header_from_ctx(ctx) is None

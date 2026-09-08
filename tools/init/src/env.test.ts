@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   ensureEnvInGitignore,
+  isExampleSecretKey,
   readSolvaPayProductRefFromEnv,
   writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
@@ -12,6 +13,16 @@ import {
 
 const envMode = async (cwd: string): Promise<number> =>
   (await stat(path.join(cwd, '.env'))).mode & 0o777
+
+describe('isExampleSecretKey', () => {
+  it('treats template and empty values as unset', () => {
+    expect(isExampleSecretKey('sk_sandbox_your_key_here')).toBe(true)
+    expect(isExampleSecretKey('sk_test_your_key_here')).toBe(true)
+    expect(isExampleSecretKey('replace_me')).toBe(true)
+    expect(isExampleSecretKey('')).toBe(true)
+    expect(isExampleSecretKey('sk_sandbox_abc123')).toBe(false)
+  })
+})
 
 describe('writeSolvaPaySecretToEnv', () => {
   const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
@@ -60,6 +71,79 @@ describe('writeSolvaPaySecretToEnv', () => {
       expect(result.action).toBe('unchanged')
       expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_live_old\n')
       expect(await envMode(cwd)).toBe(0o600)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces example secret keys without prompting', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(
+        path.join(cwd, '.env'),
+        'SOLVAPAY_SECRET_KEY=sk_sandbox_your_key_here\nOTHER=1\n',
+        'utf8',
+      )
+      const confirmOverwrite = async () => {
+        throw new Error('confirmOverwrite must not run for example keys')
+      }
+      const result = await writeSolvaPaySecretToEnv('sk_sandbox_exchanged', {
+        cwd,
+        confirmOverwrite,
+      })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toContain('SOLVAPAY_SECRET_KEY=sk_sandbox_exchanged')
+      expect(content).toContain('OTHER=1')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('replaces sk_test_your_key_here without prompting', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_test_your_key_here\n', 'utf8')
+      const result = await writeSolvaPaySecretToEnv('sk_test_exchanged', { cwd, isTty: true })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_test_exchanged\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('overwrites a real key when yes is set without calling confirmOverwrite', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sandbox_real_old\n', 'utf8')
+      const result = await writeSolvaPaySecretToEnv('sk_sandbox_real_new', {
+        cwd,
+        yes: true,
+        confirmOverwrite: async () => {
+          throw new Error('confirmOverwrite must not run under --yes')
+        },
+      })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(result.action).toBe('updated')
+      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sandbox_real_new\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('throws on a non-TTY when a real key exists and yes is not set', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sandbox_real_old\n', 'utf8')
+      await expect(
+        writeSolvaPaySecretToEnv('sk_sandbox_real_new', { cwd, isTty: false }),
+      ).rejects.toThrow(/Cannot confirm overwrite of SOLVAPAY_SECRET_KEY on a non-TTY/)
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sandbox_real_old\n')
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }

@@ -12,7 +12,7 @@ signature parity.
 ### Golden fixtures — the single behavioral truth
 
 `contract/fixtures/` holds behavioral golden fixtures (webhook signatures, retry
-schedules, paywall classification/gate/payload, all 36 client request/response
+schedules, paywall classification/gate/payload, all 45 client request/response
 shapes, and every helper decision core). Each fixture is a language-neutral
 input → expected-output record. These are the source of truth for behavior; every
 surface must reproduce them byte-for-byte.

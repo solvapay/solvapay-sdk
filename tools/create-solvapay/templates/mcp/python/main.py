@@ -53,6 +53,7 @@ def run_http() -> None:
         public_base_url=public_base_url,
         api_base_url=api_base_url,
         server_name="__SERVER_NAME__",
+        hide_tools_by_audience=["ui"],
     )
     register_tools(server, solvapay=solvapay, product=product)
     app = build_http_app(

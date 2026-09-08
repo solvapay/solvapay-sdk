@@ -94,4 +94,24 @@ describe('runDoctorInDirectory', () => {
 
     expect(report.apiBaseUrl).toBe('https://api-dev.solvapay.com')
   })
+
+  it('lets --api-base win over --dev', async () => {
+    vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
+    vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
+    process.env.SOLVAPAY_API_BASE_URL = 'https://api-dev.solvapay.com'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, ok: false }))
+
+    const report = await runDoctorInDirectory({
+      cwd: TEST_CWD,
+      options: { dev: true, apiBaseUrl: 'http://localhost:3010' },
+    })
+
+    expect(report.apiBaseUrl).toBe('http://localhost:3010')
+  })
+
+  it('throws when --api-base is not a parseable URL', async () => {
+    await expect(
+      runDoctorInDirectory({ cwd: TEST_CWD, options: { apiBaseUrl: 'not-a-url' } }),
+    ).rejects.toThrow(/Invalid --api-base/)
+  })
 })

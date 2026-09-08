@@ -15,6 +15,7 @@ vi.mock('./browser-auth', () => ({
 
 vi.mock('./env', () => ({
   writeSolvaPaySecretToEnv: vi.fn(),
+  writeSolvaPayApiBaseUrlToEnv: vi.fn(),
   ensureEnvInGitignore: vi.fn(),
   readSolvaPayProductRefFromEnv: vi.fn(),
   writeSolvaPayProductRefToEnv: vi.fn(),
@@ -65,6 +66,7 @@ import {
 import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
+  writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
@@ -118,6 +120,10 @@ describe('runInitInDirectory', () => {
       filePath: '/tmp/.env',
       action: 'created',
     })
+    vi.mocked(writeSolvaPayApiBaseUrlToEnv).mockResolvedValue({
+      filePath: '/tmp/.env',
+      action: 'appended',
+    })
     vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
     vi.mocked(verifyMerchant).mockResolvedValue({ status: 'ok' })
   }
@@ -126,6 +132,7 @@ describe('runInitInDirectory', () => {
     output.length = 0
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    delete process.env.SOLVAPAY_API_BASE_URL
     vi.mocked(ensureNodeProject).mockResolvedValue({
       filePath: '/tmp/project/package.json',
       action: 'existing',
@@ -170,7 +177,10 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD })
 
     expect(ensureNodeProject).toHaveBeenCalledWith({ cwd: TEST_CWD, autoCreate: undefined })
-    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', { cwd: TEST_CWD })
+    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', {
+      cwd: TEST_CWD,
+      yes: false,
+    })
     expect(ensureEnvInGitignore).toHaveBeenCalledWith(TEST_CWD)
     expect(vi.mocked(ensureEnvInGitignore).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(writeSolvaPaySecretToEnv).mock.invocationCallOrder[0],
@@ -310,6 +320,10 @@ describe('runInitInDirectory', () => {
     await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
 
     expect(ensureNodeProject).toHaveBeenCalledWith({ cwd: TEST_CWD, autoCreate: true })
+    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', {
+      cwd: TEST_CWD,
+      yes: true,
+    })
     expect(waitForEnter).not.toHaveBeenCalled()
     expect(openAuthUrl).toHaveBeenCalledWith('https://app.solvapay.com/auth/cli-init?session_id=s1')
   })
@@ -648,5 +662,51 @@ describe('runInitInDirectory', () => {
     )
     expect(promptLanguage).not.toHaveBeenCalled()
     expect(ensureNodeProject).not.toHaveBeenCalled()
+  })
+
+  it('lets --api-base win over --dev for createInitSession', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+    process.env.SOLVAPAY_API_BASE_URL = 'https://api-dev.solvapay.com'
+
+    await runInitInDirectory({
+      cwd: TEST_CWD,
+      options: { yes: true, dev: true, apiBaseUrl: 'http://localhost:3010' },
+    })
+
+    expect(createInitSession).toHaveBeenCalledWith('http://localhost:3010')
+  })
+
+  it('throws when --api-base is not a parseable URL', async () => {
+    await expect(
+      runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { apiBaseUrl: 'not-a-url' },
+      }),
+    ).rejects.toThrow(/Invalid --api-base/)
+    expect(createInitSession).not.toHaveBeenCalled()
+  })
+
+  it('persists a custom API base to .env and skips the line on a production run', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({
+      cwd: TEST_CWD,
+      options: { yes: true, apiBaseUrl: 'http://localhost:3010' },
+    })
+    expect(writeSolvaPayApiBaseUrlToEnv).toHaveBeenCalledWith('http://localhost:3010', {
+      cwd: TEST_CWD,
+    })
+
+    vi.mocked(writeSolvaPayApiBaseUrlToEnv).mockClear()
+    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
+    expect(writeSolvaPayApiBaseUrlToEnv).not.toHaveBeenCalled()
   })
 })

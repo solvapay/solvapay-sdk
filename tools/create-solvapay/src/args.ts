@@ -17,6 +17,7 @@ export type ParsedCommonArgs = {
   product?: string
   yes: boolean
   dev: boolean
+  apiBaseUrl?: string
   nonInteractive: boolean
   help: boolean
   version: boolean
@@ -63,9 +64,10 @@ const COMMON_SKIP_FLAGS = new Set([
   '--skip-install',
   '--skip-init',
   '--dev',
+  '--api-base',
 ])
 
-const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product', '--language'])
+const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product', '--language', '--api-base'])
 const COMMON_BOOLEAN_FLAGS = new Set([
   '--yes',
   '--non-interactive',
@@ -118,6 +120,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--type') out.type = value
       if (arg === '--auth') out.auth = value
       if (arg === '--product') out.product = value
+      if (arg === '--api-base') out.apiBaseUrl = value
       if (arg === '--language') {
         const parsed = parseScaffoldLanguage(value)
         if (!parsed.ok) {
@@ -177,7 +180,13 @@ export function parseMcpArgs(argv: readonly string[]): ParsedMcpArgs {
     }
 
     if (COMMON_SKIP_FLAGS.has(arg)) {
-      if (arg === '--type' || arg === '--auth' || arg === '--product' || arg === '--language') {
+      if (
+        arg === '--type' ||
+        arg === '--auth' ||
+        arg === '--product' ||
+        arg === '--language' ||
+        arg === '--api-base'
+      ) {
         i++
       }
       continue
@@ -229,6 +238,7 @@ export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
     dev: common.dev,
     productRef: common.product,
     language: common.language,
+    apiBaseUrl: common.apiBaseUrl,
   }
 }
 
@@ -287,10 +297,12 @@ Common flags:
   --list-types           List available project types and exit
   --skip-install         Skip the post-scaffold dependency install (run \`npm install\` manually)
   --skip-init            Skip the post-scaffold \`solvapay init\` step (no browser OAuth)
-  --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
-                         Internal testing only — production keys are rejected
-                         by api-dev. Seeds .env and forwards through to
-                         \`solvapay init --dev\`.
+  --dev                  Path-depend on a solvapay-sdk checkout and default
+                         the API origin to api-dev.solvapay.com. Internal
+                         testing only. Outranked by --api-base.
+  --api-base <url>       Override the API origin (auth, product lookup, .env).
+                         Wins over --dev. Use both to keep checkout path deps
+                         while talking to a local stack.
   -h, --help             Show this help (bare) or per-type help (with --type)
   --version              Print package version
 
@@ -310,10 +322,10 @@ MCP flags:
   --no-openapi           Skip OpenAPI; scaffold from-scratch.
   --tool-name <camel>    Placeholder tool name in from-scratch mode (default: helloTool).
   --module <path>        Go module path (default: github.com/example/<project-name>).
-  --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
-                         Internal testing only. Seeds .env with
-                         SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com
-                         and forwards through to \`solvapay init --dev\`.
+  --dev                  Path-depend on a solvapay-sdk checkout and default
+                         the API origin to api-dev. Outranked by --api-base.
+  --api-base <url>       Override the API origin written to .env and forwarded
+                         to \`solvapay init\`. Does not replace --dev.
   -h, --help             Show this help.
 
 For intent-driven tool clustering (one MCP tool spanning multiple upstream

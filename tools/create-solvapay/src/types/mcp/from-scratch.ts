@@ -7,7 +7,12 @@
 import { access } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { detectPackageManager, resolveLatestVersions, runInitInDirectory } from '@solvapay/init'
+import {
+  detectPackageManager,
+  resolveCliApiBaseUrl,
+  resolveLatestVersions,
+  runInitInDirectory,
+} from '@solvapay/init'
 import type { InitCommandOptions, ScaffoldLanguage } from '@solvapay/init'
 import {
   applyDevPathDeps,
@@ -157,8 +162,9 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   }
   await copyDir(MCP_SHARED_SCRIPTS_DIR, join(target, 'scripts'), { substitutions })
 
+  const apiBaseUrl = resolveCliApiBaseUrl(options)
   await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF, {
-    dev,
+    apiBaseUrl,
     publicBaseUrl,
   })
 
@@ -213,7 +219,12 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   if (skipInit) {
     process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
   } else {
-    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true, language })
+    await runInitInDirectory({
+      cwd: target,
+      options: { ...options, apiBaseUrl },
+      skipSdkInstall: true,
+      language,
+    })
   }
 
   await gitInit(target)
