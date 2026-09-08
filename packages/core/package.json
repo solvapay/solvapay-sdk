@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/core",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

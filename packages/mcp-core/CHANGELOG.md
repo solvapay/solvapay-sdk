@@ -1,5 +1,17 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- a67bb7c: Gate link honesty: thread `purpose: 'credit_topup'` through checkout session creation, label recovery links by destination (`Add credits` vs `Open checkout`), drop invented top-up presets from the narrator, and classify recovery links from `paywallReason` instead of URL substring heuristics.
+- d15f9ca: Classify each SDK paywall denial honestly and name the recovery. Credit shortfalls report balance, cost and shortfall instead of "no active plan"; included-usage exhaustion reaches `limit_reached`; failed auto-upgrades keep `upgrade_required` with distinct copy. Gate messages append a named per-plan checkout ladder when the backend sends `plans[].checkoutUrl`.
+
+  The `account` tool no longer crashes on a successful limits check (the backend never sends `plan`, and an unguarded `ref.length` threw). Tool errors now validate against the registered output schema so hosts report the real message instead of `-32602`. `attach_business_details` accepts every backend tax ID type. `already_purchased` completes activation. Top-up no longer invents a 100-credit peg when `creditsPerMinorUnit` is missing.
+
+- Updated dependencies [d15f9ca]
+  - @solvapay/core@1.7.1
+
 ## 0.4.0
 
 ### Minor Changes

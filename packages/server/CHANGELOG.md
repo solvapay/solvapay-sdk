@@ -1,5 +1,23 @@
 # @solvapay/server changelog
 
+## 2.5.0
+
+### Minor Changes
+
+- a67bb7c: Gate link honesty: thread `purpose: 'credit_topup'` through checkout session creation, label recovery links by destination (`Add credits` vs `Open checkout`), drop invented top-up presets from the narrator, and classify recovery links from `paywallReason` instead of URL substring heuristics.
+- d15f9ca: Classify each SDK paywall denial honestly and name the recovery. Credit shortfalls report balance, cost and shortfall instead of "no active plan"; included-usage exhaustion reaches `limit_reached`; failed auto-upgrades keep `upgrade_required` with distinct copy. Gate messages append a named per-plan checkout ladder when the backend sends `plans[].checkoutUrl`.
+
+  The `account` tool no longer crashes on a successful limits check (the backend never sends `plan`, and an unguarded `ref.length` threw). Tool errors now validate against the registered output schema so hosts report the real message instead of `-32602`. `attach_business_details` accepts every backend tax ID type. `already_purchased` completes activation. Top-up no longer invents a 100-credit peg when `creditsPerMinorUnit` is missing.
+
+### Patch Changes
+
+- 2e1b7f5: API errors now say when the response was not JSON. A `SolvaPayError` raised from a non-JSON body (an offline tunnel, a proxy error page) carries `code: 'non_json_response'`, and its message names the content type and truncates the body instead of pasting a whole HTML page. `verifyProductConfiguration` uses that code to report an unreachable `SOLVAPAY_API_BASE_URL` rather than claiming the product does not exist.
+
+  Every client method now raises through one shared error path, so `cancelPurchase` and `reactivatePurchase` no longer emit their own bespoke 400/404 messages. Statuses are unchanged; only the message text differs.
+
+- Updated dependencies [d15f9ca]
+  - @solvapay/core@1.7.1
+
 ## 2.4.1
 
 ### Patch Changes
