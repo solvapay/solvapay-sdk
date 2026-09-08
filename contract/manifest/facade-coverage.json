@@ -91,8 +91,7 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
         "exposed": false,
@@ -1660,8 +1659,7 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
         "exposed": false,
@@ -3915,12 +3913,10 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
-        "exposed": false,
-        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+        "exposed": true
       }
     },
     "isUnlimitedRemaining": {
@@ -4043,8 +4039,7 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
         "exposed": false,
@@ -4708,8 +4703,7 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
         "exposed": false,
@@ -5094,8 +5088,7 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
         "exposed": false,
@@ -6427,12 +6420,10 @@
         "exposed": true
       },
       "wasm-edge": {
-        "exposed": false,
-        "reason": "not on the edge wasm-bindgen surface"
+        "exposed": true
       },
       "wasm-browser": {
-        "exposed": false,
-        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+        "exposed": true
       }
     },
     "TAX_NOT_COLLECTED_NOTE": {
