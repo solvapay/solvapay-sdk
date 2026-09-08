@@ -33,7 +33,7 @@
  * doesn't consume the key.
  */
 
-import { assertValidProductRef } from '@solvapay/core'
+import { assertValidProductRef, isTaxIdType, TAX_ID_TYPES } from '@solvapay/core'
 import {
   activatePlanCore,
   cancelPurchaseCore,
@@ -58,6 +58,7 @@ import {
   parseMode,
   previewJson,
   toolErrorResult,
+  ToolErrorEnvelopeSchema,
   toolResult,
 } from './helpers'
 import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
@@ -72,6 +73,7 @@ import {
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
+import { narrateAlreadyActive } from './narrate'
 import { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
@@ -404,7 +406,7 @@ export function buildSolvaPayDescriptors(
       title: 'Account',
       description: VIEWER_DESCRIPTION,
       inputSchema: { view: viewEnum, mode: INTENT_MODE_SCHEMA },
-      outputSchema: BootstrapPayloadSchema,
+      outputSchema: z.union([BootstrapPayloadSchema, ToolErrorEnvelopeSchema]),
       meta: toolMeta,
       annotations: VIEWER_ANNOTATIONS,
       handler: async (args, extra) =>
@@ -619,7 +621,7 @@ export function buildSolvaPayDescriptors(
       customerState: z.string().optional(),
       customerPostalCode: z.string().optional(),
       taxId: z.string().optional(),
-      taxIdType: z.enum(['eu_vat', 'gb_vat', 'us_ein']).optional(),
+      taxIdType: z.enum(TAX_ID_TYPES).optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: true }),
@@ -643,12 +645,7 @@ export function buildSolvaPayDescriptors(
         const customerPostalCode =
           typeof args.customerPostalCode === 'string' ? args.customerPostalCode : undefined
         const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
-        const taxIdType =
-          args.taxIdType === 'eu_vat' ||
-          args.taxIdType === 'gb_vat' ||
-          args.taxIdType === 'us_ein'
-            ? args.taxIdType
-            : undefined
+        const taxIdType = isTaxIdType(args.taxIdType) ? args.taxIdType : undefined
 
         const result = await attachBusinessDetailsCore(
           buildRequest(extra, { method: 'POST' }),
@@ -797,6 +794,12 @@ export function buildSolvaPayDescriptors(
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)
+        if (result.status === 'already_active') {
+          return {
+            content: [{ type: 'text' as const, text: narrateAlreadyActive(result) }],
+            structuredContent: result as Record<string, unknown>,
+          }
+        }
         return toolResult(result)
       }),
   })

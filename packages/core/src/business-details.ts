@@ -20,6 +20,7 @@ export {
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
+  isTaxIdType,
   type EuMemberCountry,
   type SupportedBusinessCountry,
   type TaxIdType,

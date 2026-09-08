@@ -10,6 +10,34 @@ import type { LimitResponseWithPlan } from './client'
 export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
 export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
 export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
+export type LimitAutoRechargeDto = components['schemas']['LimitAutoRechargeDto']
+
+type BackendPaywallReason = NonNullable<components['schemas']['LimitResponse']['paywallReason']>
+
+/**
+ * All paywall reasons the SDK recognises: every backend `paywallReason`
+ * plus the three SDK-only classifier kinds. Derived from a shared tuple
+ * so the Zod mirror in `paywall-schema.ts` cannot drift.
+ */
+export const PAYWALL_REASONS = [
+  'activation_required',
+  'topup_required',
+  'payment_required',
+  'upgrade_required',
+  'limit_reached',
+  'reactivation_required',
+] as const
+
+export type PaywallReason = (typeof PAYWALL_REASONS)[number]
+
+/**
+ * Fails to compile if the backend adds a `paywallReason` the SDK tuple
+ * does not cover.
+ */
+true satisfies [BackendPaywallReason] extends [PaywallReason] ? true : never
+
+export const PAYWALL_NEXT_ACTIONS = ['topup', 'checkout', 'activate', 'account'] as const
+export type PaywallNextAction = (typeof PAYWALL_NEXT_ACTIONS)[number]
 
 /**
  * Arguments passed to protected handlers
@@ -47,8 +75,10 @@ export interface PaywallMetadata {
  * when the backend did not send it — never defaulted.
  */
 export type PaywallGateRecoveryFields = {
-  /** Active plan reference from `limits.plan`. */
+  /** Active plan reference from `limits.planRef` (falls back to deprecated `plan`). */
   planRef?: string
+  /** Display name of the active or default plan. */
+  planName?: string
   /** Product plans from `checkLimits` (activation already had this). */
   plans?: LimitPlanSummary[]
   /** Meter the gated call was charged against. */
@@ -68,6 +98,33 @@ export type PaywallGateRecoveryFields = {
   }
   /** Prepaid credit balance, coalesced from nested or top-level fields. */
   creditBalance?: number
+  /**
+   * `PaywallState.kind` — same vocabulary as the classifier, not a third enum.
+   * `upgrade_required` / `limit_reached` / `reactivation_required` are
+   * SDK-only; the backend's `paywallReason` is a smaller set
+   * (`activation_required` / `topup_required` / `payment_required`).
+   */
+  reason?: PaywallReason
+  /** Single primary recovery the agent should take. */
+  nextAction?: PaywallNextAction
+  /**
+   * Credits deducted per call. Named `creditsPerCall` on purpose:
+   * `balance.creditsPerUnit` is credits, but `plans[].creditsPerUnit`
+   * is a deprecated alias for `perUnitChargeMinor` (minor currency units).
+   */
+  creditsPerCall?: number
+  /** `max(0, creditsPerCall - creditBalance)` when both are known. */
+  shortfallCredits?: number
+  /** How many calls the current allowance or wallet still covers. */
+  remainingCalls?: number
+  /** Active purchase reference when the customer already holds a purchase. */
+  purchaseRef?: string
+  /** Purchase/plan status when the backend sent one. */
+  planStatus?: string
+  /** Per-provider auto-recharge snapshot. Omitted when unknown. */
+  autoRecharge?: LimitAutoRechargeDto
+  /** Global destinations. Per-plan URLs stay on `plans[].checkoutUrl`. */
+  links?: { topup?: string; checkout?: string; manage?: string }
 }
 
 export type PaywallStructuredContent =

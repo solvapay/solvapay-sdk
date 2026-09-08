@@ -13,8 +13,10 @@
 import {
   checkLimitsCore,
   checkPurchaseCore,
+  classifyPaywallState,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  creditSignals,
   deriveUsageSnapshot,
   getCustomerBalanceCore,
   getMerchantCore,
@@ -22,6 +24,7 @@ import {
   getProductCore,
   isErrorResult,
   listPlansCore,
+  nextActionFor,
   type ErrorResult,
   type SolvaPay,
 } from '@solvapay/server'
@@ -226,6 +229,8 @@ export function createBuildBootstrapPayload(
         })
       : null
 
+    const signals = limits ? creditSignals(limits) : null
+    const state = limits ? classifyPaywallState(limits) : null
     const customer: BootstrapPayload['customer'] = customerRef
       ? {
           ref: customerRef,
@@ -234,6 +239,18 @@ export function createBuildBootstrapPayload(
           balance: okOrNull(balanceResult),
           usage,
           limits,
+          ...(limits ? { canCall: limits.withinLimits === true } : {}),
+          ...(signals?.remainingCalls !== undefined
+            ? { remainingCalls: signals.remainingCalls }
+            : {}),
+          ...(signals?.creditsPerCall !== undefined
+            ? { creditsPerCall: signals.creditsPerCall }
+            : {}),
+          ...(signals?.shortfallCredits !== undefined
+            ? { shortfallCredits: signals.shortfallCredits }
+            : {}),
+          ...(limits?.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
+          ...(state ? { nextAction: nextActionFor(state) } : {}),
         }
       : null
 

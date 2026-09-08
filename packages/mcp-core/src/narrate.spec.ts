@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  narrateAlreadyActive,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
@@ -510,7 +511,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain(
-      'Cool MCP calls are failing: your credit balance is 0 and Pay as you go needs credits.',
+      'Cool MCP calls are failing: your credit balance is 0; this call costs 200 credits — 200 short.',
     )
     expect(text).toContain('Say "add funds" to top up, or "change plan" for a plan that does not use credits')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
@@ -1036,5 +1037,17 @@ describe('text-lane self-sufficiency', () => {
     const placeholder = uiPlaceholder('checkout', linkedPayload)
     expect(placeholder).toContain('Pay as you go')
     expect(placeholder).not.toContain('dafsfa')
+  })
+})
+
+describe('narrateAlreadyActive', () => {
+  it('names the shortfall when balance and cost are present', () => {
+    expect(
+      narrateAlreadyActive({ creditBalance: 91_000, creditsPerUnit: 100_000 }),
+    ).toContain('Balance 91,000 credits; this call costs 100,000 credits — 9,000 short')
+  })
+
+  it('stays terse when cost is missing', () => {
+    expect(narrateAlreadyActive({ creditBalance: 91_000 })).toBe('This plan is already active.')
   })
 })

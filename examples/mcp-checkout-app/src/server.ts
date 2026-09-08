@@ -90,7 +90,9 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
       iconUrl,
       logoUrl: result.logoUrl,
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[mcp-checkout-app] branding fetch failed, using default identity:', message)
     return undefined
   }
 }
@@ -116,9 +118,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
   // Goes through `resource_domains` because `img-src` / `style-src`
   // live there; `connect_domains` would only help for `fetch()` /
   // `XHR`, not `<img>` tags.
-  const resourceDomains = Array.from(
-    new Set([solvapayApiOrigin, ...mcpAssetOrigins]),
-  )
+  const resourceDomains = Array.from(new Set([solvapayApiOrigin, ...mcpAssetOrigins]))
 
   const server = createSolvaPayMcpServer({
     solvaPay,
@@ -131,8 +131,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       resourceDomains,
     },
     branding,
-    hideToolsByAudience:
-      process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
+    hideToolsByAudience: process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
     additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
     onToolCall: (name, args) => {
       if (process.env.SOLVAPAY_DEBUG === 'true') {

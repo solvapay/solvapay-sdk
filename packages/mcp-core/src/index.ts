@@ -78,6 +78,7 @@ export {
   narratedToolResult,
   parseMode,
   previewJson,
+  ToolErrorEnvelopeSchema,
   toolErrorResult,
   toolResult,
 } from './helpers'
@@ -98,6 +99,7 @@ export type { ProductReadinessInput, ProductReadinessResult } from '@solvapay/co
 export { BootstrapPayloadSchema } from './bootstrap-schema'
 export {
   NARRATORS,
+  narrateAlreadyActive,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,

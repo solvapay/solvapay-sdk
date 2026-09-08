@@ -126,9 +126,14 @@ export function registerPayableTool<
       ? z.union([outputSchema, PaywallStructuredContentSchema])
       : undefined
 
+  const accountHint = 'Paid tool — call `account` for current balance and cost per call.'
+  const descriptionWithHint = description
+    ? `${description.replace(/\s+$/, '')} ${accountHint}`
+    : accountHint
+
   const toolConfig = {
     ...(title !== undefined ? { title } : {}),
-    ...(description !== undefined ? { description } : {}),
+    description: descriptionWithHint,
     ...(schema !== undefined ? { inputSchema: wrapInputSchema(schema) } : {}),
     ...(registeredOutputSchema !== undefined ? { outputSchema: registeredOutputSchema } : {}),
     ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),

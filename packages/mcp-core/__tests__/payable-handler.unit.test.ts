@@ -615,11 +615,12 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       // data tools has been deprecated.
       expect(result._meta).toBeUndefined()
 
-      // `content[0].text` is the state-engine's human narration:
-      // names the recovery viewer (`account` with view checkout on this fixture)
+      // `content[0].text` is the state-engine's human narration.
+      // The mock default carries `creditBalance: 5000`, so a remaining-0
+      // deny is a credit shortfall (`topup`), not "no plan".
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(firstBlock.text).toMatch(/`account` tool with view: 'checkout'/i)
+      expect(firstBlock.text).toMatch(/`account` tool with view: 'topup'/i)
       expect(firstBlock.text).toContain('https://example.com/checkout')
       expect(firstBlock.text).not.toMatch(/success/i)
       expect(firstBlock.text).not.toMatch(/"error"/i)

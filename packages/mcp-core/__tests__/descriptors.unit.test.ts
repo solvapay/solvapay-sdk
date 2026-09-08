@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
 import {
   buildSolvaPayDescriptors,
@@ -42,7 +43,7 @@ function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
     purchases: [],
   }
   const client = {
-    checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+    checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1 }),
     trackUsage: vi.fn().mockResolvedValue(undefined),
     createCustomer: vi.fn().mockResolvedValue({ customerRef: customer.customerRef }),
     getCustomer: vi.fn().mockResolvedValue(customer),
@@ -426,9 +427,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: createSolvaPay({
         apiClient: {
-          checkLimits: vi
-            .fn()
-            .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+          checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1 }),
           trackUsage: vi.fn(),
           createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
           getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
@@ -467,9 +466,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: createSolvaPay({
         apiClient: {
-          checkLimits: vi
-            .fn()
-            .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+          checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1 }),
           trackUsage: vi.fn(),
           createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
           getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
@@ -605,6 +602,68 @@ describe('create_payment_intent descriptor', () => {
       expect.anything(),
     )
 
+    coreSpy.mockRestore()
+  })
+})
+
+describe('attach_business_details descriptor', () => {
+  function attachSchema() {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.attachBusinessDetails)
+    if (!tool) throw new Error('attach_business_details not registered')
+    return { tool, schema: z.object(tool.inputSchema) }
+  }
+
+  it('accepts a tax ID type outside the old eu_vat/gb_vat/us_ein trio', () => {
+    const { schema } = attachSchema()
+    expect(
+      schema.parse({ paymentIntentId: 'pi_1', isBusiness: true, taxIdType: 'au_abn' }).taxIdType,
+    ).toBe('au_abn')
+  })
+
+  it('rejects a bogus tax ID type', () => {
+    const { schema } = attachSchema()
+    expect(() =>
+      schema.parse({ paymentIntentId: 'pi_1', isBusiness: true, taxIdType: 'not_a_type' }),
+    ).toThrow()
+  })
+
+  it('forwards au_abn through the handler', async () => {
+    const serverModule = await import('@solvapay/server')
+    const coreSpy = vi.spyOn(serverModule, 'attachBusinessDetailsCore').mockResolvedValue({
+      taxBreakdown: {
+        subtotal: 0,
+        taxAmount: 0,
+        taxRate: 0,
+        treatment: 'none',
+        total: 0,
+        currency: 'USD',
+        inclusive: false,
+      },
+    })
+
+    const { tool } = attachSchema()
+    await tool.handler(
+      {
+        paymentIntentId: 'pi_1',
+        isBusiness: true,
+        taxId: '12 345 678 901',
+        taxIdType: 'au_abn',
+      },
+      { authInfo: { extra: { customer_ref: 'cus_test' } } },
+    )
+
+    expect(coreSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ taxIdType: 'au_abn' }),
+      expect.anything(),
+    )
     coreSpy.mockRestore()
   })
 })

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { PAYWALL_NEXT_ACTIONS, PAYWALL_REASONS } from './paywall'
 
 const includedSchema = z.object({
   total: z.number(),
@@ -15,6 +16,7 @@ const includedSchema = z.object({
 
 const recoveryFields = {
   planRef: z.string().optional(),
+  planName: z.string().optional(),
   plans: z.array(z.record(z.string(), z.unknown())).optional(),
   meterName: z.string().optional(),
   unitPriceMinor: z.number().optional(),
@@ -23,6 +25,26 @@ const recoveryFields = {
   creditBalance: z.number().optional(),
   balance: z.record(z.string(), z.unknown()).optional(),
   productDetails: z.record(z.string(), z.unknown()).optional(),
+  reason: z.enum(PAYWALL_REASONS).optional(),
+  nextAction: z.enum(PAYWALL_NEXT_ACTIONS).optional(),
+  creditsPerCall: z.number().optional(),
+  shortfallCredits: z.number().optional(),
+  remainingCalls: z.number().optional(),
+  purchaseRef: z.string().optional(),
+  planStatus: z.string().optional(),
+  autoRecharge: z
+    .object({
+      enabled: z.boolean(),
+      status: z.string().optional(),
+    })
+    .optional(),
+  links: z
+    .object({
+      topup: z.string().optional(),
+      checkout: z.string().optional(),
+      manage: z.string().optional(),
+    })
+    .optional(),
 }
 
 export const PaywallStructuredContentSchema = z.discriminatedUnion('kind', [
