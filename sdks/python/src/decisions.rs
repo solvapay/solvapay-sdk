@@ -19,16 +19,17 @@ use solvapay_core::{
     evaluate_product_readiness, extract_backend_customer_ref, format_compact_credits, gate_next,
     get_history_next, headline_charges, history_rows, included_units, is_cached_customer_ref_valid,
     is_email_conflict, is_error_result, map_route_error, meter_name, normalize_cancel_response,
-    normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
-    per_unit_charge, plan_consequence, plan_pricing_shape, project_payment_intent_result,
-    project_topup_process_outcome, project_usage_snapshot, require_product_ref,
-    resolve_account_state, resolve_authenticated_user, resolve_check_limits_params,
-    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
-    resolve_narrator_plan_shape, resolve_product_ref, resolve_purchase_customer_ref,
-    resolve_return_url, select_active_purchases, should_retry_usage_error, tier_bands, tier_meters,
-    topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    normalize_reactivate_response, paywall_client_payload, paywall_structured_content_schema,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
+    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    require_product_ref, resolve_account_state, resolve_authenticated_user,
+    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
+    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
+    should_retry_usage_error, tier_bands, tier_meters, topup_process_next, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, Backoff, GateContent,
     PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
@@ -723,6 +724,17 @@ pub fn gate_next_binding(args_json: String) -> String {
         let state = optional_value(&args, "state");
         let event = optional_value(&args, "event");
         result_as_value(gate_next(state.as_ref(), event.as_ref()))
+    })
+}
+
+// --- paywall state / gate / payload ---
+
+/// Binding for `paywallStructuredContentSchema`.
+#[pyfunction(name = "paywall_structured_content_schema")]
+pub fn paywall_structured_content_schema_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&paywall_structured_content_schema())
     })
 }
 

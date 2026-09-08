@@ -125,6 +125,7 @@ export type NativeSyncMethod =
   | 'requireProductRef'
   | 'evaluateProductReadiness'
   | 'gateNext'
+  | 'paywallStructuredContentSchema'
   | 'retryNextDelayMs'
   | 'assertValidProductRef'
   | 'ensureCustomerNext'

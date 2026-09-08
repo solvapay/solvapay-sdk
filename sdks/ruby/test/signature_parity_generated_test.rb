@@ -88,6 +88,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     meter_name
     minor_units_per_major
     paywall_error_to_client_payload
+    paywall_structured_content_schema
     pegged_credits_per_unit
     per_unit_charge
     plan_pricing_shape

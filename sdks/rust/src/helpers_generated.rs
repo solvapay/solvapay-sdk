@@ -257,6 +257,13 @@ pub use solvapay_core::credit_display::minor_units_per_major;
 /// Client payload object for paywall responses.
 pub use solvapay_core::paywall_payload::paywall_client_payload as paywall_error_to_client_payload;
 
+/// JSON Schema for paywall structuredContent (payment_required | activation_required).
+///
+/// # Returns
+///
+/// A oneOf schema covering both gate branches.
+pub use solvapay_core::paywall_gate::paywall_structured_content_schema;
+
 /// Convert a per-unit charge in minor units to credits via the USD peg.
 ///
 /// # Returns

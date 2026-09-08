@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use solvapay_core::{
     assert_valid_product_ref, build_prompt_descriptor_metadata, build_tool_descriptor_metadata,
-    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
-    BuildToolDescriptorMetadataOptions, MerchantBranding, PromptDescriptorMetadata,
-    ToolDescriptorMetadata,
+    paywall_structured_content_schema, validate_public_base_url,
+    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, MerchantBranding,
+    PromptDescriptorMetadata, ToolDescriptorMetadata,
 };
 
 use crate::csp::{mcp_merge_csp, SolvaPayMcpCsp};
@@ -127,74 +127,6 @@ fn bootstrap_output_schema() -> Value {
             "product": {},
             "merchant": {}
         }
-    })
-}
-
-/// Gate `structuredContent` schema. Payable tools must not default to this —
-/// a success payload would fail host validation. Pass it explicitly when a
-/// tool only ever returns a gate.
-#[must_use]
-pub fn paywall_structured_content_schema() -> Value {
-    json!({
-        "oneOf": [
-            {
-                "type": "object",
-                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
-                "additionalProperties": true,
-                "properties": {
-                    "kind": { "const": "payment_required" },
-                    "product": { "type": "string" },
-                    "checkoutUrl": { "type": "string" },
-                    "message": { "type": "string" },
-                    "shortMessage": { "type": "string" },
-                    "planRef": { "type": "string" },
-                    "plans": { "type": "array" },
-                    "meterName": { "type": "string" },
-                    "unitPriceMinor": { "type": "number" },
-                    "currency": { "type": "string" },
-                    "included": {
-                        "type": "object",
-                        "properties": {
-                            "total": { "type": "number" },
-                            "used": { "type": "number" },
-                            "remaining": { "type": "number" }
-                        }
-                    },
-                    "creditBalance": { "type": "number" },
-                    "balance": {},
-                    "productDetails": {}
-                }
-            },
-            {
-                "type": "object",
-                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
-                "additionalProperties": true,
-                "properties": {
-                    "kind": { "const": "activation_required" },
-                    "product": { "type": "string" },
-                    "checkoutUrl": { "type": "string" },
-                    "message": { "type": "string" },
-                    "shortMessage": { "type": "string" },
-                    "planRef": { "type": "string" },
-                    "plans": { "type": "array" },
-                    "meterName": { "type": "string" },
-                    "unitPriceMinor": { "type": "number" },
-                    "currency": { "type": "string" },
-                    "included": {
-                        "type": "object",
-                        "properties": {
-                            "total": { "type": "number" },
-                            "used": { "type": "number" },
-                            "remaining": { "type": "number" }
-                        }
-                    },
-                    "creditBalance": { "type": "number" },
-                    "confirmationUrl": { "type": "string" },
-                    "balance": {},
-                    "productDetails": {}
-                }
-            }
-        ]
     })
 }
 

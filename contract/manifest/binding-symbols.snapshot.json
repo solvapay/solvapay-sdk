@@ -5418,6 +5418,42 @@
       "coreCall": "paywall_client_payload",
       "clientCallArgs": []
     },
+    "paywallStructuredContentSchema": {
+      "core": "solvapay_core::paywall_gate::paywall_structured_content_schema",
+      "names": {
+        "ts": "paywallStructuredContentSchema",
+        "py": "paywall_structured_content_schema",
+        "rb": "paywall_structured_content_schema",
+        "go": "PaywallStructuredContentSchema",
+        "rust": "paywall_structured_content_schema",
+        "c": "paywallStructuredContentSchema"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "paywallStructuredContentSchema"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 41,
+      "section": "paywall state / gate / payload",
+      "doc": "Binding for `paywallStructuredContentSchema`.",
+      "docWasm": null,
+      "rustFnName": "paywall_structured_content_schema_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "paywall_structured_content_schema",
+      "clientCallArgs": []
+    },
     "paywallToolResult": {
       "core": "solvapay_core::mcp::paywall_tool_result",
       "names": {

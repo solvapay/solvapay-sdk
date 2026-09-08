@@ -111,6 +111,7 @@ var SyncExports = map[string]string{
 	"requireProductRef":                           "sv_require_product_ref_binding",
 	"evaluateProductReadiness":                    "sv_evaluate_product_readiness_binding",
 	"gateNext":                                    "sv_gate_next_binding",
+	"paywallStructuredContentSchema":              "sv_paywall_structured_content_schema_binding",
 	"retryNextDelayMs":                            "sv_retry_next_delay_ms",
 	"assertValidProductRef":                       "sv_assert_valid_product_ref_binding",
 	"ensureCustomerNext":                          "sv_ensure_customer_next_binding",

@@ -119,6 +119,7 @@ export type WasmSyncMethod =
   | 'requireProductRef'
   | 'evaluateProductReadiness'
   | 'gateNext'
+  | 'paywallStructuredContentSchema'
   | 'retryNextDelayMs'
   | 'assertValidProductRef'
   | 'ensureCustomerNext'

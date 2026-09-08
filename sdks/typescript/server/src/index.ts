@@ -138,7 +138,7 @@ export { loadWasmBinding, getWasmClient, setWasmClientForTests, resetWasmCache }
 export { PaywallError } from './paywall'
 // Payload builder delegates via native-decisions (Step 37R-c); keep the
 // re-export chain explicit so the node-binding-delegation gate sees markers.
-export { paywallErrorToClientPayload } from './native-decisions'
+export { paywallErrorToClientPayload, paywallStructuredContentSchema } from './native-decisions'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 export { PaywallStructuredContentSchema } from './types/paywall-schema'

@@ -138,7 +138,10 @@ pub use paywall_decision::{
     require_product_ref, resolve_fallback_gate_limits, resolve_product_ref, CachedLimitsEvaluation,
     FreshLimitsEvaluation, PaywallOutcome, MISSING_PRODUCT_REF_MESSAGE,
 };
-pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
+pub use paywall_gate::{
+    build_paywall_gate, paywall_structured_content_schema, PaywallGate, PaywallGateKind,
+    PaywallGateLimits,
+};
 pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};
 pub use paywall_state::{
     build_gate_message, build_nudge_message, classify_paywall_state, GateContent, IncludedUsage,

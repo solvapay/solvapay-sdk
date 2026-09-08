@@ -145,6 +145,7 @@ module SolvaPay
       require_product_ref
       evaluate_product_readiness
       gate_next
+      paywall_structured_content_schema
       retry_next_delay_ms
       assert_valid_product_ref
       ensure_customer_next

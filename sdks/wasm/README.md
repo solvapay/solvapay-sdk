@@ -8,7 +8,7 @@ wasm-bindgen binding for SolvaPay edge/browser runtimes (Step 38).
 | ------------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `edge`       | `edge`    | `ready`, `wasmVersion`, `wasmBuildInfo`, `verifyWebhook`, `WasmClient` (Groups A–C + MCP composites), sync decision / MCP payload envelopes                                                                       |
 | `browser`    | `browser` | `ready`, `wasmVersion`, `wasmBuildInfo`, plus the public-safe business-details / credit-display / seller-identity / money-format / tax-note / plan-pricing envelopes. No webhook, no `WasmClient`, no MCP symbols |
-| `browser-js` | `browser` | Same public-safe surface as `browser`, compiled to MVP WASM and converted with Binaryen `wasm2js`. No `ready` — live on import. Used by the MCP App widget under hosts that forbid WebAssembly.                  |
+| `browser-js` | `browser` | Same public-safe surface as `browser`, compiled to MVP WASM and converted with Binaryen `wasm2js`. No `ready` — live on import. Used by the MCP App widget under hosts that forbid WebAssembly.                   |
 
 ## Rebuild artifacts
 

@@ -2819,6 +2819,25 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+  paywallStructuredContentSchema:
+    names:
+      ts: paywallStructuredContentSchema
+      py: paywall_structured_content_schema
+      rb: paywall_structured_content_schema
+      go: PaywallStructuredContentSchema
+      rust: paywall_structured_content_schema
+      c: paywallStructuredContentSchema
+    params: []
+    docs:
+      summary: 'JSON Schema for paywall structuredContent (payment_required | activation_required).'
+      returns: 'A oneOf schema covering both gate branches.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   buildCustomerSnapshot:
     names:
       ts: buildCustomerSnapshot

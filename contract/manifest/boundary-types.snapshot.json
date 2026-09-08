@@ -10013,6 +10013,19 @@
         }
       }
     },
+    "solvapay_core::paywall_gate::paywall_structured_content_schema": {
+      "name": "paywall_structured_content_schema",
+      "module": "paywall_gate",
+      "implTy": null,
+      "rustdoc": "JSON Schema for `PaywallStructuredContent` / [`PaywallGate`].\n\nPayable tools must not default to this schema — a success payload would fail\nhost validation. Pass it explicitly when a tool only ever returns a gate, or\nunion it with a merchant `outputSchema`.\n\n# Returns\n\nA JSON Schema `oneOf` with `payment_required` and `activation_required`\nbranches. Recovery fields the backend may omit stay optional; `shortMessage`\nis required on both branches.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
     "solvapay_core::paywall_payload::paywall_client_payload": {
       "name": "paywall_client_payload",
       "module": "paywall_payload",

@@ -10,7 +10,7 @@
 //! conditional (skip-absent, never-`null`) field emission.
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::paywall_state::{
     build_gate_message, classify_paywall_state, GateContent, IncludedUsage, PaywallBalance,
@@ -162,6 +162,88 @@ impl Default for PaywallGate {
             credit_balance: None,
         }
     }
+}
+
+/// JSON Schema for `PaywallStructuredContent` / [`PaywallGate`].
+///
+/// Payable tools must not default to this schema — a success payload would fail
+/// host validation. Pass it explicitly when a tool only ever returns a gate, or
+/// union it with a merchant `outputSchema`.
+///
+/// # Returns
+///
+/// A JSON Schema `oneOf` with `payment_required` and `activation_required`
+/// branches. Recovery fields the backend may omit stay optional; `shortMessage`
+/// is required on both branches.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 41
+)]
+pub fn paywall_structured_content_schema() -> Value {
+    json!({
+        "oneOf": [
+            {
+                "type": "object",
+                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
+                "additionalProperties": true,
+                "properties": {
+                    "kind": { "const": "payment_required" },
+                    "product": { "type": "string" },
+                    "checkoutUrl": { "type": "string" },
+                    "message": { "type": "string" },
+                    "shortMessage": { "type": "string" },
+                    "planRef": { "type": "string" },
+                    "plans": { "type": "array" },
+                    "meterName": { "type": "string" },
+                    "unitPriceMinor": { "type": "number" },
+                    "currency": { "type": "string" },
+                    "included": {
+                        "type": "object",
+                        "properties": {
+                            "total": { "type": "number" },
+                            "used": { "type": "number" },
+                            "remaining": { "type": "number" }
+                        }
+                    },
+                    "creditBalance": { "type": "number" },
+                    "balance": {},
+                    "productDetails": {}
+                }
+            },
+            {
+                "type": "object",
+                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
+                "additionalProperties": true,
+                "properties": {
+                    "kind": { "const": "activation_required" },
+                    "product": { "type": "string" },
+                    "checkoutUrl": { "type": "string" },
+                    "message": { "type": "string" },
+                    "shortMessage": { "type": "string" },
+                    "planRef": { "type": "string" },
+                    "plans": { "type": "array" },
+                    "meterName": { "type": "string" },
+                    "unitPriceMinor": { "type": "number" },
+                    "currency": { "type": "string" },
+                    "included": {
+                        "type": "object",
+                        "properties": {
+                            "total": { "type": "number" },
+                            "used": { "type": "number" },
+                            "remaining": { "type": "number" }
+                        }
+                    },
+                    "creditBalance": { "type": "number" },
+                    "confirmationUrl": { "type": "string" },
+                    "balance": {},
+                    "productDetails": {}
+                }
+            }
+        ]
+    })
 }
 
 /// Non-empty string, or `None` when absent / empty (JS `||` truthiness).

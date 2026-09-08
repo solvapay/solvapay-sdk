@@ -292,6 +292,13 @@ module SolvaPay
     NativeDispatch.call_sync("paywall_error_to_client_payload", args)
   end
 
+  # JSON Schema for paywall structuredContent (payment_required | activation_required).
+  # @return A oneOf schema covering both gate branches.
+  def self.paywall_structured_content_schema
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("paywall_structured_content_schema", args)
+  end
+
   # Convert a per-unit charge in minor units to credits via the USD peg.
   # @return Credits per metered unit (0 for a free meter).
   def self.pegged_credits_per_unit(charge_minor:, credits_per_minor_unit:, usd_to_charge_rate: nil)

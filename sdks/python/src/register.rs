@@ -46,6 +46,7 @@ use crate::decisions::meter_name_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
+use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
 use crate::decisions::per_unit_charge_binding;
 use crate::decisions::plan_consequence_binding;
@@ -201,6 +202,10 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(require_product_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_product_readiness_binding, m)?)?;
     m.add_function(wrap_pyfunction!(gate_next_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        paywall_structured_content_schema_binding,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(retry_next_delay_ms, m)?)?;
     m.add_function(wrap_pyfunction!(assert_valid_product_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(ensure_customer_next_binding, m)?)?;

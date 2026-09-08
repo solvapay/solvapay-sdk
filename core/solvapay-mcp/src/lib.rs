@@ -46,8 +46,8 @@ pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};
 pub use dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
 pub use default_gate::{mcp_default_gate, DefaultGateInput};
 pub use descriptors::{
-    mcp_descriptors, paywall_structured_content_schema, union_payable_output_schema,
-    McpDescriptors, McpDescriptorsInput, McpToolDescriptor,
+    mcp_descriptors, union_payable_output_schema, McpDescriptors, McpDescriptorsInput,
+    McpToolDescriptor,
 };
 pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 pub use narrate::{
@@ -61,6 +61,7 @@ pub use oauth::{
     OauthPathKind, OauthPaths,
 };
 pub use overview::mcp_overview_resource;
+pub use solvapay_core::paywall_structured_content_schema;
 pub use sync_dispatch::{dispatch_sync, solvapay_call};
 
 #[cfg(feature = "engine")]

@@ -308,6 +308,12 @@ func PaywallErrorToClientPayload(ctx context.Context, message any, structuredCon
 	}))
 }
 
+// PaywallStructuredContentSchema jSON Schema for paywall structuredContent (payment_required | activation_required).
+// Returns A oneOf schema covering both gate branches.
+func PaywallStructuredContentSchema(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_paywall_structured_content_schema_binding", mustJSON(map[string]any{}))
+}
+
 // PeggedCreditsPerUnit convert a per-unit charge in minor units to credits via the USD peg.
 // Returns Credits per metered unit (0 for a free meter).
 func PeggedCreditsPerUnit(ctx context.Context, chargeMinor any, creditsPerMinorUnit any, usdToChargeRate any) (any, error) {

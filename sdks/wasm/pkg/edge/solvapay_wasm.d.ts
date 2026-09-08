@@ -606,6 +606,11 @@ export function normalizeReactivateResponse(args_json: string): string;
 export function paywallErrorToClientPayload(args_json: string): string;
 
 /**
+ * Binding for `paywallStructuredContentSchema`.
+ */
+export function paywallStructuredContentSchema(args_json: string): string;
+
+/**
  * Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
  */
 export function paywallToolResult(args_json: string): string;
@@ -945,6 +950,7 @@ export interface InitOutput {
     readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
+    readonly paywallStructuredContentSchema: (a: number, b: number) => [number, number];
     readonly paywallToolResult: (a: number, b: number) => [number, number];
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
     readonly perUnitCharge: (a: number, b: number) => [number, number];

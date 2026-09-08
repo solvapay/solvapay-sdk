@@ -1,3 +1,3 @@
 742d4f204ddd1ecb7890bb4e454b40340d3db605194979cc95901401f39af65a  sdks/go/solvapay_core.wasm
 025cb057bcc3ad54c9c35e740861d7de9a35a673cf02e962bfa4ffcb0b53a662  sdks/wasm/pkg/browser/solvapay_wasm_bg.wasm
-90a130899fc0740642ff22002cc16d90b62fe6ef16136a55f4355fe155d421af  sdks/wasm/pkg/edge/solvapay_wasm_bg.wasm
+7b24f7eb5dc473624f2d4002f1013ee4334be698dd92b6e6e7ad3020622ff51c  sdks/wasm/pkg/edge/solvapay_wasm_bg.wasm

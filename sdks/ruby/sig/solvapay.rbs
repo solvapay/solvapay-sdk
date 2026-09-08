@@ -221,6 +221,7 @@ module SolvaPay
   def self.meter_name: (?priced: untyped) -> untyped
   def self.minor_units_per_major: (currency: String) -> untyped
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
+  def self.paywall_structured_content_schema: () -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped
   def self.per_unit_charge: (?priced: untyped, ?meter: String) -> untyped
   def self.plan_pricing_shape: (?priced: untyped) -> untyped

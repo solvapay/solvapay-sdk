@@ -130,6 +130,7 @@ import {
   normalizeReactivateResponse,
   PaywallError,
   paywallErrorToClientPayload,
+  paywallStructuredContentSchema,
   pollBalanceUntilIncreased,
   projectPaymentIntentResult,
   projectTopupProcessOutcome,
@@ -1550,6 +1551,11 @@ export function createDefaultRegistry(): FixtureRegistry {
       }
       return paywallErrorToClientPayload(new PaywallError(args.message, args.structuredContent))
     },
+  })
+
+  registry.register('paywallStructuredContentSchema', {
+    id: 'server',
+    invoke: () => paywallStructuredContentSchema(),
   })
 
   // Dual-binding: mcp-core paywallToolResult vs server McpAdapter.formatGate —

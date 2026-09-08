@@ -79,6 +79,7 @@ export const minorUnitsPerMajor: (a: number, b: number) => [number, number];
 export const normalizeCancelResponse: (a: number, b: number) => [number, number];
 export const normalizeReactivateResponse: (a: number, b: number) => [number, number];
 export const paywallErrorToClientPayload: (a: number, b: number) => [number, number];
+export const paywallStructuredContentSchema: (a: number, b: number) => [number, number];
 export const paywallToolResult: (a: number, b: number) => [number, number];
 export const peggedCreditsPerUnit: (a: number, b: number) => [number, number];
 export const perUnitCharge: (a: number, b: number) => [number, number];

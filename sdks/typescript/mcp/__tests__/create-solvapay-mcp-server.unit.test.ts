@@ -77,6 +77,7 @@ async function listedTools(server: ReturnType<typeof createSolvaPayMcpServer>) {
       name: string
       description?: string
       inputSchema?: unknown
+      outputSchema?: unknown
       annotations?: unknown
       _meta?: Record<string, unknown> & {
         ui?: { resourceUri?: string; visibility?: unknown; icons?: Array<{ src: string }> }
@@ -204,6 +205,25 @@ describe('createSolvaPayMcpServer', () => {
       | undefined
     expect(schema?.type).toBe('object')
     expect(schema?.properties?.query).toBeDefined()
+  })
+
+  it('round-trips a registerPayable outputSchema union into tools/list', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ registerPayable }) => {
+        registerPayable('search_knowledge', {
+          title: 'Search knowledge',
+          schema: { query: z.string() },
+          outputSchema: z.object({ hits: z.number() }),
+          handler: async () => ({ hits: 0 }),
+        })
+      },
+    })
+    const { tools } = await listedTools(server)
+    const payable = tools.find(t => t.name === 'search_knowledge')
+    const schema = JSON.stringify(payable?.outputSchema ?? {})
+    expect(schema).toContain('hits')
+    expect(schema).toContain('payment_required')
+    expect(schema).toContain('activation_required')
   })
 
   it('advertises the empty object schema when registerPayable has no schema', async () => {

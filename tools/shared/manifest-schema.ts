@@ -27,6 +27,7 @@ export const EXPECTED_TOP_LEVEL_IDS = [
   'classifyPaywallState',
   'buildCustomerSnapshot',
   'paywallErrorToClientPayload',
+  'paywallStructuredContentSchema',
   'SolvaPayError',
   'PaywallError',
 ] as const
@@ -456,7 +457,7 @@ export const SHIM_JS_NAMES = [
   'updateCustomer',
   'updatePlan',
   'updateProduct',
-  // Decision cores (46)
+  // Decision cores (47)
   'attachBusinessDetailsValidationError',
   'buildCreateCustomerParams',
   'buildCustomerSnapshot',
@@ -488,6 +489,7 @@ export const SHIM_JS_NAMES = [
   'normalizeCancelResponse',
   'normalizeReactivateResponse',
   'paywallErrorToClientPayload',
+  'paywallStructuredContentSchema',
   'projectPaymentIntentResult',
   'projectTopupProcessOutcome',
   'topupProcessNext',

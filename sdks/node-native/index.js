@@ -662,6 +662,7 @@ module.exports.nativeBuildInfo = nativeBinding.nativeBuildInfo
 module.exports.normalizeCancelResponse = nativeBinding.normalizeCancelResponse
 module.exports.normalizeReactivateResponse = nativeBinding.normalizeReactivateResponse
 module.exports.paywallErrorToClientPayload = nativeBinding.paywallErrorToClientPayload
+module.exports.paywallStructuredContentSchema = nativeBinding.paywallStructuredContentSchema
 module.exports.paywallToolResult = nativeBinding.paywallToolResult
 module.exports.peggedCreditsPerUnit = nativeBinding.peggedCreditsPerUnit
 module.exports.perUnitCharge = nativeBinding.perUnitCharge

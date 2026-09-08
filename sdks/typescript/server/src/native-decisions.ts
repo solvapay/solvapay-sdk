@@ -761,6 +761,14 @@ export function paywallErrorToClientPayload(error: PaywallErrorLike): Record<str
   })
 }
 
+/**
+ * JSON Schema for paywall structuredContent (payment_required | activation_required).
+ * @returns A oneOf schema covering both gate branches.
+ */
+export function paywallStructuredContentSchema(): unknown {
+  return dispatchSync('paywallStructuredContentSchema', {})
+}
+
 // --- retry ---
 
 /**

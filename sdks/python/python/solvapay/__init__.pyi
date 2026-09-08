@@ -760,6 +760,11 @@ def paywall_error_to_client_payload(message: str, structured_content: object) ->
     @returns Client payload object for paywall responses.
     """
     ...
+def paywall_structured_content_schema() -> object:
+    """JSON Schema for paywall structuredContent (payment_required | activation_required).
+    @returns A oneOf schema covering both gate branches.
+    """
+    ...
 def pegged_credits_per_unit(
     charge_minor: float,
     credits_per_minor_unit: float,

@@ -4628,6 +4628,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "paywallStructuredContentSchema": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "paywallToolResult": {
       "capi": {
         "exposed": false,

@@ -446,6 +446,7 @@ const NON_CLIENT_FIXTURES = [
   'money-format/price/usd-uppercase.json',
   'money-format/to-major/jpy-1000.json',
   'money-format/to-major/usd-1999.json',
+  'paywall-schema/structured-content.json',
   'paywall/classification/activation-trumps-all.json',
   'paywall/classification/activation-trumps-needs-topup.json',
   'paywall/classification/balance-block-proxy-credit-0.json',

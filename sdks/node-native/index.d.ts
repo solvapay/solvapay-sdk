@@ -390,6 +390,9 @@ export declare function normalizeReactivateResponse(argsJson: string): string
  */
 export declare function paywallErrorToClientPayload(argsJson: string): string
 
+/** Binding for `paywallStructuredContentSchema`. */
+export declare function paywallStructuredContentSchema(argsJson: string): string
+
 /** Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`). */
 export declare function paywallToolResult(argsJson: string): string
 

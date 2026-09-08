@@ -47,6 +47,7 @@ use crate::decisions::meter_name_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
+use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
 use crate::decisions::per_unit_charge_binding;
 use crate::decisions::plan_consequence_binding;
@@ -309,6 +310,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(evaluate_product_readiness_binding, 1),
     )?;
     native.define_singleton_method("gate_next", function!(gate_next_binding, 1))?;
+    native.define_singleton_method(
+        "paywall_structured_content_schema",
+        function!(paywall_structured_content_schema_binding, 1),
+    )?;
     native.define_singleton_method("retry_next_delay_ms", function!(retry_next_delay_ms, 1))?;
     native.define_singleton_method(
         "assert_valid_product_ref",

@@ -21,10 +21,10 @@ use solvapay_core::{
     is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
     is_postal_code_required, is_state_required, is_unlimited_remaining, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
-    plan_consequence, plan_pricing_shape, postal_code_required_countries,
-    project_topup_process_outcome, resolve_account_state, resolve_buyer_country,
-    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
+    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
+    postal_code_required_countries, project_topup_process_outcome, resolve_account_state,
+    resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
     should_retry_usage_error, should_show_tax_row, state_required_countries,
@@ -480,6 +480,11 @@ fn invoke_paywall_error_to_client_payload(input: &FixtureInput) -> Result<Value,
     let _message = require_string(&args, "message")?;
     let gate = require_typed::<PaywallGate>(&args, "structuredContent")?;
     to_value(&paywall_client_payload(&gate))
+}
+
+fn invoke_paywall_structured_content_schema(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&paywall_structured_content_schema())
 }
 
 fn invoke_paywall_tool_result(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1566,6 +1571,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_is_unlimited_remaining),
+        },
+    );
+    registry.register(
+        "paywallStructuredContentSchema",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_paywall_structured_content_schema),
         },
     );
     registry.register(
