@@ -52,19 +52,31 @@ describe('createSolvaPayClient — SolvaPayError carries upstream HTTP status', 
   })
 
   it('preserves 404 status on getProduct', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('not found', { status: 404 }),
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('not found', { status: 404 }))
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
 
     await expect(client.getProduct('prd_missing')).rejects.toMatchObject({ status: 404 })
   })
 
-  it('still throws a SolvaPayError instance (backwards compatible)', async () => {
+  it('flags non-JSON HTML error pages with code non_json_response', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('boom', { status: 500 }),
+      new Response('<!DOCTYPE html><html><body>offline</body></html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html' },
+      }),
     )
+
+    const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
+
+    await expect(client.getProduct('prd_missing')).rejects.toMatchObject({
+      status: 404,
+      code: 'non_json_response',
+    })
+  })
+
+  it('still throws a SolvaPayError instance (backwards compatible)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('boom', { status: 500 }))
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })
 

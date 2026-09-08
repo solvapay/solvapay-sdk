@@ -9,6 +9,39 @@
 import { SolvaPayError } from '@solvapay/core'
 import type { SolvaPayClient } from './types'
 
+const API_ERROR_BODY_MAX = 240
+
+function apiDebugLog(...args: unknown[]): void {
+  if (process.env.SOLVAPAY_DEBUG === 'true') {
+    // eslint-disable-next-line no-console
+    console.log(...args)
+  }
+}
+
+function isNonJsonResponseBody(body: string, contentType: string | null): boolean {
+  const ct = contentType?.split(';')[0]?.trim().toLowerCase() ?? ''
+  if (ct.includes('json')) return false
+  const trimmed = body.trimStart()
+  if (trimmed.startsWith('<')) return true
+  if (ct && !ct.includes('json')) return true
+  return false
+}
+
+async function throwApiError(operation: string, res: Response): Promise<never> {
+  const body = await res.text()
+  const contentType = res.headers.get('content-type')
+  const nonJson = isNonJsonResponseBody(body, contentType)
+  const snippet = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}…` : body
+  const detail = nonJson
+    ? `non-JSON response (${contentType ?? 'unknown content-type'}) — the API may not have been reached. Body: ${snippet}`
+    : snippet
+  apiDebugLog(`❌ API Error: ${res.status} - ${detail}`)
+  throw new SolvaPayError(`${operation} failed (${res.status}): ${detail}`, {
+    status: res.status,
+    code: nonJson ? 'non_json_response' : undefined,
+  })
+}
+
 /**
  * Configuration options for creating a SolvaPay API client
  */
@@ -68,15 +101,6 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     Authorization: `Bearer ${opts.apiKey}`,
   }
 
-  // Enable debug logging via environment variable (same pattern as paywall)
-  const debug = process.env.SOLVAPAY_DEBUG === 'true'
-  const log = (...args: unknown[]) => {
-    if (debug) {
-      // eslint-disable-next-line no-console
-      console.log(...args)
-    }
-  }
-
   return {
     // POST: /v1/sdk/limits
     async checkLimits(params) {
@@ -89,11 +113,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Check limits failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Check limits', res)
       }
 
       const result = await res.json()
@@ -111,11 +131,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Track usage failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Track usage', res)
       }
 
       return await res.json()
@@ -132,11 +148,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Track usage bulk failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Track usage bulk', res)
       }
 
       return await res.json()
@@ -153,11 +165,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create customer', res)
       }
 
       const result = await res.json()
@@ -177,11 +185,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Update customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Update customer', res)
       }
 
       const result = await res.json()
@@ -214,11 +218,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get customer', res)
       }
 
       const result = await res.json()
@@ -279,11 +279,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Assign credits failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Assign credits', res)
       }
 
       return await res.json()
@@ -299,11 +295,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get merchant failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get merchant', res)
       }
 
       return res.json()
@@ -319,11 +311,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get platform config failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get platform config', res)
       }
 
       return res.json()
@@ -339,11 +327,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get product', res)
       }
 
       const result = await res.json()
@@ -363,11 +347,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List products failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('List products', res)
       }
 
       const result = await res.json()
@@ -392,11 +372,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create product', res)
       }
 
       const result = await res.json()
@@ -414,11 +390,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Bootstrap MCP product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Bootstrap MCP product', res)
       }
 
       return await res.json()
@@ -435,11 +407,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Configure MCP plans failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Configure MCP plans', res)
       }
 
       return await res.json()
@@ -455,11 +423,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok && res.status !== 404) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Delete product', res)
       }
     },
 
@@ -474,11 +438,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Clone product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Clone product', res)
       }
 
       return await res.json()
@@ -494,11 +454,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List plans failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('List plans', res)
       }
 
       const result = await res.json()
@@ -534,11 +490,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create plan', res)
       }
 
       const result = await res.json()
@@ -556,11 +508,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Update plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Update plan', res)
       }
 
       return await res.json()
@@ -576,11 +524,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok && res.status !== 404) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Delete plan', res)
       }
     },
 
@@ -607,11 +551,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create payment intent failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create payment intent', res)
       }
 
       return await res.json()
@@ -641,11 +581,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create topup payment intent failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create topup payment intent', res)
       }
 
       return await res.json()
@@ -669,11 +605,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Process payment failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Process payment', res)
       }
 
       const result = await res.json()
@@ -698,52 +630,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(
-          `Attach business details failed (${res.status}): ${error}`,
-          { status: res.status },
-        )
-      }
-
-      return await res.json()
-    },
-
-    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
-    async cancelPurchase(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`
-
-      // Prepare request options
-      const requestOptions: RequestInit = {
-        method: 'POST',
-        headers,
-      }
-
-      // Only include body if reason is provided (backend body is optional)
-      if (params.reason) {
-        requestOptions.body = JSON.stringify({ reason: params.reason })
-      }
-
-      const res = await fetch(url, requestOptions)
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-
-        if (res.status === 404) {
-          throw new SolvaPayError(`Purchase not found: ${error}`, { status: 404 })
-        }
-
-        if (res.status === 400) {
-          throw new SolvaPayError(
-            `Purchase cannot be cancelled or does not belong to provider: ${error}`,
-            { status: 400 },
-          )
-        }
-
-        throw new SolvaPayError(`Cancel purchase failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Cancel purchase', res)
       }
 
       // Get response text first to debug any parsing issues
@@ -753,7 +640,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       try {
         responseData = JSON.parse(responseText)
       } catch (parseError) {
-        log(`❌ Failed to parse response as JSON: ${parseError}`)
+        apiDebugLog(`❌ Failed to parse response as JSON: ${parseError}`)
         throw new SolvaPayError(
           `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
         )
@@ -761,7 +648,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       // Validate response structure
       if (!responseData || typeof responseData !== 'object') {
-        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
+        apiDebugLog(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
         throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
       }
 
@@ -779,7 +666,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
       // Check if response has expected fields
       if (!result || typeof result !== 'object') {
-        log(`❌ Invalid purchase data in response. Full response:`, responseData)
+        apiDebugLog(`❌ Invalid purchase data in response. Full response:`, responseData)
         throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
       }
 
@@ -796,20 +683,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-
-        if (res.status === 404) {
-          throw new SolvaPayError(`Purchase not found: ${error}`, { status: 404 })
-        }
-
-        if (res.status === 400) {
-          throw new SolvaPayError(`Purchase cannot be reactivated: ${error}`, { status: 400 })
-        }
-
-        throw new SolvaPayError(`Reactivate purchase failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Reactivate purchase', res)
       }
 
       const responseText = await res.text()
@@ -818,14 +692,14 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       try {
         responseData = JSON.parse(responseText)
       } catch (parseError) {
-        log(`❌ Failed to parse response as JSON: ${parseError}`)
+        apiDebugLog(`❌ Failed to parse response as JSON: ${parseError}`)
         throw new SolvaPayError(
           `Invalid JSON response from reactivate purchase endpoint: ${responseText.substring(0, 200)}`,
         )
       }
 
       if (!responseData || typeof responseData !== 'object') {
-        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
+        apiDebugLog(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
         throw new SolvaPayError(`Invalid response structure from reactivate purchase endpoint`)
       }
 
@@ -839,7 +713,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       }
 
       if (!result || typeof result !== 'object') {
-        log(`❌ Invalid purchase data in response. Full response:`, responseData)
+        apiDebugLog(`❌ Invalid purchase data in response. Full response:`, responseData)
         throw new SolvaPayError(`Invalid purchase data in reactivate purchase response`)
       }
 
@@ -857,11 +731,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get user info failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get user info', res)
       }
 
       return await res.json()
@@ -877,11 +747,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer balance failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get customer balance', res)
       }
 
       return await res.json()
@@ -898,11 +764,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create checkout session failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create checkout session', res)
       }
 
       const result = await res.json()
@@ -920,11 +782,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create customer session failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Create customer session', res)
       }
 
       const result = await res.json()
@@ -942,11 +800,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Activate plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Activate plan', res)
       }
 
       return await res.json()
@@ -959,11 +813,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url.toString(), { method: 'GET', headers })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get payment method failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get payment method', res)
       }
 
       return await res.json()
@@ -976,11 +826,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url.toString(), { method: 'GET', headers })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get auto-recharge', res)
       }
 
       return await res.json()
@@ -994,11 +840,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Save auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Save auto-recharge', res)
       }
 
       return await res.json()
@@ -1011,11 +853,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url.toString(), { method: 'DELETE', headers })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Disable auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Disable auto-recharge', res)
       }
 
       return await res.json()
@@ -1033,11 +871,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url.toString(), { method: 'GET', headers })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List purchases failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('List purchases', res)
       }
 
       const data = (await res.json()) as { purchases?: import('./types/client').PurchaseInfo[] }
@@ -1052,11 +886,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url.toString(), { method: 'GET', headers })
 
       if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get credit activity failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
+        await throwApiError('Get credit activity', res)
       }
 
       return await res.json()
