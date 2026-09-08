@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "boundary-balance-equals-cost",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "creditBalance": 100,
+        "creditsPerUnit": 100,
+        "remaining": 1
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

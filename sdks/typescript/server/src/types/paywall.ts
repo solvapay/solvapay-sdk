@@ -10,6 +10,27 @@ import type { LimitResponseWithPlan } from './client'
 export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
 export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
 export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
+export type LimitAutoRechargeDto = import('./overlays.generated').LimitAutoRechargeDto
+
+type BackendPaywallReason = NonNullable<
+  import('./overlays.generated').LimitResponseWithPlan['paywallReason']
+>
+
+export const PAYWALL_REASONS = [
+  'activation_required',
+  'topup_required',
+  'payment_required',
+  'upgrade_required',
+  'limit_reached',
+  'reactivation_required',
+] as const
+
+export type PaywallReason = (typeof PAYWALL_REASONS)[number]
+
+true satisfies [BackendPaywallReason] extends [PaywallReason] ? true : never
+
+export const PAYWALL_NEXT_ACTIONS = ['topup', 'checkout', 'activate', 'account'] as const
+export type PaywallNextAction = (typeof PAYWALL_NEXT_ACTIONS)[number]
 
 /**
  * Discriminated union describing which recovery path the customer needs.
@@ -29,12 +50,22 @@ export type PaywallState =
 
 export type PaywallGateRecoveryFields = {
   planRef?: string
+  planName?: string
   plans?: LimitPlanSummary[]
   meterName?: string
   unitPriceMinor?: number
   currency?: string
   included?: { total: number; used: number; remaining: number }
   creditBalance?: number
+  reason?: PaywallReason
+  nextAction?: PaywallNextAction
+  creditsPerCall?: number
+  shortfallCredits?: number
+  remainingCalls?: number
+  purchaseRef?: string
+  planStatus?: string
+  autoRecharge?: LimitAutoRechargeDto
+  links?: { topup?: string; checkout?: string; manage?: string }
 }
 
 /**

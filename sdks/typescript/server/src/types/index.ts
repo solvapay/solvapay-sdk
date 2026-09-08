@@ -45,15 +45,18 @@ export type { SolvaPayClient } from './client'
 export type {
   LimitActivationBalance,
   LimitActivationProduct,
+  LimitAutoRechargeDto,
   LimitPlanSummary,
   PaywallArgs,
   PaywallDecision,
   PaywallGateRecoveryFields,
   PaywallMetadata,
+  PaywallNextAction,
+  PaywallReason,
   PaywallStructuredContent,
   PaywallToolResult,
 } from './paywall'
-export { isPaywallStructuredContent } from './paywall'
+export { isPaywallStructuredContent, PAYWALL_NEXT_ACTIONS, PAYWALL_REASONS } from './paywall'
 
 // Re-export configuration options
 export type {

@@ -1,7 +1,15 @@
 import { z } from 'zod'
 
-export const TAX_ID_TYPES = ['eu_vat', 'gb_vat', 'us_ein', 'jp_trn'] as const
-export type TaxIdType = (typeof TAX_ID_TYPES)[number]
+export type TaxIdType = 'eu_vat' | 'gb_vat' | 'us_ein' | 'jp_trn'
+
+const TAX_ID_TYPE_VALUES = ['eu_vat', 'gb_vat', 'us_ein', 'jp_trn'] as const
+
+/** Type-level tuple for Zod. Runtime list is `TAX_ID_TYPES()` from core after gen. */
+export const TAX_ID_TYPES: readonly TaxIdType[] = TAX_ID_TYPE_VALUES
+
+export function isTaxIdType(value: string): value is TaxIdType {
+  return (TAX_ID_TYPE_VALUES as readonly string[]).includes(value)
+}
 
 /** EU member states (ISO 3166-1 alpha-2) supported for eu_vat. */
 const EU_MEMBER_COUNTRIES = [
@@ -165,7 +173,7 @@ export const BusinessDetailsSchema = z.object({
   customerState: z.string().optional(),
   customerPostalCode: z.string().optional(),
   taxId: z.string().optional(),
-  taxIdType: z.enum(TAX_ID_TYPES).optional(),
+  taxIdType: z.enum(TAX_ID_TYPE_VALUES).optional(),
 })
 
 export type {

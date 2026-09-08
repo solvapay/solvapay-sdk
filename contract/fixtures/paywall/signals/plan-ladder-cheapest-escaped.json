@@ -1,0 +1,40 @@
+{
+  "suite": "paywall",
+  "case": "plan-ladder-cheapest-escaped",
+  "input": {
+    "fn": "planLadder",
+    "args": {
+      "gate": {
+        "planRef": "pln_active",
+        "plans": [
+          {
+            "reference": "pln_active",
+            "name": "Active",
+            "price": 100,
+            "checkoutUrl": "https://pay.test/active"
+          },
+          {
+            "reference": "pln_b",
+            "name": "Plan [Beta]",
+            "price": 2000,
+            "checkoutUrl": "https://pay.test/b"
+          },
+          {
+            "reference": "pln_a",
+            "name": "Alpha",
+            "price": 500,
+            "checkoutUrl": "https://pay.test/a"
+          },
+          {
+            "reference": "pln_none",
+            "name": "No link",
+            "price": 1
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": "[Alpha](https://pay.test/a) · [Plan \\[Beta\\]](https://pay.test/b)"
+  }
+}

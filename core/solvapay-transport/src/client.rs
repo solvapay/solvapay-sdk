@@ -1451,10 +1451,11 @@ fn map_purchase_mutation_response(
             400 => cases[1],
             _ => default_template,
         };
-        return Err(api_error_from_template(
+        return Err(crate::shell::map_api_error(
             template,
-            Some(response.status),
+            response.status,
             &response.body,
+            response.content_type.as_deref(),
         ));
     }
 
@@ -1960,6 +1961,7 @@ mod tests {
             let transport = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br"{}".to_vec(),
+                content_type: None,
             })]);
             let shared: SharedTransport = Arc::clone(&transport) as SharedTransport;
             let client = SolvaPayClient::new(
@@ -1991,6 +1993,7 @@ mod tests {
             let transport = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{"reference":"cus_out"}"#.to_vec(),
+                content_type: None,
             })]);
             let shared: SharedTransport = Arc::clone(&transport) as SharedTransport;
             let client = SolvaPayClient::new(

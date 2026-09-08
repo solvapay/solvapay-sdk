@@ -5,6 +5,7 @@ use magnus::prelude::*;
 use magnus::{function, method, Error, RClass, RModule};
 
 use crate::client::SolvaPayClient;
+use crate::decisions::append_paid_tool_description_binding;
 use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
 use crate::decisions::billing_cycle_binding;
@@ -22,6 +23,7 @@ use crate::decisions::classify_paywall_state_binding;
 use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::counts_usage_binding;
+use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
 use crate::decisions::derive_active_products_binding;
@@ -42,8 +44,10 @@ use crate::decisions::included_units_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
 use crate::decisions::is_error_result_binding;
+use crate::decisions::link_label_binding;
 use crate::decisions::map_route_error_binding;
 use crate::decisions::meter_name_binding;
+use crate::decisions::next_action_for_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
@@ -51,6 +55,7 @@ use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
 use crate::decisions::per_unit_charge_binding;
 use crate::decisions::plan_consequence_binding;
+use crate::decisions::plan_ladder_binding;
 use crate::decisions::plan_pricing_shape_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
@@ -107,6 +112,7 @@ use crate::payload_builders::invoke_payable_next_binding;
 use crate::payload_builders::is_customer_address_complete_binding;
 use crate::payload_builders::is_postal_code_required_binding;
 use crate::payload_builders::is_state_required_binding;
+use crate::payload_builders::is_tax_id_type_binding;
 use crate::payload_builders::is_unlimited_remaining_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
@@ -123,6 +129,7 @@ use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
 use crate::payload_builders::state_required_countries_binding;
+use crate::payload_builders::tax_id_types_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
 use crate::payload_builders::validate_business_details_binding;
@@ -319,11 +326,13 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "assert_valid_product_ref",
         function!(assert_valid_product_ref_binding, 1),
     )?;
+    native.define_singleton_method("credit_signals", function!(credit_signals_binding, 1))?;
     native.define_singleton_method(
         "ensure_customer_next",
         function!(ensure_customer_next_binding, 1),
     )?;
     native.define_singleton_method("charges", function!(charges_binding, 1))?;
+    native.define_singleton_method("next_action_for", function!(next_action_for_binding, 1))?;
     native.define_singleton_method(
         "resolve_authenticated_user",
         function!(resolve_authenticated_user_binding, 1),
@@ -333,7 +342,13 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(evaluate_balance_observation_binding, 1),
     )?;
     native.define_singleton_method("headline_charges", function!(headline_charges_binding, 1))?;
+    native.define_singleton_method("link_label", function!(link_label_binding, 1))?;
     native.define_singleton_method("per_unit_charge", function!(per_unit_charge_binding, 1))?;
+    native.define_singleton_method("plan_ladder", function!(plan_ladder_binding, 1))?;
+    native.define_singleton_method(
+        "append_paid_tool_description",
+        function!(append_paid_tool_description_binding, 1),
+    )?;
     native.define_singleton_method("billing_cycle", function!(billing_cycle_binding, 1))?;
     native.define_singleton_method("trial_days", function!(trial_days_binding, 1))?;
     native.define_singleton_method("included_units", function!(included_units_binding, 1))?;
@@ -517,8 +532,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "STATE_REQUIRED_COUNTRIES",
         function!(state_required_countries_binding, 1),
     )?;
+    native.define_singleton_method("TAX_ID_TYPES", function!(tax_id_types_binding, 1))?;
     native.define_singleton_method("mcp_view_maps", function!(mcp_view_maps_binding, 1))?;
     native.define_singleton_method("derive_icons", function!(derive_icons_binding, 1))?;
+    native.define_singleton_method("is_tax_id_type", function!(is_tax_id_type_binding, 1))?;
     native.define_singleton_method(
         "build_tool_descriptor_metadata",
         function!(build_tool_descriptor_metadata_binding, 1),

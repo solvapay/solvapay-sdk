@@ -49,6 +49,7 @@ const WireRequest = z.object({
 const WireResponse = z.object({
   status: z.number().int(),
   body: z.unknown(),
+  contentType: z.string().min(1).optional(),
 })
 
 const WireExchange = z.object({

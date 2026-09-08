@@ -130,6 +130,8 @@ fn core_root_reexport_names() -> BTreeSet<&'static str> {
         "PaywallGateLimits",
         "PaywallClientPayload",
         "PaywallState",
+        "PaywallNextAction",
+        "CreditSignals",
         "PaywallLimits",
         "PaywallPlanSummary",
         "PaywallBalance",

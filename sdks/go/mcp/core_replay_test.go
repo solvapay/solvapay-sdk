@@ -93,7 +93,7 @@ func TestReplaysCoreOps(t *testing.T) {
 					if echo["title"] != "Echo paid" {
 						t.Fatalf("title = %#v", echo["title"])
 					}
-					if echo["description"] != "Echo arguments after a paid gate" {
+					if echo["description"] != "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call." {
 						t.Fatalf("description = %#v", echo["description"])
 					}
 				}

@@ -106,6 +106,10 @@ import {
   classifyLookupError,
   classifyPaywallState,
   classifyReactivateError,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
   coerceCustomerOptions,
   createSolvaPay,
   createSolvaPayClient,
@@ -396,7 +400,7 @@ function installMockFetch(wire: FixtureWire, onCapture: (request: CapturedReques
     }
     return new Response(wireResponseBody(response.body), {
       status: response.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': response.contentType ?? 'application/json' },
     })
   }) as typeof fetch
 }
@@ -495,6 +499,7 @@ const PAYWALL_STATE_KINDS = [
   'activation_required',
   'topup_required',
   'upgrade_required',
+  'limit_reached',
   'reactivation_required',
 ] as const
 
@@ -1538,6 +1543,46 @@ export function createDefaultRegistry(): FixtureRegistry {
         throw new Error('buildNudgeMessage args must include state and limits (object or null)')
       }
       return buildNudgeMessage(args.state, args.limits)
+    },
+  })
+
+  registry.register('creditSignals', {
+    id: 'server',
+    invoke: args => {
+      if (!('limits' in args) || !isLimitsOrNull(args.limits)) {
+        throw new Error('creditSignals args.limits must be an object or null')
+      }
+      return creditSignals(args.limits)
+    },
+  })
+
+  registry.register('nextActionFor', {
+    id: 'server',
+    invoke: args => {
+      if (!isPaywallState(args.state)) {
+        throw new Error('nextActionFor args must include state')
+      }
+      return nextActionFor(args.state)
+    },
+  })
+
+  registry.register('planLadder', {
+    id: 'server',
+    invoke: args => {
+      if (typeof args.gate !== 'object' || args.gate === null) {
+        throw new Error('planLadder args must include gate')
+      }
+      return planLadder(args.gate as Parameters<typeof planLadder>[0])
+    },
+  })
+
+  registry.register('linkLabel', {
+    id: 'server',
+    invoke: args => {
+      if (typeof args.name !== 'string') {
+        throw new Error('linkLabel args must include name string')
+      }
+      return linkLabel(args.name)
     },
   })
 

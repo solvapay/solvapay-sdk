@@ -37,6 +37,11 @@
     },
     {
       "package": "@solvapay/core",
+      "symbol": "isTaxIdType",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/core",
       "symbol": "REVERSE_CHARGE_NOTE",
       "reason": "type-guard-or-const"
     },

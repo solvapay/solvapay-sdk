@@ -1,0 +1,49 @@
+{
+  "suite": "builtin-tools",
+  "case": "activate-plan-already-active",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "activate_plan",
+      "args": {
+        "planRef": "pln_pro",
+        "productRef": "prd_demo"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/activate",
+      "status": 200,
+      "body": {
+        "status": "already_active",
+        "planRef": "pln_pro",
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short."
+        }
+      ],
+      "structuredContent": {
+        "status": "already_active",
+        "planRef": "pln_pro",
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000
+      }
+    }
+  }
+}

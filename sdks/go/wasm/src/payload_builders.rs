@@ -16,13 +16,13 @@ use solvapay_core::{
     get_postal_code_field_label, get_postal_code_placeholder,
     get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
     get_tax_id_field_label, get_tax_id_helper_text, invoke_payable_next,
-    is_customer_address_complete, is_postal_code_required, is_state_required,
+    is_customer_address_complete, is_postal_code_required, is_state_required, is_tax_id_type,
     is_unlimited_remaining, is_zero_decimal_currency, make_response_result, mcp_tool_names_json,
     mcp_view_maps, minor_units_per_major, paywall_tool_result, postal_code_required_countries,
     resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, state_required_countries, tax_not_collected_note, to_major_units,
-    validate_business_details, validate_public_base_url,
+    should_show_tax_row, state_required_countries, tax_id_types, tax_not_collected_note,
+    to_major_units, validate_business_details, validate_public_base_url,
 };
 
 use crate::abi::{pack, read_string};
@@ -817,6 +817,20 @@ pub unsafe extern "C" fn sv_state_required_countries_binding(
     }))
 }
 
+/// Binding for `TAX_ID_TYPES`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_tax_id_types_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_id_types())
+    }))
+}
+
 // --- MCP payload / descriptors ---
 
 /// Binding for `mcpViewMaps`.
@@ -850,6 +864,25 @@ pub unsafe extern "C" fn sv_derive_icons_binding(args_ptr: *mut u8, args_len: us
         }
     }))
 }
+
+// --- business-details ---
+
+/// Binding for `isTaxIdType`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_is_tax_id_type_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(is_tax_id_type(&value)))
+    }))
+}
+
+// --- MCP payload / descriptors ---
 
 /// Binding for `buildToolDescriptorMetadata`.
 ///

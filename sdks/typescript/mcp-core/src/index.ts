@@ -151,6 +151,7 @@ export type {
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 export {
+  appendPaidToolDescription,
   deriveIcons,
   buildPromptDescriptorMetadata,
   buildPromptUserMessage,

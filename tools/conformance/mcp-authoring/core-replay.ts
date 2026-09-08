@@ -126,7 +126,9 @@ function assertCoreResult(rel: string, fn: string, got: unknown, expectResult: u
       expect(echo, 'payable echo_paid missing from tools/list').toBeTruthy()
       if (isRecord(echo)) {
         expect(echo.title).toBe('Echo paid')
-        expect(echo.description).toBe('Echo arguments after a paid gate')
+        expect(echo.description).toBe(
+          'Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call.',
+        )
         expect(echo.inputSchema).toEqual({
           type: 'object',
           properties: { n: { type: 'number' } },

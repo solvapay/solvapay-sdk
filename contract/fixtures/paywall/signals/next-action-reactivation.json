@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "next-action-reactivation",
+  "input": {
+    "fn": "nextActionFor",
+    "args": { "state": { "kind": "reactivation_required" } }
+  },
+  "expect": { "result": "account" }
+}

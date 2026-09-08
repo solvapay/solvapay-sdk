@@ -7,9 +7,17 @@
  * `Request` construction, and tool-result wrapping.
  */
 
+import { z } from 'zod'
 import { callMcpSyncOp } from './native-mcp'
 import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
 import type { IntentTool } from './narrate'
+
+/** Matches the Rust `tool_error_envelope_schema` (`error` + `status`, optional `details`). */
+export const ToolErrorEnvelopeSchema = z.object({
+  error: z.string(),
+  status: z.number(),
+  details: z.string().optional(),
+})
 
 /**
  * Default extractor for `customer_ref` out of the MCP OAuth bridge

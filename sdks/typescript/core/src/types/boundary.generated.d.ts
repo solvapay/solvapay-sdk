@@ -279,6 +279,32 @@ export type CreateCustomerParams = {
 export type CreateErrorKind = 'conflict' | 'other'
 
 /**
+ * Coalesced credit-balance channels plus derived shortfall / remaining-call counts.
+ */
+export type CreditSignals = {
+  /**
+   * Nested `balance.creditBalance` wins over the top-level field.
+   */
+  creditBalance?: number
+  /**
+   * Credits deducted per call (`balance.creditsPerUnit` ?? `creditsPerUnit`).
+   */
+  creditsPerCall?: number
+  /**
+   * `max(0, creditsPerCall - creditBalance)` when both are known.
+   */
+  shortfallCredits?: number
+  /**
+   * How many calls the current allowance or wallet still covers.
+   */
+  remainingCalls?: number
+  /**
+   * True when either credit-balance channel or a per-call cost is present.
+   */
+  isCreditBased: boolean
+}
+
+/**
  * Classification of a customerRef before ensure/lookup.
  */
 export type CustomerRefKind = 'anonymous' | 'backend' | 'needsEnsure'
@@ -847,6 +873,43 @@ export type PaymentIntentProjection = {
 }
 
 /**
+ * Per-provider auto-recharge snapshot on a limits / gate payload.
+ */
+export type PaywallAutoRecharge = {
+  /**
+   * Whether auto-recharge is enabled for this provider.
+   */
+  enabled: boolean
+  /**
+   * Stored auto-recharge status when a config exists.
+   */
+  status?: string
+}
+
+/**
+ * Single primary recovery an agent should take after a gate.
+ */
+export type PaywallNextAction = 'topup' | 'checkout' | 'activate' | 'account'
+
+/**
+ * Global recovery destinations. Per-plan URLs stay on `plans[].checkoutUrl`.
+ */
+export type PaywallRecoveryLinks = {
+  /**
+   * Checkout URL that contains `/topup`.
+   */
+  topup?: string
+  /**
+   * Checkout URL that does not contain `/topup`.
+   */
+  checkout?: string
+  /**
+   * Confirmation / manage URL.
+   */
+  manage?: string
+}
+
+/**
  * Derived plan pricing presentation.
  */
 export type PlanPricingShape = {
@@ -1108,13 +1171,25 @@ export type PaywallDecisionLimits = {
   withinLimits?: boolean
   remaining?: number
   plan?: string
+  planRef?: string
+  purchaseRef?: string
+  planName?: string
   checkoutUrl?: string
   confirmationUrl?: string
   activationRequired?: boolean
+  paywallReason?: 'activation_required' | 'topup_required' | 'payment_required'
   plans?: unknown
   balance?: unknown
   product?: unknown
   creditBalance?: number
+  creditsPerUnit?: number
+  used?: number
+  limit?: number
+  autoRecharge?: unknown
+  needsTopUp?: boolean
+  needsUpgrade?: boolean
+  meterName?: string
+  currency?: string
 }
 
 export type PaywallOutcome<TGate = unknown> =

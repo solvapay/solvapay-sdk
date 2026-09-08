@@ -24,6 +24,16 @@ def state_required_countries() -> Any:
     payload: dict[str, Any] = {}
     return call_native_sync("STATE_REQUIRED_COUNTRIES", json.dumps(payload))
 
+def append_paid_tool_description(description: str | None = None) -> Any:
+    """Append the paid-tool account hint to a merchant tool description.
+    @param description Optional merchant-authored description; trailing whitespace is stripped.
+    @returns Description plus hint, or the hint alone when no description is present.
+    """
+    payload: dict[str, Any] = {}
+    if description is not None:
+        payload["description"] = description
+    return call_native_sync("append_paid_tool_description", json.dumps(payload))
+
 def assert_valid_product_ref(product_ref: str, context: str) -> Any:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.
@@ -106,6 +116,16 @@ def counts_usage(priced: Any | None = None) -> Any:
     if priced is not None:
         payload["priced"] = priced
     return call_native_sync("counts_usage", json.dumps(payload))
+
+def credit_signals(limits: Any | None = None) -> Any:
+    """Coalesce credit-balance channels and derive shortfall and remaining-call counts.
+    @param limits Limits response, or null/absent when no check has run.
+    @returns Credit signals including isCreditBased and optional shortfall fields.
+    """
+    payload: dict[str, Any] = {}
+    if limits is not None:
+        payload["limits"] = limits
+    return call_native_sync("credit_signals", json.dumps(payload))
 
 def credits_per_unit_from_balance(
     priced: Any | None = None,
@@ -291,6 +311,15 @@ def is_state_required(country: str) -> Any:
     payload["country"] = country
     return call_native_sync("is_state_required", json.dumps(payload))
 
+def is_tax_id_type(value: str) -> Any:
+    """Whether a string is a supported tax ID type.
+    @param value Candidate tax ID type wire value.
+    @returns True when the value is one of TAX_ID_TYPES.
+    """
+    payload: dict[str, Any] = {}
+    payload["value"] = value
+    return call_native_sync("is_tax_id_type", json.dumps(payload))
+
 def is_unlimited_remaining(remaining: float) -> Any:
     """Return whether remaining is the backend unlimited sentinel (-1).
     @returns True only when remaining is exactly -1.
@@ -306,6 +335,15 @@ def is_zero_decimal_currency(currency: str) -> Any:
     payload: dict[str, Any] = {}
     payload["currency"] = currency
     return call_native_sync("is_zero_decimal_currency", json.dumps(payload))
+
+def link_label(name: str) -> Any:
+    """Escape markdown link-label delimiters in a provider-authored plan name.
+    @param name Plan display name or reference.
+    @returns Label safe to embed in a markdown link.
+    """
+    payload: dict[str, Any] = {}
+    payload["name"] = name
+    return call_native_sync("link_label", json.dumps(payload))
 
 def meter_name(priced: Any | None = None) -> Any:
     """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
@@ -323,6 +361,15 @@ def minor_units_per_major(currency: str) -> Any:
     payload: dict[str, Any] = {}
     payload["currency"] = currency
     return call_native_sync("minor_units_per_major", json.dumps(payload))
+
+def next_action_for(state: Any) -> Any:
+    """Map a classified paywall state to its single primary recovery action.
+    @param state Classified paywall state.
+    @returns Primary recovery action (topup, checkout, activate, or account).
+    """
+    payload: dict[str, Any] = {}
+    payload["state"] = state
+    return call_native_sync("next_action_for", json.dumps(payload))
 
 def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
     """Project a PaywallError into the client-facing payload shape.
@@ -365,6 +412,15 @@ def per_unit_charge(priced: Any | None = None, meter: str | None = None) -> Any:
     if meter is not None:
         payload["meter"] = meter
     return call_native_sync("per_unit_charge", json.dumps(payload))
+
+def plan_ladder(gate: Any) -> Any:
+    """Build a cheapest-first markdown checkout ladder from gate plans.
+    @param gate Gate content carrying plans and the active planRef.
+    @returns Joined markdown links, or null when no plan has a checkoutUrl.
+    """
+    payload: dict[str, Any] = {}
+    payload["gate"] = gate
+    return call_native_sync("plan_ladder", json.dumps(payload))
 
 def plan_pricing_shape(priced: Any | None = None) -> Any:
     """Derive the pricing shape a plan-row or narration surface should branch on.
@@ -494,6 +550,8 @@ _CONSTANT_IDS = frozenset({
     "REVERSE_CHARGE_NOTE",
     # Map of seller tax identifier types to display labels.
     "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    # Frozen set of supported tax ID type values.
+    "TAX_ID_TYPES",
     # Buyer-facing note when tax is not collected on the purchase.
     "TAX_NOT_COLLECTED_NOTE",
 })

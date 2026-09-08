@@ -3,9 +3,9 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credits_to_display_minor_units, format_major_fixed, headline_charges,
-    is_zero_decimal_currency, meter_name, to_major_units, trial_days, usage_rate,
-    CreditsToDisplayInput,
+    billing_cycle, credit_signals, credits_to_display_minor_units, format_major_fixed,
+    headline_charges, is_zero_decimal_currency, meter_name, to_major_units, trial_days, usage_rate,
+    CreditsToDisplayInput, PaywallLimits,
 };
 
 /// Input for [`mcp_narrate`].
@@ -128,10 +128,57 @@ fn balance_row(customer: Option<&Value>) -> Option<String> {
     };
     let money = format_money(display_minor.map(|n| n as f64), currency);
     let fmt = format_grouped_number(credits);
-    Some(match money {
+    let mut row = match money {
         Some(money) => format!("Balance: {fmt} credits (~{money})"),
         None => format!("Balance: {fmt} credits"),
-    })
+    };
+    if let Some(shortfall) = customer_shortfall_credits(customer) {
+        if shortfall > 0.0 {
+            row.push_str(&format!(" — {} short", format_grouped_number(shortfall)));
+        }
+    }
+    Some(row)
+}
+
+/// Credit signals from a bootstrap customer object, including shortfall.
+fn customer_credit_signals(customer: Option<&Value>) -> Option<solvapay_core::CreditSignals> {
+    let customer = customer?;
+    let limits = serde_json::from_value::<PaywallLimits>(customer.clone()).ok();
+    let from_customer = limits.as_ref().map(|limits| credit_signals(Some(limits)));
+    if from_customer
+        .as_ref()
+        .is_some_and(|signals| signals.shortfall_credits.is_some())
+    {
+        return from_customer;
+    }
+    let credits = customer
+        .pointer("/balance/credits")
+        .and_then(Value::as_f64)
+        .or_else(|| customer.get("creditBalance").and_then(Value::as_f64));
+    let cost = customer
+        .get("creditsPerCall")
+        .and_then(Value::as_f64)
+        .or_else(|| {
+            customer
+                .pointer("/balance/creditsPerUnit")
+                .and_then(Value::as_f64)
+        });
+    match (credits, cost) {
+        (Some(balance), Some(per_call)) => Some(credit_signals(Some(&PaywallLimits {
+            credit_balance: Some(balance),
+            credits_per_unit: Some(per_call),
+            ..PaywallLimits::default()
+        }))),
+        _ => from_customer,
+    }
+}
+
+/// Shortfall from an explicit customer field, else derived credit signals.
+fn customer_shortfall_credits(customer: Option<&Value>) -> Option<f64> {
+    customer
+        .and_then(|value| value.get("shortfallCredits"))
+        .and_then(Value::as_f64)
+        .or_else(|| customer_credit_signals(customer)?.shortfall_credits)
 }
 
 /// Human-readable balance summary used by the `'ui'` mode placeholder.
@@ -376,14 +423,44 @@ fn included_usage_line(customer: Option<&Value>) -> Option<String> {
     ))
 }
 
-fn next_call_line(active: &Value, _customer: Option<&Value>) -> Option<String> {
+fn next_call_line(active: &Value, customer: Option<&Value>) -> Option<String> {
     let plan = active.get("planSnapshot")?;
     let rate = usage_rate(Some(plan), None)?;
     if rate.amount_minor <= 0.0 {
         return None;
     }
     let money = format_money(Some(rate.amount_minor), Some(&rate.currency))?;
-    Some(format!("Next call: {money}"))
+    let mut line = format!("Next call: {money}");
+    if let Some(shortfall) = customer_shortfall_credits(customer) {
+        if shortfall > 0.0 {
+            line.push_str(&format!(
+                " — {} credits short",
+                format_grouped_number(shortfall)
+            ));
+        }
+    }
+    Some(line)
+}
+
+/// Copy for `activate_plan` when the backend reports `already_active`.
+#[must_use]
+pub fn narrate_already_active(data: &Value) -> String {
+    let limits = serde_json::from_value::<PaywallLimits>(data.clone()).ok();
+    let signals = credit_signals(limits.as_ref());
+    match (signals.credit_balance, signals.credits_per_call) {
+        (Some(balance), Some(cost)) => {
+            let shortfall = signals
+                .shortfall_credits
+                .unwrap_or_else(|| (cost - balance).max(0.0));
+            format!(
+                "This plan is already active. Balance {} credits; this call costs {} credits — {} short.",
+                format_grouped_number(balance),
+                format_grouped_number(cost),
+                format_grouped_number(shortfall)
+            )
+        }
+        _ => "This plan is already active.".to_owned(),
+    }
 }
 
 /// Narrate `upgrade`.
@@ -552,6 +629,7 @@ fn narrator_for(view: &str, data: &Value) -> Option<Value> {
         "auto-recharge" => Some(narrate_auto_recharge(data)),
         "topup" => Some(narrate_topup(data)),
         "activate_plan" => Some(narrate_activate_plan(data)),
+        "already_active" => Some(narrator_output(narrate_already_active(data), Vec::new())),
         "virtual_upgrade" => Some(narrate_virtual_upgrade(data)),
         "virtual_manage_account" => Some(narrate_virtual_manage_account(data)),
         _ => None,
@@ -826,6 +904,38 @@ mod tests {
             "meter": "tokens"
         })]);
         assert!(text.contains("$0.03 / tokens"), "{text}");
+    }
+
+    #[test]
+    fn already_active_is_terse_without_credit_cost() {
+        assert_eq!(
+            narrate_already_active(&json!({ "status": "already_active" })),
+            "This plan is already active."
+        );
+    }
+
+    #[test]
+    fn already_active_names_shortfall_when_balance_and_cost_known() {
+        let text = narrate_already_active(&json!({
+            "status": "already_active",
+            "creditBalance": 91_000.0,
+            "creditsPerUnit": 100_000.0
+        }));
+        assert_eq!(
+            text,
+            "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short."
+        );
+    }
+
+    #[test]
+    fn balance_row_names_shortfall() {
+        let row = balance_row(Some(&json!({
+            "balance": { "credits": 1000.0 },
+            "creditsPerCall": 1500.0
+        })))
+        .unwrap();
+        assert!(row.contains("1,000 credits"), "{row}");
+        assert!(row.contains("500 short"), "{row}");
     }
 
     #[test]

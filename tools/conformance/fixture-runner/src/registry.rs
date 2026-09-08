@@ -5,11 +5,11 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    attach_business_details_validation_error, billing_cycle, build_create_customer_params,
-    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
-    build_paywall_gate, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, counts_usage,
+    append_paid_tool_description, attach_business_details_validation_error, billing_cycle,
+    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
+    build_payable_tool_result, build_paywall_gate, charges, classify_cancel_error,
+    classify_create_error, classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, counts_usage, credit_signals,
     credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
     derive_default_view, ensure_customer_next, evaluate_balance_observation,
     evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
@@ -19,15 +19,16 @@ use solvapay_core::{
     get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
     headline_charges, history_rows, included_units, invoke_payable_next,
     is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
-    is_postal_code_required, is_state_required, is_unlimited_remaining, is_zero_decimal_currency,
-    mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
+    is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
+    is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, next_action_for,
+    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
+    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
     postal_code_required_countries, project_topup_process_outcome, resolve_account_state,
     resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
-    should_retry_usage_error, should_show_tax_row, state_required_countries,
+    should_retry_usage_error, should_show_tax_row, state_required_countries, tax_id_types,
     tax_not_collected_note, tier_bands, tier_meters, to_major_units, topup_process_next,
     trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
@@ -57,9 +58,22 @@ fn invoke_state_required_countries(input: &FixtureInput) -> Result<Value, Bindin
     to_value(&state_required_countries())
 }
 
+fn invoke_tax_id_types(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&tax_id_types())
+}
+
 fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     Ok(Value::String(tax_not_collected_note().to_owned()))
+}
+
+fn invoke_append_paid_tool_description(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let description = optional_string(&args, "description")?;
+    Ok(Value::String(
+        append_paid_tool_description(description.as_deref()).to_owned(),
+    ))
 }
 
 fn invoke_attach_business_details_validation_error(
@@ -183,6 +197,12 @@ fn invoke_counts_usage(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     Ok(Value::Bool(counts_usage(priced.as_ref())))
+}
+
+fn invoke_credit_signals(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
+    to_value(&credit_signals(limits.as_ref()))
 }
 
 fn invoke_credits_per_unit_from_balance(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -440,6 +460,12 @@ fn invoke_is_state_required(input: &FixtureInput) -> Result<Value, BindingError>
     Ok(Value::Bool(is_state_required(&country)))
 }
 
+fn invoke_is_tax_id_type(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let value = require_string(&args, "value")?;
+    Ok(Value::Bool(is_tax_id_type(&value)))
+}
+
 fn invoke_is_unlimited_remaining(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let remaining = require_f64(&args, "remaining")?;
@@ -452,6 +478,12 @@ fn invoke_is_zero_decimal_currency(input: &FixtureInput) -> Result<Value, Bindin
     Ok(Value::Bool(is_zero_decimal_currency(&currency)))
 }
 
+fn invoke_link_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let name = require_string(&args, "name")?;
+    Ok(Value::String(link_label(&name).to_owned()))
+}
+
 fn invoke_mcp_view_maps(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&mcp_view_maps())
@@ -461,6 +493,12 @@ fn invoke_meter_name(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     to_value(&meter_name(priced.as_ref()))
+}
+
+fn invoke_next_action_for(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = require_typed::<PaywallState>(&args, "state")?;
+    to_value(&next_action_for(&state))
 }
 
 fn invoke_normalize_cancel_response(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -525,6 +563,12 @@ fn invoke_plan_consequence(input: &FixtureInput) -> Result<Value, BindingError> 
         balance.as_ref(),
         merchant_name.as_deref(),
     ))
+}
+
+fn invoke_plan_ladder(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let gate = require_typed::<GateContent>(&args, "gate")?;
+    to_value(&plan_ladder(&gate))
 }
 
 fn invoke_plan_pricing_shape(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1406,10 +1450,24 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "TAX_ID_TYPES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tax_id_types),
+        },
+    );
+    registry.register(
         "TAX_NOT_COLLECTED_NOTE",
         Binding {
             id: "core",
             invoke: Box::new(invoke_tax_not_collected_note),
+        },
+    );
+    registry.register(
+        "appendPaidToolDescription",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_append_paid_tool_description),
         },
     );
     registry.register(
@@ -1424,6 +1482,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_build_payable_tool_result),
+        },
+    );
+    registry.register(
+        "creditSignals",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_credit_signals),
         },
     );
     registry.register(
@@ -1567,10 +1632,31 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "isTaxIdType",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_is_tax_id_type),
+        },
+    );
+    registry.register(
         "isUnlimitedRemaining",
         Binding {
             id: "core",
             invoke: Box::new(invoke_is_unlimited_remaining),
+        },
+    );
+    registry.register(
+        "linkLabel",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_link_label),
+        },
+    );
+    registry.register(
+        "nextActionFor",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_next_action_for),
         },
     );
     registry.register(
@@ -1585,6 +1671,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_plan_consequence),
+        },
+    );
+    registry.register(
+        "planLadder",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_plan_ladder),
         },
     );
     registry.register(

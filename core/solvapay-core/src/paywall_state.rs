@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::money_format::format_money_intl;
+use crate::money_format::{format_grouped_major, format_money_intl};
 
 /// How long a checkout session URL stays valid. Stated inline in gate copy.
 /// Do not extend this TTL — the session id is a guardless bearer credential.
@@ -34,15 +34,85 @@ pub enum PaywallState {
     ReactivationRequired,
 }
 
-/// Minimal plan summary used by the classifier.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+/// Single primary recovery an agent should take after a gate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PaywallNextAction {
+    /// Add prepaid credits.
+    Topup,
+    /// Open hosted checkout / switch plan.
+    Checkout,
+    /// Activate a specific plan.
+    Activate,
+    /// Inspect the account viewer.
+    Account,
+}
+
+/// Coalesced credit-balance channels plus derived shortfall / remaining-call counts.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreditSignals {
+    /// Nested `balance.creditBalance` wins over the top-level field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_balance: Option<f64>,
+    /// Credits deducted per call (`balance.creditsPerUnit` ?? `creditsPerUnit`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_per_call: Option<f64>,
+    /// `max(0, creditsPerCall - creditBalance)` when both are known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shortfall_credits: Option<f64>,
+    /// How many calls the current allowance or wallet still covers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remaining_calls: Option<f64>,
+    /// True when either credit-balance channel or a per-call cost is present.
+    pub is_credit_based: bool,
+}
+
+/// Per-provider auto-recharge snapshot on a limits / gate payload.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaywallAutoRecharge {
+    /// Whether auto-recharge is enabled for this provider.
+    pub enabled: bool,
+    /// Stored auto-recharge status when a config exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Global recovery destinations. Per-plan URLs stay on `plans[].checkoutUrl`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaywallRecoveryLinks {
+    /// Checkout URL that contains `/topup`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topup: Option<String>,
+    /// Checkout URL that does not contain `/topup`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkout: Option<String>,
+    /// Confirmation / manage URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manage: Option<String>,
+}
+
+/// Minimal plan summary used by the classifier and the checkout ladder.
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallPlanSummary {
     /// Plan reference matching [`PaywallLimits::plan`].
+    #[serde(default)]
     pub reference: String,
     /// Plan type wire string (`usage-based`, `recurring`, …).
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub plan_type: String,
+    /// Display name used in the checkout ladder.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Headline price in minor units; used to sort the ladder cheapest-first.
+    #[serde(default)]
+    pub price: Option<f64>,
+    /// Per-plan hosted checkout deep link.
+    #[serde(default)]
+    pub checkout_url: Option<String>,
     /// Whether the plan requires payment (unused by classification; kept for DTO shape).
     #[serde(default)]
     pub requires_payment: Option<bool>,
@@ -58,11 +128,17 @@ pub struct PaywallPlanSummary {
 }
 
 /// Nested balance block from newer backend responses.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallBalance {
     /// Credit balance in credits (nested channel).
     pub credit_balance: Option<f64>,
+    /// Credits deducted per metered item.
+    #[serde(default)]
+    pub credits_per_unit: Option<f64>,
+    /// How many metered items the credit balance still covers.
+    #[serde(default)]
+    pub remaining_units: Option<f64>,
     /// ISO currency on the nested balance block.
     #[serde(default)]
     pub currency: Option<String>,
@@ -76,16 +152,37 @@ pub struct PaywallBalance {
 pub struct PaywallLimits {
     /// Explicit backend flag that no plan is live yet.
     pub activation_required: Option<bool>,
-    /// Active plan reference (matched against [`PaywallPlanSummary::reference`]).
+    /// Authoritative backend paywall classification (`activation_required` / `topup_required`).
+    #[serde(default)]
+    pub paywall_reason: Option<String>,
+    /// Deprecated active-plan alias. The backend never sends this; prefer [`Self::plan_ref`].
     pub plan: Option<String>,
+    /// Active plan reference when the customer already holds a purchase.
+    #[serde(default)]
+    pub plan_ref: Option<String>,
+    /// Active purchase reference when the customer already holds a purchase.
+    #[serde(default)]
+    pub purchase_ref: Option<String>,
+    /// Display name of the active or default plan.
+    #[serde(default)]
+    pub plan_name: Option<String>,
     /// Available plans on the product.
     pub plans: Option<Vec<PaywallPlanSummary>>,
     /// Structured balance block (presence is a usage-based proxy).
     pub balance: Option<PaywallBalance>,
     /// Top-level credit balance (older / alternate channel).
     pub credit_balance: Option<f64>,
+    /// Top-level credits deducted per metered item.
+    #[serde(default)]
+    pub credits_per_unit: Option<f64>,
     /// Remaining allowance (usage-based fallback when credit channels are absent).
     pub remaining: Option<f64>,
+    /// Consumed usage units this period when the backend measured a finite cap.
+    #[serde(default)]
+    pub used: Option<f64>,
+    /// Effective finite cap when the backend measured one.
+    #[serde(default)]
+    pub limit: Option<f64>,
     /// Checkout URL inlined into nudge copy when non-empty.
     pub checkout_url: Option<String>,
     /// Authoritative backend deny reason: prepaid top-up required.
@@ -100,6 +197,9 @@ pub struct PaywallLimits {
     /// Product-level currency when the active plan does not carry one.
     #[serde(default)]
     pub currency: Option<String>,
+    /// Per-provider auto-recharge snapshot.
+    #[serde(default)]
+    pub auto_recharge: Option<PaywallAutoRecharge>,
 }
 
 /// Included-usage counters emitted on gates when `freeUnits` is a positive cap.
@@ -120,34 +220,63 @@ pub struct IncludedUsage {
 pub struct GateContent {
     /// Checkout URL inlined into gate copy when non-empty.
     pub checkout_url: Option<String>,
+    /// Active plan reference (dropped from the checkout ladder).
+    #[serde(default)]
+    pub plan_ref: Option<String>,
+    /// Display name of the active or default plan.
+    #[serde(default)]
+    pub plan_name: Option<String>,
+    /// Product plans used to build the cheapest-first checkout ladder.
+    #[serde(default)]
+    pub plans: Option<Vec<PaywallPlanSummary>>,
     /// Meter name used in included-usage copy.
     #[serde(default)]
     pub meter_name: Option<String>,
     /// Next-call unit price in minor units.
     #[serde(default)]
     pub unit_price_minor: Option<f64>,
-    /// ISO currency for [`Self::unit_price_minor`] / top-up presets.
+    /// ISO currency for [`Self::unit_price_minor`].
     #[serde(default)]
     pub currency: Option<String>,
-    /// Included counters when the active plan has a finite `freeUnits`.
+    /// Included counters when the active plan has a finite cap.
     #[serde(default)]
     pub included: Option<IncludedUsage>,
-    /// Nested balance (currency fallback for PAYG-at-zero copy).
+    /// Nested balance (currency fallback).
     #[serde(default)]
     pub balance: Option<PaywallBalance>,
+    /// Coalesced credit balance.
+    #[serde(default)]
+    pub credit_balance: Option<f64>,
+    /// Credits deducted per call.
+    #[serde(default)]
+    pub credits_per_call: Option<f64>,
+    /// `max(0, creditsPerCall - creditBalance)` when both are known.
+    #[serde(default)]
+    pub shortfall_credits: Option<f64>,
+    /// How many calls the current allowance or wallet still covers.
+    #[serde(default)]
+    pub remaining_calls: Option<f64>,
+    /// Active purchase reference.
+    #[serde(default)]
+    pub purchase_ref: Option<String>,
+    /// Per-provider auto-recharge snapshot.
+    #[serde(default)]
+    pub auto_recharge: Option<PaywallAutoRecharge>,
 }
 
 /// Classify limits into a [`PaywallState`].
 ///
 /// Precedence mirrors TypeScript `classifyPaywallState`:
-/// 1. `activation_required == Some(true)` trumps everything.
-/// 2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
-///    `Some(true)`. Prefer these over the credit-balance heuristic.
-/// 3. Usage-based out of credits → `topup_required` (plan type, or balance-block
-///    proxy; credit channels then `remaining === 0` fallback).
-/// 4. Active plan at included cap (`plan` is a non-empty ref and
-///    `remaining <= 0`) → `limit_reached`.
-/// 5. Everything else (including `None` limits) → `upgrade_required`.
+/// 1. `activation_required == Some(true)` **or** `paywall_reason == "activation_required"`.
+/// 2. `paywall_reason == "topup_required"` — backend stays authoritative for
+///    credit-based denials (same rule as Managed MCP).
+/// 3. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
+///    `Some(true)`.
+/// 4. Credit-field presence **and** a real shortfall (`balance < cost`), then
+///    `balance == 0`, then `cost` unknown && `remaining == 0`.
+/// 5. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.
+/// 6. Floor: never `upgrade_required` when credit fields or a purchase are
+///    present. Everything else (including `None` limits) → `upgrade_required`.
 ///
 /// # Arguments
 ///
@@ -167,8 +296,14 @@ pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
         return PaywallState::UpgradeRequired;
     };
 
-    if limits.activation_required == Some(true) {
+    if limits.activation_required == Some(true)
+        || limits.paywall_reason.as_deref() == Some("activation_required")
+    {
         return PaywallState::ActivationRequired;
+    }
+
+    if limits.paywall_reason.as_deref() == Some("topup_required") {
+        return PaywallState::TopupRequired;
     }
 
     if limits.needs_top_up == Some(true) {
@@ -179,38 +314,227 @@ pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
         return PaywallState::UpgradeRequired;
     }
 
-    let active_plan = limits.plans.as_ref().and_then(|plans| {
-        plans
-            .iter()
-            .find(|p| Some(p.reference.as_str()) == limits.plan.as_deref())
-    });
-    // Presence of the balance block is an older-backend proxy for usage-based.
-    // Note: serde Option collapses JSON `null` and absent to None (null ≡ absent);
-    // TS `!== undefined` would treat explicit null as present — see unit test.
-    let is_usage_based =
-        active_plan.is_some_and(|p| p.plan_type == "usage-based") || limits.balance.is_some();
-    // Nested credit wins when present (`??` parity).
-    let credit_balance = limits
-        .balance
-        .as_ref()
-        .and_then(|b| b.credit_balance)
-        .or(limits.credit_balance);
-
-    if is_usage_based {
-        if credit_balance == Some(0.0) {
+    let signals = credit_signals(Some(limits));
+    if signals.is_credit_based {
+        if let (Some(balance), Some(cost)) = (signals.credit_balance, signals.credits_per_call) {
+            if balance < cost {
+                return PaywallState::TopupRequired;
+            }
+        }
+        if signals.credit_balance == Some(0.0) {
             return PaywallState::TopupRequired;
         }
-        if credit_balance.is_none() && limits.remaining == Some(0.0) {
+        if signals.credits_per_call.is_none() && limits.remaining == Some(0.0) {
             return PaywallState::TopupRequired;
         }
     }
 
-    let plan_ref = limits.plan.as_deref().unwrap_or("");
-    if !plan_ref.is_empty() && limits.remaining.is_some_and(|remaining| remaining <= 0.0) {
+    let active_ref = active_plan_ref_of(limits);
+    let has_purchase = limits
+        .purchase_ref
+        .as_deref()
+        .is_some_and(|value| !value.is_empty());
+    if (has_purchase || active_ref.is_some())
+        && limits.remaining.is_some_and(|remaining| remaining <= 0.0)
+    {
+        return PaywallState::LimitReached;
+    }
+
+    if signals.is_credit_based {
+        return PaywallState::TopupRequired;
+    }
+    if has_purchase {
         return PaywallState::LimitReached;
     }
 
     PaywallState::UpgradeRequired
+}
+
+/// Active plan reference: `plan_ref` wins over deprecated `plan`; empty → `None`.
+fn active_plan_ref_of(limits: &PaywallLimits) -> Option<&str> {
+    let reference = limits
+        .plan_ref
+        .as_deref()
+        .or(limits.plan.as_deref())
+        .filter(|value| !value.is_empty())?;
+    Some(reference)
+}
+
+/// Coalesce the two credit-balance channels and derive shortfall / remaining-call counts.
+///
+/// Nested `balance` wins when present. `remainingCalls` prefers
+/// `balance.remainingUnits`, then `floor(balance / cost)`, then `remaining`
+/// when it is `>= 0`.
+///
+/// # Arguments
+///
+/// * `limits` - Limits response, or `None` when no check has run.
+///
+/// # Returns
+///
+/// Credit signals. `is_credit_based` is `false` when both channels are absent.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall",
+    emit_order = 42
+)]
+pub fn credit_signals(limits: Option<&PaywallLimits>) -> CreditSignals {
+    let Some(limits) = limits else {
+        return CreditSignals {
+            credit_balance: None,
+            credits_per_call: None,
+            shortfall_credits: None,
+            remaining_calls: None,
+            is_credit_based: false,
+        };
+    };
+    let credit_balance = limits
+        .balance
+        .as_ref()
+        .and_then(|balance| balance.credit_balance)
+        .or(limits.credit_balance);
+    let credits_per_call = limits
+        .balance
+        .as_ref()
+        .and_then(|balance| balance.credits_per_unit)
+        .or(limits.credits_per_unit);
+    let is_credit_based = credit_balance.is_some() || credits_per_call.is_some();
+    let shortfall_credits = match (credit_balance, credits_per_call) {
+        (Some(balance), Some(cost)) => Some((cost - balance).max(0.0)),
+        _ => None,
+    };
+    let remaining_calls = if let Some(units) = limits
+        .balance
+        .as_ref()
+        .and_then(|balance| balance.remaining_units)
+    {
+        Some(units)
+    } else if let (Some(balance), Some(cost)) = (credit_balance, credits_per_call) {
+        if cost > 0.0 {
+            Some((balance / cost).floor())
+        } else {
+            remaining_from_allowance(limits.remaining)
+        }
+    } else {
+        remaining_from_allowance(limits.remaining)
+    };
+    CreditSignals {
+        credit_balance,
+        credits_per_call,
+        shortfall_credits,
+        remaining_calls,
+        is_credit_based,
+    }
+}
+
+/// Keep a remaining-allowance count when the backend sent a non-negative value.
+fn remaining_from_allowance(remaining: Option<f64>) -> Option<f64> {
+    remaining.filter(|value| *value >= 0.0)
+}
+
+/// Map a classified paywall state to its single primary recovery action.
+///
+/// # Arguments
+///
+/// * `state` - Classified paywall state.
+///
+/// # Returns
+///
+/// The recovery action an agent should take next.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall",
+    emit_order = 43
+)]
+pub fn next_action_for(state: &PaywallState) -> PaywallNextAction {
+    match state {
+        PaywallState::ActivationRequired => PaywallNextAction::Activate,
+        PaywallState::TopupRequired => PaywallNextAction::Topup,
+        PaywallState::UpgradeRequired | PaywallState::LimitReached => PaywallNextAction::Checkout,
+        PaywallState::ReactivationRequired => PaywallNextAction::Account,
+    }
+}
+
+/// Escape markdown link-label delimiters — plan names are provider-authored.
+///
+/// # Arguments
+///
+/// * `name` - Plan display name or reference.
+///
+/// # Returns
+///
+/// Label safe to embed in `[label](url)`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall",
+    emit_order = 44
+)]
+pub fn link_label(name: &str) -> String {
+    let mut escaped = String::with_capacity(name.len());
+    for ch in name.chars() {
+        match ch {
+            '[' => escaped.push_str("\\["),
+            ']' => escaped.push_str("\\]"),
+            other => escaped.push(other),
+        }
+    }
+    escaped
+}
+
+/// Cheapest-first markdown checkout ladder from plans that carry a `checkoutUrl`.
+///
+/// Drops the active `gate.plan_ref`, sorts by `price` ascending, and takes 4.
+///
+/// # Arguments
+///
+/// * `gate` - Gate content carrying `plans` and the active `plan_ref`.
+///
+/// # Returns
+///
+/// Joined ` · ` markdown links, or `None` when no plan is linkable.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall",
+    emit_order = 45
+)]
+pub fn plan_ladder(gate: &GateContent) -> Option<String> {
+    let mut linkable = gate
+        .plans
+        .as_deref()
+        .unwrap_or(&[])
+        .iter()
+        .filter(|plan| {
+            plan.checkout_url
+                .as_deref()
+                .is_some_and(|url| !url.is_empty())
+        })
+        .filter(|plan| Some(plan.reference.as_str()) != gate.plan_ref.as_deref())
+        .collect::<Vec<_>>();
+    if linkable.is_empty() {
+        return None;
+    }
+    linkable.sort_by(|a, b| a.price.unwrap_or(0.0).total_cmp(&b.price.unwrap_or(0.0)));
+    linkable.truncate(4);
+    Some(
+        linkable
+            .into_iter()
+            .map(|plan| {
+                let label = link_label(plan.name.as_deref().unwrap_or(plan.reference.as_str()));
+                let url = plan.checkout_url.as_deref().unwrap_or_default();
+                format!("[{label}]({url})")
+            })
+            .collect::<Vec<_>>()
+            .join(" · "),
+    )
+}
+
+/// Format a credit count with thousands grouping (`91,000`).
+fn format_credits(value: f64) -> String {
+    format_grouped_major(value, 0)
 }
 
 /// Non-empty checkout URL, or `None` when absent / empty string.
@@ -241,6 +565,7 @@ fn non_empty_url(url: Option<&str>) -> Option<&str> {
 )]
 pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
     let url = non_empty_url(gate.checkout_url.as_deref());
+    let ladder = plan_ladder(gate);
 
     match state {
         PaywallState::LimitReached => {
@@ -255,37 +580,83 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
                 None => "You've reached the included usage for this period.".to_owned(),
             };
             let next_line = price.map_or(String::new(), |p| format!(" The next call is {p}."));
-            format!(
-                "{used_line}{next_line}{} {DOCS_HINT}",
-                recover_clause(url, "continue", "account", Some("checkout"))
-            )
+            let plan_name = gate.plan_name.as_deref().unwrap_or("This plan");
+            let anti_trap = if gate.credit_balance.is_some_and(|balance| balance > 0.0)
+                && gate.credits_per_call.is_none_or(|cost| cost == 0.0)
+            {
+                format!(" Adding credits will not help, because {plan_name} does not spend them.")
+            } else {
+                String::new()
+            };
+            let switch_line = match &ladder {
+                Some(ladder) => format!(" Or switch plan: {ladder}."),
+                None => recover_clause(url, "continue", Some("checkout")),
+            };
+            format!("{used_line}{next_line}{anti_trap}{switch_line} {DOCS_HINT}")
         }
         PaywallState::ActivationRequired => format!(
-            "Your plan needs activation.{} {DOCS_HINT}",
-            recover_clause(url, "activate", "activate_plan", None)
+            "Your plan needs activation.{} Or call `activate_plan` with a `planRef`. {DOCS_HINT}",
+            recover_clause(url, "activate", Some("checkout"))
         ),
         PaywallState::TopupRequired => {
-            let currency = gate
-                .currency
-                .as_deref()
-                .or_else(|| gate.balance.as_ref().and_then(|b| b.currency.as_deref()))
-                .unwrap_or("USD");
-            let presets = [1000.0, 2500.0, 5000.0, 10_000.0]
-                .into_iter()
-                .map(|m| format_money_intl(m, currency))
-                .collect::<Vec<_>>()
-                .join(" · ");
-            format!(
-                "You're out of credits. Top up first ({presets}).{} {DOCS_HINT}",
-                recover_clause(url, "add credits", "account", Some("topup"))
-            )
+            let lead = match (
+                gate.credit_balance,
+                gate.credits_per_call,
+                gate.shortfall_credits,
+            ) {
+                (Some(balance), Some(cost), Some(shortfall)) => format!(
+                    "Out of credits for this call. Balance {} credits; this call costs {} credits — {} short.",
+                    format_credits(balance),
+                    format_credits(cost),
+                    format_credits(shortfall)
+                ),
+                _ => "Included usage is exhausted.".to_owned(),
+            };
+            let topup = recover_clause(url, "add credits", Some("topup"));
+            let auto = if gate
+                .auto_recharge
+                .as_ref()
+                .is_some_and(|config| !config.enabled)
+            {
+                " Auto-recharge is off — turn it on from the account tool to avoid this next time."
+            } else {
+                ""
+            };
+            let switch_line = match &ladder {
+                Some(ladder) => format!(" Or switch plan: {ladder}."),
+                None => String::new(),
+            };
+            format!("{lead}{topup}{auto}{switch_line} {DOCS_HINT}")
         }
-        PaywallState::UpgradeRequired => format!(
-            "You don't have an active plan for this tool.{} {DOCS_HINT}",
-            recover_clause(url, "pick a plan", "account", Some("checkout"))
-        ),
+        PaywallState::UpgradeRequired => {
+            if has_active_plan(gate) {
+                let plan_name = gate.plan_name.as_deref().unwrap_or("This plan");
+                let lead = format!(
+                    "{plan_name} is active but its included usage is exhausted, and the automatic switch to the next plan did not complete."
+                );
+                return match &ladder {
+                    Some(ladder) => format!("{lead} Switch here: {ladder}. {DOCS_HINT}"),
+                    None => format!(
+                        "{lead}{} {DOCS_HINT}",
+                        recover_clause(url, "switch plan", Some("checkout"))
+                    ),
+                };
+            }
+            match &ladder {
+                Some(ladder) => format!(
+                    "You don't have an active plan for this tool. Pick a plan to use this tool: {ladder} (links expire in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or {}. {DOCS_HINT}",
+                    call_viewer(Some("checkout"))
+                ),
+                None => format!(
+                    "You don't have an active plan for this tool.{} {DOCS_HINT}",
+                    recover_clause(url, "pick a plan", Some("checkout"))
+                ),
+            }
+        }
         PaywallState::ReactivationRequired => format!(
-            "Your previous plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or with view: 'checkout' to pick a new plan. {DOCS_HINT}"
+            "Your previous plan is no longer active. {} to reactivate it, or {} to pick a new plan. {DOCS_HINT}",
+            capitalize_call(call_viewer(Some("account"))),
+            call_viewer(Some("checkout"))
         ),
     }
 }
@@ -295,19 +666,47 @@ fn named_checkout_markdown(url: &str) -> String {
     format!("[Open checkout]({url})")
 }
 
+/// Built-in tool agents call to inspect account, checkout, or top-up views.
+const VIEWER_TOOL: &str = "account";
+
+/// Instruction to call the account tool, optionally pinned to a view.
+fn call_viewer(view: Option<&str>) -> String {
+    match view {
+        Some(view) => format!("call the `{VIEWER_TOOL}` tool with view: '{view}'"),
+        None => format!("call the `{VIEWER_TOOL}` tool"),
+    }
+}
+
+/// Capitalize the first character so the clause can start a sentence.
+fn capitalize_call(call: String) -> String {
+    let mut chars = call.chars();
+    match chars.next() {
+        Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+        None => call,
+    }
+}
+
 /// URL + TTL clause, or a tool-only fallback when no checkout URL exists.
-fn recover_clause(url: Option<&str>, verb: &str, tool: &str, view: Option<&str>) -> String {
-    let tool_call = match view {
-        Some(view) => format!("the `{tool}` tool with view: '{view}'"),
-        None => format!("the `{tool}` tool"),
-    };
+fn recover_clause(url: Option<&str>, verb: &str, view: Option<&str>) -> String {
     match url {
         Some(url) => format!(
-            " {} to {verb} (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or call {tool_call}.",
-            named_checkout_markdown(url)
+            " {} to {verb} (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or {}.",
+            named_checkout_markdown(url),
+            call_viewer(view)
         ),
-        None => format!(" Call {tool_call}."),
+        None => format!(" {}.", capitalize_call(call_viewer(view))),
     }
+}
+
+/// True when the customer already holds a purchase or an active plan ref.
+fn has_active_plan(gate: &GateContent) -> bool {
+    gate.purchase_ref
+        .as_deref()
+        .is_some_and(|value| !value.is_empty())
+        || gate
+            .plan_ref
+            .as_deref()
+            .is_some_and(|value| !value.is_empty())
 }
 
 /// Human meter name, or `"units"` when the backend omitted one.
@@ -352,19 +751,41 @@ pub fn build_nudge_message(state: &PaywallState, limits: Option<&PaywallLimits>)
     let visit_clause = url.map_or(String::new(), |u| {
         format!(", or {}", named_checkout_markdown(u))
     });
+    let remaining = credit_signals(limits).remaining_calls;
 
     match state {
-        PaywallState::TopupRequired => format!(
-            "Heads up — running low on credits. Call the `topup` tool to add more{visit_clause}."
-        ),
-        PaywallState::UpgradeRequired | PaywallState::LimitReached => format!(
-            "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom{visit_clause}."
-        ),
+        PaywallState::TopupRequired => {
+            if remaining == Some(0.0) {
+                format!(
+                    "Heads up — 0 calls left — the next call needs a top-up. {} to add more{visit_clause}.",
+                    capitalize_call(call_viewer(Some("topup")))
+                )
+            } else {
+                format!(
+                    "Heads up — running low on credits. {} to add more{visit_clause}.",
+                    capitalize_call(call_viewer(Some("topup")))
+                )
+            }
+        }
+        PaywallState::UpgradeRequired | PaywallState::LimitReached => {
+            if remaining == Some(0.0) {
+                format!(
+                    "Heads up — 0 calls left — the next call needs a top-up. {} for more headroom{visit_clause}.",
+                    capitalize_call(call_viewer(Some("checkout")))
+                )
+            } else {
+                format!(
+                    "Heads up — approaching your plan's limit this period. {} for more headroom{visit_clause}.",
+                    capitalize_call(call_viewer(Some("checkout")))
+                )
+            }
+        }
         PaywallState::ActivationRequired => format!(
-            "Heads up — this plan still needs activation. Call the `activate_plan` tool{visit_clause}."
+            "Heads up — this plan still needs activation. Call the `activate_plan` tool with a `planRef`{visit_clause}."
         ),
         PaywallState::ReactivationRequired => format!(
-            "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it{visit_clause}."
+            "Heads up — your plan is no longer active. {} to reactivate it{visit_clause}.",
+            capitalize_call(call_viewer(Some("account")))
         ),
     }
 }
@@ -385,9 +806,7 @@ mod tests {
             reference: reference.to_owned(),
             plan_type: "usage-based".to_owned(),
             requires_payment: Some(true),
-            free_units: None,
-            per_unit_charge_minor: None,
-            currency: None,
+            ..Default::default()
         }
     }
 
@@ -396,9 +815,7 @@ mod tests {
             reference: reference.to_owned(),
             plan_type: "recurring".to_owned(),
             requires_payment: Some(true),
-            free_units: None,
-            per_unit_charge_minor: None,
-            currency: None,
+            ..Default::default()
         }
     }
 
@@ -416,6 +833,7 @@ mod tests {
             balance: Some(PaywallBalance {
                 credit_balance: Some(0.0),
                 currency: None,
+                ..Default::default()
             }),
             plans: Some(vec![usage_plan("pl_pro")]),
             credit_balance: None,
@@ -424,6 +842,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -441,6 +860,7 @@ mod tests {
             balance: Some(PaywallBalance {
                 credit_balance: Some(0.0),
                 currency: None,
+                ..Default::default()
             }),
             credit_balance: None,
             checkout_url: None,
@@ -448,6 +868,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -469,6 +890,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -490,10 +912,11 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
-            PaywallState::TopupRequired
+            PaywallState::LimitReached
         );
     }
 
@@ -507,6 +930,7 @@ mod tests {
             balance: Some(PaywallBalance {
                 credit_balance: Some(0.0),
                 currency: None,
+                ..Default::default()
             }),
             credit_balance: None,
             checkout_url: None,
@@ -514,6 +938,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -530,6 +955,8 @@ mod tests {
             plans: Some(vec![usage_plan("pl_pro")]),
             balance: Some(PaywallBalance {
                 credit_balance: Some(100.0),
+                credits_per_unit: Some(1.0),
+                remaining_units: None,
                 currency: None,
             }),
             credit_balance: None,
@@ -538,6 +965,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..PaywallLimits::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -559,6 +987,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -580,6 +1009,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -601,6 +1031,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -621,11 +1052,11 @@ mod tests {
         }))
         .unwrap();
         assert!(limits.balance.is_none());
-        // Without balance block and with no credit channels, remaining===0 on a
-        // usage-based plan still tops up via the remaining fallback.
+        // Credit-field absence + an active plan at cap is included-usage
+        // exhaustion (row 7), not a top-up.
         assert_eq!(
             classify_paywall_state(Some(&limits)),
-            PaywallState::TopupRequired
+            PaywallState::LimitReached
         );
     }
 
@@ -640,6 +1071,7 @@ mod tests {
             balance: Some(PaywallBalance {
                 credit_balance: Some(0.0),
                 currency: None,
+                ..Default::default()
             }),
             credit_balance: Some(100.0),
             checkout_url: None,
@@ -647,6 +1079,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -680,19 +1113,30 @@ mod tests {
 
         assert_eq!(
             build_gate_message(&PaywallState::ActivationRequired, &with_url),
-            "Your plan needs activation. [Open checkout](https://pay.test/x) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md."
+            "Your plan needs activation. [Open checkout](https://pay.test/x) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::ActivationRequired, &empty_url),
-            "Your plan needs activation. Call the `activate_plan` tool. See docs://solvapay/overview.md."
+            "Your plan needs activation. Call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &with_url),
-            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+            "Included usage is exhausted. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &no_url),
-            "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). Call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+            "Included usage is exhausted. Call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+        );
+        let shortfall = GateContent {
+            checkout_url: Some("https://pay.test/x".into()),
+            credit_balance: Some(91_000.0),
+            credits_per_call: Some(100_000.0),
+            shortfall_credits: Some(9_000.0),
+            ..GateContent::default()
+        };
+        assert_eq!(
+            build_gate_message(&PaywallState::TopupRequired, &shortfall),
+            "Out of credits for this call. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::UpgradeRequired, &with_url),
@@ -708,7 +1152,7 @@ mod tests {
         );
         assert_eq!(
             build_gate_message(&PaywallState::ReactivationRequired, &with_url),
-            "Your previous plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or with view: 'checkout' to pick a new plan. See docs://solvapay/overview.md."
+            "Your previous plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or call the `account` tool with view: 'checkout' to pick a new plan. See docs://solvapay/overview.md."
         );
     }
 
@@ -726,6 +1170,7 @@ mod tests {
             needs_upgrade: None,
             meter_name: None,
             currency: None,
+            ..Default::default()
         };
         let no_url = PaywallLimits {
             checkout_url: None,
@@ -740,35 +1185,43 @@ mod tests {
 
         assert_eq!(
             build_nudge_message(&PaywallState::TopupRequired, Some(&with_url)),
-            "Heads up — running low on credits. Call the `topup` tool to add more, or [Open checkout](https://pay.test/x)."
+            "Heads up — running low on credits. Call the `account` tool with view: 'topup' to add more, or [Open checkout](https://pay.test/x)."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::TopupRequired, Some(&no_url)),
-            "Heads up — running low on credits. Call the `topup` tool to add more."
+            "Heads up — running low on credits. Call the `account` tool with view: 'topup' to add more."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::UpgradeRequired, Some(&with_url)),
-            "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom, or [Open checkout](https://pay.test/x)."
+            "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom, or [Open checkout](https://pay.test/x)."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::UpgradeRequired, None),
-            "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom."
+            "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::ActivationRequired, Some(&empty_url)),
-            "Heads up — this plan still needs activation. Call the `activate_plan` tool."
+            "Heads up — this plan still needs activation. Call the `activate_plan` tool with a `planRef`."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::ActivationRequired, Some(&with_url)),
-            "Heads up — this plan still needs activation. Call the `activate_plan` tool, or [Open checkout](https://pay.test/x)."
+            "Heads up — this plan still needs activation. Call the `activate_plan` tool with a `planRef`, or [Open checkout](https://pay.test/x)."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::ReactivationRequired, Some(&with_url)),
-            "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it, or [Open checkout](https://pay.test/x)."
+            "Heads up — your plan is no longer active. Call the `account` tool with view: 'account' to reactivate it, or [Open checkout](https://pay.test/x)."
         );
         assert_eq!(
             build_nudge_message(&PaywallState::ReactivationRequired, Some(&no_url)),
-            "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it."
+            "Heads up — your plan is no longer active. Call the `account` tool with view: 'account' to reactivate it."
+        );
+        let zero_calls = PaywallLimits {
+            remaining: Some(0.0),
+            ..with_url.clone()
+        };
+        assert_eq!(
+            build_nudge_message(&PaywallState::TopupRequired, Some(&zero_calls)),
+            "Heads up — 0 calls left — the next call needs a top-up. Call the `account` tool with view: 'topup' to add more, or [Open checkout](https://pay.test/x)."
         );
     }
 

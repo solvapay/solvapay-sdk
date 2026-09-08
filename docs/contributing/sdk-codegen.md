@@ -256,7 +256,7 @@ Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`)
 ### C ABI
 
 `sdks/capi/` dispatch is generated (`Toolchain::C`, `--c-bindings-out`). The
-C fixture census (`sdks/capi/ctest/contract.sh`) replays all 741 golden
+C fixture census (`sdks/capi/ctest/contract.sh`) replays all 762 golden
 fixtures via a test-only fixture-host feature. Signature parity is
 `--c-parity-out`.
 

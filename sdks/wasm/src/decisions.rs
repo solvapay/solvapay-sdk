@@ -10,21 +10,21 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    assert_valid_product_ref, attach_business_details_validation_error, billing_cycle,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_paywall_gate, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, counts_usage,
-    credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
+    append_paid_tool_description, assert_valid_product_ref,
+    attach_business_details_validation_error, billing_cycle, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate, charges,
+    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options, counts_usage,
+    credit_signals, credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
     derive_default_view, ensure_customer_next, evaluate_balance_observation,
     evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
     evaluate_product_readiness, extract_backend_customer_ref, format_compact_credits, gate_next,
     get_history_next, headline_charges, history_rows, included_units, is_cached_customer_ref_valid,
-    is_email_conflict, is_error_result, map_route_error, meter_name, normalize_cancel_response,
-    normalize_reactivate_response, paywall_client_payload, paywall_structured_content_schema,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_pricing_shape,
-    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
-    require_product_ref, resolve_account_state, resolve_authenticated_user,
+    is_email_conflict, is_error_result, link_label, map_route_error, meter_name, next_action_for,
+    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
+    paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
+    plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
+    project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
     resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
@@ -790,6 +790,18 @@ pub fn assert_valid_product_ref_binding(args_json: String) -> String {
     })
 }
 
+// --- paywall ---
+
+/// Binding for `creditSignals`.
+#[wasm_bindgen(js_name = "creditSignals")]
+pub fn credit_signals_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
+        to_value(&credit_signals(limits.as_ref()))
+    })
+}
+
 // --- paywall-decision ---
 
 /// Binding for `ensureCustomerNext`.
@@ -812,6 +824,18 @@ pub fn charges_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let priced = optional_value(&args, "priced");
         to_value(&charges(priced.as_ref()))
+    })
+}
+
+// --- paywall ---
+
+/// Binding for `nextActionFor`.
+#[wasm_bindgen(js_name = "nextActionFor")]
+pub fn next_action_for_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = require_typed::<PaywallState>(&args, "state")?;
+        to_value(&next_action_for(&state))
     })
 }
 
@@ -852,6 +876,20 @@ pub fn headline_charges_binding(args_json: String) -> String {
     })
 }
 
+// --- paywall ---
+
+/// Binding for `linkLabel`.
+#[wasm_bindgen(js_name = "linkLabel")]
+pub fn link_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let name = require_string(&args, "name")?;
+        Ok(Value::String(link_label(&name).to_owned()))
+    })
+}
+
+// --- plans ---
+
 /// Binding for `perUnitCharge`.
 #[wasm_bindgen(js_name = "perUnitCharge")]
 pub fn per_unit_charge_binding(args_json: String) -> String {
@@ -862,6 +900,32 @@ pub fn per_unit_charge_binding(args_json: String) -> String {
         to_value(&per_unit_charge(priced.as_ref(), meter.as_deref()))
     })
 }
+
+// --- paywall ---
+
+/// Binding for `planLadder`.
+#[wasm_bindgen(js_name = "planLadder")]
+pub fn plan_ladder_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let gate = require_typed::<GateContent>(&args, "gate")?;
+        to_value(&plan_ladder(&gate))
+    })
+}
+
+/// Binding for `appendPaidToolDescription`.
+#[wasm_bindgen(js_name = "appendPaidToolDescription")]
+pub fn append_paid_tool_description_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let description = optional_string(&args, "description")?;
+        Ok(Value::String(
+            append_paid_tool_description(description.as_deref()).to_owned(),
+        ))
+    })
+}
+
+// --- plans ---
 
 /// Binding for `billingCycle`.
 #[wasm_bindgen(js_name = "billingCycle")]

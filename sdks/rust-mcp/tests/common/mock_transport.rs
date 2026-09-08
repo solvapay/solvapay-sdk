@@ -30,6 +30,7 @@ impl Transport for MockTransport {
                 return Ok(HttpResponse {
                     status: 200,
                     body: serde_json::to_vec(&self.limits).expect("limits json"),
+                    content_type: None,
                 });
             }
             if req.method == Method::Post && req.url.contains("/v1/sdk/usages") {
@@ -39,6 +40,7 @@ impl Transport for MockTransport {
                 return Ok(HttpResponse {
                     status: 200,
                     body: br#"{"reference":"usg_test","outcome":"success"}"#.to_vec(),
+                    content_type: None,
                 });
             }
             Err(SdkError::transport(

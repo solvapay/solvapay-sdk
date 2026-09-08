@@ -74,6 +74,13 @@ export function narrateActivatePlan(data: BootstrapPayload): NarratorOutput {
   return narrate('activate_plan', data)
 }
 
+/** Copy for `activate_plan` when the backend reports `already_active`. */
+export function narrateAlreadyActive(data: BootstrapPayload): NarratorOutput {
+  return asNarratorOutput(
+    callMcpSyncOp<NarrateEnvelope>('mcpNarrate', { tool: 'already_active', payload: data }),
+  )
+}
+
 export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorOutput> = {
   checkout: narrateUpgrade,
   account: narrateManageAccount,

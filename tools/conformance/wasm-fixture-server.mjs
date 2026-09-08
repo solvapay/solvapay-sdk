@@ -93,11 +93,12 @@ async function handle(req, res) {
     return
   }
 
-  const { status, body } = entry.wire.response
+  const { status, body, contentType } = entry.wire.response
   const bodyBuf = responseBodyBytes(body)
   res.writeHead(status, {
     'content-type':
-      typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
+      contentType ??
+      (typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8'),
     'content-length': bodyBuf.length,
   })
   res.end(bodyBuf)

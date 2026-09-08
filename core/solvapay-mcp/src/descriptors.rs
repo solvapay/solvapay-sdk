@@ -113,20 +113,38 @@ fn output_schema_for(name: &str) -> Option<Value> {
     }
 }
 
-fn bootstrap_output_schema() -> Value {
+/// JSON Schema for `{ error, status, details? }` so tool errors validate.
+fn tool_error_envelope_schema() -> Value {
     json!({
         "type": "object",
-        "additionalProperties": true,
+        "required": ["error", "status"],
         "properties": {
-            "view": { "type": "string" },
-            "productRef": { "type": "string" },
-            "checkoutUrl": { "type": ["string", "null"] },
-            "portalUrl": { "type": ["string", "null"] },
-            "plans": { "type": "array" },
-            "customer": {},
-            "product": {},
-            "merchant": {}
+            "error": { "type": "string" },
+            "status": { "type": "number" },
+            "details": { "type": "string" }
         }
+    })
+}
+
+fn bootstrap_output_schema() -> Value {
+    json!({
+        "anyOf": [
+            {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "view": { "type": "string" },
+                    "productRef": { "type": "string" },
+                    "checkoutUrl": { "type": ["string", "null"] },
+                    "portalUrl": { "type": ["string", "null"] },
+                    "plans": { "type": "array" },
+                    "customer": {},
+                    "product": {},
+                    "merchant": {}
+                }
+            },
+            tool_error_envelope_schema()
+        ]
     })
 }
 
@@ -137,6 +155,12 @@ pub fn union_payable_output_schema(merchant: &Value) -> Value {
     json!({
         "oneOf": [merchant, paywall_structured_content_schema()]
     })
+}
+
+/// Append the paid-tool account hint. See [`solvapay_core::append_paid_tool_description`].
+#[must_use]
+pub fn append_paid_tool_description(description: Option<&str>) -> String {
+    solvapay_core::append_paid_tool_description(description)
 }
 
 fn view_schema(views: Option<&[String]>) -> Value {

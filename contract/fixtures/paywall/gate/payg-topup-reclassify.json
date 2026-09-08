@@ -33,8 +33,9 @@
     "result": {
       "kind": "activation_required",
       "product": "prd_demo",
-      "message": "You're out of credits. Top up first ($10.00 \u00b7 $25.00 \u00b7 $50.00 \u00b7 $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
       "checkoutUrl": "https://pay.test/x",
+      "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+      "shortMessage": "Activation required",
       "plans": [
         {
           "reference": "pl_pro",
@@ -52,9 +53,16 @@
         "creditsPerUnit": 1,
         "currency": "usd"
       },
-      "shortMessage": "Activation required",
       "planRef": "pl_pro",
-      "creditBalance": 0
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 1,
+      "shortfallCredits": 1,
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.test/x"
+      }
     }
   }
 }

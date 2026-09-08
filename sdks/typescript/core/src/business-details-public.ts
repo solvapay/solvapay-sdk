@@ -14,6 +14,7 @@ export {
   TAX_EXCLUSIVE_CURRENCIES,
   TAX_ID_EXAMPLE_BY_COUNTRY,
   TAX_ID_TYPES,
+  isTaxIdType,
   type BusinessCountryOption,
   type BusinessDetails,
   type BusinessDetailsInput,

@@ -134,6 +134,7 @@ def _dispatch_client(fixture: Fixture, snake: str) -> Outcome:
     with StubBackend(
         response_status=wire.response.status,
         response_body=wire.response.body,
+        response_content_type=wire.response.content_type,
     ) as stub:
         client = SolvaPayClient._for_fixtures(  # type: ignore[attr-defined]
             API_KEY,

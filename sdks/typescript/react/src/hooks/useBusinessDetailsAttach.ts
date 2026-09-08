@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  TAX_ID_TYPES,
+  isTaxIdType,
   getCustomerAddressFieldErrors,
   isCustomerAddressComplete,
   validateBusinessDetails,
@@ -34,7 +34,7 @@ function customerAddressFieldErrors(input: BusinessDetailsInput): BusinessFieldE
 }
 
 function taxIdTypeFromInput(value: unknown): TaxIdType | undefined {
-  return TAX_ID_TYPES.find(candidate => candidate === value)
+  return typeof value === 'string' && isTaxIdType(value) ? value : undefined
 }
 
 export type AttachBusinessDetailsFn = (params: {

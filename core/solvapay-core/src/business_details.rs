@@ -1428,6 +1428,43 @@ pub fn derive_tax_id_type(country: &str) -> Option<TaxIdType> {
     find_country(country).map(|c| c.tax_id_type)
 }
 
+/// Frozen set of supported tax ID type wire values.
+///
+/// # Returns
+///
+/// The Stripe-aligned tax ID types SolvaPay accepts on business details.
+#[must_use]
+#[crate::solvapay_export(
+    id = "TAX_ID_TYPES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 17
+)]
+pub fn tax_id_types() -> &'static [&'static str] {
+    &TAX_ID_TYPES
+}
+
+/// Whether `value` is a supported [`TAX_ID_TYPES`] wire value.
+///
+/// # Arguments
+///
+/// * `value` - Candidate tax ID type string.
+///
+/// # Returns
+///
+/// `true` when `value` is exactly one of [`TAX_ID_TYPES`].
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 18
+)]
+pub fn is_tax_id_type(value: &str) -> bool {
+    TAX_ID_TYPES.contains(&value)
+}
+
 /// Example tax ID for a supported country.
 ///
 /// # Arguments
@@ -1795,6 +1832,21 @@ mod tests {
             }
             ValidateBusinessDetailsResult::Failure { .. } => panic!("expected success"),
         }
+    }
+
+    #[test]
+    fn tax_id_types_match_business_details_dto_enum() {
+        for ty in TAX_ID_TYPES {
+            let parsed: solvapay_dto::BusinessDetailsDtoTaxIdType =
+                serde_json::from_value(json!(ty)).unwrap_or_else(|err| {
+                    panic!("{ty} must be a BusinessDetailsDto.taxIdType variant: {err}")
+                });
+            let again = serde_json::to_value(parsed).expect("serialize dto tax id type");
+            assert_eq!(again, json!(ty));
+            assert!(is_tax_id_type(ty));
+        }
+        assert_eq!(tax_id_types(), TAX_ID_TYPES.as_slice());
+        assert!(!is_tax_id_type("ae_trn"));
     }
 
     #[test]

@@ -14,12 +14,13 @@ use solvapay_core::{
     get_postal_code_field_label, get_postal_code_placeholder,
     get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
     get_tax_id_field_label, get_tax_id_helper_text, is_customer_address_complete,
-    is_postal_code_required, is_state_required, is_unlimited_remaining, is_zero_decimal_currency,
-    minor_units_per_major, postal_code_required_countries, resolve_buyer_country,
-    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
-    reverse_charge_note, seller_tax_identifier_display_label_by_type, should_show_tax_row,
-    state_required_countries, tax_not_collected_note, to_major_units, validate_business_details,
-    BusinessDetailsInput, CreditsToDisplayInput, SdkError, SellerIdentityInput,
+    is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
+    is_zero_decimal_currency, minor_units_per_major, postal_code_required_countries,
+    resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
+    resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
+    should_show_tax_row, state_required_countries, tax_id_types, tax_not_collected_note,
+    to_major_units, validate_business_details, BusinessDetailsInput, CreditsToDisplayInput,
+    SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
@@ -461,6 +462,25 @@ pub fn state_required_countries_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
         to_value(&state_required_countries())
+    })
+}
+
+/// Binding for `TAX_ID_TYPES`.
+#[wasm_bindgen(js_name = "TAX_ID_TYPES")]
+pub fn tax_id_types_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_id_types())
+    })
+}
+
+/// Binding for `isTaxIdType`.
+#[wasm_bindgen(js_name = "isTaxIdType")]
+pub fn is_tax_id_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(is_tax_id_type(&value)))
     })
 }
 

@@ -121,6 +121,21 @@ export function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType {
 }
 
 /**
+ * Whether a string is a supported tax ID type.
+ * @param value Candidate tax ID type wire value.
+ * @returns True when the value is one of TAX_ID_TYPES.
+ */
+export function isTaxIdType(value: string): boolean {
+  return dispatchSync('isTaxIdType', { value })
+}
+
+/**
+ * Frozen set of supported tax ID type values.
+ * @returns Tax ID type list.
+ */
+export function TAX_ID_TYPES(): string[] { return dispatchSync('TAX_ID_TYPES', {}) }
+
+/**
  * Resolve inclusive vs exclusive tax behavior for a currency/country pair.
  * @returns Resolved tax behavior.
  */

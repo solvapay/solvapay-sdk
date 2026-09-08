@@ -48,6 +48,20 @@ pub enum CreditDisplayBlockRateSource {
     Parity,
 }
 
+/// Enum for `LimitResponseWithPlan.paywallReason`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LimitResponseWithPlanPaywallReason {
+    /// Wire value `activation_required`.
+    #[serde(rename = "activation_required")]
+    ActivationRequired,
+    /// Wire value `payment_required`.
+    #[serde(rename = "payment_required")]
+    PaymentRequired,
+    /// Wire value `topup_required`.
+    #[serde(rename = "topup_required")]
+    TopupRequired,
+}
+
 /// Enum for `RetryOptions.backoffStrategy`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RetryOptionsBackoffStrategy {
@@ -534,15 +548,28 @@ pub struct GetUserInfoParams {
     pub product_ref: String,
 }
 
-/// SDK overlay extending `LimitResponse`.
+/// Per-provider auto-recharge snapshot on a limits response. Workaround until the backend DTO ships this schema.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct LimitResponseWithPlan {
+pub struct LimitAutoRechargeDto {
+    /// Overlay field.
+    #[serde(rename = "enabled")]
+    pub enabled: bool,
+    /// Overlay field.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Limit plan row plus an optional per-plan checkout deep link. Workaround until LimitPlanItemDto.checkoutUrl ships in OpenAPI.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LimitPlanItemWithCheckout {
     /// Flattened base DTO fields.
     #[serde(flatten)]
-    pub base: schemas::LimitResponse,
+    pub base: schemas::LimitPlanItemDto,
     /// Overlay field.
-    #[serde(rename = "plan")]
-    pub plan: String,
+    #[serde(rename = "checkoutUrl")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkout_url: Option<String>,
 }
 
 /// List of `Plan`.
@@ -1060,6 +1087,42 @@ pub struct GetCustomerBalanceResult {
     #[serde(rename = "minorUnitsPerMajor")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_units_per_major: Option<f64>,
+}
+
+/// LimitResponse plus SDK-only recovery fields the backend already sends on some denials. Drop the overlay fields when OpenAPI catches up. `plan` is deprecated and optional — the backend never sends it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LimitResponseWithPlan {
+    /// Flattened base DTO fields.
+    #[serde(flatten)]
+    pub base: schemas::LimitResponse,
+    /// Overlay field.
+    #[serde(rename = "autoRecharge")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_recharge: Option<LimitAutoRechargeDto>,
+    /// Overlay field.
+    #[serde(rename = "paywallReason")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paywall_reason: Option<LimitResponseWithPlanPaywallReason>,
+    /// Deprecated alias of planRef. The backend never populates this.
+    #[serde(rename = "plan")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "planName")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_name: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "planRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_ref: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "plans")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plans: Option<Vec<LimitPlanItemWithCheckout>>,
+    /// Overlay field.
+    #[serde(rename = "purchaseRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purchase_ref: Option<String>,
 }
 
 /// SDK-only type `RetryOptions`.

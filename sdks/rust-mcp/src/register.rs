@@ -91,10 +91,7 @@ pub fn register_payable_tool<S: Send + Sync + 'static>(
         return Err(PayableError::Handler("product is required".to_owned()));
     }
     let schema = compile_input_schema(tool.input_schema.as_ref())?;
-    let description = tool
-        .description
-        .clone()
-        .unwrap_or_else(|| format!("Payable tool {}", tool.name));
+    let description = solvapay_mcp_core::append_paid_tool_description(tool.description.as_deref());
     let mut attr = Tool::new(tool.name.clone(), description, Arc::new(schema));
     if let Some(title) = tool.title.clone() {
         attr = attr.with_title(title);

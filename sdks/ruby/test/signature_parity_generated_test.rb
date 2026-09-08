@@ -56,6 +56,7 @@ class SignatureParityGeneratedTest < Minitest::Test
   }.freeze
 
   GENERATED_HELPERS = %w[
+    append_paid_tool_description
     assert_valid_product_ref
     billing_cycle
     build_customer_snapshot
@@ -65,6 +66,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     charges
     classify_paywall_state
     counts_usage
+    credit_signals
     credits_per_unit_from_balance
     credits_to_display_minor_units
     derive_tax_id_type
@@ -83,14 +85,18 @@ class SignatureParityGeneratedTest < Minitest::Test
     included_units
     is_postal_code_required
     is_state_required
+    is_tax_id_type
     is_unlimited_remaining
     is_zero_decimal_currency
+    link_label
     meter_name
     minor_units_per_major
+    next_action_for
     paywall_error_to_client_payload
     paywall_structured_content_schema
     pegged_credits_per_unit
     per_unit_charge
+    plan_ladder
     plan_pricing_shape
     postal_code_required_countries
     require_product_ref

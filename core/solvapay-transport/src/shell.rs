@@ -248,7 +248,12 @@ impl ClientShell {
         if (200..300).contains(&response.status) {
             return parse_success_body(&response.body);
         }
-        Err(map_api_error(template, response.status, &response.body))
+        Err(map_api_error(
+            template,
+            response.status,
+            &response.body,
+            response.content_type.as_deref(),
+        ))
     }
 
     /// Executes one shell request with auth / idempotency / retry, returning the raw
@@ -554,13 +559,48 @@ fn parse_success_body(body: &[u8]) -> Result<Value, SdkError> {
 }
 
 /// Maps a non-2xx response to [`SdkError::Api`] via a manifest message template.
-fn map_api_error(template: &str, status: u16, body: &[u8]) -> SdkError {
+pub(crate) fn map_api_error(
+    template: &str,
+    status: u16,
+    body: &[u8],
+    content_type: Option<&str>,
+) -> SdkError {
     let body_text = String::from_utf8_lossy(body);
+    if is_non_json_response(content_type, &body_text) {
+        let preview = truncate_chars(body_text.trim(), 240);
+        let ct_label = content_type.unwrap_or("unknown");
+        let named = format!("non-JSON response ({ct_label}): {preview}");
+        let status_str = status.to_string();
+        let mut vars = BTreeMap::new();
+        vars.insert("status", status_str.as_str());
+        vars.insert("body", named.as_str());
+        return SdkError::api_from_template(
+            template,
+            &vars,
+            Some(status),
+            Some("non_json_response".to_owned()),
+        );
+    }
     let status_str = status.to_string();
     let mut vars = BTreeMap::new();
     vars.insert("status", status_str.as_str());
     vars.insert("body", body_text.as_ref());
     SdkError::api_from_template(template, &vars, Some(status), None)
+}
+
+/// True when the content type is not JSON or the body looks like HTML.
+fn is_non_json_response(content_type: Option<&str>, body: &str) -> bool {
+    let type_lacks_json = content_type.is_some_and(|ct| !ct.to_ascii_lowercase().contains("json"));
+    type_lacks_json || body.trim_start().starts_with('<')
+}
+
+/// Truncate to `max_chars` Unicode scalars and append an ellipsis when cut.
+fn truncate_chars(text: &str, max_chars: usize) -> String {
+    let mut truncated = text.chars().take(max_chars).collect::<String>();
+    if text.chars().count() > max_chars {
+        truncated.push('…');
+    }
+    truncated
 }
 
 #[cfg(test)]
@@ -679,6 +719,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{"ok":true}"#.to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(Arc::clone(&mock), "sk_test_fixture")
                 .with_base_url("https://api.solvapay.com");
@@ -712,6 +753,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"[]"#.to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(Arc::clone(&mock), "sk_test").with_base_url("http://mock");
             let mut query = BTreeMap::new();
@@ -772,6 +814,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{}"#.to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(Arc::clone(&mock), "sk_test").with_base_url("http://mock");
             let _ = shell
@@ -798,6 +841,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{}"#.to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(Arc::clone(&mock), "sk_test").with_base_url("http://mock");
             let _ = shell
@@ -823,6 +867,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{}"#.to_vec(),
+                content_type: None,
             })]);
             let mut vars = BTreeMap::new();
             vars.insert("planRef", "plan_basic".to_owned());
@@ -858,6 +903,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 400,
                 body: b"bad".to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(mock, "sk_test").with_base_url("http://mock");
             let err = shell
@@ -887,6 +933,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 404,
                 body: b"gone".to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(mock, "sk_test").with_base_url("http://mock");
             let response = shell
@@ -930,6 +977,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 200,
                 body: br#"{"plan":"plan_basic","remaining":10}"#.to_vec(),
+                content_type: None,
             })]);
             let shell = shell_with_mock(mock, "sk_test").with_base_url("http://mock");
             let value = shell
@@ -954,6 +1002,7 @@ mod tests {
                 Ok(HttpResponse {
                     status: 200,
                     body: br#"{"ok":true}"#.to_vec(),
+                    content_type: None,
                 }),
             ]);
             let delays = Arc::new(Mutex::new(Vec::new()));
@@ -1012,6 +1061,7 @@ mod tests {
             let mock = MockTransport::new(vec![Ok(HttpResponse {
                 status: 500,
                 body: b"nope".to_vec(),
+                content_type: None,
             })]);
             let delays = Arc::new(Mutex::new(Vec::new()));
             let shell = shell_with_mock(Arc::clone(&mock), "sk_test")
@@ -1038,6 +1088,47 @@ mod tests {
             ));
             assert_eq!(mock.recorded().len(), 1);
             assert!(delays.lock().expect("lock").is_empty());
+        }
+
+        #[tokio::test]
+        async fn html_404_is_non_json_response_with_truncated_body() {
+            let html = format!("<html>{}</html>", "x".repeat(400));
+            let mock = MockTransport::new(vec![Ok(HttpResponse {
+                status: 404,
+                body: html.as_bytes().to_vec(),
+                content_type: Some("text/html".to_owned()),
+            })]);
+            let shell = shell_with_mock(Arc::clone(&mock), "sk_test").with_base_url("http://mock");
+            let err = shell
+                .execute(ShellRequest {
+                    method: Method::Get,
+                    path: "/v1/sdk/x".to_owned(),
+                    query: BTreeMap::new(),
+                    body: None,
+                    idempotency: Idempotency::None,
+                    error_template: "failed ({status}): {body}",
+                })
+                .await
+                .expect_err("404 html");
+            match err {
+                SdkError::Api {
+                    message,
+                    status,
+                    code,
+                } => {
+                    assert_eq!(status, Some(404));
+                    assert_eq!(code.as_deref(), Some("non_json_response"));
+                    assert!(message.contains("text/html"), "{message}");
+                    assert!(message.contains('…'), "{message}");
+                    let preview = message
+                        .split("non-JSON response (text/html): ")
+                        .nth(1)
+                        .expect("named content type");
+                    assert_eq!(preview.chars().count(), 241);
+                    assert!(preview.ends_with('…'));
+                }
+                other => panic!("expected Api error, got {other:?}"),
+            }
         }
 
         #[tokio::test]

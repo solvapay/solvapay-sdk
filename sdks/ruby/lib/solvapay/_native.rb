@@ -108,9 +108,11 @@ module SolvaPay
       STATE_REQUIRED_COUNTRIES
       topup_process_next
       validate_checkout_session_params
+      TAX_ID_TYPES
       is_cached_customer_ref_valid
       mcp_view_maps
       derive_icons
+      is_tax_id_type
       resolve_purchase_customer_ref
       build_tool_descriptor_metadata
       select_active_purchases
@@ -148,13 +150,18 @@ module SolvaPay
       paywall_structured_content_schema
       retry_next_delay_ms
       assert_valid_product_ref
+      credit_signals
       ensure_customer_next
       invoke_payable_next
       charges
+      next_action_for
       resolve_authenticated_user
       evaluate_balance_observation
       headline_charges
+      link_label
       per_unit_charge
+      plan_ladder
+      append_paid_tool_description
       billing_cycle
       trial_days
       included_units

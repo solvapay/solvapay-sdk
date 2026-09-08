@@ -69,12 +69,12 @@ pub use business_details::{
     get_postal_code_field_label, get_postal_code_placeholder, get_state_field_label,
     get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text,
     is_customer_address_complete, is_postal_code_required, is_state_required,
-    is_supported_business_country, postal_code_required_countries, resolve_buyer_country,
-    resolve_tax_behavior, state_required_countries, validate_business_details,
-    BusinessCountryOption, BusinessDetails, BusinessDetailsInput, BusinessDetailsValidationError,
-    BusinessDetailsValidationIssue, TaxIdType, ValidateBusinessDetailsResult,
-    POSTAL_CODE_REQUIRED_COUNTRIES, STATE_REQUIRED_COUNTRIES, TAX_BEHAVIORS,
-    TAX_EXCLUSIVE_CURRENCIES, TAX_ID_TYPES,
+    is_supported_business_country, is_tax_id_type, postal_code_required_countries,
+    resolve_buyer_country, resolve_tax_behavior, state_required_countries, tax_id_types,
+    validate_business_details, BusinessCountryOption, BusinessDetails, BusinessDetailsInput,
+    BusinessDetailsValidationError, BusinessDetailsValidationIssue, TaxIdType,
+    ValidateBusinessDetailsResult, POSTAL_CODE_REQUIRED_COUNTRIES, STATE_REQUIRED_COUNTRIES,
+    TAX_BEHAVIORS, TAX_EXCLUSIVE_CURRENCIES, TAX_ID_TYPES,
 };
 pub use checkout::{resolve_return_url, validate_checkout_session_params};
 pub use credit_display::{
@@ -112,15 +112,15 @@ pub use invoke_payable::{
 };
 pub use limits::{is_unlimited_remaining, resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
-    assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
-    build_prompt_user_message, build_tool_descriptor_metadata, derive_default_view, derive_icons,
-    make_response_result, mcp_tool_names_json, mcp_view_maps, merge_plan, paywall_tool_result,
-    plan_consequence, resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape,
-    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+    append_paid_tool_description, assert_response_result, build_payable_tool_result,
+    build_prompt_descriptor_metadata, build_prompt_user_message, build_tool_descriptor_metadata,
+    derive_default_view, derive_icons, make_response_result, mcp_tool_names_json, mcp_view_maps,
+    merge_plan, paywall_tool_result, plan_consequence, resolve_account_state, resolve_display_mode,
+    resolve_narrator_plan_shape, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, McpContentBlock, McpDisplayModeState, McpPayableToolResult,
     McpPaywallToolResult, McpViewMaps, MerchantBranding, PromptDescriptorMetadata,
     PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
-    MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
+    MCP_TOOL_NAMES, PAID_TOOL_HINT, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
 };
 pub use money_format::{
     format_compact_credits, format_grouped_major, format_major_fixed, format_money_intl,
@@ -144,8 +144,10 @@ pub use paywall_gate::{
 };
 pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};
 pub use paywall_state::{
-    build_gate_message, build_nudge_message, classify_paywall_state, GateContent, IncludedUsage,
-    PaywallBalance, PaywallLimits, PaywallPlanSummary, PaywallState,
+    build_gate_message, build_nudge_message, classify_paywall_state, credit_signals, link_label,
+    next_action_for, plan_ladder, CreditSignals, GateContent, IncludedUsage, PaywallAutoRecharge,
+    PaywallBalance, PaywallLimits, PaywallNextAction, PaywallPlanSummary, PaywallRecoveryLinks,
+    PaywallState,
 };
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{

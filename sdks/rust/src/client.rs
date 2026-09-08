@@ -675,6 +675,7 @@ mod tests {
         let mock = MockTransport::new(vec![Ok(HttpResponse {
             status: 200,
             body: br#"{"displayName":"Acme"}"#.to_vec(),
+            content_type: None,
         })]);
         let client = Client::with_transport(
             mock.clone(),
@@ -697,6 +698,7 @@ mod tests {
         let mock = MockTransport::new(vec![Ok(HttpResponse {
             status: 200,
             body: limits_body.to_vec(),
+            content_type: None,
         })]);
         let client = Client::with_transport(
             mock,
@@ -726,10 +728,12 @@ mod tests {
             Ok(HttpResponse {
                 status: 200,
                 body: limits_body.to_vec(),
+                content_type: None,
             }),
             Ok(HttpResponse {
                 status: 200,
                 body: usage_ok.to_vec(),
+                content_type: None,
             }),
         ]);
         let client = Client::with_transport(
@@ -785,10 +789,12 @@ mod tests {
             Ok(HttpResponse {
                 status: 200,
                 body: limits_body.to_vec(),
+                content_type: None,
             }),
             Ok(HttpResponse {
                 status: 200,
                 body: usage_ok.to_vec(),
+                content_type: None,
             }),
         ]);
         let client = Client::with_transport(
@@ -846,6 +852,7 @@ mod tests {
         let mock = MockTransport::new(vec![Ok(HttpResponse {
             status: 200,
             body: limits_body.to_vec(),
+            content_type: None,
         })]);
         let client = Client::with_transport(
             mock.clone(),

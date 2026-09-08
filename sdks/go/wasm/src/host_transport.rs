@@ -44,6 +44,9 @@ struct WireResponse {
     /// UTF-8 response body (empty string when the host has no body).
     #[serde(default)]
     body: String,
+    /// Optional `Content-Type` observed by the host.
+    #[serde(default, rename = "contentType")]
+    content_type: Option<String>,
 }
 
 /// [`Transport`] implementation that delegates to the host `transport_send`.
@@ -126,5 +129,6 @@ fn call_host(req: &HttpRequest) -> Result<HttpResponse, SdkError> {
     Ok(HttpResponse {
         status: response.status,
         body: response.body.into_bytes(),
+        content_type: response.content_type,
     })
 }

@@ -20,6 +20,11 @@ export type AutoRechargeDisplayBlockRateSource = 'db' | 'fallback' | 'parity'
 export type CreditDisplayBlockRateSource = 'db' | 'fallback' | 'parity'
 
 /**
+ * Enum for `LimitResponseWithPlan.paywallReason`.
+ */
+export type LimitResponseWithPlanPaywallReason = 'activation_required' | 'payment_required' | 'topup_required'
+
+/**
  * Enum for `RetryOptions.backoffStrategy`.
  */
 export type RetryOptionsBackoffStrategy = 'exponential' | 'fixed' | 'linear'
@@ -395,10 +400,34 @@ export type GetUserInfoParams = {
 }
 
 /**
- * SDK overlay extending `LimitResponse`.
+ * Per-provider auto-recharge snapshot on a limits response. Workaround until the backend DTO ships this schema.
+ */
+export type LimitAutoRechargeDto = {
+  enabled: boolean
+  status?: string
+}
+
+/**
+ * Limit plan row plus an optional per-plan checkout deep link. Workaround until LimitPlanItemDto.checkoutUrl ships in OpenAPI.
+ */
+export type LimitPlanItemWithCheckout = components['schemas']['LimitPlanItemDto'] & {
+  checkoutUrl?: string
+}
+
+/**
+ * LimitResponse plus SDK-only recovery fields the backend already sends on some denials. Drop the overlay fields when OpenAPI catches up. `plan` is deprecated and optional — the backend never sends it.
  */
 export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
-  plan: string
+  autoRecharge?: LimitAutoRechargeDto
+  paywallReason?: LimitResponseWithPlanPaywallReason
+/**
+ * Deprecated alias of planRef. The backend never populates this.
+ */
+  plan?: string
+  planName?: string
+  planRef?: string
+  plans?: Array<LimitPlanItemWithCheckout>
+  purchaseRef?: string
 }
 
 /**

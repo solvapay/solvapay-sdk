@@ -65,9 +65,18 @@ async fn send_with_client(client: &Client, req: HttpRequest) -> Result<HttpRespo
 
     let response = builder.send().await.map_err(map_reqwest_error)?;
     let status = response.status().as_u16();
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
     let body = response.bytes().await.map_err(map_reqwest_error)?.to_vec();
 
-    Ok(HttpResponse { status, body })
+    Ok(HttpResponse {
+        status,
+        body,
+        content_type,
+    })
 }
 
 /// Maps [`Method`] to [`reqwest::Method`].

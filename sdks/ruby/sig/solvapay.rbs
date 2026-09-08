@@ -189,6 +189,7 @@ module SolvaPay
   TAX_ID_EXAMPLE_BY_COUNTRY: untyped
   TAX_ID_TYPES: untyped
   TAX_NOT_COLLECTED_NOTE: untyped
+  def self.append_paid_tool_description: (?description: String) -> untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped
   def self.build_customer_snapshot: (input: Hash[String, untyped]) -> untyped
@@ -198,6 +199,7 @@ module SolvaPay
   def self.charges: (?priced: untyped) -> untyped
   def self.classify_paywall_state: (input: Hash[String, untyped]) -> untyped
   def self.counts_usage: (?priced: untyped) -> untyped
+  def self.credit_signals: (?limits: Hash[String, untyped]) -> untyped
   def self.credits_per_unit_from_balance: (?priced: untyped, ?balance: untyped, ?meter: String) -> untyped
   def self.credits_to_display_minor_units: (credits: Float, credits_per_minor_unit: Float, display_exchange_rate: Float, display_currency: String) -> untyped
   def self.derive_tax_id_type: (country: String) -> untyped
@@ -216,14 +218,18 @@ module SolvaPay
   def self.included_units: (?priced: untyped, ?meter: String) -> untyped
   def self.is_postal_code_required: (country: String) -> untyped
   def self.is_state_required: (country: String) -> untyped
+  def self.is_tax_id_type: (value: String) -> untyped
   def self.is_unlimited_remaining: (remaining: Float) -> untyped
   def self.is_zero_decimal_currency: (currency: String) -> untyped
+  def self.link_label: (name: String) -> untyped
   def self.meter_name: (?priced: untyped) -> untyped
   def self.minor_units_per_major: (currency: String) -> untyped
+  def self.next_action_for: (state: Hash[String, untyped]) -> untyped
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
   def self.paywall_structured_content_schema: () -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped
   def self.per_unit_charge: (?priced: untyped, ?meter: String) -> untyped
+  def self.plan_ladder: (gate: Hash[String, untyped]) -> untyped
   def self.plan_pricing_shape: (?priced: untyped) -> untyped
   def self.postal_code_required_countries: () -> untyped
   def self.require_product_ref: (?metadata_product: String, ?env_product: String) -> untyped

@@ -48,6 +48,7 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "builtin-tools/account-topup.json",
     "builtin-tools/account-view-account.json",
     "builtin-tools/account.json",
+    "builtin-tools/activate-plan-already-active.json",
     "builtin-tools/activate-plan-no-ref.json",
     "builtin-tools/activate-plan.json",
     "builtin-tools/attach-business-details-unauth.json",
@@ -109,6 +110,8 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "hide-tools/openai-visibility-private.json",
     "hide-tools/ua-spoof.json",
     "narrate/activate-plan.json",
+    "narrate/already-active-shortfall.json",
+    "narrate/already-active.json",
     "narrate/manage-account-active.json",
     "narrate/manage-account.json",
     "narrate/mode-auto.json",
@@ -315,7 +318,8 @@ fn replays_core_ops() {
                     .expect("payable advertised");
                 assert_eq!(echo["title"], "Echo paid", "{rel}");
                 assert_eq!(
-                    echo["description"], "Echo arguments after a paid gate",
+                    echo["description"],
+                    "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call.",
                     "{rel}"
                 );
                 assert_eq!(

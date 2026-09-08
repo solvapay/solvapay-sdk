@@ -6,9 +6,14 @@
  */
 
 export type { PaywallState } from './types/paywall'
+export type { CreditSignals } from '@solvapay/core'
 export {
   buildCustomerSnapshot,
   buildGateMessage,
   buildNudgeMessage,
   classifyPaywallState,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
 } from './native-decisions'

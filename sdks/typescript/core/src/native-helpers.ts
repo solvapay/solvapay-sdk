@@ -37,10 +37,27 @@ import type { PlansHelperError } from './plans'
 import type { ProductHelperError } from './product'
 import type { RenewalHelperError } from './renewal'
 import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
-import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, McpDisplayModeState, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'
+import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'
 import type { BalancePegLike, PricedLike } from './pricing-options-types'
 
 export type NarratorPlanShape = 'trial' | 'free' | 'recurring-metered' | 'recurring-unlimited' | 'usage-based'
+
+type PaywallLimits = PaywallDecisionLimits
+type PaywallState =
+  | 'activation_required'
+  | 'topup_required'
+  | 'upgrade_required'
+  | 'reactivation_required'
+  | 'limit_reached'
+type GateContent = {
+  planRef?: string | null
+  plans?: Array<{
+    reference: string
+    name?: string | null
+    price?: number | null
+    checkoutUrl?: string | null
+  }> | null
+}
 
 // --- customer-sync ---
 
@@ -249,6 +266,49 @@ export function classifyCancelError(message: string): RenewalHelperError {
 
 export function classifyReactivateError(message: string): RenewalHelperError {
   return dispatchSync('classifyReactivateError', { message })
+}
+
+/**
+ * Append the paid-tool account hint to a merchant tool description.
+ * @param description Optional merchant-authored description; trailing whitespace is stripped.
+ * @returns Description plus hint, or the hint alone when no description is present.
+ */
+export function appendPaidToolDescription(description: string | null | undefined): string {
+  return dispatchSync('appendPaidToolDescription', { description: description ?? null })
+}
+
+/**
+ * Coalesce credit-balance channels and derive shortfall and remaining-call counts.
+ * @param limits Limits response, or null/absent when no check has run.
+ * @returns Credit signals including isCreditBased and optional shortfall fields.
+ */
+export function creditSignals(limits: PaywallLimits): CreditSignals {
+  return dispatchSync('creditSignals', { limits })
+}
+
+/**
+ * Escape markdown link-label delimiters in a provider-authored plan name.
+ * @param name Plan display name or reference.
+ * @returns Label safe to embed in a markdown link.
+ */
+export function linkLabel(name: string): string { return dispatchSync('linkLabel', { name }) }
+
+/**
+ * Map a classified paywall state to its single primary recovery action.
+ * @param state Classified paywall state.
+ * @returns Primary recovery action (topup, checkout, activate, or account).
+ */
+export function nextActionFor(state: PaywallState): PaywallNextAction {
+  return dispatchSync('nextActionFor', { state })
+}
+
+/**
+ * Build a cheapest-first markdown checkout ladder from gate plans.
+ * @param gate Gate content carrying plans and the active planRef.
+ * @returns Joined markdown links, or null when no plan has a checkoutUrl.
+ */
+export function planLadder(gate: GateContent): string | null {
+  return dispatchSync('planLadder', { gate })
 }
 
 // --- usage ---

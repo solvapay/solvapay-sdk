@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Your plan needs activation. Call the `activate_plan` tool. See docs://solvapay/overview.md."
+    "result": "Your plan needs activation. Call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md."
   }
 }

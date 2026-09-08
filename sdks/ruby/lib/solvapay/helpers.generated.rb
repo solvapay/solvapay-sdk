@@ -22,8 +22,20 @@ module SolvaPay
     NativeDispatch.call_sync("STATE_REQUIRED_COUNTRIES", args)
   end
 
+  # Frozen set of supported tax ID type values.
+  # @return Tax ID type list.
+  TAX_ID_TYPES = NativeDispatch.call_sync("TAX_ID_TYPES", {}).freeze
   # Buyer-facing note when tax is not collected on the purchase.
   TAX_NOT_COLLECTED_NOTE = NativeDispatch.call_sync("TAX_NOT_COLLECTED_NOTE", {}).freeze
+  # Append the paid-tool account hint to a merchant tool description.
+  # @param description Optional merchant-authored description; trailing whitespace is stripped.
+  # @return Description plus hint, or the hint alone when no description is present.
+  def self.append_paid_tool_description(description: nil)
+    args = {} #: Hash[String, untyped]
+    args["description"] = description unless description.nil?
+    NativeDispatch.call_sync("append_paid_tool_description", args)
+  end
+
   # Reject empty, placeholder, or non-prd_ product refs at construction time.
   # @return Throws when the ref is not a real prd_ identifier.
   def self.assert_valid_product_ref(product_ref:, context:)
@@ -95,6 +107,15 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["priced"] = priced unless priced.nil?
     NativeDispatch.call_sync("counts_usage", args)
+  end
+
+  # Coalesce credit-balance channels and derive shortfall and remaining-call counts.
+  # @param limits Limits response, or null/absent when no check has run.
+  # @return Credit signals including isCreditBased and optional shortfall fields.
+  def self.credit_signals(limits: nil)
+    args = {} #: Hash[String, untyped]
+    args["limits"] = limits unless limits.nil?
+    NativeDispatch.call_sync("credit_signals", args)
   end
 
   # Credits per metered call when the charge currency matches the balance peg.
@@ -252,6 +273,15 @@ module SolvaPay
     NativeDispatch.call_sync("is_state_required", args)
   end
 
+  # Whether a string is a supported tax ID type.
+  # @param value Candidate tax ID type wire value.
+  # @return True when the value is one of TAX_ID_TYPES.
+  def self.is_tax_id_type(value:)
+    args = {} #: Hash[String, untyped]
+    args["value"] = value
+    NativeDispatch.call_sync("is_tax_id_type", args)
+  end
+
   # Return whether remaining is the backend unlimited sentinel (-1).
   # @return True only when remaining is exactly -1.
   def self.is_unlimited_remaining(remaining:)
@@ -268,6 +298,15 @@ module SolvaPay
     NativeDispatch.call_sync("is_zero_decimal_currency", args)
   end
 
+  # Escape markdown link-label delimiters in a provider-authored plan name.
+  # @param name Plan display name or reference.
+  # @return Label safe to embed in a markdown link.
+  def self.link_label(name:)
+    args = {} #: Hash[String, untyped]
+    args["name"] = name
+    NativeDispatch.call_sync("link_label", args)
+  end
+
   # Read the meter a plan counts against from a per-unit charge, tier, or limit option.
   # @return Meter name, or null when no charge, tier, or limit names one.
   def self.meter_name(priced: nil)
@@ -282,6 +321,15 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["currency"] = currency
     NativeDispatch.call_sync("minor_units_per_major", args)
+  end
+
+  # Map a classified paywall state to its single primary recovery action.
+  # @param state Classified paywall state.
+  # @return Primary recovery action (topup, checkout, activate, or account).
+  def self.next_action_for(state:)
+    args = {} #: Hash[String, untyped]
+    args["state"] = state
+    NativeDispatch.call_sync("next_action_for", args)
   end
 
   # Project a PaywallError into the client-facing payload shape.
@@ -316,6 +364,15 @@ module SolvaPay
     args["priced"] = priced unless priced.nil?
     args["meter"] = meter unless meter.nil?
     NativeDispatch.call_sync("per_unit_charge", args)
+  end
+
+  # Build a cheapest-first markdown checkout ladder from gate plans.
+  # @param gate Gate content carrying plans and the active planRef.
+  # @return Joined markdown links, or null when no plan has a checkoutUrl.
+  def self.plan_ladder(gate:)
+    args = {} #: Hash[String, untyped]
+    args["gate"] = gate
+    NativeDispatch.call_sync("plan_ladder", args)
   end
 
   # Derive the pricing shape a plan-row or narration surface should branch on.

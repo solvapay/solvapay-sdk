@@ -49,34 +49,53 @@
             }
           },
           "outputSchema": {
-            "type": "object",
-            "additionalProperties": true,
-            "properties": {
-              "view": {
-                "type": "string"
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "view": {
+                    "type": "string"
+                  },
+                  "productRef": {
+                    "type": "string"
+                  },
+                  "checkoutUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "portalUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "plans": {
+                    "type": "array"
+                  },
+                  "customer": {},
+                  "product": {},
+                  "merchant": {}
+                }
               },
-              "productRef": {
-                "type": "string"
-              },
-              "checkoutUrl": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "portalUrl": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "plans": {
-                "type": "array"
-              },
-              "customer": {},
-              "product": {},
-              "merchant": {}
-            }
+              {
+                "type": "object",
+                "required": ["error", "status"],
+                "properties": {
+                  "error": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "number"
+                  },
+                  "details": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         },
         {

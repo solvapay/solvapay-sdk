@@ -184,9 +184,11 @@ async fn mount_wire(server: &MockServer, wire: &fixture_runner::Wire) -> Result<
     let status = u16::try_from(wire.response.status)
         .map_err(|_| format!("status out of u16 range: {}", wire.response.status))?;
     let body_bytes = response_body_bytes(&wire.response.body)?;
-    mock.respond_with(ResponseTemplate::new(status).set_body_bytes(body_bytes))
-        .mount(server)
-        .await;
+    let mut template = ResponseTemplate::new(status).set_body_bytes(body_bytes);
+    if let Some(content_type) = &wire.response.content_type {
+        template = template.insert_header("content-type", content_type.as_str());
+    }
+    mock.respond_with(template).mount(server).await;
     Ok(())
 }
 

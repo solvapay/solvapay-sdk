@@ -71,9 +71,13 @@ export {
   buildGateMessage,
   buildNudgeMessage,
   classifyPaywallState,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
 } from './paywall-state'
 export { buildPaywallGate } from './paywall-gate'
-export type { PaywallState } from './paywall-state'
+export type { CreditSignals, PaywallState } from './paywall-state'
 export type { PaywallDecision } from './types/paywall'
 
 // Export types
@@ -81,6 +85,7 @@ export type {
   components,
   LimitActivationBalance,
   LimitActivationProduct,
+  LimitAutoRechargeDto,
   LimitPlanSummary,
   LimitResponseWithPlan,
   SolvaPayClient,
@@ -89,6 +94,8 @@ export type {
   NextAdapterOptions,
   PaywallArgs,
   PaywallMetadata,
+  PaywallNextAction,
+  PaywallReason,
   PaywallStructuredContent,
   RetryOptions,
   WebhookEvent,

@@ -8,6 +8,7 @@ import type { McpServer, RegisteredTool } from '@modelcontextprotocol/server'
 import type { CallToolResult } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import {
+  appendPaidToolDescription,
   buildPayableHandler,
   type McpToolExtra,
   type PayableHandler,
@@ -129,10 +130,7 @@ export function registerPayableTool<
   const registeredOutputSchema =
     outputSchema !== undefined ? z.union([outputSchema, PaywallStructuredContentSchema]) : undefined
 
-  const accountHint = 'Paid tool — call `account` for current balance and cost per call.'
-  const descriptionWithHint = description
-    ? `${description.replace(/\s+$/, '')} ${accountHint}`
-    : accountHint
+  const descriptionWithHint = appendPaidToolDescription(description)
 
   const toolConfig = {
     ...(title !== undefined ? { title } : {}),

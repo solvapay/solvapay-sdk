@@ -11,17 +11,18 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, counts_usage, credits_per_unit_from_balance, credits_to_display_minor_units,
-    derive_default_view, format_money_intl, get_business_country_options, get_history_next,
-    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, headline_charges,
-    included_units, is_error_result, meter_name, minor_units_per_major, normalize_cancel_response,
+    billing_cycle, classify_paywall_state, counts_usage, credit_signals,
+    credits_per_unit_from_balance, credits_to_display_minor_units, derive_default_view,
+    format_money_intl, get_business_country_options, get_history_next, get_tax_id_example,
+    get_tax_id_field_label, get_tax_id_helper_text, headline_charges, included_units,
+    is_error_result, meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
     normalize_reactivate_response, per_unit_charge, project_topup_process_outcome,
     project_usage_snapshot, resolve_purchase_customer_ref, resolve_seller_identity_display,
     select_active_purchases, trial_days, validate_activate_plan_params,
     validate_attach_business_details_params, validate_create_payment_intent_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, CreditsToDisplayInput, GetHistoryAction, SdkError,
-    SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
+    validate_topup_payment_intent_params, CreditsToDisplayInput, GetHistoryAction, PaywallLimits,
+    SdkError, SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
@@ -32,9 +33,9 @@ use solvapay_dto::{
 };
 use solvapay_mcp_core::{
     is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
-    narrated_tool_result, new_widget_session_id, parse_mode, stamp_catalog_result,
-    stamp_complete_result, tool_error_result, tool_result, HandleRequestInput, McpAuthMode,
-    McpDescriptorsInput,
+    narrate_already_active, narrated_tool_result, new_widget_session_id, parse_mode,
+    stamp_catalog_result, stamp_complete_result, tool_error_result, tool_result,
+    HandleRequestInput, McpAuthMode, McpDescriptorsInput,
 };
 
 use crate::client::SolvaPayClient;
@@ -468,6 +469,40 @@ fn format_money_intl_opt(amount_minor: f64, currency: &str) -> Option<String> {
     Some(format_money_intl(amount_minor, currency))
 }
 
+/// Attach `canCall` / remaining-call / next-action fields from a limits body.
+fn attach_customer_credit_fields(customer: &mut Value, limits_value: &Value) {
+    let Some(obj) = customer.as_object_mut() else {
+        return;
+    };
+    if let Some(can_call) = limits_value.get("withinLimits") {
+        if !can_call.is_null() {
+            obj.insert("canCall".to_owned(), can_call.clone());
+        }
+    }
+    let Ok(limits) = serde_json::from_value::<PaywallLimits>(limits_value.clone()) else {
+        return;
+    };
+    let signals = credit_signals(Some(&limits));
+    if let Some(remaining) = signals.remaining_calls {
+        obj.insert("remainingCalls".to_owned(), json!(remaining));
+    }
+    if let Some(cost) = signals.credits_per_call {
+        obj.insert("creditsPerCall".to_owned(), json!(cost));
+    }
+    if let Some(shortfall) = signals.shortfall_credits {
+        obj.insert("shortfallCredits".to_owned(), json!(shortfall));
+    }
+    if let Some(auto) = &limits.auto_recharge {
+        if let Ok(value) = serde_json::to_value(auto) {
+            obj.insert("autoRecharge".to_owned(), value);
+        }
+    }
+    if let Ok(value) = serde_json::to_value(next_action_for(&classify_paywall_state(Some(&limits))))
+    {
+        obj.insert("nextAction".to_owned(), value);
+    }
+}
+
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {
     CheckLimitsRequest {
         customer_ref: Some(customer_ref.to_owned()),
@@ -536,13 +571,13 @@ impl SolvaPayClient {
                     })
                     .await,
                 );
-                let usage = match self
+                let limits_result = self
                     .check_limits(check_limits_request(customer_ref, &params.product_ref))
-                    .await
-                {
-                    Ok(limits) => serde_json::to_value(project_usage_snapshot(None, Some(&limits)))
+                    .await;
+                let usage = match &limits_result {
+                    Ok(limits) => serde_json::to_value(project_usage_snapshot(None, Some(limits)))
                         .unwrap_or(Value::Null),
-                    Err(err) => sdk_error_placeholder(&err),
+                    Err(err) => sdk_error_placeholder(err),
                 };
                 let balance_value = if is_error_result(&balance) {
                     Value::Null
@@ -554,13 +589,17 @@ impl SolvaPayClient {
                 } else {
                     enrich_purchase(purchase_result)
                 };
-                Some(json!({
+                let mut customer = json!({
                     "ref": customer_ref,
                     "purchase": purchase,
                     "paymentMethod": if is_error_result(&payment_method) { Value::Null } else { payment_method },
                     "balance": balance_value,
                     "usage": if is_error_result(&usage) { Value::Null } else { usage },
-                }))
+                });
+                if let Ok(limits_value) = &limits_result {
+                    attach_customer_credit_fields(&mut customer, limits_value);
+                }
+                Some(customer)
             }
         };
 
@@ -1060,6 +1099,15 @@ impl SolvaPayClient {
                         solvapay_dto::error_templates::operations::activate_plan::DEFAULT,
                     )
                     .await?;
+                if activated.get("status").and_then(Value::as_str) == Some("already_active") {
+                    return Ok(json!({
+                        "content": [{
+                            "type": "text",
+                            "text": narrate_already_active(&activated)
+                        }],
+                        "structuredContent": activated,
+                    }));
+                }
                 Ok(wrap_ok(activated))
             }
             other => Err(SdkError::transport(

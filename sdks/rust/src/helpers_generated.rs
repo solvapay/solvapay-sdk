@@ -4,10 +4,11 @@
 
 #[allow(unused_imports)]
 pub use solvapay_core::{
-    BillingCycle, BusinessDetailsInput, Charge, CreditsToDisplayInput, CustomerSnapshot,
-    GateContent, PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
-    PlanPricingShape, ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay,
-    SellerIdentityInput, TaxIdType, UsageRate, ValidateBusinessDetailsResult,
+    BillingCycle, BusinessDetailsInput, Charge, CreditSignals, CreditsToDisplayInput,
+    CustomerSnapshot, GateContent, PaywallClientPayload, PaywallGate, PaywallGateLimits,
+    PaywallLimits, PaywallNextAction, PaywallState, PlanPricingShape, ProductReadinessInput,
+    ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput, TaxIdType, UsageRate,
+    ValidateBusinessDetailsResult,
 };
 
 /// Countries that require a postal or ZIP code for Stripe Tax.
@@ -30,8 +31,26 @@ pub use solvapay_core::seller_identity::seller_tax_identifier_display_label_by_t
 /// Country code list.
 pub use solvapay_core::business_details::state_required_countries;
 
+/// Frozen set of supported tax ID type values.
+///
+/// # Returns
+///
+/// Tax ID type list.
+pub use solvapay_core::business_details::tax_id_types as TAX_ID_TYPES;
+
 /// Buyer-facing note when tax is not collected on the purchase.
 pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_NOTE;
+
+/// Append the paid-tool account hint to a merchant tool description.
+///
+/// # Arguments
+///
+/// * `description` — Optional merchant-authored description; trailing whitespace is stripped.
+///
+/// # Returns
+///
+/// Description plus hint, or the hint alone when no description is present.
+pub use solvapay_core::mcp::append_paid_tool_description;
 
 /// Reject empty, placeholder, or non-prd_ product refs at construction time.
 ///
@@ -95,6 +114,17 @@ pub use solvapay_core::paywall_state::classify_paywall_state;
 ///
 /// Whether the plan has a usage counter even without a per-unit rate.
 pub use solvapay_core::pricing_options::counts_usage;
+
+/// Coalesce credit-balance channels and derive shortfall and remaining-call counts.
+///
+/// # Arguments
+///
+/// * `limits` — Limits response, or null/absent when no check has run.
+///
+/// # Returns
+///
+/// Credit signals including isCreditBased and optional shortfall fields.
+pub use solvapay_core::paywall_state::credit_signals;
 
 /// Credits per metered call when the charge currency matches the balance peg.
 ///
@@ -222,6 +252,17 @@ pub use solvapay_core::business_details::is_postal_code_required;
 /// True when a state or province is required.
 pub use solvapay_core::business_details::is_state_required;
 
+/// Whether a string is a supported tax ID type.
+///
+/// # Arguments
+///
+/// * `value` — Candidate tax ID type wire value.
+///
+/// # Returns
+///
+/// True when the value is one of TAX_ID_TYPES.
+pub use solvapay_core::business_details::is_tax_id_type;
+
 /// Return whether remaining is the backend unlimited sentinel (-1).
 ///
 /// # Returns
@@ -236,6 +277,17 @@ pub use solvapay_core::limits::is_unlimited_remaining;
 /// True when the currency has zero decimal places.
 pub use solvapay_core::credit_display::is_zero_decimal_currency;
 
+/// Escape markdown link-label delimiters in a provider-authored plan name.
+///
+/// # Arguments
+///
+/// * `name` — Plan display name or reference.
+///
+/// # Returns
+///
+/// Label safe to embed in a markdown link.
+pub use solvapay_core::paywall_state::link_label;
+
 /// Read the meter a plan counts against from a per-unit charge, tier, or limit option.
 ///
 /// # Returns
@@ -249,6 +301,17 @@ pub use solvapay_core::pricing_options::meter_name;
 ///
 /// Minor units per major unit.
 pub use solvapay_core::credit_display::minor_units_per_major;
+
+/// Map a classified paywall state to its single primary recovery action.
+///
+/// # Arguments
+///
+/// * `state` — Classified paywall state.
+///
+/// # Returns
+///
+/// Primary recovery action (topup, checkout, activate, or account).
+pub use solvapay_core::paywall_state::next_action_for;
 
 /// Project a PaywallError into the client-facing payload shape.
 ///
@@ -277,6 +340,17 @@ pub use solvapay_core::pricing_options::pegged_credits_per_unit;
 ///
 /// The metered charge, or null when the plan does not meter usage.
 pub use solvapay_core::pricing_options::per_unit_charge;
+
+/// Build a cheapest-first markdown checkout ladder from gate plans.
+///
+/// # Arguments
+///
+/// * `gate` — Gate content carrying plans and the active planRef.
+///
+/// # Returns
+///
+/// Joined markdown links, or null when no plan has a checkoutUrl.
+pub use solvapay_core::paywall_state::plan_ladder;
 
 /// Derive the pricing shape a plan-row or narration surface should branch on.
 ///

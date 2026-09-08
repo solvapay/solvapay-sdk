@@ -225,14 +225,23 @@ def _parse_poll_delays(raw: Any) -> list[int]:
     raise ValueError(f"unsupported poll delays: {raw!r}")
 
 
-def _wire_routes(wire: Wire | None) -> tuple[tuple[str, str, int, Any], ...]:
+def _wire_routes(wire: Wire | None) -> tuple[tuple[str, str, int, Any, str | None], ...]:
     if wire is None:
         return ()
     if wire.exchanges:
         return tuple(
-            (req.method, req.path, resp.status, resp.body) for req, resp in wire.exchanges
+            (req.method, req.path, resp.status, resp.body, resp.content_type)
+            for req, resp in wire.exchanges
         )
-    return ((wire.request.method, wire.request.path, wire.response.status, wire.response.body),)
+    return (
+        (
+            wire.request.method,
+            wire.request.path,
+            wire.response.status,
+            wire.response.body,
+            wire.response.content_type,
+        ),
+    )
 
 
 def _captured_trace(stub: StubBackend) -> list[dict[str, str]]:

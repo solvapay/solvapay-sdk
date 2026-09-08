@@ -103,15 +103,11 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'limit_reached' })
   })
 
-  it('returns topup_required for an exhausted usage-based plan even when the response omits the balance block', () => {
-    // Edge case surfaced by Bugbot: when the backend response resolves
-    // the plan to usage-based via `plans[]` but omits the top-level
-    // `balance` block, `limits.balance?.creditBalance` is `undefined`
-    // — the old strict-zero check fell through to `upgrade_required`
-    // and sent the customer down the wrong recovery path ("pick a
-    // plan" instead of "add credits"). Usage-based + exhausted
-    // (`remaining: 0`) must classify as `topup_required` regardless
-    // of whether the balance block is present.
+  it('returns limit_reached when included usage is exhausted and credit fields are absent', () => {
+    // A live plan/purchase at remaining 0 without credit-field presence
+    // is a cap, not a top-up. Credit shortfall (balance < cost, zero
+    // balance, or remaining 0 with unknown cost) still classifies as
+    // `topup_required` — see the next case.
     const state = classifyPaywallState(
       limits({
         plan: 'pln_usage',
@@ -125,11 +121,10 @@ describe('classifyPaywallState', () => {
             requiresPayment: true,
           },
         ],
-        // No `balance` block — older backend responses may omit it.
         remaining: 0,
       }),
     )
-    expect(state).toEqual({ kind: 'topup_required' })
+    expect(state).toEqual({ kind: 'limit_reached' })
   })
 
   it('returns topup_required when the top-level `creditBalance` field is zero (no nested balance block)', () => {
@@ -285,7 +280,8 @@ describe('buildNudgeMessage', () => {
       { kind: 'upgrade_required' } satisfies PaywallState,
       limits({ remaining: 1, checkoutUrl }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool/)
+    expect(msg).toMatch(/view: 'checkout'/)
     expect(msg).toContain(checkoutUrl)
   })
 })

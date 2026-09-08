@@ -161,6 +161,30 @@ pub fn derive_icons(branding: Option<&MerchantBranding>) -> Option<Vec<ToolIcon>
     None
 }
 
+/// Hint appended to every payable tool description.
+pub const PAID_TOOL_HINT: &str =
+    "Paid tool — call `account` for current balance and cost per call.";
+
+/// Append the paid-tool account hint to a merchant description.
+///
+/// Trailing whitespace is stripped. When `description` is missing or blank,
+/// the hint is returned alone.
+///
+/// # Arguments
+///
+/// * `description` - Optional merchant-authored tool description.
+///
+/// # Returns
+///
+/// Description plus hint, or the hint alone.
+#[must_use]
+pub fn append_paid_tool_description(description: Option<&str>) -> String {
+    match description.map(str::trim_end).filter(|s| !s.is_empty()) {
+        Some(trimmed) => format!("{trimmed} {PAID_TOOL_HINT}"),
+        None => PAID_TOOL_HINT.to_owned(),
+    }
+}
+
 /// Validate `publicBaseUrl` is http(s). Returns frozen error message or `None`.
 #[must_use]
 #[crate::solvapay_export(
@@ -501,6 +525,16 @@ mod tests {
         .unwrap();
         assert_eq!(fallback[0].src, "https://l");
         assert!(fallback[0].sizes.is_none());
+    }
+
+    #[test]
+    fn append_paid_tool_description_trims_and_falls_back() {
+        assert_eq!(append_paid_tool_description(None), PAID_TOOL_HINT);
+        assert_eq!(append_paid_tool_description(Some("   ")), PAID_TOOL_HINT);
+        assert_eq!(
+            append_paid_tool_description(Some("Echo the input.  \n")),
+            format!("Echo the input. {PAID_TOOL_HINT}")
+        );
     }
 
     #[test]

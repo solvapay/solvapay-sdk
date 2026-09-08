@@ -56,6 +56,49 @@
         "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
+    "appendPaidToolDescription": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "assertResponseResult": {
       "capi": {
         "exposed": false,
@@ -1575,6 +1618,50 @@
       },
       "wasm-edge": {
         "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
+    "creditSignals": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
       },
       "wasm-browser": {
         "exposed": false,
@@ -3792,6 +3879,50 @@
         "exposed": true
       }
     },
+    "isTaxIdType": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "isUnlimitedRemaining": {
       "capi": {
         "exposed": false,
@@ -3874,6 +4005,50 @@
       },
       "wasm-browser": {
         "exposed": true
+      }
+    },
+    "linkLabel": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
     "listPlans": {
@@ -4497,6 +4672,50 @@
         "exposed": true
       }
     },
+    "nextActionFor": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
+      }
+    },
     "normalizeCancelResponse": {
       "capi": {
         "exposed": false,
@@ -4837,6 +5056,50 @@
       },
       "wasm-browser": {
         "exposed": true
+      }
+    },
+    "planLadder": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
     "planPricingShape": {
@@ -6126,6 +6389,50 @@
       },
       "wasm-browser": {
         "exposed": true
+      }
+    },
+    "TAX_ID_TYPES": {
+      "capi": {
+        "exposed": false,
+        "reason": "C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table"
+      },
+      "go": {
+        "exposed": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "wasm-edge": {
+        "exposed": false,
+        "reason": "not on the edge wasm-bindgen surface"
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`"
       }
     },
     "TAX_NOT_COLLECTED_NOTE": {

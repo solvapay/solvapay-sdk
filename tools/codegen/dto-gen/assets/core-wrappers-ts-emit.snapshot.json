@@ -18,6 +18,8 @@
         "POSTAL_CODE_REQUIRED_COUNTRIES",
         "STATE_REQUIRED_COUNTRIES",
         "deriveTaxIdType",
+        "isTaxIdType",
+        "TAX_ID_TYPES",
         "resolveTaxBehavior",
         "getTaxIdExample",
         "getTaxIdFieldLabel",
@@ -63,6 +65,11 @@
         "selectActivePurchases",
         "classifyCancelError",
         "classifyReactivateError",
+        "appendPaidToolDescription",
+        "creditSignals",
+        "linkLabel",
+        "nextActionFor",
+        "planLadder",
         "normalizeCancelResponse",
         "normalizeReactivateResponse",
         "validatePurchaseRef",
@@ -128,6 +135,8 @@
         "POSTAL_CODE_REQUIRED_COUNTRIES",
         "STATE_REQUIRED_COUNTRIES",
         "deriveTaxIdType",
+        "isTaxIdType",
+        "TAX_ID_TYPES",
         "resolveTaxBehavior",
         "getTaxIdExample",
         "getTaxIdFieldLabel",
@@ -158,7 +167,7 @@
       }
     },
     "nativeHelpers": {
-      "preamble": "/**\n * Sync helper pure-logic facade (Step 52).\n *\n * Phase-4/5 decision helpers dispatch to napi / WASM via the shared\n * {@link dispatchSync} install. No TypeScript fallback \u2014 uninstalled throws.\n */\n\nimport { dispatchSync } from './native-dispatch'\nimport type { ActivatePlanValidationError } from './activation'\nimport type { CheckoutHelperError } from './checkout'\nimport type {\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  LookupErrorKind,\n} from './customer-sync'\nimport type { RouteErrorInput, RouteErrorResult } from './error'\nimport type { CheckLimitsParams, LimitsHelperError } from './limits'\nimport type {\n  CachedLimitsEvaluation,\n  FreshLimitsEvaluation,\n  PaywallDecisionLimits,\n  PaywallOutcome,\n} from './paywall-decision'\nimport type {\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  TopupProcessOutcome,\n} from './payment'\nimport type { PlansHelperError } from './plans'\nimport type { ProductHelperError } from './product'\nimport type { RenewalHelperError } from './renewal'\nimport type { UsageSnapshot, UsageSnapshotPurchase } from './usage'\nimport type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, McpDisplayModeState, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'\nimport type { BalancePegLike, PricedLike } from './pricing-options-types'\n\nexport type NarratorPlanShape = 'trial' | 'free' | 'recurring-metered' | 'recurring-unlimited' | 'usage-based'\n\n",
+      "preamble": "/**\n * Sync helper pure-logic facade (Step 52).\n *\n * Phase-4/5 decision helpers dispatch to napi / WASM via the shared\n * {@link dispatchSync} install. No TypeScript fallback \u2014 uninstalled throws.\n */\n\nimport { dispatchSync } from './native-dispatch'\nimport type { ActivatePlanValidationError } from './activation'\nimport type { CheckoutHelperError } from './checkout'\nimport type {\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  LookupErrorKind,\n} from './customer-sync'\nimport type { RouteErrorInput, RouteErrorResult } from './error'\nimport type { CheckLimitsParams, LimitsHelperError } from './limits'\nimport type {\n  CachedLimitsEvaluation,\n  FreshLimitsEvaluation,\n  PaywallDecisionLimits,\n  PaywallOutcome,\n} from './paywall-decision'\nimport type {\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  TopupProcessOutcome,\n} from './payment'\nimport type { PlansHelperError } from './plans'\nimport type { ProductHelperError } from './product'\nimport type { RenewalHelperError } from './renewal'\nimport type { UsageSnapshot, UsageSnapshotPurchase } from './usage'\nimport type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'\nimport type { BalancePegLike, PricedLike } from './pricing-options-types'\n\nexport type NarratorPlanShape = 'trial' | 'free' | 'recurring-metered' | 'recurring-unlimited' | 'usage-based'\n\ntype PaywallLimits = PaywallDecisionLimits\ntype PaywallState =\n  | 'activation_required'\n  | 'topup_required'\n  | 'upgrade_required'\n  | 'reactivation_required'\n  | 'limit_reached'\ntype GateContent = {\n  planRef?: string | null\n  plans?: Array<{\n    reference: string\n    name?: string | null\n    price?: number | null\n    checkoutUrl?: string | null\n  }> | null\n}\n\n",
       "symbolOrder": [
         "classifyCustomerRef",
         "coerceCustomerOptions",
@@ -186,6 +195,11 @@
         "normalizeReactivateResponse",
         "classifyCancelError",
         "classifyReactivateError",
+        "appendPaidToolDescription",
+        "creditSignals",
+        "linkLabel",
+        "nextActionFor",
+        "planLadder",
         "projectUsageSnapshot",
         "shouldRetryUsageError",
         "resolveCheckLimitsParams",
@@ -246,7 +260,7 @@
       }
     },
     "nativeDecisions": {
-      "preamble": "/**\n * Sync decision-core dispatch layer (Step 37R-c \u2192 Step 53).\n *\n * Pure logic surfaces (`@solvapay/core` extracts + paywall/retry) dispatch to\n * napi (Node) or WASM (edge) via an *installed* API so this module never\n * statically imports `./native` or `node:module` \u2014 keeping the edge/Deno graph\n * safe.\n *\n * Node entry (`index.ts`) installs napi dispatch; edge entry (`edge.ts`)\n * installs WASM dispatch. After Step 53 the logic is Rust-only: an uninstalled\n * API throws {@link SolvaPayError}. Restoring the old behaviour requires\n * republishing the prior `@solvapay/server` facade.\n */\n\nimport { SolvaPayError } from '@solvapay/core'\nimport type {\n  ActivatePlanValidationError,\n  ActiveProduct,\n  AuthResolutionInput,\n  CachedLimitsEvaluation,\n  CheckoutHelperError,\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  CheckLimitsParams,\n  FreshLimitsEvaluation,\n  LimitsHelperError,\n  LookupErrorKind,\n  McpDisplayModeState,\n  NarratorPlanShape,\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  PaywallDecisionLimits,\n  PaywallOutcome,\n  PlanPricingShape,\n  PlansHelperError,\n  ProductHelperError,\n  RenewalHelperError,\n  RouteErrorInput,\n  RouteErrorResult,\n  TopupProcessOutcome,\n  BalancePegLike,\n  BillingCycle,\n  Charge,\n  PricedLike,\n  Tier,\n  UsageRate,\n  UsageSnapshot,\n  UsageSnapshotPurchase,\n} from '@solvapay/core'\nimport type { NativeSyncMethod } from './native'\nimport type { LimitResponseWithPlan, PaywallStructuredContent } from './types'\nimport type { PaywallState } from './types/paywall'\n\nexport type { PaywallState }\n\n/** Duck-typed error shape \u2014 matches `PaywallError` without importing the class. */\nexport type PaywallErrorLike = {\n  message: string\n  structuredContent: PaywallStructuredContent\n}\n\ntype NativeDecisionApi = {\n  callNativeSync: (fn: NativeSyncMethod, argsJson: string) => unknown\n}\n\nlet installed: NativeDecisionApi | null = null\n\nexport function installNativeDecisionApi(api: NativeDecisionApi): void {\n  installed = api\n}\n\n/** @internal test helper */\nexport function resetNativeDecisionApiForTests(): void {\n  installed = null\n}\n\n/**\n * Dispatches a sync decision/helper method to the installed binding.\n *\n * The install is the gate: Node installs napi dispatch (`index.ts`), edge\n * installs WASM dispatch (`edge.ts`). Throws when uninstalled \u2014 Rust-only after\n * Step 53, no fallback.\n */\nfunction dispatchSync<T>(fn: NativeSyncMethod, args: unknown): T {\n  if (installed === null) {\n    throw new SolvaPayError('server sync API not installed')\n  }\n  return installed.callNativeSync(fn, JSON.stringify(args)) as T\n}\n\n",
+      "preamble": "/**\n * Sync decision-core dispatch layer (Step 37R-c \u2192 Step 53).\n *\n * Pure logic surfaces (`@solvapay/core` extracts + paywall/retry) dispatch to\n * napi (Node) or WASM (edge) via an *installed* API so this module never\n * statically imports `./native` or `node:module` \u2014 keeping the edge/Deno graph\n * safe.\n *\n * Node entry (`index.ts`) installs napi dispatch; edge entry (`edge.ts`)\n * installs WASM dispatch. After Step 53 the logic is Rust-only: an uninstalled\n * API throws {@link SolvaPayError}. Restoring the old behaviour requires\n * republishing the prior `@solvapay/server` facade.\n */\n\nimport { SolvaPayError } from '@solvapay/core'\nimport type {\n  ActivatePlanValidationError,\n  ActiveProduct,\n  AuthResolutionInput,\n  CachedLimitsEvaluation,\n  CheckoutHelperError,\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  CheckLimitsParams,\n  FreshLimitsEvaluation,\n  LimitsHelperError,\n  LookupErrorKind,\n  McpDisplayModeState,\n  NarratorPlanShape,\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  CreditSignals,\n  PaywallDecisionLimits,\n  PaywallNextAction,\n  PaywallOutcome,\n  PlanPricingShape,\n  PlansHelperError,\n  ProductHelperError,\n  RenewalHelperError,\n  RouteErrorInput,\n  RouteErrorResult,\n  TopupProcessOutcome,\n  BalancePegLike,\n  BillingCycle,\n  Charge,\n  PricedLike,\n  Tier,\n  UsageRate,\n  UsageSnapshot,\n  UsageSnapshotPurchase,\n} from '@solvapay/core'\nimport type { NativeSyncMethod } from './native'\nimport type { LimitResponseWithPlan, PaywallStructuredContent } from './types'\nimport type { PaywallState } from './types/paywall'\n\nexport type { PaywallState }\n\ntype PaywallLimits = LimitResponseWithPlan\ntype GateContent = PaywallStructuredContent\n\n/** Duck-typed error shape \u2014 matches `PaywallError` without importing the class. */\nexport type PaywallErrorLike = {\n  message: string\n  structuredContent: PaywallStructuredContent\n}\n\ntype NativeDecisionApi = {\n  callNativeSync: (fn: NativeSyncMethod, argsJson: string) => unknown\n}\n\nlet installed: NativeDecisionApi | null = null\n\nexport function installNativeDecisionApi(api: NativeDecisionApi): void {\n  installed = api\n}\n\n/** @internal test helper */\nexport function resetNativeDecisionApiForTests(): void {\n  installed = null\n}\n\n/**\n * Dispatches a sync decision/helper method to the installed binding.\n *\n * The install is the gate: Node installs napi dispatch (`index.ts`), edge\n * installs WASM dispatch (`edge.ts`). Throws when uninstalled \u2014 Rust-only after\n * Step 53, no fallback.\n */\nfunction dispatchSync<T>(fn: NativeSyncMethod, args: unknown): T {\n  if (installed === null) {\n    throw new SolvaPayError('server sync API not installed')\n  }\n  return installed.callNativeSync(fn, JSON.stringify(args)) as T\n}\n\n",
       "symbolOrder": [
         "classifyCustomerRef",
         "coerceCustomerOptions",
@@ -317,7 +331,12 @@
         "deriveActiveProducts",
         "historyRows",
         "resolveDisplayMode",
-        "formatCompactCredits"
+        "formatCompactCredits",
+        "appendPaidToolDescription",
+        "creditSignals",
+        "linkLabel",
+        "nextActionFor",
+        "planLadder"
       ],
       "sectionBefore": {
         "classifyCustomerRef": "// --- customer-sync ---",

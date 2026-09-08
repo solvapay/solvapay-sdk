@@ -146,6 +146,12 @@ fn global_fetch(request: &Request) -> Result<js_sys::Promise, SdkError> {
 /// [`HttpResponse`], or a retryable transport error when the body cannot be read.
 async fn read_response(response: Response) -> Result<HttpResponse, SdkError> {
     let status = response.status();
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .ok()
+        .flatten()
+        .filter(|value| !value.is_empty());
     let buffer_promise = response
         .array_buffer()
         .map_err(|err| map_js_error("response.array_buffer() failed", &err, true))?;
@@ -154,7 +160,11 @@ async fn read_response(response: Response) -> Result<HttpResponse, SdkError> {
         .map_err(|err| map_js_error("response.array_buffer() rejected", &err, true))?;
     let array = Uint8Array::new(&buffer);
     let body = array.to_vec();
-    Ok(HttpResponse { status, body })
+    Ok(HttpResponse {
+        status,
+        body,
+        content_type,
+    })
 }
 
 /// Maps a JS failure value into [`SdkError::Transport`].

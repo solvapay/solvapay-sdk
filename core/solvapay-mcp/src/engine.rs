@@ -354,9 +354,9 @@ fn payable_list_item(spec: &PayableToolSpec) -> Value {
         "title": title,
         "inputSchema": input_schema,
     });
-    if let Some(description) = &spec.description {
-        item["description"] = json!(description);
-    }
+    item["description"] = json!(crate::descriptors::append_paid_tool_description(
+        spec.description.as_deref()
+    ));
     if let Some(annotations) = &spec.annotations {
         item["annotations"] = annotations.clone();
     }
@@ -804,7 +804,10 @@ mod tests {
             .find(|t| t["name"] == "echo_paid")
             .expect("payable advertised");
         assert_eq!(echo["title"], "Echo paid");
-        assert_eq!(echo["description"], "Echo arguments after a paid gate");
+        assert_eq!(
+            echo["description"],
+            solvapay_core::append_paid_tool_description(Some("Echo arguments after a paid gate"))
+        );
         assert_eq!(
             echo["inputSchema"],
             json!({ "type": "object", "properties": { "n": { "type": "number" } } })

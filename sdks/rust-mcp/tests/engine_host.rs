@@ -167,7 +167,10 @@ async fn tools_list_includes_registered_payable_descriptor() {
         .find(|t| t["name"] == "echo_paid")
         .expect("payable advertised");
     assert_eq!(echo["title"], "Echo paid");
-    assert_eq!(echo["description"], "Echo arguments after a paid gate");
+    assert_eq!(
+        echo["description"],
+        "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call."
+    );
     assert_eq!(
         echo["inputSchema"],
         json!({ "type": "object", "properties": { "n": { "type": "string" } } })

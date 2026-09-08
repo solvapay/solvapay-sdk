@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+    "result": "Included usage is exhausted. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
   }
 }

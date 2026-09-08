@@ -176,6 +176,42 @@
       "coreCall": "state_required_countries",
       "clientCallArgs": []
     },
+    "TAX_ID_TYPES": {
+      "core": "solvapay_core::business_details::tax_id_types",
+      "names": {
+        "ts": "TAX_ID_TYPES",
+        "py": "TAX_ID_TYPES",
+        "rb": "TAX_ID_TYPES",
+        "go": "TAX_ID_TYPES",
+        "rust": "TAX_ID_TYPES",
+        "c": "TAX_ID_TYPES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TAX_ID_TYPES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 17,
+      "section": "business-details",
+      "doc": "Binding for `TAX_ID_TYPES`.",
+      "docWasm": null,
+      "rustFnName": "tax_id_types_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tax_id_types",
+      "clientCallArgs": []
+    },
     "TAX_NOT_COLLECTED_NOTE": {
       "core": "solvapay_core::tax_summary::tax_not_collected_note",
       "names": {
@@ -246,6 +282,55 @@
       "verbatimBodyWasm": null,
       "dtoType": "ActivatePlanDto",
       "coreCall": "activate_plan",
+      "clientCallArgs": []
+    },
+    "appendPaidToolDescription": {
+      "core": "solvapay_core::mcp::append_paid_tool_description",
+      "names": {
+        "ts": "appendPaidToolDescription",
+        "py": "append_paid_tool_description",
+        "rb": "append_paid_tool_description",
+        "go": "AppendPaidToolDescription",
+        "rust": "append_paid_tool_description",
+        "c": "appendPaidToolDescription"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "appendPaidToolDescription"
+      },
+      "args": [
+        {
+          "name": "description",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 46,
+      "section": "paywall",
+      "doc": "Binding for `appendPaidToolDescription`.",
+      "docWasm": null,
+      "rustFnName": "append_paid_tool_description_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "description.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "append_paid_tool_description",
       "clientCallArgs": []
     },
     "assertResponseResult": {
@@ -1944,6 +2029,55 @@
       "verbatimBodyWasm": null,
       "dtoType": "CreateTopupPaymentIntentParams",
       "coreCall": "create_topup_payment_intent",
+      "clientCallArgs": []
+    },
+    "creditSignals": {
+      "core": "solvapay_core::paywall_state::credit_signals",
+      "names": {
+        "ts": "creditSignals",
+        "py": "credit_signals",
+        "rb": "credit_signals",
+        "go": "CreditSignals",
+        "rust": "credit_signals",
+        "c": "creditSignals"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "creditSignals"
+      },
+      "args": [
+        {
+          "name": "limits",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalTyped",
+          "typedAs": "PaywallLimits",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 42,
+      "section": "paywall",
+      "doc": "Binding for `creditSignals`.",
+      "docWasm": null,
+      "rustFnName": "credit_signals_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "limits.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "credit_signals",
       "clientCallArgs": []
     },
     "creditsPerUnitFromBalance": {
@@ -4560,6 +4694,55 @@
       "coreCall": "is_state_required",
       "clientCallArgs": []
     },
+    "isTaxIdType": {
+      "core": "solvapay_core::business_details::is_tax_id_type",
+      "names": {
+        "ts": "isTaxIdType",
+        "py": "is_tax_id_type",
+        "rb": "is_tax_id_type",
+        "go": "IsTaxIdType",
+        "rust": "is_tax_id_type",
+        "c": "isTaxIdType"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "isTaxIdType"
+      },
+      "args": [
+        {
+          "name": "value",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 18,
+      "section": "business-details",
+      "doc": "Binding for `isTaxIdType`.",
+      "docWasm": null,
+      "rustFnName": "is_tax_id_type_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&value"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_tax_id_type",
+      "clientCallArgs": []
+    },
     "isUnlimitedRemaining": {
       "core": "solvapay_core::limits::is_unlimited_remaining",
       "names": {
@@ -4656,6 +4839,55 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "is_zero_decimal_currency",
+      "clientCallArgs": []
+    },
+    "linkLabel": {
+      "core": "solvapay_core::paywall_state::link_label",
+      "names": {
+        "ts": "linkLabel",
+        "py": "link_label",
+        "rb": "link_label",
+        "go": "LinkLabel",
+        "rust": "link_label",
+        "c": "linkLabel"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "linkLabel"
+      },
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 44,
+      "section": "paywall",
+      "doc": "Binding for `linkLabel`.",
+      "docWasm": null,
+      "rustFnName": "link_label_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&name"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "link_label",
       "clientCallArgs": []
     },
     "listPlans": {
@@ -5263,6 +5495,55 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "nextActionFor": {
+      "core": "solvapay_core::paywall_state::next_action_for",
+      "names": {
+        "ts": "nextActionFor",
+        "py": "next_action_for",
+        "rb": "next_action_for",
+        "go": "NextActionFor",
+        "rust": "next_action_for",
+        "c": "nextActionFor"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "nextActionFor"
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "PaywallState",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 43,
+      "section": "paywall",
+      "doc": "Binding for `nextActionFor`.",
+      "docWasm": null,
+      "rustFnName": "next_action_for_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&state"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "next_action_for",
+      "clientCallArgs": []
+    },
     "normalizeCancelResponse": {
       "core": "solvapay_core::renewal::normalize_cancel_response",
       "names": {
@@ -5723,6 +6004,55 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "plan_consequence",
+      "clientCallArgs": []
+    },
+    "planLadder": {
+      "core": "solvapay_core::paywall_state::plan_ladder",
+      "names": {
+        "ts": "planLadder",
+        "py": "plan_ladder",
+        "rb": "plan_ladder",
+        "go": "PlanLadder",
+        "rust": "plan_ladder",
+        "c": "planLadder"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "planLadder"
+      },
+      "args": [
+        {
+          "name": "gate",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "GateContent",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 45,
+      "section": "paywall",
+      "doc": "Binding for `planLadder`.",
+      "docWasm": null,
+      "rustFnName": "plan_ladder_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&gate"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "plan_ladder",
       "clientCallArgs": []
     },
     "planPricingShape": {

@@ -17,6 +17,7 @@ export type NativeMcpSyncMethod =
   | 'buildPromptDescriptorMetadata'
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
+  | 'appendPaidToolDescription'
 
 type NativeMcpApi = {
   callNativeSync: (fn: NativeMcpSyncMethod | 'solvapayCall', argsJson: string) => unknown

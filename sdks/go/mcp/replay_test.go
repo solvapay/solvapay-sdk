@@ -72,6 +72,15 @@ func fixtureHTTP(t *testing.T, env map[string]any) *httptest.Server {
 	}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		for _, raw := range stubs {
+			stub, _ := raw.(map[string]any)
+			if stub["method"] == r.Method && stub["path"] == r.URL.Path {
+				status := int(stub["status"].(float64))
+				w.WriteHeader(status)
+				_ = json.NewEncoder(w).Encode(stub["body"])
+				return
+			}
+		}
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"withinLimits": true, "remaining": 42, "plan": "pl_pro", "creditBalance": 5000,
@@ -81,15 +90,6 @@ func fixtureHTTP(t *testing.T, env map[string]any) *httptest.Server {
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/usages" {
 			_, _ = w.Write([]byte(`{"reference":"usg_test","outcome":"success"}`))
 			return
-		}
-		for _, raw := range stubs {
-			stub, _ := raw.(map[string]any)
-			if stub["method"] == r.Method && stub["path"] == r.URL.Path {
-				status := int(stub["status"].(float64))
-				w.WriteHeader(status)
-				_ = json.NewEncoder(w).Encode(stub["body"])
-				return
-			}
 		}
 		http.NotFound(w, r)
 	}))

@@ -45,6 +45,7 @@ fn blocking_client_round_trips() {
     let mock = MockTransport::new(vec![Ok(HttpResponse {
         status: 200,
         body: br#"{"displayName":"Blocking Co"}"#.to_vec(),
+        content_type: None,
     })]);
     let client = BlockingClient::with_transport(
         mock.clone(),

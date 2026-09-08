@@ -29,7 +29,8 @@ class StubBackend:
     port: int = 0
     response_status: int = 200
     response_body: Any = None
-    exchanges: Sequence[tuple[str, str, int, Any]] = field(default_factory=tuple)
+    response_content_type: str | None = None
+    exchanges: Sequence[tuple[str, str, int, Any, str | None]] = field(default_factory=tuple)
     captured: list[CapturedRequest] = field(default_factory=list)
     _server: ThreadingHTTPServer | None = field(default=None, init=False, repr=False)
     _thread: threading.Thread | None = field(default=None, init=False, repr=False)
@@ -93,9 +94,9 @@ class StubBackend:
                 payload = backend.response_body
                 if backend.exchanges:
                     matched = None
-                    for method, path, route_status, route_body in backend.exchanges:
+                    for method, path, route_status, route_body, route_content_type in backend.exchanges:
                         if method == self.command and path == parsed.path:
-                            matched = (route_status, route_body)
+                            matched = (route_status, route_body, route_content_type)
                             break
                     if matched is None:
                         self.send_response(404)
@@ -105,18 +106,18 @@ class StubBackend:
                         if self.command != "HEAD":
                             self.wfile.write(b"{}")
                         return
-                    status, payload = matched
+                    status, payload, content_type = matched
+                else:
+                    content_type = backend.response_content_type
                 if isinstance(payload, (dict, list)):
                     data = json.dumps(payload).encode("utf-8")
-                    content_type = "application/json"
                 elif isinstance(payload, str):
                     data = payload.encode("utf-8")
-                    content_type = "text/plain; charset=utf-8"
                 elif payload is None:
                     data = b""
-                    content_type = "application/octet-stream"
                 else:
                     data = json.dumps(payload).encode("utf-8")
+                if content_type is None:
                     content_type = "application/json"
 
                 self.send_response(status)

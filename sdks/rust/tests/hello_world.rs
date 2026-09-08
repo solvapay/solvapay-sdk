@@ -47,6 +47,7 @@ async fn hello_world_get_merchant_round_trips() {
     let mock = MockTransport::new(vec![Ok(HttpResponse {
         status: 200,
         body: br#"{"displayName":"Hello Merchant"}"#.to_vec(),
+        content_type: None,
     })]);
     let client = Client::with_transport(
         mock.clone(),
@@ -68,6 +69,7 @@ async fn empty_api_key_rejected_before_transport() {
     let mock = MockTransport::new(vec![Ok(HttpResponse {
         status: 200,
         body: br#"{"displayName":"unused"}"#.to_vec(),
+        content_type: None,
     })]);
     let client = Client::with_transport(
         mock.clone(),

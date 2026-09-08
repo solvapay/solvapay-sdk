@@ -33,6 +33,8 @@ export type SupportedBusinessCountry = EuMemberCountry | 'GB' | 'US' | 'JP'
 
 export declare const TAX_ID_TYPES: readonly TaxIdType[]
 
+export declare function isTaxIdType(value: string): value is TaxIdType
+
 export declare const SUPPORTED_BUSINESS_COUNTRIES: readonly SupportedBusinessCountry[]
 
 export declare const COUNTRY_TO_TAX_ID_TYPE: Record<SupportedBusinessCountry, TaxIdType>

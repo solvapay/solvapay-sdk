@@ -122,7 +122,10 @@ mod replay {
                                 .expect("payable advertised");
                             assert_eq!(echo["title"], "Echo paid", "{rel}");
                             assert_eq!(
-                                echo["description"], "Echo arguments after a paid gate",
+                                echo["description"],
+                                solvapay_core::append_paid_tool_description(Some(
+                                    "Echo arguments after a paid gate"
+                                )),
                                 "{rel}"
                             );
                             assert_eq!(

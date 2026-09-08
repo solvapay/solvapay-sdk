@@ -46,13 +46,13 @@ pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};
 pub use dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
 pub use default_gate::{mcp_default_gate, DefaultGateInput};
 pub use descriptors::{
-    mcp_descriptors, union_payable_output_schema, McpDescriptors, McpDescriptorsInput,
-    McpToolDescriptor,
+    append_paid_tool_description, mcp_descriptors, union_payable_output_schema, McpDescriptors,
+    McpDescriptorsInput, McpToolDescriptor,
 };
 pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 pub use narrate::{
-    mcp_narrate, narrated_tool_result, new_widget_session_id, parse_mode, tool_error_result,
-    tool_result, ui_placeholder, NarrateInput,
+    mcp_narrate, narrate_already_active, narrated_tool_result, new_widget_session_id, parse_mode,
+    tool_error_result, tool_result, ui_placeholder, NarrateInput,
 };
 pub use oauth::{
     mcp_normalize_oauth_error, mcp_oauth_discovery, mcp_oauth_error_inspect, mcp_oauth_path,

@@ -81,6 +81,7 @@ impl Transport for MockTransport {
             Ok(HttpResponse {
                 status: body.0,
                 body: body.1,
+                content_type: None,
             })
         })
     }

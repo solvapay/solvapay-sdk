@@ -137,6 +137,9 @@
       ],
       "customer": {
         "ref": "cus_1",
+        "canCall": true,
+        "remainingCalls": 2.0,
+        "nextAction": "checkout",
         "purchase": {
           "customerRef": "cus_1",
           "email": null,

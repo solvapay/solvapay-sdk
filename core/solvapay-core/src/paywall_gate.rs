@@ -13,8 +13,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::paywall_state::{
-    build_gate_message, classify_paywall_state, GateContent, IncludedUsage, PaywallBalance,
-    PaywallLimits, PaywallPlanSummary, PaywallState,
+    build_gate_message, classify_paywall_state, credit_signals, next_action_for, GateContent,
+    IncludedUsage, PaywallAutoRecharge, PaywallBalance, PaywallLimits, PaywallNextAction,
+    PaywallPlanSummary, PaywallRecoveryLinks, PaywallState,
 };
 
 /// Limits input read by [`build_paywall_gate`].
@@ -69,6 +70,33 @@ pub struct PaywallGateLimits {
     /// Product-level currency when the active plan does not carry one.
     #[serde(default)]
     pub currency: Option<String>,
+    /// Authoritative backend paywall classification.
+    #[serde(default)]
+    pub paywall_reason: Option<String>,
+    /// Active plan reference when the customer already holds a purchase.
+    #[serde(default)]
+    pub plan_ref: Option<String>,
+    /// Active purchase reference when the customer already holds a purchase.
+    #[serde(default)]
+    pub purchase_ref: Option<String>,
+    /// Display name of the active or default plan.
+    #[serde(default)]
+    pub plan_name: Option<String>,
+    /// Top-level credits deducted per metered item.
+    #[serde(default)]
+    pub credits_per_unit: Option<f64>,
+    /// Consumed usage units this period when the backend measured a finite cap.
+    #[serde(default)]
+    pub used: Option<f64>,
+    /// Effective finite cap when the backend measured one.
+    #[serde(default)]
+    pub limit: Option<f64>,
+    /// Per-provider auto-recharge snapshot.
+    #[serde(default)]
+    pub auto_recharge: Option<PaywallAutoRecharge>,
+    /// Purchase/plan status when the backend sent one.
+    #[serde(default)]
+    pub plan_status: Option<String>,
 }
 
 /// Recovery discriminator emitted on the wire as `kind`.
@@ -140,6 +168,36 @@ pub struct PaywallGate {
     /// Coalesced credit balance (`balance.creditBalance ?? creditBalance`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credit_balance: Option<f64>,
+    /// Classified [`PaywallState::kind`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// Single primary recovery the agent should take.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_action: Option<PaywallNextAction>,
+    /// Display name of the active or default plan.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_name: Option<String>,
+    /// Credits deducted per call.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_per_call: Option<f64>,
+    /// `max(0, creditsPerCall - creditBalance)` when both are known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shortfall_credits: Option<f64>,
+    /// How many calls the current allowance or wallet still covers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remaining_calls: Option<f64>,
+    /// Active purchase reference.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purchase_ref: Option<String>,
+    /// Purchase/plan status when the backend sent one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_status: Option<String>,
+    /// Per-provider auto-recharge snapshot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_recharge: Option<PaywallAutoRecharge>,
+    /// Global destinations. Per-plan URLs stay on `plans[].checkoutUrl`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub links: Option<PaywallRecoveryLinks>,
 }
 
 impl Default for PaywallGate {
@@ -160,6 +218,16 @@ impl Default for PaywallGate {
             currency: None,
             included: None,
             credit_balance: None,
+            reason: None,
+            next_action: None,
+            plan_name: None,
+            credits_per_call: None,
+            shortfall_credits: None,
+            remaining_calls: None,
+            purchase_ref: None,
+            plan_status: None,
+            auto_recharge: None,
+            links: None,
         }
     }
 }
@@ -209,6 +277,29 @@ pub fn paywall_structured_content_schema() -> Value {
                         }
                     },
                     "creditBalance": { "type": "number" },
+                    "reason": { "type": "string" },
+                    "nextAction": { "type": "string" },
+                    "planName": { "type": "string" },
+                    "creditsPerCall": { "type": "number" },
+                    "shortfallCredits": { "type": "number" },
+                    "remainingCalls": { "type": "number" },
+                    "purchaseRef": { "type": "string" },
+                    "planStatus": { "type": "string" },
+                    "autoRecharge": {
+                        "type": "object",
+                        "properties": {
+                            "enabled": { "type": "boolean" },
+                            "status": { "type": "string" }
+                        }
+                    },
+                    "links": {
+                        "type": "object",
+                        "properties": {
+                            "topup": { "type": "string" },
+                            "checkout": { "type": "string" },
+                            "manage": { "type": "string" }
+                        }
+                    },
                     "balance": {},
                     "productDetails": {}
                 }
@@ -237,6 +328,29 @@ pub fn paywall_structured_content_schema() -> Value {
                         }
                     },
                     "creditBalance": { "type": "number" },
+                    "reason": { "type": "string" },
+                    "nextAction": { "type": "string" },
+                    "planName": { "type": "string" },
+                    "creditsPerCall": { "type": "number" },
+                    "shortfallCredits": { "type": "number" },
+                    "remainingCalls": { "type": "number" },
+                    "purchaseRef": { "type": "string" },
+                    "planStatus": { "type": "string" },
+                    "autoRecharge": {
+                        "type": "object",
+                        "properties": {
+                            "enabled": { "type": "boolean" },
+                            "status": { "type": "string" }
+                        }
+                    },
+                    "links": {
+                        "type": "object",
+                        "properties": {
+                            "topup": { "type": "string" },
+                            "checkout": { "type": "string" },
+                            "manage": { "type": "string" }
+                        }
+                    },
                     "confirmationUrl": { "type": "string" },
                     "balance": {},
                     "productDetails": {}
@@ -316,9 +430,13 @@ fn all_paid_plans_are_payg(plans: Option<&[Value]>) -> bool {
 fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> PaywallLimits {
     PaywallLimits {
         activation_required: limits.activation_required,
+        paywall_reason: limits.paywall_reason.clone(),
         // TS `plan: limits.plan ?? ''` is a no-op here — `None` never matches a
         // plan reference, exactly like the empty-string fallback.
         plan: limits.plan.clone(),
+        plan_ref: limits.plan_ref.clone(),
+        purchase_ref: limits.purchase_ref.clone(),
+        plan_name: limits.plan_name.clone(),
         plans: limits.plans.as_ref().map(|items| {
             items
                 .iter()
@@ -328,18 +446,22 @@ fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> Paywa
         balance: balance
             .and_then(|value| serde_json::from_value::<PaywallBalance>(value.clone()).ok()),
         credit_balance: limits.credit_balance,
+        credits_per_unit: limits.credits_per_unit,
         remaining: limits.remaining,
+        used: limits.used,
+        limit: limits.limit,
         checkout_url: limits.checkout_url.clone(),
         needs_top_up: limits.needs_top_up,
         needs_upgrade: limits.needs_upgrade,
         meter_name: limits.meter_name.clone(),
         currency: limits.currency.clone(),
+        auto_recharge: limits.auto_recharge.clone(),
     }
 }
 
 /// Machine-readable recovery fields. A field the backend did not send is omitted.
 struct RecoveryFields {
-    /// Active plan reference from `limits.plan`.
+    /// Active plan reference from `plan_ref` or deprecated `plan`.
     plan_ref: Option<String>,
     /// Catalog plans from `limits.plans`.
     plans: Option<Value>,
@@ -349,15 +471,44 @@ struct RecoveryFields {
     unit_price_minor: Option<f64>,
     /// ISO currency for [`Self::unit_price_minor`].
     currency: Option<String>,
-    /// Included-usage counters when `freeUnits` is a positive cap.
+    /// Included-usage counters when a finite cap is known.
     included: Option<IncludedUsage>,
     /// Credit balance coalesced from nested or top-level fields.
     credit_balance: Option<f64>,
+    /// Classified paywall reason.
+    reason: Option<String>,
+    /// Primary recovery action.
+    next_action: Option<PaywallNextAction>,
+    /// Display name of the active or default plan.
+    plan_name: Option<String>,
+    /// Credits deducted per call.
+    credits_per_call: Option<f64>,
+    /// Shortfall when both balance and cost are known.
+    shortfall_credits: Option<f64>,
+    /// Remaining call count.
+    remaining_calls: Option<f64>,
+    /// Active purchase reference.
+    purchase_ref: Option<String>,
+    /// Purchase/plan status.
+    plan_status: Option<String>,
+    /// Auto-recharge snapshot.
+    auto_recharge: Option<PaywallAutoRecharge>,
+    /// Global recovery destinations.
+    links: Option<PaywallRecoveryLinks>,
 }
 
-/// Plan object in `limits.plans` whose `reference` matches `limits.plan`.
+/// Active plan reference: `plan_ref` wins over deprecated `plan`; empty → `None`.
+fn active_plan_ref_of(limits: &PaywallGateLimits) -> Option<&str> {
+    limits
+        .plan_ref
+        .as_deref()
+        .or(limits.plan.as_deref())
+        .filter(|value| !value.is_empty())
+}
+
+/// Plan object in `limits.plans` whose `reference` matches the active plan ref.
 fn active_plan_of(limits: &PaywallGateLimits) -> Option<&Value> {
-    let plan_ref = limits.plan.as_deref().filter(|s| !s.is_empty())?;
+    let plan_ref = active_plan_ref_of(limits)?;
     limits
         .plans
         .as_ref()?
@@ -365,8 +516,15 @@ fn active_plan_of(limits: &PaywallGateLimits) -> Option<&Value> {
         .find(|p| p.get("reference").and_then(Value::as_str) == Some(plan_ref))
 }
 
-/// Included counters from the active plan's `freeUnits` and `limits.remaining`.
+/// Included counters: measured `used`/`limit` win over plan-derived `freeUnits`.
 fn included_from_limits(limits: &PaywallGateLimits) -> Option<IncludedUsage> {
+    if let (Some(used), Some(limit)) = (limits.used, limits.limit) {
+        return Some(IncludedUsage {
+            total: limit,
+            used,
+            remaining: limits.remaining.unwrap_or(0.0),
+        });
+    }
     let plan = active_plan_of(limits)?;
     let total = plan.get("freeUnits").and_then(Value::as_f64)?;
     if total == 0.0 {
@@ -380,15 +538,48 @@ fn included_from_limits(limits: &PaywallGateLimits) -> Option<IncludedUsage> {
     })
 }
 
+/// Map checkout / confirmation URLs onto the named recovery link slots.
+fn recovery_links(limits: &PaywallGateLimits) -> Option<PaywallRecoveryLinks> {
+    let mut links = PaywallRecoveryLinks::default();
+    if let Some(url) = limits.checkout_url.as_deref().filter(|url| !url.is_empty()) {
+        if url.contains("/topup") {
+            links.topup = Some(url.to_owned());
+        } else {
+            links.checkout = Some(url.to_owned());
+        }
+    }
+    if let Some(url) = limits
+        .confirmation_url
+        .as_deref()
+        .filter(|url| !url.is_empty())
+    {
+        links.manage = Some(url.to_owned());
+    }
+    if links.topup.is_none() && links.checkout.is_none() && links.manage.is_none() {
+        None
+    } else {
+        Some(links)
+    }
+}
+
+/// Wire form of the classified reason (`topup_required`, `limit_reached`, …).
+fn paywall_reason_wire(state: &PaywallState) -> String {
+    match state {
+        PaywallState::ActivationRequired => "activation_required",
+        PaywallState::TopupRequired => "topup_required",
+        PaywallState::UpgradeRequired => "upgrade_required",
+        PaywallState::LimitReached => "limit_reached",
+        PaywallState::ReactivationRequired => "reactivation_required",
+    }
+    .to_owned()
+}
+
 /// Collect recovery fields for both gate branches. Absent backend data stays `None`.
-fn recovery_fields(limits: &PaywallGateLimits) -> RecoveryFields {
+fn recovery_fields(limits: &PaywallGateLimits, state: &PaywallState) -> RecoveryFields {
     let plan = active_plan_of(limits);
     let included = included_from_limits(limits);
-    let credit_balance = limits
-        .balance
-        .as_ref()
-        .and_then(|b| b.get("creditBalance").and_then(Value::as_f64))
-        .or(limits.credit_balance);
+    let view = classifier_view(limits, present(limits.balance.as_ref()));
+    let signals = credit_signals(Some(&view));
     let (unit_price_minor, currency) = match plan.and_then(|p| {
         p.get("perUnitChargeMinor")
             .and_then(Value::as_f64)
@@ -405,7 +596,7 @@ fn recovery_fields(limits: &PaywallGateLimits) -> RecoveryFields {
         None => (None, limits.currency.clone()),
     };
     RecoveryFields {
-        plan_ref: limits.plan.clone().filter(|s| !s.is_empty()),
+        plan_ref: active_plan_ref_of(limits).map(ToOwned::to_owned),
         plans: limits
             .plans
             .as_ref()
@@ -414,7 +605,17 @@ fn recovery_fields(limits: &PaywallGateLimits) -> RecoveryFields {
         unit_price_minor,
         currency,
         included,
-        credit_balance,
+        credit_balance: signals.credit_balance,
+        reason: Some(paywall_reason_wire(state)),
+        next_action: Some(next_action_for(state)),
+        plan_name: limits.plan_name.clone(),
+        credits_per_call: signals.credits_per_call,
+        shortfall_credits: signals.shortfall_credits,
+        remaining_calls: signals.remaining_calls,
+        purchase_ref: limits.purchase_ref.clone(),
+        plan_status: limits.plan_status.clone(),
+        auto_recharge: limits.auto_recharge.clone(),
+        links: recovery_links(limits),
     }
 }
 
@@ -465,58 +666,70 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
     .unwrap_or_default()
     .to_owned();
 
-    let recovery = recovery_fields(limits);
+    let recovery = recovery_fields(limits, &state);
+    let typed_plans = limits.plans.as_ref().map(|items| {
+        items
+            .iter()
+            .filter_map(|item| serde_json::from_value::<PaywallPlanSummary>(item.clone()).ok())
+            .collect()
+    });
     let message = build_gate_message(
         &state,
         &GateContent {
             checkout_url: Some(checkout_url.clone()),
+            plan_ref: recovery.plan_ref.clone(),
+            plan_name: recovery.plan_name.clone(),
+            plans: typed_plans,
             meter_name: recovery.meter_name.clone(),
             unit_price_minor: recovery.unit_price_minor,
             currency: recovery.currency.clone(),
             included: recovery.included.clone(),
             balance: balance
                 .and_then(|value| serde_json::from_value::<PaywallBalance>(value.clone()).ok()),
+            credit_balance: recovery.credit_balance,
+            credits_per_call: recovery.credits_per_call,
+            shortfall_credits: recovery.shortfall_credits,
+            remaining_calls: recovery.remaining_calls,
+            purchase_ref: recovery.purchase_ref.clone(),
+            auto_recharge: recovery.auto_recharge.clone(),
         },
     );
 
+    let shared = |kind: PaywallGateKind, confirmation_url: Option<String>| PaywallGate {
+        kind,
+        product: product_ref.to_owned(),
+        checkout_url: checkout_url.clone(),
+        message: message.clone(),
+        short_message: kind.short_message().to_owned(),
+        confirmation_url,
+        plans: recovery.plans.clone(),
+        balance: balance.cloned(),
+        product_details: product.cloned(),
+        plan_ref: recovery.plan_ref.clone(),
+        meter_name: recovery.meter_name.clone(),
+        unit_price_minor: recovery.unit_price_minor,
+        currency: recovery.currency.clone(),
+        included: recovery.included.clone(),
+        credit_balance: recovery.credit_balance,
+        reason: recovery.reason.clone(),
+        next_action: recovery.next_action,
+        plan_name: recovery.plan_name.clone(),
+        credits_per_call: recovery.credits_per_call,
+        shortfall_credits: recovery.shortfall_credits,
+        remaining_calls: recovery.remaining_calls,
+        purchase_ref: recovery.purchase_ref.clone(),
+        plan_status: recovery.plan_status.clone(),
+        auto_recharge: recovery.auto_recharge.clone(),
+        links: recovery.links.clone(),
+    };
+
     if activation_branch {
-        let kind = PaywallGateKind::ActivationRequired;
-        PaywallGate {
-            kind,
-            product: product_ref.to_owned(),
-            checkout_url,
-            message,
-            short_message: kind.short_message().to_owned(),
-            confirmation_url: limits.confirmation_url.clone(),
-            plans: recovery.plans,
-            balance: balance.cloned(),
-            product_details: product.cloned(),
-            plan_ref: recovery.plan_ref,
-            meter_name: recovery.meter_name,
-            unit_price_minor: recovery.unit_price_minor,
-            currency: recovery.currency,
-            included: recovery.included,
-            credit_balance: recovery.credit_balance,
-        }
+        shared(
+            PaywallGateKind::ActivationRequired,
+            limits.confirmation_url.clone(),
+        )
     } else {
-        let kind = PaywallGateKind::PaymentRequired;
-        PaywallGate {
-            kind,
-            product: product_ref.to_owned(),
-            checkout_url,
-            message,
-            short_message: kind.short_message().to_owned(),
-            confirmation_url: None,
-            plans: recovery.plans,
-            balance: balance.cloned(),
-            product_details: product.cloned(),
-            plan_ref: recovery.plan_ref,
-            meter_name: recovery.meter_name,
-            unit_price_minor: recovery.unit_price_minor,
-            currency: recovery.currency,
-            included: recovery.included,
-            credit_balance: recovery.credit_balance,
-        }
+        shared(PaywallGateKind::PaymentRequired, None)
     }
 }
 
@@ -609,6 +822,10 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_basic",
+                "reason": "limit_reached",
+                "nextAction": "checkout",
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
@@ -625,6 +842,9 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "",
                 "planRef": "pl_basic",
+                "reason": "limit_reached",
+                "nextAction": "checkout",
+                "remainingCalls": 0.0,
                 "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
@@ -643,6 +863,10 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
+                "reason": "upgrade_required",
+                "nextAction": "checkout",
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );
@@ -667,10 +891,14 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md.",
+                "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/confirm",
                 "confirmationUrl": "https://pay.test/confirm",
                 "planRef": "pl_pro",
+                "reason": "activation_required",
+                "nextAction": "activate",
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x", "manage": "https://pay.test/confirm" },
                 "plans": [plan("pl_pro", "usage-based", true)]
             })
         );
@@ -697,10 +925,16 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
+                "reason": "topup_required",
+                "nextAction": "topup",
+                "creditsPerCall": 1.0,
+                "shortfallCredits": 1.0,
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "plans": [
                     plan("pl_pro", "usage-based", true),
                     plan("pl_hybrid", "hybrid", true)
@@ -732,9 +966,15 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
+                "reason": "topup_required",
+                "nextAction": "topup",
+                "creditsPerCall": 1.0,
+                "shortfallCredits": 1.0,
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "plans": [
                     plan("pl_pro", "usage-based", true),
                     plan("pl_pro", "recurring", true)
@@ -763,9 +1003,15 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_basic",
                 "creditBalance": 0.0,
+                "reason": "topup_required",
+                "nextAction": "topup",
+                "creditsPerCall": 1.0,
+                "shortfallCredits": 1.0,
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
                 "productDetails": { "name": "Demo", "reference": "prd_demo" }
             })
@@ -794,6 +1040,10 @@ mod tests {
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_basic",
+                "reason": "limit_reached",
+                "nextAction": "checkout",
+                "remainingCalls": 0.0,
+                "links": { "checkout": "https://pay.test/x" },
                 "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
             })
         );

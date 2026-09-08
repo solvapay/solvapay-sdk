@@ -1,11 +1,7 @@
 import chalk from 'chalk'
 import { evaluateProductReadiness, SOLVAPAY_PRODUCT_REF_PLACEHOLDER } from '@solvapay/core'
 import { verifyProductRef, verifySecretKey } from './browser-auth'
-import {
-  DEFAULT_API_BASE_URL,
-  DEV_API_BASE_URL,
-  parseExplicitApiBaseUrl,
-} from './api-base'
+import { DEFAULT_API_BASE_URL, DEV_API_BASE_URL, parseExplicitApiBaseUrl } from './api-base'
 import {
   readSolvaPayApiBaseUrlFromEnv,
   readSolvaPayProductRefFromEnv,

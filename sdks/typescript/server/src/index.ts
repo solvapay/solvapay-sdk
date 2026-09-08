@@ -156,8 +156,12 @@ export {
   buildGateMessage,
   buildNudgeMessage,
   classifyPaywallState,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
 } from './paywall-state'
-export type { PaywallState } from './paywall-state'
+export type { CreditSignals, PaywallState } from './paywall-state'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
@@ -170,6 +174,7 @@ export type {
   components,
   LimitActivationBalance,
   LimitActivationProduct,
+  LimitAutoRechargeDto,
   LimitPlanSummary,
   LimitResponseWithPlan,
   SolvaPayClient,
@@ -180,6 +185,8 @@ export type {
   PaywallDecision,
   PaywallGateRecoveryFields,
   PaywallMetadata,
+  PaywallNextAction,
+  PaywallReason,
   PaywallStructuredContent,
   RetryOptions,
   WebhookEvent,

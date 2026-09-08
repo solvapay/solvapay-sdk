@@ -107,6 +107,8 @@ pub struct WireResponse {
     pub status: i64,
     /// JSON response body (required when `wire` is present).
     pub body: Value,
+    /// Optional `Content-Type` for the programmed response.
+    pub content_type: Option<String>,
 }
 
 /// One programmed HTTP exchange (`wire.request`/`wire.response` or an `exchanges[]` row).
@@ -401,6 +403,11 @@ fn parse_wire_response(obj: &Map<String, Value>) -> RunnerResult<WireResponse> {
     Ok(WireResponse {
         status: require_i64(obj, "status")?,
         body,
+        content_type: obj
+            .get("contentType")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .filter(|s| !s.is_empty()),
     })
 }
 

@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { SolvaPayError } from './solvapay-error'
 export { SolvaPayError }
+export { appendPaidToolDescription } from './native-helpers'
 
 export const Env = z.object({
   SOLVAPAY_SECRET_KEY: z.string().min(1),
@@ -99,11 +100,13 @@ export type {
   BillingInterval,
   Charge,
   ChargePer,
+  CreditSignals,
   CustomerSnapshot,
   GateAction,
   GateCacheOp,
   GateNextOutput,
   McpDisplayModeState,
+  PaywallNextAction,
   PlanPricingShape,
   Tier,
   TierMode,
@@ -129,6 +132,7 @@ export {
   TAX_EXCLUSIVE_CURRENCIES,
   TAX_ID_EXAMPLE_BY_COUNTRY,
   TAX_ID_TYPES,
+  isTaxIdType,
   type BusinessCountryOption,
   type BusinessDetails,
   type BusinessDetailsInput,

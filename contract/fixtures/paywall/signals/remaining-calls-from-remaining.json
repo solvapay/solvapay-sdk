@@ -1,0 +1,18 @@
+{
+  "suite": "paywall",
+  "case": "remaining-calls-from-remaining",
+  "input": {
+    "fn": "creditSignals",
+    "args": {
+      "limits": {
+        "remaining": 7
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "remainingCalls": 7,
+      "isCreditBased": false
+    }
+  }
+}

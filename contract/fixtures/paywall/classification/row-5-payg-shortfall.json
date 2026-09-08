@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "row-5-payg-shortfall",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000,
+        "balance": {
+          "creditBalance": 91000,
+          "creditsPerUnit": 100000,
+          "currency": "USD"
+        }
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

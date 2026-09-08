@@ -1,0 +1,26 @@
+{
+  "suite": "paywall",
+  "case": "remaining-calls-from-remaining-units",
+  "input": {
+    "fn": "creditSignals",
+    "args": {
+      "limits": {
+        "remaining": 99,
+        "balance": {
+          "creditBalance": 500,
+          "creditsPerUnit": 100,
+          "remainingUnits": 4
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "creditBalance": 500,
+      "creditsPerCall": 100,
+      "shortfallCredits": 0,
+      "remainingCalls": 4,
+      "isCreditBased": true
+    }
+  }
+}

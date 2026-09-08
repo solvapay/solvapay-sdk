@@ -16,11 +16,24 @@ pub use account_state::{
     derive_default_view, merge_plan, resolve_account_state, resolve_narrator_plan_shape,
     NarratorPlanShape,
 };
+/// Append the paid-tool account hint. Implementation lives in [`descriptors`].
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "paywall",
+    emit_order = 46
+)]
+pub fn append_paid_tool_description(description: Option<&str>) -> String {
+    descriptors::append_paid_tool_description(description)
+}
+
 pub use descriptors::{
     build_prompt_descriptor_metadata, build_prompt_user_message, build_tool_descriptor_metadata,
     derive_icons, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, MerchantBranding, PromptDescriptorMetadata,
-    PromptUserMessage, ToolAnnotations, ToolDescriptorMetadata, ToolIcon, PUBLIC_BASE_URL_ERROR,
+    PromptUserMessage, ToolAnnotations, ToolDescriptorMetadata, ToolIcon, PAID_TOOL_HINT,
+    PUBLIC_BASE_URL_ERROR,
 };
 pub use display_mode::{
     resolve_display_mode, McpContainerDimensions, McpDisplayMode, McpDisplayModeState,

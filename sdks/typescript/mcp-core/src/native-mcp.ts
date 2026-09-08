@@ -129,6 +129,12 @@ export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
   return dispatchSync('validatePublicBaseUrl', { publicBaseUrl })
 }
 
+export function appendPaidToolDescription(description?: string): string {
+  return dispatchSync('appendPaidToolDescription', {
+    description: description ?? null,
+  })
+}
+
 export function invokePayableNext(
   state: unknown | null | undefined,
   event: unknown,

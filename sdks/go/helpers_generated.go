@@ -31,9 +31,24 @@ func STATE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_state_required_countries_binding", mustJSON(map[string]any{}))
 }
 
+// TAX_ID_TYPES frozen set of supported tax ID type values.
+// Returns Tax ID type list.
+func TAX_ID_TYPES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tax_id_types_binding", "{}")
+}
+
 // TAX_NOT_COLLECTED_NOTE buyer-facing note when tax is not collected on the purchase.
 func TAX_NOT_COLLECTED_NOTE(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_tax_not_collected_note_binding", "{}")
+}
+
+// AppendPaidToolDescription append the paid-tool account hint to a merchant tool description.
+// The description parameter is Optional merchant-authored description; trailing whitespace is stripped.
+// Returns Description plus hint, or the hint alone when no description is present.
+func AppendPaidToolDescription(ctx context.Context, description any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_append_paid_tool_description_binding", mustJSON(map[string]any{
+		"description": description,
+	}))
 }
 
 // AssertValidProductRef reject empty, placeholder, or non-prd_ product refs at construction time.
@@ -110,6 +125,15 @@ func ClassifyPaywallState(ctx context.Context, limits any) (any, error) {
 func CountsUsage(ctx context.Context, priced any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_counts_usage_binding", mustJSON(map[string]any{
 		"priced": priced,
+	}))
+}
+
+// CreditSignals coalesce credit-balance channels and derive shortfall and remaining-call counts.
+// The limits parameter is Limits response, or null/absent when no check has run.
+// Returns Credit signals including isCreditBased and optional shortfall fields.
+func CreditSignals(ctx context.Context, limits any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_credit_signals_binding", mustJSON(map[string]any{
+		"limits": limits,
 	}))
 }
 
@@ -267,6 +291,15 @@ func IsStateRequired(ctx context.Context, country any) (any, error) {
 	}))
 }
 
+// IsTaxIdType whether a string is a supported tax ID type.
+// The value parameter is Candidate tax ID type wire value.
+// Returns True when the value is one of TAX_ID_TYPES.
+func IsTaxIdType(ctx context.Context, value any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_is_tax_id_type_binding", mustJSON(map[string]any{
+		"value": value,
+	}))
+}
+
 // IsUnlimitedRemaining return whether remaining is the backend unlimited sentinel (-1).
 // Returns True only when remaining is exactly -1.
 func IsUnlimitedRemaining(ctx context.Context, remaining any) (any, error) {
@@ -283,6 +316,15 @@ func IsZeroDecimalCurrency(ctx context.Context, currency any) (any, error) {
 	}))
 }
 
+// LinkLabel escape markdown link-label delimiters in a provider-authored plan name.
+// The name parameter is Plan display name or reference.
+// Returns Label safe to embed in a markdown link.
+func LinkLabel(ctx context.Context, name any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_link_label_binding", mustJSON(map[string]any{
+		"name": name,
+	}))
+}
+
 // MeterName read the meter a plan counts against from a per-unit charge, tier, or limit option.
 // Returns Meter name, or null when no charge, tier, or limit names one.
 func MeterName(ctx context.Context, priced any) (any, error) {
@@ -296,6 +338,15 @@ func MeterName(ctx context.Context, priced any) (any, error) {
 func MinorUnitsPerMajor(ctx context.Context, currency any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_minor_units_per_major_binding", mustJSON(map[string]any{
 		"currency": currency,
+	}))
+}
+
+// NextActionFor map a classified paywall state to its single primary recovery action.
+// The state parameter is Classified paywall state.
+// Returns Primary recovery action (topup, checkout, activate, or account).
+func NextActionFor(ctx context.Context, state any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_next_action_for_binding", mustJSON(map[string]any{
+		"state": state,
 	}))
 }
 
@@ -330,6 +381,15 @@ func PerUnitCharge(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_per_unit_charge_binding", mustJSON(map[string]any{
 		"priced": priced,
 		"meter":  meter,
+	}))
+}
+
+// PlanLadder build a cheapest-first markdown checkout ladder from gate plans.
+// The gate parameter is Gate content carrying plans and the active planRef.
+// Returns Joined markdown links, or null when no plan has a checkoutUrl.
+func PlanLadder(ctx context.Context, gate any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_plan_ladder_binding", mustJSON(map[string]any{
+		"gate": gate,
 	}))
 }
 

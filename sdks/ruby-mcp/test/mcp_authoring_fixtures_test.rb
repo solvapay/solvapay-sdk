@@ -34,6 +34,7 @@ MCP_AUTHORING_FIXTURES = [
   "builtin-tools/account-topup.json",
   "builtin-tools/account-view-account.json",
   "builtin-tools/account.json",
+  "builtin-tools/activate-plan-already-active.json",
   "builtin-tools/activate-plan-no-ref.json",
   "builtin-tools/activate-plan.json",
   "builtin-tools/attach-business-details-unauth.json",
@@ -95,6 +96,8 @@ MCP_AUTHORING_FIXTURES = [
   "hide-tools/openai-visibility-private.json",
   "hide-tools/ua-spoof.json",
   "narrate/activate-plan.json",
+  "narrate/already-active-shortfall.json",
+  "narrate/already-active.json",
   "narrate/manage-account-active.json",
   "narrate/manage-account.json",
   "narrate/mode-auto.json",
@@ -239,7 +242,7 @@ class McpAuthoringFixturesTest < Minitest::Test
           echo = got.dig("rpc", "result", "tools").find { |tool| tool["name"] == "echo_paid" }
           refute_nil echo, "payable echo_paid missing from tools/list"
           assert_equal "Echo paid", echo["title"]
-          assert_equal "Echo arguments after a paid gate", echo["description"]
+          assert_equal "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call.", echo["description"]
           assert_equal({ "type" => "object", "properties" => { "n" => { "type" => "number" } } }, echo["inputSchema"])
         end
       elsif fn == "mcpHandleRequest" && rel.end_with?("invoke-handler.json")

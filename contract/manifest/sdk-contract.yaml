@@ -71,13 +71,25 @@ boundaryTypesTs:
         withinLimits?: boolean
         remaining?: number
         plan?: string
+        planRef?: string
+        purchaseRef?: string
+        planName?: string
         checkoutUrl?: string
         confirmationUrl?: string
         activationRequired?: boolean
+        paywallReason?: 'activation_required' | 'topup_required' | 'payment_required'
         plans?: unknown
         balance?: unknown
         product?: unknown
         creditBalance?: number
+        creditsPerUnit?: number
+        used?: number
+        limit?: number
+        autoRecharge?: unknown
+        needsTopUp?: boolean
+        needsUpgrade?: boolean
+        meterName?: string
+        currency?: string
       }
     BusinessDetails: |-
       | { isBusiness: false; customerCountry?: SupportedBusinessCountry; customerName?: string }
@@ -2395,13 +2407,54 @@ overlays:
       customerRef:
         type: string
         required: true
+  # Workaround until commerce LimitResponse ships these fields on the
+  # OpenAPI snapshot. Drop the extra fields here when the backend emits them.
+  LimitAutoRechargeDto:
+    kind: synthetic
+    doc: 'Per-provider auto-recharge snapshot on a limits response. Workaround until the backend DTO ships this schema.'
+    fields:
+      enabled:
+        type: boolean
+        required: true
+      status:
+        type: string
+        required: false
+  LimitPlanItemWithCheckout:
+    kind: extendDto
+    base: LimitPlanItemDto
+    doc: 'Limit plan row plus an optional per-plan checkout deep link. Workaround until LimitPlanItemDto.checkoutUrl ships in OpenAPI.'
+    fields:
+      checkoutUrl:
+        type: string
+        required: false
   LimitResponseWithPlan:
     kind: extendDto
     base: LimitResponse
+    doc: 'LimitResponse plus SDK-only recovery fields the backend already sends on some denials. Drop the overlay fields when OpenAPI catches up. `plan` is deprecated and optional — the backend never sends it.'
     fields:
       plan:
         type: string
-        required: true
+        required: false
+        doc: 'Deprecated alias of planRef. The backend never populates this.'
+      paywallReason:
+        enum: [activation_required, topup_required, payment_required]
+        required: false
+      planRef:
+        type: string
+        required: false
+      purchaseRef:
+        type: string
+        required: false
+      planName:
+        type: string
+        required: false
+      autoRecharge:
+        ref: LimitAutoRechargeDto
+        required: false
+      plans:
+        array:
+          ref: LimitPlanItemWithCheckout
+        required: false
   ListProductItem:
     kind: synthetic
     fields:
@@ -2934,6 +2987,102 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+  creditSignals:
+    names:
+      ts: creditSignals
+      py: credit_signals
+      rb: credit_signals
+      go: CreditSignals
+      rust: credit_signals
+      c: creditSignals
+    params:
+      - name: limits
+        type: unknown
+        required: false
+    docs:
+      summary: 'Coalesce credit-balance channels and derive shortfall and remaining-call counts.'
+      params:
+        limits: 'Limits response, or null/absent when no check has run.'
+      returns: 'Credit signals including isCreditBased and optional shortfall fields.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  nextActionFor:
+    names:
+      ts: nextActionFor
+      py: next_action_for
+      rb: next_action_for
+      go: NextActionFor
+      rust: next_action_for
+      c: nextActionFor
+    params:
+      - name: state
+        type: unknown
+        required: true
+    docs:
+      summary: 'Map a classified paywall state to its single primary recovery action.'
+      params:
+        state: 'Classified paywall state.'
+      returns: 'Primary recovery action (topup, checkout, activate, or account).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  planLadder:
+    names:
+      ts: planLadder
+      py: plan_ladder
+      rb: plan_ladder
+      go: PlanLadder
+      rust: plan_ladder
+      c: planLadder
+    params:
+      - name: gate
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build a cheapest-first markdown checkout ladder from gate plans.'
+      params:
+        gate: 'Gate content carrying plans and the active planRef.'
+      returns: 'Joined markdown links, or null when no plan has a checkoutUrl.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  linkLabel:
+    names:
+      ts: linkLabel
+      py: link_label
+      rb: link_label
+      go: LinkLabel
+      rust: link_label
+      c: linkLabel
+    params:
+      - name: name
+        type: string
+        required: true
+    docs:
+      summary: 'Escape markdown link-label delimiters in a provider-authored plan name.'
+      params:
+        name: 'Plan display name or reference.'
+      returns: 'Label safe to embed in a markdown link.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   paywallErrorToClientPayload:
     names:
       ts: paywallErrorToClientPayload
@@ -3052,6 +3201,30 @@ topLevel:
         reason: 'No generated C exception class.'
 
 coreHelpers:
+  appendPaidToolDescription:
+    names:
+      ts: appendPaidToolDescription
+      py: append_paid_tool_description
+      rb: append_paid_tool_description
+      go: AppendPaidToolDescription
+      rust: append_paid_tool_description
+      c: appendPaidToolDescription
+    params:
+      - name: description
+        type: string
+        required: false
+    docs:
+      summary: 'Append the paid-tool account hint to a merchant tool description.'
+      params:
+        description: 'Optional merchant-authored description; trailing whitespace is stripped.'
+      returns: 'Description plus hint, or the hint alone when no description is present.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   validateBusinessDetails:
     names:
       ts: validateBusinessDetails
@@ -3665,6 +3838,7 @@ coreHelpers:
       c: TAX_ID_TYPES
     docs:
       summary: 'Frozen set of supported tax ID type values.'
+      returns: 'Tax ID type list.'
     sync:
       ts: sync
       py: sync
@@ -3672,37 +3846,30 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
-    availability:
-      ts:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
-      py:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
-      rb:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
-      go:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
-      rust:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
-      c:
-        {
-          omitted: true,
-          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
-        }
+  isTaxIdType:
+    names:
+      ts: isTaxIdType
+      py: is_tax_id_type
+      rb: is_tax_id_type
+      go: IsTaxIdType
+      rust: is_tax_id_type
+      c: isTaxIdType
+    params:
+      - name: value
+        type: string
+        required: true
+    docs:
+      summary: 'Whether a string is a supported tax ID type.'
+      params:
+        value: 'Candidate tax ID type wire value.'
+      returns: 'True when the value is one of TAX_ID_TYPES.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   creditsToDisplayMinorUnits:
     names:
       ts: creditsToDisplayMinorUnits

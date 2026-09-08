@@ -154,12 +154,14 @@ pub struct HttpRequest {
 ///
 /// Any status code — including 4xx/5xx — is a successful transport result.
 /// Mapping status codes to [`SdkError::Api`] is the client shell's job (step 21).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct HttpResponse {
     /// HTTP status code.
     pub status: u16,
     /// Raw response body bytes.
     pub body: Vec<u8>,
+    /// `Content-Type` header when the transport observed one.
+    pub content_type: Option<String>,
 }
 
 #[cfg(test)]

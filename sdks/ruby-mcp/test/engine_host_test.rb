@@ -84,7 +84,7 @@ class EngineHostTest < Minitest::Test
     echo = parsed.dig("result", "tools").find { |tool| tool["name"] == "echo_paid" }
     refute_nil echo, "payable echo_paid missing from tools/list"
     assert_equal "Echo paid", echo["title"]
-    assert_equal "Echo arguments after a paid gate", echo["description"]
+    assert_equal "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call.", echo["description"]
     assert_equal({ "type" => "object", "properties" => { "n" => { "type" => "number" } } }, echo["inputSchema"])
   end
 

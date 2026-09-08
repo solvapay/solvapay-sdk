@@ -140,10 +140,13 @@ describe('paywall bindings', () => {
           product: 'prd_demo',
           checkoutUrl: 'https://pay.test/x',
           message: '',
+          creditBalance: 0,
+          creditsPerCall: 1,
+          shortfallCredits: 1,
         },
       }),
     ).toBe(
-      "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+      "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
     )
   })
 
@@ -156,7 +159,7 @@ describe('paywall bindings', () => {
         limits: { plan: 'pl_basic', remaining: 1 },
       }),
     ).toBe(
-      "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom.",
+      "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom.",
     )
   })
 

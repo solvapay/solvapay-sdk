@@ -35,6 +35,7 @@ class WireRequest:
 class WireResponse:
     status: int
     body: Any
+    content_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -208,6 +209,9 @@ def _parse_wire_pair(raw: dict[str, Any]) -> Wire:
         raise ValueError("wire.response.status must be an int")
     if "body" not in resp:
         raise ValueError("wire.response.body is required")
+    content_type = resp.get("contentType")
+    if content_type is not None and (not isinstance(content_type, str) or not content_type):
+        raise ValueError("wire.response.contentType must be a non-empty string when present")
     return Wire(
         request=WireRequest(
             method=method,  # type: ignore[arg-type]
@@ -220,7 +224,7 @@ def _parse_wire_pair(raw: dict[str, Any]) -> Wire:
             ),
             body=req.get("body"),
         ),
-        response=WireResponse(status=status, body=resp["body"]),
+        response=WireResponse(status=status, body=resp["body"], content_type=content_type),
     )
 
 

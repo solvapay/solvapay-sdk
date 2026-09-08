@@ -1164,6 +1164,83 @@
         ]
       }
     },
+    "CreditSignals": {
+      "module": "paywall_state",
+      "rustdoc": "Coalesced credit-balance channels plus derived shortfall / remaining-call counts.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "credit_balance",
+            "wireName": "creditBalance",
+            "rustdoc": "Nested `balance.creditBalance` wins over the top-level field.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "credits_per_call",
+            "wireName": "creditsPerCall",
+            "rustdoc": "Credits deducted per call (`balance.creditsPerUnit` ?? `creditsPerUnit`).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "shortfall_credits",
+            "wireName": "shortfallCredits",
+            "rustdoc": "`max(0, creditsPerCall - creditBalance)` when both are known.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining_calls",
+            "wireName": "remainingCalls",
+            "rustdoc": "How many calls the current allowance or wallet still covers.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "is_credit_based",
+            "wireName": "isCreditBased",
+            "rustdoc": "True when either credit-balance channel or a per-call cost is present.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          }
+        ]
+      }
+    },
     "CreditsToDisplayInput": {
       "module": "credit_display",
       "rustdoc": "Input for [`credits_to_display_minor_units`].",
@@ -2494,6 +2571,49 @@
             }
           },
           {
+            "rustName": "plan_ref",
+            "wireName": "planRef",
+            "rustdoc": "Active plan reference (dropped from the checkout ladder).",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_name",
+            "wireName": "planName",
+            "rustdoc": "Display name of the active or default plan.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plans",
+            "wireName": "plans",
+            "rustdoc": "Product plans used to build the cheapest-first checkout ladder.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "PaywallPlanSummary"
+              }
+            }
+          },
+          {
             "rustName": "meter_name",
             "wireName": "meterName",
             "rustdoc": "Meter name used in included-usage copy.",
@@ -2522,7 +2642,7 @@
           {
             "rustName": "currency",
             "wireName": "currency",
-            "rustdoc": "ISO currency for [`Self::unit_price_minor`] / top-up presets.",
+            "rustdoc": "ISO currency for [`Self::unit_price_minor`].",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -2535,7 +2655,7 @@
           {
             "rustName": "included",
             "wireName": "included",
-            "rustdoc": "Included counters when the active plan has a finite `freeUnits`.",
+            "rustdoc": "Included counters when the active plan has a finite cap.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -2549,7 +2669,7 @@
           {
             "rustName": "balance",
             "wireName": "balance",
-            "rustdoc": "Nested balance (currency fallback for PAYG-at-zero copy).",
+            "rustdoc": "Nested balance (currency fallback).",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -2558,6 +2678,85 @@
             "ty": {
               "kind": "named",
               "name": "PaywallBalance"
+            }
+          },
+          {
+            "rustName": "credit_balance",
+            "wireName": "creditBalance",
+            "rustdoc": "Coalesced credit balance.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "credits_per_call",
+            "wireName": "creditsPerCall",
+            "rustdoc": "Credits deducted per call.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "shortfall_credits",
+            "wireName": "shortfallCredits",
+            "rustdoc": "`max(0, creditsPerCall - creditBalance)` when both are known.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining_calls",
+            "wireName": "remainingCalls",
+            "rustdoc": "How many calls the current allowance or wallet still covers.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "purchase_ref",
+            "wireName": "purchaseRef",
+            "rustdoc": "Active purchase reference.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "auto_recharge",
+            "wireName": "autoRecharge",
+            "rustdoc": "Per-provider auto-recharge snapshot.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallAutoRecharge"
             }
           }
         ]
@@ -4215,6 +4414,44 @@
         ]
       }
     },
+    "PaywallAutoRecharge": {
+      "module": "paywall_state",
+      "rustdoc": "Per-provider auto-recharge snapshot on a limits / gate payload.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "enabled",
+            "wireName": "enabled",
+            "rustdoc": "Whether auto-recharge is enabled for this provider.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "status",
+            "wireName": "status",
+            "rustdoc": "Stored auto-recharge status when a config exists.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
     "PaywallBalance": {
       "module": "paywall_state",
       "rustdoc": "Nested balance block from newer backend responses.",
@@ -4231,6 +4468,32 @@
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "credits_per_unit",
+            "wireName": "creditsPerUnit",
+            "rustdoc": "Credits deducted per metered item.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining_units",
+            "wireName": "remainingUnits",
+            "rustdoc": "How many metered items the credit balance still covers.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
@@ -4614,6 +4877,139 @@
             "ty": {
               "kind": "f64"
             }
+          },
+          {
+            "rustName": "reason",
+            "wireName": "reason",
+            "rustdoc": "Classified [`PaywallState::kind`].",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "next_action",
+            "wireName": "nextAction",
+            "rustdoc": "Single primary recovery the agent should take.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallNextAction"
+            }
+          },
+          {
+            "rustName": "plan_name",
+            "wireName": "planName",
+            "rustdoc": "Display name of the active or default plan.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "credits_per_call",
+            "wireName": "creditsPerCall",
+            "rustdoc": "Credits deducted per call.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "shortfall_credits",
+            "wireName": "shortfallCredits",
+            "rustdoc": "`max(0, creditsPerCall - creditBalance)` when both are known.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining_calls",
+            "wireName": "remainingCalls",
+            "rustdoc": "How many calls the current allowance or wallet still covers.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "purchase_ref",
+            "wireName": "purchaseRef",
+            "rustdoc": "Active purchase reference.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_status",
+            "wireName": "planStatus",
+            "rustdoc": "Purchase/plan status when the backend sent one.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "auto_recharge",
+            "wireName": "autoRecharge",
+            "rustdoc": "Per-provider auto-recharge snapshot.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallAutoRecharge"
+            }
+          },
+          {
+            "rustName": "links",
+            "wireName": "links",
+            "rustdoc": "Global destinations. Per-plan URLs stay on `plans[].checkoutUrl`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallRecoveryLinks"
+            }
           }
         ]
       }
@@ -4824,6 +5220,124 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "paywall_reason",
+            "wireName": "paywallReason",
+            "rustdoc": "Authoritative backend paywall classification.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_ref",
+            "wireName": "planRef",
+            "rustdoc": "Active plan reference when the customer already holds a purchase.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "purchase_ref",
+            "wireName": "purchaseRef",
+            "rustdoc": "Active purchase reference when the customer already holds a purchase.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_name",
+            "wireName": "planName",
+            "rustdoc": "Display name of the active or default plan.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "credits_per_unit",
+            "wireName": "creditsPerUnit",
+            "rustdoc": "Top-level credits deducted per metered item.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "used",
+            "wireName": "used",
+            "rustdoc": "Consumed usage units this period when the backend measured a finite cap.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "limit",
+            "wireName": "limit",
+            "rustdoc": "Effective finite cap when the backend measured one.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "auto_recharge",
+            "wireName": "autoRecharge",
+            "rustdoc": "Per-provider auto-recharge snapshot.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallAutoRecharge"
+            }
+          },
+          {
+            "rustName": "plan_status",
+            "wireName": "planStatus",
+            "rustdoc": "Purchase/plan status when the backend sent one.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -4851,12 +5365,64 @@
             }
           },
           {
+            "rustName": "paywall_reason",
+            "wireName": "paywallReason",
+            "rustdoc": "Authoritative backend paywall classification (`activation_required` / `topup_required`).",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
             "rustName": "plan",
             "wireName": "plan",
-            "rustdoc": "Active plan reference (matched against [`PaywallPlanSummary::reference`]).",
+            "rustdoc": "Deprecated active-plan alias. The backend never sends this; prefer [`Self::plan_ref`].",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_ref",
+            "wireName": "planRef",
+            "rustdoc": "Active plan reference when the customer already holds a purchase.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "purchase_ref",
+            "wireName": "purchaseRef",
+            "rustdoc": "Active purchase reference when the customer already holds a purchase.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "plan_name",
+            "wireName": "planName",
+            "rustdoc": "Display name of the active or default plan.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
@@ -4908,12 +5474,51 @@
             }
           },
           {
+            "rustName": "credits_per_unit",
+            "wireName": "creditsPerUnit",
+            "rustdoc": "Top-level credits deducted per metered item.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
             "rustName": "remaining",
             "wireName": "remaining",
             "rustdoc": "Remaining allowance (usage-based fallback when credit channels are absent).",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "used",
+            "wireName": "used",
+            "rustdoc": "Consumed usage units this period when the backend measured a finite cap.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "limit",
+            "wireName": "limit",
+            "rustdoc": "Effective finite cap when the backend measured one.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
@@ -4984,6 +5589,60 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "auto_recharge",
+            "wireName": "autoRecharge",
+            "rustdoc": "Per-provider auto-recharge snapshot.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallAutoRecharge"
+            }
+          }
+        ]
+      }
+    },
+    "PaywallNextAction": {
+      "module": "paywall_state",
+      "rustdoc": "Single primary recovery an agent should take after a gate.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "rustName": "Topup",
+            "wireName": "topup",
+            "rustdoc": "Add prepaid credits.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Checkout",
+            "wireName": "checkout",
+            "rustdoc": "Open hosted checkout / switch plan.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Activate",
+            "wireName": "activate",
+            "rustdoc": "Activate a specific plan.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Account",
+            "wireName": "account",
+            "rustdoc": "Inspect the account viewer.",
+            "cfgFeature": null,
+            "fields": []
           }
         ]
       }
@@ -5032,7 +5691,7 @@
     },
     "PaywallPlanSummary": {
       "module": "paywall_state",
-      "rustdoc": "Minimal plan summary used by the classifier.",
+      "rustdoc": "Minimal plan summary used by the classifier and the checkout ladder.",
       "serde": "deserialize",
       "cfgFeature": null,
       "shape": {
@@ -5045,7 +5704,7 @@
             "rustdoc": "Plan reference matching [`PaywallLimits::plan`].",
             "optional": false,
             "skipSerializingIf": null,
-            "serdeDefault": false,
+            "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
@@ -5058,7 +5717,46 @@
             "rustdoc": "Plan type wire string (`usage-based`, `recurring`, …).",
             "optional": false,
             "skipSerializingIf": null,
-            "serdeDefault": false,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "name",
+            "wireName": "name",
+            "rustdoc": "Display name used in the checkout ladder.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "price",
+            "wireName": "price",
+            "rustdoc": "Headline price in minor units; used to sort the ladder cheapest-first.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "checkout_url",
+            "wireName": "checkoutUrl",
+            "rustdoc": "Per-plan hosted checkout deep link.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
@@ -5110,6 +5808,57 @@
             "rustdoc": "ISO currency on the active plan.",
             "optional": true,
             "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "PaywallRecoveryLinks": {
+      "module": "paywall_state",
+      "rustdoc": "Global recovery destinations. Per-plan URLs stay on `plans[].checkoutUrl`.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "topup",
+            "wireName": "topup",
+            "rustdoc": "Checkout URL that contains `/topup`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "checkout",
+            "wireName": "checkout",
+            "rustdoc": "Checkout URL that does not contain `/topup`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "manage",
+            "wireName": "manage",
+            "rustdoc": "Confirmation / manage URL.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
             "serdeDefault": true,
             "serializeWith": null,
             "cfgFeature": null,
@@ -7607,6 +8356,28 @@
         }
       }
     },
+    "solvapay_core::business_details::is_tax_id_type": {
+      "name": "is_tax_id_type",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Whether `value` is a supported [`TAX_ID_TYPES`] wire value.\n\n# Arguments\n\n* `value` - Candidate tax ID type string.\n\n# Returns\n\n`true` when `value` is exactly one of [`TAX_ID_TYPES`].",
+      "params": [
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
     "solvapay_core::business_details::postal_code_required_countries": {
       "name": "postal_code_required_countries",
       "module": "business_details",
@@ -7681,6 +8452,22 @@
       "module": "business_details",
       "implTy": null,
       "rustdoc": "Countries that require a state/province for Stripe Tax.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
+        }
+      }
+    },
+    "solvapay_core::business_details::tax_id_types": {
+      "name": "tax_id_types",
+      "module": "business_details",
+      "implTy": null,
+      "rustdoc": "Frozen set of supported tax ID type wire values.\n\n# Returns\n\nThe Stripe-aligned tax ID types SolvaPay accepts on business details.",
       "params": [],
       "return": {
         "optional": false,
@@ -8952,6 +9739,50 @@
         }
       }
     },
+    "solvapay_core::mcp::append_paid_tool_description": {
+      "name": "append_paid_tool_description",
+      "module": "mcp",
+      "implTy": null,
+      "rustdoc": "Append the paid-tool account hint. Implementation lives in [`descriptors`].",
+      "params": [
+        {
+          "rustName": "description",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::mcp::descriptors::append_paid_tool_description": {
+      "name": "append_paid_tool_description",
+      "module": "mcp::descriptors",
+      "implTy": null,
+      "rustdoc": "Append the paid-tool account hint to a merchant description.\n\nTrailing whitespace is stripped. When `description` is missing or blank,\nthe hint is returned alone.\n\n# Arguments\n\n* `description` - Optional merchant-authored tool description.\n\n# Returns\n\nDescription plus hint, or the hint alone.",
+      "params": [
+        {
+          "rustName": "description",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::mcp::descriptors::build_prompt_descriptor_metadata": {
       "name": "build_prompt_descriptor_metadata",
       "module": "mcp::descriptors",
@@ -10118,7 +10949,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`. Prefer these over the credit-balance heuristic.\n3. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n4. Active plan at included cap (`plan` is a non-empty ref and\n   `remaining <= 0`) → `limit_reached`.\n5. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n3. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n4. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n5. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n6. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",
@@ -10135,6 +10966,99 @@
         "ty": {
           "kind": "named",
           "name": "PaywallState"
+        }
+      }
+    },
+    "solvapay_core::paywall_state::credit_signals": {
+      "name": "credit_signals",
+      "module": "paywall_state",
+      "implTy": null,
+      "rustdoc": "Coalesce the two credit-balance channels and derive shortfall / remaining-call counts.\n\nNested `balance` wins when present. `remainingCalls` prefers\n`balance.remainingUnits`, then `floor(balance / cost)`, then `remaining`\nwhen it is `>= 0`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` when no check has run.\n\n# Returns\n\nCredit signals. `is_credit_based` is `false` when both channels are absent.",
+      "params": [
+        {
+          "rustName": "limits",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "named",
+            "name": "PaywallLimits"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CreditSignals"
+        }
+      }
+    },
+    "solvapay_core::paywall_state::link_label": {
+      "name": "link_label",
+      "module": "paywall_state",
+      "implTy": null,
+      "rustdoc": "Escape markdown link-label delimiters — plan names are provider-authored.\n\n# Arguments\n\n* `name` - Plan display name or reference.\n\n# Returns\n\nLabel safe to embed in `[label](url)`.",
+      "params": [
+        {
+          "rustName": "name",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::paywall_state::next_action_for": {
+      "name": "next_action_for",
+      "module": "paywall_state",
+      "implTy": null,
+      "rustdoc": "Map a classified paywall state to its single primary recovery action.\n\n# Arguments\n\n* `state` - Classified paywall state.\n\n# Returns\n\nThe recovery action an agent should take next.",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "PaywallState"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallNextAction"
+        }
+      }
+    },
+    "solvapay_core::paywall_state::plan_ladder": {
+      "name": "plan_ladder",
+      "module": "paywall_state",
+      "implTy": null,
+      "rustdoc": "Cheapest-first markdown checkout ladder from plans that carry a `checkoutUrl`.\n\nDrops the active `gate.plan_ref`, sorts by `price` ascending, and takes 4.\n\n# Arguments\n\n* `gate` - Gate content carrying `plans` and the active `plan_ref`.\n\n# Returns\n\nJoined ` · ` markdown links, or `None` when no plan is linkable.",
+      "params": [
+        {
+          "rustName": "gate",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "GateContent"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
         }
       }
     },

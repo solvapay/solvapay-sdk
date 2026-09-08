@@ -36,6 +36,7 @@ MCP_AUTHORING_FIXTURES = [
     "builtin-tools/account-topup.json",
     "builtin-tools/account-view-account.json",
     "builtin-tools/account.json",
+    "builtin-tools/activate-plan-already-active.json",
     "builtin-tools/activate-plan-no-ref.json",
     "builtin-tools/activate-plan.json",
     "builtin-tools/attach-business-details-unauth.json",
@@ -97,6 +98,8 @@ MCP_AUTHORING_FIXTURES = [
     "hide-tools/openai-visibility-private.json",
     "hide-tools/ua-spoof.json",
     "narrate/activate-plan.json",
+    "narrate/already-active-shortfall.json",
+    "narrate/already-active.json",
     "narrate/manage-account-active.json",
     "narrate/manage-account.json",
     "narrate/mode-auto.json",
@@ -277,7 +280,10 @@ def test_replays_core_op(rel: str) -> None:
         if str(rel).endswith("tools-list-payable.json"):
             echo = next(t for t in got["rpc"]["result"]["tools"] if t["name"] == "echo_paid")
             assert echo["title"] == "Echo paid"
-            assert echo["description"] == "Echo arguments after a paid gate"
+            assert echo["description"] == (
+                "Echo arguments after a paid gate Paid tool — call `account` "
+                "for current balance and cost per call."
+            )
             assert echo["inputSchema"] == {
                 "type": "object",
                 "properties": {"n": {"type": "number"}},

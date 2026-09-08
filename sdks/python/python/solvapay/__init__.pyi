@@ -582,8 +582,18 @@ def state_required_countries() -> list[str]:
     @returns Country code list.
     """
     ...
+TAX_ID_TYPES: list[str]
+"""Frozen set of supported tax ID type values.
+@returns Tax ID type list.
+"""
 TAX_NOT_COLLECTED_NOTE: str
 """Buyer-facing note when tax is not collected on the purchase."""
+def append_paid_tool_description(description: str | None = None) -> str:
+    """Append the paid-tool account hint to a merchant tool description.
+    @param description Optional merchant-authored description; trailing whitespace is stripped.
+    @returns Description plus hint, or the hint alone when no description is present.
+    """
+    ...
 def assert_valid_product_ref(product_ref: str, context: str) -> None:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.
@@ -627,6 +637,12 @@ def classify_paywall_state(limits: object | None = None) -> object:
 def counts_usage(priced: object | None = None) -> bool:
     """True when the plan counts usage via a per-unit charge, limit, or tier.
     @returns Whether the plan has a usage counter even without a per-unit rate.
+    """
+    ...
+def credit_signals(limits: object | None = None) -> object:
+    """Coalesce credit-balance channels and derive shortfall and remaining-call counts.
+    @param limits Limits response, or null/absent when no check has run.
+    @returns Credit signals including isCreditBased and optional shortfall fields.
     """
     ...
 def credits_per_unit_from_balance(
@@ -735,6 +751,12 @@ def is_state_required(country: str) -> bool:
     @returns True when a state or province is required.
     """
     ...
+def is_tax_id_type(value: str) -> bool:
+    """Whether a string is a supported tax ID type.
+    @param value Candidate tax ID type wire value.
+    @returns True when the value is one of TAX_ID_TYPES.
+    """
+    ...
 def is_unlimited_remaining(remaining: float) -> bool:
     """Return whether remaining is the backend unlimited sentinel (-1).
     @returns True only when remaining is exactly -1.
@@ -745,6 +767,12 @@ def is_zero_decimal_currency(currency: str) -> bool:
     @returns True when the currency has zero decimal places.
     """
     ...
+def link_label(name: str) -> str:
+    """Escape markdown link-label delimiters in a provider-authored plan name.
+    @param name Plan display name or reference.
+    @returns Label safe to embed in a markdown link.
+    """
+    ...
 def meter_name(priced: object | None = None) -> str | None:
     """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
     @returns Meter name, or null when no charge, tier, or limit names one.
@@ -753,6 +781,12 @@ def meter_name(priced: object | None = None) -> str | None:
 def minor_units_per_major(currency: str) -> int:
     """Return how many minor units make one major unit for a currency.
     @returns Minor units per major unit.
+    """
+    ...
+def next_action_for(state: object) -> object:
+    """Map a classified paywall state to its single primary recovery action.
+    @param state Classified paywall state.
+    @returns Primary recovery action (topup, checkout, activate, or account).
     """
     ...
 def paywall_error_to_client_payload(message: str, structured_content: object) -> object:
@@ -777,6 +811,12 @@ def pegged_credits_per_unit(
 def per_unit_charge(priced: object | None = None, meter: str | None = None) -> object | None:
     """Return the first per-unit charge, optionally scoped to one meter.
     @returns The metered charge, or null when the plan does not meter usage.
+    """
+    ...
+def plan_ladder(gate: object) -> str | None:
+    """Build a cheapest-first markdown checkout ladder from gate plans.
+    @param gate Gate content carrying plans and the active planRef.
+    @returns Joined markdown links, or null when no plan has a checkoutUrl.
     """
     ...
 def plan_pricing_shape(priced: object | None = None) -> object:

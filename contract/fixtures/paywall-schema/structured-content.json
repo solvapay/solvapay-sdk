@@ -32,6 +32,29 @@
               }
             },
             "creditBalance": { "type": "number" },
+            "reason": { "type": "string" },
+            "nextAction": { "type": "string" },
+            "planName": { "type": "string" },
+            "creditsPerCall": { "type": "number" },
+            "shortfallCredits": { "type": "number" },
+            "remainingCalls": { "type": "number" },
+            "purchaseRef": { "type": "string" },
+            "planStatus": { "type": "string" },
+            "autoRecharge": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "status": { "type": "string" }
+              }
+            },
+            "links": {
+              "type": "object",
+              "properties": {
+                "topup": { "type": "string" },
+                "checkout": { "type": "string" },
+                "manage": { "type": "string" }
+              }
+            },
             "balance": {},
             "productDetails": {}
           }
@@ -60,6 +83,29 @@
               }
             },
             "creditBalance": { "type": "number" },
+            "reason": { "type": "string" },
+            "nextAction": { "type": "string" },
+            "planName": { "type": "string" },
+            "creditsPerCall": { "type": "number" },
+            "shortfallCredits": { "type": "number" },
+            "remainingCalls": { "type": "number" },
+            "purchaseRef": { "type": "string" },
+            "planStatus": { "type": "string" },
+            "autoRecharge": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "status": { "type": "string" }
+              }
+            },
+            "links": {
+              "type": "object",
+              "properties": {
+                "topup": { "type": "string" },
+                "checkout": { "type": "string" },
+                "manage": { "type": "string" }
+              }
+            },
             "confirmationUrl": { "type": "string" },
             "balance": {},
             "productDetails": {}
