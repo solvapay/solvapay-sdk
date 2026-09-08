@@ -95,14 +95,21 @@ function createMockTransport(merchant: Merchant): SolvaPayTransport {
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
     createCheckoutSession: vi.fn(),
-    createCustomerSession: vi.fn(),
+    createCustomerSession: vi.fn().mockResolvedValue({
+      sessionId: 'csess_test',
+      customerUrl: 'https://example.test/portal',
+    }),
     getMerchant: vi.fn().mockResolvedValue(merchant),
     listPlans: vi.fn().mockResolvedValue([]),
     getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
   }
 }
 
-function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayContextValue {
+function buildCtx(
+  config: SolvaPayConfig,
+  displayCurrency = 'USD',
+  creditsPerMinorUnit: number | null = 100,
+): SolvaPayContextValue {
   return {
     purchase: {
       loading: false,
@@ -129,7 +136,7 @@ function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayCont
       loading: false,
       credits: 1000,
       displayCurrency,
-      creditsPerMinorUnit: 100,
+      creditsPerMinorUnit,
       displayExchangeRate: 1,
       display: null,
       displayMinorUnits: null,
@@ -146,12 +153,13 @@ function renderTopup(
   merchant: Merchant,
   displayCurrency = 'USD',
   displayMode: 'inline' | 'fullscreen' = 'inline',
+  creditsPerMinorUnit: number | null = 100,
 ) {
   const transport = createMockTransport(merchant)
   const config: SolvaPayConfig = { transport }
-  const ctx = buildCtx(config, displayCurrency)
+  const ctx = buildCtx(config, displayCurrency, creditsPerMinorUnit)
   const app: McpBridgeAppLike = { updateModelContext: vi.fn().mockResolvedValue(undefined) }
-  return render(
+  const view = render(
     <SolvaPayContext.Provider value={ctx}>
       <McpDisplayModeProvider
         value={{
@@ -166,6 +174,7 @@ function renderTopup(
       </McpDisplayModeProvider>
     </SolvaPayContext.Provider>,
   )
+  return { ...view, ctx }
 }
 
 const multiCurrencyMerchant: Merchant = {
@@ -434,5 +443,17 @@ describe('<McpTopupView> — topup currency picker', () => {
     const rail = container.querySelector('.solvapay-mcp-summary-rail')
     expect(rail?.textContent).toMatch(/\$31\.25/)
     expect(screen.getByTestId('topup-submit')).toHaveTextContent('$31.25')
+  })
+
+  it('skips the optimistic credit bump when creditsPerMinorUnit is missing', async () => {
+    const { ctx } = renderTopup(singleCurrencyUsdMerchant, 'USD', 'inline', null)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    fireEvent.click(screen.getByTestId('topup-form-submit'))
+    expect(ctx.balance.adjustBalance).not.toHaveBeenCalled()
   })
 })

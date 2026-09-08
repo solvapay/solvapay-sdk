@@ -50,9 +50,9 @@ export interface BuildResponseContextParams {
 }
 
 /**
- * Synthesize a minimal `BootstrapPlan` from `LimitResponseWithPlan.plan`
- * (a plan-ref string). Fall-back path when the caller hasn't threaded
- * a richer bootstrap plan projection through.
+ * Synthesize a minimal `BootstrapPlan` from the deprecated
+ * `LimitResponseWithPlan.plan` alias. Prefer `planRef` on the limits
+ * response, or a richer bootstrap plan projection from the caller.
  */
 function synthesizePlanStub(limits: LimitResponseWithPlan | null): BootstrapPlan | null {
   if (!limits?.plan) return null

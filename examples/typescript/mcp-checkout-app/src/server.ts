@@ -90,7 +90,9 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
       iconUrl,
       logoUrl: result.logoUrl,
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[mcp-checkout-app] branding fetch failed, using default identity:', message)
     return undefined
   }
 }

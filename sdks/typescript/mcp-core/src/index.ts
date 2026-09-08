@@ -77,6 +77,7 @@ export {
   narratedToolResult,
   parseMode,
   previewJson,
+  ToolErrorEnvelopeSchema,
   toolErrorResult,
   toolResult,
 } from './helpers'
@@ -97,6 +98,7 @@ export type { ProductReadinessInput, ProductReadinessResult } from '@solvapay/co
 // ---- Narrators (per-tool text-mode renderers) ----
 export {
   NARRATORS,
+  narrateAlreadyActive,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,

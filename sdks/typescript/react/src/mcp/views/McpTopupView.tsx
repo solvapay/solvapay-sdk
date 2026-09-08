@@ -245,7 +245,9 @@ function EmbeddedTopup({
           autoRecharge={screen.autoRecharge}
           returnUrl={returnUrl}
           onSuccess={() => {
-            adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
+            if (creditsPerMinorUnit != null && creditsPerMinorUnit > 0) {
+              adjustBalance(committedAmountMinor * creditsPerMinorUnit)
+            }
             setScreen({ step: 'success', amountMinor: committedAmountMinor })
             void notifyModelContext({
               text: `Topup of ${formatPrice(committedAmountMinor, currency, {

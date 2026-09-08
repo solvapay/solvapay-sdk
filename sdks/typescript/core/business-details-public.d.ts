@@ -41,6 +41,8 @@ export declare const TAX_ID_EXAMPLE_BY_COUNTRY: Record<SupportedBusinessCountry,
 
 export declare function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType
 
+export declare function isTaxIdType(value: unknown): value is TaxIdType
+
 export declare function getTaxIdFieldLabel(country: SupportedBusinessCountry): string
 
 export declare function getTaxIdExample(country: SupportedBusinessCountry): string

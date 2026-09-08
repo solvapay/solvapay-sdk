@@ -4,6 +4,7 @@ import {
   buildSolvaPayRequest,
   defaultGetCustomerRef,
   paywallToolResult,
+  ToolErrorEnvelopeSchema,
   toolErrorResult,
   toolResult,
 } from '../src'
@@ -115,6 +116,7 @@ describe('toolResult / toolErrorResult', () => {
     const result = toolErrorResult({ error: 'boom', status: 500 })
     expect(result.isError).toBe(true)
     expect(result.structuredContent).toEqual({ error: 'boom', status: 500 })
+    ToolErrorEnvelopeSchema.parse(result.structuredContent)
   })
 
   it('puts the human-readable short message in content[0].text when details is absent', () => {

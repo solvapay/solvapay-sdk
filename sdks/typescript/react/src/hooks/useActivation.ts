@@ -59,6 +59,7 @@ export function useActivation(): UseActivationReturn {
         switch (data.status) {
           case 'activated':
           case 'already_active':
+          case 'already_purchased':
             setState('activated')
             return 'activated'
           case 'topup_required':

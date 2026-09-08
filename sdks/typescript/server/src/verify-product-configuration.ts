@@ -65,6 +65,15 @@ export async function verifyProductConfiguration(
     }
   } catch (error) {
     const status = error instanceof SolvaPayError ? error.status : undefined
+    const code = error instanceof SolvaPayError ? error.code : undefined
+
+    if (status === 404 && code === 'non_json_response') {
+      throw new Error(
+        `Could not reach ${apiBaseUrl} while verifying SOLVAPAY_PRODUCT_REF "${productRef}": ` +
+          'the server returned a non-JSON response (often an offline ngrok tunnel or proxy error page). ' +
+          'Check SOLVAPAY_API_BASE_URL and that the API tunnel is running.',
+      )
+    }
 
     if (status === 404) {
       throw new Error(

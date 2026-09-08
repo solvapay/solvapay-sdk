@@ -4,6 +4,7 @@
  * Types related to the SolvaPay API client and backend communication.
  */
 
+import type { TaxIdType } from '@solvapay/core'
 import type { components, operations } from './generated'
 import type {
   CancelPurchaseParams,
@@ -61,7 +62,7 @@ export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
- * Extended LimitResponse with SDK-added plan field.
+ * `LimitResponse` plus a deprecated SDK-only `plan` alias.
  *
  * The backend `LimitResponse` now natively carries the `onExceed` outcome flags
  * (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` / `upgraded`, resolved
@@ -69,10 +70,24 @@ export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
  * `overage` ride the allow path (`withinLimits: true`) so a protected handler
  * can read them from `decision.limits` and degrade service or note overage; the
  * others accompany a gate outcome.
+ *
+ * Read `planRef` for the active plan. `plan` is never populated by the
+ * backend — it remains optional so older fixtures and callers still type-check.
  */
 export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
-  plan: string
+  /** @deprecated Never populated by the backend. Read `planRef` instead. */
+  plan?: string
 }
+
+type GeneratedTaxIdType = NonNullable<components['schemas']['BusinessDetailsDto']['taxIdType']>
+type AssertEqual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never
+
+/**
+ * Fails to compile if `@solvapay/core`'s `TaxIdType` drifts from the
+ * generated `BusinessDetailsDto.taxIdType` union. `core` cannot import
+ * `generated.ts`, so this is where parity is enforced.
+ */
+true satisfies AssertEqual<TaxIdType, GeneratedTaxIdType>
 
 /**
  * Extended CustomerResponse with proper field mapping
