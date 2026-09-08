@@ -22,6 +22,11 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): 
 export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
 
 /**
+ * Binding for `TAX_ID_TYPES`.
+ */
+export function TAX_ID_TYPES(args_json: string): string;
+
+/**
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
  */
 export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
@@ -162,6 +167,11 @@ export function isPostalCodeRequired(args_json: string): string;
 export function isStateRequired(args_json: string): string;
 
 /**
+ * Binding for `isTaxIdType`.
+ */
+export function isTaxIdType(args_json: string): string;
+
+/**
  * Binding for `isUnlimitedRemaining`.
  */
 export function isUnlimitedRemaining(args_json: string): string;
@@ -284,6 +294,7 @@ export interface InitOutput {
     readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
     readonly STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly charges: (a: number, b: number) => [number, number];
@@ -312,6 +323,7 @@ export interface InitOutput {
     readonly isCustomerAddressComplete: (a: number, b: number) => [number, number];
     readonly isPostalCodeRequired: (a: number, b: number) => [number, number];
     readonly isStateRequired: (a: number, b: number) => [number, number];
+    readonly isTaxIdType: (a: number, b: number) => [number, number];
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly meterName: (a: number, b: number) => [number, number];

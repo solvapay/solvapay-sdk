@@ -22,6 +22,11 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): 
 export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
 
 /**
+ * Binding for `TAX_ID_TYPES`.
+ */
+export function TAX_ID_TYPES(args_json: string): string;
+
+/**
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
  */
 export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
@@ -160,6 +165,11 @@ export function isPostalCodeRequired(args_json: string): string;
  * Binding for `isStateRequired`.
  */
 export function isStateRequired(args_json: string): string;
+
+/**
+ * Binding for `isTaxIdType`.
+ */
+export function isTaxIdType(args_json: string): string;
 
 /**
  * Binding for `isUnlimitedRemaining`.

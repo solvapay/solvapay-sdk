@@ -27,6 +27,11 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): 
 export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
 
 /**
+ * Binding for `TAX_ID_TYPES`.
+ */
+export function TAX_ID_TYPES(args_json: string): string;
+
+/**
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
  */
 export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
@@ -250,6 +255,11 @@ export class WasmClient {
 }
 
 /**
+ * Binding for `appendPaidToolDescription`.
+ */
+export function appendPaidToolDescription(args_json: string): string;
+
+/**
  * Binding for `assertResponseResult` — brand failures are Transport errors
  * (TS wrapper rethrows as plain `Error` for fixture name parity).
  */
@@ -359,6 +369,11 @@ export function coerceCustomerOptions(args_json: string): string;
  * Binding for `countsUsage`.
  */
 export function countsUsage(args_json: string): string;
+
+/**
+ * Binding for `creditSignals`.
+ */
+export function creditSignals(args_json: string): string;
 
 /**
  * Binding for `creditsPerUnitFromBalance`.
@@ -556,6 +571,11 @@ export function isPostalCodeRequired(args_json: string): string;
 export function isStateRequired(args_json: string): string;
 
 /**
+ * Binding for `isTaxIdType`.
+ */
+export function isTaxIdType(args_json: string): string;
+
+/**
  * Binding for `isUnlimitedRemaining`.
  */
 export function isUnlimitedRemaining(args_json: string): string;
@@ -564,6 +584,11 @@ export function isUnlimitedRemaining(args_json: string): string;
  * Binding for `isZeroDecimalCurrency`.
  */
 export function isZeroDecimalCurrency(args_json: string): string;
+
+/**
+ * Binding for `linkLabel`.
+ */
+export function linkLabel(args_json: string): string;
 
 /**
  * Binding for `makeResponseResult`.
@@ -589,6 +614,11 @@ export function meterName(args_json: string): string;
  * Binding for `minorUnitsPerMajor`.
  */
 export function minorUnitsPerMajor(args_json: string): string;
+
+/**
+ * Binding for `nextActionFor`.
+ */
+export function nextActionFor(args_json: string): string;
 
 /**
  * Binding for `normalizeCancelResponse`.
@@ -629,6 +659,11 @@ export function perUnitCharge(args_json: string): string;
  * Binding for `planConsequence`.
  */
 export function planConsequence(args_json: string): string;
+
+/**
+ * Binding for `planLadder`.
+ */
+export function planLadder(args_json: string): string;
 
 /**
  * Binding for `planPricingShape`.
@@ -877,8 +912,10 @@ export interface InitOutput {
     readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
     readonly STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly __wbg_wasmclient_free: (a: number, b: number) => void;
+    readonly appendPaidToolDescription: (a: number, b: number) => [number, number];
     readonly assertResponseResult: (a: number, b: number) => [number, number];
     readonly assertValidProductRef: (a: number, b: number) => [number, number];
     readonly attachBusinessDetailsValidationError: (a: number, b: number) => [number, number];
@@ -901,6 +938,7 @@ export interface InitOutput {
     readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly coerceCustomerOptions: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];
+    readonly creditSignals: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
@@ -940,13 +978,16 @@ export interface InitOutput {
     readonly isErrorResult: (a: number, b: number) => [number, number];
     readonly isPostalCodeRequired: (a: number, b: number) => [number, number];
     readonly isStateRequired: (a: number, b: number) => [number, number];
+    readonly isTaxIdType: (a: number, b: number) => [number, number];
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
+    readonly linkLabel: (a: number, b: number) => [number, number];
     readonly makeResponseResult: (a: number, b: number) => [number, number];
     readonly mapRouteError: (a: number, b: number) => [number, number];
     readonly mcpViewMaps: (a: number, b: number) => [number, number];
     readonly meterName: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
+    readonly nextActionFor: (a: number, b: number) => [number, number];
     readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
@@ -955,6 +996,7 @@ export interface InitOutput {
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
     readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly planConsequence: (a: number, b: number) => [number, number];
+    readonly planLadder: (a: number, b: number) => [number, number];
     readonly planPricingShape: (a: number, b: number) => [number, number];
     readonly projectPaymentIntentResult: (a: number, b: number) => [number, number];
     readonly projectTopupProcessOutcome: (a: number, b: number) => [number, number];
