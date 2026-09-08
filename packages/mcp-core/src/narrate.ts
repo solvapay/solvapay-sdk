@@ -315,8 +315,12 @@ function checkoutUrlOf(data: BootstrapPayload): string | null {
   return httpsUrl(data.checkoutUrl)
 }
 
+function checkoutLinkLabel(url: string): string {
+  return url.includes('/checkout/topup') ? 'Add credits' : 'Open checkout'
+}
+
 function namedCheckoutMarkdown(url: string): string {
-  return `[Open checkout](${url})`
+  return `[${checkoutLinkLabel(url)}](${url})`
 }
 
 function checkoutRow(data: BootstrapPayload): string | null {
@@ -330,18 +334,18 @@ function namedManageMarkdown(url: string): string {
 
 function manageRow(data: BootstrapPayload): string | null {
   const url = httpsUrl(data.portalUrl)
-  return url ? `Manage: ${namedManageMarkdown(url)}` : null
+  return url ? `Manage: ${namedManageMarkdown(url)} (${CHECKOUT_TTL})` : null
 }
 
 function checkoutLink(data: BootstrapPayload): { uri: string; name: string } | null {
   const url = checkoutUrlOf(data)
-  return url ? { uri: url, name: 'Open checkout' } : null
+  return url ? { uri: url, name: checkoutLinkLabel(url) } : null
 }
 
 function hostedPortalLink(data: BootstrapPayload): { uri: string; name: string } | null {
   const url = httpsUrl(data.portalUrl)
   if (url) {
-    return { uri: url, name: 'Open hosted portal' }
+    return { uri: url, name: 'Manage account' }
   }
   return null
 }
@@ -799,8 +803,13 @@ export function narrateManageAccount(
 
   const manage = manageRow(data)
   if (manage) lines.push(manage)
-  const checkout = checkoutRow(data)
-  if (checkout) lines.push(checkout)
+  if (state === 'D') {
+    const topup = checkoutRow(data)
+    if (topup) lines.push(topup)
+  } else {
+    const checkout = checkoutRow(data)
+    if (checkout) lines.push(checkout)
+  }
   lines.push('')
   lines.push(recoveryForState(state, free?.reference))
   lines.push(DOCS_HINT)
@@ -848,12 +857,6 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   lines.push('')
   const bal = balanceRow(data.customer as CustomerShape | null)
   if (bal) lines.push(bal)
-  const currency = (data.customer as CustomerShape | null)?.balance?.displayCurrency ?? 'USD'
-  const presets = [1000, 2500, 5000, 10_000]
-    .map(m => formatMoney(m, currency))
-    .filter(Boolean)
-    .join(' · ')
-  if (presets) lines.push(`Top-up presets: ${presets}`)
   lines.push('')
   lines.push(recoveryLine(['account']))
   return withCheckout(data, lines)

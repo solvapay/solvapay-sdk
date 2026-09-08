@@ -183,8 +183,8 @@ function meterLabel(gate: PaywallStructuredContent): string {
   return gate.meterName.replace(/_/g, ' ')
 }
 
-function namedCheckoutMarkdown(url: string): string {
-  return `[Open checkout](${url})`
+function namedCheckoutMarkdown(url: string, label = 'Open checkout'): string {
+  return `[${label}](${url})`
 }
 
 /** Escape markdown link-label delimiters — plan names are provider-authored. */
@@ -199,7 +199,8 @@ export function planLadder(gate: PaywallStructuredContent): string | null {
     .sort((a, b) => a.price - b.price)
     .slice(0, 4)
   if (linkable.length === 0) return null
-  return linkable.map(p => `[${linkLabel(p.name ?? p.reference)}](${p.checkoutUrl})`).join(' · ')
+  const links = linkable.map(p => `[${linkLabel(p.name ?? p.reference)}](${p.checkoutUrl})`).join(' · ')
+  return `${links} (first link used closes the rest; links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes)`
 }
 
 const VIEWER_TOOL = 'account'
@@ -214,9 +215,10 @@ function recoverClause(
   url: string | null,
   verb: string,
   view?: 'checkout' | 'account' | 'topup',
+  linkLabel = 'Open checkout',
 ): string {
   if (url) {
-    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer(view)}.`
+    return ` ${namedCheckoutMarkdown(url, linkLabel)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer(view)}.`
   }
   return ` ${callViewer(view).replace(/^c/, 'C')}.`
 }
@@ -281,7 +283,7 @@ export function buildGateMessage(
       } else {
         lead = 'Included usage is exhausted.'
       }
-      const topup = recoverClause(url, 'add credits', 'topup')
+      const topup = recoverClause(url, 'add credits', 'topup', 'Add credits')
       const auto =
         autoRechargeDisabled(gate)
           ? ' Auto-recharge is off — turn it on from the account tool to avoid this next time.'

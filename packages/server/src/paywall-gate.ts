@@ -81,7 +81,7 @@ function includedFromLimits(
 function recoveryLinks(limits: LimitsLike): PaywallGateRecoveryFields['links'] {
   const links: NonNullable<PaywallGateRecoveryFields['links']> = {}
   if (limits.checkoutUrl) {
-    if (limits.checkoutUrl.includes('/topup')) {
+    if (limits.paywallReason === 'topup_required') {
       links.topup = limits.checkoutUrl
     } else {
       links.checkout = limits.checkoutUrl

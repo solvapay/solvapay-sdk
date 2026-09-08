@@ -273,7 +273,7 @@ describe('buildGateMessage', () => {
       gate({ checkoutUrl }),
     )
     expect(msg).toMatch(/`account` tool with view: 'topup'/)
-    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
+    expect(msg).toContain(`[Add credits](${checkoutUrl})`)
     expect(msg).not.toMatch(/activate_plan/)
   })
 
@@ -552,7 +552,7 @@ describe('buildGateMessage copy rewrite', () => {
       }),
     )
     expect(msg).toMatch(
-      /\[Plan \\\[beta\\\]\]\(https:\/\/example\.test\/checkout&plan=pln_payg\) · \[Unlimited\]\(https:\/\/example\.test\/checkout&plan=pln_unl\)/,
+      /\[Plan \\\[beta\\\]\]\(https:\/\/example\.test\/checkout&plan=pln_payg\) · \[Unlimited\]\(https:\/\/example\.test\/checkout&plan=pln_unl\) \(first link used closes the rest; links expire in 15 minutes\)/,
     )
   })
 
