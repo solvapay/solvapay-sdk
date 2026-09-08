@@ -16,7 +16,7 @@ export const PAYWALL_GATE_SMOKE_INPUT = {
   },
 }
 
-/** @type {{ kind: string, product: string, checkoutUrl: string, message: string, shortMessage: string, planRef: string }} */
+/** @type {Record<string, unknown>} */
 export const PAYWALL_GATE_SMOKE_EXPECTED = {
   kind: 'payment_required',
   product: 'prd_demo',
@@ -25,6 +25,12 @@ export const PAYWALL_GATE_SMOKE_EXPECTED = {
     "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
   shortMessage: 'Payment required',
   planRef: 'pl_basic',
+  reason: 'limit_reached',
+  nextAction: 'checkout',
+  remainingCalls: 0,
+  links: {
+    checkout: 'https://pay.test/x',
+  },
 }
 
 export const CUSTOMER_SMOKE_REF = 'cus_smoke_1'
