@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  narrateAlreadyActive,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
@@ -510,7 +511,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain(
-      'Cool MCP calls are failing: your credit balance is 0 and Pay as you go needs credits.',
+      'Cool MCP calls are failing: your credit balance is 0; this call costs 200 credits — 200 short.',
     )
     expect(text).toContain('Say "add funds" to top up, or "change plan" for a plan that does not use credits')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
@@ -700,7 +701,7 @@ describe('narrateUpgrade', () => {
 })
 
 describe('narrateTopup', () => {
-  it('shows balance + presets', () => {
+  it('shows balance without invented presets', () => {
     const { text } = narrateTopup(
       basePayload({
         customer: {
@@ -714,7 +715,19 @@ describe('narrateTopup', () => {
     )
     expect(text).toContain('**Top up — Acme Knowledge Base**')
     expect(text).toContain('Balance: 865,500 credits')
-    expect(text).toContain('Top-up presets:')
+    expect(text).not.toContain('Top-up presets:')
+  })
+
+  it('labels a topup checkout URL as Add credits', () => {
+    const { text, links } = narrateTopup(
+      basePayload({
+        checkoutUrl: 'https://customer.solvapay.com/customer/checkout/topup?id=abc',
+      }),
+    )
+    expect(text).toContain('[Add credits](https://customer.solvapay.com/customer/checkout/topup?id=abc)')
+    expect(links).toEqual([
+      { uri: 'https://customer.solvapay.com/customer/checkout/topup?id=abc', name: 'Add credits' },
+    ])
   })
 })
 
@@ -1013,6 +1026,7 @@ describe('text-lane self-sufficiency', () => {
     const checkoutAt = text.indexOf('[Open checkout](https://customer.solvapay.com/checkout?id=def)')
     expect(manageAt).toBeGreaterThanOrEqual(0)
     expect(checkoutAt).toBeGreaterThan(manageAt)
+    expect(text).toContain('(expires in 15 minutes)')
   })
 
   it('no narrator emits the slash-command recovery form', () => {
@@ -1036,5 +1050,17 @@ describe('text-lane self-sufficiency', () => {
     const placeholder = uiPlaceholder('checkout', linkedPayload)
     expect(placeholder).toContain('Pay as you go')
     expect(placeholder).not.toContain('dafsfa')
+  })
+})
+
+describe('narrateAlreadyActive', () => {
+  it('names the shortfall when balance and cost are present', () => {
+    expect(
+      narrateAlreadyActive({ creditBalance: 91_000, creditsPerUnit: 100_000 }),
+    ).toContain('Balance 91,000 credits; this call costs 100,000 credits — 9,000 short')
+  })
+
+  it('stays terse when cost is missing', () => {
+    expect(narrateAlreadyActive({ creditBalance: 91_000 })).toBe('This plan is already active.')
   })
 })

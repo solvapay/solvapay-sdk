@@ -12,7 +12,8 @@
  * primary recovery tool so LLMs chain naturally toward it.
  */
 
-import type { LimitResponseWithPlan, PaywallStructuredContent } from './types'
+import { minorUnitsPerMajor } from '@solvapay/core'
+import type { PaywallNextAction, LimitResponseWithPlan, PaywallStructuredContent } from './types'
 
 /**
  * How long a checkout session URL stays valid. Stated inline in gate
@@ -35,44 +36,90 @@ export type PaywallState =
   | { kind: 'limit_reached' }
   | { kind: 'reactivation_required' }
 
+export type CreditSignals = {
+  creditBalance?: number
+  creditsPerCall?: number
+  shortfallCredits?: number
+  remainingCalls?: number
+  isCreditBased: boolean
+}
+
+/**
+ * Coalesce the two credit-balance channels and derive shortfall /
+ * remaining-call counts. Nested `balance` wins when present.
+ */
+export function creditSignals(limits: LimitResponseWithPlan | null): CreditSignals {
+  if (!limits) return { isCreditBased: false }
+  const creditBalance = limits.balance?.creditBalance ?? limits.creditBalance
+  const creditsPerCall = limits.balance?.creditsPerUnit ?? limits.creditsPerUnit
+  const isCreditBased = creditBalance !== undefined || creditsPerCall !== undefined
+  const shortfallCredits =
+    creditBalance !== undefined && creditsPerCall !== undefined
+      ? Math.max(0, creditsPerCall - creditBalance)
+      : undefined
+  let remainingCalls: number | undefined
+  if (limits.balance?.remainingUnits !== undefined) {
+    remainingCalls = limits.balance.remainingUnits
+  } else if (
+    creditBalance !== undefined &&
+    creditsPerCall !== undefined &&
+    creditsPerCall > 0
+  ) {
+    remainingCalls = Math.floor(creditBalance / creditsPerCall)
+  } else if (limits.remaining >= 0) {
+    remainingCalls = limits.remaining
+  }
+  return { creditBalance, creditsPerCall, shortfallCredits, remainingCalls, isCreditBased }
+}
+
+export function nextActionFor(state: PaywallState): PaywallNextAction {
+  switch (state.kind) {
+    case 'activation_required':
+      return 'activate'
+    case 'topup_required':
+      return 'topup'
+    case 'upgrade_required':
+    case 'limit_reached':
+      return 'checkout'
+    case 'reactivation_required':
+      return 'account'
+  }
+}
+
+function activePlanRefOf(limits: LimitResponseWithPlan): string | undefined {
+  const ref = limits.planRef ?? limits.plan
+  return ref && ref.length > 0 ? ref : undefined
+}
+
 /**
  * Classify a `LimitResponseWithPlan` (or `null` on degraded paths) into
  * a `PaywallState`. Pure — safe to call multiple times per request.
  *
  * Precedence:
- *  1. `activationRequired === true` — trumps everything else; the
- *     backend explicitly flagged that no plan is live yet.
- *  2. Authoritative `needsTopUp` / `needsUpgrade` flags from
- *     `decideLimit`, when the backend sent them. Prefer these over
- *     the credit-balance heuristic so a top-up deny and an
- *     auto-upgrade deny are not re-derived from plan type.
- *  3. Usage-based plan out of credits — the customer has a plan but
- *     ran out, so a topup is the right action. "Out of credits" is
- *     determined from (in order): the nested
- *     `balance.creditBalance === 0` block, the top-level
- *     `creditBalance === 0` field, or `remaining === 0` as a
- *     fallback for older backend responses that omit both credit
- *     fields on usage-based plans.
- *  4. Active plan at included cap (`plan` is a non-empty ref and
- *     `remaining <= 0`) → `limit_reached`. This is the "on Free, used
- *     3 of 3" case — not "no plan".
- *  5. Everything else → `upgrade_required`, including:
- *     - `limits === null` (defensive),
- *     - no active plan on the product.
+ *  1. `activationRequired` / `paywallReason === 'activation_required'`.
+ *  2. `paywallReason === 'topup_required'` — backend stays authoritative
+ *     for credit-based denials (same rule as Managed MCP).
+ *  3. Authoritative `needsTopUp` / `needsUpgrade` flags from `decideLimit`.
+ *  4. Credit-field presence + a real shortfall (`balance < cost`).
+ *  5. Active purchase / plan at included cap → `limit_reached`.
+ *  6. Floor: never `upgrade_required` when credit fields or a purchase
+ *     are present. Everything else → `upgrade_required`.
  *
  * `reactivation_required` is deferred — it needs a distinct backend
- * signal (future `LimitResponse.inactivePurchaseRef`) which isn't
- * emitted yet. Kept in the type so downstream code compiles against
- * the full discriminated union; `classifyPaywallState` will never
- * return it under current backend behaviour.
+ * signal which isn't emitted yet. Kept in the type so downstream code
+ * compiles against the full discriminated union.
  */
 export function classifyPaywallState(
   limits: LimitResponseWithPlan | null,
 ): PaywallState {
   if (!limits) return { kind: 'upgrade_required' }
 
-  if (limits.activationRequired === true) {
+  if (limits.activationRequired === true || limits.paywallReason === 'activation_required') {
     return { kind: 'activation_required' }
+  }
+
+  if (limits.paywallReason === 'topup_required') {
+    return { kind: 'topup_required' }
   }
 
   if (limits.needsTopUp === true) {
@@ -83,53 +130,52 @@ export function classifyPaywallState(
     return { kind: 'upgrade_required' }
   }
 
-  const activePlan = limits.plans?.find(p => p.reference === limits.plan)
-  // A resolved plan with `type === 'usage-based'` is authoritative.
-  // Presence of the `balance` block is an older-backend proxy for
-  // "this response describes a usage-based customer" — every
-  // backend that emits the structured balance uses it for
-  // usage-based tiers. We treat either signal as usage-based so
-  // the topup path fires when the plan list is missing.
-  const isUsageBased =
-    activePlan?.type === 'usage-based' || limits.balance !== undefined
-  // Coalesce the two credit-balance channels. Nested wins when
-  // present (richer schema on newer backends); fall back to the
-  // top-level optional field. `undefined` means "we can't
-  // determine the balance" and we defer to `remaining` below.
-  const creditBalance = limits.balance?.creditBalance ?? limits.creditBalance
-
-  if (isUsageBased) {
-    if (creditBalance === 0) return { kind: 'topup_required' }
-    // Fallback: when the response omits both credit-balance
-    // channels on a usage-based plan, `remaining === 0` means the
-    // customer is exhausted — the only actionable recovery is a
-    // topup. Without this, usage-based customers on older backend
-    // responses got sent to `upgrade` ("pick a plan") when they
-    // should have been sent to `topup` ("add credits").
-    if (creditBalance === undefined && limits.remaining === 0) {
+  const signals = creditSignals(limits)
+  if (signals.isCreditBased) {
+    if (
+      signals.creditBalance !== undefined &&
+      signals.creditsPerCall !== undefined &&
+      signals.creditBalance < signals.creditsPerCall
+    ) {
+      return { kind: 'topup_required' }
+    }
+    if (signals.creditBalance === 0) return { kind: 'topup_required' }
+    if (signals.creditsPerCall === undefined && limits.remaining === 0) {
       return { kind: 'topup_required' }
     }
   }
 
-  if (limits.plan.length > 0 && limits.remaining <= 0) {
+  const activeRef = activePlanRefOf(limits)
+  if ((limits.purchaseRef || activeRef) && limits.remaining <= 0) {
     return { kind: 'limit_reached' }
   }
+
+  if (signals.isCreditBased) return { kind: 'topup_required' }
+  if (limits.purchaseRef) return { kind: 'limit_reached' }
 
   return { kind: 'upgrade_required' }
 }
 
 function formatMinor(amountMinor: number, currency: string): string {
-  const major = amountMinor / 100
+  const divisor = minorUnitsPerMajor(currency)
+  const major = amountMinor / divisor
+  const fractionDigits = divisor === 1 ? 0 : 2
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase(),
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
     }).format(major)
   } catch {
-    return `${currency.toUpperCase()} ${major.toFixed(2)}`
+    return `${currency.toUpperCase()} ${
+      divisor === 1 ? String(Math.round(major)) : major.toFixed(2)
+    }`
   }
+}
+
+function formatCredits(value: number): string {
+  return value.toLocaleString('en-US')
 }
 
 function meterLabel(gate: PaywallStructuredContent): string {
@@ -137,8 +183,24 @@ function meterLabel(gate: PaywallStructuredContent): string {
   return gate.meterName.replace(/_/g, ' ')
 }
 
-function namedCheckoutMarkdown(url: string): string {
-  return `[Open checkout](${url})`
+function namedCheckoutMarkdown(url: string, label = 'Open checkout'): string {
+  return `[${label}](${url})`
+}
+
+/** Escape markdown link-label delimiters — plan names are provider-authored. */
+export function linkLabel(name: string): string {
+  return name.replace(/([[\]])/g, '\\$1')
+}
+
+export function planLadder(gate: PaywallStructuredContent): string | null {
+  const linkable = (gate.plans ?? [])
+    .filter(p => typeof p.checkoutUrl === 'string' && p.checkoutUrl.length > 0)
+    .filter(p => p.reference !== gate.planRef)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 4)
+  if (linkable.length === 0) return null
+  const links = linkable.map(p => `[${linkLabel(p.name ?? p.reference)}](${p.checkoutUrl})`).join(' · ')
+  return `${links} (first link used closes the rest; links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes)`
 }
 
 const VIEWER_TOOL = 'account'
@@ -153,11 +215,20 @@ function recoverClause(
   url: string | null,
   verb: string,
   view?: 'checkout' | 'account' | 'topup',
+  linkLabel = 'Open checkout',
 ): string {
   if (url) {
-    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer(view)}.`
+    return ` ${namedCheckoutMarkdown(url, linkLabel)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer(view)}.`
   }
   return ` ${callViewer(view).replace(/^c/, 'C')}.`
+}
+
+function hasActivePlan(gate: PaywallStructuredContent): boolean {
+  return Boolean(gate.purchaseRef || (gate.planRef && gate.planRef.length > 0))
+}
+
+function autoRechargeDisabled(gate: PaywallStructuredContent): boolean {
+  return gate.autoRecharge?.enabled === false
 }
 
 /**
@@ -177,6 +248,7 @@ export function buildGateMessage(
   gate: PaywallStructuredContent,
 ): string {
   const url = gate.checkoutUrl && gate.checkoutUrl.length > 0 ? gate.checkoutUrl : null
+  const ladder = planLadder(gate)
 
   switch (state.kind) {
     case 'limit_reached': {
@@ -189,17 +261,50 @@ export function buildGateMessage(
         ? `You've used ${included.used} of ${included.total} included ${meterLabel(gate)} this period.`
         : `You've reached the included usage for this period.`
       const nextLine = price ? ` The next call is ${price}.` : ''
-      return `${usedLine}${nextLine}${recoverClause(url, 'continue', 'checkout')} ${DOCS_HINT}`
+      const planName = gate.planName ?? 'This plan'
+      const antiTrap =
+        gate.creditBalance !== undefined &&
+        gate.creditBalance > 0 &&
+        (gate.creditsPerCall === undefined || gate.creditsPerCall === 0)
+          ? ` Adding credits will not help, because ${planName} does not spend them.`
+          : ''
+      const switchLine = ladder ? ` Or switch plan: ${ladder}.` : recoverClause(url, 'continue', 'checkout')
+      return `${usedLine}${nextLine}${antiTrap}${switchLine} ${DOCS_HINT}`
     }
     case 'activation_required':
       return `Your plan needs activation.${recoverClause(url, 'activate', 'checkout')} Or call \`activate_plan\` with a \`planRef\`. ${DOCS_HINT}`
     case 'topup_required': {
-      const currency = gate.currency ?? gate.balance?.currency ?? 'USD'
-      const presets = [1000, 2500, 5000, 10_000].map(m => formatMinor(m, currency)).join(' · ')
-      return `You're out of credits. Top up first (${presets}).${recoverClause(url, 'add credits', 'topup')} ${DOCS_HINT}`
+      const balance = gate.creditBalance
+      const cost = gate.creditsPerCall
+      const shortfall = gate.shortfallCredits
+      let lead: string
+      if (balance !== undefined && cost !== undefined && shortfall !== undefined) {
+        lead = `Out of credits for this call. Balance ${formatCredits(balance)} credits; this call costs ${formatCredits(cost)} credits — ${formatCredits(shortfall)} short.`
+      } else {
+        lead = 'Included usage is exhausted.'
+      }
+      const topup = recoverClause(url, 'add credits', 'topup', 'Add credits')
+      const auto =
+        autoRechargeDisabled(gate)
+          ? ' Auto-recharge is off — turn it on from the account tool to avoid this next time.'
+          : ''
+      const switchLine = ladder ? ` Or switch plan: ${ladder}.` : ''
+      return `${lead}${topup}${auto}${switchLine} ${DOCS_HINT}`
     }
-    case 'upgrade_required':
+    case 'upgrade_required': {
+      if (hasActivePlan(gate)) {
+        const planName = gate.planName ?? 'This plan'
+        const lead = `${planName} is active but its included usage is exhausted, and the automatic switch to the next plan did not complete.`
+        if (ladder) {
+          return `${lead} Switch here: ${ladder}. ${DOCS_HINT}`
+        }
+        return `${lead}${recoverClause(url, 'switch plan', 'checkout')} ${DOCS_HINT}`
+      }
+      if (ladder) {
+        return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder} (links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer('checkout')}. ${DOCS_HINT}`
+      }
       return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'checkout')} ${DOCS_HINT}`
+    }
     case 'reactivation_required':
       return `Your previous plan is no longer active. ${callViewer('account').replace(/^c/, 'C')} to reactivate it, or ${callViewer('checkout')} to pick a new plan. ${DOCS_HINT}`
   }
@@ -223,12 +328,19 @@ export function buildNudgeMessage(
 ): string {
   const url = limits?.checkoutUrl && limits.checkoutUrl.length > 0 ? limits.checkoutUrl : null
   const visitClause = url ? `, or ${namedCheckoutMarkdown(url)}` : ''
+  const remaining = creditSignals(limits).remainingCalls
 
   switch (state.kind) {
     case 'topup_required':
+      if (remaining === 0) {
+        return `Heads up — 0 calls left — the next call needs a top-up. ${callViewer('topup').replace(/^c/, 'C')} to add more${visitClause}.`
+      }
       return `Heads up — running low on credits. ${callViewer('topup').replace(/^c/, 'C')} to add more${visitClause}.`
     case 'upgrade_required':
     case 'limit_reached':
+      if (remaining === 0) {
+        return `Heads up — 0 calls left — the next call needs a top-up. ${callViewer('checkout').replace(/^c/, 'C')} for more headroom${visitClause}.`
+      }
       return `Heads up — approaching your plan's limit this period. ${callViewer('checkout').replace(/^c/, 'C')} for more headroom${visitClause}.`
     case 'activation_required':
       return `Heads up — this plan still needs activation. Call the \`activate_plan\` tool with a \`planRef\`${visitClause}.`

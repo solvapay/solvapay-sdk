@@ -248,6 +248,73 @@ describe('buildPaywallGate', () => {
     expect(gate.kind).toBe('payment_required')
   })
 
+  it('prefers measured used/limit over plan-derived included arithmetic', () => {
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      plan: 'plan_free',
+      planRef: 'plan_free',
+      used: 2,
+      limit: 5,
+      remaining: 3,
+      plans: [
+        {
+          reference: 'plan_free',
+          name: 'Free',
+          type: 'hybrid',
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+          freeUnits: 3,
+        },
+      ],
+    })
+    expect(gate.included).toEqual({ total: 5, used: 2, remaining: 3 })
+  })
+
+  it('routes recovery links.topup from paywallReason instead of URL shape', () => {
+    const gate = buildPaywallGate('prd_topup', {
+      withinLimits: false,
+      remaining: 0,
+      plan: '',
+      paywallReason: 'topup_required',
+      checkoutUrl: 'https://pay.example.com/customer/checkout?id=chk_1',
+    })
+    expect(gate.links?.topup).toBe('https://pay.example.com/customer/checkout?id=chk_1')
+    expect(gate.links?.checkout).toBeUndefined()
+  })
+
+  it('swaps to activation_required for a credit shortfall once plans are forwarded', () => {
+    // Forwarding plans[] wakes useActivationForTopup for rows 5 and 6.
+    // The React isTopupGate discriminator sees kind: activation_required.
+    // buildGateMessage still switches on state.kind (topup_required), so
+    // the message branch is unchanged by this kind swap.
+    const paygPlan = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      type: 'usage-based' as const,
+      price: 1000,
+      currency: 'USD',
+      requiresPayment: true,
+    }
+    const gate = buildPaywallGate('prd_topup', {
+      withinLimits: false,
+      remaining: 0,
+      plan: '',
+      planRef: 'pln_payg',
+      purchaseRef: 'pur_1',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [paygPlan],
+      creditBalance: 91_000,
+      creditsPerUnit: 100_000,
+      balance: { creditBalance: 91_000, creditsPerUnit: 100_000, currency: 'USD' },
+    })
+    expect(gate.kind).toBe('activation_required')
+    expect(gate.reason).toBe('topup_required')
+    expect(gate.nextAction).toBe('topup')
+    expect(gate.message).toMatch(/9,000 short/)
+    expect(gate.message).not.toMatch(/don't have an active plan/)
+  })
+
   it('ignores Free plans when checking PAYG-only — Free + PAYG still swaps to activation_required', () => {
     // Free plans don't represent a paid remediation, so a product that
     // offers Free + a single PAYG plan still counts as topup-only for the

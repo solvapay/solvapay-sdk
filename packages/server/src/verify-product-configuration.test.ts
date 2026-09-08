@@ -55,6 +55,24 @@ describe('verifyProductConfiguration', () => {
     ).rejects.toThrow(/does not exist on https:\/\/api-dev\.solvapay\.com/)
   })
 
+  it('throws an unreachable-API error on non-JSON 404 responses', async () => {
+    const promise = verifyProductConfiguration({
+      apiClient: {
+        getProduct: vi
+          .fn()
+          .mockRejectedValue(
+            new SolvaPayError('offline tunnel', { status: 404, code: 'non_json_response' }),
+          ),
+      },
+      productRef: 'prd_demo',
+      apiBaseUrl: 'https://api.tommy-local.ngrok.app',
+    })
+
+    await expect(promise).rejects.toThrow(/Could not reach https:\/\/api\.tommy-local\.ngrok\.app/)
+    await expect(promise).rejects.toThrow(/non-JSON response/)
+    await expect(promise).rejects.not.toThrow(/does not exist/)
+  })
+
   it('throws when getProduct is missing', async () => {
     await expect(
       verifyProductConfiguration({

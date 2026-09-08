@@ -7,6 +7,7 @@
  * `Request` construction, and tool-result wrapping.
  */
 
+import { z } from 'zod'
 import type {
   BootstrapPayload,
   McpToolExtra,
@@ -14,6 +15,17 @@ import type {
   SolvaPayMcpViewKind,
 } from './types'
 import { NARRATORS, uiPlaceholder } from './narrate'
+
+/**
+ * Shape of `toolErrorResult`'s `structuredContent`. Union this into any
+ * tool `outputSchema` so a host that validates structured content does
+ * not replace a real diagnostic with a schema complaint.
+ */
+export const ToolErrorEnvelopeSchema = z.object({
+  error: z.string(),
+  status: z.number(),
+  details: z.string().optional(),
+})
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.

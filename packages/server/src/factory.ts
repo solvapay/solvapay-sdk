@@ -671,6 +671,7 @@ export interface SolvaPay {
     customerRef: string
     planRef?: string
     returnUrl?: string
+    purpose?: 'credit_topup'
   }): Promise<{
     sessionId: string
     checkoutUrl: string
@@ -977,6 +978,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         customerRef: params.customerRef,
         productRef: params.productRef,
         planRef: params.planRef,
+        returnUrl: params.returnUrl,
+        ...(params.purpose ? { purpose: params.purpose } : {}),
       })
     },
 

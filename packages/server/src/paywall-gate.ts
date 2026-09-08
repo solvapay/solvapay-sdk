@@ -17,18 +17,21 @@
 import type {
   LimitPlanSummary,
   LimitResponseWithPlan,
+  PaywallGateRecoveryFields,
   PaywallStructuredContent,
 } from './types'
-import { buildGateMessage, classifyPaywallState } from './paywall-state'
+import {
+  buildGateMessage,
+  classifyPaywallState,
+  creditSignals,
+  nextActionFor,
+} from './paywall-state'
 
 /**
- * Subset of `LimitResponseWithPlan` the helper actually reads. Keeps the
- * signature flexible — callers can pass the raw `apiClient.checkLimits`
- * result without first asserting the `plan` field.
+ * `LimitResponseWithPlan` as returned by `apiClient.checkLimits`.
+ * `plan` is optional and deprecated — the backend never sends it.
  */
-type LimitsLike = Omit<LimitResponseWithPlan, 'plan'> & {
-  plan?: LimitResponseWithPlan['plan']
-}
+type LimitsLike = LimitResponseWithPlan
 
 /**
  * Detect "the only paid remediation on this product is a topup" — i.e. every
@@ -44,14 +47,27 @@ function allPaidPlansArePayg(plans: LimitPlanSummary[] | undefined): boolean {
   return paidPlans.every(p => p.type === 'usage-based' || p.type === 'hybrid')
 }
 
+function activePlanRefOf(limits: LimitsLike): string | undefined {
+  const ref = limits.planRef ?? limits.plan
+  return ref && ref.length > 0 ? ref : undefined
+}
+
 function activePlanOf(limits: LimitsLike): LimitPlanSummary | undefined {
-  if (!limits.plan) return undefined
-  return limits.plans?.find(p => p.reference === limits.plan)
+  const ref = activePlanRefOf(limits)
+  if (!ref) return undefined
+  return limits.plans?.find(p => p.reference === ref)
 }
 
 function includedFromLimits(
   limits: LimitsLike,
 ): { total: number; used: number; remaining: number } | undefined {
+  if (limits.used !== undefined && limits.limit !== undefined) {
+    return {
+      total: limits.limit,
+      used: limits.used,
+      remaining: limits.remaining,
+    }
+  }
   const total = activePlanOf(limits)?.freeUnits
   if (total == null || total === 0) return undefined
   const remaining = limits.remaining
@@ -62,24 +78,37 @@ function includedFromLimits(
   }
 }
 
+function recoveryLinks(limits: LimitsLike): PaywallGateRecoveryFields['links'] {
+  const links: NonNullable<PaywallGateRecoveryFields['links']> = {}
+  if (limits.checkoutUrl) {
+    if (limits.paywallReason === 'topup_required') {
+      links.topup = limits.checkoutUrl
+    } else {
+      links.checkout = limits.checkoutUrl
+    }
+  }
+  if (limits.confirmationUrl) {
+    links.manage = limits.confirmationUrl
+  }
+  return Object.keys(links).length > 0 ? links : undefined
+}
+
 /**
  * Machine-readable recovery fields for both gate kinds. A field the
  * backend did not send is omitted, not invented.
  */
-function recoveryFields(limits: LimitsLike): {
-  planRef?: string
-  plans?: LimitPlanSummary[]
-  meterName?: string
-  unitPriceMinor?: number
-  currency?: string
-  included?: { total: number; used: number; remaining: number }
-  creditBalance?: number
-} {
+function recoveryFields(
+  limits: LimitsLike,
+  state: ReturnType<typeof classifyPaywallState>,
+): PaywallGateRecoveryFields {
   const plan = activePlanOf(limits)
   const included = includedFromLimits(limits)
-  const creditBalance = limits.balance?.creditBalance ?? limits.creditBalance
+  const signals = creditSignals(limits)
+  const planRef = activePlanRefOf(limits)
+  const links = recoveryLinks(limits)
   return {
-    ...(limits.plan ? { planRef: limits.plan } : {}),
+    ...(planRef ? { planRef } : {}),
+    ...(limits.planName !== undefined ? { planName: limits.planName } : {}),
     ...(limits.plans !== undefined ? { plans: limits.plans } : {}),
     ...(limits.meterName !== undefined ? { meterName: limits.meterName } : {}),
     ...(plan?.perUnitChargeMinor != null
@@ -88,7 +117,17 @@ function recoveryFields(limits: LimitsLike): {
         ? { currency: limits.currency }
         : {}),
     ...(included ? { included } : {}),
-    ...(creditBalance !== undefined ? { creditBalance } : {}),
+    ...(signals.creditBalance !== undefined ? { creditBalance: signals.creditBalance } : {}),
+    reason: state.kind,
+    nextAction: nextActionFor(state),
+    ...(signals.creditsPerCall !== undefined ? { creditsPerCall: signals.creditsPerCall } : {}),
+    ...(signals.shortfallCredits !== undefined
+      ? { shortfallCredits: signals.shortfallCredits }
+      : {}),
+    ...(signals.remainingCalls !== undefined ? { remainingCalls: signals.remainingCalls } : {}),
+    ...(limits.purchaseRef !== undefined ? { purchaseRef: limits.purchaseRef } : {}),
+    ...(limits.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
+    ...(links ? { links } : {}),
   }
 }
 
@@ -98,11 +137,7 @@ export function buildPaywallGate(
 ): PaywallStructuredContent {
   const checkoutUrl = limits.checkoutUrl
 
-  // `classifyPaywallState` requires the `plan` field — fall back to the
-  // empty string for callers that only have a `LimitResponse` proper
-  // (e.g. `payable.gate()` consumers that haven't yet routed through
-  // the SDK client wrapper that adds the field).
-  const state = classifyPaywallState({ ...limits, plan: limits.plan ?? '' })
+  const state = classifyPaywallState(limits)
 
   // When the customer is on an active usage-based plan but out of credits
   // (state: `topup_required`) AND the product's only paid remediation is
@@ -119,7 +154,7 @@ export function buildPaywallGate(
     state.kind === 'topup_required' &&
     allPaidPlansArePayg(limits.plans)
 
-  const recovery = recoveryFields(limits)
+  const recovery = recoveryFields(limits, state)
 
   const preMessage: PaywallStructuredContent =
     limits.activationRequired || useActivationForTopup

@@ -13,8 +13,10 @@
 import {
   checkLimitsCore,
   checkPurchaseCore,
+  classifyPaywallState,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  creditSignals,
   deriveUsageSnapshot,
   getCustomerBalanceCore,
   getMerchantCore,
@@ -22,6 +24,7 @@ import {
   getProductCore,
   isErrorResult,
   listPlansCore,
+  nextActionFor,
   type ErrorResult,
   type SolvaPay,
 } from '@solvapay/server'
@@ -167,7 +170,6 @@ export function createBuildBootstrapPayload(
       paymentMethodResult,
       balanceResult,
       limitsResult,
-      checkoutResult,
       portalResult,
     ] = await Promise.all([
       fetchPublishableKey(),
@@ -178,19 +180,25 @@ export function createBuildBootstrapPayload(
       customerRef ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(checkLimitsCore(limitsRequest(), { solvaPay })) : unauthenticated(),
-      wrapError(
-        createCheckoutSessionCore(
-          buildSolvaPayRequest(extra, {
-            getCustomerRef: () => customerRef ?? 'anonymous',
-          }),
-          { productRef, returnUrl: publicBaseUrl },
-          { solvaPay, returnUrl: publicBaseUrl },
-        ),
-      ),
       customerRef
         ? wrapError(createCustomerSessionCore(buildRequest(extra), { solvaPay }))
         : unauthenticated(),
     ])
+
+    const limits = okOrNull(limitsResult)
+    const checkoutPurpose =
+      view === 'topup' || view === 'auto-recharge' || limits?.paywallReason === 'topup_required'
+        ? ('credit_topup' as const)
+        : undefined
+    const checkoutResult = await wrapError(
+      createCheckoutSessionCore(
+        buildSolvaPayRequest(extra, {
+          getCustomerRef: () => customerRef ?? 'anonymous',
+        }),
+        { productRef, returnUrl: publicBaseUrl, ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}) },
+        { solvaPay, returnUrl: publicBaseUrl },
+      ),
+    )
 
     if (isErrorResult(merchantResult)) {
       throw createBootstrapMerchantError(merchantResult)
@@ -211,7 +219,6 @@ export function createBuildBootstrapPayload(
         }
       : null
 
-    const limits = okOrNull(limitsResult)
     const activePurchase = enrichedPurchase?.purchases.find(p => p.status === 'active')
     const usage = customerRef
       ? deriveUsageSnapshot({
@@ -226,6 +233,8 @@ export function createBuildBootstrapPayload(
         })
       : null
 
+    const signals = limits ? creditSignals(limits) : null
+    const state = limits ? classifyPaywallState(limits) : null
     const customer: BootstrapPayload['customer'] = customerRef
       ? {
           ref: customerRef,
@@ -234,6 +243,18 @@ export function createBuildBootstrapPayload(
           balance: okOrNull(balanceResult),
           usage,
           limits,
+          ...(limits ? { canCall: limits.withinLimits === true } : {}),
+          ...(signals?.remainingCalls !== undefined
+            ? { remainingCalls: signals.remainingCalls }
+            : {}),
+          ...(signals?.creditsPerCall !== undefined
+            ? { creditsPerCall: signals.creditsPerCall }
+            : {}),
+          ...(signals?.shortfallCredits !== undefined
+            ? { shortfallCredits: signals.shortfallCredits }
+            : {}),
+          ...(limits?.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
+          ...(state ? { nextAction: nextActionFor(state) } : {}),
         }
       : null
 

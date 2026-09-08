@@ -155,6 +155,7 @@ export {
   TAX_ID_EXAMPLE_BY_COUNTRY,
   TAX_ID_TYPES,
   deriveTaxIdType,
+  isTaxIdType,
   getCustomerAddressFieldErrors,
   getPostalCodeFieldLabel,
   getPostalCodePlaceholder,

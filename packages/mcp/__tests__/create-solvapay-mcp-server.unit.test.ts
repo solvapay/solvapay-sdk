@@ -200,6 +200,23 @@ describe('createSolvaPayMcpServer', () => {
       expect(activate?.annotations?.readOnlyHint).toBe(false)
     })
 
+    it('registerPayable appends the account hint to paid tool descriptions', () => {
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('search', {
+            product: 'prd_x',
+            description: 'Search documents.',
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      expect(registered['search']?.description).toBe(
+        'Search documents. Paid tool — call `account` for current balance and cost per call.',
+      )
+    })
+
     it('registerPayable unions merchant outputSchema with the paywall gate schema', () => {
       const schema = z.object({ symbol: z.string() })
       const { server } = buildTestServer({
