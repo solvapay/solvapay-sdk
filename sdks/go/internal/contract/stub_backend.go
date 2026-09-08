@@ -91,7 +91,6 @@ func (s *StubBackend) Start() {
 			contentType = "application/octet-stream"
 		case string:
 			data = []byte(v)
-			contentType = "text/plain; charset=utf-8"
 		default:
 			encoded, err := json.Marshal(v)
 			if err != nil {

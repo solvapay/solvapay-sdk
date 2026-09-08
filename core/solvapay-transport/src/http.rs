@@ -164,6 +164,17 @@ pub struct HttpResponse {
     pub content_type: Option<String>,
 }
 
+impl HttpResponse {
+    /// 200 response with a raw body and no observed Content-Type.
+    pub fn ok(body: impl AsRef<[u8]>) -> Self {
+        Self {
+            status: 200,
+            body: body.as_ref().to_vec(),
+            content_type: None,
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,

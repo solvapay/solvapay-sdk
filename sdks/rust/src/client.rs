@@ -672,11 +672,7 @@ mod tests {
 
     #[tokio::test]
     async fn client_with_transport_uses_injected_transport() {
-        let mock = MockTransport::new(vec![Ok(HttpResponse {
-            status: 200,
-            body: br#"{"displayName":"Acme"}"#.to_vec(),
-            content_type: None,
-        })]);
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(br#"{"displayName":"Acme"}"#))]);
         let client = Client::with_transport(
             mock.clone(),
             Config {
@@ -695,11 +691,7 @@ mod tests {
     #[tokio::test]
     async fn gate_allow_returns_allow_when_within_limits() {
         let limits_body = br#"{"withinLimits":true,"remaining":3,"plan":"pro"}"#;
-        let mock = MockTransport::new(vec![Ok(HttpResponse {
-            status: 200,
-            body: limits_body.to_vec(),
-            content_type: None,
-        })]);
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(limits_body))]);
         let client = Client::with_transport(
             mock,
             Config {
@@ -725,16 +717,8 @@ mod tests {
         let limits_body = br#"{"withinLimits":false,"remaining":0,"plan":"pro"}"#;
         let usage_ok = br#"{}"#;
         let mock = MockTransport::new(vec![
-            Ok(HttpResponse {
-                status: 200,
-                body: limits_body.to_vec(),
-                content_type: None,
-            }),
-            Ok(HttpResponse {
-                status: 200,
-                body: usage_ok.to_vec(),
-                content_type: None,
-            }),
+            Ok(HttpResponse::ok(limits_body)),
+            Ok(HttpResponse::ok(usage_ok)),
         ]);
         let client = Client::with_transport(
             mock.clone(),
@@ -786,16 +770,8 @@ mod tests {
         let limits_body = br#"{"withinLimits":true,"remaining":1,"plan":"pro"}"#;
         let usage_ok = br#"{}"#;
         let mock = MockTransport::new(vec![
-            Ok(HttpResponse {
-                status: 200,
-                body: limits_body.to_vec(),
-                content_type: None,
-            }),
-            Ok(HttpResponse {
-                status: 200,
-                body: usage_ok.to_vec(),
-                content_type: None,
-            }),
+            Ok(HttpResponse::ok(limits_body)),
+            Ok(HttpResponse::ok(usage_ok)),
         ]);
         let client = Client::with_transport(
             mock.clone(),
@@ -849,11 +825,7 @@ mod tests {
         use solvapay_core::{PaywallGate, PaywallGateKind};
 
         let limits_body = br#"{"withinLimits":true,"remaining":1,"plan":"pro"}"#;
-        let mock = MockTransport::new(vec![Ok(HttpResponse {
-            status: 200,
-            body: limits_body.to_vec(),
-            content_type: None,
-        })]);
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(limits_body))]);
         let client = Client::with_transport(
             mock.clone(),
             Config {

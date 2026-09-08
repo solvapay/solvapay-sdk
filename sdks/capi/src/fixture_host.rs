@@ -722,7 +722,7 @@ fn write_http_response(
     body: &Value,
 ) -> Result<(), String> {
     let (payload, content_type) = match body {
-        Value::String(s) => (s.clone().into_bytes(), "text/plain; charset=utf-8"),
+        Value::String(s) => (s.clone().into_bytes(), "application/json"),
         other => (
             serde_json::to_vec(other).map_err(|err| err.to_string())?,
             "application/json",
