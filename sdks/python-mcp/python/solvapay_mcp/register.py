@@ -171,7 +171,8 @@ def _auth_info_from_request(request: object | None) -> object | None:
         return None
     scope = getattr(request, "scope", None)
     if isinstance(scope, Mapping) and "auth" in scope:
-        return scope["auth"]
+        auth: object = scope["auth"]
+        return auth
     return None
 
 
