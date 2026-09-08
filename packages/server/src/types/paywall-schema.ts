@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { PAYWALL_NEXT_ACTIONS, PAYWALL_REASONS } from './paywall'
 
 const includedSchema = z.object({
   total: z.number(),
@@ -24,16 +25,8 @@ const recoveryFields = {
   creditBalance: z.number().optional(),
   balance: z.record(z.string(), z.unknown()).optional(),
   productDetails: z.record(z.string(), z.unknown()).optional(),
-  reason: z
-    .enum([
-      'activation_required',
-      'topup_required',
-      'upgrade_required',
-      'limit_reached',
-      'reactivation_required',
-    ])
-    .optional(),
-  nextAction: z.enum(['topup', 'checkout', 'activate', 'account']).optional(),
+  reason: z.enum(PAYWALL_REASONS).optional(),
+  nextAction: z.enum(PAYWALL_NEXT_ACTIONS).optional(),
   creditsPerCall: z.number().optional(),
   shortfallCredits: z.number().optional(),
   remainingCalls: z.number().optional(),

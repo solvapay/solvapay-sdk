@@ -88,7 +88,7 @@ export function nextActionFor(state: PaywallState): PaywallNextAction {
 
 function activePlanRefOf(limits: LimitResponseWithPlan): string | undefined {
   const ref = limits.planRef ?? limits.plan
-  return ref.length > 0 ? ref : undefined
+  return ref && ref.length > 0 ? ref : undefined
 }
 
 /**

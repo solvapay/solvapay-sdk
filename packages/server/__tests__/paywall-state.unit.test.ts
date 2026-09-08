@@ -81,6 +81,33 @@ describe('classifyPaywallState', () => {
     expect(classifyPaywallState(null)).toEqual({ kind: 'upgrade_required' })
   })
 
+  it('classifies a credit-based allow response that has no plan or planRef', () => {
+    const state = classifyPaywallState({
+      withinLimits: true,
+      remaining: 15132,
+      creditBalance: 3026427,
+      creditsPerUnit: 200,
+      balance: {
+        creditBalance: 3026427,
+        creditsPerUnit: 200,
+        remainingUnits: 15132,
+        currency: 'USD',
+      },
+    })
+    expect(state.kind).toBeTruthy()
+  })
+
+  it('classifies a metered allow response that has no plan or planRef', () => {
+    const state = classifyPaywallState({
+      withinLimits: true,
+      remaining: 3800,
+      used: 6200,
+      limit: 10000,
+      meterName: 'requests',
+    })
+    expect(state.kind).toBeTruthy()
+  })
+
   it('returns limit_reached when on an active recurring plan at period cap', () => {
     const state = classifyPaywallState(
       limits({

@@ -28,13 +28,10 @@ import {
 } from './paywall-state'
 
 /**
- * Subset of `LimitResponseWithPlan` the helper actually reads. Keeps the
- * signature flexible — callers can pass the raw `apiClient.checkLimits`
- * result without first asserting the `plan` field.
+ * `LimitResponseWithPlan` as returned by `apiClient.checkLimits`.
+ * `plan` is optional and deprecated — the backend never sends it.
  */
-type LimitsLike = Omit<LimitResponseWithPlan, 'plan'> & {
-  plan?: LimitResponseWithPlan['plan']
-}
+type LimitsLike = LimitResponseWithPlan
 
 /**
  * Detect "the only paid remediation on this product is a topup" — i.e. every
@@ -106,7 +103,7 @@ function recoveryFields(
 ): PaywallGateRecoveryFields {
   const plan = activePlanOf(limits)
   const included = includedFromLimits(limits)
-  const signals = creditSignals({ ...limits, plan: limits.plan ?? '' })
+  const signals = creditSignals(limits)
   const planRef = activePlanRefOf(limits)
   const links = recoveryLinks(limits)
   return {
@@ -140,11 +137,7 @@ export function buildPaywallGate(
 ): PaywallStructuredContent {
   const checkoutUrl = limits.checkoutUrl
 
-  // `classifyPaywallState` requires the `plan` field — fall back to the
-  // empty string for callers that only have a `LimitResponse` proper
-  // (e.g. `payable.gate()` consumers that haven't yet routed through
-  // the SDK client wrapper that adds the field).
-  const state = classifyPaywallState({ ...limits, plan: limits.plan ?? '' })
+  const state = classifyPaywallState(limits)
 
   // When the customer is on an active usage-based plan but out of credits
   // (state: `topup_required`) AND the product's only paid remediation is

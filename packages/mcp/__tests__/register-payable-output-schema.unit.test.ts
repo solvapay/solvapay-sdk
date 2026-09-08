@@ -9,7 +9,12 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { z } from 'zod'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
-import type { ResponseContext } from '@solvapay/mcp-core'
+import {
+  BootstrapPayloadSchema,
+  ToolErrorEnvelopeSchema,
+  VIEWER_TOOL_NAME,
+  type ResponseContext,
+} from '@solvapay/mcp-core'
 import { createSolvaPayMcpServer } from '../src'
 
 vi.mock('node:fs/promises', () => ({
@@ -32,7 +37,6 @@ function makeSolvaPay(overrides: { withinLimits?: boolean } = {}) {
     checkLimits: vi.fn().mockResolvedValue({
       withinLimits,
       remaining: withinLimits ? 1 : 0,
-      plan: 'free',
     }),
     trackUsage: vi.fn().mockResolvedValue(undefined),
     createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_new' }),
@@ -86,6 +90,7 @@ async function invokeToolsCall(
   server: ReturnType<typeof createSolvaPayMcpServer>,
   name: string,
   args: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handlers = (server as any).server._requestHandlers as Map<
@@ -109,6 +114,7 @@ async function invokeToolsCall(
         send: vi.fn(),
         notify: vi.fn(),
       },
+      ...extra,
     },
   )
 }
@@ -155,5 +161,91 @@ describe('registerPayable — outputSchema + tools/call', () => {
     expect(result.structuredContent?.kind).toBe('payment_required')
     expect(typeof result.structuredContent?.checkoutUrl).toBe('string')
     expect(typeof result.structuredContent?.message).toBe('string')
+  })
+})
+
+function makeAccountSolvaPay(overrides: { checkLimits?: Record<string, unknown> } = {}) {
+  const client = {
+    checkLimits: vi.fn().mockResolvedValue(
+      overrides.checkLimits ?? {
+        withinLimits: true,
+        remaining: 15132,
+        creditBalance: 3026427,
+        creditsPerUnit: 200,
+        balance: {
+          creditBalance: 3026427,
+          creditsPerUnit: 200,
+          remainingUnits: 15132,
+          currency: 'USD',
+        },
+      },
+    ),
+    trackUsage: vi.fn().mockResolvedValue(undefined),
+    createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_42' }),
+    getCustomer: vi.fn().mockResolvedValue({
+      customerRef: 'cus_42',
+      purchases: [{ status: 'active', productRef: 'prd_test', reference: 'pur_1' }],
+    }),
+    getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
+    getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Widget' }),
+    listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_pro', name: 'Pro' }]),
+    getCustomerBalance: vi.fn().mockResolvedValue({
+      customerRef: 'cus_42',
+      credits: 3026427,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    }),
+    getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    createCheckoutSession: vi
+      .fn()
+      .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/checkout' }),
+    createCustomerSession: vi
+      .fn()
+      .mockResolvedValue({ sessionId: 'csess_1', customerUrl: 'https://example.com/portal' }),
+  } as unknown as SolvaPayClient
+  return createSolvaPay({ apiClient: client })
+}
+
+describe('account — outputSchema + tools/call', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns a bootstrap payload for a credit-based allow response with no plan field', async () => {
+    const server = buildServer(makeAccountSolvaPay())
+    const auth = { extra: { customer_ref: 'cus_42' } }
+    const result = await invokeToolsCall(server, VIEWER_TOOL_NAME, { view: 'account' }, {
+      authInfo: auth,
+      http: { authInfo: auth },
+    })
+
+    expect(result.isError).toBeFalsy()
+    expect(outputValidationMessage(result)).toBeUndefined()
+    const parsed = BootstrapPayloadSchema.parse(result.structuredContent)
+    expect(parsed.view).toBe('account')
+    expect(parsed.customer).toMatchObject({
+      canCall: true,
+      remainingCalls: 15132,
+      creditsPerCall: 200,
+    })
+  })
+
+  it('reports the real tool error instead of an output-schema complaint', async () => {
+    const server = buildServer(makeSolvaPay())
+    const result = await invokeToolsCall(server, VIEWER_TOOL_NAME, { view: 'account' })
+
+    expect(result.isError).toBe(true)
+    expect(outputValidationMessage(result)).toBeUndefined()
+    const text = result.content?.find(c => c.type === 'text')?.text ?? ''
+    expect(text.length).toBeGreaterThan(0)
+    expect(text).not.toMatch(/Output validation error/)
+    expect(text).not.toMatch(/must have required property/)
+    ToolErrorEnvelopeSchema.parse(result.structuredContent)
+    expect(result.structuredContent).toMatchObject({
+      error: expect.any(String),
+      status: expect.any(Number),
+    })
   })
 })

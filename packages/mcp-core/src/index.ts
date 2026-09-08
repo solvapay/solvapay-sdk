@@ -78,6 +78,7 @@ export {
   narratedToolResult,
   parseMode,
   previewJson,
+  ToolErrorEnvelopeSchema,
   toolErrorResult,
   toolResult,
 } from './helpers'
