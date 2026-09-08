@@ -1748,9 +1748,19 @@ export interface components {
       /** @description How many metered items the credit balance still covers (`balance / creditsPerUnit`) */
       remainingUnits?: number
     }
+    LimitAutoRechargeDto: {
+      /** @description Whether auto-recharge is enabled for this provider */
+      enabled: boolean
+      /** @description Stored auto-recharge status when a config exists */
+      status?: string
+    }
     LimitPlanItemDto: {
       /** @description Derived billing cycle */
       billingCycle?: string
+      /**
+       * Deep link that opens hosted checkout with this plan preselected. Present only when a checkout session was minted for this response.
+       */
+      checkoutUrl?: string
       /**
        * @deprecated
        * @description Deprecated alias of perUnitChargeMinor. Same minor-units value — not credits. Prefer perUnitChargeMinor.
@@ -1780,6 +1790,10 @@ export interface components {
     LimitResponse: {
       /** @description True when the customer must activate a priced default plan before usage is allowed */
       activationRequired?: boolean
+      /**
+       * Per-provider auto-recharge snapshot read off the customer document. Omitted when no config exists.
+       */
+      autoRecharge?: components['schemas']['LimitAutoRechargeDto']
       /** @description Prepaid usage balance context when the default plan is usage-based */
       balance?: components['schemas']['LimitBalanceDto']
       /**
@@ -1815,10 +1829,21 @@ export interface components {
       needsUpgrade?: boolean
       /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
       overage?: boolean
+      /**
+       * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
+       * @enum {string}
+       */
+      paywallReason?: 'activation_required' | 'topup_required' | 'payment_required'
+      /** @description Display name of the active or default plan */
+      planName?: string
+      /** @description Active plan reference when the customer already holds a purchase */
+      planRef?: string
       /** @description Active plans on the product available for activation or checkout */
       plans?: components['schemas']['LimitPlanItemDto'][]
       /** @description Product the limit check applies to */
       product?: components['schemas']['LimitProductBriefDto']
+      /** @description Active purchase reference when the customer already holds a purchase */
+      purchaseRef?: string
       /**
        * Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).
        * @example 997

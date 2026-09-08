@@ -98,6 +98,7 @@ export type { ProductReadinessInput, ProductReadinessResult } from '@solvapay/co
 export { BootstrapPayloadSchema } from './bootstrap-schema'
 export {
   NARRATORS,
+  narrateAlreadyActive,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,

@@ -41,9 +41,17 @@ export { PaywallError, paywallErrorToClientPayload } from './paywall'
 // point already ships. Pure modules — safe on every edge runtime.
 export { isPaywallStructuredContent } from './types/paywall'
 export { PaywallStructuredContentSchema } from './types/paywall-schema'
-export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
+export {
+  buildGateMessage,
+  buildNudgeMessage,
+  classifyPaywallState,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
+} from './paywall-state'
 export { buildPaywallGate } from './paywall-gate'
-export type { PaywallState } from './paywall-state'
+export type { CreditSignals, PaywallState } from './paywall-state'
 export type { PaywallDecision } from './types/paywall'
 
 // Export types

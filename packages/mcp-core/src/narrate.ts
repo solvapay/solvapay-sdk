@@ -633,9 +633,17 @@ function narrateAccountBody(input: {
   }
 
   if (state === 'D') {
+    const perCall = plan ? creditsPerUnitFromBalance(plan, customer?.balance) : null
+    const shortfall = perCall && perCall > 0 ? Math.max(0, perCall - credits) : null
+    const costBit =
+      perCall && perCall > 0
+        ? `; this call costs ${formatCount(perCall)} credits${
+            shortfall != null ? ` — ${formatCount(shortfall)} short` : ''
+          }`
+        : ` and ${planName} needs credits`
     return (
-      `${product} calls are failing: your credit balance is ${formatCount(credits)} ` +
-      `and ${planName} needs credits. ` +
+      `${product} calls are failing: your credit balance is ${formatCount(credits)}` +
+      `${costBit}. ` +
       `Say "add funds" to top up, or "change plan" for a plan that does not use credits.`
     )
   }
@@ -727,6 +735,25 @@ function narrateAccountBody(input: {
     `${product}'s ${planName} plan is cancelled and ${until}${daysBit}${leftBit}. ` +
     `Calls stop after that. Say "reactivate" to keep it.`
   )
+}
+
+export function narrateAlreadyActive(result: {
+  creditBalance?: number
+  creditsPerUnit?: number
+}): string {
+  const balance = result.creditBalance
+  const cost = result.creditsPerUnit
+  if (balance !== undefined && cost !== undefined) {
+    const shortfall = Math.max(0, cost - balance)
+    if (shortfall > 0) {
+      return (
+        `This plan is already active. Balance ${formatCount(balance)} credits; ` +
+        `this call costs ${formatCount(cost)} credits — ${formatCount(shortfall)} short. ` +
+        `Call the \`${VIEWER_TOOL_NAME}\` tool with view: 'topup' to add credits.`
+      )
+    }
+  }
+  return 'This plan is already active.'
 }
 
 export function narrateManageAccount(

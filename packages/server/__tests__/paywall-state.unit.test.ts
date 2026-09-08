@@ -124,18 +124,15 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'limit_reached' })
   })
 
-  it('returns topup_required for an exhausted usage-based plan even when the response omits the balance block', () => {
-    // Edge case surfaced by Bugbot: when the backend response resolves
-    // the plan to usage-based via `plans[]` but omits the top-level
-    // `balance` block, `limits.balance?.creditBalance` is `undefined`
-    // — the old strict-zero check fell through to `upgrade_required`
-    // and sent the customer down the wrong recovery path ("pick a
-    // plan" instead of "add credits"). Usage-based + exhausted
-    // (`remaining: 0`) must classify as `topup_required` regardless
-    // of whether the balance block is present.
+  it('returns limit_reached for an active plan at cap when no credit fields are present', () => {
+    // Credit-based denials are identified by credit-field presence, not
+    // by `plans[].type`. A usage-based plan row with no balance or
+    // creditsPerUnit is included-usage exhaustion (row 7), not a topup.
     const state = classifyPaywallState(
       limits({
         plan: 'pln_usage',
+        planRef: 'pln_usage',
+        purchaseRef: 'pur_1',
         plans: [
           {
             reference: 'pln_usage',
@@ -146,11 +143,10 @@ describe('classifyPaywallState', () => {
             requiresPayment: true,
           },
         ],
-        // No `balance` block — older backend responses may omit it.
         remaining: 0,
       }),
     )
-    expect(state).toEqual({ kind: 'topup_required' })
+    expect(state).toEqual({ kind: 'limit_reached' })
   })
 
   it('returns topup_required when the top-level `creditBalance` field is zero (no nested balance block)', () => {
@@ -329,5 +325,232 @@ describe('buildNudgeMessage', () => {
     )
     expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
+  })
+
+  it('states 0 calls left when remainingCalls hits zero', () => {
+    const msg = buildNudgeMessage(
+      { kind: 'topup_required' } satisfies PaywallState,
+      limits({
+        remaining: 0,
+        balance: { creditBalance: 0, creditsPerUnit: 100_000, currency: 'USD' },
+      }),
+    )
+    expect(msg).toMatch(/0 calls left/)
+    expect(msg).toMatch(/next call needs a top-up/)
+  })
+})
+
+const NO_ACTIVE_PLAN = /don't have an active plan/
+
+describe('scenario matrix', () => {
+  it('row 5 — PAYG shortfall classifies as topup_required, never upgrade_required', () => {
+    const input = limits({
+      plan: '',
+      planRef: 'pln_payg',
+      planName: 'Pay as you go',
+      purchaseRef: 'pur_1',
+      remaining: 0,
+      paywallReason: 'topup_required',
+      creditBalance: 91_000,
+      creditsPerUnit: 100_000,
+      balance: { creditBalance: 91_000, creditsPerUnit: 100_000, currency: 'USD' },
+    })
+    const state = classifyPaywallState(input)
+    expect(state).toEqual({ kind: 'topup_required' })
+    expect(state.kind).not.toBe('upgrade_required')
+    const msg = buildGateMessage(state, gate({
+      creditBalance: 91_000,
+      creditsPerCall: 100_000,
+      shortfallCredits: 9_000,
+      purchaseRef: 'pur_1',
+      planRef: 'pln_payg',
+    }))
+    expect(msg).toMatch(/Balance 91,000 credits/)
+    expect(msg).toMatch(/100,000 credits/)
+    expect(msg).toMatch(/9,000 short/)
+    expect(msg).not.toMatch(NO_ACTIVE_PLAN)
+    expect(msg).not.toMatch(/\$10\.00/)
+  })
+
+  it('row 6 — zero balance classifies as topup_required via credit-field presence', () => {
+    const input = limits({
+      plan: '',
+      planRef: 'pln_payg',
+      purchaseRef: 'pur_1',
+      remaining: 0,
+      creditBalance: 0,
+      creditsPerUnit: 100_000,
+    })
+    const state = classifyPaywallState(input)
+    expect(state).toEqual({ kind: 'topup_required' })
+    expect(state.kind).not.toBe('upgrade_required')
+  })
+
+  it('row 7 — included usage exhausted classifies as limit_reached off purchaseRef', () => {
+    const input = limits({
+      plan: '',
+      planRef: 'pln_pro',
+      planName: 'Pro',
+      purchaseRef: 'pur_rec',
+      remaining: 0,
+      used: 3,
+      limit: 3,
+      meterName: 'requests',
+      paywallReason: 'payment_required',
+    })
+    const state = classifyPaywallState(input)
+    expect(state).toEqual({ kind: 'limit_reached' })
+  })
+
+  it('row 9 — failed auto-upgrade stays upgrade_required without the no-plan lie', () => {
+    const input = limits({
+      planRef: 'pln_pro',
+      planName: 'Pro',
+      purchaseRef: 'pur_rec',
+      remaining: 0,
+      needsUpgrade: true,
+    })
+    const state = classifyPaywallState(input)
+    expect(state).toEqual({ kind: 'upgrade_required' })
+    const msg = buildGateMessage(
+      state,
+      gate({ planRef: 'pln_pro', planName: 'Pro', purchaseRef: 'pur_rec' }),
+    )
+    expect(msg).not.toMatch(NO_ACTIVE_PLAN)
+    expect(msg).toMatch(/automatic switch/)
+  })
+
+  it.each([
+    {
+      name: 'balance equals cost',
+      plan: '',
+      creditBalance: 100_000,
+      creditsPerUnit: 100_000,
+      remaining: 1,
+      expected: 'topup_required' as const,
+    },
+    {
+      name: 'cost unknown, remaining 0',
+      creditBalance: 50,
+      remaining: 0,
+      expected: 'topup_required' as const,
+    },
+    {
+      name: 'credit fields absent, no purchase',
+      remaining: 0,
+      plan: '',
+      expected: 'upgrade_required' as const,
+    },
+  ])('boundary: $name', ({ expected, ...partial }) => {
+    expect(classifyPaywallState(limits(partial)).kind).toBe(expected)
+  })
+
+  it('never says no active plan when purchaseRef or a credit balance is present', () => {
+    const cases = [
+      limits({
+        purchaseRef: 'pur_1',
+        planRef: 'pln_pro',
+        remaining: 0,
+        used: 3,
+        limit: 3,
+      }),
+      limits({
+        creditBalance: 91_000,
+        creditsPerUnit: 100_000,
+        remaining: 0,
+      }),
+    ]
+    for (const input of cases) {
+      const state = classifyPaywallState(input)
+      const msg = buildGateMessage(
+        state,
+        gate({
+          purchaseRef: input.purchaseRef,
+          planRef: input.planRef,
+          creditBalance: input.creditBalance ?? input.balance?.creditBalance,
+          creditsPerCall: input.creditsPerUnit ?? input.balance?.creditsPerUnit,
+        }),
+      )
+      expect(msg).not.toMatch(NO_ACTIVE_PLAN)
+    }
+  })
+})
+
+describe('buildGateMessage copy rewrite', () => {
+  const checkoutUrl = 'https://example.test/checkout'
+  const payg = {
+    reference: 'pln_payg',
+    name: 'Pay as you go',
+    type: 'usage-based',
+    price: 0,
+    currency: 'USD',
+    requiresPayment: true,
+    checkoutUrl: `${checkoutUrl}&plan=pln_payg`,
+  }
+  const unlimited = {
+    reference: 'pln_unl',
+    name: 'Unlimited',
+    type: 'recurring',
+    price: 5000,
+    currency: 'USD',
+    requiresPayment: true,
+    checkoutUrl: `${checkoutUrl}&plan=pln_unl`,
+  }
+
+  it('quotes JPY without dividing by 100 and omits money when currency is absent', () => {
+    const withYen = buildGateMessage(
+      { kind: 'limit_reached' },
+      gate({ unitPriceMinor: 150, currency: 'JPY', included: { total: 3, used: 3, remaining: 0 } }),
+    )
+    expect(withYen).toMatch(/¥150|JPY 150/)
+    expect(withYen).not.toMatch(/1\.50/)
+    expect(withYen).not.toContain('$')
+
+    const noCurrency = buildGateMessage(
+      { kind: 'limit_reached' },
+      gate({ unitPriceMinor: 150, included: { total: 3, used: 3, remaining: 0 } }),
+    )
+    expect(noCurrency).not.toMatch(/\$|¥|USD|JPY/)
+    expect(noCurrency).not.toMatch(/The next call is/)
+  })
+
+  it('renders the plan ladder cheapest-first and escapes brackets in names', () => {
+    const msg = buildGateMessage(
+      { kind: 'upgrade_required' },
+      gate({
+        plans: [
+          { ...unlimited },
+          { ...payg, name: 'Plan [beta]' },
+        ],
+      }),
+    )
+    expect(msg).toMatch(
+      /\[Plan \\\[beta\\\]\]\(https:\/\/example\.test\/checkout&plan=pln_payg\) · \[Unlimited\]\(https:\/\/example\.test\/checkout&plan=pln_unl\)/,
+    )
+  })
+
+  it('is byte-identical to the post-rewrite copy when no plan has a checkoutUrl', () => {
+    const plans = [{ ...payg, checkoutUrl: undefined }, { ...unlimited, checkoutUrl: undefined }]
+    const withPlans = buildGateMessage({ kind: 'upgrade_required' }, gate({ plans, checkoutUrl }))
+    const without = buildGateMessage({ kind: 'upgrade_required' }, gate({ checkoutUrl }))
+    expect(withPlans).toBe(without)
+  })
+
+  it('limit_reached names the measured meter and the anti-trap line', () => {
+    const msg = buildGateMessage(
+      { kind: 'limit_reached' },
+      gate({
+        planName: 'Pro',
+        planRef: 'pln_pro',
+        meterName: 'requests',
+        included: { total: 3, used: 3, remaining: 0 },
+        creditBalance: 91_000,
+        plans: [payg, unlimited],
+      }),
+    )
+    expect(msg).toMatch(/You've used 3 of 3 included requests/)
+    expect(msg).toMatch(/Adding credits will not help, because Pro does not spend them/)
+    expect(msg).toMatch(/Or switch plan: \[Pay as you go\]/)
+    expect(msg).not.toMatch(/included units/)
   })
 })

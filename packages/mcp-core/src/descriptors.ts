@@ -72,6 +72,7 @@ import {
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
+import { narrateAlreadyActive } from './narrate'
 import { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
@@ -797,6 +798,12 @@ export function buildSolvaPayDescriptors(
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)
+        if (result.status === 'already_active') {
+          return {
+            content: [{ type: 'text' as const, text: narrateAlreadyActive(result) }],
+            structuredContent: result as Record<string, unknown>,
+          }
+        }
         return toolResult(result)
       }),
   })

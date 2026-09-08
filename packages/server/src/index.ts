@@ -138,8 +138,16 @@ export { PaywallStructuredContentSchema } from './types/paywall-schema'
 // Pure paywall state engine — classifier + gate / nudge copy builder.
 // Exposed so transport adapters (`@solvapay/mcp-core`) can produce the
 // same text-only copy off a `LimitResponseWithPlan` they already hold.
-export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
-export type { PaywallState } from './paywall-state'
+export {
+  buildGateMessage,
+  buildNudgeMessage,
+  classifyPaywallState,
+  creditSignals,
+  linkLabel,
+  nextActionFor,
+  planLadder,
+} from './paywall-state'
+export type { CreditSignals, PaywallState } from './paywall-state'
 
 // Export virtual tools for MCP server monetization
 export { createVirtualTools, VIRTUAL_TOOL_DEFINITIONS } from './virtual-tools'
@@ -163,6 +171,7 @@ export type {
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallGateRecoveryFields,
+  PaywallNextAction,
   RetryOptions,
   WebhookEvent,
   WebhookEventType,

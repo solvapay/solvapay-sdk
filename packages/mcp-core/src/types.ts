@@ -61,6 +61,18 @@ export interface BootstrapCustomer {
    * `overage`, `needsTopUp` — the flags usage math discards.
    */
   limits: LimitResponseWithPlan | null
+  /** Whether the latest `checkLimits` allowed the call. */
+  canCall?: boolean
+  /** How many calls the current allowance or wallet still covers. */
+  remainingCalls?: number
+  /** Credits deducted per call when the response is credit-based. */
+  creditsPerCall?: number
+  /** `max(0, creditsPerCall - balance)` when both are known. */
+  shortfallCredits?: number
+  /** Per-provider auto-recharge snapshot from the limits response. */
+  autoRecharge?: { enabled: boolean; status?: string }
+  /** Same next action the gate would name for this limits result. */
+  nextAction?: 'topup' | 'checkout' | 'activate' | 'account'
 }
 
 /**

@@ -72,6 +72,9 @@ describe('createBuildBootstrapPayload', () => {
       withinLimits: true,
       meterName: 'requests',
     })
+    expect(payload.customer?.canCall).toBe(true)
+    expect(payload.customer?.remainingCalls).toBe(3800)
+    expect(payload.customer?.nextAction).toBeDefined()
     expect(payload.customer?.usage).toMatchObject({
       used: 6200,
       remaining: 3800,
