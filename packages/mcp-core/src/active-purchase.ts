@@ -14,10 +14,14 @@ export type ActivePlanPurchaseLike = {
   amount?: number
   startDate?: string
   metadata?: { purpose?: string }
+  origin?: string
 }
 
 export function isPlanPurchase(purchase: ActivePlanPurchaseLike): boolean {
-  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+  if (purchase.origin === 'credit_topup' || purchase.metadata?.purpose === 'credit_topup') {
+    return false
+  }
+  return !!purchase.planSnapshot
 }
 
 function startTime(purchase: ActivePlanPurchaseLike): number {

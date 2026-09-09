@@ -258,4 +258,51 @@ describe('createBuildBootstrapPayload', () => {
       expect.not.objectContaining({ purpose: 'credit_topup' }),
     )
   })
+
+  it('refetches purchases when limits.purchaseRef is missing from the first snapshot', async () => {
+    const client = makeClient()
+    const enrolled = {
+      status: 'active',
+      productRef: 'prd_test',
+      reference: 'pur_enrolled',
+      planSnapshot: { isMetered: false, name: 'Free' },
+    }
+    client.getCustomer
+      .mockResolvedValueOnce({
+        customerRef: 'cus_42',
+        externalRef: 'cus_42',
+        purchases: [],
+      })
+      .mockResolvedValue({
+        customerRef: 'cus_42',
+        externalRef: 'cus_42',
+        purchases: [enrolled],
+      })
+    client.checkLimits.mockResolvedValue({
+      remaining: 3,
+      withinLimits: true,
+      meterName: 'requests',
+      activationRequired: false,
+      used: 0,
+      limit: 3,
+      planRef: 'pln_free',
+      purchaseRef: 'pur_enrolled',
+    })
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://example.test',
+      getCustomerRef: () => 'cus_42',
+    })
+
+    const payload = await build('account', {
+      authInfo: { extra: { customer_ref: 'cus_42' } },
+    })
+
+    expect(payload.customer?.purchase?.purchases).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reference: 'pur_enrolled' })]),
+    )
+    expect(client.getCustomer.mock.calls.length).toBeGreaterThan(1)
+  })
 })
