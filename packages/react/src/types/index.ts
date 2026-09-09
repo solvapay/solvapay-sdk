@@ -589,6 +589,11 @@ export interface UsePlansOptions {
    */
   autoSelectFirstPaid?: boolean
   /**
+   * Skip this plan when auto-selecting the first paid plan. Used so
+   * the customer's already-active plan is not preselected.
+   */
+  excludePlanRef?: string | null
+  /**
    * Plan reference to select initially when plans load.
    * Applied at most once when selectionReady is true.
    * Takes priority over autoSelectFirstPaid.

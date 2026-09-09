@@ -191,4 +191,71 @@ describe('createBuildBootstrapPayload', () => {
       expect.objectContaining({ purpose: 'credit_topup' }),
     )
   })
+
+  it('mints a product checkout session for explicit checkout view during a credit shortfall', async () => {
+    const client = makeClient()
+    client.checkLimits.mockResolvedValue({
+      remaining: 0,
+      withinLimits: false,
+      paywallReason: 'topup_required',
+      creditBalance: 91_000,
+      creditsPerUnit: 100_000,
+      currency: 'USD',
+    })
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://example.test',
+      getCustomerRef: () => 'cus_42',
+    })
+
+    await build('checkout', {
+      authInfo: { extra: { customer_ref: 'cus_42' } },
+    })
+
+    expect(client.createCheckoutSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ purpose: 'credit_topup' }),
+    )
+  })
+
+  it('mints a hosted checkout session with no returnUrl', async () => {
+    const client = makeClient()
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://mcp.example.test',
+      getCustomerRef: () => 'cus_42',
+    })
+
+    const payload = await build('account', {
+      authInfo: { extra: { customer_ref: 'cus_42' } },
+    })
+
+    expect(client.createCheckoutSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ returnUrl: expect.anything() }),
+    )
+    expect(client.createCheckoutSession.mock.calls[0][0]).not.toHaveProperty('returnUrl')
+    expect(payload.returnUrl).toBe('https://mcp.example.test')
+  })
+
+  it('does not mint a credit-topup session for the auto-recharge view', async () => {
+    const client = makeClient()
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://mcp.example.test',
+      getCustomerRef: () => 'cus_42',
+    })
+
+    await build('auto-recharge', {
+      authInfo: { extra: { customer_ref: 'cus_42' } },
+    })
+
+    expect(client.createCheckoutSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ purpose: 'credit_topup' }),
+    )
+  })
 })

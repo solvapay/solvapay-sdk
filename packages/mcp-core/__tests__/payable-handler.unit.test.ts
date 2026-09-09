@@ -95,15 +95,11 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
 
       expect(result.structuredContent).toEqual(data)
+      expect(result.content).toHaveLength(1)
       expect(result.content[0]).toEqual({
         type: 'text',
         text: JSON.stringify(data),
       })
-      expect(result.content[1]).toEqual({
-        type: 'text',
-        text: JSON.stringify(data),
-      })
-      expect(JSON.parse((result.content[1] as { text: string }).text)).toEqual(data)
       expect(result._meta).toBeUndefined()
     })
 
@@ -479,8 +475,8 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
       expect(result.content[0]).toEqual({ type: 'text', text: 'intermediate 1' })
       expect(result.content[1]).toEqual({ type: 'text', text: 'intermediate 2' })
-      expect(result.content[2]).toMatchObject({ type: 'text' })
-      expect(result.content[3]).toEqual({ type: 'text', text: JSON.stringify({ final: true }) })
+      expect(result.content[2]).toEqual({ type: 'text', text: JSON.stringify({ final: true }) })
+      expect(result.content).toHaveLength(3)
     })
   })
 

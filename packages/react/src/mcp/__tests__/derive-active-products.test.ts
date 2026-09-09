@@ -125,15 +125,20 @@ describe('formatAllowanceTerms', () => {
       planRef: 'pln_free',
       planSnapshot: { reference: 'pln_free', name: 'Free', currency: 'USD', price: 0 },
     }
-    expect(
-      formatAllowanceTerms(deriveActiveProducts([free])[0]!, 'en-US', { started: true }),
-    ).toBe('Free · started Sep 1, 2026')
+    expect(formatAllowanceTerms(deriveActiveProducts([free])[0]!, 'en-US', { started: true })).toBe(
+      'Free · started Sep 1, 2026',
+    )
   })
 
   it('qualifies a one-time plan and omits renews', () => {
     const oneTime: PurchaseInfo = {
       ...starter,
-      planSnapshot: { ...starter.planSnapshot, name: 'Pro' },
+      planSnapshot: {
+        ...starter.planSnapshot,
+        name: 'Pro',
+        currency: 'USD',
+        price: 9000,
+      },
     }
     expect(
       formatAllowanceTerms(deriveActiveProducts([oneTime])[0]!, 'en-US', {

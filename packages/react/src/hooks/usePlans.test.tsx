@@ -6,7 +6,12 @@ import { SolvaPayProvider } from '../SolvaPayProvider'
 import type { Plan } from '../types'
 
 const freePlan: Plan = { reference: 'plan_free', name: 'Free', price: 0, requiresPayment: false }
-const basicPlan: Plan = { reference: 'plan_basic', name: 'Basic', price: 1000, requiresPayment: true }
+const basicPlan: Plan = {
+  reference: 'plan_basic',
+  name: 'Basic',
+  price: 1000,
+  requiresPayment: true,
+}
 const proPlan: Plan = { reference: 'plan_pro', name: 'Pro', price: 2000, requiresPayment: true }
 
 const allPlans = [freePlan, basicPlan, proPlan]
@@ -16,9 +21,9 @@ function createFetcher(plans: Plan[] = allPlans) {
 }
 
 function createDelayedFetcher(plans: Plan[] = allPlans, ms = 50) {
-  return vi.fn().mockImplementation(
-    () => new Promise<Plan[]>(resolve => setTimeout(() => resolve(plans), ms)),
-  )
+  return vi
+    .fn()
+    .mockImplementation(() => new Promise<Plan[]>(resolve => setTimeout(() => resolve(plans), ms)))
 }
 
 beforeEach(() => {
@@ -29,9 +34,7 @@ describe('usePlans', () => {
   describe('basic fetching', () => {
     it('fetches and returns plans', async () => {
       const fetcher = createFetcher()
-      const { result } = renderHook(() =>
-        usePlans({ productRef: 'prd_1', fetcher }),
-      )
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_1', fetcher }))
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.plans).toEqual(allPlans)
@@ -40,9 +43,7 @@ describe('usePlans', () => {
 
     it('sets error when productRef is missing', async () => {
       const fetcher = createFetcher()
-      const { result } = renderHook(() =>
-        usePlans({ productRef: '', fetcher }),
-      )
+      const { result } = renderHook(() => usePlans({ productRef: '', fetcher }))
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.error).toBeInstanceOf(Error)
@@ -50,9 +51,7 @@ describe('usePlans', () => {
 
     it('sets error when fetcher throws', async () => {
       const fetcher = vi.fn().mockRejectedValue(new Error('Network error'))
-      const { result } = renderHook(() =>
-        usePlans({ productRef: 'prd_1', fetcher }),
-      )
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_1', fetcher }))
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.error?.message).toBe('Network error')
@@ -108,15 +107,59 @@ describe('usePlans', () => {
       expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
 
+    it('skips excludePlanRef when auto-selecting the first paid plan', async () => {
+      const fetcher = createFetcher()
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+          excludePlanRef: 'plan_basic',
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlan?.reference).toBe('plan_pro')
+    })
+
+    it('selects nothing when autoSelectFirstPaid matches only excluded or free plans', async () => {
+      const fetcher = createFetcher([freePlan, basicPlan])
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+          excludePlanRef: 'plan_basic',
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
+    it('selects nothing when autoSelectFirstPaid finds no paid plan', async () => {
+      const fetcher = createFetcher([freePlan])
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
     it('leaves selection empty when no initialPlanRef and autoSelectFirstPaid is false', async () => {
       // Caller opted out of auto-selection; the hook must not silently
       // pre-select the first card. `-1` surfaces as `selectedPlan: null`
       // so consumers gating on `selectedPlanRef` (e.g. the Continue
       // button) keep the disabled state until the user clicks a card.
       const fetcher = createFetcher()
-      const { result } = renderHook(() =>
-        usePlans({ productRef: 'prd_1', fetcher }),
-      )
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_1', fetcher }))
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.selectedPlanIndex).toBe(-1)
@@ -125,9 +168,7 @@ describe('usePlans', () => {
 
     it('honours user pick after the no-selection default', async () => {
       const fetcher = createFetcher()
-      const { result } = renderHook(() =>
-        usePlans({ productRef: 'prd_1', fetcher }),
-      )
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_1', fetcher }))
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(result.current.selectedPlan).toBeNull()
@@ -480,12 +521,9 @@ describe('usePlans', () => {
     it('explicit fetcher still overrides the default', async () => {
       const fetchFn = makeFetch({ plans: [] })
       const fetcher = createFetcher([basicPlan])
-      const { result } = renderHook(
-        () => usePlans({ productRef: 'prd_o', fetcher }),
-        {
-          wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
-        },
-      )
+      const { result } = renderHook(() => usePlans({ productRef: 'prd_o', fetcher }), {
+        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+      })
 
       await waitFor(() => expect(result.current.loading).toBe(false))
       expect(fetcher).toHaveBeenCalledWith('prd_o')

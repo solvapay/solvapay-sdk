@@ -117,6 +117,10 @@ export type PaywallGateRecoveryFields = {
   shortfallCredits?: number
   /** How many calls the current allowance or wallet still covers. */
   remainingCalls?: number
+  /** Credits per minor currency unit, from the limits balance peg. */
+  creditsPerMinorUnit?: number
+  /** USD → display-currency rate used with `creditsPerMinorUnit`. */
+  displayExchangeRate?: number
   /** Active purchase reference when the customer already holds a purchase. */
   purchaseRef?: string
   /** Purchase/plan status when the backend sent one. */

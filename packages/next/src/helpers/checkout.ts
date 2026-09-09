@@ -29,7 +29,7 @@ export async function createCheckoutSession(
   body: {
     productRef: string
     planRef?: string
-    returnUrl?: string
+    returnUrl?: string | null
   },
   options: {
     solvaPay?: SolvaPay

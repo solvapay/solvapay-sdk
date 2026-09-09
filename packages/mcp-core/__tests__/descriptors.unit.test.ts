@@ -34,6 +34,7 @@ interface MakeSolvaPayOverrides {
     displayExchangeRate: number
   }
   paymentMethod?: Record<string, unknown>
+  activatePlan?: ReturnType<typeof vi.fn>
 }
 
 function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
@@ -75,6 +76,8 @@ function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
       sessionId: 'csess_test',
       customerUrl: 'https://customer.solvapay.com/portal?session=csess_test',
     }),
+    activatePlan:
+      overrides.activatePlan ?? vi.fn().mockResolvedValue({ status: 'activated' }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -454,6 +457,57 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.status).toBe(400)
     expect(String(sc.error)).toMatch(/planRef/)
+  })
+
+  it('narrates payment_required and mints a checkout URL when the backend omitted one', async () => {
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'payment_required' })
+    const solvaPay = makeSolvaPay({
+      activatePlan,
+      plans: [{ reference: 'pln_pro', name: 'Pro' }],
+    })
+    const invalidate = vi.spyOn(solvaPay.paywall, 'invalidateLimits')
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)
+    if (!tool) throw new Error('activate_plan not registered')
+
+    const result = await tool.handler(
+      { planRef: 'pln_pro' },
+      { authInfo: { extra: { customer_ref: 'cus_existing' } } },
+    )
+
+    expect(invalidate).toHaveBeenCalledWith('cus_existing', 'prd_test')
+    expect(solvaPay.apiClient.createCheckoutSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ returnUrl: expect.anything() }),
+    )
+    expect(
+      (solvaPay.apiClient.createCheckoutSession as ReturnType<typeof vi.fn>).mock.calls[0][0],
+    ).not.toHaveProperty('returnUrl')
+    const text = (result.content as Array<{ text?: string }>)[0]?.text ?? ''
+    expect(text).toContain('Pro requires payment')
+    expect(text).toContain('[Open checkout](https://customer.solvapay.com/demo?session=sess_test)')
+    expect(result.structuredContent).toMatchObject({
+      status: 'payment_required',
+      checkoutUrl: 'https://customer.solvapay.com/demo?session=sess_test',
+    })
+  })
+
+  it('narrates activated without dumping JSON', async () => {
+    const result = await invokeOpen(
+      MCP_TOOL_NAMES.activatePlan,
+      { plans: [{ reference: 'pln_basic', name: 'Basic' }] },
+      { authInfo: { extra: { customer_ref: 'cus_existing' } } },
+      { planRef: 'pln_basic' },
+    )
+    const text = (result.content as Array<{ text?: string }>)[0]?.text ?? ''
+    expect(text).toBe('Activated Basic. Paid tools are available now.')
+    expect(text.trim().startsWith('{')).toBe(false)
+    expect(result.structuredContent).toMatchObject({ status: 'activated' })
   })
 
   it('account without view derives checkout for unauthenticated callers', async () => {

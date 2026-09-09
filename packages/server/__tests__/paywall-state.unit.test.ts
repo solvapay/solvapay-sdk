@@ -277,6 +277,29 @@ describe('buildGateMessage', () => {
     expect(msg).not.toMatch(/activate_plan/)
   })
 
+  it('topup_required with an active plan has no plan-switch clause and exactly one markdown link', () => {
+    const msg = buildGateMessage(
+      { kind: 'topup_required' } satisfies PaywallState,
+      gate({ checkoutUrl, plans: [], planRef: 'pln_payg', purchaseRef: 'pur_1' }),
+    )
+
+    expect(msg).toMatch(/`account` tool with view: 'topup'/)
+    expect(msg).toContain(`[Add credits](${checkoutUrl})`)
+    expect(msg.match(/\[[^\]]+\]\([^)]+\)/g)).toHaveLength(1)
+    expect(msg).not.toMatch(/switch plan/)
+    expect(msg).not.toMatch(/pick a plan/)
+  })
+
+  it('topup_required without an active plan points at the checkout view to pick a plan', () => {
+    const msg = buildGateMessage(
+      { kind: 'topup_required' } satisfies PaywallState,
+      gate({ checkoutUrl, plans: [] }),
+    )
+
+    expect(msg).toMatch(/`account` tool with view: 'topup'/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout' to pick a plan/)
+  })
+
   it('upgrade_required names account with view checkout and inlines checkoutUrl with expiry', () => {
     const msg = buildGateMessage(
       { kind: 'upgrade_required' } satisfies PaywallState,
@@ -286,7 +309,7 @@ describe('buildGateMessage', () => {
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).not.toContain(`Open ${checkoutUrl}`)
     expect(msg).toMatch(/expires in 15 minutes/)
-    expect(msg).toContain('docs://solvapay/overview.md')
+    expect(msg).not.toContain('docs://solvapay/overview.md')
     expect(msg).not.toMatch(/view: 'topup'/)
   })
 
@@ -385,18 +408,62 @@ describe('scenario matrix', () => {
     const state = classifyPaywallState(input)
     expect(state).toEqual({ kind: 'topup_required' })
     expect(state.kind).not.toBe('upgrade_required')
-    const msg = buildGateMessage(state, gate({
-      creditBalance: 91_000,
-      creditsPerCall: 100_000,
-      shortfallCredits: 9_000,
-      purchaseRef: 'pur_1',
-      planRef: 'pln_payg',
-    }))
+    const msg = buildGateMessage(
+      state,
+      gate({
+        creditBalance: 91_000,
+        creditsPerCall: 100_000,
+        shortfallCredits: 9_000,
+        purchaseRef: 'pur_1',
+        planRef: 'pln_payg',
+      }),
+    )
     expect(msg).toMatch(/Balance 91,000 credits/)
     expect(msg).toMatch(/100,000 credits/)
     expect(msg).toMatch(/9,000 short/)
+    expect(msg).toMatch(/`account` tool with view: 'topup'/)
+    expect(msg).not.toMatch(/to pick a plan/)
+    expect(msg).not.toMatch(/to switch plan/)
     expect(msg).not.toMatch(NO_ACTIVE_PLAN)
     expect(msg).not.toMatch(/\$10\.00/)
+  })
+
+  it('prints money next to credits when the backend sends the peg and rate', () => {
+    const msg = buildGateMessage(
+      { kind: 'topup_required' },
+      gate({
+        creditBalance: 91_000,
+        creditsPerCall: 100_000,
+        shortfallCredits: 9_000,
+        purchaseRef: 'pur_1',
+        planRef: 'pln_payg',
+        currency: 'USD',
+        creditsPerMinorUnit: 100,
+        displayExchangeRate: 1,
+        checkoutUrl: 'https://example.test/checkout/topup',
+      }),
+    )
+    expect(msg).toMatch(/Balance 91,000 credits \(~\$9\.10\)/)
+    expect(msg).toMatch(/this call costs 100,000 credits \(~\$10\.00\)/)
+    expect(msg).toMatch(/9,000 short/)
+  })
+
+  it('omits the money suffix when the FX rate is missing on a non-USD balance', () => {
+    const msg = buildGateMessage(
+      { kind: 'topup_required' },
+      gate({
+        creditBalance: 91_000,
+        creditsPerCall: 100_000,
+        shortfallCredits: 9_000,
+        purchaseRef: 'pur_1',
+        planRef: 'pln_payg',
+        currency: 'SEK',
+        creditsPerMinorUnit: 100,
+        checkoutUrl: 'https://example.test/checkout/topup',
+      }),
+    )
+    expect(msg).toMatch(/Balance 91,000 credits;/)
+    expect(msg).not.toMatch(/~/)
   })
 
   it('row 6 — zero balance classifies as topup_required via credit-field presence', () => {
@@ -545,10 +612,7 @@ describe('buildGateMessage copy rewrite', () => {
     const msg = buildGateMessage(
       { kind: 'upgrade_required' },
       gate({
-        plans: [
-          { ...unlimited },
-          { ...payg, name: 'Plan [beta]' },
-        ],
+        plans: [{ ...unlimited }, { ...payg, name: 'Plan [beta]' }],
       }),
     )
     expect(msg).toMatch(
@@ -557,7 +621,10 @@ describe('buildGateMessage copy rewrite', () => {
   })
 
   it('is byte-identical to the post-rewrite copy when no plan has a checkoutUrl', () => {
-    const plans = [{ ...payg, checkoutUrl: undefined }, { ...unlimited, checkoutUrl: undefined }]
+    const plans = [
+      { ...payg, checkoutUrl: undefined },
+      { ...unlimited, checkoutUrl: undefined },
+    ]
     const withPlans = buildGateMessage({ kind: 'upgrade_required' }, gate({ plans, checkoutUrl }))
     const without = buildGateMessage({ kind: 'upgrade_required' }, gate({ checkoutUrl }))
     expect(withPlans).toBe(without)

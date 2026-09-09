@@ -44,6 +44,7 @@ import {
   attachBusinessDetailsCore,
   getHistoryCore,
   isErrorResult,
+  listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
   type SolvaPay,
@@ -73,7 +74,7 @@ import {
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
-import { narrateAlreadyActive } from './narrate'
+import { narrateActivatePlan } from './narrate'
 import { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
@@ -794,13 +795,38 @@ export function buildSolvaPayDescriptors(
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)
-        if (result.status === 'already_active') {
-          return {
-            content: [{ type: 'text' as const, text: narrateAlreadyActive(result) }],
-            structuredContent: result as Record<string, unknown>,
-          }
+
+        solvaPay.paywall.invalidateLimits(auth, effectiveProduct)
+
+        let checkoutUrl = result.checkoutUrl
+        if (result.status === 'payment_required' && !checkoutUrl) {
+          const session = await createCheckoutSessionCore(
+            buildRequest(extra, { method: 'POST' }),
+            { productRef: effectiveProduct, planRef, returnUrl: null },
+            { solvaPay },
+          )
+          if (!isErrorResult(session)) checkoutUrl = session.checkoutUrl
         }
-        return toolResult(result)
+
+        const plansResult = await listPlansCore(
+          buildRequest(extra, { query: { productRef: effectiveProduct } }),
+          { solvaPay },
+        )
+        const plans = isErrorResult(plansResult) ? [] : plansResult.plans
+        const planName = plans.find(plan => plan.reference === planRef)?.name
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: narrateActivatePlan({ ...result, checkoutUrl, planName }),
+            },
+          ],
+          structuredContent: { ...result, ...(checkoutUrl ? { checkoutUrl } : {}) } as Record<
+            string,
+            unknown
+          >,
+        }
       }),
   })
 
