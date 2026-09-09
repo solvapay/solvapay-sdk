@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import React, { createRef } from 'react'
 import { PlanSelector as ShimPlanSelector } from './PlanSelector'
 import { CheckoutSummary as ShimCheckoutSummary } from './CheckoutSummary'
-import { PlanSelector } from '../primitives/PlanSelector'
+import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
@@ -119,7 +119,46 @@ describe('PlanSelector (default-tree shim)', () => {
     expect(badge.getAttribute('data-variant')).toBe('current')
   })
 
-  it('keeps a PAYG plan marked currentPlanRef selectable and auto-selects it', async () => {
+  it.each([
+    {
+      name: 'Pay as you go',
+      plan: {
+        reference: 'pln_payg',
+        name: 'Pay as you go',
+        price: 0,
+        currency: 'usd',
+        type: 'usage-based',
+        creditsPerUnit: 1,
+      } satisfies Plan,
+      currentPlanRef: 'pln_payg',
+    },
+    {
+      name: 'Monthly',
+      plan: monthly,
+      currentPlanRef: 'pln_monthly',
+    },
+  ])('badges and disables a current $name plan', async ({ name, plan, currentPlanRef }) => {
+    seed([plan])
+    const onSelect = vi.fn()
+    render(
+      <SolvaPayProvider config={{}}>
+        <ShimPlanSelector
+          productRef="prd_x"
+          currentPlanRef={currentPlanRef}
+          autoSelectFirstPaid={false}
+          onSelect={onSelect}
+        />
+      </SolvaPayProvider>,
+    )
+    const card = (await screen.findByText(name)).closest('button') as HTMLButtonElement
+    expect(screen.getByText('Current')).toBeTruthy()
+    expect(card.disabled).toBe(true)
+    expect(card.getAttribute('data-state')).toBe('current')
+    fireEvent.click(card)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('keeps Continue disabled when the only plan is the current one', async () => {
     const payg: Plan = {
       reference: 'pln_payg',
       name: 'Pay as you go',
@@ -129,55 +168,29 @@ describe('PlanSelector (default-tree shim)', () => {
       creditsPerUnit: 1,
     }
     seed([payg])
-    const onSelect = vi.fn()
+    function Probe() {
+      const { selectedPlanRef } = usePlanSelector()
+      return (
+        <button type="button" disabled={!selectedPlanRef}>
+          Continue
+        </button>
+      )
+    }
     render(
       <SolvaPayProvider config={{}}>
-        <ShimPlanSelector
-          productRef="prd_x"
-          currentPlanRef="pln_payg"
-          // Mirrors the topup checkout config (`<CheckoutSteps.Root>`'s
-          // default) where `usePlans` does NOT pre-select. The new
-          // PAYG-current auto-select effect on `<PlanSelector.Root>`
-          // is the one that should engage.
-          autoSelectFirstPaid={false}
-          onSelect={onSelect}
-        />
+        <PlanSelector.Root productRef="prd_x" currentPlanRef="pln_payg" autoSelectFirstPaid>
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardName />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+          <Probe />
+        </PlanSelector.Root>
       </SolvaPayProvider>,
     )
-    const card = (await screen.findByText('Pay as you go')).closest('button') as HTMLButtonElement
-    // The "Current" badge still renders so the customer knows this is
-    // their active plan, but the card itself stays clickable so they
-    // can step into the amount picker for a top up.
-    expect(screen.getByText('Current')).toBeTruthy()
-    expect(card.disabled).toBe(false)
-    // <PlanSelector.Root> auto-selects the PAYG-current plan so the
-    // outer Continue button is enabled without an extra click.
-    await waitFor(() => expect(card.getAttribute('data-state')).toBe('selected'))
-    expect(onSelect).toHaveBeenCalledWith(
-      'pln_payg',
-      expect.objectContaining({ reference: 'pln_payg' }),
-    )
-  })
-
-  it('does not auto-select a non-PAYG current plan (recurring stays opt-in)', async () => {
-    seed([monthly, yearly])
-    const onSelect = vi.fn()
-    render(
-      <SolvaPayProvider config={{}}>
-        <ShimPlanSelector
-          productRef="prd_x"
-          currentPlanRef="pln_monthly"
-          autoSelectFirstPaid={false}
-          onSelect={onSelect}
-        />
-      </SolvaPayProvider>,
-    )
-    const monthlyCard = (
-      await screen.findByText('Monthly')
-    ).closest('button') as HTMLButtonElement
-    expect(monthlyCard.disabled).toBe(true)
-    expect(monthlyCard.getAttribute('data-state')).toBe('current')
-    expect(onSelect).not.toHaveBeenCalled()
+    await screen.findByText('Pay as you go')
+    const continueButton = screen.getByRole('button', { name: 'Continue' })
+    expect(continueButton).toHaveProperty('disabled', true)
   })
 
   it('renders the Popular badge with data-variant=popular on popularPlanRef', async () => {
@@ -250,7 +263,9 @@ describe('PlanSelector primitive', () => {
     )
     await waitFor(() => expect(screen.getByText('Monthly')).toBeTruthy())
     expect(screen.getByTestId('root').getAttribute('data-solvapay-plan-selector')).toBe('')
-    expect(screen.getByTestId('heading').getAttribute('data-solvapay-plan-selector-heading')).toBe('')
+    expect(screen.getByTestId('heading').getAttribute('data-solvapay-plan-selector-heading')).toBe(
+      '',
+    )
     expect(screen.getByTestId('grid').getAttribute('data-solvapay-plan-selector-grid')).toBe('')
     const monthlyCard = screen.getByText('Monthly').closest('button') as HTMLButtonElement
     expect(monthlyCard.getAttribute('data-state')).toBeTruthy()
