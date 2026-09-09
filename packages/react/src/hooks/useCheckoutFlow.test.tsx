@@ -27,13 +27,7 @@ import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { createTransportCacheKey } from '../transport/cache-key'
-import type {
-  Merchant,
-  Plan,
-  PurchaseInfo,
-  SolvaPayConfig,
-  SolvaPayContextValue,
-} from '../types'
+import type { Merchant, Plan, PurchaseInfo, SolvaPayConfig, SolvaPayContextValue } from '../types'
 
 const productRef = 'prd_test'
 
@@ -154,6 +148,8 @@ interface WrapperOptions {
    */
   merchant?: Merchant | null
   credits?: number
+  /** Deep-link a plan without going through `select()` (current plans are inert there). */
+  initialPlanRef?: string
 }
 
 function makeWrapper(opts: WrapperOptions = {}): {
@@ -182,7 +178,11 @@ function makeWrapper(opts: WrapperOptions = {}): {
   }
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <SolvaPayContext.Provider value={ctx}>
-      <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+      <PlanSelector.Root
+        productRef={productRef}
+        autoSelectFirstPaid={false}
+        initialPlanRef={opts.initialPlanRef}
+      >
         {children}
       </PlanSelector.Root>
     </SolvaPayContext.Provider>
@@ -245,10 +245,9 @@ describe('useCheckoutFlow — Stripe return resume', () => {
     vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce(undefined)
 
     const { Wrapper } = makeWrapper()
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, initialStep: 'amount' }),
-      { wrapper: Wrapper },
-    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {
+      wrapper: Wrapper,
+    })
     expect(result.current.step).toBe('amount')
   })
 })
@@ -353,7 +352,7 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(transport.createTopupPayment).not.toHaveBeenCalled()
   })
 
-  it('skips activatePlan when the selected PAYG plan is already the customer\'s current plan', async () => {
+  it("skips activatePlan when the selected PAYG plan is already the customer's current plan", async () => {
     const activate = vi.fn().mockResolvedValue({ status: 'activated' })
     const purchases: PurchaseInfo[] = [
       {
@@ -373,16 +372,13 @@ describe('useCheckoutFlow — PAYG branch', () => {
     const { Wrapper, transport } = makeWrapper({
       transport: makeTransport({ activatePlan: activate }),
       purchases,
+      initialPlanRef: 'pln_payg',
     })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
     })
-    // <PlanSelector.Root> auto-selects the PAYG-current plan; we still
-    // explicitly call selectPlan to keep the test independent of the
-    // auto-select effect's timing.
-    act(() => {
-      result.current.selectPlan('pln_payg')
-    })
+    // The picker no longer selects the current plan. initialPlanRef is
+    // the deep-link path into the amount step.
     await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
 
     await act(async () => {
@@ -417,12 +413,10 @@ describe('useCheckoutFlow — PAYG branch', () => {
       transport: makeTransport({ activatePlan: activate }),
       purchases,
       credits: 500,
+      initialPlanRef: 'pln_payg',
     })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
-    })
-    act(() => {
-      result.current.selectPlan('pln_payg')
     })
     await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
 
@@ -919,10 +913,9 @@ describe('useCheckoutFlow — topupCurrency', () => {
     const { Wrapper } = makeWrapper({
       merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'sek' },
     })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, topupCurrency: 'eur' }),
-      { wrapper: Wrapper },
-    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef, topupCurrency: 'eur' }), {
+      wrapper: Wrapper,
+    })
     expect(result.current.topupCurrency).toBe('EUR')
     expect(result.current.topupCurrencyReady).toBe(true)
   })
@@ -961,10 +954,9 @@ describe('useCheckoutFlow — topupCurrency', () => {
     const { Wrapper } = makeWrapper({
       merchant: { displayName: 'Acme', legalName: 'Acme', defaultCurrency: 'eur' },
     })
-    const { result } = renderHook(
-      () => useCheckoutFlow({ productRef, onAmountSelect }),
-      { wrapper: Wrapper },
-    )
+    const { result } = renderHook(() => useCheckoutFlow({ productRef, onAmountSelect }), {
+      wrapper: Wrapper,
+    })
     act(() => {
       result.current.selectPlan('pln_payg')
     })

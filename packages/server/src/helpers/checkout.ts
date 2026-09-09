@@ -24,7 +24,13 @@ export async function createCheckoutSessionCore(
   body: {
     productRef: string
     planRef?: string
-    returnUrl?: string
+    /**
+     * URL to send the customer back to after payment. Pass `null` to omit
+     * the field entirely — skips `options.returnUrl` and the request-origin
+     * fallback. Use this when the caller has no browsable page to return to
+     * (MCP servers whose public URL is an API endpoint, not a website).
+     */
+    returnUrl?: string | null
     purpose?: 'credit_topup'
   },
   options: {
@@ -60,13 +66,16 @@ export async function createCheckoutSessionCore(
 
     const customerRef = customerResult
 
-    let returnUrl = body.returnUrl || options.returnUrl
-    if (!returnUrl) {
-      try {
-        const url = new URL(request.url)
-        returnUrl = url.origin
-      } catch {
-        // If URL parsing fails, continue without returnUrl
+    let returnUrl: string | undefined
+    if (body.returnUrl !== null) {
+      returnUrl = body.returnUrl || options.returnUrl
+      if (!returnUrl) {
+        try {
+          const url = new URL(request.url)
+          returnUrl = url.origin
+        } catch {
+          // If URL parsing fails, continue without returnUrl
+        }
       }
     }
 
@@ -76,7 +85,7 @@ export async function createCheckoutSessionCore(
       productRef: body.productRef,
       customerRef,
       planRef: body.planRef || undefined,
-      returnUrl: returnUrl,
+      ...(returnUrl ? { returnUrl } : {}),
       ...(body.purpose ? { purpose: body.purpose } : {}),
     })
 

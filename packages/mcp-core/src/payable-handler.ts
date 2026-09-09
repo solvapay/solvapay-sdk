@@ -33,7 +33,7 @@ import type {
   ProtectHandlerContext,
   SolvaPay,
 } from '@solvapay/server'
-import { buildNudgeMessage, isPaywallStructuredContent } from '@solvapay/server'
+import { buildNudgeMessage, creditSignals, isPaywallStructuredContent } from '@solvapay/server'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { buildResponseContext } from './response-context'
 import { assertResponseResult } from './response-envelope'
@@ -207,15 +207,17 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
  * `structuredContent` switch, no widget route — merchant data stays
  * on `structuredContent` unchanged. The fallback nudge copy from
  * `buildNudgeMessage` is used when `options.nudge.message` is absent.
- * A trailing JSON text block is appended unless `dataInText` is
- * `false`.
+ * A trailing JSON text block is appended only when a narration exists
+ * (`options.text` or a nudge mixed into the primary text) and
+ * `dataInText` is not `false`. Pure `ctx.respond(data)` stays a single
+ * text block.
  */
 async function unwrapResponseEnvelope(
   adapterResult: SolvaPayCallToolResult,
   envelope: ResponseResult<unknown>,
   _extra: McpToolExtra | undefined,
 ): Promise<SolvaPayCallToolResult> {
-  const { data, options, emittedBlocks } = envelope
+  const { data, options, emittedBlocks, limits } = envelope
   const textOverride = options?.text
   const nudge = options?.nudge
 
@@ -233,27 +235,21 @@ async function unwrapResponseEnvelope(
   let primaryText = baseText
   let nudgeText: string | undefined
   if (nudge) {
+    const creditBased = creditSignals(limits ?? null).isCreditBased
+    const fallbackKind =
+      nudge.kind === 'low-balance' && creditBased ? 'topup_required' : 'upgrade_required'
     nudgeText =
       nudge.message && nudge.message.length > 0
         ? nudge.message
-        : buildNudgeMessage(
-            // `buildNudgeMessage` only reads the state kind to pick
-            // copy; for merchant-supplied nudges we don't have a
-            // `LimitResponseWithPlan` in hand here, so we defer to
-            // the nudge's own kind → state mapping. `low-balance` →
-            // topup, everything else → upgrade.
-            nudge.kind === 'low-balance'
-              ? { kind: 'topup_required' }
-              : { kind: 'upgrade_required' },
-            null,
-          )
+        : buildNudgeMessage({ kind: fallbackKind }, limits ?? null)
     primaryText = baseText.length > 0 ? `${baseText}\n\n${nudgeText}` : nudgeText
   }
 
   const content: SolvaPayCallToolResult['content'] = [
     ...((emittedBlocks ?? []) as SolvaPayCallToolResult['content']),
     { type: 'text', text: primaryText },
-    ...(options?.dataInText !== false
+    ...((typeof textOverride === 'string' || nudgeText !== undefined) &&
+    options?.dataInText !== false
       ? [{ type: 'text' as const, text: JSON.stringify(data) }]
       : []),
     ...(nudgeText !== undefined

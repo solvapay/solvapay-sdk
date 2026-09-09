@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useAutoActivateFreePlan } from '../useAutoActivateFreePlan'
-import { useActivation } from '../useActivation'
+import { useActivation, type ActivationState } from '../useActivation'
 import { useCustomer } from '../useCustomer'
 import { useLimits } from '../useLimits'
 import { usePlans } from '../usePlans'
@@ -82,7 +82,7 @@ function setPlans(plans: Plan[] = [freePlan]) {
   })
 }
 
-type ActivateFn = (params: { productRef: string; planRef: string }) => Promise<void>
+type ActivateFn = (params: { productRef: string; planRef: string }) => Promise<ActivationState>
 
 interface SetActivationOpts {
   activate?: ActivateFn
@@ -90,7 +90,7 @@ interface SetActivationOpts {
 }
 
 function setActivation(opts: SetActivationOpts = {}) {
-  const activate = opts.activate ?? (vi.fn().mockResolvedValue(undefined) as unknown as ActivateFn)
+  const activate = opts.activate ?? vi.fn<ActivateFn>().mockResolvedValue('activated')
   mockedUseActivation.mockReturnValue({
     activate,
     state: 'idle',
@@ -123,7 +123,11 @@ describe('useAutoActivateFreePlan', () => {
   })
 
   it('prefers the auto-assigned free plan when more than one is free', async () => {
-    const fallbackFree: Plan = { reference: 'plan_other_free', name: 'Hobby', requiresPayment: false }
+    const fallbackFree: Plan = {
+      reference: 'plan_other_free',
+      name: 'Hobby',
+      requiresPayment: false,
+    }
     const assignedFree: Plan = {
       reference: 'plan_assigned',
       name: 'Free',
@@ -148,9 +152,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([paidPlan])
     const activate = setActivation()
 
-    const { result } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_payg' }),
-    )
+    const { result } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_payg' }))
 
     // Give any latent effect a tick.
     await act(async () => {
@@ -168,9 +170,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([freePlan])
     const activate = setActivation()
 
-    const { result } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { result } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await act(async () => {
       await Promise.resolve()
@@ -203,8 +203,7 @@ describe('useAutoActivateFreePlan', () => {
     const activate = setActivation()
 
     const { rerender } = renderHook(
-      ({ productRef }: { productRef: string }) =>
-        useAutoActivateFreePlan({ productRef }),
+      ({ productRef }: { productRef: string }) => useAutoActivateFreePlan({ productRef }),
       { initialProps: { productRef: 'prd_a' } },
     )
 
@@ -228,9 +227,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([freePlan])
     const activate = setActivation()
 
-    const { rerender } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { rerender } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
 
@@ -248,9 +245,7 @@ describe('useAutoActivateFreePlan', () => {
       .mockRejectedValue(new Error('activation failed')) as unknown as ActivateFn
     setActivation({ activate })
 
-    const { rerender } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { rerender } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
 

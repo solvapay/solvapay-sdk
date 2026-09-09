@@ -61,4 +61,56 @@ describe('narrateUpgrade plan pricing', () => {
     )
     expect(text).toContain('$19')
   })
+
+  it('includes a free plan when the customer has no active purchase', () => {
+    const data = {
+      ...payload([]),
+      plans: [
+        {
+          reference: 'pln_free',
+          name: 'Starter',
+          type: 'recurring',
+          requiresPayment: false,
+          price: 0,
+          currency: 'USD',
+          options: [],
+        },
+      ],
+      customer: { purchase: { purchases: [] } },
+    } as unknown as BootstrapPayload
+
+    expect(narrateUpgrade(data).text).toContain('Starter')
+  })
+
+  it('excludes a free plan when the customer has an active purchase', () => {
+    const data = {
+      ...payload([]),
+      plans: [
+        {
+          reference: 'pln_free',
+          name: 'Starter',
+          type: 'recurring',
+          requiresPayment: false,
+          price: 0,
+          currency: 'USD',
+          options: [],
+        },
+      ],
+      customer: {
+        purchase: {
+          purchases: [
+            {
+              reference: 'pur_1',
+              status: 'active',
+              productRef: 'prd_test',
+              planRef: 'pln_current',
+              planSnapshot: { reference: 'pln_current', name: 'Current' },
+            },
+          ],
+        },
+      },
+    } as unknown as BootstrapPayload
+
+    expect(narrateUpgrade(data).text).not.toContain('Starter')
+  })
 })

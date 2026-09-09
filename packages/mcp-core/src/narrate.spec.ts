@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   narrateAlreadyActive,
+  narrateActivatePlan,
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
+  narrateAutoRecharge,
   balanceSummary,
   NARRATORS,
   uiPlaceholder,
@@ -131,7 +133,8 @@ describe('narrateManageAccount', () => {
       }),
     )
     expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
-    expect(text).toContain('has no plan yet, so calls will fail')
+    expect(text).toContain('has no plan yet')
+    expect(text).not.toContain('so calls will fail')
     expect(text).toContain('Free requires no payment')
     expect(text).toContain('Starter is $0.01 per call')
     expect(text).toContain('Unlimited is $500 a month')
@@ -181,6 +184,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planSnapshot: {
                 name: 'Unlimited',
                 isMetered: false,
@@ -207,6 +211,112 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Credits are not used on this plan')
   })
 
+  it('names this product\'s plan, not a paid plan on another product', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        productRef: 'prd_this',
+        product: { reference: 'prd_this', name: 'This Product' } as never,
+        plans: [
+          {
+            type: 'usage-based',
+            name: 'Pay as you go',
+            reference: 'pln_payg',
+            requiresPayment: true,
+            options: [perUnit(2)],
+          } as never,
+        ],
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_other',
+                amount: 3000,
+                startDate: '2026-03-01T00:00:00.000Z',
+                planSnapshot: {
+                  name: 'Pro',
+                  reference: 'pln_pro',
+                  price: 3000,
+                  currency: 'USD',
+                  options: [cycle(), flat(3000)],
+                },
+              },
+              {
+                status: 'active',
+                productRef: 'prd_this',
+                amount: 0,
+                startDate: '2026-01-01T00:00:00.000Z',
+                planRef: 'pln_payg',
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  reference: 'pln_payg',
+                  isMetered: true,
+                  options: [perUnit(2)],
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 5000 } as never,
+          usage: null,
+          limits: {
+            withinLimits: true,
+            remaining: -1,
+            creditsPerUnit: 200,
+            creditBalance: 5000,
+          },
+        } as never,
+      }),
+    )
+    expect(text).toContain('Pay as you go')
+    expect(text).not.toContain('is on Pro')
+    expect(text).not.toContain('$30')
+    expect(text).not.toContain('Unlimited calls')
+    expect(text).not.toContain('Credits are not used on this plan')
+  })
+
+  it('does not claim unlimited when a paid snapshot has no readable options', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                amount: 1000,
+                planRef: 'pln_payg',
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  reference: 'pln_payg',
+                  price: 1000,
+                  currency: 'USD',
+                  requiresPayment: true,
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 100 } as never,
+          usage: { remaining: 0 },
+          limits: {
+            withinLimits: true,
+            remaining: 0,
+            creditsPerUnit: 10_000,
+            creditBalance: 100,
+          },
+        } as never,
+      }),
+    )
+    expect(text).toContain('Pay as you go')
+    expect(text).not.toContain('Unlimited calls')
+    expect(text).not.toContain('Credits are not used on this plan')
+  })
+
   function meteredAccount(
     snapshotOptions: unknown[] | undefined,
     balance: Record<string, unknown> = usdBalance,
@@ -218,6 +328,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planRef: 'pln_payg',
               planSnapshot: {
                 name: 'Pay as you go',
@@ -278,6 +389,7 @@ describe('narrateManageAccount', () => {
             customerRef: 'cus_1',
             purchases: [
               {
+                productRef: 'prd_x',
                 planRef: 'pln_payg',
                 planSnapshot: { name: 'Pay as you go', isMetered: true, reference: 'pln_payg' },
               },
@@ -329,7 +441,8 @@ describe('narrateManageAccount', () => {
     )
     expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
     expect(text).toContain('Balance: 865,500 credits')
-    expect(text).toContain('has no plan yet, so calls will fail')
+    expect(text).toContain('has no plan yet')
+    expect(text).not.toContain('so calls will fail')
     expect(text).not.toContain('**Acme Knowledge Base — your account**')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout".`)
     expect(text).not.toMatch(/Commands:\s*`\//)
@@ -372,7 +485,7 @@ function coolCustomer(overrides: Record<string, unknown> = {}) {
 function coolPurchase(snapshot: Record<string, unknown>, extra: Record<string, unknown> = {}) {
   return {
     customerRef: 'cus_cool',
-    purchases: [{ planSnapshot: snapshot, ...extra }],
+    purchases: [{ status: 'active', productRef: 'prd_x', planSnapshot: snapshot, ...extra }],
   } as never
 }
 
@@ -419,6 +532,28 @@ const coolPlans = {
 }
 
 describe('narrateManageAccount v3 text-only copy', () => {
+  it('narrates the limits plan when the purchase list is empty', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [coolPlans.payg] as never,
+        customer: coolCustomer({
+          purchase: { customerRef: 'cus_cool', purchases: [] },
+          limits: {
+            ...runningLimits,
+            remaining: -1,
+            withinLimits: true,
+            planRef: 'pln_payg',
+            planName: 'Pay as you go',
+            creditsPerUnit: 200,
+            creditBalance: 599_800,
+          },
+        }),
+      }),
+    )
+    expect(text).toContain('is on Pay as you go')
+    expect(text).not.toContain('has no plan yet')
+  })
+
   it('A · no plan: product, catalog fragments, reply-with-name', () => {
     const { text } = narrateManageAccount(
       coolPayload({
@@ -426,7 +561,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
         customer: coolCustomer(),
       }),
     )
-    expect(text).toContain('Cool MCP has no plan yet, so calls will fail')
+    expect(text).toContain('Cool MCP has no plan yet')
+    expect(text).not.toContain('so calls will fail')
     expect(text).toContain('Free gives 100 calls a month')
     expect(text).toContain('Pay as you go is 200 credits per call')
     expect(text).toContain('Starter is $30 a month for 10,000 calls')
@@ -454,7 +590,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain(
       'Cool MCP is on Pay as you go, 200 credits per call. Balance 599,800 credits, about 2,999 calls.',
     )
-    expect(text).toContain('Say "add funds" to top up')
+    expect(text).toContain('Call `account` with view: \'topup\' to add credits.')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
     expect(text).not.toContain('Auto-recharge')
   })
@@ -490,11 +626,11 @@ describe('narrateManageAccount v3 text-only copy', () => {
       'Cool MCP is on Starter, $30 a month. 3,800 of 10,000 calls left this period, renewing Sep 12.',
     )
     expect(text).toContain('Credits are not used on this plan')
-    expect(text).toContain('Say "change plan" to switch')
+    expect(text).toContain("Call `account` with view: 'checkout' to switch.")
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
   })
 
-  it('D · balance spent: calls failing, add funds or change plan', () => {
+  it('D · balance spent: snapshot with shortfall, not blocked-tool wording', () => {
     const { text } = narrateManageAccount(
       coolPayload({
         plans: [coolPlans.payg, coolPlans.starter] as never,
@@ -511,9 +647,12 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain(
-      'Cool MCP calls are failing: your credit balance is 0; this call costs 200 credits — 200 short.',
+      'Cool MCP is on Pay as you go. Balance 0 credits; this call costs 200 credits — 200 short.',
     )
-    expect(text).toContain('Say "add funds" to top up, or "change plan" for a plan that does not use credits')
+    expect(text).not.toContain('calls are failing')
+    expect(text).toContain(
+      "Call `account` with view: 'topup' to add credits, or with view: 'checkout' to switch to a plan that does not use credits.",
+    )
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
     expect(text).toContain(`\`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
   })
@@ -544,7 +683,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
       'Cool MCP is on the free plan: 1 of 3 calls left this month, resetting Oct 1.',
     )
     expect(text).toContain('Credits are not used on Free')
-    expect(text).toContain('Say "see plans" for more calls')
+    expect(text).toContain("Call `account` with view: 'checkout' for more calls.")
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
   })
 
@@ -571,14 +710,72 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain(
-      "Cool MCP calls are failing: the free plan's 3 calls are used up until Oct 1.",
+      'Cool MCP is on Free. 3 calls are used up. Further calls fail until Oct 1.',
     )
     expect(text).toContain('Adding credits will not help, because Free does not spend them')
     expect(text).toContain('Pay as you go starts now using your existing 599,800 credits')
     expect(text).toContain('Starter is $30 a month')
-    expect(text).toContain('Say a plan name to switch')
+    expect(text).toContain("Call `account` with view: 'checkout' to switch plan.")
     expect(text).toContain('planRef: pln_payg')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
+  })
+
+  it('C · one-time: once qualifier and no renewal wording', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [coolPlans.pro] as never,
+        customer: coolCustomer({
+          purchase: coolPurchase(
+            {
+              name: 'Pro',
+              reference: 'pln_pro',
+              price: 9000,
+              currency: 'USD',
+              options: [flat(9000)],
+            },
+            { endDate: '2026-09-12T00:00:00.000Z' },
+          ),
+          usage: { remaining: -1 },
+          limits: runningLimits,
+        }),
+      }),
+    )
+    expect(text).toContain('Cool MCP is on Pro, $90 once')
+    expect(text).toContain('Unlimited calls')
+    expect(text).not.toContain('a month')
+    expect(text).not.toContain('renewing')
+    expect(text).not.toContain('Renews')
+  })
+
+  it('account narration never says calls are failing', () => {
+    const payloads = [
+      coolPayload({
+        plans: [coolPlans.free100, coolPlans.payg, coolPlans.starter, coolPlans.pro] as never,
+        customer: coolCustomer(),
+      }),
+      coolPayload({
+        plans: [coolPlans.free3, coolPlans.payg, coolPlans.starter] as never,
+        customer: coolCustomer({
+          purchase: coolPurchase({
+            name: 'Free',
+            reference: 'pln_free',
+            requiresPayment: false,
+            options: [cycle(), limitOpt(3)],
+          }),
+          usage: {
+            used: 3,
+            total: 3,
+            remaining: 0,
+            periodEnd: '2026-10-01T00:00:00.000Z',
+            meterRef: 'requests',
+          },
+          limits: { ...runningLimits, remaining: 0, withinLimits: false },
+        }),
+      }),
+    ]
+    for (const payload of payloads) {
+      expect(narrateManageAccount(payload).text).not.toContain('calls are failing')
+    }
   })
 
   it('H · claim free tier: ready to activate, named activate_plan', () => {
@@ -591,9 +788,31 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain('Cool MCP has a free plan ready: 3 calls a month, no card')
-    expect(text).toContain('Say "start free plan" to activate it')
+    expect(text).toContain('Call `activate_plan` with a `planRef` to activate it.')
     expect(text).toContain('call `activate_plan` with planRef: "pln_free"')
     expect(text).not.toContain('has no plan yet')
+  })
+
+  it('H · claimable free plan without a billing cycle omits the interval', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [
+          {
+            type: 'one-time',
+            name: 'Free',
+            reference: 'pln_free_once',
+            requiresPayment: false,
+            options: [limitOpt(3)],
+          },
+        ] as never,
+        customer: coolCustomer({
+          limits: { ...runningLimits, remaining: 0, activationRequired: true },
+        }),
+      }),
+    )
+    expect(text).toContain('Cool MCP has a free plan ready: 3 calls, no card')
+    expect(text).not.toContain('a month')
+    expect(text).toContain('call `activate_plan` with planRef: "pln_free_once"')
   })
 
   it('I · overage: used-of-allowance and still-working, no invented money', () => {
@@ -626,7 +845,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain(
       'Cool MCP is over its Starter allowance: 11,240 of 10,000 calls used. Calls still work.',
     )
-    expect(text).toContain('Say "see plans" for a higher limit')
+    expect(text).toContain("Call `account` with view: 'checkout' for a higher limit.")
     expect(text).not.toContain('$12.40')
     expect(text).not.toContain('will add')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
@@ -667,7 +886,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
       "Cool MCP's Starter plan is cancelled and runs until Oct 12, 36 days away, with 3,800 of 10,000 calls left.",
     )
     expect(text).toContain('Calls stop after that')
-    expect(text).toContain('Say "reactivate" to keep it')
+    expect(text).toContain("Call `account` with view: 'account' to reactivate it.")
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "account"`)
   })
 })
@@ -692,6 +911,18 @@ describe('narrateUpgrade', () => {
             options: [cycle(), flat(20000)],
           } as never,
         ],
+        customer: {
+          purchase: {
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                planRef: 'pln_current',
+                planSnapshot: { name: 'Current' },
+              },
+            ],
+          },
+        } as never,
       }),
     )
     expect(text).toContain('**Upgrade — Acme Knowledge Base**')
@@ -724,7 +955,9 @@ describe('narrateTopup', () => {
         checkoutUrl: 'https://customer.solvapay.com/customer/checkout/topup?id=abc',
       }),
     )
-    expect(text).toContain('[Add credits](https://customer.solvapay.com/customer/checkout/topup?id=abc)')
+    expect(text).toContain(
+      '[Add credits](https://customer.solvapay.com/customer/checkout/topup?id=abc)',
+    )
     expect(links).toEqual([
       { uri: 'https://customer.solvapay.com/customer/checkout/topup?id=abc', name: 'Add credits' },
     ])
@@ -749,7 +982,7 @@ describe('narratedToolResult', () => {
       ref: 'cus_1',
       purchase: {
         customerRef: 'cus_1',
-        purchases: [{ planSnapshot: { name: 'Pro', isMetered: false } }],
+        purchases: [{ productRef: 'prd_x', planSnapshot: { name: 'Pro', isMetered: false } }],
       } as never,
       paymentMethod: null,
       balance: null,
@@ -823,13 +1056,13 @@ describe('narratedToolResult', () => {
         },
       ] as never,
     })
-    const r = narratedToolResult('checkout', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
+    const r = narratedToolResult('checkout', upgradePayload, 'ui', {
+      ui: { resourceUri: 'ui://x' },
+    })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const text = (r.content[0] as any).text as string
     expect(text).toContain('Pro')
-    expect(text).toContain(
-      '[Open checkout](https://customer.solvapay.com/demo?session=abc)',
-    )
+    expect(text).toContain('[Open checkout](https://customer.solvapay.com/demo?session=abc)')
     expect(text).not.toMatch(/Checkout: https:/)
     expect(text).not.toContain('shown in the panel')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -855,9 +1088,7 @@ describe('narratedToolResult', () => {
       }),
     ).text
     expect(text).toContain('planRef: plan_pro')
-    expect(text).toContain(
-      '[Open checkout](https://customer.solvapay.com/demo?session=abc)',
-    )
+    expect(text).toContain('[Open checkout](https://customer.solvapay.com/demo?session=abc)')
     expect(text).toContain('expires in 15 minutes')
     expect(text).not.toMatch(/Checkout: https:/)
     expect(text).not.toContain('shown in the panel')
@@ -887,6 +1118,7 @@ describe('narratedToolResult', () => {
             customerRef: 'cus_1',
             purchases: [
               {
+                productRef: 'prd_x',
                 planSnapshot: {
                   name: 'Starter',
                   isMetered: true,
@@ -923,7 +1155,7 @@ describe('narratedToolResult', () => {
     expect(text).toContain('Sep 12')
     expect(text).not.toContain('Used 3 of 3')
     expect(text).not.toContain('Oct 1')
-    expect(text).toContain('docs://solvapay/overview.md')
+    expect(text).not.toContain('docs://solvapay/overview.md')
   })
 
   it('ui placeholder carries balance when the customer snapshot has one', () => {
@@ -971,6 +1203,7 @@ describe('text-lane self-sufficiency', () => {
         customerRef: 'cus_1',
         purchases: [
           {
+            productRef: 'prd_x',
             planSnapshot: {
               name: 'dafsfa',
               isMetered: false,
@@ -998,9 +1231,7 @@ describe('text-lane self-sufficiency', () => {
     return content
       .filter(
         (b): b is { type: 'resource_link'; uri: string } =>
-          typeof b === 'object' &&
-          b !== null &&
-          (b as { type?: string }).type === 'resource_link',
+          typeof b === 'object' && b !== null && (b as { type?: string }).type === 'resource_link',
       )
       .map(b => b.uri)
   }
@@ -1023,7 +1254,9 @@ describe('text-lane self-sufficiency', () => {
   it('narrateManageAccount emits Manage account before checkout', () => {
     const { text } = narrateManageAccount(linkedPayload)
     const manageAt = text.indexOf('[Manage account](https://customer.solvapay.com/manage?id=abc)')
-    const checkoutAt = text.indexOf('[Open checkout](https://customer.solvapay.com/checkout?id=def)')
+    const checkoutAt = text.indexOf(
+      '[Open checkout](https://customer.solvapay.com/checkout?id=def)',
+    )
     expect(manageAt).toBeGreaterThanOrEqual(0)
     expect(checkoutAt).toBeGreaterThan(manageAt)
     expect(text).toContain('(expires in 15 minutes)')
@@ -1046,6 +1279,19 @@ describe('text-lane self-sufficiency', () => {
     expect(placeholder).toContain('dafsfa')
   })
 
+  it("uiPlaceholder('account') omits a catalog plan when there is no active purchase", () => {
+    const placeholder = uiPlaceholder(
+      'account',
+      coolPayload({
+        plans: [coolPlans.pro] as never,
+        customer: coolCustomer(),
+      }),
+    )
+    expect(placeholder).toContain('Opened your Cool MCP account.')
+    expect(placeholder).not.toContain('$90')
+    expect(placeholder).not.toContain('Pro')
+  })
+
   it("uiPlaceholder('checkout') still reads from the catalogue", () => {
     const placeholder = uiPlaceholder('checkout', linkedPayload)
     expect(placeholder).toContain('Pay as you go')
@@ -1055,12 +1301,49 @@ describe('text-lane self-sufficiency', () => {
 
 describe('narrateAlreadyActive', () => {
   it('names the shortfall when balance and cost are present', () => {
-    expect(
-      narrateAlreadyActive({ creditBalance: 91_000, creditsPerUnit: 100_000 }),
-    ).toContain('Balance 91,000 credits; this call costs 100,000 credits — 9,000 short')
+    expect(narrateAlreadyActive({ creditBalance: 91_000, creditsPerUnit: 100_000 })).toContain(
+      'Balance 91,000 credits; this call costs 100,000 credits — 9,000 short',
+    )
   })
 
   it('stays terse when cost is missing', () => {
     expect(narrateAlreadyActive({ creditBalance: 91_000 })).toBe('This plan is already active.')
+  })
+})
+
+describe('narrateActivatePlan', () => {
+  it('narrates payment_required with a checkout URL', () => {
+    const text = narrateActivatePlan({
+      status: 'payment_required',
+      planName: 'Pro',
+      checkoutUrl: 'https://pay.example/checkout',
+    })
+    expect(text).toContain('Pro requires payment')
+    expect(text).toContain('[Open checkout](https://pay.example/checkout)')
+    expect(text).toContain("`account` with view: 'checkout'")
+  })
+
+  it('narrates invalid without dumping JSON', () => {
+    expect(narrateActivatePlan({ status: 'invalid' })).toContain(
+      "Call `account` with view: 'checkout' to see plans",
+    )
+  })
+})
+
+describe('narrateAutoRecharge', () => {
+  it('states that auto-recharge is off and points at the account portal', () => {
+    const { text, links } = narrateAutoRecharge(
+      basePayload({
+        portalUrl: 'https://pay.example/manage',
+        customer: {
+          ref: 'cus_1',
+          autoRecharge: { enabled: false },
+          balance: usdBalance,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Auto-recharge is off')
+    expect(text).toContain("`account` with view: \"account\"")
+    expect(links?.some(link => link.uri === 'https://pay.example/manage')).toBe(true)
   })
 })

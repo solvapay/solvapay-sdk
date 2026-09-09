@@ -1,0 +1,13 @@
+---
+description: Never attribute Cursor or any AI as a git or PR co-author
+alwaysApply: true
+---
+
+# No AI attribution
+
+Never add Cursor, any agent, or any AI tool as a commit or PR author.
+
+- Do not add `Co-Authored-By: Cursor`, `Co-authored-by: Cursor <cursoragent@cursor.com>`, or any other agent/tool `Co-Authored-By`
+- Do not add `Made-with: Cursor`, `Generated with Cursor`, or similar trailers
+- Do not add "Generated with …", tool footers, or AI attribution in PR titles or bodies
+- Commits and PRs are authored only by the human who asked for the change

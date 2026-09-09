@@ -33,11 +33,8 @@ import {
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
   enrichPurchase,
 } from './helpers'
-import type {
-  BootstrapPayload,
-  McpToolExtra,
-  SolvaPayMcpViewKind,
-} from './types'
+import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
+import { selectActivePlanPurchase } from './active-purchase'
 
 export interface CreateBuildBootstrapPayloadOptions {
   solvaPay: SolvaPay
@@ -176,9 +173,15 @@ export function createBuildBootstrapPayload(
       getMerchantCore(buildRequest(undefined), { solvaPay }),
       getProductCore(productQueryRequest(), { solvaPay }),
       wrapError(listPlansCore(productQueryRequest(), { solvaPay })),
-      customerRef ? wrapError(checkPurchaseCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
-      customerRef ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
-      customerRef ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
+      customerRef
+        ? wrapError(checkPurchaseCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
+      customerRef
+        ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
+      customerRef
+        ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
       customerRef ? wrapError(checkLimitsCore(limitsRequest(), { solvaPay })) : unauthenticated(),
       customerRef
         ? wrapError(createCustomerSessionCore(buildRequest(extra), { solvaPay }))
@@ -186,8 +189,24 @@ export function createBuildBootstrapPayload(
     ])
 
     const limits = okOrNull(limitsResult)
+
+    // checkLimits is what creates the free-default purchase, so the
+    // parallel checkPurchase snapshot can be pre-enrolment. Refetch once
+    // when limits names a purchase the list does not yet carry.
+    let resolvedPurchaseResult = purchaseResult
+    const neededPurchaseRef = limits?.purchaseRef
+    if (neededPurchaseRef && customerRef) {
+      const listed = isErrorResult(purchaseResult) ? [] : purchaseResult.purchases
+      if (!listed.some(purchase => purchase.reference === neededPurchaseRef)) {
+        resolvedPurchaseResult = await wrapError(
+          checkPurchaseCore(buildRequest(extra), { solvaPay }),
+        )
+      }
+    }
+
     const checkoutPurpose =
-      view === 'topup' || view === 'auto-recharge' || limits?.paywallReason === 'topup_required'
+      view === 'topup' ||
+      (view !== 'checkout' && view !== 'auto-recharge' && limits?.paywallReason === 'topup_required')
         ? ('credit_topup' as const)
         : undefined
     const checkoutResult = await wrapError(
@@ -195,8 +214,12 @@ export function createBuildBootstrapPayload(
         buildSolvaPayRequest(extra, {
           getCustomerRef: () => customerRef ?? 'anonymous',
         }),
-        { productRef, returnUrl: publicBaseUrl, ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}) },
-        { solvaPay, returnUrl: publicBaseUrl },
+        {
+          productRef,
+          returnUrl: null,
+          ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}),
+        },
+        { solvaPay },
       ),
     )
 
@@ -209,7 +232,7 @@ export function createBuildBootstrapPayload(
 
     const plans = isErrorResult(plansResult) ? [] : plansResult.plans
 
-    const purchase = okOrNull(purchaseResult)
+    const purchase = okOrNull(resolvedPurchaseResult)
     const enrichedPurchase = purchase
       ? {
           ...purchase,
@@ -219,7 +242,7 @@ export function createBuildBootstrapPayload(
         }
       : null
 
-    const activePurchase = enrichedPurchase?.purchases.find(p => p.status === 'active')
+    const activePurchase = selectActivePlanPurchase(enrichedPurchase?.purchases, productRef)
     const usage = customerRef
       ? deriveUsageSnapshot({
           // Consumption comes from `limits.used` (or `limit - remaining`)

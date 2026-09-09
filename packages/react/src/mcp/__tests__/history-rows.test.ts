@@ -36,9 +36,7 @@ describe('CREDIT_ACTIVITY_TYPE_LABELS', () => {
 describe('creditEventTitle', () => {
   it('uses productName when present, including USAGE rows', () => {
     expect(creditEventTitle(usage)).toBe('Cool MCP')
-    expect(creditEventTitle({ ...usage, type: 'TOPUP', productName: 'Cool MCP' })).toBe(
-      'Cool MCP',
-    )
+    expect(creditEventTitle({ ...usage, type: 'TOPUP', productName: 'Cool MCP' })).toBe('Cool MCP')
   })
 
   it('falls back to the type label when productName is missing', () => {
@@ -103,7 +101,7 @@ describe('mapChargeRow', () => {
     currency: 'USD',
     isRecurring: true,
     billingCycle: 'monthly',
-    planSnapshot: { name: 'Starter' },
+    planSnapshot: { name: 'Starter', currency: 'USD', price: 3000 },
   }
 
   it('labels a recurring purchase as plan · cycle with no receipt', () => {
@@ -121,7 +119,7 @@ describe('mapChargeRow', () => {
       billingCycle: undefined,
       amount: 9000,
       createdAt: '2026-08-18T00:00:00Z',
-      planSnapshot: { name: 'Pro' },
+      planSnapshot: { name: 'Pro', currency: 'USD', price: 9000 },
     }
     expect(mapChargeRow(oneTime, 'en-US')).toEqual({
       charge: 'Pro · one time',

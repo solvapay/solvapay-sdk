@@ -539,6 +539,11 @@ export interface ResponseResult<TData = unknown> {
    * time; V1.1 emits them over SSE.
    */
   readonly emittedBlocks?: ContentBlock[]
+  /**
+   * Pre-check limits captured at `ctx.respond()` so unwrap can build
+   * honest nudge copy. Not part of the merchant-facing contract.
+   */
+  readonly limits?: LimitResponseWithPlan | null
 }
 
 /**
@@ -554,8 +559,13 @@ export interface ResponseResult<TData = unknown> {
 export interface CustomerSnapshot {
   /** Backend customer ref (`cus_...`). */
   readonly ref: string
-  /** Credit balance in mils. 0 when the backend didn't surface a balance. */
-  readonly balance: number
+  /**
+   * Credit balance when the plan spends credits. `undefined` when the
+   * backend did not surface a credit system — not `0`.
+   */
+  readonly balance: number | undefined
+  /** True when the limits response carries credit-balance fields. */
+  readonly isCreditBased: boolean
   /** Remaining usage units before hitting the limit. `null` when unlimited. */
   readonly remaining: number | null
   /** Whether the customer is within their usage limits at snapshot time. */
