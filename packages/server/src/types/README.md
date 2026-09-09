@@ -82,7 +82,7 @@ type Agent = components['schemas']['Agent']
 
 The `types.ts` file provides mapped types that bridge differences between the generated OpenAPI types and the SDK's interface:
 
-- `LimitResponseWithPlan` - Extends `LimitResponse` with a required `plan` field
+- `LimitResponseWithPlan` - Extends `LimitResponse` with a deprecated SDK-only `plan` alias
 - `CustomerResponseMapped` - Maps backend's `reference` field to `customerRef` for consistency
 - `AutoRechargeConfig` - `AutoRechargeConfigDto` plus an optional SDK-merged `display` block
-- `ProcessPaymentResult` - Hand-mapped because openapi-typescript rewrites the `oneOf` discriminator `status` values to schema names
+- `ProcessPaymentResult` - Generated `/v1/sdk/payment-intents/{id}/process` 200 union. The generator strips OpenAPI `discriminator` objects so `status` keeps the wire enums (`succeeded`, `timeout`, …) instead of schema names
