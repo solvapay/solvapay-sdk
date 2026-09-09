@@ -1,5 +1,12 @@
 # @solvapay/server changelog
 
+## 2.6.0
+
+### Minor Changes
+
+- c67e78e: Stop asking an already-paying customer to switch plan on a credit shortfall, and stop minting hosted checkout sessions with a non-browsable MCP endpoint as `returnUrl`. Pass `returnUrl: null` to `createCheckoutSessionCore` to omit the field instead of falling back to the request origin.
+- c67e78e: One ordered active-plan selector, invalidate the limits cache after `activate_plan`, stop double-emitting merchant JSON, and narrate every activate_plan status. Gate and account copy share one recovery vocabulary, print credit amounts next to money when the backend sends the peg, and point auto-recharge at the account portal.
+
 ## 2.5.0
 
 ### Minor Changes
