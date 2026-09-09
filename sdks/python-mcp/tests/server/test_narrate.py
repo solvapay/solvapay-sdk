@@ -93,7 +93,7 @@ def test_narrate_upgrade_lists_paid_plans() -> None:
     assert "Unlimited · recurring · $500.00" in str(text)
 
 
-def test_narrate_topup_includes_presets() -> None:
+def test_narrate_topup_omits_invented_presets() -> None:
     text = narrate_topup(
         base_payload(
             customer={
@@ -112,7 +112,7 @@ def test_narrate_topup_includes_presets() -> None:
     )["text"]
     assert "Top up — Acme Knowledge Base" in str(text)
     assert "Balance: 5,000 credits" in str(text)
-    assert "Top-up presets:" in str(text)
+    assert "Top-up presets:" not in str(text)
 
 
 def test_narrate_activate_plan_lists_plans() -> None:

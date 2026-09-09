@@ -896,11 +896,11 @@ export type PaywallNextAction = 'topup' | 'checkout' | 'activate' | 'account'
  */
 export type PaywallRecoveryLinks = {
   /**
-   * Checkout URL that contains `/topup`.
+   * Checkout URL when the classified state is [`PaywallState::TopupRequired`].
    */
   topup?: string
   /**
-   * Checkout URL that does not contain `/topup`.
+   * Checkout URL when the classified state is not a top-up.
    */
   checkout?: string
   /**

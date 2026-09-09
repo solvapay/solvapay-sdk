@@ -5830,7 +5830,7 @@
           {
             "rustName": "topup",
             "wireName": "topup",
-            "rustdoc": "Checkout URL that contains `/topup`.",
+            "rustdoc": "Checkout URL when the classified state is [`PaywallState::TopupRequired`].",
             "optional": true,
             "skipSerializingIf": "Option::is_none",
             "serdeDefault": true,
@@ -5843,7 +5843,7 @@
           {
             "rustName": "checkout",
             "wireName": "checkout",
-            "rustdoc": "Checkout URL that does not contain `/topup`.",
+            "rustdoc": "Checkout URL when the classified state is not a top-up.",
             "optional": true,
             "skipSerializingIf": "Option::is_none",
             "serdeDefault": true,

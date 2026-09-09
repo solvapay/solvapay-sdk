@@ -26,10 +26,10 @@ use solvapay_core::{
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
-    CreateCheckoutSessionRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreateTopupPaymentIntentParams, GetCreditActivityParams, GetCustomerBalanceParams,
-    GetCustomerParams, GetPaymentMethodParams, ListPurchasesParams, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams,
+    CreateCheckoutSessionRequest, CreateCheckoutSessionRequestPurpose,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreateTopupPaymentIntentParams,
+    GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams,
+    ListPurchasesParams, ProcessPaymentIntentParams, ReactivatePurchaseParams,
 };
 use solvapay_mcp_core::{
     is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
@@ -555,6 +555,7 @@ impl SolvaPayClient {
             _ => Vec::new(),
         };
 
+        let mut paywall_reason: Option<String> = None;
         let customer = match customer_ref {
             None => None,
             Some(customer_ref) => {
@@ -597,6 +598,10 @@ impl SolvaPayClient {
                     "usage": if is_error_result(&usage) { Value::Null } else { usage },
                 });
                 if let Ok(limits_value) = &limits_result {
+                    paywall_reason = limits_value
+                        .get("paywallReason")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned);
                     attach_customer_credit_fields(&mut customer, limits_value);
                 }
                 Some(customer)
@@ -613,11 +618,15 @@ impl SolvaPayClient {
             .collect();
 
         let checkout_customer = customer_ref.unwrap_or(ANONYMOUS_CUSTOMER_REF);
+        let checkout_purpose = (params.view == "topup"
+            || params.view == "auto-recharge"
+            || paywall_reason.as_deref() == Some("topup_required"))
+        .then_some(CreateCheckoutSessionRequestPurpose::CreditTopup);
         let checkout_req = CreateCheckoutSessionRequest {
             customer_ref: Some(checkout_customer.to_owned()),
             plan_ref: None,
             product_ref: Some(params.product_ref.clone()),
-            purpose: None,
+            purpose: checkout_purpose.clone(),
             return_url: Some(params.public_base_url.clone()),
         };
         let portal_req = customer_ref.map(|customer_ref| CreateCustomerSessionRequest {
@@ -656,6 +665,7 @@ impl SolvaPayClient {
             "customer": customer,
             "taxIdFields": tax_id_fields_table(),
             "checkoutUrl": checkout_url,
+            "checkoutPurpose": checkout_purpose,
             "portalUrl": portal_url,
         }))
     }

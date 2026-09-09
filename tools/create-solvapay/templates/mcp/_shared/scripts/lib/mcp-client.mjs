@@ -119,6 +119,22 @@ export async function callTool(workerUrl, name, args, options = {}) {
   return rpc(workerUrl, 'tools/call', { name, arguments: args }, options)
 }
 
+/**
+ * `resources/list` convenience — returns the array of resource descriptors.
+ */
+export async function listResources(workerUrl, options = {}) {
+  const result = await rpc(workerUrl, 'resources/list', {}, options)
+  return Array.isArray(result?.resources) ? result.resources : []
+}
+
+/**
+ * `resources/read` convenience — returns the full result envelope so the
+ * caller can introspect `contents[]`, `_meta.ui.csp`, and mime types.
+ */
+export async function readResource(workerUrl, uri, options = {}) {
+  return rpc(workerUrl, 'resources/read', { uri }, options)
+}
+
 export class RpcError extends Error {
   constructor(message, info = {}) {
     super(message)

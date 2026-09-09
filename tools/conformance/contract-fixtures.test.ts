@@ -537,6 +537,7 @@ const NON_CLIENT_FIXTURES = [
   'paywall/gate/plan-absent-fallback.json',
   'paywall/gate/short-message-activation.json',
   'paywall/gate/short-message-payment.json',
+  'paywall/gate/topup-reason-plain-checkout-url.json',
   'paywall/gate/topup-with-recurring-stays-payment.json',
   'paywall/messages/gate-activation-no-url.json',
   'paywall/messages/gate-activation-url.json',

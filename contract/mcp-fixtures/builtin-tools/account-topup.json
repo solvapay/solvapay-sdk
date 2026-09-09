@@ -70,12 +70,12 @@
       "content": [
         {
           "type": "text",
-          "text": "**Top up \u2014 Demo**\n\nTop-up presets: $10.00 \u00b7 $25.00 \u00b7 $50.00 \u00b7 $100.00\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)\nDocs: docs://solvapay/overview.md"
+          "text": "**Top up \u2014 Demo**\n\nCheckout: [Add credits](https://checkout.example/s) (expires in 15 minutes)\nDocs: docs://solvapay/overview.md"
         },
         {
           "type": "resource_link",
           "uri": "https://checkout.example/s",
-          "name": "Open checkout"
+          "name": "Add credits"
         }
       ],
       "structuredContent": {
@@ -109,6 +109,7 @@
         ],
         "customer": null,
         "checkoutUrl": "https://checkout.example/s",
+        "checkoutPurpose": "credit_topup",
         "portalUrl": null,
         "taxIdFields": {
           "AT": {

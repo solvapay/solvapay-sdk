@@ -288,16 +288,25 @@ fn http_url<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
     }
 }
 
+fn checkout_link_label(data: &Value) -> &'static str {
+    if data.get("checkoutPurpose").and_then(Value::as_str) == Some("credit_topup") {
+        "Add credits"
+    } else {
+        "Open checkout"
+    }
+}
+
 fn checkout_line(data: &Value) -> Option<String> {
     let url = http_url(data, "checkoutUrl")?;
+    let label = checkout_link_label(data);
     Some(format!(
-        "Checkout: [Open checkout]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
+        "Checkout: [{label}]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
     ))
 }
 
 fn hosted_checkout_link(data: &Value) -> Option<Value> {
     let url = http_url(data, "checkoutUrl")?;
-    Some(json!({ "uri": url, "name": "Open checkout" }))
+    Some(json!({ "uri": url, "name": checkout_link_label(data) }))
 }
 
 fn docs_line() -> String {
@@ -314,7 +323,7 @@ fn recovery_links(data: &Value) -> Vec<Value> {
 fn hosted_portal_link(data: &Value) -> Option<Value> {
     let url = data.get("portalUrl").and_then(Value::as_str)?;
     if url.starts_with("http://") || url.starts_with("https://") {
-        Some(json!({ "uri": url, "name": "Open hosted portal" }))
+        Some(json!({ "uri": url, "name": "Manage account" }))
     } else {
         None
     }
@@ -523,17 +532,6 @@ pub fn narrate_topup(data: &Value) -> Value {
     if let Some(bal) = balance_row(customer) {
         lines.push(bal);
     }
-    let currency = customer
-        .and_then(|c| c.pointer("/balance/displayCurrency"))
-        .and_then(Value::as_str)
-        .unwrap_or("USD");
-    let presets: Vec<String> = [1000.0, 2500.0, 5000.0, 10_000.0]
-        .into_iter()
-        .filter_map(|m| format_money(Some(m), Some(currency)))
-        .collect();
-    if !presets.is_empty() {
-        lines.push(format!("Top-up presets: {}", presets.join(" · ")));
-    }
     if let Some(checkout) = checkout_line(data) {
         lines.push(checkout);
     }
@@ -615,8 +613,9 @@ pub fn ui_placeholder(view: &str, data: &Value) -> String {
         parts.push(format!("Balance: {balance}."));
     }
     if let Some(url) = http_url(data, "checkoutUrl") {
+        let label = checkout_link_label(data);
         parts.push(format!(
-            "[Open checkout]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)."
+            "[{label}]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)."
         ));
     }
     parts.join(" ")

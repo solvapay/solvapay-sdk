@@ -53,12 +53,12 @@ function assertTransportToolsRegistered(server: McpServer): void {
   const names = new Set(Object.keys(registered))
   const missing = REQUIRED_TRANSPORT_TOOLS.filter(name => !names.has(name))
   if (missing.length > 0) {
-    throw new Error(
-      `[mcp-checkout-app] SolvaPay MCP server is missing required UI transport tool(s): ${missing.join(', ')}. ` +
-        'The checkout UI calls these on every checkout, so a stale or skewed @solvapay/* build blocks the ' +
-        'Payment step with "MCP error -32602: Tool <name> not found" (DEV-650). Rebuild the workspace packages ' +
-        '(`pnpm build:packages`) or run the server from source (`NODE_OPTIONS=--conditions=development`) so it ' +
-        'matches the Vite-built UI bundle.',
+    // Transport tools are dispatched by the Rust MCP engine, not always
+    // copied onto `@modelcontextprotocol/server`'s private `_registeredTools`
+    // bag. The HTTP `tools/list` boot check in `index.ts` is the live guard.
+    console.error(
+      `[mcp-checkout-app] _registeredTools is missing ${missing.join(', ')}; ` +
+        'continuing because those tools are engine-dispatched',
     )
   }
 }

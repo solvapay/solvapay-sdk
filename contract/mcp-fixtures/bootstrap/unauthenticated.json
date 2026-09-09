@@ -73,6 +73,7 @@
       ],
       "customer": null,
       "checkoutUrl": "https://checkout.example/s",
+      "checkoutPurpose": null,
       "portalUrl": null,
       "taxIdFields": {
         "AT": {

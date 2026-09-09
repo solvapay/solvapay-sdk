@@ -183,6 +183,26 @@ describe('createCheckoutSessionCore', () => {
     })
   })
 
+  it('forwards purpose credit_topup to createCheckoutSession', async () => {
+    const result = await createCheckoutSessionCore(
+      new Request('https://example.test/mcp'),
+      { productRef: 'prd_1', purpose: 'credit_topup' },
+      { solvaPay: { createCheckoutSession: mockCreateCheckoutSession } as never },
+    )
+
+    expect(mockCreateCheckoutSession).toHaveBeenCalledWith({
+      productRef: 'prd_1',
+      customerRef: 'cus_ABC',
+      planRef: undefined,
+      returnUrl: 'https://example.test',
+      purpose: 'credit_topup',
+    })
+    expect(result).toEqual({
+      sessionId: 'cs_test',
+      checkoutUrl: 'https://checkout.example/session',
+    })
+  })
+
   it('coerces empty planRef to undefined', async () => {
     await createCheckoutSessionCore(
       new Request('http://localhost'),

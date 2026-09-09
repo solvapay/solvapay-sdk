@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Included usage is exhausted. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+    "result": "Included usage is exhausted. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
   }
 }

@@ -74,14 +74,18 @@ async function assertTransportToolsListed(): Promise<void> {
       .map(tool => (isRecord(tool) && typeof tool.name === 'string' ? tool.name : ''))
       .filter(name => name.length > 0),
   )
-  const missing = REQUIRED_TRANSPORT_TOOLS.filter(name => !names.has(name))
+  const hideUi = process.env.MCP_VISIBILITY_TEST !== '1'
+  const required = hideUi ? (['account', 'activate_plan'] as const) : REQUIRED_TRANSPORT_TOOLS
+  const missing = required.filter(name => !names.has(name))
   if (missing.length > 0) {
     throw new Error(
-      `[mcp-checkout-app] SolvaPay MCP server is missing required UI transport tool(s): ${missing.join(', ')}. ` +
-        'The checkout UI calls these on every checkout, so a stale or skewed @solvapay/* build blocks the ' +
-        'Payment step with "MCP error -32602: Tool <name> not found" (DEV-650). Rebuild the workspace packages ' +
-        '(`pnpm build:packages`) or run the server from source (`NODE_OPTIONS=--conditions=development`) so it ' +
-        'matches the Vite-built UI bundle.',
+      hideUi
+        ? `[mcp-checkout-app] tools/list is missing intent tool(s): ${missing.join(', ')}.`
+        : `[mcp-checkout-app] SolvaPay MCP server is missing required UI transport tool(s): ${missing.join(', ')}. ` +
+            'The checkout UI calls these on every checkout, so a stale or skewed @solvapay/* build blocks the ' +
+            'Payment step with "MCP error -32602: Tool <name> not found" (DEV-650). Rebuild the workspace packages ' +
+            '(`pnpm build:packages`) or run the server from source (`NODE_OPTIONS=--conditions=development`) so it ' +
+            'matches the Vite-built UI bundle.',
     )
   }
   if (process.env.SOLVAPAY_DEBUG === 'true') {

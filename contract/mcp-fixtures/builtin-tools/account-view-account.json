@@ -61,6 +61,7 @@
       "status": 200,
       "body": {
         "checkoutUrl": "https://checkout.example/s",
+      "checkoutPurpose": null,
         "sessionId": "cs_1"
       }
     }
@@ -109,6 +110,7 @@
         ],
         "customer": null,
         "checkoutUrl": "https://checkout.example/s",
+        "checkoutPurpose": null,
         "portalUrl": null,
         "taxIdFields": {
           "AT": {

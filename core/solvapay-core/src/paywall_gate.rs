@@ -539,10 +539,13 @@ fn included_from_limits(limits: &PaywallGateLimits) -> Option<IncludedUsage> {
 }
 
 /// Map checkout / confirmation URLs onto the named recovery link slots.
-fn recovery_links(limits: &PaywallGateLimits) -> Option<PaywallRecoveryLinks> {
+fn recovery_links(
+    limits: &PaywallGateLimits,
+    state: &PaywallState,
+) -> Option<PaywallRecoveryLinks> {
     let mut links = PaywallRecoveryLinks::default();
     if let Some(url) = limits.checkout_url.as_deref().filter(|url| !url.is_empty()) {
-        if url.contains("/topup") {
+        if *state == PaywallState::TopupRequired {
             links.topup = Some(url.to_owned());
         } else {
             links.checkout = Some(url.to_owned());
@@ -615,7 +618,7 @@ fn recovery_fields(limits: &PaywallGateLimits, state: &PaywallState) -> Recovery
         purchase_ref: limits.purchase_ref.clone(),
         plan_status: limits.plan_status.clone(),
         auto_recharge: limits.auto_recharge.clone(),
-        links: recovery_links(limits),
+        links: recovery_links(limits, state),
     }
 }
 
@@ -925,7 +928,7 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
@@ -934,7 +937,7 @@ mod tests {
                 "creditsPerCall": 1.0,
                 "shortfallCredits": 1.0,
                 "remainingCalls": 0.0,
-                "links": { "checkout": "https://pay.test/x" },
+                "links": { "topup": "https://pay.test/x" },
                 "plans": [
                     plan("pl_pro", "usage-based", true),
                     plan("pl_hybrid", "hybrid", true)
@@ -966,7 +969,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
                 "reason": "topup_required",
@@ -974,7 +977,7 @@ mod tests {
                 "creditsPerCall": 1.0,
                 "shortfallCredits": 1.0,
                 "remainingCalls": 0.0,
-                "links": { "checkout": "https://pay.test/x" },
+                "links": { "topup": "https://pay.test/x" },
                 "plans": [
                     plan("pl_pro", "usage-based", true),
                     plan("pl_pro", "recurring", true)
@@ -1003,7 +1006,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
                 "planRef": "pl_basic",
                 "creditBalance": 0.0,
                 "reason": "topup_required",
@@ -1011,7 +1014,7 @@ mod tests {
                 "creditsPerCall": 1.0,
                 "shortfallCredits": 1.0,
                 "remainingCalls": 0.0,
-                "links": { "checkout": "https://pay.test/x" },
+                "links": { "topup": "https://pay.test/x" },
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
                 "productDetails": { "name": "Demo", "reference": "prd_demo" }
             })
@@ -1054,5 +1057,29 @@ mod tests {
     fn null_balance_deserializes_to_none() {
         let limits = limits_from(json!({ "plan": "pl_basic", "remaining": 0, "balance": null }));
         assert!(limits.balance.is_none());
+    }
+
+    #[test]
+    fn recovery_links_topup_from_paywall_reason_not_url_shape() {
+        let actual = gate_value(
+            "prd_topup",
+            json!({
+                "paywallReason": "topup_required",
+                "checkoutUrl": "https://pay.example.com/customer/checkout?id=chk_1"
+            }),
+        );
+        assert_eq!(
+            actual.get("links"),
+            Some(&json!({ "topup": "https://pay.example.com/customer/checkout?id=chk_1" }))
+        );
+        assert_eq!(actual.get("reason"), Some(&json!("topup_required")));
+        assert_eq!(
+            actual.get("checkoutUrl"),
+            Some(&json!("https://pay.example.com/customer/checkout?id=chk_1"))
+        );
+        assert!(actual["message"]
+            .as_str()
+            .unwrap()
+            .contains("[Add credits](https://pay.example.com/customer/checkout?id=chk_1)"));
     }
 }

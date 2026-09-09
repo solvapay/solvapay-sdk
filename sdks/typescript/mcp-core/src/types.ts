@@ -227,6 +227,7 @@ export interface BootstrapPayload {
   plans: BootstrapPlan[]
   customer: BootstrapCustomer | null
   checkoutUrl?: string | null
+  checkoutPurpose?: 'credit_topup' | null
   portalUrl?: string | null
   taxIdFields?: Record<
     string,

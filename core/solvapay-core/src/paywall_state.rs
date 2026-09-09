@@ -83,10 +83,10 @@ pub struct PaywallAutoRecharge {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallRecoveryLinks {
-    /// Checkout URL that contains `/topup`.
+    /// Checkout URL when the classified state is [`PaywallState::TopupRequired`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topup: Option<String>,
-    /// Checkout URL that does not contain `/topup`.
+    /// Checkout URL when the classified state is not a top-up.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checkout: Option<String>,
     /// Confirmation / manage URL.
@@ -519,17 +519,18 @@ pub fn plan_ladder(gate: &GateContent) -> Option<String> {
     }
     linkable.sort_by(|a, b| a.price.unwrap_or(0.0).total_cmp(&b.price.unwrap_or(0.0)));
     linkable.truncate(4);
-    Some(
-        linkable
-            .into_iter()
-            .map(|plan| {
-                let label = link_label(plan.name.as_deref().unwrap_or(plan.reference.as_str()));
-                let url = plan.checkout_url.as_deref().unwrap_or_default();
-                format!("[{label}]({url})")
-            })
-            .collect::<Vec<_>>()
-            .join(" · "),
-    )
+    let links = linkable
+        .into_iter()
+        .map(|plan| {
+            let label = link_label(plan.name.as_deref().unwrap_or(plan.reference.as_str()));
+            let url = plan.checkout_url.as_deref().unwrap_or_default();
+            format!("[{label}]({url})")
+        })
+        .collect::<Vec<_>>()
+        .join(" · ");
+    Some(format!(
+        "{links} (first link used closes the rest; links expire in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
+    ))
 }
 
 /// Format a credit count with thousands grouping (`91,000`).
@@ -590,13 +591,13 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
             };
             let switch_line = match &ladder {
                 Some(ladder) => format!(" Or switch plan: {ladder}."),
-                None => recover_clause(url, "continue", Some("checkout")),
+                None => recover_clause(url, "continue", Some("checkout"), "Open checkout"),
             };
             format!("{used_line}{next_line}{anti_trap}{switch_line} {DOCS_HINT}")
         }
         PaywallState::ActivationRequired => format!(
             "Your plan needs activation.{} Or call `activate_plan` with a `planRef`. {DOCS_HINT}",
-            recover_clause(url, "activate", Some("checkout"))
+            recover_clause(url, "activate", Some("checkout"), "Open checkout")
         ),
         PaywallState::TopupRequired => {
             let lead = match (
@@ -612,7 +613,7 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
                 ),
                 _ => "Included usage is exhausted.".to_owned(),
             };
-            let topup = recover_clause(url, "add credits", Some("topup"));
+            let topup = recover_clause(url, "add credits", Some("topup"), "Add credits");
             let auto = if gate
                 .auto_recharge
                 .as_ref()
@@ -638,18 +639,18 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
                     Some(ladder) => format!("{lead} Switch here: {ladder}. {DOCS_HINT}"),
                     None => format!(
                         "{lead}{} {DOCS_HINT}",
-                        recover_clause(url, "switch plan", Some("checkout"))
+                        recover_clause(url, "switch plan", Some("checkout"), "Open checkout")
                     ),
                 };
             }
             match &ladder {
                 Some(ladder) => format!(
-                    "You don't have an active plan for this tool. Pick a plan to use this tool: {ladder} (links expire in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or {}. {DOCS_HINT}",
+                    "You don't have an active plan for this tool. Pick a plan to use this tool: {ladder}, or {}. {DOCS_HINT}",
                     call_viewer(Some("checkout"))
                 ),
                 None => format!(
                     "You don't have an active plan for this tool.{} {DOCS_HINT}",
-                    recover_clause(url, "pick a plan", Some("checkout"))
+                    recover_clause(url, "pick a plan", Some("checkout"), "Open checkout")
                 ),
             }
         }
@@ -662,8 +663,8 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
 }
 
 /// Markdown link for a pasteable checkout URL.
-fn named_checkout_markdown(url: &str) -> String {
-    format!("[Open checkout]({url})")
+fn named_checkout_markdown(url: &str, label: &str) -> String {
+    format!("[{label}]({url})")
 }
 
 /// Built-in tool agents call to inspect account, checkout, or top-up views.
@@ -687,11 +688,11 @@ fn capitalize_call(call: String) -> String {
 }
 
 /// URL + TTL clause, or a tool-only fallback when no checkout URL exists.
-fn recover_clause(url: Option<&str>, verb: &str, view: Option<&str>) -> String {
+fn recover_clause(url: Option<&str>, verb: &str, view: Option<&str>, label: &str) -> String {
     match url {
         Some(url) => format!(
             " {} to {verb} (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or {}.",
-            named_checkout_markdown(url),
+            named_checkout_markdown(url, label),
             call_viewer(view)
         ),
         None => format!(" {}.", capitalize_call(call_viewer(view))),
@@ -749,7 +750,7 @@ fn format_count(value: f64) -> String {
 pub fn build_nudge_message(state: &PaywallState, limits: Option<&PaywallLimits>) -> String {
     let url = limits.and_then(|l| non_empty_url(l.checkout_url.as_deref()));
     let visit_clause = url.map_or(String::new(), |u| {
-        format!(", or {}", named_checkout_markdown(u))
+        format!(", or {}", named_checkout_markdown(u, "Open checkout"))
     });
     let remaining = credit_signals(limits).remaining_calls;
 
@@ -1121,7 +1122,7 @@ mod tests {
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &with_url),
-            "Included usage is exhausted. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+            "Included usage is exhausted. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &no_url),
@@ -1136,7 +1137,7 @@ mod tests {
         };
         assert_eq!(
             build_gate_message(&PaywallState::TopupRequired, &shortfall),
-            "Out of credits for this call. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+            "Out of credits for this call. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
         );
         assert_eq!(
             build_gate_message(&PaywallState::UpgradeRequired, &with_url),

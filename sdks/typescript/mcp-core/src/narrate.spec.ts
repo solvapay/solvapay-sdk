@@ -336,7 +336,7 @@ describe('narrateUpgrade', () => {
 })
 
 describe('narrateTopup', () => {
-  it('shows balance + presets', () => {
+  it('shows balance without inventing presets', () => {
     const { text } = narrateTopup(
       basePayload({
         customer: {
@@ -350,7 +350,7 @@ describe('narrateTopup', () => {
     )
     expect(text).toContain('**Top up — Acme Knowledge Base**')
     expect(text).toContain('Balance: 865,500 credits')
-    expect(text).toContain('Top-up presets:')
+    expect(text).not.toContain('Top-up presets:')
   })
 })
 

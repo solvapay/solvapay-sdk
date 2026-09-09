@@ -35,6 +35,6 @@
     }
   },
   "expect": {
-    "result": "[Alpha](https://pay.test/a) · [Plan \\[Beta\\]](https://pay.test/b)"
+    "result": "[Alpha](https://pay.test/a) · [Plan \\[Beta\\]](https://pay.test/b) (first link used closes the rest; links expire in 15 minutes)"
   }
 }

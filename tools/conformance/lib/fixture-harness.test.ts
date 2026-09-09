@@ -146,7 +146,7 @@ describe('paywall bindings', () => {
         },
       }),
     ).toBe(
-      "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+      "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
     )
   })
 
