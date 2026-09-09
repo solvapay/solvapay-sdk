@@ -532,6 +532,28 @@ const coolPlans = {
 }
 
 describe('narrateManageAccount v3 text-only copy', () => {
+  it('narrates the limits plan when the purchase list is empty', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [coolPlans.payg] as never,
+        customer: coolCustomer({
+          purchase: { customerRef: 'cus_cool', purchases: [] },
+          limits: {
+            ...runningLimits,
+            remaining: -1,
+            withinLimits: true,
+            planRef: 'pln_payg',
+            planName: 'Pay as you go',
+            creditsPerUnit: 200,
+            creditBalance: 599_800,
+          },
+        }),
+      }),
+    )
+    expect(text).toContain('is on Pay as you go')
+    expect(text).not.toContain('has no plan yet')
+  })
+
   it('A · no plan: product, catalog fragments, reply-with-name', () => {
     const { text } = narrateManageAccount(
       coolPayload({

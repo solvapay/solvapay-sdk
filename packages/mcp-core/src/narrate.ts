@@ -207,9 +207,9 @@ function preferLimitsPlan(
   purchase: PurchaseShape | null,
   limits: LimitsShape | null | undefined,
 ): boolean {
-  const purchaseRef = purchase?.planRef ?? purchase?.planSnapshot?.reference
   const limitsRef = limits?.planRef
-  return Boolean(limitsRef && purchaseRef && limitsRef !== purchaseRef)
+  if (!limitsRef) return false
+  return limitsRef !== (purchase?.planRef ?? purchase?.planSnapshot?.reference)
 }
 
 function productName(data: BootstrapPayload): string {

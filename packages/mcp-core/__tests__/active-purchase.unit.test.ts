@@ -27,6 +27,15 @@ describe('isPlanPurchase', () => {
     ).toBe(false)
   })
 
+  it('rejects credit top-ups stamped on origin when metadata.purpose is absent', () => {
+    expect(
+      isPlanPurchase({
+        planSnapshot: { name: 'Credits' },
+        origin: 'credit_topup',
+      }),
+    ).toBe(false)
+  })
+
   it('accepts a plan snapshot without a top-up purpose', () => {
     expect(isPlanPurchase({ planSnapshot: { name: 'Pro' } })).toBe(true)
   })

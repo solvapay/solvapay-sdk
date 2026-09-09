@@ -189,6 +189,21 @@ export function createBuildBootstrapPayload(
     ])
 
     const limits = okOrNull(limitsResult)
+
+    // checkLimits is what creates the free-default purchase, so the
+    // parallel checkPurchase snapshot can be pre-enrolment. Refetch once
+    // when limits names a purchase the list does not yet carry.
+    let resolvedPurchaseResult = purchaseResult
+    const neededPurchaseRef = limits?.purchaseRef
+    if (neededPurchaseRef && customerRef) {
+      const listed = isErrorResult(purchaseResult) ? [] : purchaseResult.purchases
+      if (!listed.some(purchase => purchase.reference === neededPurchaseRef)) {
+        resolvedPurchaseResult = await wrapError(
+          checkPurchaseCore(buildRequest(extra), { solvaPay }),
+        )
+      }
+    }
+
     const checkoutPurpose =
       view === 'topup' ||
       (view !== 'checkout' && view !== 'auto-recharge' && limits?.paywallReason === 'topup_required')
@@ -217,7 +232,7 @@ export function createBuildBootstrapPayload(
 
     const plans = isErrorResult(plansResult) ? [] : plansResult.plans
 
-    const purchase = okOrNull(purchaseResult)
+    const purchase = okOrNull(resolvedPurchaseResult)
     const enrichedPurchase = purchase
       ? {
           ...purchase,
