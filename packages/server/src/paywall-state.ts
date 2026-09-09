@@ -12,7 +12,7 @@
  * primary recovery tool so LLMs chain naturally toward it.
  */
 
-import { minorUnitsPerMajor } from '@solvapay/core'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/core'
 import type { PaywallNextAction, LimitResponseWithPlan, PaywallStructuredContent } from './types'
 
 /**
@@ -21,8 +21,6 @@ import type { PaywallNextAction, LimitResponseWithPlan, PaywallStructuredContent
  * extend this TTL — the session id is a guardless bearer credential.
  */
 export const CHECKOUT_SESSION_TTL_MINUTES = 15
-
-const DOCS_HINT = 'See docs://solvapay/overview.md.'
 
 /**
  * Discriminated union describing which recovery path the customer
@@ -60,11 +58,7 @@ export function creditSignals(limits: LimitResponseWithPlan | null): CreditSigna
   let remainingCalls: number | undefined
   if (limits.balance?.remainingUnits !== undefined) {
     remainingCalls = limits.balance.remainingUnits
-  } else if (
-    creditBalance !== undefined &&
-    creditsPerCall !== undefined &&
-    creditsPerCall > 0
-  ) {
+  } else if (creditBalance !== undefined && creditsPerCall !== undefined && creditsPerCall > 0) {
     remainingCalls = Math.floor(creditBalance / creditsPerCall)
   } else if (limits.remaining >= 0) {
     remainingCalls = limits.remaining
@@ -109,9 +103,7 @@ function activePlanRefOf(limits: LimitResponseWithPlan): string | undefined {
  * signal which isn't emitted yet. Kept in the type so downstream code
  * compiles against the full discriminated union.
  */
-export function classifyPaywallState(
-  limits: LimitResponseWithPlan | null,
-): PaywallState {
+export function classifyPaywallState(limits: LimitResponseWithPlan | null): PaywallState {
   if (!limits) return { kind: 'upgrade_required' }
 
   if (limits.activationRequired === true || limits.paywallReason === 'activation_required') {
@@ -178,6 +170,28 @@ function formatCredits(value: number): string {
   return value.toLocaleString('en-US')
 }
 
+function formatCreditsWithMoney(
+  credits: number,
+  gate: PaywallStructuredContent,
+): string {
+  const amount = formatCredits(credits)
+  const peg = gate.creditsPerMinorUnit
+  const currency = gate.currency
+  const rate = gate.displayExchangeRate
+  if (peg && peg > 0 && currency && rate != null && rate > 0) {
+    const minor = creditsToDisplayMinorUnits({
+      credits,
+      creditsPerMinorUnit: peg,
+      displayExchangeRate: rate,
+      displayCurrency: currency,
+    })
+    if (minor != null) {
+      return `${amount} credits (~${formatMinor(minor, currency)})`
+    }
+  }
+  return `${amount} credits`
+}
+
 function meterLabel(gate: PaywallStructuredContent): string {
   if (!gate.meterName) return 'units'
   return gate.meterName.replace(/_/g, ' ')
@@ -199,7 +213,9 @@ export function planLadder(gate: PaywallStructuredContent): string | null {
     .sort((a, b) => a.price - b.price)
     .slice(0, 4)
   if (linkable.length === 0) return null
-  const links = linkable.map(p => `[${linkLabel(p.name ?? p.reference)}](${p.checkoutUrl})`).join(' · ')
+  const links = linkable
+    .map(p => `[${linkLabel(p.name ?? p.reference)}](${p.checkoutUrl})`)
+    .join(' · ')
   return `${links} (first link used closes the rest; links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes)`
 }
 
@@ -243,10 +259,7 @@ function autoRechargeDisabled(gate: PaywallStructuredContent): boolean {
  * Kept as a pure string so the adapter layer can concatenate it with
  * an optional narrator prefix without parsing structured copy.
  */
-export function buildGateMessage(
-  state: PaywallState,
-  gate: PaywallStructuredContent,
-): string {
+export function buildGateMessage(state: PaywallState, gate: PaywallStructuredContent): string {
   const url = gate.checkoutUrl && gate.checkoutUrl.length > 0 ? gate.checkoutUrl : null
   const ladder = planLadder(gate)
 
@@ -268,45 +281,54 @@ export function buildGateMessage(
         (gate.creditsPerCall === undefined || gate.creditsPerCall === 0)
           ? ` Adding credits will not help, because ${planName} does not spend them.`
           : ''
-      const switchLine = ladder ? ` Or switch plan: ${ladder}.` : recoverClause(url, 'continue', 'checkout')
-      return `${usedLine}${nextLine}${antiTrap}${switchLine} ${DOCS_HINT}`
+      const switchLine = ladder
+        ? ` Or switch plan: ${ladder}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
+        : recoverClause(url, 'continue', 'checkout')
+      return `${usedLine}${nextLine}${antiTrap}${switchLine}`
     }
     case 'activation_required':
-      return `Your plan needs activation.${recoverClause(url, 'activate', 'checkout')} Or call \`activate_plan\` with a \`planRef\`. ${DOCS_HINT}`
+      return `Your plan needs activation.${recoverClause(url, 'activate', 'checkout')} Or call \`activate_plan\` with a \`planRef\`.`
     case 'topup_required': {
       const balance = gate.creditBalance
       const cost = gate.creditsPerCall
       const shortfall = gate.shortfallCredits
       let lead: string
       if (balance !== undefined && cost !== undefined && shortfall !== undefined) {
-        lead = `Out of credits for this call. Balance ${formatCredits(balance)} credits; this call costs ${formatCredits(cost)} credits — ${formatCredits(shortfall)} short.`
+        lead = `Out of credits for this call. Balance ${formatCreditsWithMoney(balance, gate)}; this call costs ${formatCreditsWithMoney(cost, gate)} — ${formatCredits(shortfall)} short.`
       } else {
         lead = 'Included usage is exhausted.'
       }
       const topup = recoverClause(url, 'add credits', 'topup', 'Add credits')
-      const auto =
-        autoRechargeDisabled(gate)
-          ? ' Auto-recharge is off — turn it on from the account tool to avoid this next time.'
-          : ''
-      const switchLine = ladder ? ` Or switch plan: ${ladder}.` : ''
-      return `${lead}${topup}${auto}${switchLine} ${DOCS_HINT}`
+      const auto = autoRechargeDisabled(gate)
+        ? ` Auto-recharge is off — ${callViewer('account')} to turn it on and avoid this next time.`
+        : ''
+      // A customer who already holds a plan does not need to be asked whether
+      // they want to keep paying, and there is no session behind a plain
+      // plan-switch pointer for the model to link. Only a customer with no
+      // plan needs to be told that picking one is the way in.
+      const switchLine = ladder
+        ? ` Or switch plan: ${ladder}.`
+        : hasActivePlan(gate)
+          ? ''
+          : ` Or ${callViewer('checkout')} to pick a plan.`
+      return `${lead}${topup}${auto}${switchLine}`
     }
     case 'upgrade_required': {
       if (hasActivePlan(gate)) {
         const planName = gate.planName ?? 'This plan'
         const lead = `${planName} is active but its included usage is exhausted, and the automatic switch to the next plan did not complete.`
         if (ladder) {
-          return `${lead} Switch here: ${ladder}. ${DOCS_HINT}`
+          return `${lead} Switch here: ${ladder}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
         }
-        return `${lead}${recoverClause(url, 'switch plan', 'checkout')} ${DOCS_HINT}`
+        return `${lead}${recoverClause(url, 'switch plan', 'checkout')}`
       }
       if (ladder) {
-        return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder} (links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer('checkout')}. ${DOCS_HINT}`
+        return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder} (links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer('checkout')}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
       }
-      return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'checkout')} ${DOCS_HINT}`
+      return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'checkout')}`
     }
     case 'reactivation_required':
-      return `Your previous plan is no longer active. ${callViewer('account').replace(/^c/, 'C')} to reactivate it, or ${callViewer('checkout')} to pick a new plan. ${DOCS_HINT}`
+      return `Your previous plan is no longer active. ${callViewer('account').replace(/^c/, 'C')} to reactivate it, or ${callViewer('checkout')} to pick a new plan.`
   }
 }
 
@@ -328,9 +350,14 @@ export function buildNudgeMessage(
 ): string {
   const url = limits?.checkoutUrl && limits.checkoutUrl.length > 0 ? limits.checkoutUrl : null
   const visitClause = url ? `, or ${namedCheckoutMarkdown(url)}` : ''
-  const remaining = creditSignals(limits).remainingCalls
+  const signals = creditSignals(limits)
+  const remaining = signals.remainingCalls
+  const kind =
+    state.kind === 'topup_required' && limits && !signals.isCreditBased
+      ? 'limit_reached'
+      : state.kind
 
-  switch (state.kind) {
+  switch (kind) {
     case 'topup_required':
       if (remaining === 0) {
         return `Heads up — 0 calls left — the next call needs a top-up. ${callViewer('topup').replace(/^c/, 'C')} to add more${visitClause}.`

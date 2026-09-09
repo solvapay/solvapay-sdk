@@ -6,10 +6,12 @@ function customer(overrides: {
   hasPlan?: boolean
   credits?: number | null
   purpose?: string
+  productRef?: string
 }): BootstrapCustomer {
   const purchases = overrides.hasPlan
     ? [
         {
+          productRef: overrides.productRef ?? 'prd_test',
           planSnapshot: { name: 'Pro' },
           metadata: { purpose: overrides.purpose },
         },
@@ -35,8 +37,11 @@ function customer(overrides: {
   } as BootstrapCustomer
 }
 
-function payload(customerSnapshot: BootstrapCustomer | null): Pick<BootstrapPayload, 'customer'> {
-  return { customer: customerSnapshot }
+function payload(
+  customerSnapshot: BootstrapCustomer | null,
+  productRef = 'prd_test',
+): Pick<BootstrapPayload, 'customer' | 'productRef'> {
+  return { customer: customerSnapshot, productRef }
 }
 
 describe('deriveDefaultView', () => {
@@ -75,5 +80,11 @@ describe('deriveDefaultView', () => {
 
   it('throws when no views are enabled', () => {
     expect(() => deriveDefaultView(payload(null), new Set())).toThrow(/no enabled views/)
+  })
+
+  it('returns checkout when the only plan purchase belongs to another product', () => {
+    expect(
+      deriveDefaultView(payload(customer({ hasPlan: true, productRef: 'prd_other' }), 'prd_test')),
+    ).toBe('checkout')
   })
 })

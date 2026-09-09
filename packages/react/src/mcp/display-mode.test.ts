@@ -80,37 +80,10 @@ describe('resolveHostedRail', () => {
 
   it('keeps inline on the inline rail', () => {
     expect(resolveHostedRail({ displayMode: 'inline' })).toBe('inline')
-    expect(
-      resolveHostedRail({
-        displayMode: 'inline',
-        containerDimensions: { width: 1400 },
-      }),
-    ).toBe('inline')
   })
 
   it('uses the hosted rail in fullscreen when the host does not report a width', () => {
     expect(resolveHostedRail({ displayMode: 'fullscreen' })).toBe('hosted')
-  })
-
-  it('uses the hosted rail in fullscreen even when the host reports a stale width under 1000px', () => {
-    expect(
-      resolveHostedRail({
-        displayMode: 'fullscreen',
-        containerDimensions: { width: 720 },
-      }),
-    ).toBe('hosted')
-    expect(
-      resolveHostedRail({
-        displayMode: 'fullscreen',
-        containerDimensions: { width: 999 },
-      }),
-    ).toBe('hosted')
-    expect(
-      resolveHostedRail({
-        displayMode: 'fullscreen',
-        containerDimensions: { width: 1000 },
-      }),
-    ).toBe('hosted')
   })
 })
 

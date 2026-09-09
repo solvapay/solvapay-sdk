@@ -14,7 +14,7 @@ import type {
   PaywallStructuredContent,
   SolvaPay,
 } from '@solvapay/server'
-import { PaywallError } from '@solvapay/server'
+import { PaywallError, creditSignals } from '@solvapay/server'
 import { makeResponseResult } from './response-envelope'
 import type {
   BootstrapPlan,
@@ -77,9 +77,11 @@ function snapshotFromLimits(params: {
   refresh: () => Promise<CustomerSnapshot>
 }): CustomerSnapshot {
   const { customerRef, limits, plan, refresh } = params
+  const signals = creditSignals(limits)
   return {
     ref: customerRef,
-    balance: limits?.creditBalance ?? 0,
+    balance: signals.creditBalance,
+    isCreditBased: signals.isCreditBased,
     remaining: limits?.remaining ?? null,
     withinLimits: limits?.withinLimits ?? true,
     throttled: limits?.throttled ?? false,
@@ -159,7 +161,7 @@ export function buildResponseContext(
   function respond<TData>(data: TData): ResponseResult<TData>
   function respond<TData>(data: TData, options: ResponseOptions): ResponseResult<TData>
   function respond<TData>(data: TData, options?: ResponseOptions): ResponseResult<TData> {
-    return makeResponseResult(data, options, emittedBlocks)
+    return makeResponseResult(data, options, emittedBlocks, limits)
   }
 
   /**

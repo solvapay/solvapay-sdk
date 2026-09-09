@@ -125,6 +125,12 @@ function recoveryFields(
       ? { shortfallCredits: signals.shortfallCredits }
       : {}),
     ...(signals.remainingCalls !== undefined ? { remainingCalls: signals.remainingCalls } : {}),
+    ...(limits.balance?.creditsPerMinorUnit !== undefined
+      ? { creditsPerMinorUnit: limits.balance.creditsPerMinorUnit }
+      : {}),
+    ...(limits.balance?.displayExchangeRate !== undefined
+      ? { displayExchangeRate: limits.balance.displayExchangeRate }
+      : {}),
     ...(limits.purchaseRef !== undefined ? { purchaseRef: limits.purchaseRef } : {}),
     ...(limits.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
     ...(links ? { links } : {}),

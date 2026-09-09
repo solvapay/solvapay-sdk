@@ -794,6 +794,12 @@ export interface SolvaPay {
       metadata?: PaywallMetadata,
       getCustomerRef?: (args: TArgs) => string,
     ): Promise<PaywallDecision<TArgs>>
+    /**
+     * Drop cached `checkLimits` snapshots for this customer (optionally
+     * scoped to one product). Call after `activate_plan`, a completed
+     * checkout, or a top-up so the next payable call refetches.
+     */
+    invalidateLimits(customerRef: string, product?: string): void
   }
 
   /**
@@ -894,6 +900,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       ): Promise<PaywallDecision<TArgs>> {
         return paywall.decide<TArgs>(args, metadata, getCustomerRef)
       },
+      invalidateLimits(customerRef: string, product?: string): void {
+        paywall.invalidateLimits(customerRef, product)
+      },
     },
 
     // Common API methods exposed directly for convenience
@@ -978,7 +987,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         customerRef: params.customerRef,
         productRef: params.productRef,
         planRef: params.planRef,
-        returnUrl: params.returnUrl,
+        ...(params.returnUrl ? { returnUrl: params.returnUrl } : {}),
         ...(params.purpose ? { purpose: params.purpose } : {}),
       })
     },

@@ -34,8 +34,10 @@ import {
   usageRate,
   type PricingOptionLike,
 } from '@solvapay/core'
+import { creditSignals, type LimitResponseWithPlan } from '@solvapay/server'
 import type { BootstrapPayload, SolvaPayMcpViewKind } from './types'
 import { MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
+import { selectActivePlanPurchase } from './active-purchase'
 
 export interface NarratorOutput {
   text: string
@@ -77,10 +79,13 @@ interface PlanSnapshotShape {
 }
 
 interface PurchaseShape {
+  status?: string
+  productRef?: string
   planRef?: string
   planSnapshot?: PlanSnapshotShape | null
   amount?: number
   currency?: string
+  startDate?: string
   endDate?: string
   cancelledAt?: string | null
   isRecurring?: boolean
@@ -105,6 +110,15 @@ interface LimitsShape {
   needsTopUp?: boolean | null
   needsUpgrade?: boolean | null
   throttled?: boolean | null
+  planRef?: string | null
+  planName?: string | null
+  creditBalance?: number
+  creditsPerUnit?: number
+  balance?: {
+    creditBalance?: number
+    creditsPerUnit?: number
+    remainingUnits?: number
+  }
 }
 
 interface CustomerShape {
@@ -118,6 +132,7 @@ interface CustomerShape {
   usage?: UsageShape | null
   limits?: LimitsShape | null
   purchase?: { purchases?: PurchaseShape[] } | null
+  autoRecharge?: { enabled?: boolean; status?: string } | null
 }
 
 function formatMoney(
@@ -176,13 +191,25 @@ function meterUnit(meter: string | null | undefined, count: number): string {
   return count === 1 ? 'call' : 'calls'
 }
 
-function isPlanPurchase(purchase: PurchaseShape): boolean {
-  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+function activePurchase(data: BootstrapPayload): PurchaseShape | null {
+  return selectActivePlanPurchase(
+    (data.customer as CustomerShape | null)?.purchase?.purchases,
+    data.productRef,
+  )
 }
 
-function activePurchase(customer: CustomerShape | null | undefined): PurchaseShape | null {
-  const list = customer?.purchase?.purchases ?? []
-  return list.find(isPlanPurchase) ?? null
+function limitsAsSignals(limits: LimitsShape | null | undefined): LimitResponseWithPlan | null {
+  if (!limits) return null
+  return limits as LimitResponseWithPlan
+}
+
+function preferLimitsPlan(
+  purchase: PurchaseShape | null,
+  limits: LimitsShape | null | undefined,
+): boolean {
+  const purchaseRef = purchase?.planRef ?? purchase?.planSnapshot?.reference
+  const limitsRef = limits?.planRef
+  return Boolean(limitsRef && purchaseRef && limitsRef !== purchaseRef)
 }
 
 function productName(data: BootstrapPayload): string {
@@ -304,7 +331,6 @@ function plansListLines(plans: PlanShape[]): string[] {
 }
 
 const CHECKOUT_TTL = 'expires in 15 minutes'
-const DOCS_HINT = 'Capabilities: docs://solvapay/overview.md'
 
 function httpsUrl(value: string | null | undefined): string | null {
   if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value
@@ -357,11 +383,16 @@ type NarratorPlanShape =
   | 'usage-based'
   | 'recurring-unlimited'
   | 'recurring-metered'
+  | 'paid-unknown'
 
 function isPaidPlan(plan: PlanShape | PlanSnapshotShape): boolean {
   if ('requiresPayment' in plan && plan.requiresPayment === false) return false
   if (charges(plan).some(charge => charge.amountMinor > 0)) return true
   return (plan.price ?? 0) > 0
+}
+
+function hasReadableOptions(plan: PlanShape | PlanSnapshotShape): boolean {
+  return Array.isArray(plan.options) && plan.options.length > 0
 }
 
 function resolveNarratorPlanShape(
@@ -371,8 +402,16 @@ function resolveNarratorPlanShape(
   if ((trialDays(plan) ?? 0) > 0) return 'trial'
   if (!isPaidPlan(plan)) return 'free'
   const metered = countsUsage(plan)
-  if (billingCycle(plan)) return metered ? 'recurring-metered' : 'recurring-unlimited'
-  return metered ? 'usage-based' : 'recurring-unlimited'
+  const unlimitedCap = includedUnits(plan) === 0
+  const readable = hasReadableOptions(plan)
+  if (billingCycle(plan)) {
+    if (metered && !unlimitedCap) return 'recurring-metered'
+    if (unlimitedCap || (readable && !metered)) return 'recurring-unlimited'
+    return 'paid-unknown'
+  }
+  if (metered && !unlimitedCap) return 'usage-based'
+  if (unlimitedCap || (readable && !metered)) return 'recurring-unlimited'
+  return 'paid-unknown'
 }
 
 function mergePlan(
@@ -409,10 +448,7 @@ function isAtFiniteCap(limits: LimitsShape | null | undefined): boolean {
   return limits.remaining <= 0
 }
 
-function isCancelledNotExpired(
-  purchase: PurchaseShape | null | undefined,
-  now: Date,
-): boolean {
+function isCancelledNotExpired(purchase: PurchaseShape | null | undefined, now: Date): boolean {
   if (!purchase?.cancelledAt || !purchase.endDate) return false
   const end = new Date(purchase.endDate)
   return !Number.isNaN(end.getTime()) && end.getTime() > now.getTime()
@@ -463,6 +499,15 @@ function planPricePhrase(plan: PlanShape | PlanSnapshotShape | null | undefined)
   return formatCompactMoney(plan?.price, plan?.currency)
 }
 
+function planPriceBit(plan: PlanShape | PlanSnapshotShape | null | undefined): string {
+  const price = planPricePhrase(plan)
+  const cycle = intervalPhrase(plan)
+  if (!billingCycle(plan)) return price ? `, ${price} once` : ''
+  if (price && cycle) return `, ${price} ${cycle}`
+  if (price) return `, ${price}`
+  return ''
+}
+
 function creditsRatePhrase(
   plan: PlanShape | PlanSnapshotShape | null | undefined,
   customer: CustomerShape | null | undefined,
@@ -479,10 +524,7 @@ function creditsRatePhrase(
   return `${rate.tiered ? 'from ' : ''}${formatCount(credits)} credits per call`
 }
 
-function catalogFragment(
-  plan: PlanShape,
-  customer: CustomerShape | null | undefined,
-): string {
+function catalogFragment(plan: PlanShape, customer: CustomerShape | null | undefined): string {
   const name = plan.name ?? 'Plan'
   const cap = includedUnits(plan)
   const cycle = intervalPhrase(plan)
@@ -506,14 +548,18 @@ function catalogFragment(
         : ` for ${formatCount(cap)} ${meterUnit(meterName(plan), cap)}`
     core = price ? `${name} is ${price} once${allowance}` : `${name} is one-time`
   } else {
-    const interval = cycle ?? 'a month'
+    const interval = cycle
     const allowance =
       cap === 0
         ? ' for unlimited'
         : cap && cap > 0
           ? ` for ${formatCount(cap)} ${meterUnit(meterName(plan), cap)}`
           : ''
-    core = price ? `${name} is ${price} ${interval}${allowance}` : `${name} is ${interval}`
+    core = price
+      ? `${name} is ${price}${interval ? ` ${interval}` : ''}${allowance}`
+      : interval
+        ? `${name} is ${interval}`
+        : name
   }
 
   if (trial) core += ` · ${trial}-day trial`
@@ -521,10 +567,7 @@ function catalogFragment(
   return core
 }
 
-function carryOnFragment(
-  plan: PlanShape,
-  customer: CustomerShape | null | undefined,
-): string {
+function carryOnFragment(plan: PlanShape, customer: CustomerShape | null | undefined): string {
   const name = plan.name ?? 'Plan'
   let core: string
   if (resolveNarratorPlanShape(plan) === 'usage-based') {
@@ -610,17 +653,19 @@ function narrateAccountBody(input: {
   if (state === 'A') {
     const fragments = plans.map(item => catalogFragment(item, customer))
     const catalog = fragments.length > 0 ? ` ${fragments.join(', ')}.` : ''
-    return `${product} has no plan yet, so calls will fail.${catalog} Reply with a plan name to activate it.`
+    return `${product} has no plan yet.${catalog} Reply with a plan name to activate it.`
   }
 
   if (state === 'H') {
     const free = claimableFreePlan(plans)
     const cap = free ? includedUnits(free) : null
-    const cycle = intervalPhrase(free) ?? 'a month'
+    const cycle = intervalPhrase(free)
     const unit = meterUnit(meterName(free), cap && cap > 0 ? cap : 2)
     const ready =
-      cap && cap > 0 ? `${formatCount(cap)} ${unit} ${cycle}, no card` : 'no card'
-    return `${product} has a free plan ready: ${ready}. Say "start free plan" to activate it.`
+      cap && cap > 0
+        ? `${formatCount(cap)} ${unit}${cycle ? ` ${cycle}` : ''}, no card`
+        : 'no card'
+    return `${product} has a free plan ready: ${ready}. Call \`${MCP_TOOL_NAMES.activatePlan}\` with a \`planRef\` to activate it.`
   }
 
   if (state === 'B') {
@@ -632,7 +677,7 @@ function narrateAccountBody(input: {
     return (
       `${product} is on ${planName}${rateBit}. ` +
       `Balance ${formatCount(credits)} credits${runway}. ` +
-      `Say "add funds" to top up.`
+      `Call \`${VIEWER_TOOL_NAME}\` with view: 'topup' to add credits.`
     )
   }
 
@@ -646,33 +691,37 @@ function narrateAccountBody(input: {
           }`
         : ` and ${planName} needs credits`
     return (
-      `${product} calls are failing: your credit balance is ${formatCount(credits)}` +
+      `${product} is on ${planName}. Balance ${formatCount(credits)} credits` +
       `${costBit}. ` +
-      `Say "add funds" to top up, or "change plan" for a plan that does not use credits.`
+      `Call \`${VIEWER_TOOL_NAME}\` with view: 'topup' to add credits, or with view: 'checkout' to switch to a plan that does not use credits.`
     )
   }
 
   if (state === 'C') {
-    const price = planPricePhrase(plan)
-    const cycle = intervalPhrase(plan)
-    const priceBit = price && cycle ? `, ${price} ${cycle}` : price ? `, ${price}` : ''
+    const priceBit = planPriceBit(plan)
+    const oneTime = !billingCycle(plan)
     const left = remainingOfTotal(usage)
     const date = formatShortDate(usage?.periodEnd ?? purchase?.endDate)
     const unlimited =
       usage?.remaining === -1 || includedUnits(plan) === 0 || planShape === 'recurring-unlimited'
     let position: string
     if (left) {
-      position = `${left} left this period${date ? `, renewing ${date}` : ''}`
+      position = oneTime
+        ? `${left} left`
+        : `${left} left this period${date ? `, renewing ${date}` : ''}`
     } else if (unlimited) {
-      position = `Unlimited calls${date ? `, renewing ${date}` : ''}`
-    } else if (date) {
+      position = oneTime ? 'Unlimited calls' : `Unlimited calls${date ? `, renewing ${date}` : ''}`
+    } else if (date && !oneTime) {
       position = `Renews ${date}`
     } else {
       position = 'After your first call'
     }
+    const creditsUnused = !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
     return (
       `${product} is on ${planName}${priceBit}. ${position}. ` +
-      `Credits are not used on this plan. Say "change plan" to switch.`
+      (creditsUnused
+        ? `Credits are not used on this plan. Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`
+        : `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`)
     )
   }
 
@@ -687,7 +736,7 @@ function narrateAccountBody(input: {
         : 'After your first call'
     return (
       `${product} is on the free plan: ${leftBit}. ` +
-      `Credits are not used on ${planName}. Say "see plans" for more calls.`
+      `Credits are not used on ${planName}. Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' for more calls.`
     )
   }
 
@@ -695,13 +744,11 @@ function narrateAccountBody(input: {
     const cap = usage?.total ?? includedUnits(plan)
     const unit = meterUnit(usage?.meterRef ?? meterName(plan), cap && cap > 0 ? cap : 2)
     const date = formatShortDate(usage?.periodEnd)
-    const until = date ? ` until ${date}` : ''
-    const label =
-      planShape === 'free' || planShape === 'trial'
-        ? `the ${planName.toLowerCase()} plan`
-        : planName
     const capBit =
-      cap && cap > 0 ? `${formatCount(cap)} ${unit} are used up${until}` : `allowance is used up${until}`
+      cap && cap > 0 ? `${formatCount(cap)} ${unit} are used up` : `allowance is used up`
+    const consequence = date
+      ? ` Further calls fail until ${date}`
+      : ' Further calls fail until the allowance resets'
     const others = plans.filter(item => {
       if (item.reference && item.reference === (plan?.reference ?? purchase?.planRef)) {
         return false
@@ -709,14 +756,16 @@ function narrateAccountBody(input: {
       const otherShape = resolveNarratorPlanShape(item)
       return otherShape !== 'free' && otherShape !== 'trial'
     })
-    const carryOn = others.length > 0 ? ` ${joinOr(others.map(item => carryOnFragment(item, customer)))}.` : ''
+    const carryOn =
+      others.length > 0 ? ` ${joinOr(others.map(item => carryOnFragment(item, customer)))}.` : ''
     const antiTrap =
       credits > 0 && planShape !== 'usage-based'
         ? ` Adding credits will not help, because ${planName} does not spend them.`
         : ''
+    const priceBit = planPriceBit(plan)
     return (
-      `${product} calls are failing: ${label}'s ${capBit}.${antiTrap}${carryOn} ` +
-      `Say a plan name to switch.`
+      `${product} is on ${planName}${priceBit}. ${capBit}.${consequence}.${antiTrap}${carryOn} ` +
+      `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch plan.`
     )
   }
 
@@ -725,7 +774,7 @@ function narrateAccountBody(input: {
     const usedBit = used ? `: ${used} used` : ''
     return (
       `${product} is over its ${planName} allowance${usedBit}. Calls still work. ` +
-      `Say "see plans" for a higher limit.`
+      `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' for a higher limit.`
     )
   }
 
@@ -737,7 +786,7 @@ function narrateAccountBody(input: {
   const leftBit = left ? `, with ${left} left` : ''
   return (
     `${product}'s ${planName} plan is cancelled and ${until}${daysBit}${leftBit}. ` +
-    `Calls stop after that. Say "reactivate" to keep it.`
+    `Calls stop after that. Call \`${VIEWER_TOOL_NAME}\` with view: 'account' to reactivate it.`
   )
 }
 
@@ -745,19 +794,62 @@ export function narrateAlreadyActive(result: {
   creditBalance?: number
   creditsPerUnit?: number
 }): string {
-  const balance = result.creditBalance
-  const cost = result.creditsPerUnit
-  if (balance !== undefined && cost !== undefined) {
-    const shortfall = Math.max(0, cost - balance)
-    if (shortfall > 0) {
+  return narrateActivatePlan({ status: 'already_active', ...result })
+}
+
+export function narrateActivatePlan(result: {
+  status:
+    | 'activated'
+    | 'already_active'
+    | 'already_purchased'
+    | 'topup_required'
+    | 'payment_required'
+    | 'invalid'
+  creditBalance?: number
+  creditsPerUnit?: number
+  checkoutUrl?: string
+  message?: string
+  planName?: string
+}): string {
+  const planName = result.planName
+  const named = planName ? `${planName}` : 'This plan'
+  const checkout =
+    result.checkoutUrl && result.checkoutUrl.length > 0
+      ? ` [${result.checkoutUrl.includes('/checkout/topup') ? 'Add credits' : 'Open checkout'}](${result.checkoutUrl}) (expires in 15 minutes), or`
+      : ''
+
+  switch (result.status) {
+    case 'activated':
+      return planName
+        ? `Activated ${planName}. Paid tools are available now.`
+        : 'Plan activated. Paid tools are available now.'
+    case 'already_purchased':
+      return `${named} is already purchased. Call \`${VIEWER_TOOL_NAME}\` with view: 'account' to manage it.`
+    case 'payment_required':
+      return `${named} requires payment.${checkout} Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to pay.`
+    case 'topup_required':
+      return `${named} needs credits before it can activate.${checkout} Call \`${VIEWER_TOOL_NAME}\` with view: 'topup' to add credits.`
+    case 'invalid':
       return (
-        `This plan is already active. Balance ${formatCount(balance)} credits; ` +
-        `this call costs ${formatCount(cost)} credits — ${formatCount(shortfall)} short. ` +
-        `Call the \`${VIEWER_TOOL_NAME}\` tool with view: 'topup' to add credits.`
+        result.message ??
+        `That planRef is not valid for this product. Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to see plans.`
       )
+    case 'already_active': {
+      const balance = result.creditBalance
+      const cost = result.creditsPerUnit
+      if (balance !== undefined && cost !== undefined) {
+        const shortfall = Math.max(0, cost - balance)
+        if (shortfall > 0) {
+          return (
+            `${named} is already active. Balance ${formatCount(balance)} credits; ` +
+            `this call costs ${formatCount(cost)} credits — ${formatCount(shortfall)} short. ` +
+            `Call the \`${VIEWER_TOOL_NAME}\` tool with view: 'topup' to add credits.`
+          )
+        }
+      }
+      return `${named === 'This plan' ? 'This plan is' : `${named} is`} already active.`
     }
   }
-  return 'This plan is already active.'
 }
 
 export function narrateManageAccount(
@@ -767,9 +859,17 @@ export function narrateManageAccount(
   const now = options?.now ?? new Date()
   const customer = data.customer as CustomerShape | null
   const plans = (data.plans ?? []) as PlanShape[]
-  const active = activePurchase(customer)
-  const catalog = findCatalogPlan(plans, active?.planSnapshot, active?.planRef)
-  const plan = mergePlan(active?.planSnapshot, catalog)
+  const active = activePurchase(data)
+  const limits = customer?.limits
+  const useLimits = preferLimitsPlan(active, limits)
+  const catalog = findCatalogPlan(
+    plans,
+    useLimits ? { reference: limits?.planRef ?? undefined } : active?.planSnapshot,
+    useLimits ? limits?.planRef : active?.planRef,
+  )
+  const plan = useLimits
+    ? (catalog ?? { name: limits?.planName ?? undefined, reference: limits?.planRef ?? undefined })
+    : mergePlan(active?.planSnapshot, catalog)
   const planShape = resolveNarratorPlanShape(plan)
   const state = resolveNarratorAccountState({
     purchase: active,
@@ -781,7 +881,9 @@ export function narrateManageAccount(
   const free = claimableFreePlan(plans)
 
   const lines: string[] = []
-  lines.push(state === 'A' || state === 'H' ? `**Welcome to ${name}**` : `**${name} — your account**`)
+  lines.push(
+    state === 'A' || state === 'H' ? `**Welcome to ${name}**` : `**${name} — your account**`,
+  )
   lines.push('')
   lines.push(
     narrateAccountBody({
@@ -812,7 +914,6 @@ export function narrateManageAccount(
   }
   lines.push('')
   lines.push(recoveryForState(state, free?.reference))
-  lines.push(DOCS_HINT)
 
   const links: NarratorOutput['links'] = []
   const portal = hostedPortalLink(data)
@@ -822,10 +923,7 @@ export function narrateManageAccount(
   return { text: lines.join('\n'), links }
 }
 
-function withCheckout(
-  data: BootstrapPayload,
-  lines: string[],
-): NarratorOutput {
+function withCheckout(data: BootstrapPayload, lines: string[]): NarratorOutput {
   const checkout = checkoutRow(data)
   if (checkout) lines.push(checkout)
   const links: NarratorOutput['links'] = []
@@ -838,7 +936,10 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
   const lines: string[] = []
   lines.push(`**Upgrade — ${productName(data)}**`)
   lines.push('')
-  const plans = ((data.plans ?? []) as PlanShape[]).filter(p => !isFreePlan(p))
+  const hasActivePurchase = activePurchase(data) !== null
+  const plans = ((data.plans ?? []) as PlanShape[]).filter(
+    plan => !hasActivePurchase || !isFreePlan(plan),
+  )
   if (plans.length > 0) {
     lines.push('Plans available:')
     lines.push(...plansListLines(plans))
@@ -847,7 +948,6 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
   }
   lines.push('')
   lines.push(recoveryLine(['account']))
-  lines.push(DOCS_HINT)
   return withCheckout(data, lines)
 }
 
@@ -866,21 +966,31 @@ export function narrateAutoRecharge(data: BootstrapPayload): NarratorOutput {
   const lines: string[] = []
   lines.push(`**Auto-recharge — ${productName(data)}**`)
   lines.push('')
-  const bal = balanceRow(data.customer as CustomerShape | null)
+  const customer = data.customer as CustomerShape | null
+  const bal = balanceRow(customer)
   if (bal) lines.push(bal)
-  lines.push('Tops your balance up automatically so calls do not fail. Nothing is charged today.')
+  const enabled = customer?.autoRecharge?.enabled === true
+  lines.push(
+    enabled
+      ? 'Auto-recharge is on. It tops your balance up automatically so calls do not fail.'
+      : 'Auto-recharge is off. Turn it on from the account page — it stores a card and tops your balance up automatically so calls do not fail.',
+  )
+  const manage = manageRow(data)
+  if (manage) lines.push(manage)
   lines.push('')
   lines.push(recoveryLine(['account']))
-  return withCheckout(data, lines)
+  const links: NarratorOutput['links'] = []
+  const portal = hostedPortalLink(data)
+  if (portal) links.push({ ...portal, name: enabled ? 'Manage auto-recharge' : 'Turn on auto-recharge' })
+  return { text: lines.join('\n'), links }
 }
 
-export const NARRATORS: Record<SolvaPayMcpViewKind, (data: BootstrapPayload) => NarratorOutput> =
-  {
-    checkout: narrateUpgrade,
-    account: narrateManageAccount,
-    topup: narrateTopup,
-    'auto-recharge': narrateAutoRecharge,
-  }
+export const NARRATORS: Record<SolvaPayMcpViewKind, (data: BootstrapPayload) => NarratorOutput> = {
+  checkout: narrateUpgrade,
+  account: narrateManageAccount,
+  topup: narrateTopup,
+  'auto-recharge': narrateAutoRecharge,
+}
 
 const UI_OPENED_VERB: Record<SolvaPayMcpViewKind, (productName: string) => string> = {
   topup: p => `Opened ${p} top-up.`,
@@ -900,17 +1010,19 @@ function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
  * still receive this block: plan name, price, and a pasteable https
  * URL. Never points at "the panel".
  */
-function planForPlaceholder(view: SolvaPayMcpViewKind, data: BootstrapPayload): PlanShape | undefined {
+function planForPlaceholder(
+  view: SolvaPayMcpViewKind,
+  data: BootstrapPayload,
+): PlanShape | undefined {
   if (view === 'account') {
-    const snap = activePurchase(data.customer as CustomerShape | null)?.planSnapshot
-    if (snap) {
-      return {
-        name: snap.name,
-        price: snap.price,
-        currency: snap.currency,
-        options: snap.options,
-        reference: snap.reference,
-      }
+    const snap = activePurchase(data)?.planSnapshot
+    if (!snap) return undefined
+    return {
+      name: snap.name,
+      price: snap.price,
+      currency: snap.currency,
+      options: snap.options,
+      reference: snap.reference,
     }
   }
   return firstSelectablePlan(data)

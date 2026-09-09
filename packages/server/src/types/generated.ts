@@ -1753,6 +1753,10 @@ export interface components {
       currency: string
       /** @description How many metered items the credit balance still covers (`balance / creditsPerUnit`) */
       remainingUnits?: number
+      /** @description Credits per minor unit of `currency` (typically 100) */
+      creditsPerMinorUnit?: number
+      /** @description USD → display-currency rate used with creditsPerMinorUnit */
+      displayExchangeRate?: number
     }
     LimitPlanItemDto: {
       /** @description Derived billing cycle */
