@@ -199,6 +199,29 @@ function pruneUnreferencedSchemas(spec: OpenAPISpec): number {
   return pruned
 }
 
+// openapi-typescript rewrites a `discriminator.propertyName` field's enum
+// to the schema names (`ProcessPaymentSucceededRecurring`, …) instead of
+// the values the backend actually returns (`succeeded`). Drop the
+// discriminator so each variant keeps its real status/type enums. Narrowing
+// still works from those enums.
+function stripDiscriminators(value: unknown): number {
+  let stripped = 0
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item)
+      return
+    }
+    if (!isRecord(node)) return
+    if ('discriminator' in node) {
+      delete node.discriminator
+      stripped += 1
+    }
+    for (const child of Object.values(node)) walk(child)
+  }
+  walk(value)
+  return stripped
+}
+
 function addMissingSchemaPlaceholders(spec: OpenAPISpec): number {
   const refs = new Set<string>()
   collectSchemaRefs(spec, refs)
@@ -275,6 +298,11 @@ async function main(): Promise<void> {
       console.warn(
         `Added ${missingSchemasAdded} placeholder component schema(s) for unresolved $ref values`,
       )
+    }
+
+    const discriminatorsStripped = stripDiscriminators(filteredSpec)
+    if (discriminatorsStripped > 0) {
+      console.log(`Stripped ${discriminatorsStripped} OpenAPI discriminator(s)`)
     }
 
     // Deterministic ordering so the generated file is stable across runs.
