@@ -222,6 +222,18 @@ describe('buildPaywallGate', () => {
     expect(gate.included).toEqual({ total: 5, used: 2, remaining: 3 })
   })
 
+  it('routes recovery links.topup from paywallReason instead of URL shape', () => {
+    const gate = buildPaywallGate('prd_topup', {
+      withinLimits: false,
+      remaining: 0,
+      plan: '',
+      paywallReason: 'topup_required',
+      checkoutUrl: 'https://pay.example.com/customer/checkout?id=chk_1',
+    })
+    expect(gate.links?.topup).toBe('https://pay.example.com/customer/checkout?id=chk_1')
+    expect(gate.links?.checkout).toBeUndefined()
+  })
+
   it('swaps to activation_required for a credit shortfall once plans are forwarded', () => {
     // Forwarding plans[] wakes useActivationForTopup for rows 5 and 6.
     // The React isTopupGate discriminator sees kind: activation_required.
