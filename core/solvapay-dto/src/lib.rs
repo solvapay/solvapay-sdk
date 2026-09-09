@@ -11,6 +11,7 @@ pub mod schemas;
 
 pub use overlays::*;
 pub use routes::{match_route, path_matches_template, roundtrip_response, RouteMatch};
+// `LimitAutoRechargeDto`: crate root → overlays (wire: schemas::LimitAutoRechargeDto)
 // `OneTimePurchaseInfo`: crate root → overlays (wire: schemas::OneTimePurchaseInfo)
 // `ProcessPaymentResult`: crate root → overlays (wire: schemas::ProcessPaymentResult)
 pub use schemas::{
@@ -72,8 +73,9 @@ pub use schemas::{
     DisableAutoRechargeResponse, GetCustomerResponse, GetCustomerSessionResponse,
     GetCustomerSessionResponseStatus, GetPlansResponse, GetProductResponse, GetProductsResponse,
     GetPurchasesResponse, GrantCustomerCreditsRequest, GrantCustomerCreditsResponse,
-    LimitBalanceDto, LimitPlanItemDto, LimitProductBriefDto, LimitResponse, McpBootstrapDto,
-    McpBootstrapDtoPlansItem, McpBootstrapDtoPlansItemOptions, McpBootstrapDtoPlansItemOptions0,
+    LimitBalanceDto, LimitPlanItemDto, LimitProductBriefDto, LimitResponse,
+    LimitResponsePaywallReason, McpBootstrapDto, McpBootstrapDtoPlansItem,
+    McpBootstrapDtoPlansItemOptions, McpBootstrapDtoPlansItemOptions0,
     McpBootstrapDtoPlansItemOptions0Kind, McpBootstrapDtoPlansItemOptions0Per,
     McpBootstrapDtoPlansItemOptions1, McpBootstrapDtoPlansItemOptions1Interval,
     McpBootstrapDtoPlansItemOptions1Kind, McpBootstrapDtoPlansItemOptions2,

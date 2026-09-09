@@ -2929,6 +2929,19 @@ pub struct GrantCustomerCreditsResponse {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LimitAutoRechargeDto {
+    /// Whether auto-recharge is enabled for this provider
+    #[serde(rename = "enabled")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    /// Stored auto-recharge status when a config exists
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LimitBalanceDto {
     /// Credit balance in credits (100 credits = 1 minor currency unit)
     #[serde(rename = "creditBalance")]
@@ -2955,6 +2968,10 @@ pub struct LimitPlanItemDto {
     #[serde(rename = "billingCycle")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub billing_cycle: Option<String>,
+    /// Deep link that opens hosted checkout with this plan preselected. Present only when a checkout session was minted for this response.
+    #[serde(rename = "checkoutUrl")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checkout_url: Option<String>,
     /// Deprecated alias of perUnitChargeMinor. Same minor-units value — not credits. Prefer perUnitChargeMinor.
     #[serde(rename = "creditsPerUnit")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3017,6 +3034,10 @@ pub struct LimitResponse {
     #[serde(rename = "activationRequired")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub activation_required: Option<bool>,
+    /// Per-provider auto-recharge snapshot read off the customer document. Omitted when no config exists.
+    #[serde(rename = "autoRecharge")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_recharge: Option<LimitAutoRechargeDto>,
     /// Prepaid usage balance context when the default plan is usage-based
     #[serde(rename = "balance")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3065,6 +3086,18 @@ pub struct LimitResponse {
     #[serde(rename = "overage")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub overage: Option<bool>,
+    /// Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
+    #[serde(rename = "paywallReason")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paywall_reason: Option<LimitResponsePaywallReason>,
+    /// Display name of the active or default plan
+    #[serde(rename = "planName")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_name: Option<String>,
+    /// Active plan reference when the customer already holds a purchase
+    #[serde(rename = "planRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_ref: Option<String>,
     /// Active plans on the product available for activation or checkout
     #[serde(rename = "plans")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3073,6 +3106,10 @@ pub struct LimitResponse {
     #[serde(rename = "product")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub product: Option<LimitProductBriefDto>,
+    /// Active purchase reference when the customer already holds a purchase
+    #[serde(rename = "purchaseRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purchase_ref: Option<String>,
     /// Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).
     #[serde(rename = "remaining")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3093,6 +3130,20 @@ pub struct LimitResponse {
     #[serde(rename = "withinLimits")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub within_limits: Option<bool>,
+}
+
+/// Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LimitResponsePaywallReason {
+    /// Wire value `activation_required`.
+    #[serde(rename = "activation_required")]
+    ActivationRequired,
+    /// Wire value `payment_required`.
+    #[serde(rename = "payment_required")]
+    PaymentRequired,
+    /// Wire value `topup_required`.
+    #[serde(rename = "topup_required")]
+    TopupRequired,
 }
 
 /// Generated wire DTO.

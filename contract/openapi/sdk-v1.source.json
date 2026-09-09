@@ -5222,6 +5222,22 @@
         ],
         "type": "object"
       },
+      "LimitAutoRechargeDto": {
+        "properties": {
+          "enabled": {
+            "description": "Whether auto-recharge is enabled for this provider",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Stored auto-recharge status when a config exists",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "type": "object"
+      },
       "LimitBalanceDto": {
         "properties": {
           "creditBalance": {
@@ -5251,6 +5267,10 @@
         "properties": {
           "billingCycle": {
             "description": "Derived billing cycle",
+            "type": "string"
+          },
+          "checkoutUrl": {
+            "description": "Deep link that opens hosted checkout with this plan preselected. Present only when a checkout session was minted for this response.",
             "type": "string"
           },
           "creditsPerUnit": {
@@ -5324,6 +5344,14 @@
             "description": "True when the customer must activate a priced default plan before usage is allowed",
             "type": "boolean"
           },
+          "autoRecharge": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LimitAutoRechargeDto"
+              }
+            ],
+            "description": "Per-provider auto-recharge snapshot read off the customer document. Omitted when no config exists."
+          },
           "balance": {
             "allOf": [
               {
@@ -5379,6 +5407,23 @@
             "description": "Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`.",
             "type": "boolean"
           },
+          "paywallReason": {
+            "description": "Authoritative paywall classification shared with Managed MCP. Present on denial responses only.",
+            "enum": [
+              "activation_required",
+              "topup_required",
+              "payment_required"
+            ],
+            "type": "string"
+          },
+          "planName": {
+            "description": "Display name of the active or default plan",
+            "type": "string"
+          },
+          "planRef": {
+            "description": "Active plan reference when the customer already holds a purchase",
+            "type": "string"
+          },
           "plans": {
             "description": "Active plans on the product available for activation or checkout",
             "items": {
@@ -5393,6 +5438,10 @@
               }
             ],
             "description": "Product the limit check applies to"
+          },
+          "purchaseRef": {
+            "description": "Active purchase reference when the customer already holds a purchase",
+            "type": "string"
           },
           "remaining": {
             "description": "Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).",
