@@ -181,6 +181,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planSnapshot: {
                 name: 'Unlimited',
                 isMetered: false,
@@ -207,6 +208,160 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Credits are not used on this plan')
   })
 
+  it('names this product\'s plan, not a paid plan on another product', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        productRef: 'prd_this',
+        product: { reference: 'prd_this', name: 'This Product' } as never,
+        plans: [
+          {
+            type: 'usage-based',
+            name: 'Pay as you go',
+            reference: 'pln_payg',
+            requiresPayment: true,
+            options: [perUnit(2)],
+          } as never,
+        ],
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_other',
+                amount: 3000,
+                startDate: '2026-03-01T00:00:00.000Z',
+                planSnapshot: {
+                  name: 'Pro',
+                  reference: 'pln_pro',
+                  price: 3000,
+                  currency: 'USD',
+                  options: [cycle(), flat(3000)],
+                },
+              },
+              {
+                status: 'active',
+                productRef: 'prd_this',
+                amount: 0,
+                startDate: '2026-01-01T00:00:00.000Z',
+                planRef: 'pln_payg',
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  reference: 'pln_payg',
+                  isMetered: true,
+                  options: [perUnit(2)],
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 5000 } as never,
+          usage: null,
+          limits: {
+            withinLimits: true,
+            remaining: -1,
+            creditsPerUnit: 200,
+            creditBalance: 5000,
+          },
+        } as never,
+      }),
+    )
+    expect(text).toContain('Pay as you go')
+    expect(text).not.toContain('is on Pro')
+    expect(text).not.toContain('$30')
+    expect(text).not.toContain('Unlimited calls')
+    expect(text).not.toContain('Credits are not used on this plan')
+  })
+
+  it('does not claim unlimited when a paid snapshot has no readable options', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                amount: 1000,
+                planRef: 'pln_payg',
+                planSnapshot: {
+                  name: 'Pay as you go',
+                  reference: 'pln_payg',
+                  price: 1000,
+                  currency: 'USD',
+                  requiresPayment: true,
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 100 } as never,
+          usage: { remaining: 0 },
+          limits: {
+            withinLimits: true,
+            remaining: 0,
+            creditsPerUnit: 10_000,
+            creditBalance: 100,
+          },
+        } as never,
+      }),
+    )
+    expect(text).toContain('Pay as you go')
+    expect(text).not.toContain('Unlimited calls')
+    expect(text).not.toContain('Credits are not used on this plan')
+  })
+
+  it('prefers limits.planName when it disagrees with the selected purchase', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          {
+            type: 'usage-based',
+            name: 'Pay as you go',
+            reference: 'pln_payg',
+            requiresPayment: true,
+            options: [perUnit(2)],
+          } as never,
+        ],
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                planRef: 'pln_stale',
+                planSnapshot: {
+                  name: 'Free',
+                  reference: 'pln_stale',
+                  options: [cycle(), { kind: 'limit', cap: 100, meter: 'requests' }],
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 5000 } as never,
+          usage: null,
+          limits: {
+            withinLimits: true,
+            remaining: -1,
+            planRef: 'pln_payg',
+            planName: 'Pay as you go',
+            creditsPerUnit: 200,
+            creditBalance: 5000,
+          },
+        } as never,
+      }),
+    )
+    expect(text).toContain('Pay as you go')
+    expect(text).not.toContain('is on the free plan')
+    expect(text).not.toContain('is on Free')
+  })
+
   function meteredAccount(
     snapshotOptions: unknown[] | undefined,
     balance: Record<string, unknown> = usdBalance,
@@ -218,6 +373,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planRef: 'pln_payg',
               planSnapshot: {
                 name: 'Pay as you go',
@@ -278,6 +434,7 @@ describe('narrateManageAccount', () => {
             customerRef: 'cus_1',
             purchases: [
               {
+                productRef: 'prd_x',
                 planRef: 'pln_payg',
                 planSnapshot: { name: 'Pay as you go', isMetered: true, reference: 'pln_payg' },
               },
@@ -372,7 +529,7 @@ function coolCustomer(overrides: Record<string, unknown> = {}) {
 function coolPurchase(snapshot: Record<string, unknown>, extra: Record<string, unknown> = {}) {
   return {
     customerRef: 'cus_cool',
-    purchases: [{ planSnapshot: snapshot, ...extra }],
+    purchases: [{ productRef: 'prd_x', planSnapshot: snapshot, ...extra }],
   } as never
 }
 
@@ -749,7 +906,7 @@ describe('narratedToolResult', () => {
       ref: 'cus_1',
       purchase: {
         customerRef: 'cus_1',
-        purchases: [{ planSnapshot: { name: 'Pro', isMetered: false } }],
+        purchases: [{ productRef: 'prd_x', planSnapshot: { name: 'Pro', isMetered: false } }],
       } as never,
       paymentMethod: null,
       balance: null,
@@ -887,6 +1044,7 @@ describe('narratedToolResult', () => {
             customerRef: 'cus_1',
             purchases: [
               {
+                productRef: 'prd_x',
                 planSnapshot: {
                   name: 'Starter',
                   isMetered: true,
@@ -971,6 +1129,7 @@ describe('text-lane self-sufficiency', () => {
         customerRef: 'cus_1',
         purchases: [
           {
+            productRef: 'prd_x',
             planSnapshot: {
               name: 'dafsfa',
               isMetered: false,

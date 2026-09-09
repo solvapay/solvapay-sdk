@@ -34,8 +34,10 @@ import {
   usageRate,
   type PricingOptionLike,
 } from '@solvapay/core'
+import { creditSignals, type LimitResponseWithPlan } from '@solvapay/server'
 import type { BootstrapPayload, SolvaPayMcpViewKind } from './types'
 import { MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
+import { selectActivePlanPurchase } from './active-purchase'
 
 export interface NarratorOutput {
   text: string
@@ -77,10 +79,13 @@ interface PlanSnapshotShape {
 }
 
 interface PurchaseShape {
+  status?: string
+  productRef?: string
   planRef?: string
   planSnapshot?: PlanSnapshotShape | null
   amount?: number
   currency?: string
+  startDate?: string
   endDate?: string
   cancelledAt?: string | null
   isRecurring?: boolean
@@ -105,6 +110,15 @@ interface LimitsShape {
   needsTopUp?: boolean | null
   needsUpgrade?: boolean | null
   throttled?: boolean | null
+  planRef?: string | null
+  planName?: string | null
+  creditBalance?: number
+  creditsPerUnit?: number
+  balance?: {
+    creditBalance?: number
+    creditsPerUnit?: number
+    remainingUnits?: number
+  }
 }
 
 interface CustomerShape {
@@ -176,13 +190,25 @@ function meterUnit(meter: string | null | undefined, count: number): string {
   return count === 1 ? 'call' : 'calls'
 }
 
-function isPlanPurchase(purchase: PurchaseShape): boolean {
-  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+function activePurchase(data: BootstrapPayload): PurchaseShape | null {
+  return selectActivePlanPurchase(
+    (data.customer as CustomerShape | null)?.purchase?.purchases,
+    data.productRef,
+  )
 }
 
-function activePurchase(customer: CustomerShape | null | undefined): PurchaseShape | null {
-  const list = customer?.purchase?.purchases ?? []
-  return list.find(isPlanPurchase) ?? null
+function limitsAsSignals(limits: LimitsShape | null | undefined): LimitResponseWithPlan | null {
+  if (!limits) return null
+  return limits as LimitResponseWithPlan
+}
+
+function preferLimitsPlan(
+  purchase: PurchaseShape | null,
+  limits: LimitsShape | null | undefined,
+): boolean {
+  const purchaseRef = purchase?.planRef ?? purchase?.planSnapshot?.reference
+  const limitsRef = limits?.planRef
+  return Boolean(limitsRef && purchaseRef && limitsRef !== purchaseRef)
 }
 
 function productName(data: BootstrapPayload): string {
@@ -357,11 +383,16 @@ type NarratorPlanShape =
   | 'usage-based'
   | 'recurring-unlimited'
   | 'recurring-metered'
+  | 'paid-unknown'
 
 function isPaidPlan(plan: PlanShape | PlanSnapshotShape): boolean {
   if ('requiresPayment' in plan && plan.requiresPayment === false) return false
   if (charges(plan).some(charge => charge.amountMinor > 0)) return true
   return (plan.price ?? 0) > 0
+}
+
+function hasReadableOptions(plan: PlanShape | PlanSnapshotShape): boolean {
+  return Array.isArray(plan.options) && plan.options.length > 0
 }
 
 function resolveNarratorPlanShape(
@@ -371,8 +402,16 @@ function resolveNarratorPlanShape(
   if ((trialDays(plan) ?? 0) > 0) return 'trial'
   if (!isPaidPlan(plan)) return 'free'
   const metered = countsUsage(plan)
-  if (billingCycle(plan)) return metered ? 'recurring-metered' : 'recurring-unlimited'
-  return metered ? 'usage-based' : 'recurring-unlimited'
+  const unlimitedCap = includedUnits(plan) === 0
+  const readable = hasReadableOptions(plan)
+  if (billingCycle(plan)) {
+    if (metered && !unlimitedCap) return 'recurring-metered'
+    if (unlimitedCap || (readable && !metered)) return 'recurring-unlimited'
+    return 'paid-unknown'
+  }
+  if (metered && !unlimitedCap) return 'usage-based'
+  if (unlimitedCap || (readable && !metered)) return 'recurring-unlimited'
+  return 'paid-unknown'
 }
 
 function mergePlan(
@@ -670,9 +709,12 @@ function narrateAccountBody(input: {
     } else {
       position = 'After your first call'
     }
+    const creditsUnused = !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
     return (
       `${product} is on ${planName}${priceBit}. ${position}. ` +
-      `Credits are not used on this plan. Say "change plan" to switch.`
+      (creditsUnused
+        ? `Credits are not used on this plan. Say "change plan" to switch.`
+        : `Say "change plan" to switch.`)
     )
   }
 
@@ -767,9 +809,17 @@ export function narrateManageAccount(
   const now = options?.now ?? new Date()
   const customer = data.customer as CustomerShape | null
   const plans = (data.plans ?? []) as PlanShape[]
-  const active = activePurchase(customer)
-  const catalog = findCatalogPlan(plans, active?.planSnapshot, active?.planRef)
-  const plan = mergePlan(active?.planSnapshot, catalog)
+  const active = activePurchase(data)
+  const limits = customer?.limits
+  const useLimits = preferLimitsPlan(active, limits)
+  const catalog = findCatalogPlan(
+    plans,
+    useLimits ? { reference: limits?.planRef ?? undefined } : active?.planSnapshot,
+    useLimits ? limits?.planRef : active?.planRef,
+  )
+  const plan = useLimits
+    ? (catalog ?? { name: limits?.planName ?? undefined, reference: limits?.planRef ?? undefined })
+    : mergePlan(active?.planSnapshot, catalog)
   const planShape = resolveNarratorPlanShape(plan)
   const state = resolveNarratorAccountState({
     purchase: active,
@@ -902,7 +952,7 @@ function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
  */
 function planForPlaceholder(view: SolvaPayMcpViewKind, data: BootstrapPayload): PlanShape | undefined {
   if (view === 'account') {
-    const snap = activePurchase(data.customer as CustomerShape | null)?.planSnapshot
+    const snap = activePurchase(data)?.planSnapshot
     if (snap) {
       return {
         name: snap.name,

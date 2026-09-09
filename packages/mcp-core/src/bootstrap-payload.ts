@@ -33,6 +33,7 @@ import {
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
   enrichPurchase,
 } from './helpers'
+import { selectActivePlanPurchase } from './active-purchase'
 import type {
   BootstrapPayload,
   McpToolExtra,
@@ -219,7 +220,7 @@ export function createBuildBootstrapPayload(
         }
       : null
 
-    const activePurchase = enrichedPurchase?.purchases.find(p => p.status === 'active')
+    const activePurchase = selectActivePlanPurchase(enrichedPurchase?.purchases, productRef)
     const usage = customerRef
       ? deriveUsageSnapshot({
           // Consumption comes from `limits.used` (or `limit - remaining`)

@@ -109,6 +109,8 @@ export {
 } from './narrate'
 export type { NarratorOutput } from './narrate'
 export { deriveDefaultView } from './derive-view'
+export { isPlanPurchase, selectActivePlanPurchase } from './active-purchase'
+export type { ActivePlanPurchaseLike } from './active-purchase'
 
 // ---- Paywall envelope builders ----
 //
