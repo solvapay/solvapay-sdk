@@ -18,3 +18,7 @@ allowBuilds:
   protobufjs: true
   sharp: true
   workerd: true
+
+# 2.0.0 published 2026-09-08; pin gate requires latest, so skip the age floor.
+minimumReleaseAgeExclude:
+  - '@modelcontextprotocol/ext-apps@2.0.0'

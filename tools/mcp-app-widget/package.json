@@ -11,7 +11,7 @@
     "lint": "eslint src __tests__"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/ext-apps": "^2.0.0",
     "@solvapay/core": "workspace:*",
     "@solvapay/react": "workspace:*",
     "@solvapay/server-wasm": "workspace:*",

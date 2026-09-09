@@ -287,8 +287,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.5
-        version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
@@ -521,8 +521,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.5
-        version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/node':
         specifier: ^2.0.0
         version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.4)
@@ -661,8 +661,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.5
-        version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/node':
         specifier: ^2.0.0
         version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.4)
@@ -921,7 +921,7 @@ importers:
         version: link:../../../sdks/typescript/core
       '@solvapay/server':
         specifier: ^2.0.0
-        version: 2.3.1(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
+        version: link:../../../sdks/typescript/server
 
   examples/typescript/supabase-edge-mcp:
     devDependencies:
@@ -929,8 +929,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.5
-        version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
@@ -1476,8 +1476,8 @@ importers:
   tools/mcp-app-widget:
     dependencies:
       '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.5
-        version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
       '@solvapay/core':
         specifier: workspace:*
         version: link:../../sdks/typescript/core
@@ -3201,19 +3201,27 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
+  '@modelcontextprotocol/client@2.0.0':
+    resolution: {integrity: sha512-8f1OghQ2rjzIOfqgUCP+8GiUWqRs89njoWLNqAe8kWmDePv3s1fZXseej+QXemssEuuOvLLmLO/kqM3IQHtISw==}
+    engines: {node: '>=20'}
+
   '@modelcontextprotocol/core@2.0.0':
     resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
     engines: {node: '>=20'}
 
-  '@modelcontextprotocol/ext-apps@1.7.5':
-    resolution: {integrity: sha512-TjPH2S2y5UEGKhmI6+XGFuqfqOV4ppe1x6DA3txnUaEWkgtA4G5vo14jGKFZmegdkZ1H4QMLyujLvoU1BEdnAg==}
+  '@modelcontextprotocol/ext-apps@2.0.0':
+    resolution: {integrity: sha512-a6tXzFcIbIIdnqumQ7W8Oxd8W/KAPkAKYpoxpD9nDgxZ24ywgxG5pK/8G9W5pOFUygS7gWHQhPv8cwRB44/8yg==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@modelcontextprotocol/sdk': ^1.29.0
+      '@modelcontextprotocol/client': ^2.0.0
+      '@modelcontextprotocol/core': ^2.0.0
+      '@modelcontextprotocol/server': ^2.0.0
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
-      zod: ^3.25.0 || ^4.0.0
+      zod: ^4.2.0
     peerDependenciesMeta:
+      '@modelcontextprotocol/server':
+        optional: true
       react:
         optional: true
       react-dom:
@@ -4392,9 +4400,6 @@ packages:
     resolution: {integrity: sha512-oTt3OP9NcJkrySCSCCdSbP6XLSMNgOmt/ulaiYtb0Ng6tfEWtXQ1mwfyqmLd+GapmDUjbU2mgkf7QIq9H4ij/g==}
     engines: {node: '>=18.0.0'}
 
-  '@solvapay/core@1.6.0':
-    resolution: {integrity: sha512-MVlKzxkWWkDGmOdQdPcS1Jl1L16Geeti7fl7lRlQAJKXKSpVDJAO9XSqZXy2BKUInjvVL7pOYo92EiZlmIy3tA==}
-
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     resolution: {directory: sdks/node-native/npm/darwin-arm64, type: directory}
     engines: {node: '>= 18'}
@@ -4446,16 +4451,6 @@ packages:
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [win32]
-
-  '@solvapay/server@2.3.1':
-    resolution: {integrity: sha512-oU2+ApzVNfHH+xeOrIYh5+TXaVA6c3stQXGQ5qzXxY8T+ZIpuiBGvnLq4JQscrh6p/C+I5zW8C+KWIuL6iSB7Q==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@solvapay/auth': ^1.1.0
-      zod: ^4.2.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
@@ -9887,6 +9882,7 @@ snapshots:
   '@hono/node-server@1.19.17(hono@4.13.4)':
     dependencies:
       hono: 4.13.4
+    optional: true
 
   '@humanfs/core@0.19.1': {}
 
@@ -10170,16 +10166,28 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
+  '@modelcontextprotocol/client@2.0.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.0.0
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.1.1
+      jose: 6.2.10
+      pkce-challenge: 5.0.1
+      zod: 4.3.6
+
   '@modelcontextprotocol/core@2.0.0':
     dependencies:
       zod: 4.3.6
 
-  '@modelcontextprotocol/ext-apps@1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)':
+  '@modelcontextprotocol/ext-apps@2.0.0(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/core@2.0.0)(@modelcontextprotocol/server@2.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.3.6)
+      '@modelcontextprotocol/client': 2.0.0
+      '@modelcontextprotocol/core': 2.0.0
       '@standard-schema/spec': 1.1.0
       zod: 4.3.6
     optionalDependencies:
+      '@modelcontextprotocol/server': 2.0.0
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
 
@@ -10211,6 +10219,7 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@modelcontextprotocol/server@2.0.0':
     dependencies:
@@ -11188,10 +11197,6 @@ snapshots:
       '@smithy/core': 3.24.6
       tslib: 2.8.1
 
-  '@solvapay/core@1.6.0':
-    dependencies:
-      zod: 4.3.6
-
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     optional: true
 
@@ -11215,13 +11220,6 @@ snapshots:
 
   '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     optional: true
-
-  '@solvapay/server@2.3.1(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)':
-    dependencies:
-      '@solvapay/auth': link:sdks/typescript/auth
-      '@solvapay/core': 1.6.0
-    optionalDependencies:
-      zod: 4.3.6
 
   '@speed-highlight/core@1.2.15': {}
 
@@ -11748,6 +11746,7 @@ snapshots:
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
+    optional: true
 
   ajv@6.14.0:
     dependencies:
@@ -11769,6 +11768,7 @@ snapshots:
       fast-uri: 3.1.6
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+    optional: true
 
   ansi-colors@4.1.3: {}
 
@@ -12165,6 +12165,7 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
+    optional: true
 
   cosmiconfig-typescript-loader@6.2.0(@types/node@25.5.2)(cosmiconfig@9.0.1(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
@@ -12742,6 +12743,7 @@ snapshots:
       ip-address: 10.5.0
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   express@5.2.1(supports-color@10.2.2):
     dependencies:
@@ -12819,7 +12821,8 @@ snapshots:
 
   fast-uri@3.1.0: {}
 
-  fast-uri@3.1.6: {}
+  fast-uri@3.1.6:
+    optional: true
 
   fast-wrap-ansi@0.2.2:
     dependencies:
@@ -13238,7 +13241,8 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
-  ip-address@10.5.0: {}
+  ip-address@10.5.0:
+    optional: true
 
   ipaddr.js@1.9.1: {}
 
@@ -13510,7 +13514,8 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  json-schema-typed@8.0.2: {}
+  json-schema-typed@8.0.2:
+    optional: true
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -15728,6 +15733,7 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.3.6):
     dependencies:
       zod: 4.3.6
+    optional: true
 
   zod-validation-error@4.0.2(zod@4.3.6):
     dependencies:
