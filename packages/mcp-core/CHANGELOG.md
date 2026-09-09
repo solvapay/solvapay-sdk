@@ -1,5 +1,15 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.2
+
+### Patch Changes
+
+- c67e78e: Account narration is a snapshot, not a gate: states A and F lead with plan and position, one-time plans keep their `once` qualifier, and the account UI placeholder no longer attributes a catalog plan price when there is no active purchase. Recovery copy no longer points at the provider SDK docs; `docs://solvapay/overview.md` stays registered for discovery.
+- dbd0108: Account narration now trusts `limits.planRef` when the purchase list is empty, so a just-enrolled or just-activated customer is no longer described as having no plan. Bootstrap refetches the purchase list when limits names a purchase the parallel snapshot missed, and credit top-ups are filtered on `origin`.
+- c67e78e: Stop asking an already-paying customer to switch plan on a credit shortfall, and stop minting hosted checkout sessions with a non-browsable MCP endpoint as `returnUrl`. Pass `returnUrl: null` to `createCheckoutSessionCore` to omit the field instead of falling back to the request origin.
+- c67e78e: One ordered active-plan selector, invalidate the limits cache after `activate_plan`, stop double-emitting merchant JSON, and narrate every activate_plan status. Gate and account copy share one recovery vocabulary, print credit amounts next to money when the backend sends the peg, and point auto-recharge at the account portal.
+- c67e78e: Scope account narration and the default viewer to the current product, pick the newest ownership purchase, and only claim unlimited access or unused credits when the payload actually says so.
+
 ## 0.4.1
 
 ### Patch Changes
