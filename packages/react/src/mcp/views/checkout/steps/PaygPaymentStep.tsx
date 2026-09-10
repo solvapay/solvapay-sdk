@@ -18,6 +18,7 @@ import { useHostLocale } from '../../../useHostLocale'
 import { chargeAmountMinor } from '../../chargeAmount'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import { McpPaymentHeader } from '../../McpPaymentHeader'
+import { MCP_PAYMENT_ELEMENT_OPTIONS } from '../../paymentElementOptions'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -103,7 +104,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
 
           <div className={cx.topupForm}>
             <TopupForm.Loading />
-            <TopupForm.PaymentElement />
+            <TopupForm.PaymentElement options={MCP_PAYMENT_ELEMENT_OPTIONS} />
             <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
               <TopupForm.BusinessDetails.Fields />
             </TopupForm.BusinessDetails.Root>
@@ -112,7 +113,12 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
             <TopupForm.SubmitButton className={cx.button}>
               <PaygChargeCta amountMinor={amountMinor} currency={currency} />
             </TopupForm.SubmitButton>
-            <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
+            <MandateText
+              mode="topup"
+              amountMinor={amountMinor}
+              currency={currency}
+              savesPaymentMethod={autoRecharge != null}
+            />
           </div>
         </McpHostedBody>
       </McpHostedLayout>

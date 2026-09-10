@@ -28,6 +28,12 @@ export type MandateContext = {
   }
   amountFormatted: string
   trialDays?: number
+  /**
+   * True when the confirm also stores the card for later off-session
+   * charges (auto-recharge). The mandate has to disclose the storage,
+   * because SolvaPay surfaces hide Stripe's own `terms` line.
+   */
+  savesPaymentMethod?: boolean
 }
 
 export type MandateTemplate = string | ((ctx: MandateContext) => string)

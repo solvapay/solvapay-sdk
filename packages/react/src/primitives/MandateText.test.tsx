@@ -94,6 +94,36 @@ describe('MandateText primitive', () => {
     })
   })
 
+  it('omits the saved-card sentence when the confirm does not store the card', async () => {
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText mode="topup" amountMinor={500} currency="usd" data-testid="mandate" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('mandate').textContent).not.toContain('save this card')
+    })
+  })
+
+  it('discloses card storage when savesPaymentMethod is set', async () => {
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText
+          mode="topup"
+          amountMinor={500}
+          currency="usd"
+          savesPaymentMethod
+          data-testid="mandate"
+        />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => {
+      const text = screen.getByTestId('mandate').textContent
+      expect(text).toContain('save this card')
+      expect(text).toContain('future auto-recharges')
+    })
+  })
+
   it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(<MandateText planRef="pln" />)).toThrow(MissingProviderError)
