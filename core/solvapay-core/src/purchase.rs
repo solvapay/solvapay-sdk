@@ -168,7 +168,10 @@ fn is_paid_purchase(purchase: &Value) -> bool {
     section = "purchase",
     emit_order = 21
 )]
-pub fn select_active_plan_purchase(purchases: Option<&Value>, product_ref: Option<&str>) -> Option<Value> {
+pub fn select_active_plan_purchase(
+    purchases: Option<&Value>,
+    product_ref: Option<&str>,
+) -> Option<Value> {
     let items = match purchases {
         Some(Value::Array(items)) => items,
         _ => return None,
@@ -176,15 +179,16 @@ pub fn select_active_plan_purchase(purchases: Option<&Value>, product_ref: Optio
     let scope = product_ref.map(str::trim).filter(|s| !s.is_empty());
     let mut candidates: Vec<&Value> = items
         .iter()
-        .filter(|purchase| {
-            match purchase.get("status").and_then(Value::as_str) {
+        .filter(
+            |purchase| match purchase.get("status").and_then(Value::as_str) {
                 Some("active") | None => true,
                 Some(_) => false,
-            }
-        })
+            },
+        )
         .filter(|purchase| is_plan_purchase(purchase))
         .filter(|purchase| {
-            scope.is_none_or(|want| purchase.get("productRef").and_then(Value::as_str) == Some(want))
+            scope
+                .is_none_or(|want| purchase.get("productRef").and_then(Value::as_str) == Some(want))
         })
         .collect();
     if candidates.is_empty() {

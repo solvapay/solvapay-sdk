@@ -569,7 +569,10 @@ fn format_credits_with_money(credits: f64, gate: &GateContent) -> String {
 
 /// Pointer at the account viewer for usage and recovery.
 fn account_usage_recovery() -> String {
-    format!("{} for usage and recovery.", capitalize_call(call_viewer(None)))
+    format!(
+        "{} for usage and recovery.",
+        capitalize_call(call_viewer(None))
+    )
 }
 
 /// Non-empty checkout URL, or `None` when absent / empty string.
@@ -797,12 +800,12 @@ pub fn build_nudge_message(state: &PaywallState, limits: Option<&PaywallLimits>)
     });
     let signals = credit_signals(limits);
     let remaining = signals.remaining_calls;
-    let kind = if *state == PaywallState::TopupRequired && limits.is_some() && !signals.is_credit_based
-    {
-        PaywallState::LimitReached
-    } else {
-        state.clone()
-    };
+    let kind =
+        if *state == PaywallState::TopupRequired && limits.is_some() && !signals.is_credit_based {
+            PaywallState::LimitReached
+        } else {
+            state.clone()
+        };
 
     match kind {
         PaywallState::TopupRequired => {

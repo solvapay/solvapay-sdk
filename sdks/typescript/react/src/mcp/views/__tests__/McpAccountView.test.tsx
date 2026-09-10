@@ -696,10 +696,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
     expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
   })
 
@@ -723,10 +720,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge on')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
   it('shows the pending-setup line after a top-up that enabled auto-recharge', () => {
@@ -739,10 +733,7 @@ describe('McpAccountView', () => {
     })
     expect(screen.getByText('Auto-recharge starts once this payment clears')).toBeTruthy()
     expect(screen.queryByText('Auto-recharge on')).toBeNull()
-    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
   it('shows the failed-card line and Fix card link', () => {

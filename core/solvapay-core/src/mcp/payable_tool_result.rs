@@ -33,7 +33,8 @@ fn resolve_nudge_text(nudge: &Value, limits: Option<&Value>) -> String {
         return message.to_owned();
     }
     let kind = nudge.get("kind").and_then(Value::as_str).unwrap_or("");
-    let parsed = limits.and_then(|value| serde_json::from_value::<PaywallLimits>(value.clone()).ok());
+    let parsed =
+        limits.and_then(|value| serde_json::from_value::<PaywallLimits>(value.clone()).ok());
     let credit_based = credit_signals(parsed.as_ref()).is_credit_based;
     let state = if kind == "low-balance" && credit_based {
         PaywallState::TopupRequired
@@ -130,7 +131,12 @@ mod tests {
 
     #[test]
     fn minimal_respond_compacts_data() {
-        let env = make_response_result(json!({ "foo": "bar", "list": [1, 2, 3] }), None, vec![], None);
+        let env = make_response_result(
+            json!({ "foo": "bar", "list": [1, 2, 3] }),
+            None,
+            vec![],
+            None,
+        );
         let result = build_payable_tool_result(&env);
         assert_eq!(result.content.len(), 1);
         assert_eq!(text_at(&result, 0), r#"{"foo":"bar","list":[1,2,3]}"#);
@@ -242,7 +248,8 @@ mod tests {
         );
         let result = build_payable_tool_result(&env);
         let parsed: PaywallLimits =
-            serde_json::from_value(json!({ "creditBalance": 5.0, "creditsPerUnit": 10.0 })).unwrap();
+            serde_json::from_value(json!({ "creditBalance": 5.0, "creditsPerUnit": 10.0 }))
+                .unwrap();
         let expected = build_nudge_message(&PaywallState::TopupRequired, Some(&parsed));
         assert_eq!(text_at(&result, 0), format!("{{\"z\":3}}\n\n{expected}"));
     }

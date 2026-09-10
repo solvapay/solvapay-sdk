@@ -11,22 +11,22 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, classify_paywall_state, counts_usage, credit_signals,
+    auto_recharge_url_from, billing_cycle, classify_paywall_state, counts_usage, credit_signals,
     credits_per_unit_from_balance, credits_to_display_minor_units, derive_default_view,
     format_money_intl, get_business_country_options, get_history_next, get_tax_id_example,
     get_tax_id_field_label, get_tax_id_helper_text, headline_charges, included_units,
     is_error_result, meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
     normalize_reactivate_response, per_unit_charge, project_topup_process_outcome,
-    project_usage_snapshot,     resolve_purchase_customer_ref, resolve_seller_identity_display,
-    select_active_plan_purchase, select_active_purchases, trial_days, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_create_payment_intent_params,
-    validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, CreditsToDisplayInput, GetHistoryAction, PaywallLimits,
-    SdkError, SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
+    project_usage_snapshot, resolve_purchase_customer_ref, resolve_seller_identity_display,
+    select_active_plan_purchase, select_active_purchases, trial_days,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_create_payment_intent_params, validate_process_payment_intent_params,
+    validate_purchase_ref, validate_topup_payment_intent_params, CreditsToDisplayInput,
+    GetHistoryAction, PaywallLimits, SdkError, SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
 };
 use solvapay_dto::{
-    ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
-    CreateCheckoutSessionRequest, CreateCheckoutSessionRequestPurpose,
+    ActivatePlanDto, AttachBusinessDetailsParams, AutoRechargeInput, CancelPurchaseParams,
+    CheckLimitsRequest, CreateCheckoutSessionRequest, CreateCheckoutSessionRequestPurpose,
     CreateCustomerSessionRequest, CreatePaymentIntentParams, CreateTopupPaymentIntentParams,
     GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams,
     ListPurchasesParams, ProcessPaymentIntentParams, ReactivatePurchaseParams,
@@ -225,8 +225,20 @@ fn default_mcp_views() -> Vec<String> {
         "checkout".to_owned(),
         "account".to_owned(),
         "topup".to_owned(),
-        "auto-recharge".to_owned(),
     ]
+}
+
+fn parse_auto_recharge_arg(value: Option<&Value>) -> Result<Option<AutoRechargeInput>, Value> {
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(raw) => serde_json::from_value(raw.clone()).map(Some).map_err(|_| {
+            tool_error_result(
+                "create_payment_intent autoRecharge is invalid",
+                400,
+                Some("autoRecharge must match AutoRechargeInput (enabled, triggerType, currency)."),
+            )
+        }),
+    }
 }
 
 fn default_view_input(payload: &Value, enabled: &[String]) -> Value {
@@ -659,6 +671,7 @@ impl SolvaPayClient {
                 .filter(|s| !s.is_empty())
                 .map(str::to_owned)
         });
+        let auto_recharge_url = auto_recharge_url_from(portal_url.as_deref());
 
         Ok(json!({
             "view": params.view,
@@ -673,6 +686,7 @@ impl SolvaPayClient {
             "checkoutUrl": checkout_url,
             "checkoutPurpose": checkout_purpose,
             "portalUrl": portal_url,
+            "autoRechargeUrl": auto_recharge_url,
         }))
     }
 
@@ -720,7 +734,7 @@ impl SolvaPayClient {
                         || *view == "auto-recharge"
                 });
                 if let Some(view) = requested {
-                    if !enabled.iter().any(|item| item == view) {
+                    if view != "auto-recharge" && !enabled.iter().any(|item| item == view) {
                         return Ok(tool_error_result(
                             &format!("view '{view}' is not enabled on this server"),
                             400,
@@ -813,6 +827,11 @@ impl SolvaPayClient {
                         ) {
                             return Ok(helper_error_tool(&err));
                         }
+                        let auto_recharge = match parse_auto_recharge_arg(args.get("autoRecharge"))
+                        {
+                            Ok(value) => value,
+                            Err(err) => return Ok(err),
+                        };
                         let created = self
                             .create_topup_payment_intent_json(CreateTopupPaymentIntentParams {
                                 amount: args.get("amount").and_then(Value::as_f64).unwrap_or(0.0),
@@ -826,13 +845,20 @@ impl SolvaPayClient {
                                     .get("description")
                                     .and_then(Value::as_str)
                                     .map(str::to_owned),
-                                auto_recharge: None,
+                                auto_recharge,
                                 idempotency_key: None,
                             })
                             .await?;
                         Ok(wrap_ok(created))
                     }
                     Some("plan") => {
+                        if args.get("autoRecharge").is_some_and(|v| !v.is_null()) {
+                            return Ok(tool_error_result(
+                                "create_payment_intent plan does not accept autoRecharge",
+                                400,
+                                Some("autoRecharge is only honoured on purpose: \"topup\"."),
+                            ));
+                        }
                         if let Some(err) = validate_create_payment_intent_params(
                             args.get("planRef").and_then(Value::as_str),
                             Some(product_ref),

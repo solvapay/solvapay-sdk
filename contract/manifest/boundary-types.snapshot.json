@@ -10213,6 +10213,28 @@
         }
       }
     },
+    "solvapay_core::mcp::portal_links::auto_recharge_url_from": {
+      "name": "auto_recharge_url_from",
+      "module": "mcp::portal_links",
+      "implTy": null,
+      "rustdoc": "Suffix a minted customer-portal URL so it opens the auto-recharge form.\n\nReturns `None` for a missing or non-http URL — no silent default.",
+      "params": [
+        {
+          "rustName": "customer_url",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::mcp::tool_names::mcp_tool_names_json": {
       "name": "mcp_tool_names_json",
       "module": "mcp::tool_names",

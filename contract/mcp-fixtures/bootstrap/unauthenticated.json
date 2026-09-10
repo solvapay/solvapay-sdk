@@ -75,6 +75,7 @@
       "checkoutUrl": "https://checkout.example/s",
       "checkoutPurpose": null,
       "portalUrl": null,
+      "autoRechargeUrl": null,
       "taxIdFields": {
         "AT": {
           "label": "VAT ID",

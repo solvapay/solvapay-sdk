@@ -138,6 +138,7 @@ fn bootstrap_output_schema() -> Value {
                     "productRef": { "type": "string" },
                     "checkoutUrl": { "type": ["string", "null"] },
                     "portalUrl": { "type": ["string", "null"] },
+                    "autoRechargeUrl": { "type": ["string", "null"] },
                     "plans": { "type": "array" },
                     "customer": {},
                     "product": {},
@@ -166,21 +167,20 @@ pub fn append_paid_tool_description(description: Option<&str>) -> String {
 }
 
 fn view_schema(views: Option<&[String]>) -> Value {
-    let default = [
+    let advertised = [
         "checkout".to_owned(),
         "account".to_owned(),
         "topup".to_owned(),
-        "auto-recharge".to_owned(),
     ];
     let enabled: Vec<String> = views
         .map(|items| {
             items
                 .iter()
-                .filter(|view| default.iter().any(|known| known == *view))
+                .filter(|view| advertised.iter().any(|known| known == *view))
                 .cloned()
                 .collect()
         })
-        .unwrap_or(default.to_vec());
+        .unwrap_or(advertised.to_vec());
     json!({ "type": "string", "enum": enabled })
 }
 
@@ -208,7 +208,19 @@ fn input_schema_for(name: &str, views: Option<&[String]>) -> Value {
                 "productRef": { "type": "string" },
                 "currency": { "type": "string" },
                 "amount": { "type": "integer" },
-                "description": { "type": "string" }
+                "description": { "type": "string" },
+                "autoRecharge": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": { "type": "boolean" },
+                        "triggerType": { "type": "string", "const": "balance" },
+                        "thresholdAmountMajor": { "type": "number" },
+                        "topupAmountMajor": { "type": "number" },
+                        "maxMonthlySpendMajor": { "type": "number" },
+                        "currency": { "type": "string", "minLength": 3, "maxLength": 3 }
+                    },
+                    "required": ["enabled", "triggerType", "currency"]
+                }
             }),
             &["purpose"],
         ),

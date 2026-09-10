@@ -274,7 +274,7 @@ export function parseBootstrapFromToolResult(
   fallbackView: SolvaPayMcpViewKind,
 ): McpBootstrap {
   const structured = result.structuredContent as
-    | (Partial<BootstrapPayload> & { view?: McpView })
+    | (Partial<BootstrapPayload> & { view?: McpView; autoRechargeUrl?: string | null })
     | undefined
   const hasBootstrapShape =
     structured !== undefined &&

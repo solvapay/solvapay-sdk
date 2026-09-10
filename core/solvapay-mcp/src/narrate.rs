@@ -281,7 +281,10 @@ fn http_url<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 fn checkout_link_label(data: &Value) -> &'static str {
-    let url = data.get("checkoutUrl").and_then(Value::as_str).unwrap_or("");
+    let url = data
+        .get("checkoutUrl")
+        .and_then(Value::as_str)
+        .unwrap_or("");
     if url.contains("/checkout/topup")
         || data.get("checkoutPurpose").and_then(Value::as_str) == Some("credit_topup")
     {
@@ -388,7 +391,9 @@ fn plan_price_phrase(plan: Option<&Value>) -> Option<String> {
     if !list.is_empty() {
         let prices: Vec<String> = list
             .into_iter()
-            .filter_map(|charge| format_compact_money(Some(charge.amount_minor), Some(&charge.currency)))
+            .filter_map(|charge| {
+                format_compact_money(Some(charge.amount_minor), Some(&charge.currency))
+            })
             .collect();
         if !prices.is_empty() {
             return Some(prices.join(" · "));
@@ -418,7 +423,8 @@ fn credits_rate_phrase(plan: Option<&Value>, customer: Option<&Value>) -> Option
     if rate.amount_minor <= 0.0 {
         return None;
     }
-    let credits = credits_per_unit_from_balance(plan, customer.and_then(|c| c.get("balance")), None);
+    let credits =
+        credits_per_unit_from_balance(plan, customer.and_then(|c| c.get("balance")), None);
     if let Some(credits) = credits {
         let prefix = if rate.tiered { "from " } else { "" };
         return Some(format!(
@@ -427,10 +433,7 @@ fn credits_rate_phrase(plan: Option<&Value>, customer: Option<&Value>) -> Option
         ));
     }
     let money = format_compact_money(Some(rate.amount_minor), Some(&rate.currency))?;
-    let unit = meter_unit(
-        rate.meter.as_deref().or(meter_name(plan).as_deref()),
-        1.0,
-    );
+    let unit = meter_unit(rate.meter.as_deref().or(meter_name(plan).as_deref()), 1.0);
     let prefix = if rate.tiered { "from " } else { "" };
     Some(format!("{prefix}{money} per {unit}"))
 }
@@ -478,12 +481,16 @@ fn catalog_fragment(plan: &Value, customer: Option<&Value>) -> String {
     let shape = resolve_narrator_plan_shape(Some(plan));
     let trial = trial_days(Some(plan));
     let paid = plan.get("requiresPayment") != Some(&Value::Bool(false));
-    let mut core = if shape == Some(NarratorPlanShape::Free) || (!paid && shape != Some(NarratorPlanShape::Trial))
+    let mut core = if shape == Some(NarratorPlanShape::Free)
+        || (!paid && shape != Some(NarratorPlanShape::Trial))
     {
         if let Some(cap) = cap.filter(|c| *c > 0) {
             let unit = meter_unit(meter_name(Some(plan)).as_deref(), cap as f64);
             let cycle_bit = cycle.map(|c| format!(" {c}")).unwrap_or_default();
-            format!("{name} gives {} {unit}{cycle_bit}", format_grouped_number(cap as f64))
+            format!(
+                "{name} gives {} {unit}{cycle_bit}",
+                format_grouped_number(cap as f64)
+            )
         } else {
             format!("{name} requires no payment")
         }
@@ -533,7 +540,8 @@ fn catalog_fragment(plan: &Value, customer: Option<&Value>) -> String {
 
 fn carry_on_fragment(plan: &Value, customer: Option<&Value>) -> String {
     let name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
-    let mut core = if resolve_narrator_plan_shape(Some(plan)) == Some(NarratorPlanShape::UsageBased) {
+    let mut core = if resolve_narrator_plan_shape(Some(plan)) == Some(NarratorPlanShape::UsageBased)
+    {
         let credits = customer
             .and_then(|c| c.pointer("/balance/credits"))
             .and_then(Value::as_f64);
@@ -549,7 +557,10 @@ fn carry_on_fragment(plan: &Value, customer: Option<&Value>) -> String {
         let price = plan_price_phrase(Some(plan));
         let cycle = interval_phrase(Some(plan));
         if billing_cycle(Some(plan)).is_none() {
-            price.map_or_else(|| name.to_owned(), |price| format!("{name} is {price} once"))
+            price.map_or_else(
+                || name.to_owned(),
+                |price| format!("{name} is {price} once"),
+            )
         } else {
             match (price, cycle) {
                 (Some(price), Some(cycle)) => format!("{name} is {price} {cycle}"),
@@ -571,9 +582,7 @@ fn recovery_for_state(state: &str, free_plan_ref: Option<&str>) -> String {
         "D" => recovery_line(&["topup", "checkout"]),
         "H" => free_plan_ref.map_or_else(
             || recovery_line(&["checkout"]),
-            |plan_ref| {
-                format!("To continue, call `activate_plan` with planRef: \"{plan_ref}\".")
-            },
+            |plan_ref| format!("To continue, call `activate_plan` with planRef: \"{plan_ref}\"."),
         ),
         "J" => recovery_line(&["account"]),
         _ => recovery_line(&["checkout"]),
@@ -600,7 +609,10 @@ fn narrate_account_body(
 
     match state {
         "A" => {
-            let fragments: Vec<String> = plans.iter().map(|p| catalog_fragment(p, customer)).collect();
+            let fragments: Vec<String> = plans
+                .iter()
+                .map(|p| catalog_fragment(p, customer))
+                .collect();
             let catalog = if fragments.is_empty() {
                 String::new()
             } else {
@@ -618,7 +630,10 @@ fn narrate_account_body(
             );
             let ready = if let Some(cap) = cap.filter(|c| *c > 0) {
                 let cycle_bit = cycle.map(|c| format!(" {c}")).unwrap_or_default();
-                format!("{} {unit}{cycle_bit}, no card", format_grouped_number(cap as f64))
+                format!(
+                    "{} {unit}{cycle_bit}, no card",
+                    format_grouped_number(cap as f64)
+                )
             } else {
                 "no card".to_owned()
             };
@@ -628,11 +643,8 @@ fn narrate_account_body(
         }
         "B" => {
             let rate = credits_rate_phrase(plan, customer);
-            let per_call = credits_per_unit_from_balance(
-                plan,
-                customer.and_then(|c| c.get("balance")),
-                None,
-            );
+            let per_call =
+                credits_per_unit_from_balance(plan, customer.and_then(|c| c.get("balance")), None);
             let runway = per_call
                 .filter(|p| *p > 0)
                 .map(|per| {
@@ -649,11 +661,8 @@ fn narrate_account_body(
             )
         }
         "D" => {
-            let per_call = credits_per_unit_from_balance(
-                plan,
-                customer.and_then(|c| c.get("balance")),
-                None,
-            );
+            let per_call =
+                credits_per_unit_from_balance(plan, customer.and_then(|c| c.get("balance")), None);
             let cost_bit = if let Some(per) = per_call.filter(|p| *p > 0) {
                 let shortfall = (per as f64 - credits).max(0.0);
                 format!(
@@ -708,7 +717,8 @@ fn narrate_account_body(
                 "After your first call".to_owned()
             };
             let limits = customer.and_then(|c| c.get("limits"));
-            let parsed = limits.and_then(|l| serde_json::from_value::<PaywallLimits>(l.clone()).ok());
+            let parsed =
+                limits.and_then(|l| serde_json::from_value::<PaywallLimits>(l.clone()).ok());
             let credits_unused = !credit_signals(parsed.as_ref()).is_credit_based;
             let tail = if credits_unused {
                 "Credits are not used on this plan. Call `account` with view: 'checkout' to switch."
@@ -719,9 +729,10 @@ fn narrate_account_body(
         }
         "E" => {
             let left = remaining_of_total(usage);
-            let date = format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
+            let date =
+                format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
             let interval = billing_cycle(plan)
-                .map(|c| cycle_interval(c))
+                .map(cycle_interval)
                 .unwrap_or_else(|| "period".to_owned());
             let left_bit = if let Some(left) = left {
                 let reset = date
@@ -748,7 +759,8 @@ fn narrate_account_body(
                     .or(meter_name(plan).as_deref()),
                 cap.filter(|c| *c > 0.0).unwrap_or(2.0),
             );
-            let date = format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
+            let date =
+                format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
             let cap_bit = if let Some(cap) = cap.filter(|c| *c > 0.0) {
                 format!("{} {unit} are used up", format_grouped_number(cap))
             } else {
@@ -800,7 +812,8 @@ fn narrate_account_body(
             )
         }
         _ => {
-            let date = format_short_date(purchase.and_then(|p| p.get("endDate").and_then(Value::as_str)));
+            let date =
+                format_short_date(purchase.and_then(|p| p.get("endDate").and_then(Value::as_str)));
             let until = date
                 .as_deref()
                 .map(|d| format!("runs until {d}"))
@@ -855,10 +868,7 @@ pub fn narrate_manage_account(data: &Value) -> Value {
             }))
         })
     } else {
-        solvapay_core::merge_plan(
-            active.as_ref().and_then(|p| p.get("planSnapshot")),
-            catalog,
-        )
+        solvapay_core::merge_plan(active.as_ref().and_then(|p| p.get("planSnapshot")), catalog)
     };
     let plan_shape = resolve_narrator_plan_shape(merged.as_ref());
     let state_input = json!({
@@ -978,19 +988,16 @@ pub fn narrate_activate_plan_status(data: &Value) -> String {
         "already_active" => {
             let limits = serde_json::from_value::<PaywallLimits>(data.clone()).ok();
             let signals = credit_signals(limits.as_ref());
-            match (signals.credit_balance, signals.credits_per_call) {
-                (Some(balance), Some(cost)) => {
-                    let shortfall = (cost - balance).max(0.0);
-                    if shortfall > 0.0 {
-                        return format!(
-                            "{named} is already active. Balance {} credits; this call costs {} credits — {} short. Call the `account` tool with view: 'topup' to add credits.",
-                            format_grouped_number(balance),
-                            format_grouped_number(cost),
-                            format_grouped_number(shortfall)
-                        );
-                    }
+            if let (Some(balance), Some(cost)) = (signals.credit_balance, signals.credits_per_call) {
+                let shortfall = (cost - balance).max(0.0);
+                if shortfall > 0.0 {
+                    return format!(
+                        "{named} is already active. Balance {} credits; this call costs {} credits — {} short. Call the `account` tool with view: 'topup' to add credits.",
+                        format_grouped_number(balance),
+                        format_grouped_number(cost),
+                        format_grouped_number(shortfall)
+                    );
                 }
-                _ => {}
             }
             if named == "This plan" {
                 "This plan is already active.".to_owned()
@@ -1054,31 +1061,36 @@ pub fn narrate_auto_recharge(data: &Value) -> Value {
     if let Some(bal) = balance_row(customer) {
         lines.push(bal);
     }
-    let enabled = customer
-        .and_then(|c| c.pointer("/autoRecharge/enabled"))
-        == Some(&Value::Bool(true));
-    lines.push(if enabled {
-        "Auto-recharge is on. It tops your balance up automatically so calls do not fail.".to_owned()
+    let enabled =
+        customer.and_then(|c| c.pointer("/autoRecharge/enabled")) == Some(&Value::Bool(true));
+    let failed = customer.and_then(|c| c.pointer("/autoRecharge/status"))
+        == Some(&Value::String("failed".to_owned()));
+    if failed {
+        lines.push("Auto-recharge failed — update your card to resume".to_owned());
     } else {
-        "Auto-recharge is off. Turn it on from the account page — it stores a card and tops your balance up automatically so calls do not fail.".to_owned()
-    });
-    if let Some(manage) = manage_row(data) {
-        lines.push(manage);
+        lines.push(if enabled {
+            "Auto-recharge is on. It tops your balance up automatically so calls do not fail."
+                .to_owned()
+        } else {
+            "Auto-recharge is off. Turn it on from the link below — it stores a card and tops your balance up automatically so calls do not fail.".to_owned()
+        });
     }
+    let manage_url = http_url(data, "autoRechargeUrl").or_else(|| http_url(data, "portalUrl"));
+    if let Some(url) = manage_url {
+        lines.push(format!(
+            "Manage: [Manage account]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
+        ));
+    }
+    lines.push(String::new());
     lines.push(recovery_line(&["account"]));
-    let mut links = recovery_links(data);
-    if let Some(portal) = hosted_portal_link(data) {
+    let mut links = Vec::new();
+    if let Some(url) = manage_url {
         let name = if enabled {
             "Manage auto-recharge"
         } else {
             "Turn on auto-recharge"
         };
-        links.retain(|link| link.get("name").and_then(Value::as_str) != Some("Manage account"));
-        let mut portal = portal;
-        if let Some(obj) = portal.as_object_mut() {
-            obj.insert("name".to_owned(), json!(name));
-        }
-        links.push(portal);
+        links.push(json!({ "uri": url, "name": name }));
     }
     narrator_output(lines.join("\n"), links)
 }

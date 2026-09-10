@@ -170,6 +170,7 @@
       "checkoutUrl": "https://checkout.example/s",
       "checkoutPurpose": null,
       "portalUrl": "https://portal.example/s",
+      "autoRechargeUrl": "https://portal.example/s?tab=credits&intent=autorecharge",
       "taxIdFields": {
         "AT": {
           "label": "VAT ID",

@@ -82,6 +82,7 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
     assert_eq!(got["customer"], Value::Null);
     assert_eq!(got["checkoutUrl"], "https://checkout.example/s");
     assert_eq!(got["portalUrl"], Value::Null);
+    assert_eq!(got["autoRechargeUrl"], Value::Null);
     assert!(got["merchant"].get("identityDisplay").is_some());
     assert!(got["taxIdFields"]["DE"]["label"].is_string());
 }

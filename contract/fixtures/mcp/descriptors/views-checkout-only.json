@@ -46,7 +46,7 @@
       },
       {
         "name": "create_payment_intent",
-        "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation).",
+        "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.",
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,

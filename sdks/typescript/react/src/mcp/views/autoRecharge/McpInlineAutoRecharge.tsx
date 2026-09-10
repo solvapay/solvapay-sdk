@@ -10,9 +10,7 @@ import { useCopy } from '../../../hooks/useCopy'
 import { SplitRow, Toggle } from '../../primitives'
 import { McpAutoRechargeFields } from './McpAutoRechargeFields'
 
-export type McpInlineAutoRechargeResult =
-  | { ok: true; payload?: AutoRechargeInput }
-  | { ok: false }
+export type McpInlineAutoRechargeResult = { ok: true; payload?: AutoRechargeInput } | { ok: false }
 
 export type McpInlineAutoRechargeHandle = {
   validate: () => McpInlineAutoRechargeResult

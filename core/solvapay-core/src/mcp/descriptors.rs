@@ -18,8 +18,9 @@ const UI_ONLY_PREFIX: &str = "UI-only; agents should prefer `account` / `activat
 const VIEWER_DESCRIPTION: &str =
     "Call when the user says \"upgrade\", \"change plan\", \"buy\", \"subscribe\", \"my account\", \"current plan\", \"cancel\", \"billing\", \"top up\", \"add credits\", or \"buy credits\". Opens the SolvaPay billing surface. Pass `view` to pick the landing screen; omit it to let the server pick (no plan → checkout, out of credits → topup, else account). Read-only snapshot — charges happen after the customer confirms. Always include the Manage and Checkout markdown links from the tool result in your reply to the user. To change something, call this tool again with `view`: `account` (manage or cancel), `topup` (add credits), or `checkout` (change plan).";
 
-/// Default enabled views when the caller omits `views`.
-const DEFAULT_VIEWS: &[&str] = &["checkout", "account", "topup", "auto-recharge"];
+/// Advertised views when the caller omits `views`. `auto-recharge` stays on
+/// the wire for leftover stamps but is not published on the tool schema.
+const DEFAULT_VIEWS: &[&str] = &["checkout", "account", "topup"];
 
 /// Merchant branding input for icon projection.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -313,7 +314,7 @@ pub fn build_tool_descriptor_metadata(
         ),
         (
             "createPayment",
-            "Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation).",
+            "Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.",
             solvapay_tool(Some(false), Some(false), None),
         ),
         (

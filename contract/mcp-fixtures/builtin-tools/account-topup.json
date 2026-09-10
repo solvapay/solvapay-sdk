@@ -262,7 +262,8 @@
         },
         "checkoutUrl": "https://checkout.example/s",
         "checkoutPurpose": "credit_topup",
-        "portalUrl": null
+        "portalUrl": null,
+        "autoRechargeUrl": null
       },
       "_meta": {
         "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001",

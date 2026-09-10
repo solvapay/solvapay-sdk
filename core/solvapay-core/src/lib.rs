@@ -112,15 +112,17 @@ pub use invoke_payable::{
 };
 pub use limits::{is_unlimited_remaining, resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
-    append_paid_tool_description, assert_response_result, build_payable_tool_result,
-    build_prompt_descriptor_metadata, build_prompt_user_message, build_tool_descriptor_metadata,
-    derive_default_view, derive_icons, make_response_result, mcp_tool_names_json, mcp_view_maps,
-    merge_plan, paywall_tool_result, plan_consequence, resolve_account_state, resolve_display_mode,
-    resolve_narrator_plan_shape, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+    append_paid_tool_description, assert_response_result, auto_recharge_url_from,
+    build_payable_tool_result, build_prompt_descriptor_metadata, build_prompt_user_message,
+    build_tool_descriptor_metadata, derive_default_view, derive_icons, make_response_result,
+    mcp_tool_names_json, mcp_view_maps, merge_plan, paywall_tool_result, plan_consequence,
+    resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape,
+    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, McpContentBlock, McpDisplayModeState, McpPayableToolResult,
-    McpPaywallToolResult, McpViewMaps, MerchantBranding, NarratorPlanShape, PromptDescriptorMetadata,
-    PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
-    MCP_TOOL_NAMES, PAID_TOOL_HINT, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
+    McpPaywallToolResult, McpViewMaps, MerchantBranding, NarratorPlanShape,
+    PromptDescriptorMetadata, PromptUserMessage, ResponseEnvelope, ToolAnnotations,
+    ToolDescriptorMetadata, ToolIcon, MCP_TOOL_NAMES, PAID_TOOL_HINT, PORTAL_AUTO_RECHARGE_QUERY,
+    PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
 };
 pub use money_format::{
     format_compact_credits, format_grouped_major, format_major_fixed, format_money_intl,

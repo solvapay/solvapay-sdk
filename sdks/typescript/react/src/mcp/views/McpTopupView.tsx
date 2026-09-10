@@ -236,9 +236,7 @@ function EmbeddedTopup({
       )
     }
     if (stripeProbe === 'blocked') {
-      return (
-        <HostedTopupFallback cx={cx} onChangeAmount={() => setScreen({ step: 'amount' })} />
-      )
+      return <HostedTopupFallback cx={cx} onChangeAmount={() => setScreen({ step: 'amount' })} />
     }
 
     const committedAmountMinor = screen.amountMinor
@@ -543,13 +541,7 @@ function CustomAmountRow({
   )
 }
 
-function HostedTopupFallback({
-  cx,
-  onChangeAmount,
-}: {
-  cx: Cx
-  onChangeAmount: () => void
-}) {
+function HostedTopupFallback({ cx, onChangeAmount }: { cx: Cx; onChangeAmount: () => void }) {
   return (
     <section className={cx.card} aria-label="Add credits">
       <BackLink label="Change amount" onClick={onChangeAmount} />

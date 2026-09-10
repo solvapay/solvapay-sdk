@@ -10,6 +10,7 @@ mod envelope;
 mod payable_tool_result;
 mod paywall_tool_result;
 mod plan_consequence;
+mod portal_links;
 mod tool_names;
 
 pub use account_state::{
@@ -43,6 +44,7 @@ pub use envelope::{assert_response_result, make_response_result, ResponseEnvelop
 pub use payable_tool_result::{build_payable_tool_result, McpPayableToolResult};
 pub use paywall_tool_result::{paywall_tool_result, McpContentBlock, McpPaywallToolResult};
 pub use plan_consequence::plan_consequence;
+pub use portal_links::{auto_recharge_url_from, PORTAL_AUTO_RECHARGE_QUERY};
 pub use tool_names::{
     mcp_tool_names_json, mcp_view_maps, McpViewMaps, MCP_PROMPT_NAMES, MCP_TOOL_NAMES,
     TOOL_FOR_VIEW, VIEWER_TOOL_NAME, VIEW_FOR_TOOL,

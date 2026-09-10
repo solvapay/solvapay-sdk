@@ -73,6 +73,12 @@
                       "null"
                     ]
                   },
+                  "autoRechargeUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "plans": {
                     "type": "array"
                   },
@@ -143,7 +149,7 @@
         },
         {
           "name": "create_payment_intent",
-          "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation).",
+          "description": "UI-only; agents should prefer `account` / `activate_plan`. Create a Stripe payment intent for the authenticated customer. Pass purpose: \"plan\" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: \"topup\" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.",
           "annotations": {
             "openWorldHint": true,
             "readOnlyHint": false,
@@ -184,6 +190,37 @@
               },
               "description": {
                 "type": "string"
+              },
+              "autoRecharge": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "triggerType": {
+                    "type": "string",
+                    "const": "balance"
+                  },
+                  "thresholdAmountMajor": {
+                    "type": "number"
+                  },
+                  "topupAmountMajor": {
+                    "type": "number"
+                  },
+                  "maxMonthlySpendMajor": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "triggerType",
+                  "currency"
+                ]
               }
             },
             "required": [
