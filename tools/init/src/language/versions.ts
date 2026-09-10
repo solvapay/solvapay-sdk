@@ -31,6 +31,17 @@ export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDe
 export type ResolveLatestVersionsOptions = {
   timeoutMs?: number
   onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
+  /**
+   * When true, a definitive "not published" registry response (HTTP 404)
+   * throws instead of silently substituting the hardcoded fallback. Only the
+   * published (non-`--dev`) scaffold lane sets this: pinning a fallback for a
+   * package that exists nowhere produces a manifest that can't install, logged
+   * as `(offline fallback)`. A network error or timeout is still treated as
+   * offline and falls back — this distinguishes "not published" from "can't
+   * reach the registry". The `--dev` lane never calls this (it resolves from
+   * the checkout), so leaving the default `false` keeps existing behavior.
+   */
+  failOnNotPublished?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 3000
@@ -112,6 +123,12 @@ export async function resolveLatestVersions(
           },
           signal: AbortSignal.timeout(timeoutMs),
         })
+        // A 404 is definitive: the package is not published. Keep it distinct
+        // from other non-ok statuses and from network errors, which are
+        // "can't reach the registry" and stay as offline fallbacks.
+        if (response.status === 404) {
+          return { dep, version: dep.fallback, source: 'not-published' as const }
+        }
         if (!response.ok) {
           return { dep, version: dep.fallback, source: 'fallback' as const }
         }
@@ -127,10 +144,22 @@ export async function resolveLatestVersions(
     }),
   )
 
+  const notPublished = settled.filter(entry => entry.source === 'not-published')
+  if (options.failOnNotPublished && notPublished.length > 0) {
+    const names = notPublished.map(entry => entry.dep.name).join(', ')
+    throw new Error(
+      `SolvaPay ${notPublished.length > 1 ? 'packages are' : 'package is'} not published to the registry: ${names}. ` +
+        'Scaffold with --dev to resolve SolvaPay dependencies from a local solvapay-sdk checkout.',
+    )
+  }
+
   const result = new Map<string, string>()
   for (const entry of settled) {
     result.set(entry.dep.name, entry.version)
-    onResolve({ name: entry.dep.name, version: entry.version, source: entry.source })
+    // `not-published` folds into `fallback` for reporting when the caller did
+    // not opt into failing — preserving the pre-existing offline behavior.
+    const source = entry.source === 'not-published' ? 'fallback' : entry.source
+    onResolve({ name: entry.dep.name, version: entry.version, source })
   }
   return result
 }

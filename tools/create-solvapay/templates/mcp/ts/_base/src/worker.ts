@@ -19,7 +19,7 @@
  * tool handler so they can read `env.UPSTREAM_API_KEY`.
  */
 
-import { createSolvaPay } from '@solvapay/server'
+import { createSolvaPay } from '@solvapay/server/edge'
 import { createSolvaPayMcpFetch } from '@solvapay/mcp/fetch'
 import { registerTools } from './tools'
 import mcpAppHtml from './assets/mcp-app.html'

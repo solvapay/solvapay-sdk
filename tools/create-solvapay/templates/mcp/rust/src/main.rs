@@ -204,6 +204,9 @@ async fn main() {
             oauth_paths: None,
             hs256_secret: None,
             jwks_json: None,
+            // None → UI-only tools (payment/transport) are hidden from
+            // tools/list by default. Pass Some(vec![]) to show them.
+            hide_audiences: None,
         },
     );
     let mut fields = Map::new();
@@ -213,7 +216,7 @@ async fn main() {
             name: "__TOOL_NAME__".into(),
             product,
             title: Some("__TOOL_NAME__".into()),
-            description: Some("Placeholder paid tool — echoes the input message.".into()),
+            description: Some("Placeholder paid tool — echoes the input message so you can verify the paywall is wired before writing real logic. 1 credit per call; when gated, text-only narration names `account` (or `activate_plan` when a planRef is known).".into()),
             input_schema: Some(fields),
             output_schema: None,
             usage_type: None,

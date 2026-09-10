@@ -60,6 +60,26 @@ describe('language MCP templates', () => {
 
         const gitignore = await readFile(path.join(target, '.gitignore'), 'utf8')
         expect(gitignore).toContain('.env')
+
+        const readme = await readFile(path.join(target, 'README.md'), 'utf8')
+        expect(readme).toMatch(new RegExp(`^# ${deriveServerName('demo-mcp')}\\n`))
+        expect(readme).not.toContain('**SERVER_NAME**')
+
+        // F9: placeholder descriptions may only name factory-registered
+        // recovery tools (`account`, `activate_plan`) plus the paid tool.
+        const factoryRegistered = new Set(['account', 'activate_plan', names.toolNameSnake])
+        for (const file of files) {
+          if (file.endsWith('.png') || file.endsWith('.wasm')) continue
+          const raw = await readFile(file, 'utf8')
+          if (!raw.includes('Placeholder paid tool')) continue
+          expect(raw, file).toMatch(/`account`/)
+          const named = [...raw.matchAll(/`([a-z][a-z0-9_]*)`/g)].map(m => m[1])
+          for (const name of named) {
+            expect(factoryRegistered.has(name), `${file} names unregistered tool \`${name}\``).toBe(
+              true,
+            )
+          }
+        }
       } finally {
         await rm(target, { recursive: true, force: true })
       }

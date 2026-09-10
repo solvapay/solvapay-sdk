@@ -46,15 +46,64 @@ describe('rewriteManifest', () => {
 })
 
 describe('applyDevPathDeps', () => {
-  it('marks Python path sources editable so they match solvapay-mcp', () => {
+  it('rewrites TS @solvapay deps to link: by default, preserving other deps', () => {
+    const raw = `${JSON.stringify(
+      {
+        name: 'my-mcp',
+        dependencies: {
+          '@solvapay/mcp': '^1.0.0',
+          '@solvapay/core': '^2.0.0',
+          '@solvapay/server-wasm': '^0.2.0',
+          zod: '^4.3.6',
+        },
+      },
+      null,
+      2,
+    )}\n`
+    const out = applyDevPathDeps('ts', raw, {
+      '@solvapay/mcp': '/repo/sdks/typescript/mcp',
+      '@solvapay/core': '/repo/sdks/typescript/core',
+      '@solvapay/server-wasm': '/repo/sdks/wasm',
+    })
+    const pkg = JSON.parse(out) as { dependencies: Record<string, string> }
+    expect(pkg.dependencies['@solvapay/mcp']).toBe('link:/repo/sdks/typescript/mcp')
+    expect(pkg.dependencies['@solvapay/core']).toBe('link:/repo/sdks/typescript/core')
+    expect(pkg.dependencies['@solvapay/server-wasm']).toBe('link:/repo/sdks/wasm')
+    // Third-party deps are untouched, and the trailing newline is preserved.
+    expect(pkg.dependencies.zod).toBe('^4.3.6')
+    expect(out.endsWith('\n')).toBe(true)
+  })
+
+  it('uses file: protocol for npm (no link: support)', () => {
+    const raw = `${JSON.stringify({ dependencies: { '@solvapay/core': '^2.0.0' } }, null, 2)}\n`
+    const out = applyDevPathDeps(
+      'ts',
+      raw,
+      { '@solvapay/core': '/repo/sdks/typescript/core' },
+      'file',
+    )
+    const pkg = JSON.parse(out) as { dependencies: Record<string, string> }
+    expect(pkg.dependencies['@solvapay/core']).toBe('file:/repo/sdks/typescript/core')
+  })
+
+  it('writes Python path sources as non-editable (scaffold lane default)', () => {
     const raw = `[project]\ndependencies = ["solvapay==0.1.0", "solvapay-mcp==0.1.0"]\n`
     const out = applyDevPathDeps('python', raw, {
       solvapay: '/repo/sdks/python',
       'solvapay-mcp': '/repo/sdks/python-mcp',
     })
     expect(out).toContain('[tool.uv.sources]')
+    expect(out).toContain('solvapay = { path = "/repo/sdks/python" }')
+    expect(out).toContain('solvapay-mcp = { path = "/repo/sdks/python-mcp" }')
+    expect(out).not.toContain('editable')
+  })
+
+  it('keeps Python path sources editable when opted in', () => {
+    const raw = `[project]\ndependencies = ["solvapay==0.1.0"]\n`
+    const out = applyDevPathDeps('python', raw, { solvapay: '/repo/sdks/python' }, 'link', {
+      pythonEditable: true,
+    })
     expect(out).toContain('solvapay = { path = "/repo/sdks/python", editable = true }')
-    expect(out).toContain('solvapay-mcp = { path = "/repo/sdks/python-mcp", editable = true }')
   })
 
   it('rewrites Ruby gems to path:', () => {

@@ -247,8 +247,16 @@ describe('validateToolName', () => {
     expect(validateToolName('hello')).toEqual({ ok: true, name: 'hello' })
   })
 
+  it('accepts snake_case (what every language doc tells users to pass)', () => {
+    expect(validateToolName('generate_haiku')).toEqual({ ok: true, name: 'generate_haiku' })
+  })
+
   it('rejects PascalCase', () => {
     expect(validateToolName('FetchPet').ok).toBe(false)
+  })
+
+  it('rejects a leading underscore', () => {
+    expect(validateToolName('_hidden').ok).toBe(false)
   })
 
   it('rejects kebab-case', () => {

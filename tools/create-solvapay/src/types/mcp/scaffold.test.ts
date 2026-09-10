@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile, mkdir, chmod, stat } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -128,6 +128,44 @@ describe('writeBootstrapEnv', () => {
   })
 })
 
+describe('copyDir exec-bit preservation', () => {
+  let src: string
+  let target: string
+
+  beforeEach(async () => {
+    src = await makeTempDir()
+    target = await makeTempDir()
+    await rm(target, { recursive: true, force: true })
+  })
+
+  afterEach(async () => {
+    await rm(src, { recursive: true, force: true })
+    await rm(target, { recursive: true, force: true })
+  })
+
+  it('carries the executable bit onto copied scripts (text branch)', async () => {
+    // `.sh` and `.mjs` go through the text (readFile→writeFile) branch, which
+    // dropped the exec bit before F3. Templates ship these as 0755.
+    await mkdir(path.join(src, 'scripts'), { recursive: true })
+    await writeFile(path.join(src, 'scripts', 'http.sh'), '#!/usr/bin/env bash\necho hi\n', 'utf8')
+    await chmod(path.join(src, 'scripts', 'http.sh'), 0o755)
+    await writeFile(path.join(src, 'scripts', 'verify.mjs'), '#!/usr/bin/env node\n', 'utf8')
+    await chmod(path.join(src, 'scripts', 'verify.mjs'), 0o755)
+    // A non-executable text file must NOT gain the exec bit.
+    await writeFile(path.join(src, 'README.md'), 'hello\n', 'utf8')
+    await chmod(path.join(src, 'README.md'), 0o644)
+
+    await copyDir(src, target)
+
+    const sh = await stat(path.join(target, 'scripts', 'http.sh'))
+    const mjs = await stat(path.join(target, 'scripts', 'verify.mjs'))
+    const md = await stat(path.join(target, 'README.md'))
+    expect(sh.mode & 0o111).not.toBe(0)
+    expect(mjs.mode & 0o111).not.toBe(0)
+    expect(md.mode & 0o111).toBe(0)
+  })
+})
+
 describe('copyDir + applyOverlay (round-trip)', () => {
   let target: string
 
@@ -161,10 +199,16 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     const worker = await readFile(path.join(target, 'src', 'worker.ts'), 'utf8')
     expect(worker).toContain("'ui://demo-mcp/mcp-app.html'")
     expect(worker).toContain("serverName: 'demo-mcp'")
+    expect(worker).toContain("from '@solvapay/server/edge'")
+    expect(worker).not.toMatch(/from '@solvapay\/server'(?!\/)/)
 
     const envExample = await readFile(path.join(target, '.env.example'), 'utf8')
     expect(envExample).toContain('SOLVAPAY_PRODUCT_REF=prd_test_123')
     expect(envExample).not.toContain('UPSTREAM_API_KEY')
+
+    const readme = await readFile(path.join(target, 'README.md'), 'utf8')
+    expect(readme).toMatch(/^# demo-mcp\n/)
+    expect(readme).not.toContain('**WORKER_NAME**')
 
     // dev.mjs should have copied into scripts/.
     const dev = await readFile(path.join(target, 'scripts', 'dev.mjs'), 'utf8')

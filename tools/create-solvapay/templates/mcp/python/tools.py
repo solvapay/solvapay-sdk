@@ -22,7 +22,9 @@ def register_tools(server: Server[object], *, solvapay: SolvaPay, product: str) 
         title="__TOOL_NAME__",
         description=(
             "Placeholder paid tool — echoes the input message so you can verify "
-            "the paywall is wired before writing real logic."
+            "the paywall is wired before writing real logic. 1 credit per call; "
+            "when gated, text-only narration names `account` (or `activate_plan` "
+            "when a planRef is known)."
         ),
         input_schema={
             "type": "object",

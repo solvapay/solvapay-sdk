@@ -68,4 +68,27 @@ describe('resolveLatestVersions', () => {
     const map = await resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} })
     expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe('v0.1.0')
   })
+
+  it('throws on a 404 when failOnNotPublished is set, naming the package', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
+    await expect(
+      resolveLatestVersions('ts', [{ name: '@solvapay/server-wasm', fallback: '0.2.0' }], {
+        onResolve: () => {},
+        failOnNotPublished: true,
+      }),
+    ).rejects.toThrow('@solvapay/server-wasm')
+  })
+
+  it('still falls back on a network error when failOnNotPublished is set', async () => {
+    // A network error is "can't reach the registry", not "not published" —
+    // it must not abort the published lane.
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error('ENETUNREACH')
+    }) as typeof fetch
+    const map = await resolveLatestVersions('ruby', [{ name: 'solvapay', fallback: '0.1.0' }], {
+      onResolve: () => {},
+      failOnNotPublished: true,
+    })
+    expect(map.get('solvapay')).toBe('0.1.0')
+  })
 })

@@ -31,16 +31,37 @@ import {
 } from './lib/mcp-client.mjs'
 
 const INTENT_TOOLS = ['account', 'activate_plan']
+// Legacy fallback only. The leak check below keys on tool metadata
+// (`_meta.audience` / `_meta.ui.resourceUri`); these names are kept so a
+// descriptor that predates the metadata still gets caught by name.
 const UI_TOOL_HINTS = [
   'create_payment_intent',
   'create_topup_payment_intent',
   'create_checkout_session',
 ]
 
+/**
+ * A tool is UI-only (must stay out of the text `tools/list`) when its
+ * metadata says so. Two shapes, either is enough:
+ *   - `_meta.audience` includes `'ui'` (the SDK's audience marker), or
+ *   - `_meta.ui.resourceUri` is present — a virtual UI/transport tool —
+ *     with `account` exempted (it legitimately carries a UI resource but
+ *     is an always-listed intent tool).
+ * Falls back to the legacy name list for descriptors with no metadata.
+ */
+function isUiOnlyTool(tool) {
+  const meta = tool?._meta
+  if (Array.isArray(meta?.audience) && meta.audience.includes('ui')) return true
+  if (meta?.ui?.resourceUri && tool.name !== 'account') return true
+  return UI_TOOL_HINTS.includes(tool?.name)
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (!args.workerUrl) {
-    console.error('Usage: verify.mjs <worker-url> [--credentials-file <path>] [--skip-oauth]')
+    console.error(
+      'Usage: verify.mjs <worker-url> [--credentials-file <path>] [--skip-oauth] [--no-platform] [--expect-tools a,b,c]',
+    )
     process.exit(2)
   }
 
@@ -72,7 +93,21 @@ async function main() {
 
   const rpcOptions = bearerToken ? { bearerToken } : {}
 
-  const base = args.workerUrl.replace(/\/$/, '')
+  // Derive the origin instead of string-appending. The boot log hands us
+  // the JSON-RPC endpoint (e.g. http://127.0.0.1:3030/mcp); the
+  // `.well-known/*` OAuth metadata lives at the ORIGIN, not under /mcp.
+  // Appending to the full endpoint 404/405s every OAuth check on a healthy
+  // server. `origin` for well-known; `base` (the full URL) for JSON-RPC.
+  let origin
+  let base
+  try {
+    const url = new URL(args.workerUrl)
+    origin = url.origin
+    base = url.href.replace(/\/$/, '')
+  } catch {
+    console.error(`Invalid <worker-url>: ${args.workerUrl}`)
+    process.exit(2)
+  }
   const checks = {}
 
   if (args.skipOauth) {
@@ -86,7 +121,7 @@ async function main() {
     }
   } else {
     checks.oauthProtectedResource = await run(async () => {
-      const meta = await getJson(`${base}/.well-known/oauth-protected-resource`)
+      const meta = await getJson(`${origin}/.well-known/oauth-protected-resource`)
       assert(typeof meta.resource === 'string', 'resource must be a string')
       assert(
         Array.isArray(meta.authorization_servers) && meta.authorization_servers.length > 0,
@@ -96,7 +131,7 @@ async function main() {
     })
 
     checks.oauthAuthorizationServer = await run(async () => {
-      const meta = await getJson(`${base}/.well-known/oauth-authorization-server`)
+      const meta = await getJson(`${origin}/.well-known/oauth-authorization-server`)
       assert(typeof meta.issuer === 'string', 'issuer must be a string')
       assert(
         typeof meta.authorization_endpoint === 'string',
@@ -107,11 +142,17 @@ async function main() {
     })
   }
 
-  const toolsResult = await runToolsListCheck(base, rpcOptions)
+  const toolsResult = await runToolsListCheck(base, rpcOptions, args.expectTools)
   checks.toolsList = toolsResult
 
   checks.widgetResource = await runWidgetResourceCheck(base, rpcOptions)
-  checks.bootstrapResource = await runBootstrapResourceCheck(base, rpcOptions)
+  // `bootstrapResource` reads `solvapay://bootstrap.json`, which the SDK
+  // builds from the SolvaPay backend. In Tier-1 (`--no-platform`, no
+  // :3010 running) there is nothing to bootstrap against, so skip it —
+  // it is exercised by the platform-backed Tier-2 sweep.
+  checks.bootstrapResource = args.noPlatform
+    ? { status: 'skipped', reason: '--no-platform: bootstrap resource needs the SolvaPay backend (Tier-2)' }
+    : await runBootstrapResourceCheck(base, rpcOptions)
 
   // `paywallGate` needs credentials: `tools/call` is gated under the
   // SDK default `requireAuth: true` even though discovery is anonymous.
@@ -122,13 +163,15 @@ async function main() {
     toolsResult.status === 'passed' && Array.isArray(toolsResult.value.names)
       ? findToolCandidates(toolsResult.value.names)
       : []
-  checks.paywallGate = !bearerToken
-    ? {
-        status: 'skipped',
-        reason:
-          'tools/call requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out` to exercise the paywall gate',
-      }
-    : await runPaywallGateCheck(base, candidates, rpcOptions)
+  checks.paywallGate = args.noPlatform
+    ? { status: 'skipped', reason: '--no-platform: paywall gate needs the SolvaPay backend (Tier-2)' }
+    : !bearerToken
+      ? {
+          status: 'skipped',
+          reason:
+            'tools/call requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out` to exercise the paywall gate',
+        }
+      : await runPaywallGateCheck(base, candidates, rpcOptions)
 
   // `merchantBootstrap` exercises the SolvaPay bootstrap path by
   // calling `account` (an intent tool, always registered) and
@@ -136,12 +179,14 @@ async function main() {
   // token, the call would gate at the HTTP layer — so it skips. With
   // a bearer token, a 500 or text containing `"bootstrap"` is a real
   // failure (typically `Provider not found` post-deploy).
-  checks.merchantBootstrap = bearerToken
-    ? await runMerchantBootstrapCheck(base, rpcOptions)
-    : {
-        status: 'skipped',
-        reason: 'no --credentials-file passed; cannot exercise SolvaPay bootstrap',
-      }
+  checks.merchantBootstrap = args.noPlatform
+    ? { status: 'skipped', reason: '--no-platform: merchant bootstrap needs the SolvaPay backend (Tier-2)' }
+    : bearerToken
+      ? await runMerchantBootstrapCheck(base, rpcOptions)
+      : {
+          status: 'skipped',
+          reason: 'no --credentials-file passed; cannot exercise SolvaPay bootstrap',
+        }
 
   const warnings = collectWarnings(checks)
   const summary = {
@@ -162,17 +207,28 @@ function parseArgs(argv) {
   let workerUrl
   let credentialsFile
   let skipOauth = false
+  let noPlatform = false
+  let expectTools
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--credentials-file') {
       credentialsFile = argv[++i]
     } else if (arg === '--skip-oauth') {
       skipOauth = true
+    } else if (arg === '--no-platform') {
+      // Tier-1 hermetic run: skip every check that needs the SolvaPay
+      // backend (:3010). Leaves toolsList + widget + (skipped) OAuth.
+      noPlatform = true
+    } else if (arg === '--expect-tools') {
+      expectTools = (argv[++i] ?? '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
     } else if (!workerUrl) {
       workerUrl = arg
     }
   }
-  return { workerUrl, credentialsFile, skipOauth }
+  return { workerUrl, credentialsFile, skipOauth, noPlatform, expectTools }
 }
 
 async function run(fn) {
@@ -196,18 +252,31 @@ async function run(fn) {
  * A 401 on `tools/list` is a failure — the worker is incorrectly
  * gating discovery (outdated SDK or a fully-private origin).
  */
-async function runToolsListCheck(base, rpcOptions = {}) {
+async function runToolsListCheck(base, rpcOptions = {}, expectTools) {
   try {
     const tools = await listTools(base, rpcOptions)
     const names = tools.map(t => t.name)
     for (const intent of INTENT_TOOLS) {
       assert(names.includes(intent), `intent tool \`${intent}\` missing from tools/list`)
     }
-    const leakedUi = names.filter(n => UI_TOOL_HINTS.includes(n))
+    // Metadata-driven: catch every UI-audience descriptor, not just the
+    // three hard-coded names. This is what makes the check fail the Rust
+    // row (six leaked UI tools) and enforces the SEP-1865 guardrail.
+    const leakedUi = tools.filter(isUiOnlyTool).map(t => t.name)
     assert(
       leakedUi.length === 0,
-      `UI-only tools leaked to text catalog: ${leakedUi.join(', ')}. Set \`hideToolsByAudience: ['ui']\`.`,
+      `UI-only tools leaked to text catalog: ${leakedUi.join(', ')}. Set \`hideToolsByAudience: ['ui']\` (or default it in the factory).`,
     )
+    // `--expect-tools`: every named tool must be present. An absent paid
+    // tool (mis-scaffolded, mis-registered) fails here rather than passing
+    // silently on a server that only ever exposed the intent tools.
+    if (Array.isArray(expectTools) && expectTools.length > 0) {
+      const missing = expectTools.filter(n => !names.includes(n))
+      assert(
+        missing.length === 0,
+        `expected tools missing from tools/list: ${missing.join(', ')} (present: ${names.join(', ')})`,
+      )
+    }
     return { status: 'passed', value: { toolCount: names.length, names } }
   } catch (err) {
     if (err instanceof RpcError && err.info?.httpStatus === 401) {

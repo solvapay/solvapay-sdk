@@ -93,6 +93,17 @@ const DEV_PATHS = (
       .split('\\')
       .join('/')
   switch (language) {
+    case 'ts':
+      // Every path is mapped under `tsPackages` / `sdks.wasm` in
+      // contract/manifest/repo-paths.yaml. `link:`/`file:` deps ignore
+      // semver, so the template's version floors never come up here.
+      return {
+        '@solvapay/mcp': abs(['sdks', 'typescript', 'mcp']),
+        '@solvapay/server': abs(['sdks', 'typescript', 'server']),
+        '@solvapay/react': abs(['sdks', 'typescript', 'react']),
+        '@solvapay/core': abs(['sdks', 'typescript', 'core']),
+        '@solvapay/server-wasm': abs(['sdks', 'wasm']),
+      }
     case 'python':
       return {
         solvapay: abs(['sdks', 'python']),
@@ -140,7 +151,10 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
     [PLACEHOLDERS.PRODUCT_REF, productRef ?? PLACEHOLDERS.PRODUCT_REF],
     [PLACEHOLDERS.PUBLIC_BASE_URL, publicBaseUrl],
     [PLACEHOLDERS.TOOL_NAME_PASCAL, pascalize(toolName)],
-    [PLACEHOLDERS.TOOL_NAME, language === 'ts' ? toolName : names.toolNameSnake],
+    // Snake_case MCP identifier on every row, including ts (F5). The old ts
+    // exception emitted a camelCase MCP name that violated the snake_case
+    // naming guardrail; `snakeCase()` normalizes camel or snake input alike.
+    [PLACEHOLDERS.TOOL_NAME, names.toolNameSnake],
     ['__PYTHON_PACKAGE__', names.pythonPackage],
     ['__RUBY_MODULE__', names.rubyModule],
     ['__GO_MODULE__', names.goModule],
@@ -153,8 +167,11 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
 
   if (language === 'ts') {
     await copyDir(BASE_TEMPLATE_DIR, target, { substitutions })
+    // File stem tracks the snake_case MCP identifier so the generated
+    // `import … from './__TOOL_NAME__'` (also substituted to snake_case)
+    // resolves regardless of whether the user passed camel or snake.
     const renameMap = new Map<string, string>([
-      [`src/tools/_placeholder.ts`, `src/tools/${toolName}.ts`],
+      [`src/tools/_placeholder.ts`, `src/tools/${names.toolNameSnake}.ts`],
     ])
     await applyOverlay(FROM_SCRATCH_OVERLAY_DIR, target, { substitutions, renameMap })
   } else {
@@ -168,31 +185,46 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
     publicBaseUrl,
   })
 
-  process.stdout.write(`🔄 Resolving latest SolvaPay versions for ${language}…\n`)
-  const versionMap = await resolveLatestVersions(language)
-  await patchManifest(language, target, versionMap)
+  const packageManager = language === 'ts' ? await detectPackageManager(target) : 'npm'
 
-  if (dev && language !== 'ts') {
+  // Registry version resolution is for the published lane only. Under `--dev`
+  // the manifest is rewritten to checkout paths just below, so resolving and
+  // pinning registry versions here is wasted work — and for an unpublished
+  // package (e.g. @solvapay/server-wasm) it would pin a version that installs
+  // nowhere. Skipping it keeps the dev lane fully offline.
+  if (!dev) {
+    process.stdout.write(`🔄 Resolving latest SolvaPay versions for ${language}…\n`)
+    const versionMap = await resolveLatestVersions(language, undefined, {
+      failOnNotPublished: true,
+    })
+    await patchManifest(language, target, versionMap)
+  }
+
+  if (dev) {
     const sdkRoot = await findSolvapaySdkRoot(mcpLanguageTemplateDir(language))
     const paths = sdkRoot ? DEV_PATHS(language, sdkRoot) : undefined
     if (paths) {
       const { readFile, writeFile } = await import('node:fs/promises')
       const manifestName =
-        language === 'python'
-          ? 'pyproject.toml'
-          : language === 'ruby'
-            ? 'Gemfile'
-            : language === 'go'
-              ? 'go.mod'
-              : 'Cargo.toml'
+        language === 'ts'
+          ? 'package.json'
+          : language === 'python'
+            ? 'pyproject.toml'
+            : language === 'ruby'
+              ? 'Gemfile'
+              : language === 'go'
+                ? 'go.mod'
+                : 'Cargo.toml'
       const manifestPath = join(target, manifestName)
       const raw = await readFile(manifestPath, 'utf8')
-      await writeFile(manifestPath, applyDevPathDeps(language, raw, paths), 'utf8')
+      // npm has no `link:` protocol; use `file:` there. pnpm/yarn symlink a
+      // `link:` dep against the checkout, so edits in the SDK show up without
+      // a reinstall — the point of the dev lane.
+      const protocol = packageManager === 'npm' ? 'file' : 'link'
+      await writeFile(manifestPath, applyDevPathDeps(language, raw, paths, protocol), 'utf8')
       process.stdout.write('🧪 --dev: using monorepo path dependencies\n')
     }
   }
-
-  const packageManager = language === 'ts' ? await detectPackageManager(target) : 'npm'
   if (skipInstall) {
     process.stdout.write('⏭  Skipping dependency install (--skip-install)\n')
   } else {

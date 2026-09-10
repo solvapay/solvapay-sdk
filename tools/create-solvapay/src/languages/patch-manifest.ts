@@ -120,14 +120,45 @@ export async function patchManifest(
   }
 }
 
+export type DevPathDepOptions = {
+  /**
+   * SDK authors can opt into uv editable path deps for live reload of the
+   * in-tree PyO3 extension. The scaffold `--dev` lane must stay
+   * non-editable: `editable = true` builds into the checkout's shared
+   * `target/` and a leftover foreign-platform `.so` wins over a fresh
+   * build (`invalid ELF header` on Linux after a Mac compile).
+   */
+  pythonEditable?: boolean
+}
+
 export function applyDevPathDeps(
   language: ScaffoldLanguage,
   raw: string,
   paths: Record<string, string>,
+  protocol: 'link' | 'file' = 'link',
+  options: DevPathDepOptions = {},
 ): string {
+  if (language === 'ts') {
+    const pkg = JSON.parse(raw) as {
+      dependencies?: Record<string, string>
+    } & Record<string, unknown>
+    if (pkg.dependencies && typeof pkg.dependencies === 'object') {
+      for (const [name, pathValue] of Object.entries(paths)) {
+        if (Object.prototype.hasOwnProperty.call(pkg.dependencies, name)) {
+          pkg.dependencies[name] = `${protocol}:${pathValue}`
+        }
+      }
+    }
+    const trailingNewline = raw.endsWith('\n') ? '\n' : ''
+    return `${JSON.stringify(pkg, null, 2)}${trailingNewline}`
+  }
   if (language === 'python') {
     const sources = Object.entries(paths)
-      .map(([name, pathValue]) => `${name} = { path = "${pathValue}", editable = true }`)
+      .map(([name, pathValue]) =>
+        options.pythonEditable
+          ? `${name} = { path = "${pathValue}", editable = true }`
+          : `${name} = { path = "${pathValue}" }`,
+      )
       .join('\n')
     if (raw.includes('[tool.uv.sources]')) {
       return raw.replace(

@@ -90,6 +90,7 @@
     "preview:python": "tsx tools/repo/language-preview.ts --only python",
     "preview:ruby": "tsx tools/repo/language-preview.ts --only ruby",
     "preview:go": "tsx tools/repo/language-preview.ts --only go",
+    "scaffold:sweep": "tsx tools/repo/scaffold-sweep.ts",
     "delegation:check": "tsx tools/conformance/check-delegation.ts",
     "facade-coverage": "tsx tools/codegen/facade-coverage.ts",
     "facade-coverage:check": "tsx tools/codegen/facade-coverage.ts --check",

@@ -264,17 +264,22 @@ export function sanitizeProjectName(
   return { ok: true, name: lower }
 }
 
-const CAMEL_RE = /^[a-z][a-zA-Z0-9]*$/
+// Accept camelCase or snake_case. Every language doc tells users to pass a
+// snake_case `--tool-name` (e.g. `generate_haiku`), and four of five templates
+// already emit snake_case; the scaffolder normalizes to the snake_case MCP
+// identifier downstream (see from-scratch.ts). Underscores are the only
+// addition over the old camelCase rule — no hyphens, spaces, or punctuation.
+const TOOL_NAME_RE = /^[a-z][a-zA-Z0-9_]*$/
 
 export function validateToolName(
   name: string,
 ): { ok: true; name: string } | { ok: false; reason: string } {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'tool name is empty' }
-  if (!CAMEL_RE.test(trimmed)) {
+  if (!TOOL_NAME_RE.test(trimmed)) {
     return {
       ok: false,
-      reason: `"${name}" must be camelCase (start lowercase, letters and digits only — no hyphens, spaces, or punctuation)`,
+      reason: `"${name}" must be camelCase or snake_case (start lowercase; letters, digits, and underscores only — no hyphens, spaces, or punctuation)`,
     }
   }
   return { ok: true, name: trimmed }

@@ -17,6 +17,9 @@ checks:
   - name: rust-mcp
     jobId: rust-mcp
     gate: MCP-authoring conformance; Per-language examples
+  - name: rust-cloudflare-worker
+    jobId: rust-cloudflare-worker
+    gate: Per-language examples
   - name: python-binding (manylinux-x86_64)
     jobId: python-binding
     gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness; Per-language examples

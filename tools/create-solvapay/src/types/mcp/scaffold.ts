@@ -13,7 +13,7 @@
 
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { mkdir, readdir, readFile, writeFile, copyFile, stat } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile, copyFile, stat, chmod } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PackageManager } from '@solvapay/init'
@@ -167,6 +167,19 @@ type CopyOptions = {
   renameMap?: Map<string, string>
 }
 
+/**
+ * Carry the source's executable bit onto the destination. The binary
+ * `copyFile` branch preserves mode for free; the text branch goes through
+ * `readFile`→`writeFile`, which creates the destination at the default mode
+ * (0644) and drops the exec bit. Templates ship `scripts/*.sh` and `*.mjs`
+ * as 0755, and their documented run command is `./scripts/http.sh` — so
+ * without this the generated scripts are not executable.
+ */
+async function preserveExecBit(srcPath: string, destPath: string): Promise<void> {
+  const { mode } = await stat(srcPath)
+  if (mode & 0o111) await chmod(destPath, 0o755)
+}
+
 export async function copyDir(src: string, dest: string, options: CopyOptions = {}): Promise<void> {
   const substitutions = options.substitutions ?? new Map<string, string>()
   const skipPaths = options.skipPaths ?? new Set<string>()
@@ -203,6 +216,7 @@ export async function copyDir(src: string, dest: string, options: CopyOptions = 
       const content = await readFile(srcPath, 'utf8')
       await mkdir(dirname(destPath), { recursive: true })
       await writeFile(destPath, substitute(content, substitutions), 'utf8')
+      await preserveExecBit(srcPath, destPath)
     } else {
       await mkdir(dirname(destPath), { recursive: true })
       await copyFile(srcPath, destPath)
@@ -288,6 +302,7 @@ export async function applyOverlay(
         await writeFile(destPath, `${existing}${joiner}${payload}`, 'utf8')
       } else {
         await writeFile(destPath, payload, 'utf8')
+        await preserveExecBit(srcPath, destPath)
       }
     } else {
       await mkdir(dirname(destPath), { recursive: true })

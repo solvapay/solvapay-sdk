@@ -26,7 +26,7 @@ export function register__TOOL_NAME_PASCAL__(ctx: AdditionalToolsContext): void 
   ctx.registerPayable('__TOOL_NAME__', {
     title: '__TOOL_NAME__',
     description:
-      'Placeholder paid tool — echoes the input message back so you can verify the paywall is wired before writing real logic. 1 credit per call; returns a text-only purchase-required narration naming the `upgrade` or `topup` recovery tool when the customer is out of balance. Replace this description (and the handler) with your tool semantics before going live.',
+      'Placeholder paid tool — echoes the input message back so you can verify the paywall is wired before writing real logic. 1 credit per call; when gated, text-only narration names `account` (or `activate_plan` when a planRef is known). Replace this description (and the handler) with your tool semantics before going live.',
     schema: {
       message: z.string().describe('What the caller wants').optional(),
     },
