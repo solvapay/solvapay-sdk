@@ -120,7 +120,10 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
       // Balance threshold is deliberately chatty so the demo can cross
       // it after a handful of calls against a starter top-up.
       const LOW_BALANCE_CENTS = 1000
-      const isLowBalance = ctx.customer.balance < LOW_BALANCE_CENTS
+      const isLowBalance =
+        ctx.customer.isCreditBased &&
+        ctx.customer.balance !== undefined &&
+        ctx.customer.balance < LOW_BALANCE_CENTS
 
       if (!isLowBalance) {
         return ctx.respond({ range, results }, { units: results.length })

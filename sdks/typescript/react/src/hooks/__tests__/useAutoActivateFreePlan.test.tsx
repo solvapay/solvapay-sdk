@@ -90,7 +90,7 @@ interface SetActivationOpts {
 }
 
 function setActivation(opts: SetActivationOpts = {}) {
-  const activate = opts.activate ?? (vi.fn().mockResolvedValue(undefined) as unknown as ActivateFn)
+  const activate = opts.activate ?? vi.fn<ActivateFn>().mockResolvedValue('activated')
   mockedUseActivation.mockReturnValue({
     activate,
     state: 'idle',

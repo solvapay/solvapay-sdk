@@ -14,16 +14,7 @@
  * targeting without inline styles.
  */
 
-import React, {
-  createContext,
-  forwardRef,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { createContext, forwardRef, useCallback, useContext, useMemo, useState } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { usePlans } from '../hooks/usePlans'
@@ -35,7 +26,6 @@ import { interpolate } from '../i18n/interpolate'
 import { PlanSelectionProvider } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProductRefError, MissingProviderError } from '../utils/errors'
-import { isPaygPlan } from '../utils/isPayg'
 import {
   getPlanPricingOptions,
   resolvePlanPricingOption,
@@ -142,15 +132,6 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
     [fetcher, _config],
   )
 
-  const { plans, selectedPlan, selectPlan, setSelectedPlanIndex, loading, error } = usePlans({
-    productRef,
-    fetcher: effectiveFetcher,
-    filter,
-    sortBy,
-    autoSelectFirstPaid,
-    initialPlanRef,
-  })
-
   const autoCurrentPlanRef = useMemo(() => {
     const active = purchases
       .filter(p => p.status === 'active')
@@ -160,6 +141,16 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
 
   const resolvedCurrentPlanRef =
     currentPlanRef === null ? null : (currentPlanRef ?? autoCurrentPlanRef)
+
+  const { plans, selectedPlan, selectPlan, setSelectedPlanIndex, loading, error } = usePlans({
+    productRef,
+    fetcher: effectiveFetcher,
+    filter,
+    sortBy,
+    autoSelectFirstPaid,
+    initialPlanRef,
+    excludePlanRef: resolvedCurrentPlanRef,
+  })
 
   const isCurrent = useCallback(
     (ref: string) => resolvedCurrentPlanRef === ref,
@@ -176,10 +167,11 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
       const plan = plans.find(p => p.reference === ref)
       if (!plan) return
       if (plan.requiresPayment === false) return
+      if (isCurrent(ref)) return
       selectPlan(ref)
       onSelect?.(ref, plan)
     },
-    [plans, selectPlan, onSelect],
+    [plans, selectPlan, onSelect, isCurrent],
   )
 
   // Clearing the selection pins `userHasSelected` true inside
@@ -213,32 +205,6 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PlanSelectorRoot(pro
   }, [])
 
   const selectedCurrency = selectedPlan ? getSelectedOption(selectedPlan).currency : null
-
-  // Auto-select the customer's already-active PAYG plan when it lands
-  // in the visible plan list. The default checkout filter (see
-  // `buildDefaultCheckoutPlanFilter`) collapses topup products down to
-  // a single PAYG card, so without this the user faces a card stamped
-  // "Current" with no way to advance — the only path forward is the
-  // amount picker behind it. Recurring/one-time current plans stay
-  // disabled (re-selecting would re-charge), so we gate on `isPaygPlan`.
-  // One-shot per `productRef` so a manual `clearSelection` doesn't
-  // immediately re-snap to the current plan.
-  const autoCurrentAppliedKeyRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (autoCurrentAppliedKeyRef.current === productRef) return
-    if (selectedPlanRef) {
-      autoCurrentAppliedKeyRef.current = productRef
-      return
-    }
-    if (!resolvedCurrentPlanRef || plans.length === 0) return
-    const currentPlan = plans.find(p => p.reference === resolvedCurrentPlanRef)
-    if (!currentPlan || !isPaygPlan(currentPlan)) {
-      autoCurrentAppliedKeyRef.current = productRef
-      return
-    }
-    autoCurrentAppliedKeyRef.current = productRef
-    select(resolvedCurrentPlanRef)
-  }, [productRef, plans, resolvedCurrentPlanRef, selectedPlanRef, select])
 
   const ctx = useMemo<PlanSelectorContextValue>(
     () => ({
@@ -339,29 +305,14 @@ const Grid = forwardRef<HTMLDivElement, GridProps>(function PlanSelectorGrid(
         const isFree = ctx.isFree(plan.reference)
         const isPopular = ctx.isPopular(plan.reference)
         const selected = ctx.selectedPlanRef === plan.reference
-        // A "current" PAYG plan stays selectable so the customer can
-        // step into the amount picker and top up. Re-selecting an
-        // already-active recurring/one-time plan would re-charge them,
-        // so those cards remain disabled. Free plans are always
-        // disabled — they're informational, not a checkout target.
-        const isPaygCurrent = isCurrent && isPaygPlan(plan)
-        const disabled = isFree || (isCurrent && !isPaygCurrent)
-        // Disabled current plans always read as 'current' regardless
-        // of selection (consumers may auto-select them at the
-        // `usePlans` layer; the visual should still communicate
-        // "active, no action available"). Selectable PAYG-current
-        // plans flip to 'selected' once the user clicks them so the
-        // selection feedback isn't masked by the persistent badge.
-        const state: CardState =
-          isCurrent && !isPaygCurrent
-            ? 'current'
-            : selected
-              ? 'selected'
-              : isCurrent
-                ? 'current'
-                : isFree
-                  ? 'disabled'
-                  : 'idle'
+        const disabled = isFree || isCurrent
+        const state: CardState = isCurrent
+          ? 'current'
+          : selected
+            ? 'selected'
+            : isFree
+              ? 'disabled'
+              : 'idle'
         const pricingOptions = getPlanPricingOptions(plan)
         const selectedOption = ctx.getSelectedOption(plan)
         const cardCtx: CardContextValue = {

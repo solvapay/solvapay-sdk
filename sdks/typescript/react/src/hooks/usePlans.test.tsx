@@ -107,6 +107,52 @@ describe('usePlans', () => {
       expect(result.current.selectedPlan?.reference).toBe('plan_basic')
     })
 
+    it('skips excludePlanRef when auto-selecting the first paid plan', async () => {
+      const fetcher = createFetcher()
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+          excludePlanRef: 'plan_basic',
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlan?.reference).toBe('plan_pro')
+    })
+
+    it('selects nothing when autoSelectFirstPaid matches only excluded or free plans', async () => {
+      const fetcher = createFetcher([freePlan, basicPlan])
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+          excludePlanRef: 'plan_basic',
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
+    it('selects nothing when autoSelectFirstPaid finds no paid plan', async () => {
+      const fetcher = createFetcher([freePlan])
+      const { result } = renderHook(() =>
+        usePlans({
+          productRef: 'prd_1',
+          fetcher,
+          autoSelectFirstPaid: true,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.selectedPlanIndex).toBe(-1)
+      expect(result.current.selectedPlan).toBeNull()
+    })
+
     it('leaves selection empty when no initialPlanRef and autoSelectFirstPaid is false', async () => {
       // Caller opted out of auto-selection; the hook must not silently
       // pre-select the first card. `-1` surfaces as `selectedPlan: null`

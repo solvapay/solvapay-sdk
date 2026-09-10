@@ -52,7 +52,7 @@ Grounded in the MCP 2026-07-28 tools spec, SEP-1865 / MCP Apps, and the ext-apps
 - **UI is the default for intent tools that need pixels; the text lane is not optional.** A short `content[0]` under `mode: 'ui'` is still the model/text-host copy, not a pointer at the panel. Full markdown stays behind `mode: 'text'` / `'auto'`.
 - **Do not rely on `audience: ['assistant']`.** Audience-aware hosts hide those blocks from the user pane. Hosts that ignore the annotation must still see a useful `content[0]`.
 - **UI fires only when the interaction genuinely needs pixels.** Listing plans, checking usage, confirming a cancel, reading current limits: text is enough.
-- **Text-only hosts must still inform, upgrade, and discover.** A gated call without an iframe has to state current limits, name `` `account` `` with the right `view` (or `` `activate_plan` `` when a `planRef` is known) plus a https URL, and point at `docs://solvapay/overview.md`.
+- **Text-only hosts must still inform, upgrade, and discover.** A gated call without an iframe has to state current limits, name `` `account` `` with the right `view` (or `` `activate_plan` `` when a `planRef` is known), and include a https URL. Keep `docs://solvapay/overview.md` registered for capability discovery — do not put it in recovery copy. The docs site pages are provider implementation guides, not customer recovery.
 
 ### Merchant API
 

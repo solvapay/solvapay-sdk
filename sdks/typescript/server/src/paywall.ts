@@ -234,6 +234,25 @@ export class SolvaPayPaywall {
     }
   }
 
+  /**
+   * Drop cached limits for `customerRef`. When `product` is omitted every
+   * meter/product entry for that customer is removed. Matches both the
+   * backend `cus_…` ref and an unmapped external ref used as a cache key.
+   */
+  invalidateLimits(customerRef: string, product?: string): void {
+    const aliases = new Set<string>([customerRef])
+    const mapped = this.customerRefMapping.get(customerRef)
+    if (mapped) aliases.add(mapped)
+    if (!customerRef.startsWith('cus_')) aliases.add(`cus_${customerRef}`)
+
+    for (const key of [...this.limitsCache.keys()]) {
+      const [ref, prod] = key.split(':')
+      if (!ref || !aliases.has(ref)) continue
+      if (product && prod !== product) continue
+      this.limitsCache.delete(key)
+    }
+  }
+
   private resolveProduct(metadata: PaywallMetadata): string {
     return requireProductRef(metadata.product, process.env.SOLVAPAY_PRODUCT_REF)
   }

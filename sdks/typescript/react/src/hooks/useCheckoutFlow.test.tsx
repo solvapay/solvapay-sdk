@@ -148,6 +148,8 @@ interface WrapperOptions {
    */
   merchant?: Merchant | null
   credits?: number
+  /** Deep-link a plan without going through `select()` (current plans are inert there). */
+  initialPlanRef?: string
 }
 
 function makeWrapper(opts: WrapperOptions = {}): {
@@ -176,7 +178,11 @@ function makeWrapper(opts: WrapperOptions = {}): {
   }
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <SolvaPayContext.Provider value={ctx}>
-      <PlanSelector.Root productRef={productRef} autoSelectFirstPaid={false}>
+      <PlanSelector.Root
+        productRef={productRef}
+        autoSelectFirstPaid={false}
+        initialPlanRef={opts.initialPlanRef}
+      >
         {children}
       </PlanSelector.Root>
     </SolvaPayContext.Provider>
@@ -366,16 +372,13 @@ describe('useCheckoutFlow — PAYG branch', () => {
     const { Wrapper, transport } = makeWrapper({
       transport: makeTransport({ activatePlan: activate }),
       purchases,
+      initialPlanRef: 'pln_payg',
     })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
     })
-    // <PlanSelector.Root> auto-selects the PAYG-current plan; we still
-    // explicitly call selectPlan to keep the test independent of the
-    // auto-select effect's timing.
-    act(() => {
-      result.current.selectPlan('pln_payg')
-    })
+    // The picker no longer selects the current plan. initialPlanRef is
+    // the deep-link path into the amount step.
     await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
 
     await act(async () => {
@@ -410,12 +413,10 @@ describe('useCheckoutFlow — PAYG branch', () => {
       transport: makeTransport({ activatePlan: activate }),
       purchases,
       credits: 500,
+      initialPlanRef: 'pln_payg',
     })
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
       wrapper: Wrapper,
-    })
-    act(() => {
-      result.current.selectPlan('pln_payg')
     })
     await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
 

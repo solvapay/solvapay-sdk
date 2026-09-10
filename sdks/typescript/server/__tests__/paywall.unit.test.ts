@@ -950,6 +950,24 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       vi.useRealTimers()
     })
 
+    it('invalidateLimits drops the cache so the next call refetches', async () => {
+      const checkLimitsSpy = vi
+        .spyOn(mockApiClient, 'checkLimits')
+        .mockResolvedValue({ withinLimits: true, remaining: 5, plan: 'free' })
+
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'cache-invalidate-api' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_invalidate' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      solvaPay.paywall.invalidateLimits('cus_invalidate', 'cache-invalidate-api')
+
+      await protectedHandler({ auth: { customer_ref: 'cus_invalidate' } })
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(2)
+    })
+
     it('coalesces concurrent checkLimits and consumes one unit per caller', async () => {
       let resolveLimits!: (value: {
         withinLimits: boolean

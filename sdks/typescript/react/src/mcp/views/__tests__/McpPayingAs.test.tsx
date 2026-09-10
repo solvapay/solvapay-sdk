@@ -46,8 +46,6 @@ function stubContext(email: string | undefined): SolvaPayContextValue {
       creditsPerMinorUnit: null,
       displayExchangeRate: null,
       display: null,
-      displayMinorUnits: null,
-      minorUnitsPerMajor: null,
       refetch: async () => null,
       adjustBalance: () => undefined,
       reconcileAfterUsageDebit: () => undefined,
@@ -64,11 +62,7 @@ function renderPayingAs(
   return render(
     <SolvaPayContext.Provider value={stubContext(options.email)}>
       <McpDisplayModeProvider
-        value={{
-          displayMode,
-          availableDisplayModes: ['inline', 'fullscreen'],
-          hostedRail: displayMode === 'fullscreen' ? 'hosted' : 'inline',
-        }}
+        value={{ displayMode, availableDisplayModes: ['inline', 'fullscreen'] }}
       >
         <McpPayingAs {...props} />
       </McpDisplayModeProvider>

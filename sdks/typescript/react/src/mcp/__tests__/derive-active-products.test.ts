@@ -97,17 +97,16 @@ describe('formatProductTerms', () => {
 })
 
 describe('formatAllowanceTerms', () => {
-  const starterSnapshot: NonNullable<PurchaseInfo['planSnapshot']> = {
-    reference: 'pln_starter',
-    name: 'Starter',
-    currency: 'USD',
-    price: 3000,
-    isMetered: true,
-  }
   const starter: PurchaseInfo = {
     ...planPurchase,
     planRef: 'pln_starter',
-    planSnapshot: starterSnapshot,
+    planSnapshot: {
+      reference: 'pln_starter',
+      name: 'Starter',
+      currency: 'USD',
+      price: 3000,
+      isMetered: true,
+    },
   }
 
   it('puts price and renews on a paid allowance plan', () => {
@@ -134,7 +133,12 @@ describe('formatAllowanceTerms', () => {
   it('qualifies a one-time plan and omits renews', () => {
     const oneTime: PurchaseInfo = {
       ...starter,
-      planSnapshot: { ...starterSnapshot, name: 'Pro' },
+      planSnapshot: {
+        ...starter.planSnapshot,
+        name: 'Pro',
+        currency: 'USD',
+        price: 9000,
+      },
     }
     expect(
       formatAllowanceTerms(deriveActiveProducts([oneTime])[0]!, 'en-US', {

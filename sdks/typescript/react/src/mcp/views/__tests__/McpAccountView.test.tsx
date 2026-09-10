@@ -17,13 +17,7 @@ import { seedUsageSnapshot } from '../../../hooks/useUsage'
 import type { TransportLimitsResult } from '../../../transport/types'
 import { createTransportCacheKey } from '../../../transport/cache-key'
 import type { AutoRechargeConfig, PaymentMethodInfo } from '@solvapay/server'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  PurchaseInfo,
-  PurchaseStatus,
-  Merchant,
-} from '../../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { PlanLike } from '../../plan-actions'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
@@ -51,9 +45,7 @@ function makeTransport(
 }
 
 function buildCtx(
-  overrides: Partial<Omit<SolvaPayContextValue, 'purchase'>> & {
-    purchase?: Partial<PurchaseStatus>
-  } = {},
+  overrides: Partial<SolvaPayContextValue> = {},
   purchases: PurchaseInfo[] = [],
   credits: number | null = null,
 ): SolvaPayContextValue {
@@ -111,7 +103,6 @@ function renderAccount(
         value={{
           displayMode,
           availableDisplayModes: ['inline', 'fullscreen'],
-          hostedRail: displayMode === 'fullscreen' ? 'hosted' : 'inline',
         }}
       >
         <McpAccountView {...props} />
@@ -214,7 +205,12 @@ const freePurchase: PurchaseInfo = {
     price: 0,
     isMetered: true,
   },
-  usage: { used: 2, overageCost: 0, overageUnits: 0, periodEnd: '2026-10-01T00:00:00Z' },
+  usage: {
+    used: 2,
+    overageCost: 0,
+    overageUnits: 0,
+    periodEnd: '2026-10-01T00:00:00Z',
+  },
 }
 
 const starterPurchase: PurchaseInfo = {
@@ -236,7 +232,12 @@ const starterPurchase: PurchaseInfo = {
     price: 3000,
     isMetered: true,
   },
-  usage: { used: 6200, overageCost: 0, overageUnits: 0, periodEnd: '2026-09-12T00:00:00Z' },
+  usage: {
+    used: 6200,
+    overageCost: 0,
+    overageUnits: 0,
+    periodEnd: '2026-09-12T00:00:00Z',
+  },
 }
 
 const unlimitedPurchase: PurchaseInfo = {
@@ -266,11 +267,11 @@ function seedLimits(partial: Partial<TransportLimitsResult> & { remaining: numbe
       withinLimits: true,
       meterName: 'requests',
       activationRequired: false,
-      throttled: undefined,
-      overage: undefined,
-      needsTopUp: undefined,
-      needsUpgrade: undefined,
-      upgraded: undefined,
+      throttled: false,
+      overage: false,
+      needsTopUp: false,
+      needsUpgrade: false,
+      upgraded: false,
       ...partial,
     },
     timestamp: Date.now(),
@@ -702,10 +703,10 @@ describe('McpAccountView', () => {
         needsTopUp: true,
         meterName: 'requests',
         activationRequired: false,
-        throttled: undefined,
-        overage: undefined,
-        needsUpgrade: undefined,
-        upgraded: undefined,
+        throttled: false,
+        overage: false,
+        needsUpgrade: false,
+        upgraded: false,
       },
       timestamp: Date.now(),
       promise: null,
@@ -1058,7 +1059,12 @@ describe('McpAccountView', () => {
     const onChangePlan = vi.fn()
     const overagePurchase: PurchaseInfo = {
       ...starterPurchase,
-      usage: { used: 11240, overageCost: 0, overageUnits: 0, periodEnd: '2026-09-12T00:00:00Z' },
+      usage: {
+        used: 11240,
+        overageCost: 0,
+        overageUnits: 0,
+        periodEnd: '2026-09-12T00:00:00Z',
+      },
     }
     const ctx = buildCtx({}, [overagePurchase], 0)
     renderAccount(ctx, {
@@ -1383,17 +1389,9 @@ describe('McpAccountView', () => {
       },
       historyTransport(chargeHistory),
     )
-    const ctx = buildCtx(
-      {
-        _config: config,
-        purchase: {
-          email: 'tommy@solvapay.com',
-          name: 'Tommy Berglind',
-        },
-      },
-      [starterPurchase],
-      0,
-    )
+    const ctx = buildCtx({ _config: config }, [starterPurchase], 0)
+    ctx.purchase.email = 'tommy@solvapay.com'
+    ctx.purchase.name = 'Tommy Berglind'
     renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' }, 'fullscreen')
     expect(await screen.findByText('Sold by Test')).toBeTruthy()
     expect(screen.getByText('San Francisco, CA')).toBeTruthy()

@@ -28,6 +28,7 @@ function computeInitialIndex(
   plans: Plan[],
   initialPlanRef?: string,
   autoSelectFirstPaid?: boolean,
+  excludePlanRef?: string | null,
 ): number {
   if (plans.length === 0) return 0
 
@@ -37,15 +38,15 @@ function computeInitialIndex(
   }
 
   if (autoSelectFirstPaid) {
-    const idx = plans.findIndex(p => p.requiresPayment !== false)
-    return idx >= 0 ? idx : 0
+    return plans.findIndex(p => p.requiresPayment !== false && p.reference !== excludePlanRef)
   }
 
   // No `initialPlanRef`, no `autoSelectFirstPaid` -> caller wants no
   // auto-selection. Returning 0 here would silently pre-select the
   // first card and enable Continue, defeating the opt-out. `-1`
   // surfaces as `selectedPlan === null`; consumers (the Continue
-  // button included) gate on selection state.
+  // button included) gate on selection state. The same sentinel is
+  // used when every paid plan is excluded.
   return -1
 }
 
@@ -55,7 +56,8 @@ function computeInitialIndex(
  * Selection lifecycle:
  * 1. While `selectionReady` is false, plans fetch but no auto-selection fires.
  * 2. When `selectionReady` becomes true AND plans are loaded, one-shot initial
- *    selection is applied (initialPlanRef > autoSelectFirstPaid > index 0).
+ *    selection is applied (initialPlanRef > autoSelectFirstPaid excluding
+ *    excludePlanRef > no selection).
  * 3. After initial selection, user picks always win — the hook never overrides.
  */
 export function usePlans(options: UsePlansOptions): UsePlansReturn {
@@ -66,6 +68,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
     sortBy,
     autoSelectFirstPaid = false,
     initialPlanRef,
+    excludePlanRef,
     selectionReady = true,
   } = options
 
@@ -86,6 +89,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const sortByRef = useRef(sortBy)
   const autoSelectFirstPaidRef = useRef(autoSelectFirstPaid)
   const initialPlanRefRef = useRef(initialPlanRef)
+  const excludePlanRefRef = useRef(excludePlanRef)
   const selectionReadyRef = useRef(selectionReady)
 
   const hasAppliedInitialRef = useRef(false)
@@ -101,7 +105,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
     }
     const processed = processPlans(cached.plans, filter, sortBy)
     if (processed.length === 0) return 0
-    const idx = computeInitialIndex(processed, initialPlanRef, autoSelectFirstPaid)
+    const idx = computeInitialIndex(processed, initialPlanRef, autoSelectFirstPaid, excludePlanRef)
     hasAppliedInitialRef.current = true
     return idx
   })
@@ -118,24 +122,13 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const [loading, setLoading] = useState(() => plans.length === 0)
   const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => {
-    fetcherRef.current = effectiveFetcher
-  }, [effectiveFetcher])
-  useEffect(() => {
-    filterRef.current = filter
-  }, [filter])
-  useEffect(() => {
-    sortByRef.current = sortBy
-  }, [sortBy])
-  useEffect(() => {
-    autoSelectFirstPaidRef.current = autoSelectFirstPaid
-  }, [autoSelectFirstPaid])
-  useEffect(() => {
-    initialPlanRefRef.current = initialPlanRef
-  }, [initialPlanRef])
-  useEffect(() => {
-    selectionReadyRef.current = selectionReady
-  }, [selectionReady])
+  useEffect(() => { fetcherRef.current = effectiveFetcher }, [effectiveFetcher])
+  useEffect(() => { filterRef.current = filter }, [filter])
+  useEffect(() => { sortByRef.current = sortBy }, [sortBy])
+  useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])
+  useEffect(() => { initialPlanRefRef.current = initialPlanRef }, [initialPlanRef])
+  useEffect(() => { excludePlanRefRef.current = excludePlanRef }, [excludePlanRef])
+  useEffect(() => { selectionReadyRef.current = selectionReady }, [selectionReady])
 
   // Wrapped setter that tracks user-initiated selection
   const setSelectedPlanIndex = useCallback((index: number) => {
@@ -153,6 +146,7 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
       processedPlans,
       initialPlanRefRef.current,
       autoSelectFirstPaidRef.current,
+      excludePlanRefRef.current,
     )
     setSelectedPlanIndexState(idx)
   }, [])

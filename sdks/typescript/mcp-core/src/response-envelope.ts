@@ -15,6 +15,7 @@
  */
 
 import type { ContentBlock, ResponseOptions, ResponseResult } from './types'
+import type { LimitResponseWithPlan } from '@solvapay/server'
 
 /**
  * Type guard for `ResponseResult`. Matches by the branded field so
@@ -65,11 +66,13 @@ export function makeResponseResult<TData>(
   data: TData,
   options: ResponseOptions | undefined,
   emittedBlocks: ContentBlock[],
+  limits?: LimitResponseWithPlan | null,
 ): ResponseResult<TData> {
   return {
     __solvapayResponse: true,
     data,
     ...(options !== undefined ? { options } : {}),
     ...(emittedBlocks.length > 0 ? { emittedBlocks: [...emittedBlocks] } : {}),
+    ...(limits !== undefined ? { limits } : {}),
   }
 }
