@@ -277,14 +277,47 @@ describe('<McpAppShell>', () => {
       account: () => <div data-testid="account-stub" />,
       checkout: () => <div data-testid="checkout-stub" />,
       topup: () => <div data-testid="topup-stub" />,
-      autoRecharge: () => <div data-testid="auto-recharge-stub" />,
     }
 
     for (const view of ['account', 'checkout', 'topup', 'auto-recharge'] as const) {
       const { unmount } = renderShell({ view, customer: authedCustomer }, ctx, { views: stubs })
       expect(screen.queryByText(/Paying as/)).toBeNull()
+      if (view === 'auto-recharge') {
+        expect(screen.getByTestId('account-stub')).toBeTruthy()
+        expect(screen.queryByTestId('auto-recharge-stub')).toBeNull()
+      }
       unmount()
     }
+  })
+
+  it('renders the account surface for view auto-recharge', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const Account = vi.fn(
+      (props: { autoRecharge?: { enabled?: boolean } | null; autoRechargeUrl?: string | null }) => (
+        <div data-testid="account-stub">
+          <span>{props.autoRecharge?.enabled ? 'auto-on' : 'auto-off'}</span>
+          <span>{props.autoRechargeUrl}</span>
+        </div>
+      ),
+    )
+    renderShell(
+      {
+        view: 'auto-recharge',
+        customer: {
+          ...authedCustomer,
+          autoRecharge: { enabled: true, status: 'active' },
+        },
+        autoRechargeUrl: 'https://portal.test/manage?tab=credits&intent=autorecharge',
+      },
+      ctx,
+      { views: { account: Account } },
+    )
+    expect(screen.getByTestId('account-stub')).toBeTruthy()
+    expect(screen.getByText('auto-on')).toBeTruthy()
+    expect(
+      screen.getByText('https://portal.test/manage?tab=credits&intent=autorecharge'),
+    ).toBeTruthy()
   })
 
   it('no longer renders a shell-level brand header — branding moved to <McpApp>-level <AppHeader>', () => {

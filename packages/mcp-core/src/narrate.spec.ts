@@ -1331,10 +1331,11 @@ describe('narrateActivatePlan', () => {
 })
 
 describe('narrateAutoRecharge', () => {
-  it('states that auto-recharge is off and points at the account portal', () => {
+  it('states that auto-recharge is off and prefers the auto-recharge deep link', () => {
     const { text, links } = narrateAutoRecharge(
       basePayload({
         portalUrl: 'https://pay.example/manage',
+        autoRechargeUrl: 'https://pay.example/manage?tab=credits&intent=autorecharge',
         customer: {
           ref: 'cus_1',
           autoRecharge: { enabled: false },
@@ -1343,7 +1344,51 @@ describe('narrateAutoRecharge', () => {
       }),
     )
     expect(text).toContain('Auto-recharge is off')
+    expect(text).toContain('Turn it on from the link below')
     expect(text).toContain("`account` with view: \"account\"")
+    expect(
+      links?.some(
+        link =>
+          link.uri === 'https://pay.example/manage?tab=credits&intent=autorecharge' &&
+          link.name === 'Turn on auto-recharge',
+      ),
+    ).toBe(true)
+  })
+
+  it('falls back to portalUrl when autoRechargeUrl is absent', () => {
+    const { text, links } = narrateAutoRecharge(
+      basePayload({
+        portalUrl: 'https://pay.example/manage',
+        customer: {
+          ref: 'cus_1',
+          autoRecharge: { enabled: true, status: 'active' },
+          balance: usdBalance,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Auto-recharge is on')
+    expect(text).toContain('https://pay.example/manage')
     expect(links?.some(link => link.uri === 'https://pay.example/manage')).toBe(true)
+  })
+
+  it('narrates a failed card so the text lane can send the customer to fix it', () => {
+    const { text, links } = narrateAutoRecharge(
+      basePayload({
+        autoRechargeUrl: 'https://pay.example/manage?tab=credits&intent=autorecharge',
+        customer: {
+          ref: 'cus_1',
+          autoRecharge: { enabled: true, status: 'failed' },
+          balance: usdBalance,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Auto-recharge failed — update your card to resume')
+    expect(
+      links?.some(
+        link =>
+          link.uri === 'https://pay.example/manage?tab=credits&intent=autorecharge' &&
+          link.name === 'Manage auto-recharge',
+      ),
+    ).toBe(true)
   })
 })

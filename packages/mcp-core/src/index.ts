@@ -157,6 +157,8 @@ export {
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
 
+export { PORTAL_AUTO_RECHARGE_QUERY, autoRechargeUrlFrom } from './portal-links'
+
 export { createBuildBootstrapPayload } from './bootstrap-payload'
 export type {
   BuildBootstrapPayloadFn,

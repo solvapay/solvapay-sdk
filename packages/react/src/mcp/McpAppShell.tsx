@@ -10,7 +10,9 @@
  *  - `checkout` — plan picker + activation dispatcher.
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
- *  - `auto-recharge` — dedicated setting, reached from the account panel.
+ *  - `auto-recharge` — same account surface; the status row links out
+ *    to the hosted portal form. Kept as a wire view kind because the
+ *    `account` tool and narrator still stamp it.
  *
  * Identity (`Paying as {email}`) lives inside the payment form, not
  * the shell. Fullscreen wraps the surface in a 1000px hosted column.
@@ -30,7 +32,6 @@ import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
 import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
-import { McpAutoRechargeView, type McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
 import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
@@ -203,8 +204,6 @@ export function McpViewRouter({
     McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
-  const AutoRechargeView = (views?.autoRecharge ??
-    McpAutoRechargeView) as React.ComponentType<McpAutoRechargeViewProps>
 
   const goCheckout = onSurfaceChange
     ? (planRef?: string) =>
@@ -212,7 +211,6 @@ export function McpViewRouter({
     : undefined
   const goTopup = onSurfaceChange ? () => onSurfaceChange('topup') : undefined
   const goAccount = onSurfaceChange ? () => onSurfaceChange('account') : undefined
-  const goAutoRecharge = onSurfaceChange ? () => onSurfaceChange('auto-recharge') : undefined
 
   switch (view) {
     case 'checkout':
@@ -231,6 +229,7 @@ export function McpViewRouter({
           autoAdvance={Boolean(overridePlanRef)}
         />
       )
+    case 'auto-recharge':
     case 'account':
       return (
         <AccountView
@@ -238,13 +237,12 @@ export function McpViewRouter({
           product={bootstrap.product}
           productRef={productRef}
           onTopup={goTopup}
-          onAutoRecharge={goAutoRecharge}
+          autoRecharge={bootstrap.customer?.autoRecharge ?? null}
+          autoRechargeUrl={bootstrap.autoRechargeUrl ?? null}
           onChangePlan={goCheckout}
           plans={bootstrap.plans}
         />
       )
-    case 'auto-recharge':
-      return <AutoRechargeView classNames={classNames} onBack={goAccount} />
     case 'topup':
       return (
         <TopupView

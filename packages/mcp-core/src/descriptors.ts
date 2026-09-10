@@ -47,6 +47,7 @@ import {
   listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
+  type AutoRechargeInput,
   type SolvaPay,
 } from '@solvapay/server'
 import { z } from 'zod'
@@ -246,6 +247,20 @@ export interface SolvaPayDescriptorBundle {
    * embed the full payload in its `structuredContent`.
    */
   buildBootstrapPayload: BuildBootstrapPayloadFn
+}
+
+/**
+ * Narrow the optional `autoRecharge` tool arg. The input schema already
+ * gated the shape; this only recovers a typed value from
+ * `Record<string, unknown>` so we can forward it without inventing
+ * defaults.
+ */
+function readAutoRechargeArg(value: unknown): AutoRechargeInput | undefined {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined
+  }
+  // Schema-gated shape; assertion recovers the server input type.
+  return value as AutoRechargeInput
 }
 
 /**
@@ -502,7 +517,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation).',
+      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.',
     inputSchema: {
       purpose: z
         .enum(['plan', 'topup'])
@@ -512,6 +527,16 @@ export function buildSolvaPayDescriptors(
       currency: z.string().optional(),
       amount: z.number().int().positive().optional(),
       description: z.string().optional(),
+      autoRecharge: z
+        .object({
+          enabled: z.boolean(),
+          triggerType: z.literal('balance'),
+          thresholdAmountMajor: z.number().positive().optional(),
+          topupAmountMajor: z.number().positive().optional(),
+          maxMonthlySpendMajor: z.number().positive().optional(),
+          currency: z.string().length(3),
+        })
+        .optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false }),
@@ -526,6 +551,16 @@ export function buildSolvaPayDescriptors(
             error: 'create_payment_intent requires purpose',
             status: 400,
             details: 'Pass purpose: "plan" or purpose: "topup".',
+          })
+        }
+
+        const autoRecharge = readAutoRechargeArg(args.autoRecharge)
+
+        if (purpose === 'plan' && autoRecharge) {
+          return toolErrorResult({
+            error: 'create_payment_intent plan does not accept autoRecharge',
+            status: 400,
+            details: 'autoRecharge is only honoured on purpose: "topup".',
           })
         }
 
@@ -544,7 +579,7 @@ export function buildSolvaPayDescriptors(
 
           const result = await createTopupPaymentIntentCore(
             buildRequest(extra, { method: 'POST' }),
-            { amount, currency, description },
+            { amount, currency, description, ...(autoRecharge ? { autoRecharge } : {}) },
             { solvaPay },
           )
           if (isErrorResult(result)) return toolErrorResult(result)

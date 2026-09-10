@@ -226,6 +226,12 @@ export interface BootstrapPayload {
   checkoutUrl?: string | null
   /** Customer portal URL for the current customer, when one could be minted. */
   portalUrl?: string | null
+  /**
+   * Hosted portal URL that opens the auto-recharge form (`tab=credits&intent=autorecharge`).
+   * Null when no portal session could be minted. Suffixed in `@solvapay/mcp-core`
+   * from the same `customerUrl` as `portalUrl`.
+   */
+  autoRechargeUrl?: string | null
 }
 
 /**
