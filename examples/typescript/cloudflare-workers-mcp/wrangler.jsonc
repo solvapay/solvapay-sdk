@@ -20,6 +20,9 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-04-26",
   "compatibility_flags": ["nodejs_compat"],
+  "alias": {
+    "@solvapay/server": "@solvapay/server/edge"
+  },
   // Route binds a custom domain to this Worker. Replace with your
   // own zone or remove this block entirely to serve on the default
   // `<worker>.<subdomain>.workers.dev` URL.

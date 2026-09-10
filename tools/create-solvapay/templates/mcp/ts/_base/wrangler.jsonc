@@ -31,6 +31,13 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-04-26",
   "compatibility_flags": ["nodejs_compat"],
+  // Workspace packages otherwise resolve `@solvapay/server` to the Node
+  // `dist/index.js` graph (`createRequire(import.meta.url)`), which crashes
+  // workerd. Force the edge/WASM entry that `src/worker.ts` already imports
+  // via `@solvapay/server/edge`.
+  "alias": {
+    "@solvapay/server": "@solvapay/server/edge"
+  },
   // Add a `routes` block here to bind a custom domain. Defaults to the
   // `<worker>.<subdomain>.workers.dev` URL when omitted. Example:
   //   "routes": [{ "pattern": "mcp.your-company.com", "custom_domain": true }]

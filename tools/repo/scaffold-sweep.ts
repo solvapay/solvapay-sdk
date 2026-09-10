@@ -37,6 +37,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { REPO_ROOT, toolPackageDir } from '../shared/paths.js'
+import { sdkPath } from '../shared/repo-paths.js'
 
 type Stage = 'scaffold' | 'lane' | 'install' | 'boot' | 'verify'
 
@@ -253,6 +254,21 @@ async function runRow(row: Row, cliPath: string, workspace: string): Promise<Row
       'install',
       `\`${row.install.command} ${row.install.args.join(' ')}\` exited ${installCode}`,
     )
+
+  // Path gems do not compile Magnus on `bundle install`. Match the ruby CI
+  // job: install + `rake compile` in the checkout so `require "solvapay"`
+  // can load `lib/solvapay/solvapay`.
+  if (row.language === 'ruby') {
+    const rubySdk = sdkPath('ruby')
+    const rubyBundle = run('bundle', ['install'], rubySdk)
+    if (rubyBundle !== 0) {
+      return fail('install', `\`bundle install\` in the Ruby SDK exited ${rubyBundle}`)
+    }
+    const compileCode = run('bundle', ['exec', 'rake', 'compile'], rubySdk)
+    if (compileCode !== 0) {
+      return fail('install', `\`bundle exec rake compile\` in the Ruby SDK exited ${compileCode}`)
+    }
+  }
 
   // 4. Boot (background) + readiness poll.
   process.stdout.write(`   $ ${HTTP_SCRIPT} (MCP_PORT=${row.port})\n`)
