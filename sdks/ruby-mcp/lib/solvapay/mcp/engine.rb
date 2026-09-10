@@ -8,7 +8,7 @@ module SolvaPay
     # Rack adapter: OAuth via mcp_oauth_request, /mcp via mcp_dispatch.
     class Engine
       def initialize(client:, product_ref:, public_base_url:, resource_uri: "ui://widget.html", mcp_path: "/mcp",
-                     views: nil, oauth_paths: nil, hs256_secret: nil, jwks_json: nil)
+                     views: nil, oauth_paths: nil, hs256_secret: nil, jwks_json: nil, hide_audiences: nil)
         raise ArgumentError, "client is required" if client.nil?
         raise ArgumentError, "product_ref is required" if product_ref.nil? || product_ref.empty?
         raise ArgumentError, "public_base_url is required" if public_base_url.nil? || public_base_url.empty?
@@ -23,6 +23,8 @@ module SolvaPay
         @oauth_paths = oauth_paths
         @hs256_secret = hs256_secret
         @jwks_json = jwks_json
+        # Match Go/Rust: omit or empty means hide the `ui` audience.
+        @hide_audiences = hide_audiences.nil? || hide_audiences.empty? ? ["ui"] : hide_audiences
         @payables = {} #: Hash[String, untyped]
         @mutex = Mutex.new
       end
@@ -93,6 +95,7 @@ module SolvaPay
               "mcpPath" => @mcp_path,
               "views" => @views,
               "userAgent" => env["HTTP_USER_AGENT"],
+              "hideAudiences" => @hide_audiences,
             },
           }
           params["config"]["hs256Secret"] = @hs256_secret unless @hs256_secret.nil? || @hs256_secret.empty?

@@ -2154,6 +2154,7 @@ name = "solvapay"
 version = "0.1.0"
 dependencies = [
  "fixture-runner",
+ "js-sys",
  "repo-paths",
  "serde",
  "serde_json",
@@ -2162,6 +2163,8 @@ dependencies = [
  "solvapay-transport",
  "tokio",
  "walkdir",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wiremock",
 ]
 
@@ -2229,6 +2232,7 @@ name = "solvapay-mcp"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "js-sys",
  "repo-paths",
  "rmcp",
  "serde",
@@ -2239,6 +2243,8 @@ dependencies = [
  "solvapay-mcp-core",
  "thiserror",
  "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wiremock",
 ]
 

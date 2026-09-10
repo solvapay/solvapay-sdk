@@ -62,6 +62,13 @@ _request_user_agent: ContextVar[str | None] = ContextVar(
 )
 
 
+def ensure_output_schema_type(schema: object) -> object:
+    """MCP 2.2 `Tool.outputSchema` requires `type`. Core anyOf/oneOf unions omit it."""
+    if isinstance(schema, dict) and "type" not in schema:
+        return {**schema, "type": "object"}
+    return schema
+
+
 class MissingCustomerRefError(SolvaPayError):
     def __init__(self, message: str = "customer_ref missing from MCP auth context") -> None:
         super().__init__(message)
@@ -357,6 +364,11 @@ def _install_dispatch(server: Server[object]) -> None:
                                 "_meta": meta,
                                 "annotations": descriptor.get("annotations"),
                             }
+                    if "outputSchema" in item:
+                        item = {
+                            **item,
+                            "outputSchema": ensure_output_schema_type(item["outputSchema"]),
+                        }
                     listed_tools.append(Tool.model_validate(item))
         payable_tools: dict[str, _PayableTool] = dict(_REGISTRIES.get(server) or {})
         listed = {tool.name for tool in listed_tools}

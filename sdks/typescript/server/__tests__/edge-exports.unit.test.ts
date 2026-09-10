@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import * as edgeEntry from '../src/edge'
 import * as fetchEntry from '../src/fetch'
@@ -10,6 +13,21 @@ import * as helpers from '../src/helpers'
 // forgets to re-export a helper, adapters crash at boot with
 // `does not provide an export named 'fooCore'`. This test keeps the two
 // surfaces in sync for route helpers.
+describe('package export conditions', () => {
+  it('omits development so wrangler does not load Node native over workerd', () => {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../package.json')
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
+      exports: { '.': Record<string, string> }
+    }
+    const conditions = Object.keys(pkg.exports['.'])
+    expect(conditions).not.toContain('development')
+    for (const name of ['workerd', 'worker', 'edge-light', 'deno'] as const) {
+      expect(conditions, name).toContain(name)
+    }
+    expect(conditions.indexOf('workerd')).toBeLessThan(conditions.indexOf('import'))
+  })
+})
+
 describe('edge entry point parity', () => {
   it('re-exports every *Core route helper from ./helpers', () => {
     const coreHelperNames = Object.keys(helpers).filter(name => name.endsWith('Core'))

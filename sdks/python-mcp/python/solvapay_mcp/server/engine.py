@@ -77,7 +77,7 @@ async def dispatch_rpc(
     user_agent: str | None = None,
     protocol_version_header: str | None = None,
 ) -> dict[str, object]:
-    from solvapay_mcp.register import _REGISTRIES, _invoke_payable
+    from solvapay_mcp.register import _REGISTRIES, _invoke_payable, ensure_output_schema_type
 
     binding = _ENGINE.get(server)
     if binding is None:
@@ -101,7 +101,7 @@ async def dispatch_rpc(
             **({"description": spec.description} if spec.description is not None else {}),
             "inputSchema": spec.input_schema,
             **(
-                {"outputSchema": spec.output_schema}
+                {"outputSchema": ensure_output_schema_type(spec.output_schema)}
                 if getattr(spec, "output_schema", None) is not None
                 else {}
             ),

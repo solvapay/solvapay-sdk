@@ -25,10 +25,9 @@ pub fn default_mcp_app_html() -> &'static str {
 
 pub use core::call_sync;
 pub use layer2::{assert_response_result, build_payable_tool_result, make_response_result};
-pub use register::{
-    invoke_payable, register_payable_tool, GetCustomerRef, PayableError, PayableHandler,
-    PayableTool,
-};
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+pub use register::register_payable_tool;
+pub use register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler, PayableTool};
 pub use response_context::{CustomerView, PayableResponse, ProductView, ResponseContext};
 pub use server::{McpHttpConfig, McpHttpRequest, McpHttpResponse, McpHttpServer};
 

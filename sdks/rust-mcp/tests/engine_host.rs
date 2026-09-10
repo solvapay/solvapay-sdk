@@ -42,6 +42,7 @@ async fn engine_loop_invoke_handler_then_resume() {
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
@@ -117,6 +118,7 @@ async fn tools_list_includes_registered_payable_descriptor() {
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     let handler: PayableHandler = Arc::new(|_args, mut ctx: ResponseContext| {
@@ -177,6 +179,79 @@ async fn tools_list_includes_registered_payable_descriptor() {
     );
 }
 
+/// The host defaults `hide_audiences` to `["ui"]` (matching the Go SDK), so a
+/// `tools/list` with no config override must not leak `audience: "ui"` tools
+/// into the text catalog, while the intent tools — including `account`, which
+/// carries `_meta.ui.resourceUri` but is NOT `audience: "ui"` — stay listed.
+///
+/// (End-to-end verification that a populated set of UI/transport tools is
+/// hidden lives in the core `hide_tools` unit tests and the shared authoring
+/// fixtures; the mock backend here surfaces only the intent tools.)
+#[tokio::test]
+async fn tools_list_default_hides_ui_audience_keeps_intent_tools() {
+    let client = Client::with_transport(
+        MockTransport::new(json!({})),
+        Config {
+            api_key: "sk_test".to_owned(),
+            ..Config::default()
+        },
+    );
+    let host = McpHttpServer::new(
+        client,
+        McpHttpConfig {
+            product_ref: "prd_demo".to_owned(),
+            public_base_url: "https://app.example.com".to_owned(),
+            resource_uri: Some("ui://widget.html".to_owned()),
+            mcp_path: Some("/mcp".to_owned()),
+            views: None,
+            oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
+            // No override → the host must default to hiding the `ui` audience.
+            hide_audiences: None,
+        },
+    );
+    let response = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: BTreeMap::new(),
+            body: serde_json::to_vec(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {}
+            }))
+            .unwrap(),
+        })
+        .await
+        .expect("handle");
+    let body: Value = serde_json::from_slice(&response.body).unwrap();
+    let tools = body["result"]["tools"].as_array().unwrap();
+    let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+
+    // Intent tools survive the default hide — `account` in particular must not
+    // be dropped just because it carries `_meta.ui.resourceUri`.
+    assert!(
+        names.contains(&"account"),
+        "account must be listed: {names:?}"
+    );
+    assert!(
+        names.contains(&"activate_plan"),
+        "activate_plan must be listed: {names:?}"
+    );
+
+    // No `audience: "ui"` tool leaks into the text catalog under the default.
+    for tool in tools {
+        assert_ne!(
+            tool["_meta"]["audience"].as_str(),
+            Some("ui"),
+            "ui-audience tool leaked to the text catalog: {}",
+            tool["name"]
+        );
+    }
+}
+
 #[tokio::test]
 async fn resources_read_returns_widget_html() {
     let client = Client::with_transport(
@@ -197,6 +272,7 @@ async fn resources_read_returns_widget_html() {
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     let response = host
@@ -246,6 +322,7 @@ async fn resources_read_stamps_modern_catalog_envelope() {
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     let response = host
@@ -300,6 +377,7 @@ async fn handle_mcp_unparseable_json_is_jsonrpc_not_sdk_error() {
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     let response = host

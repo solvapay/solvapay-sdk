@@ -1125,7 +1125,7 @@ wheels = [
 [[package]]
 name = "solvapay"
 version = "0.1.0"
-source = { editable = "../python" }
+source = { directory = "../python" }
 
 [package.metadata]
 requires-dist = [
@@ -1171,7 +1171,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "ruff", marker = "extra == 'typecheck'", specifier = "==0.12.4" },
-    { name = "solvapay", editable = "../python" },
+    { name = "solvapay", directory = "../python" },
     { name = "starlette", specifier = ">=0.38" },
 ]
 provides-extras = ["dev", "typecheck"]

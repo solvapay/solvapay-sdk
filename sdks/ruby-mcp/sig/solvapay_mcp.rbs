@@ -53,7 +53,10 @@ module SolvaPay
         ?resource_uri: String,
         ?mcp_path: String,
         ?views: Array[String]?,
-        ?oauth_paths: Hash[String, untyped]?
+        ?oauth_paths: Hash[String, untyped]?,
+        ?hs256_secret: String?,
+        ?jwks_json: untyped,
+        ?hide_audiences: Array[String]?
       ) -> void
       def register_payable: (
         String name,

@@ -4,7 +4,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 use solvapay_core::{
@@ -20,6 +19,7 @@ use tokio::sync::{Mutex, Notify};
 
 use crate::config::{Config, CUSTOMER_DEDUP_MAX_CACHE_SIZE};
 use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
+use crate::host_time::now_ms;
 use crate::retry::with_retry_if;
 
 fn require_api_key(config: &Config) -> Result<(), SdkError> {
@@ -82,6 +82,18 @@ impl Client {
         Ok(Self::with_transport(transport, config))
     }
 
+    /// Builds a client with the default wasm [`solvapay_transport::FetchTransport`].
+    ///
+    /// # Errors
+    ///
+    /// [`SdkError::Api`] when the secret key is missing.
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    pub fn new(config: Config) -> Result<Self, SdkError> {
+        require_api_key(&config)?;
+        let transport: SharedTransport = Arc::new(solvapay_transport::FetchTransport::new());
+        Ok(Self::with_transport(transport, config))
+    }
+
     /// Builds a client over an injected transport (tests, custom HTTP stacks).
     pub fn with_transport(transport: SharedTransport, config: Config) -> Self {
         let shell = build_shell(transport, &config);
@@ -91,17 +103,23 @@ impl Client {
     /// Builds a client from a preconfigured [`ClientShell`] (fixture clock/rng hooks).
     pub fn with_shell(shell: ClientShell, config: Config) -> Self {
         let api = SolvaPayClient::new(shell);
-        Self {
-            inner: Arc::new(ClientInner {
-                api,
-                limits_cache_ttl_ms: config.limits_cache_ttl_ms,
-                gate: Mutex::new(GateState {
-                    limits_cache: HashMap::new(),
-                    customer_cache: HashMap::new(),
-                    customer_inflight: HashMap::new(),
-                }),
+        // wasm32-unknown-unknown: the isolate is single-threaded; tokio sync
+        // primitives and FetchTransport are not Send+Sync, but Client is still
+        // cloned across `.await` points via Arc.
+        #[cfg_attr(
+            all(target_arch = "wasm32", target_os = "unknown"),
+            allow(clippy::arc_with_non_send_sync)
+        )]
+        let inner = Arc::new(ClientInner {
+            api,
+            limits_cache_ttl_ms: config.limits_cache_ttl_ms,
+            gate: Mutex::new(GateState {
+                limits_cache: HashMap::new(),
+                customer_cache: HashMap::new(),
+                customer_inflight: HashMap::new(),
             }),
-        }
+        });
+        Self { inner }
     }
 
     /// Paywall gate for a customer and product (§2.4). Sequencing is [`gate_next`].
@@ -544,12 +562,6 @@ fn insert_customer_cache(
     for (cache_key, _) in oldest.into_iter().take(overflow) {
         cache.remove(&cache_key);
     }
-}
-
-pub(crate) fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_millis() as u64)
 }
 
 fn sdk_error_message(err: &SdkError) -> String {

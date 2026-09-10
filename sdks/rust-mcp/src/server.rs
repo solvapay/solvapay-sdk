@@ -37,6 +37,12 @@ pub struct McpHttpConfig {
     pub hs256_secret: Option<String>,
     /// Preloaded JWKS document.
     pub jwks_json: Option<serde_json::Value>,
+    /// Tool audiences to hide from `tools/list`. `None` or an empty vec
+    /// defaults to `["ui"]` — UI-only virtual tools (payment/transport
+    /// surfaces) are hidden from the text catalog by default, matching the
+    /// Go SDK. Pass `Some(vec![])` to disable hiding, or other audiences to
+    /// override.
+    pub hide_audiences: Option<Vec<String>>,
 }
 
 struct RegisteredPayable {
@@ -61,6 +67,7 @@ pub struct McpHttpServer {
     oauth_paths: Option<solvapay_mcp_core::OauthPaths>,
     hs256_secret: Option<String>,
     jwks_json: Option<Value>,
+    hide_audiences: Option<Vec<String>>,
     payables: HashMap<String, RegisteredPayable>,
 }
 
@@ -85,6 +92,12 @@ impl McpHttpServer {
             oauth_paths: config.oauth_paths,
             hs256_secret: config.hs256_secret.clone(),
             jwks_json: config.jwks_json,
+            // Default to hiding the `ui` audience, matching the Go SDK. An
+            // explicit non-empty vec overrides; `Some(vec![])` disables.
+            hide_audiences: match config.hide_audiences {
+                Some(audiences) if !audiences.is_empty() => Some(audiences),
+                _ => Some(vec!["ui".to_owned()]),
+            },
             payables: HashMap::new(),
         }
     }
@@ -222,7 +235,7 @@ impl McpHttpServer {
                     payable_tools,
                     auth_mode: None,
                     mcp_path: Some(self.mcp_path.clone()),
-                    hide_audiences: None,
+                    hide_audiences: self.hide_audiences.clone(),
                     user_agent: req.headers.get("user-agent").cloned(),
                     csp: None,
                     api_base_url: None,

@@ -19,6 +19,11 @@ solvapay-transport = { path = "../../core/solvapay-transport", version = "0.1.0"
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time"] }
 
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+
 [features]
 default = []
 blocking = ["tokio/rt"]

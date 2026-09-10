@@ -8,9 +8,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "development": "./src/index.ts",
-      "edge-light": "./dist/edge.js",
+      "workerd": "./dist/edge.js",
       "worker": "./dist/edge.js",
+      "edge-light": "./dist/edge.js",
       "deno": "./dist/edge.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
@@ -35,8 +35,9 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "edge-light": "./dist/edge.js",
+        "workerd": "./dist/edge.js",
         "worker": "./dist/edge.js",
+        "edge-light": "./dist/edge.js",
         "deno": "./dist/edge.js",
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"

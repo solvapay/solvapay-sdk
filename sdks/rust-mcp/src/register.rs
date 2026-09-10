@@ -1,17 +1,22 @@
 //! `register_payable_tool` and the payable decision sequence.
 
 use std::sync::Arc;
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures::future::BoxFuture;
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use rmcp::handler::server::router::tool::{ToolRoute, ToolRouter};
-use rmcp::model::{CallToolResult, JsonObject, Tool};
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+use rmcp::model::Tool;
+use rmcp::model::{CallToolResult, JsonObject};
 use serde_json::{json, Map, Value};
 use solvapay::{Allow, Client, GateOpts, GateOutcome, SdkError};
 use solvapay_core::{
     build_customer_snapshot, invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op,
     HelperErrorResult, InvokePayableAction, PaywallGate,
 };
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use solvapay_mcp_core::union_payable_output_schema;
 use thiserror::Error;
 
@@ -74,9 +79,14 @@ pub type GetCustomerRef = Arc<dyn Fn(&JsonObject) -> Result<String, PayableError
 
 /// Register a paywalled tool on an rmcp [`ToolRouter`].
 ///
+/// Unavailable on `wasm32-unknown-unknown`: rmcp's default `ToolRoute::new_dyn`
+/// requires `Send` futures, and the wasm `Client` (Fetch + isolate clock) is
+/// not `Send`. Workers should register payables on [`crate::McpHttpServer`].
+///
 /// # Errors
 ///
 /// Returns [`PayableError::Handler`] when the input schema is unsupported.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub fn register_payable_tool<S: Send + Sync + 'static>(
     router: &mut ToolRouter<S>,
     client: Client,
@@ -264,17 +274,31 @@ pub async fn invoke_payable(
 
 /// Host clock as unix milliseconds.
 fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_millis() as i64)
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    {
+        js_sys::Date::now() as i64
+    }
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as i64)
+    }
 }
 
 /// Host `Math.random()` stand-in for usage request ids.
 fn random_unit() -> f64 {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    f64::from(nanos % 1_000_000) / 1_000_000.0
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    {
+        js_sys::Math::random()
+    }
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.subsec_nanos());
+        f64::from(nanos % 1_000_000) / 1_000_000.0
+    }
 }
 
 /// Map a helper-error result into [`PayableError`].
@@ -332,6 +356,7 @@ fn resolve_customer_ref(
 }
 
 /// Compile a string-field map into a JSON Schema object.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 fn compile_input_schema(fields: Option<&Map<String, Value>>) -> Result<JsonObject, PayableError> {
     let mut schema = JsonObject::new();
     schema.insert("type".to_owned(), json!("object"));
@@ -359,4 +384,33 @@ fn compile_input_schema(fields: Option<&Map<String, Value>>) -> Result<JsonObjec
         schema.insert("required".to_owned(), json!(required));
     }
     Ok(schema)
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::{now_ms, random_unit};
+
+    #[test]
+    fn now_ms_is_plausible_unix_millis() {
+        let now = now_ms();
+        assert!(
+            now > 1_577_836_800_000,
+            "now_ms must be after 2020-01-01 UTC, got {now}"
+        );
+        assert!(
+            now < 4_102_444_800_000,
+            "now_ms must be before 2100-01-01 UTC, got {now}"
+        );
+    }
+
+    #[test]
+    fn random_unit_is_in_unit_interval() {
+        let value = random_unit();
+        assert!(
+            (0.0..1.0).contains(&value),
+            "random_unit must be in [0, 1), got {value}"
+        );
+    }
 }

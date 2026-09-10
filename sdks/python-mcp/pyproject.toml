@@ -23,7 +23,7 @@ typecheck = [
 ]
 
 [tool.uv.sources]
-solvapay = { path = "../python", editable = true }
+solvapay = { path = "../python" }
 
 [tool.setuptools.packages.find]
 where = ["python"]
@@ -50,6 +50,7 @@ files = [
   "python/solvapay_mcp/oauth",
   "python/solvapay_mcp/asgi",
   "python/solvapay_mcp/server",
+  "python/solvapay_mcp/workers.py",
 ]
 warn_unused_ignores = true
 mypy_path = "python"

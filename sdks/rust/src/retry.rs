@@ -2,6 +2,7 @@
 //! this crate owns timers and `should_retry` / `on_retry` callbacks.
 
 use std::future::Future;
+use std::time::Duration;
 
 use solvapay_core::RetryPolicy;
 
@@ -36,11 +37,51 @@ where
                 if !should_retry(&err, attempt) {
                     return Err(err);
                 }
-                tokio::time::sleep(delay).await;
+                host_sleep(delay).await;
                 attempt = attempt.saturating_add(1);
             }
         }
     }
+}
+
+/// Tokio timer on native hosts.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+async fn host_sleep(delay: Duration) {
+    tokio::time::sleep(delay).await;
+}
+
+/// Workers / browser isolates have no tokio time driver. Sleep via `setTimeout`.
+///
+/// A missing or failing timer host continues immediately so retry still
+/// progresses instead of panicking.
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+async fn host_sleep(delay: Duration) {
+    let millis = u32::try_from(delay.as_millis()).unwrap_or(u32::MAX);
+    let promise = js_sys::Promise::new(&mut |resolve, reject| {
+        let global = js_sys::global();
+        let Ok(timeout_value) =
+            js_sys::Reflect::get(&global, &wasm_bindgen::JsValue::from_str("setTimeout"))
+        else {
+            let _ = reject.call0(&wasm_bindgen::JsValue::UNDEFINED);
+            return;
+        };
+        if timeout_value.is_undefined() || timeout_value.is_null() {
+            let _ = reject.call0(&wasm_bindgen::JsValue::UNDEFINED);
+            return;
+        }
+        let timeout = js_sys::Function::from(timeout_value);
+        if timeout
+            .call2(
+                &global,
+                &resolve,
+                &wasm_bindgen::JsValue::from_f64(f64::from(millis)),
+            )
+            .is_err()
+        {
+            let _ = reject.call0(&wasm_bindgen::JsValue::UNDEFINED);
+        }
+    });
+    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
 }
 
 #[cfg(test)]

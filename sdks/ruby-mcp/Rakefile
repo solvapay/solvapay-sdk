@@ -4,6 +4,8 @@ require "rake/testtask"
 
 Rake::TestTask.new(:test) do |t|
   t.libs = %w[lib test]
+  sibling_ruby = File.expand_path("../ruby/lib", __dir__)
+  t.libs << sibling_ruby if File.directory?(sibling_ruby)
   t.test_files = FileList["test/**/*_test.rb"]
 end
 

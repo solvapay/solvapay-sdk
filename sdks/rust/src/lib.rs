@@ -16,6 +16,7 @@ mod client;
 mod config;
 mod gate;
 mod helpers_generated;
+mod host_time;
 mod retry;
 
 #[cfg(all(feature = "blocking", not(target_arch = "wasm32")))]

@@ -6,8 +6,9 @@
   "imports": {
     "#mcp-app-html": {
       "types": "./src/defaultMcpAppHtml.ts",
-      "edge-light": "./src/defaultMcpAppHtml.edge.ts",
+      "workerd": "./src/defaultMcpAppHtml.edge.ts",
       "worker": "./src/defaultMcpAppHtml.edge.ts",
+      "edge-light": "./src/defaultMcpAppHtml.edge.ts",
       "deno": "./src/defaultMcpAppHtml.edge.ts",
       "default": "./src/defaultMcpAppHtml.ts"
     }
@@ -18,9 +19,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "development": "./src/index.ts",
-      "edge-light": "./dist/edge.js",
+      "workerd": "./dist/edge.js",
       "worker": "./dist/edge.js",
+      "edge-light": "./dist/edge.js",
       "deno": "./dist/edge.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
@@ -28,9 +29,9 @@
     "./package.json": "./package.json",
     "./fetch": {
       "types": "./dist/fetch/index.d.ts",
-      "development": "./src/fetch/index.ts",
-      "edge-light": "./dist/fetch/edge.js",
+      "workerd": "./dist/fetch/edge.js",
       "worker": "./dist/fetch/edge.js",
+      "edge-light": "./dist/fetch/edge.js",
       "deno": "./dist/fetch/edge.js",
       "import": "./dist/fetch/index.js",
       "require": "./dist/fetch/index.cjs"
@@ -52,8 +53,9 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "edge-light": "./dist/edge.js",
+        "workerd": "./dist/edge.js",
         "worker": "./dist/edge.js",
+        "edge-light": "./dist/edge.js",
         "deno": "./dist/edge.js",
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
@@ -61,8 +63,9 @@
       "./package.json": "./package.json",
       "./fetch": {
         "types": "./dist/fetch/index.d.ts",
-        "edge-light": "./dist/fetch/edge.js",
+        "workerd": "./dist/fetch/edge.js",
         "worker": "./dist/fetch/edge.js",
+        "edge-light": "./dist/fetch/edge.js",
         "deno": "./dist/fetch/edge.js",
         "import": "./dist/fetch/index.js",
         "require": "./dist/fetch/index.cjs"

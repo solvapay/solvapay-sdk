@@ -454,6 +454,24 @@ describe('createSolvaPayMcpFetch', () => {
     )
   })
 
+  it('factory stub accepts registerPrompt from generated from-scratch tools', () => {
+    expect(() =>
+      buildHandler({
+        additionalTools: ({ server, registerPayable }) => {
+          registerPayable('hello_tool', {
+            title: 'hello_tool',
+            handler: async () => ({ ok: true }),
+          })
+          server.registerPrompt(
+            'hello_tool',
+            { title: 'hello_tool', description: 'placeholder' },
+            async () => ({ messages: [] }),
+          )
+        },
+      }),
+    ).not.toThrow()
+  })
+
   it('invokes the additionalTools hook with { server, solvaPay, resourceUri, productRef }', async () => {
     const additional = vi.fn()
     const handler = buildHandler({ additionalTools: additional })

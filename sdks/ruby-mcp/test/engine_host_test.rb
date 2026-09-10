@@ -81,8 +81,14 @@ class EngineHostTest < Minitest::Test
     )
     assert_equal 200, status
     parsed = JSON.parse(body.join)
-    echo = parsed.dig("result", "tools").find { |tool| tool["name"] == "echo_paid" }
+    tools = parsed.dig("result", "tools")
+    echo = tools.find { |tool| tool["name"] == "echo_paid" }
     refute_nil echo, "payable echo_paid missing from tools/list"
+    assert(tools.any? { |tool| tool["name"] == "account" }, "account must stay listed")
+    assert(
+      tools.none? { |tool| tool.dig("_meta", "audience") == "ui" },
+      "ui-audience tool leaked to the text catalog",
+    )
     assert_equal "Echo paid", echo["title"]
     assert_equal "Echo arguments after a paid gate Paid tool — call `account` for current balance and cost per call.", echo["description"]
     assert_equal({ "type" => "object", "properties" => { "n" => { "type" => "number" } } }, echo["inputSchema"])

@@ -550,6 +550,14 @@ async fn replays_dispatch_and_oauth_through_http_server() {
                     .and_then(Value::as_str)
                     .map(str::to_owned),
                 jwks_json: args.pointer("/config/jwksJson").cloned(),
+                hide_audiences: args
+                    .pointer("/config/hideAudiences")
+                    .and_then(Value::as_array)
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(str::to_owned))
+                            .collect()
+                    }),
             },
         );
         if fn_name == "mcpDispatch" {

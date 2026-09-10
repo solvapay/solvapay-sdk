@@ -128,6 +128,7 @@ fn tool_error_envelope_schema() -> Value {
 
 fn bootstrap_output_schema() -> Value {
     json!({
+        "type": "object",
         "anyOf": [
             {
                 "type": "object",
@@ -153,6 +154,7 @@ fn bootstrap_output_schema() -> Value {
 #[must_use]
 pub fn union_payable_output_schema(merchant: &Value) -> Value {
     json!({
+        "type": "object",
         "oneOf": [merchant, paywall_structured_content_schema()]
     })
 }
@@ -332,4 +334,27 @@ pub fn mcp_descriptors(input: &McpDescriptorsInput) -> Result<McpDescriptors, St
             "csp": csp,
         }),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{bootstrap_output_schema, union_payable_output_schema};
+    use serde_json::json;
+
+    #[test]
+    fn account_output_schema_declares_type_for_mcp_22() {
+        let schema = bootstrap_output_schema();
+        assert_eq!(schema["type"], "object");
+        assert!(schema.get("anyOf").and_then(|v| v.as_array()).is_some());
+    }
+
+    #[test]
+    fn union_output_schema_declares_type_for_mcp_22() {
+        let schema = union_payable_output_schema(&json!({
+            "type": "object",
+            "properties": { "n": { "type": "number" } }
+        }));
+        assert_eq!(schema["type"], "object");
+        assert_eq!(schema["oneOf"].as_array().map(Vec::len), Some(2));
+    }
 }

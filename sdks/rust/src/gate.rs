@@ -198,7 +198,7 @@ impl Allow {
                 serde_json::json!({
                     "kind": "handlerSucceeded",
                     "durationMs": opts.duration.unwrap_or(0.0),
-                    "nowMs": crate::client::now_ms(),
+                    "nowMs": crate::host_time::now_ms(),
                 }),
             )
             .await
@@ -216,7 +216,7 @@ impl Allow {
                 serde_json::json!({
                     "kind": "handlerFailed",
                     "durationMs": opts.duration.unwrap_or(0.0),
-                    "nowMs": crate::client::now_ms(),
+                    "nowMs": crate::host_time::now_ms(),
                     "errorMessage": error.track_fail_message(),
                     "isPaywallError": error.is_paywall_error(),
                 }),
