@@ -1,0 +1,13 @@
+{
+  "name": "solvapay-mcp-python-worker",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-04-26",
+  "compatibility_flags": ["python_workers"],
+  "vars": {
+    "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
+    "MCP_PUBLIC_BASE_URL": "https://your-worker.example.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

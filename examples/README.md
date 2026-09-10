@@ -6,11 +6,13 @@ Runnable examples by language. Each language subtree holds at least one offline-
 
 ```text
 examples/
-├── typescript/   # Node / Next / Workers / Supabase / MCP demos (@example/*)
-├── python/       # Python binding examples
-├── ruby/         # Ruby gem examples
-├── go/           # Go module examples
-└── rust/         # Rust crate examples
+├── typescript/                 # Node / Next / Workers / Supabase / MCP demos
+├── python/                     # Python binding examples
+├── ruby/                       # Ruby gem examples
+├── go/                         # Go module examples
+├── rust/                       # Rust crate examples
+├── cloudflare-containers/      # Go + Ruby MCP via Cloudflare Containers
+└── cloudflare-mcp-language-matrix.md
 ```
 
 ## TypeScript
@@ -61,9 +63,10 @@ collide with platform services. Convenience scripts from the repo root:
 
 ## Python
 
-| Example                                           | Description                                                                                                      |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data. Ngrok via `pnpm mcp:stock-research:tunnel` |
+| Example                                                              | Description                                                                                                      |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [stock-research-mcp](./python/stock-research-mcp)                    | Paywalled MCP tools joining a ranked watchlist with SEC company data. Ngrok via `pnpm mcp:stock-research:tunnel` |
+| [cloudflare-workers-mcp](./python/cloudflare-workers-mcp) (**beta**) | Python Worker + Starlette over `@solvapay/server-wasm` FFI (native `solvapay` cannot load on Pyodide)            |
 
 ```bash
 cd examples/python/stock-research-mcp
@@ -93,9 +96,13 @@ cd examples/go/weather-mcp && go test ./...
 
 ## Rust
 
-| Example                                       | Description                                                                                   |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [guerrillamail-mcp](./rust/guerrillamail-mcp) | Paywalled disposable-inbox MCP over Guerrilla Mail. Ngrok via `pnpm mcp:guerrillamail:tunnel` |
+| Example                                               | Description                                                                                   |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [guerrillamail-mcp](./rust/guerrillamail-mcp)         | Paywalled disposable-inbox MCP over Guerrilla Mail. Ngrok via `pnpm mcp:guerrillamail:tunnel` |
+| [cloudflare-worker-mcp](./rust/cloudflare-worker-mcp) | 100% Rust `workers-rs` MCP Worker (`FetchTransport` + `McpHttpServer`)                        |
+
+Cloudflare language matrix (Rust / Python Workers, Go / Ruby containers):
+[`cloudflare-mcp-language-matrix.md`](./cloudflare-mcp-language-matrix.md).
 
 ```bash
 cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml

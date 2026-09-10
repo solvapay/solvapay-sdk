@@ -111,6 +111,7 @@ pub fn build_host(
             oauth_paths: None,
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
+            hide_audiences: None,
         },
     );
     register_tools(&mut host, product, source, store, now)?;

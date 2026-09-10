@@ -1,0 +1,21 @@
+{
+  "name": "@example/cloudflare-containers-mcp",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Containers fronting the unchanged Go weather and Ruby bitcoin MCP servers.",
+  "scripts": {
+    "dev:go": "wrangler dev --env go",
+    "dev:ruby": "wrangler dev --env ruby",
+    "deploy:go": "wrangler deploy --env go",
+    "deploy:ruby": "wrangler deploy --env ruby",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.31"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251124.0",
+    "wrangler": "^4.47.0",
+    "typescript": "^5.9.2"
+  }
+}

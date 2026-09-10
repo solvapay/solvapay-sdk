@@ -17,6 +17,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24"]
 
+[tool.uv.sources]
+solvapay = { path = "../../../sdks/python" }
+solvapay-mcp = { path = "../../../sdks/python-mcp" }
+
 [tool.setuptools]
 py-modules = ["analysis", "http_serve", "market_data", "tools", "main"]
 

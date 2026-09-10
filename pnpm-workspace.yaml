@@ -4,6 +4,8 @@ packages:
   - 'tools/*'
   - 'internal/*'
   - 'examples/typescript/*'
+  - 'examples/python/cloudflare-workers-mcp'
+  - 'examples/cloudflare-containers'
 
 overrides:
   next: 16.2.7

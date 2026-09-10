@@ -15,7 +15,7 @@
  * (ChatGPT Custom Connectors, MCP Inspector web UI).
  */
 
-import { createSolvaPay } from '@solvapay/server'
+import { createSolvaPay } from '@solvapay/server/edge'
 import { createSolvaPayMcpFetch } from '@solvapay/mcp/fetch'
 import { demoToolsEnabled, registerDemoTools } from './demo-tools'
 import mcpAppHtml from './assets/mcp-app.html'

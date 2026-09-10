@@ -1,0 +1,35 @@
+[workspace]
+
+[package]
+name = "solvapay-example-cloudflare-worker-mcp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.96"
+description = "SolvaPay Rust payable MCP example on Cloudflare Workers (workers-rs)"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+solvapay = { path = "../../../sdks/rust" }
+solvapay-mcp = { path = "../../../sdks/rust-mcp" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+worker = "0.6.7"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+opt-level = "s"
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.clippy]
+missing_docs_in_private_items = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
