@@ -43,7 +43,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       # Ruby headers are needed both for the ruby row (native gems:

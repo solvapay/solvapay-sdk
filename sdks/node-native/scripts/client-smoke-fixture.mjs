@@ -22,7 +22,7 @@ export const PAYWALL_GATE_SMOKE_EXPECTED = {
   product: 'prd_demo',
   checkoutUrl: 'https://pay.test/x',
   message:
-    "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
+    "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
   shortMessage: 'Payment required',
   planRef: 'pl_basic',
   reason: 'limit_reached',

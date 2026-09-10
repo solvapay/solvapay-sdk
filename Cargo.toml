@@ -60,7 +60,7 @@ wasm-bindgen-futures = "0.4.76"
 web-sys = "0.3.103"
 wasm-bindgen-test = "0.3.76"
 # Layer 1 MCP protocol for the hand-written MA-Rs adapter (never reimplemented in core).
-rmcp = { version = "3.2.0", default-features = false, features = ["server"] }
+rmcp = { version = "3.3.0", default-features = false, features = ["server"] }
 
 [workspace.lints.rust]
 missing_docs = "deny"

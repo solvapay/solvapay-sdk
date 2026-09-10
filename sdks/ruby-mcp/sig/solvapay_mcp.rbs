@@ -91,10 +91,16 @@ module SolvaPay
       @customer: Hash[String, untyped]
       @product: Hash[String, untyped]
       @product_ref: String
+      @limits: Hash[String, untyped]?
       @emitted: Array[untyped]
       attr_reader customer: Hash[String, untyped]
       attr_reader product: Hash[String, untyped]
-      def initialize: (customer: Hash[String, untyped], product: Hash[String, untyped], product_ref: String) -> void
+      def initialize: (
+        customer: Hash[String, untyped],
+        product: Hash[String, untyped],
+        product_ref: String,
+        ?limits: Hash[String, untyped]?
+      ) -> void
       def emit: (untyped block) -> void
       def respond: (untyped data, ?untyped options) -> Hash[String, untyped]
       def gate: (?String? reason) -> void

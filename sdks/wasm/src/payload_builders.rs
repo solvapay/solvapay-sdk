@@ -557,10 +557,7 @@ mod mcp_payload {
                 }
             };
 
-            let limits = match args.get("limits") {
-                None => None,
-                Some(value) => Some(value.clone()),
-            };
+            let limits = args.get("limits").cloned();
 
             to_value(&make_response_result(data, options, emitted_blocks, limits))
         })
