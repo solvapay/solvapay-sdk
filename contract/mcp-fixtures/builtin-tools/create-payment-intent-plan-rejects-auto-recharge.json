@@ -1,0 +1,42 @@
+{
+  "suite": "builtin-tools",
+  "case": "create_payment_intent_plan_rejects_auto_recharge",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "create_payment_intent",
+      "args": {
+        "purpose": "plan",
+        "planRef": "pln_pro",
+        "productRef": "prd_demo",
+        "autoRecharge": {
+          "enabled": true,
+          "triggerType": "balance",
+          "currency": "USD"
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "autoRecharge is only honoured on purpose: \"topup\"."
+        }
+      ],
+      "structuredContent": {
+        "error": "create_payment_intent plan does not accept autoRecharge",
+        "status": 400,
+        "details": "autoRecharge is only honoured on purpose: \"topup\"."
+      }
+    }
+  }
+}
