@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+    "result": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'."
   }
 }

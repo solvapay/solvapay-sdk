@@ -52,13 +52,14 @@ type TrackOpts struct {
 
 // CustomerSnapshot is the merchant-facing customer projection from the last limits check.
 type CustomerSnapshot struct {
-	Ref          string
-	Balance      any
-	Remaining    any
-	WithinLimits any
-	Plan         any
-	Throttled    bool
-	Overage      bool
+	Ref           string
+	Balance       any
+	Remaining     any
+	WithinLimits  any
+	Plan          any
+	Throttled     bool
+	Overage       bool
+	IsCreditBased bool
 }
 
 // Limits returns the last checkLimits body used to build this allow.
@@ -104,13 +105,14 @@ func customerSnapshotFromAction(action map[string]any, backendRef string) (Custo
 		ref = backendRef
 	}
 	return CustomerSnapshot{
-		Ref:          ref,
-		Balance:      raw["balance"],
-		Remaining:    raw["remaining"],
-		WithinLimits: raw["withinLimits"],
-		Plan:         raw["plan"],
-		Throttled:    asBool(raw["throttled"]),
-		Overage:      asBool(raw["overage"]),
+		Ref:           ref,
+		Balance:       raw["balance"],
+		Remaining:     raw["remaining"],
+		WithinLimits:  raw["withinLimits"],
+		Plan:          raw["plan"],
+		Throttled:     asBool(raw["throttled"]),
+		Overage:       asBool(raw["overage"]),
+		IsCreditBased: asBool(raw["isCreditBased"]),
 	}, nil
 }
 

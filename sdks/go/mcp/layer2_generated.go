@@ -102,8 +102,9 @@ func InvokePayableNext(ctx context.Context, state any, event any) (json.RawMessa
 // The data parameter is Merchant handler data payload.
 // The options parameter is Optional response options object.
 // The emittedBlocks parameter is Content blocks queued via ctx.emit before respond.
+// The limits parameter is Pre-check limits captured at respond time for honest nudge copy.
 // Returns Branded ResponseEnvelope.
-func MakeResponseResult(ctx context.Context, data any, options any, emittedBlocks any) (json.RawMessage, error) {
+func MakeResponseResult(ctx context.Context, data any, options any, emittedBlocks any, limits any) (json.RawMessage, error) {
 	call_args := map[string]any{}
 	call_args["data"] = data
 	if options != nil {
@@ -111,6 +112,9 @@ func MakeResponseResult(ctx context.Context, data any, options any, emittedBlock
 	}
 	if emittedBlocks != nil {
 		call_args["emittedBlocks"] = emittedBlocks
+	}
+	if limits != nil {
+		call_args["limits"] = limits
 	}
 	return callLayer2(ctx, "sv_make_response_result_binding", call_args)
 }

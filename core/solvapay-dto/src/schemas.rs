@@ -2740,7 +2740,7 @@ pub struct DeletePlansResponse {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeleteProductsResponse {
-    /// Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases
+    /// Outcome of the delete: deactivation when purchases exist, otherwise soft-delete. Same in sandbox and live.
     #[serde(rename = "action")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<DeleteProductsResponseAction>,
@@ -2750,15 +2750,12 @@ pub struct DeleteProductsResponse {
     pub success: Option<bool>,
 }
 
-/// Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases
+/// Outcome of the delete: deactivation when purchases exist, otherwise soft-delete. Same in sandbox and live.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DeleteProductsResponseAction {
     /// Wire value `deactivated`.
     #[serde(rename = "deactivated")]
     Deactivated,
-    /// Wire value `deleted`.
-    #[serde(rename = "deleted")]
-    Deleted,
     /// Wire value `soft_deleted`.
     #[serde(rename = "soft_deleted")]
     SoftDeleted,
@@ -2947,6 +2944,10 @@ pub struct LimitBalanceDto {
     #[serde(rename = "creditBalance")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credit_balance: Option<f64>,
+    /// Credits per minor unit of `currency` (typically 100)
+    #[serde(rename = "creditsPerMinorUnit")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_per_minor_unit: Option<f64>,
     /// Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit)
     #[serde(rename = "creditsPerUnit")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2955,6 +2956,10 @@ pub struct LimitBalanceDto {
     #[serde(rename = "currency")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
+    /// USD → display-currency rate used with creditsPerMinorUnit
+    #[serde(rename = "displayExchangeRate")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_exchange_rate: Option<f64>,
     /// How many metered items the credit balance still covers (`balance / creditsPerUnit`)
     #[serde(rename = "remainingUnits")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

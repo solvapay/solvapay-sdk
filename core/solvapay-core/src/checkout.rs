@@ -38,18 +38,9 @@ pub fn validate_checkout_session_params(product_ref: Option<&str>) -> Option<Hel
 
 /// Resolve returnUrl with JS-falsy precedence: body → options → origin → none.
 ///
-/// Empty strings are falsy and fall through. `origin` is the already-parsed
-/// request origin (or [`None`] when URL parsing failed).
-///
-/// # Arguments
-///
-/// * `body_return_url` - `body.returnUrl`.
-/// * `options_return_url` - `options.returnUrl`.
-/// * `origin` - Parsed request origin.
-///
-/// # Returns
-///
-/// The first non-empty candidate, or [`None`].
+/// Empty strings are falsy and fall through. When `body_return_url_null` is
+/// `true`, the body explicitly sent JSON `null` and the field is omitted —
+/// options and origin must not fill it in.
 #[crate::solvapay_export(
     artifact = "decisions",
     catalog = "none",
@@ -60,7 +51,11 @@ pub fn resolve_return_url(
     body_return_url: Option<&str>,
     options_return_url: Option<&str>,
     origin: Option<&str>,
+    body_return_url_null: Option<bool>,
 ) -> Option<String> {
+    if body_return_url_null == Some(true) {
+        return None;
+    }
     if is_nonempty(body_return_url) {
         return body_return_url.map(str::to_owned);
     }
@@ -103,6 +98,7 @@ mod tests {
                 Some("https://body.example/return"),
                 Some("https://options.example/return"),
                 Some("https://origin"),
+                None,
             )
             .as_deref(),
             Some("https://body.example/return")
@@ -112,13 +108,24 @@ mod tests {
     #[test]
     fn return_url_empty_falls_to_origin() {
         assert_eq!(
-            resolve_return_url(Some(""), Some(""), Some("https://origin")).as_deref(),
+            resolve_return_url(Some(""), Some(""), Some("https://origin"), None).as_deref(),
             Some("https://origin")
         );
     }
 
     #[test]
     fn return_url_all_absent() {
-        assert!(resolve_return_url(None, None, None).is_none());
+        assert!(resolve_return_url(None, None, None, None).is_none());
+    }
+
+    #[test]
+    fn return_url_explicit_null_omits() {
+        assert!(resolve_return_url(
+            Some("https://body.example/return"),
+            Some("https://options.example/return"),
+            Some("https://origin"),
+            Some(true),
+        )
+        .is_none());
     }
 }

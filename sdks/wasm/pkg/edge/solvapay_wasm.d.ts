@@ -766,6 +766,11 @@ export function resolveTaxTreatmentNote(args_json: string): string;
 export function retryNextDelayMs(args_json: string): string;
 
 /**
+ * Binding for `selectActivePlanPurchase`.
+ */
+export function selectActivePlanPurchase(args_json: string): string;
+
+/**
  * Binding for `selectActivePurchases`.
  */
 export function selectActivePurchases(args_json: string): string;
@@ -1017,6 +1022,7 @@ export interface InitOutput {
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
     readonly retryNextDelayMs: (a: number, b: number) => [number, number];
+    readonly selectActivePlanPurchase: (a: number, b: number) => [number, number];
     readonly selectActivePurchases: (a: number, b: number) => [number, number];
     readonly shouldRetryUsageError: (a: number, b: number) => [number, number];
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];

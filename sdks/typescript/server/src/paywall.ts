@@ -241,8 +241,6 @@ export class SolvaPayPaywall {
    */
   invalidateLimits(customerRef: string, product?: string): void {
     const aliases = new Set<string>([customerRef])
-    const mapped = this.customerRefMapping.get(customerRef)
-    if (mapped) aliases.add(mapped)
     if (!customerRef.startsWith('cus_')) aliases.add(`cus_${customerRef}`)
 
     for (const key of [...this.limitsCache.keys()]) {

@@ -3,9 +3,11 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credit_signals, credits_to_display_minor_units, format_major_fixed,
-    headline_charges, is_zero_decimal_currency, meter_name, to_major_units, trial_days, usage_rate,
-    CreditsToDisplayInput, PaywallLimits,
+    billing_cycle, credit_signals, credits_per_unit_from_balance, credits_to_display_minor_units,
+    format_major_fixed, headline_charges, included_units, is_zero_decimal_currency, meter_name,
+    resolve_account_state, resolve_narrator_plan_shape, select_active_plan_purchase,
+    to_major_units, trial_days, usage_rate, CreditsToDisplayInput, NarratorPlanShape,
+    PaywallLimits,
 };
 
 /// Input for [`mcp_narrate`].
@@ -72,9 +74,8 @@ fn format_money(amount_minor: Option<f64>, currency: Option<&str>) -> Option<Str
     Some(format_major(major, currency, if zero { 0 } else { 2 }))
 }
 
-fn format_date(iso: Option<&str>) -> Option<String> {
+fn format_short_date(iso: Option<&str>) -> Option<String> {
     let iso = iso.filter(|s| s.len() >= 10)?;
-    let y: i32 = iso.get(0..4)?.parse().ok()?;
     let m: u32 = iso.get(5..7)?.parse().ok()?;
     let d: u32 = iso.get(8..10)?.parse().ok()?;
     if !(1..=12).contains(&m) {
@@ -83,22 +84,14 @@ fn format_date(iso: Option<&str>) -> Option<String> {
     let months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
-    Some(format!("{} {}, {}", months[(m - 1) as usize], d, y))
+    Some(format!("{} {}", months[(m - 1) as usize], d))
 }
 
-fn is_plan_purchase(purchase: &Value) -> bool {
-    purchase
-        .get("planSnapshot")
-        .is_some_and(|snap| !snap.is_null())
-        && purchase
-            .pointer("/metadata/purpose")
-            .and_then(Value::as_str)
-            != Some("credit_topup")
-}
-
-fn active_purchase(customer: Option<&Value>) -> Option<&Value> {
-    let list = customer?.pointer("/purchase/purchases")?.as_array()?;
-    list.iter().find(|item| is_plan_purchase(item))
+fn active_purchase(data: &Value) -> Option<Value> {
+    select_active_plan_purchase(
+        data.pointer("/customer/purchase/purchases"),
+        data.get("productRef").and_then(Value::as_str),
+    )
 }
 
 fn balance_row(customer: Option<&Value>) -> Option<String> {
@@ -277,7 +270,6 @@ fn plans_list_lines(plans: &[Value]) -> Vec<String> {
 }
 
 const CHECKOUT_SESSION_TTL_MINUTES: u32 = 15;
-const DOCS_URI: &str = "docs://solvapay/overview.md";
 
 fn http_url<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
     let url = data.get(key).and_then(Value::as_str)?;
@@ -289,7 +281,10 @@ fn http_url<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 fn checkout_link_label(data: &Value) -> &'static str {
-    if data.get("checkoutPurpose").and_then(Value::as_str) == Some("credit_topup") {
+    let url = data.get("checkoutUrl").and_then(Value::as_str).unwrap_or("");
+    if url.contains("/checkout/topup")
+        || data.get("checkoutPurpose").and_then(Value::as_str) == Some("credit_topup")
+    {
         "Add credits"
     } else {
         "Open checkout"
@@ -309,8 +304,604 @@ fn hosted_checkout_link(data: &Value) -> Option<Value> {
     Some(json!({ "uri": url, "name": checkout_link_label(data) }))
 }
 
-fn docs_line() -> String {
-    format!("Docs: {DOCS_URI}")
+fn manage_row(data: &Value) -> Option<String> {
+    let url = http_url(data, "portalUrl")?;
+    Some(format!(
+        "Manage: [Manage account]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
+    ))
+}
+
+fn recovery_line(views: &[&str]) -> String {
+    let calls: Vec<String> = views
+        .iter()
+        .map(|view| format!("`account` with view: \"{view}\""))
+        .collect();
+    format!("To continue, call {}.", calls.join(" or "))
+}
+
+fn meter_unit(meter: Option<&str>, count: f64) -> String {
+    match meter {
+        Some(name) if name != "requests" => {
+            if (count - 1.0).abs() < f64::EPSILON && name.ends_with('s') {
+                name[..name.len() - 1].to_owned()
+            } else {
+                name.to_owned()
+            }
+        }
+        _ if (count - 1.0).abs() < f64::EPSILON => "call".to_owned(),
+        _ => "calls".to_owned(),
+    }
+}
+
+fn join_or(parts: &[String]) -> String {
+    match parts.len() {
+        0 => String::new(),
+        1 => parts[0].clone(),
+        2 => format!("{}, or {}", parts[0], parts[1]),
+        n => format!("{}, or {}", parts[..n - 1].join(", "), parts[n - 1]),
+    }
+}
+
+fn prefer_limits_plan(purchase: Option<&Value>, limits: Option<&Value>) -> bool {
+    let Some(limits_ref) = limits.and_then(|l| l.get("planRef").and_then(Value::as_str)) else {
+        return false;
+    };
+    let purchase_ref = purchase
+        .and_then(|p| p.get("planRef").and_then(Value::as_str))
+        .or_else(|| {
+            purchase
+                .and_then(|p| p.pointer("/planSnapshot/reference"))
+                .and_then(Value::as_str)
+        });
+    Some(limits_ref) != purchase_ref
+}
+
+fn find_catalog_plan<'a>(
+    plans: &'a [Value],
+    snapshot: Option<&Value>,
+    plan_ref: Option<&str>,
+) -> Option<&'a Value> {
+    let reference = snapshot
+        .and_then(|s| s.get("reference").and_then(Value::as_str))
+        .or(plan_ref)?;
+    plans
+        .iter()
+        .find(|plan| plan.get("reference").and_then(Value::as_str) == Some(reference))
+}
+
+fn format_compact_money(amount_minor: Option<f64>, currency: Option<&str>) -> Option<String> {
+    format_money(amount_minor, currency).map(|money| money.replace(".00", ""))
+}
+
+fn interval_phrase(plan: Option<&Value>) -> Option<String> {
+    let cycle = billing_cycle(plan)?;
+    let count = cycle.count.unwrap_or(1.0);
+    if (count - 1.0).abs() < f64::EPSILON {
+        Some(format!("a {}", cycle.interval))
+    } else {
+        Some(format!("every {} {}s", count as i64, cycle.interval))
+    }
+}
+
+fn plan_price_phrase(plan: Option<&Value>) -> Option<String> {
+    let list = headline_charges(plan);
+    if !list.is_empty() {
+        let prices: Vec<String> = list
+            .into_iter()
+            .filter_map(|charge| format_compact_money(Some(charge.amount_minor), Some(&charge.currency)))
+            .collect();
+        if !prices.is_empty() {
+            return Some(prices.join(" · "));
+        }
+    }
+    format_compact_money(
+        plan.and_then(|p| p.get("price").and_then(Value::as_f64)),
+        plan.and_then(|p| p.get("currency").and_then(Value::as_str)),
+    )
+}
+
+fn plan_price_bit(plan: Option<&Value>) -> String {
+    let price = plan_price_phrase(plan);
+    let cycle = interval_phrase(plan);
+    if billing_cycle(plan).is_none() {
+        return price.map(|p| format!(", {p} once")).unwrap_or_default();
+    }
+    match (price, cycle) {
+        (Some(price), Some(cycle)) => format!(", {price} {cycle}"),
+        (Some(price), None) => format!(", {price}"),
+        _ => String::new(),
+    }
+}
+
+fn credits_rate_phrase(plan: Option<&Value>, customer: Option<&Value>) -> Option<String> {
+    let rate = usage_rate(plan, None)?;
+    if rate.amount_minor <= 0.0 {
+        return None;
+    }
+    let credits = credits_per_unit_from_balance(plan, customer.and_then(|c| c.get("balance")), None);
+    if let Some(credits) = credits {
+        let prefix = if rate.tiered { "from " } else { "" };
+        return Some(format!(
+            "{prefix}{} credits per call",
+            format_grouped_number(credits as f64)
+        ));
+    }
+    let money = format_compact_money(Some(rate.amount_minor), Some(&rate.currency))?;
+    let unit = meter_unit(
+        rate.meter.as_deref().or(meter_name(plan).as_deref()),
+        1.0,
+    );
+    let prefix = if rate.tiered { "from " } else { "" };
+    Some(format!("{prefix}{money} per {unit}"))
+}
+
+fn remaining_of_total(usage: Option<&Value>) -> Option<String> {
+    let usage = usage?;
+    let remaining = usage.get("remaining").and_then(Value::as_f64)?;
+    let total = usage.get("total").and_then(Value::as_f64)?;
+    if remaining < 0.0 {
+        return None;
+    }
+    let noun = meter_unit(usage.get("meterRef").and_then(Value::as_str), total);
+    Some(format!(
+        "{} of {} {noun}",
+        format_grouped_number(remaining),
+        format_grouped_number(total)
+    ))
+}
+
+fn used_of_total(usage: Option<&Value>) -> Option<String> {
+    let usage = usage?;
+    let used = usage.get("used").and_then(Value::as_f64)?;
+    let total = usage.get("total").and_then(Value::as_f64)?;
+    let noun = meter_unit(usage.get("meterRef").and_then(Value::as_str), total);
+    Some(format!(
+        "{} of {} {noun}",
+        format_grouped_number(used),
+        format_grouped_number(total)
+    ))
+}
+
+fn claimable_free_plan(plans: &[Value]) -> Option<&Value> {
+    plans.iter().find(|plan| {
+        plan.get("requiresPayment") == Some(&Value::Bool(false))
+            && included_units(Some(plan), None).is_some_and(|cap| cap > 0)
+    })
+}
+
+fn catalog_fragment(plan: &Value, customer: Option<&Value>) -> String {
+    let name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
+    let cap = included_units(Some(plan), None);
+    let cycle = interval_phrase(Some(plan));
+    let price = plan_price_phrase(Some(plan));
+    let rate = credits_rate_phrase(Some(plan), customer);
+    let shape = resolve_narrator_plan_shape(Some(plan));
+    let trial = trial_days(Some(plan));
+    let paid = plan.get("requiresPayment") != Some(&Value::Bool(false));
+    let mut core = if shape == Some(NarratorPlanShape::Free) || (!paid && shape != Some(NarratorPlanShape::Trial))
+    {
+        if let Some(cap) = cap.filter(|c| *c > 0) {
+            let unit = meter_unit(meter_name(Some(plan)).as_deref(), cap as f64);
+            let cycle_bit = cycle.map(|c| format!(" {c}")).unwrap_or_default();
+            format!("{name} gives {} {unit}{cycle_bit}", format_grouped_number(cap as f64))
+        } else {
+            format!("{name} requires no payment")
+        }
+    } else if shape == Some(NarratorPlanShape::UsageBased) {
+        rate.map_or_else(
+            || format!("{name} is pay as you go"),
+            |rate| format!("{name} is {rate}"),
+        )
+    } else if billing_cycle(Some(plan)).is_none() {
+        let allowance = match cap {
+            Some(0) | None => " for unlimited".to_owned(),
+            Some(cap) => format!(
+                " for {} {}",
+                format_grouped_number(cap as f64),
+                meter_unit(meter_name(Some(plan)).as_deref(), cap as f64)
+            ),
+        };
+        price.map_or_else(
+            || format!("{name} is one-time"),
+            |price| format!("{name} is {price} once{allowance}"),
+        )
+    } else {
+        let allowance = match cap {
+            Some(0) => " for unlimited".to_owned(),
+            Some(cap) if cap > 0 => format!(
+                " for {} {}",
+                format_grouped_number(cap as f64),
+                meter_unit(meter_name(Some(plan)).as_deref(), cap as f64)
+            ),
+            _ => String::new(),
+        };
+        match (price, cycle) {
+            (Some(price), Some(interval)) => format!("{name} is {price} {interval}{allowance}"),
+            (Some(price), None) => format!("{name} is {price}{allowance}"),
+            (None, Some(interval)) => format!("{name} is {interval}"),
+            _ => name.to_owned(),
+        }
+    };
+    if let Some(trial) = trial.filter(|d| *d != 0) {
+        core.push_str(&format!(" · {trial}-day trial"));
+    }
+    if let Some(reference) = plan.get("reference").and_then(Value::as_str) {
+        core.push_str(&format!(" · planRef: {reference}"));
+    }
+    core
+}
+
+fn carry_on_fragment(plan: &Value, customer: Option<&Value>) -> String {
+    let name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
+    let mut core = if resolve_narrator_plan_shape(Some(plan)) == Some(NarratorPlanShape::UsageBased) {
+        let credits = customer
+            .and_then(|c| c.pointer("/balance/credits"))
+            .and_then(Value::as_f64);
+        if credits.is_some_and(|c| c > 0.0) {
+            format!(
+                "{name} starts now using your existing {} credits",
+                format_grouped_number(credits.unwrap_or(0.0))
+            )
+        } else {
+            format!("{name} starts now")
+        }
+    } else {
+        let price = plan_price_phrase(Some(plan));
+        let cycle = interval_phrase(Some(plan));
+        if billing_cycle(Some(plan)).is_none() {
+            price.map_or_else(|| name.to_owned(), |price| format!("{name} is {price} once"))
+        } else {
+            match (price, cycle) {
+                (Some(price), Some(cycle)) => format!("{name} is {price} {cycle}"),
+                _ => name.to_owned(),
+            }
+        }
+    };
+    if let Some(reference) = plan.get("reference").and_then(Value::as_str) {
+        core.push_str(&format!(" · planRef: {reference}"));
+    }
+    core
+}
+
+fn recovery_for_state(state: &str, free_plan_ref: Option<&str>) -> String {
+    match state {
+        "A" => recovery_line(&["checkout"]),
+        "B" => recovery_line(&["topup"]),
+        "C" | "E" | "F" | "I" => recovery_line(&["checkout"]),
+        "D" => recovery_line(&["topup", "checkout"]),
+        "H" => free_plan_ref.map_or_else(
+            || recovery_line(&["checkout"]),
+            |plan_ref| {
+                format!("To continue, call `activate_plan` with planRef: \"{plan_ref}\".")
+            },
+        ),
+        "J" => recovery_line(&["account"]),
+        _ => recovery_line(&["checkout"]),
+    }
+}
+
+fn narrate_account_body(
+    state: &str,
+    product: &str,
+    plan: Option<&Value>,
+    plan_shape: Option<NarratorPlanShape>,
+    purchase: Option<&Value>,
+    customer: Option<&Value>,
+    plans: &[Value],
+) -> String {
+    let plan_name = plan
+        .and_then(|p| p.get("name").and_then(Value::as_str))
+        .unwrap_or("plan");
+    let usage = customer.and_then(|c| c.get("usage"));
+    let credits = customer
+        .and_then(|c| c.pointer("/balance/credits"))
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+
+    match state {
+        "A" => {
+            let fragments: Vec<String> = plans.iter().map(|p| catalog_fragment(p, customer)).collect();
+            let catalog = if fragments.is_empty() {
+                String::new()
+            } else {
+                format!(" {}.", fragments.join(", "))
+            };
+            format!("{product} has no plan yet.{catalog} Reply with a plan name to activate it.")
+        }
+        "H" => {
+            let free = claimable_free_plan(plans);
+            let cap = free.and_then(|p| included_units(Some(p), None));
+            let cycle = interval_phrase(free);
+            let unit = meter_unit(
+                meter_name(free).as_deref(),
+                cap.filter(|c| *c > 0).unwrap_or(2) as f64,
+            );
+            let ready = if let Some(cap) = cap.filter(|c| *c > 0) {
+                let cycle_bit = cycle.map(|c| format!(" {c}")).unwrap_or_default();
+                format!("{} {unit}{cycle_bit}, no card", format_grouped_number(cap as f64))
+            } else {
+                "no card".to_owned()
+            };
+            format!(
+                "{product} has a free plan ready: {ready}. Call `activate_plan` with a `planRef` to activate it."
+            )
+        }
+        "B" => {
+            let rate = credits_rate_phrase(plan, customer);
+            let per_call = credits_per_unit_from_balance(
+                plan,
+                customer.and_then(|c| c.get("balance")),
+                None,
+            );
+            let runway = per_call
+                .filter(|p| *p > 0)
+                .map(|per| {
+                    format!(
+                        ", about {} calls",
+                        format_grouped_number((credits / per as f64).floor())
+                    )
+                })
+                .unwrap_or_default();
+            let rate_bit = rate.map(|r| format!(", {r}")).unwrap_or_default();
+            format!(
+                "{product} is on {plan_name}{rate_bit}. Balance {} credits{runway}. Call `account` with view: 'topup' to add credits.",
+                format_grouped_number(credits)
+            )
+        }
+        "D" => {
+            let per_call = credits_per_unit_from_balance(
+                plan,
+                customer.and_then(|c| c.get("balance")),
+                None,
+            );
+            let cost_bit = if let Some(per) = per_call.filter(|p| *p > 0) {
+                let shortfall = (per as f64 - credits).max(0.0);
+                format!(
+                    "; this call costs {} credits — {} short",
+                    format_grouped_number(per as f64),
+                    format_grouped_number(shortfall)
+                )
+            } else {
+                format!(" and {plan_name} needs credits")
+            };
+            format!(
+                "{product} is on {plan_name}. Balance {} credits{cost_bit}. Call `account` with view: 'topup' to add credits, or with view: 'checkout' to switch to a plan that does not use credits.",
+                format_grouped_number(credits)
+            )
+        }
+        "C" => {
+            let price_bit = plan_price_bit(plan);
+            let one_time = billing_cycle(plan).is_none();
+            let left = remaining_of_total(usage);
+            let date = format_short_date(
+                usage
+                    .and_then(|u| u.get("periodEnd").and_then(Value::as_str))
+                    .or_else(|| purchase.and_then(|p| p.get("endDate").and_then(Value::as_str))),
+            );
+            let unlimited = usage.and_then(|u| u.get("remaining").and_then(Value::as_f64))
+                == Some(-1.0)
+                || included_units(plan, None) == Some(0)
+                || plan_shape == Some(NarratorPlanShape::RecurringUnlimited);
+            let position = if let Some(left) = left {
+                if one_time {
+                    format!("{left} left")
+                } else {
+                    let renew = date
+                        .as_deref()
+                        .map(|d| format!(", renewing {d}"))
+                        .unwrap_or_default();
+                    format!("{left} left this period{renew}")
+                }
+            } else if unlimited {
+                if one_time {
+                    "Unlimited calls".to_owned()
+                } else {
+                    let renew = date
+                        .as_deref()
+                        .map(|d| format!(", renewing {d}"))
+                        .unwrap_or_default();
+                    format!("Unlimited calls{renew}")
+                }
+            } else if let Some(date) = date.as_deref().filter(|_| !one_time) {
+                format!("Renews {date}")
+            } else {
+                "After your first call".to_owned()
+            };
+            let limits = customer.and_then(|c| c.get("limits"));
+            let parsed = limits.and_then(|l| serde_json::from_value::<PaywallLimits>(l.clone()).ok());
+            let credits_unused = !credit_signals(parsed.as_ref()).is_credit_based;
+            let tail = if credits_unused {
+                "Credits are not used on this plan. Call `account` with view: 'checkout' to switch."
+            } else {
+                "Call `account` with view: 'checkout' to switch."
+            };
+            format!("{product} is on {plan_name}{price_bit}. {position}. {tail}")
+        }
+        "E" => {
+            let left = remaining_of_total(usage);
+            let date = format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
+            let interval = billing_cycle(plan)
+                .map(|c| cycle_interval(c))
+                .unwrap_or_else(|| "period".to_owned());
+            let left_bit = if let Some(left) = left {
+                let reset = date
+                    .as_deref()
+                    .map(|d| format!(", resetting {d}"))
+                    .unwrap_or_default();
+                format!("{left} left this {interval}{reset}")
+            } else if let Some(date) = date {
+                format!("resets {date}")
+            } else {
+                "After your first call".to_owned()
+            };
+            format!(
+                "{product} is on the free plan: {left_bit}. Credits are not used on {plan_name}. Call `account` with view: 'checkout' for more calls."
+            )
+        }
+        "F" => {
+            let cap = usage
+                .and_then(|u| u.get("total").and_then(Value::as_f64))
+                .or_else(|| included_units(plan, None).map(|n| n as f64));
+            let unit = meter_unit(
+                usage
+                    .and_then(|u| u.get("meterRef").and_then(Value::as_str))
+                    .or(meter_name(plan).as_deref()),
+                cap.filter(|c| *c > 0.0).unwrap_or(2.0),
+            );
+            let date = format_short_date(usage.and_then(|u| u.get("periodEnd").and_then(Value::as_str)));
+            let cap_bit = if let Some(cap) = cap.filter(|c| *c > 0.0) {
+                format!("{} {unit} are used up", format_grouped_number(cap))
+            } else {
+                "allowance is used up".to_owned()
+            };
+            let consequence = if let Some(date) = date {
+                format!(" Further calls fail until {date}")
+            } else {
+                " Further calls fail until the allowance resets".to_owned()
+            };
+            let plan_ref = plan
+                .and_then(|p| p.get("reference").and_then(Value::as_str))
+                .or_else(|| purchase.and_then(|p| p.get("planRef").and_then(Value::as_str)));
+            let others: Vec<String> = plans
+                .iter()
+                .filter(|item| {
+                    let item_ref = item.get("reference").and_then(Value::as_str);
+                    if item_ref.is_some() && item_ref == plan_ref {
+                        return false;
+                    }
+                    !matches!(
+                        resolve_narrator_plan_shape(Some(item)),
+                        Some(NarratorPlanShape::Free | NarratorPlanShape::Trial)
+                    )
+                })
+                .map(|item| carry_on_fragment(item, customer))
+                .collect();
+            let carry_on = if others.is_empty() {
+                String::new()
+            } else {
+                format!(" {}.", join_or(&others))
+            };
+            let anti_trap = if credits > 0.0 && plan_shape != Some(NarratorPlanShape::UsageBased) {
+                format!(" Adding credits will not help, because {plan_name} does not spend them.")
+            } else {
+                String::new()
+            };
+            let price_bit = plan_price_bit(plan);
+            format!(
+                "{product} is on {plan_name}{price_bit}. {cap_bit}.{consequence}.{anti_trap}{carry_on} Call `account` with view: 'checkout' to switch plan."
+            )
+        }
+        "I" => {
+            let used_bit = used_of_total(usage)
+                .map(|used| format!(": {used} used"))
+                .unwrap_or_default();
+            format!(
+                "{product} is over its {plan_name} allowance{used_bit}. Calls still work. Call `account` with view: 'checkout' for a higher limit."
+            )
+        }
+        _ => {
+            let date = format_short_date(purchase.and_then(|p| p.get("endDate").and_then(Value::as_str)));
+            let until = date
+                .as_deref()
+                .map(|d| format!("runs until {d}"))
+                .unwrap_or_else(|| "is cancelled".to_owned());
+            let left = remaining_of_total(usage);
+            let left_bit = left
+                .map(|left| format!(", with {left} left"))
+                .unwrap_or_default();
+            format!(
+                "{product}'s {plan_name} plan is cancelled and {until}{left_bit}. Calls stop after that. Call `account` with view: 'account' to reactivate it."
+            )
+        }
+    }
+}
+
+fn cycle_interval(cycle: solvapay_core::BillingCycle) -> String {
+    cycle.interval.to_string()
+}
+
+/// Narrate `manage_account`.
+#[must_use]
+pub fn narrate_manage_account(data: &Value) -> Value {
+    let customer = data.get("customer");
+    let plans = data
+        .get("plans")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let active = active_purchase(data);
+    let limits = customer.and_then(|c| c.get("limits"));
+    let use_limits = prefer_limits_plan(active.as_ref(), limits);
+    let catalog = find_catalog_plan(
+        &plans,
+        if use_limits {
+            None
+        } else {
+            active.as_ref().and_then(|p| p.get("planSnapshot"))
+        },
+        if use_limits {
+            limits.and_then(|l| l.get("planRef").and_then(Value::as_str))
+        } else {
+            active
+                .as_ref()
+                .and_then(|p| p.get("planRef").and_then(Value::as_str))
+        },
+    );
+    let merged = if use_limits {
+        catalog.cloned().or_else(|| {
+            Some(json!({
+                "name": limits.and_then(|l| l.get("planName").and_then(Value::as_str)),
+                "reference": limits.and_then(|l| l.get("planRef").and_then(Value::as_str)),
+            }))
+        })
+    } else {
+        solvapay_core::merge_plan(
+            active.as_ref().and_then(|p| p.get("planSnapshot")),
+            catalog,
+        )
+    };
+    let plan_shape = resolve_narrator_plan_shape(merged.as_ref());
+    let state_input = json!({
+        "purchase": active,
+        "limits": limits,
+        "planShape": plan_shape,
+    });
+    let state = resolve_account_state(Some(&state_input));
+    let name = product_name(data);
+    let free = claimable_free_plan(&plans);
+    let mut lines: Vec<String> = Vec::new();
+    if state == "A" || state == "H" {
+        lines.push(format!("**Welcome to {name}**"));
+    } else {
+        lines.push(format!("**{name} — your account**"));
+    }
+    lines.push(String::new());
+    lines.push(narrate_account_body(
+        &state,
+        &name,
+        merged.as_ref(),
+        plan_shape,
+        active.as_ref(),
+        customer,
+        &plans,
+    ));
+    if state == "A" || state == "H" {
+        if let Some(bal) = balance_row(customer) {
+            lines.push(bal);
+        }
+    }
+    if let Some(manage) = manage_row(data) {
+        lines.push(manage);
+    }
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
+    }
+    lines.push(String::new());
+    lines.push(recovery_for_state(
+        &state,
+        free.and_then(|p| p.get("reference").and_then(Value::as_str)),
+    ));
+    narrate_manage_output(lines.join("\n"), recovery_links(data))
 }
 
 fn recovery_links(data: &Value) -> Vec<Value> {
@@ -341,135 +932,86 @@ fn narrate_manage_output(text: String, links: Vec<Value>) -> Value {
     json!({ "text": text, "links": links })
 }
 
-/// Narrate `manage_account`.
+/// Copy for `activate_plan` builtin status values.
 #[must_use]
-pub fn narrate_manage_account(data: &Value) -> Value {
-    let customer = data.get("customer");
-    let active = active_purchase(customer);
-    let name = product_name(data);
-    let mut lines: Vec<String> = Vec::new();
-    match active {
-        None => {
-            lines.push(format!("**Welcome to {name}**"));
-            lines.push(String::new());
-            if let Some(bal) = balance_row(customer) {
-                lines.push(bal);
-            }
-            let plans = data
-                .get("plans")
-                .and_then(Value::as_array)
-                .cloned()
-                .unwrap_or_default();
-            if plans.is_empty() {
-                lines.push("No active plan.".to_owned());
+pub fn narrate_activate_plan_status(data: &Value) -> String {
+    let status = data.get("status").and_then(Value::as_str).unwrap_or("");
+    let plan_name = data
+        .get("planName")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty());
+    let named = plan_name.unwrap_or("This plan");
+    let checkout = data
+        .get("checkoutUrl")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(|url| {
+            let label = if url.contains("/checkout/topup") {
+                "Add credits"
             } else {
-                lines.push("No active plan. Plans available:".to_owned());
-                lines.extend(plans_list_lines(&plans));
-            }
-            lines.push(docs_line());
+                "Open checkout"
+            };
+            format!(" [{label}]({url}) (expires in 15 minutes), or")
+        })
+        .unwrap_or_default();
+    match status {
+        "activated" => plan_name.map_or_else(
+            || "Plan activated. Paid tools are available now.".to_owned(),
+            |name| format!("Activated {name}. Paid tools are available now."),
+        ),
+        "already_purchased" => {
+            format!("{named} is already purchased. Call `account` with view: 'account' to manage it.")
         }
-        Some(active) => {
-            lines.push(format!("**{name} — your account**"));
-            lines.push(String::new());
-            if let Some(plan) = active.get("planSnapshot").filter(|s| !s.is_null()) {
-                let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
-                let price = format_money(
-                    plan.get("price").and_then(Value::as_f64),
-                    plan.get("currency").and_then(Value::as_str),
-                );
-                let cycle = active
-                    .get("billingCycle")
-                    .and_then(Value::as_str)
-                    .map(|c| format!("/{c}"))
-                    .unwrap_or_default();
-                let end = format_date(active.get("endDate").and_then(Value::as_str));
-                let mut parts = vec![plan_name.to_owned()];
-                if let Some(price) = price {
-                    parts.push(format!("{price}{cycle}"));
+        "payment_required" => {
+            format!("{named} requires payment.{checkout} Call `account` with view: 'checkout' to pay.")
+        }
+        "topup_required" => {
+            format!("{named} needs credits before it can activate.{checkout} Call `account` with view: 'topup' to add credits.")
+        }
+        "invalid" => data
+            .get("message")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .unwrap_or_else(|| {
+                "That planRef is not valid for this product. Call `account` with view: 'checkout' to see plans.".to_owned()
+            }),
+        "already_active" => {
+            let limits = serde_json::from_value::<PaywallLimits>(data.clone()).ok();
+            let signals = credit_signals(limits.as_ref());
+            match (signals.credit_balance, signals.credits_per_call) {
+                (Some(balance), Some(cost)) => {
+                    let shortfall = (cost - balance).max(0.0);
+                    if shortfall > 0.0 {
+                        return format!(
+                            "{named} is already active. Balance {} credits; this call costs {} credits — {} short. Call the `account` tool with view: 'topup' to add credits.",
+                            format_grouped_number(balance),
+                            format_grouped_number(cost),
+                            format_grouped_number(shortfall)
+                        );
+                    }
                 }
-                if let Some(end) = end {
-                    parts.push(format!("renews {end}"));
-                }
-                lines.push(format!("Plan: {}", parts.join(" · ")));
+                _ => {}
             }
-            if let Some(bal) = balance_row(customer) {
-                lines.push(bal);
+            if named == "This plan" {
+                "This plan is already active.".to_owned()
+            } else {
+                format!("{named} is already active.")
             }
-            if let Some(usage_line) = included_usage_line(customer) {
-                lines.push(usage_line);
-            }
-            if let Some(next) = next_call_line(active, customer) {
-                lines.push(next);
-            }
-            lines.push(docs_line());
         }
+        _ => "This plan is already active.".to_owned(),
     }
-    if let Some(checkout) = checkout_line(data) {
-        lines.push(checkout);
-    }
-    narrate_manage_output(lines.join("\n"), recovery_links(data))
-}
-
-fn included_usage_line(customer: Option<&Value>) -> Option<String> {
-    let usage = customer?.get("usage")?;
-    if usage.is_null() {
-        return None;
-    }
-    let used = usage.get("used").and_then(Value::as_f64)?;
-    let total = usage
-        .get("total")
-        .or_else(|| usage.get("included"))
-        .and_then(Value::as_f64)?;
-    let remaining = usage
-        .get("remaining")
-        .and_then(Value::as_f64)
-        .unwrap_or_else(|| (total - used).max(0.0));
-    Some(format!(
-        "Used {} of {} this period · {} remaining",
-        format_grouped_number(used),
-        format_grouped_number(total),
-        format_grouped_number(remaining)
-    ))
-}
-
-fn next_call_line(active: &Value, customer: Option<&Value>) -> Option<String> {
-    let plan = active.get("planSnapshot")?;
-    let rate = usage_rate(Some(plan), None)?;
-    if rate.amount_minor <= 0.0 {
-        return None;
-    }
-    let money = format_money(Some(rate.amount_minor), Some(&rate.currency))?;
-    let mut line = format!("Next call: {money}");
-    if let Some(shortfall) = customer_shortfall_credits(customer) {
-        if shortfall > 0.0 {
-            line.push_str(&format!(
-                " — {} credits short",
-                format_grouped_number(shortfall)
-            ));
-        }
-    }
-    Some(line)
 }
 
 /// Copy for `activate_plan` when the backend reports `already_active`.
 #[must_use]
 pub fn narrate_already_active(data: &Value) -> String {
-    let limits = serde_json::from_value::<PaywallLimits>(data.clone()).ok();
-    let signals = credit_signals(limits.as_ref());
-    match (signals.credit_balance, signals.credits_per_call) {
-        (Some(balance), Some(cost)) => {
-            let shortfall = signals
-                .shortfall_credits
-                .unwrap_or_else(|| (cost - balance).max(0.0));
-            format!(
-                "This plan is already active. Balance {} credits; this call costs {} credits — {} short.",
-                format_grouped_number(balance),
-                format_grouped_number(cost),
-                format_grouped_number(shortfall)
-            )
+    let mut payload = data.clone();
+    if payload.get("status").is_none() {
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("status".to_owned(), json!("already_active"));
         }
-        _ => "This plan is already active.".to_owned(),
     }
+    narrate_activate_plan_status(&payload)
 }
 
 /// Narrate `upgrade`.
@@ -479,13 +1021,14 @@ pub fn narrate_upgrade(data: &Value) -> Value {
         format!("**Upgrade — {}**", product_name(data)),
         String::new(),
     ];
+    let has_active_purchase = active_purchase(data).is_some();
     let plans: Vec<Value> = data
         .get("plans")
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default()
         .into_iter()
-        .filter(|p| !is_free_plan(p))
+        .filter(|p| !has_active_purchase || !is_free_plan(p))
         .collect();
     if plans.is_empty() {
         lines.push("No paid plans are configured on this product yet.".to_owned());
@@ -496,7 +1039,7 @@ pub fn narrate_upgrade(data: &Value) -> Value {
     if let Some(checkout) = checkout_line(data) {
         lines.push(checkout);
     }
-    lines.push(docs_line());
+    lines.push(recovery_line(&["account"]));
     narrator_output(lines.join("\n"), recovery_links(data))
 }
 
@@ -507,18 +1050,37 @@ pub fn narrate_auto_recharge(data: &Value) -> Value {
         format!("**Auto-recharge — {}**", product_name(data)),
         String::new(),
     ];
-    if let Some(bal) = balance_row(data.get("customer")) {
+    let customer = data.get("customer");
+    if let Some(bal) = balance_row(customer) {
         lines.push(bal);
     }
-    lines.push(
-        "Tops your balance up automatically so calls do not fail. Nothing is charged today."
-            .to_owned(),
-    );
-    if let Some(checkout) = checkout_line(data) {
-        lines.push(checkout);
+    let enabled = customer
+        .and_then(|c| c.pointer("/autoRecharge/enabled"))
+        == Some(&Value::Bool(true));
+    lines.push(if enabled {
+        "Auto-recharge is on. It tops your balance up automatically so calls do not fail.".to_owned()
+    } else {
+        "Auto-recharge is off. Turn it on from the account page — it stores a card and tops your balance up automatically so calls do not fail.".to_owned()
+    });
+    if let Some(manage) = manage_row(data) {
+        lines.push(manage);
     }
-    lines.push(docs_line());
-    narrator_output(lines.join("\n"), recovery_links(data))
+    lines.push(recovery_line(&["account"]));
+    let mut links = recovery_links(data);
+    if let Some(portal) = hosted_portal_link(data) {
+        let name = if enabled {
+            "Manage auto-recharge"
+        } else {
+            "Turn on auto-recharge"
+        };
+        links.retain(|link| link.get("name").and_then(Value::as_str) != Some("Manage account"));
+        let mut portal = portal;
+        if let Some(obj) = portal.as_object_mut() {
+            obj.insert("name".to_owned(), json!(name));
+        }
+        links.push(portal);
+    }
+    narrator_output(lines.join("\n"), links)
 }
 
 /// Narrate `topup`.
@@ -535,13 +1097,13 @@ pub fn narrate_topup(data: &Value) -> Value {
     if let Some(checkout) = checkout_line(data) {
         lines.push(checkout);
     }
-    lines.push(docs_line());
+    lines.push(recovery_line(&["account"]));
     narrator_output(lines.join("\n"), recovery_links(data))
 }
 
-/// Narrate `activate_plan`.
+/// Narrate the `activate_plan` viewer (plan picker).
 #[must_use]
-pub fn narrate_activate_plan(data: &Value) -> Value {
+pub fn narrate_activate_plan_view(data: &Value) -> Value {
     let mut lines = vec![
         format!("**Activate a plan — {}**", product_name(data)),
         String::new(),
@@ -560,7 +1122,7 @@ pub fn narrate_activate_plan(data: &Value) -> Value {
     if let Some(checkout) = checkout_line(data) {
         lines.push(checkout);
     }
-    lines.push(docs_line());
+    lines.push(recovery_line(&["account"]));
     narrator_output(lines.join("\n"), recovery_links(data))
 }
 
@@ -583,16 +1145,15 @@ fn first_selectable_plan(data: &Value) -> Option<&Value> {
         .or_else(|| plans.first())
 }
 
-fn plan_for_placeholder<'a>(view: &str, data: &'a Value) -> Option<&'a Value> {
+fn plan_for_placeholder(view: &str, data: &Value) -> Option<Value> {
     if view == "account" || view == "manage_account" {
-        if let Some(snap) = active_purchase(data.get("customer"))
-            .and_then(|purchase| purchase.get("planSnapshot"))
-            .filter(|snap| !snap.is_null())
-        {
-            return Some(snap);
+        if let Some(purchase) = active_purchase(data) {
+            if let Some(snap) = purchase.get("planSnapshot").filter(|snap| !snap.is_null()) {
+                return Some(snap.clone());
+            }
         }
     }
-    first_selectable_plan(data)
+    first_selectable_plan(data).cloned()
 }
 
 /// One-line UI placeholder with plan, price, and checkout URL.
@@ -600,7 +1161,7 @@ fn plan_for_placeholder<'a>(view: &str, data: &'a Value) -> Option<&'a Value> {
 pub fn ui_placeholder(view: &str, data: &Value) -> String {
     let name = product_name(data);
     let mut parts = vec![opened_verb(view, &name)];
-    if let Some(plan) = plan_for_placeholder(view, data) {
+    if let Some(plan) = plan_for_placeholder(view, data).as_ref() {
         let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
         let price = format_plan_prices(plan);
         if price.is_empty() || is_free_plan(plan) {
@@ -627,7 +1188,7 @@ fn narrator_for(view: &str, data: &Value) -> Option<Value> {
         "manage_account" | "account" => Some(narrate_manage_account(data)),
         "auto-recharge" => Some(narrate_auto_recharge(data)),
         "topup" => Some(narrate_topup(data)),
-        "activate_plan" => Some(narrate_activate_plan(data)),
+        "activate_plan" => Some(narrate_activate_plan_view(data)),
         "already_active" => Some(narrator_output(narrate_already_active(data), Vec::new())),
         "virtual_upgrade" => Some(narrate_virtual_upgrade(data)),
         "virtual_manage_account" => Some(narrate_virtual_manage_account(data)),
@@ -922,7 +1483,7 @@ mod tests {
         }));
         assert_eq!(
             text,
-            "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short."
+            "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. Call the `account` tool with view: 'topup' to add credits."
         );
     }
 

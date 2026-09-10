@@ -69,6 +69,7 @@ export type NativeCoreSyncMethod =
   | 'validateCheckoutSessionParams'
   | 'isCachedCustomerRefValid'
   | 'resolvePurchaseCustomerRef'
+  | 'selectActivePlanPurchase'
   | 'selectActivePurchases'
   | 'classifyCancelError'
   | 'classifyReactivateError'

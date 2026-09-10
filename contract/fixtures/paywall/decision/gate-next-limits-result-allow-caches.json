@@ -55,7 +55,8 @@
           "remaining": 3,
           "withinLimits": true,
           "throttled": false,
-          "overage": false
+          "overage": false,
+          "isCreditBased": false
         },
         "cache": {
           "op": "set",

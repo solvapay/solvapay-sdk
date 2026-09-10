@@ -122,13 +122,27 @@ export function usePlans(options: UsePlansOptions): UsePlansReturn {
   const [loading, setLoading] = useState(() => plans.length === 0)
   const [error, setError] = useState<Error | null>(null)
 
-  useEffect(() => { fetcherRef.current = effectiveFetcher }, [effectiveFetcher])
-  useEffect(() => { filterRef.current = filter }, [filter])
-  useEffect(() => { sortByRef.current = sortBy }, [sortBy])
-  useEffect(() => { autoSelectFirstPaidRef.current = autoSelectFirstPaid }, [autoSelectFirstPaid])
-  useEffect(() => { initialPlanRefRef.current = initialPlanRef }, [initialPlanRef])
-  useEffect(() => { excludePlanRefRef.current = excludePlanRef }, [excludePlanRef])
-  useEffect(() => { selectionReadyRef.current = selectionReady }, [selectionReady])
+  useEffect(() => {
+    fetcherRef.current = effectiveFetcher
+  }, [effectiveFetcher])
+  useEffect(() => {
+    filterRef.current = filter
+  }, [filter])
+  useEffect(() => {
+    sortByRef.current = sortBy
+  }, [sortBy])
+  useEffect(() => {
+    autoSelectFirstPaidRef.current = autoSelectFirstPaid
+  }, [autoSelectFirstPaid])
+  useEffect(() => {
+    initialPlanRefRef.current = initialPlanRef
+  }, [initialPlanRef])
+  useEffect(() => {
+    excludePlanRefRef.current = excludePlanRef
+  }, [excludePlanRef])
+  useEffect(() => {
+    selectionReadyRef.current = selectionReady
+  }, [selectionReady])
 
   // Wrapped setter that tracks user-initiated selection
   const setSelectedPlanIndex = useCallback((index: number) => {

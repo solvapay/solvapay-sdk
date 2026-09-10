@@ -50,8 +50,9 @@ pub fn make_response_result(
     data: Value,
     options: Option<Value>,
     emitted: Vec<Value>,
+    limits: Option<Value>,
 ) -> ResponseEnvelope {
-    core_make(data, options, emitted)
+    core_make(data, options, emitted, limits)
 }
 
 /// Assert `value` is a branded response envelope.

@@ -25,7 +25,7 @@ export async function createCheckoutSessionCore(
   body: {
     productRef: string
     planRef?: string
-    returnUrl?: string
+    returnUrl?: string | null
     purpose?: 'credit_topup'
   },
   options: {
@@ -66,7 +66,10 @@ export async function createCheckoutSessionCore(
       // If URL parsing fails, continue without origin fallback
     }
 
-    const returnUrl = resolveReturnUrl(body.returnUrl, options.returnUrl, origin)
+    const returnUrl =
+      body.returnUrl === null
+        ? undefined
+        : resolveReturnUrl(body.returnUrl, options.returnUrl, origin, body.returnUrl === null)
 
     const solvaPay = options.solvaPay || createSolvaPay()
 

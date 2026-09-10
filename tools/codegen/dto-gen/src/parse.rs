@@ -518,10 +518,7 @@ fn parse_success_response(
                 .and_then(Value::as_str)
                 .map(str::to_string);
 
-            if path.ends_with("/process")
-                && method.eq_ignore_ascii_case("post")
-                && disc.as_deref() == Some("status")
-            {
+            if path.ends_with("/process") && method.eq_ignore_ascii_case("post") {
                 return Ok(Some(build_process_payment_result(
                     one_of, &disc, ctx, schemas,
                 )?));

@@ -5448,12 +5448,16 @@ mcp:
         array:
           type: unknown
         required: false
+      - name: limits
+        type: unknown
+        required: false
     docs:
       summary: 'Construct a branded handler response envelope (__solvapayResponse).'
       params:
         data: 'Merchant handler data payload.'
         options: 'Optional response options object.'
         emittedBlocks: 'Content blocks queued via ctx.emit before respond.'
+        limits: 'Pre-check limits captured at respond time for honest nudge copy.'
       returns: 'Branded ResponseEnvelope.'
     sync:
       ts: sync

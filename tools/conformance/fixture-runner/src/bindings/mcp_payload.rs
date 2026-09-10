@@ -47,7 +47,9 @@ pub(crate) fn invoke_make_response_result(input: &FixtureInput) -> Result<Value,
         }
     };
 
-    let envelope = make_response_result(data, options, emitted_blocks);
+    let limits = input.args.get("limits").cloned();
+
+    let envelope = make_response_result(data, options, emitted_blocks, limits);
     serde_json::to_value(envelope).map_err(|e| BindingError::Harness(e.to_string()))
 }
 

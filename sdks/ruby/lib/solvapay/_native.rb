@@ -121,6 +121,7 @@ module SolvaPay
       derive_active_products
       build_prompt_user_message
       classify_reactivate_error
+      select_active_plan_purchase
       normalize_cancel_response
       validate_public_base_url
       build_payable_tool_result

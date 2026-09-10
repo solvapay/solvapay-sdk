@@ -25,6 +25,7 @@
             "customerRef": "cus_1",
             "purchases": [
               {
+                "productRef": "prd_x",
                 "planSnapshot": {
                   "name": "Unlimited",
                   "isMetered": false,

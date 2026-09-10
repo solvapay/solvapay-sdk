@@ -695,6 +695,7 @@ module.exports.resolveTaxBehavior = nativeBinding.resolveTaxBehavior
 module.exports.resolveTaxTreatmentNote = nativeBinding.resolveTaxTreatmentNote
 module.exports.retryNextDelayMs = nativeBinding.retryNextDelayMs
 module.exports.REVERSE_CHARGE_NOTE = nativeBinding.REVERSE_CHARGE_NOTE
+module.exports.selectActivePlanPurchase = nativeBinding.selectActivePlanPurchase
 module.exports.selectActivePurchases = nativeBinding.selectActivePurchases
 module.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = nativeBinding.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 module.exports.shouldRetryUsageError = nativeBinding.shouldRetryUsageError

@@ -510,6 +510,7 @@ export const SHIM_JS_NAMES = [
   'resolvePurchaseCustomerRef',
   'resolveReturnUrl',
   'retryNextDelayMs',
+  'selectActivePlanPurchase',
   'selectActivePurchases',
   'shouldRetryUsageError',
   'validateActivatePlanParams',

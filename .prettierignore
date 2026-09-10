@@ -13,6 +13,10 @@ coverage/
 # Markdown that uses `+` continuation lines (Prettier treats `+` as a list marker)
 core/solvapay-mcp/src/overview.md
 
+# Scaffold templates: `__PLACEHOLDER__` tokens are substituted at generation time,
+# and Prettier rewrites markdown `__x__` emphasis to `**x**`
+tools/create-solvapay/templates/**/*.md
+
 # Generated files
 generated/
 docs/api/

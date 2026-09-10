@@ -14,6 +14,6 @@
     }
   },
   "expect": {
-    "result": "Heads up — running low on credits. Call the `account` tool with view: 'topup' to add more."
+    "result": "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom."
   }
 }

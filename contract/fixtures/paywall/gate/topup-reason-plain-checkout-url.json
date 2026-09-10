@@ -18,7 +18,7 @@
       "kind": "payment_required",
       "product": "prd_topup",
       "checkoutUrl": "https://pay.example.com/customer/checkout?id=chk_1",
-      "message": "Included usage is exhausted. [Add credits](https://pay.example.com/customer/checkout?id=chk_1) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+      "message": "Included usage is exhausted. [Add credits](https://pay.example.com/customer/checkout?id=chk_1) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. Or call the `account` tool with view: 'checkout' to pick a plan.",
       "shortMessage": "Payment required",
       "reason": "topup_required",
       "nextAction": "topup",

@@ -83,10 +83,20 @@ pub fn invoke_resolve_return_url(input: &FixtureInput) -> Result<Value, BindingE
     let body_return_url = optional_string_arg(input, "bodyReturnUrl")?;
     let options_return_url = optional_string_arg(input, "optionsReturnUrl")?;
     let origin = optional_string_arg(input, "origin")?;
+    let body_return_url_null = match input.args.get("bodyReturnUrlNull") {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(flag)) => Some(*flag),
+        Some(_) => {
+            return Err(BindingError::Harness(
+                "args.bodyReturnUrlNull must be a boolean or null".into(),
+            ))
+        }
+    };
     match resolve_return_url(
         body_return_url.as_deref(),
         options_return_url.as_deref(),
         origin.as_deref(),
+        body_return_url_null,
     ) {
         None => Ok(Value::Null),
         Some(url) => Ok(Value::String(url)),

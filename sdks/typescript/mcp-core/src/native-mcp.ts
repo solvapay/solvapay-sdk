@@ -16,7 +16,7 @@ import type {
   ToolDescriptorMetadata,
 } from './descriptor-metadata'
 import type { McpToolName } from './tool-names'
-import type { PaywallStructuredContent } from '@solvapay/server'
+import type { PaywallStructuredContent, LimitResponseWithPlan } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
 import type { PaywallToolResultContext } from './paywallToolResult'
 import type {
@@ -64,11 +64,13 @@ export function makeResponseResult<TData>(
   data: TData,
   options: ResponseOptions | undefined,
   emittedBlocks: ContentBlock[],
+  limits?: LimitResponseWithPlan | null,
 ): ResponseResult<TData> {
   return dispatchSync('makeResponseResult', {
     data,
     ...(options !== undefined ? { options } : {}),
     ...(emittedBlocks.length > 0 ? { emittedBlocks } : {}),
+    ...(limits !== undefined ? { limits } : {}),
   })
 }
 

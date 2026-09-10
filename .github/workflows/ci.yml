@@ -336,11 +336,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/worker-build
-          key: ${{ runner.os }}-worker-build-0.1
+          key: ${{ runner.os }}-worker-build-0.8.5
 
       - name: Install worker-build
+        # Pinned: worker-build must match the `worker` major in the example's
+        # Cargo.toml, and it rejects a mismatch outright.
         if: steps.cache-worker-build.outputs.cache-hit != 'true'
-        run: cargo install worker-build
+        run: cargo install worker-build --version 0.8.5 --locked
 
       - name: worker-build cloudflare-worker-mcp
         working-directory: examples/rust/cloudflare-worker-mcp

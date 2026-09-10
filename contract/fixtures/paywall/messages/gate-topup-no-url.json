@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Included usage is exhausted. Call the `account` tool with view: 'topup'. See docs://solvapay/overview.md."
+    "result": "Included usage is exhausted. Call the `account` tool with view: 'topup'. Or call the `account` tool with view: 'checkout' to pick a plan."
   }
 }

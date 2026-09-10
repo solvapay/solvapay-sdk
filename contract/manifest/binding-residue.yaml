@@ -624,7 +624,12 @@ makeResponseResult:
                 }
             };
 
-            to_value(&make_response_result(data, options, emitted_blocks))
+            let limits = match args.get("limits") {
+                None => None,
+                Some(value) => Some(value.clone()),
+            };
+
+            to_value(&make_response_result(data, options, emitted_blocks, limits))
   args:
     - name: data
       type: value
@@ -633,6 +638,9 @@ makeResponseResult:
       type: value
       required: false
     - name: emittedBlocks
+      type: value
+      required: false
+    - name: limits
       type: value
       required: false
   omitCoreCall: true
@@ -1085,10 +1093,21 @@ resolveReturnUrl:
             let body_return_url = optional_string(&args, "bodyReturnUrl")?;
             let options_return_url = optional_string(&args, "optionsReturnUrl")?;
             let origin = optional_string(&args, "origin")?;
+            let body_return_url_null = match args.get("bodyReturnUrlNull") {
+                None | Some(Value::Null) => None,
+                Some(Value::Bool(flag)) => Some(*flag),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.bodyReturnUrlNull must be a boolean when present".to_owned(),
+                        false,
+                    ));
+                }
+            };
             match resolve_return_url(
                 body_return_url.as_deref(),
                 options_return_url.as_deref(),
                 origin.as_deref(),
+                body_return_url_null,
             ) {
                 None => Ok(Value::Null),
                 Some(url) => Ok(Value::String(url)),
@@ -1102,6 +1121,9 @@ resolveReturnUrl:
       required: false
     - name: origin
       type: string?
+      required: false
+    - name: bodyReturnUrlNull
+      type: bool
       required: false
   omitCoreCall: true
 resolveSellerIdentityDisplay:

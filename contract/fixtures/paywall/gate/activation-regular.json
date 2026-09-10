@@ -26,7 +26,7 @@
       "kind": "activation_required",
       "product": "prd_demo",
       "checkoutUrl": "https://pay.test/confirm",
-      "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md.",
+      "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`.",
       "shortMessage": "Activation required",
       "confirmationUrl": "https://pay.test/confirm",
       "plans": [

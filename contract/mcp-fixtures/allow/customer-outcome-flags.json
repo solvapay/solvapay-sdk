@@ -34,13 +34,12 @@
           {
             "type": "text",
             "text": "{\"throttled\":true,\"overage\":false}"
-          },
-          {
-            "type": "text",
-            "text": "{\"throttled\":true,\"overage\":false}"
           }
         ],
-        "structuredContent": { "throttled": true, "overage": false }
+        "structuredContent": {
+          "throttled": true,
+          "overage": false
+        }
       },
       "usage": [
         {
@@ -49,7 +48,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_hook",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

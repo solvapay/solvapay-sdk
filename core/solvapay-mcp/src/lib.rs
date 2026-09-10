@@ -51,7 +51,7 @@ pub use descriptors::{
 };
 pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 pub use narrate::{
-    mcp_narrate, narrate_already_active, narrated_tool_result, new_widget_session_id, parse_mode,
+    mcp_narrate, narrate_activate_plan_status, narrate_already_active, narrated_tool_result, new_widget_session_id, parse_mode,
     tool_error_result, tool_result, ui_placeholder, NarrateInput,
 };
 pub use oauth::{

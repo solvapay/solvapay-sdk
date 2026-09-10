@@ -28,6 +28,8 @@ import type {
   UpdateCustomerResult,
 } from './overlays.generated'
 
+type AssertEqual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never
+
 export type {
   CancelPurchaseParams,
   CloneProductOverrides,

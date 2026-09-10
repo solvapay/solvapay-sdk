@@ -30,10 +30,14 @@
     "result": {
       "toolResult": {
         "content": [
-          { "type": "text", "text": "{\"ok\":true}" },
-          { "type": "text", "text": "{\"ok\":true}" }
+          {
+            "type": "text",
+            "text": "{\"ok\":true}"
+          }
         ],
-        "structuredContent": { "ok": true }
+        "structuredContent": {
+          "ok": true
+        }
       },
       "usage": [
         {
@@ -42,7 +46,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_args",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

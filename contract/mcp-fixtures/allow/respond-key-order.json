@@ -32,13 +32,12 @@
           {
             "type": "text",
             "text": "{\"zebra\":1,\"apple\":2}"
-          },
-          {
-            "type": "text",
-            "text": "{\"zebra\":1,\"apple\":2}"
           }
         ],
-        "structuredContent": { "zebra": 1, "apple": 2 }
+        "structuredContent": {
+          "zebra": 1,
+          "apple": 2
+        }
       },
       "usage": [
         {
@@ -47,7 +46,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_hook",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

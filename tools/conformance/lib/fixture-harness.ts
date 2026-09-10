@@ -584,6 +584,7 @@ function isMakeResponseResultArgs(args: Record<string, unknown>): args is {
   data: unknown
   options?: ResponseOptions
   emittedBlocks?: ContentBlock[]
+  limits?: unknown
 } {
   if (!('data' in args)) return false
   if (args.options !== undefined) {
@@ -1640,11 +1641,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     invoke: args => {
       if (!isMakeResponseResultArgs(args)) {
         throw new Error(
-          'makeResponseResult args must include data; optional options object and emittedBlocks array',
+          'makeResponseResult args must include data; optional options object, emittedBlocks array, and limits',
         )
       }
       const emittedBlocks = args.emittedBlocks ?? []
-      return makeResponseResult(args.data, args.options, emittedBlocks)
+      return makeResponseResult(
+        args.data,
+        args.options,
+        emittedBlocks,
+        args.limits as LimitResponseWithPlan | null | undefined,
+      )
     },
   })
 

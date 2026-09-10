@@ -103,6 +103,7 @@ function renderAccount(
         value={{
           displayMode,
           availableDisplayModes: ['inline', 'fullscreen'],
+          hostedRail: 'inline',
         }}
       >
         <McpAccountView {...props} />

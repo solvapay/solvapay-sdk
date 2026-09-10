@@ -492,7 +492,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a product
-         * @description Deletes a product permanently in sandbox. In live mode, soft-deletes (preserves data but hides from listings). If the product has purchases in live mode, deactivates instead.
+         * @description Soft-deletes a product (hides it from listings, restorable). If the product has any purchases, deactivates it instead so the catalog row stays resolvable. Same rule in sandbox and live.
          */
         delete: operations["ProductSdkController_deleteProduct"];
         options?: never;
@@ -1639,9 +1639,13 @@ export interface components {
         LimitBalanceDto: {
             /** @description Credit balance in credits (100 credits = 1 minor currency unit) */
             creditBalance: number;
+            /** @description Credits per minor unit of `currency` (typically 100) */
+            creditsPerMinorUnit?: number;
             /** @description Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit) */
             creditsPerUnit: number;
             currency: string;
+            /** @description USD → display-currency rate used with creditsPerMinorUnit */
+            displayExchangeRate?: number;
             /** @description How many metered items the credit balance still covers (`balance / creditsPerUnit`) */
             remainingUnits?: number;
         };
@@ -2014,17 +2018,17 @@ export interface components {
         };
         ProcessPaymentCancelled: {
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example cancelled
              * @enum {string}
              */
-            status: "ProcessPaymentCancelled";
+            status: "cancelled";
         };
         ProcessPaymentFailed: {
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example failed
              * @enum {string}
              */
-            status: "ProcessPaymentFailed";
+            status: "failed";
         };
         ProcessPaymentIntentDto: {
             customerRef: string;
@@ -2033,25 +2037,25 @@ export interface components {
         };
         ProcessPaymentProcessing: {
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example processing
              * @enum {string}
              */
-            status: "ProcessPaymentProcessing";
+            status: "processing";
         };
         ProcessPaymentSucceededBare: {
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example succeeded
              * @enum {string}
              */
-            status: "ProcessPaymentSucceededBare";
+            status: "succeeded";
         };
         ProcessPaymentSucceededOneTime: {
             oneTimePurchase: components["schemas"]["OneTimePurchaseInfo"];
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example succeeded
              * @enum {string}
              */
-            status: "ProcessPaymentSucceededOneTime";
+            status: "succeeded";
             /**
              * @example one-time
              * @enum {string}
@@ -2061,10 +2065,10 @@ export interface components {
         ProcessPaymentSucceededRecurring: {
             purchase: components["schemas"]["SdkPurchaseResponse"];
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example succeeded
              * @enum {string}
              */
-            status: "ProcessPaymentSucceededRecurring";
+            status: "succeeded";
             /**
              * @example recurring
              * @enum {string}
@@ -2075,10 +2079,10 @@ export interface components {
             /** @description Detail message describing the timeout */
             message?: string;
             /**
-             * discriminator enum property added by openapi-typescript
+             * @example timeout
              * @enum {string}
              */
-            status: "ProcessPaymentTimeout";
+            status: "timeout";
         };
         ProductConfigDto: {
             /**
@@ -4052,10 +4056,10 @@ export interface operations {
                 content: {
                     "application/json": {
                         /**
-                         * Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases
+                         * Outcome of the delete: deactivation when purchases exist, otherwise soft-delete. Same in sandbox and live.
                          * @enum {string}
                          */
-                        action?: "deleted" | "deactivated" | "soft_deleted";
+                        action?: "deactivated" | "soft_deleted";
                         success?: boolean;
                     };
                 };

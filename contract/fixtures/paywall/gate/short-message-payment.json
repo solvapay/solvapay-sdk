@@ -15,7 +15,7 @@
       "kind": "payment_required",
       "product": "prd_demo",
       "checkoutUrl": "",
-      "message": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
+      "message": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'.",
       "shortMessage": "Payment required",
       "reason": "upgrade_required",
       "nextAction": "checkout",

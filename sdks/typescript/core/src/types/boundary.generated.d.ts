@@ -344,6 +344,10 @@ export type CustomerSnapshot = {
    * `overage` from limits, or `false` when absent.
    */
   overage: boolean
+  /**
+   * True when the limits response carries credit-balance fields.
+   */
+  isCreditBased: boolean
 }
 
 /**

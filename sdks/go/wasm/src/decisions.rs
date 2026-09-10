@@ -26,9 +26,9 @@ use solvapay_core::{
     project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
     resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
-    should_retry_usage_error, tier_bands, tier_meters, topup_process_next, trial_days, usage_rate,
-    validate_activate_plan_params, validate_attach_business_details_params,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_plan_purchase,
+    select_active_purchases, should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
+    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -381,10 +381,21 @@ pub unsafe extern "C" fn sv_resolve_return_url_binding(args_ptr: *mut u8, args_l
         let body_return_url = optional_string(&args, "bodyReturnUrl")?;
         let options_return_url = optional_string(&args, "optionsReturnUrl")?;
         let origin = optional_string(&args, "origin")?;
+        let body_return_url_null = match args.get("bodyReturnUrlNull") {
+            None | Some(Value::Null) => None,
+            Some(Value::Bool(flag)) => Some(*flag),
+            Some(_) => {
+                return Err(SdkError::transport(
+                    "args.bodyReturnUrlNull must be a boolean when present".to_owned(),
+                    false,
+                ));
+            }
+        };
         match resolve_return_url(
             body_return_url.as_deref(),
             options_return_url.as_deref(),
             origin.as_deref(),
+            body_return_url_null,
         ) {
             None => Ok(Value::Null),
             Some(url) => Ok(Value::String(url)),
@@ -558,6 +569,32 @@ pub unsafe extern "C" fn sv_classify_reactivate_error_binding(
         to_value(&classify_reactivate_error(&message))
     }))
 }
+
+// --- purchase ---
+
+/// Binding for `selectActivePlanPurchase`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_select_active_plan_purchase_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchases = optional_value(&args, "purchases");
+        let product_ref = optional_string(&args, "productRef")?;
+        to_value(&select_active_plan_purchase(
+            purchases.as_ref(),
+            product_ref.as_deref(),
+        ))
+    }))
+}
+
+// --- renewal ---
 
 /// Binding for `normalizeCancelResponse`.
 ///

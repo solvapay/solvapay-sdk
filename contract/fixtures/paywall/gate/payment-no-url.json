@@ -16,7 +16,7 @@
       "kind": "payment_required",
       "product": "prd_demo",
       "checkoutUrl": "",
-      "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
+      "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'.",
       "shortMessage": "Payment required",
       "planRef": "pl_basic",
       "reason": "limit_reached",

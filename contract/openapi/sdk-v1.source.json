@@ -5244,12 +5244,20 @@
             "description": "Credit balance in credits (100 credits = 1 minor currency unit)",
             "type": "number"
           },
+          "creditsPerMinorUnit": {
+            "description": "Credits per minor unit of `currency` (typically 100)",
+            "type": "number"
+          },
           "creditsPerUnit": {
             "description": "Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit)",
             "type": "number"
           },
           "currency": {
             "type": "string"
+          },
+          "displayExchangeRate": {
+            "description": "USD → display-currency rate used with creditsPerMinorUnit",
+            "type": "number"
           },
           "remainingUnits": {
             "description": "How many metered items the credit balance still covers (`balance / creditsPerUnit`)",
@@ -13561,9 +13569,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "discriminator": {
-                    "propertyName": "status"
-                  },
                   "oneOf": [
                     {
                       "$ref": "#/components/schemas/ProcessPaymentSucceededRecurring"
@@ -13987,7 +13992,7 @@
     },
     "/v1/sdk/products/{productRef}": {
       "delete": {
-        "description": "Deletes a product permanently in sandbox. In live mode, soft-deletes (preserves data but hides from listings). If the product has purchases in live mode, deactivates instead.",
+        "description": "Soft-deletes a product (hides it from listings, restorable). If the product has any purchases, deactivates it instead so the catalog row stays resolvable. Same rule in sandbox and live.",
         "operationId": "ProductSdkController_deleteProduct",
         "parameters": [
           {
@@ -14008,9 +14013,8 @@
                 "schema": {
                   "properties": {
                     "action": {
-                      "description": "Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases",
+                      "description": "Outcome of the delete: deactivation when purchases exist, otherwise soft-delete. Same in sandbox and live.",
                       "enum": [
-                        "deleted",
                         "deactivated",
                         "soft_deleted"
                       ],

@@ -1,20 +1,55 @@
-import { writeFileSync, readFileSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync } from 'fs'
 import { execSync } from 'child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const SNAPSHOT_PATH = path.resolve(SCRIPT_DIR, '../../../../contract/openapi/sdk-v1.snapshot.json')
 const OUTPUT_FILE = path.join(SCRIPT_DIR, '../src/types/generated.ts')
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// openapi-typescript rewrites a `discriminator.propertyName` field's enum
+// to the schema names (`ProcessPaymentSucceededRecurring`, …) instead of
+// the values the backend actually returns (`succeeded`). Drop the
+// discriminator so each variant keeps its real status/type enums. Narrowing
+// still works from those enums.
+function stripDiscriminators(value: unknown): number {
+  let stripped = 0
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item)
+      return
+    }
+    if (!isRecord(node)) return
+    if ('discriminator' in node) {
+      delete node.discriminator
+      stripped += 1
+    }
+    for (const child of Object.values(node)) walk(child)
+  }
+  walk(value)
+  return stripped
+}
+
 async function main(): Promise<void> {
   console.log('Reading OpenAPI snapshot from', SNAPSHOT_PATH)
 
+  const tempSpecPath = path.join(tmpdir(), `solvapay-sdk-openapi-${process.pid}.json`)
+
   try {
-    readFileSync(SNAPSHOT_PATH, 'utf8')
+    const spec: unknown = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8'))
+    const discriminatorsStripped = stripDiscriminators(spec)
+    if (discriminatorsStripped > 0) {
+      console.log(`Stripped ${discriminatorsStripped} OpenAPI discriminator(s)`)
+    }
+    writeFileSync(tempSpecPath, `${JSON.stringify(spec)}\n`)
 
     console.log('Generating TypeScript types...')
-    execSync(`pnpm exec openapi-typescript ${SNAPSHOT_PATH} -o ${OUTPUT_FILE}`, {
+    execSync(`pnpm exec openapi-typescript ${tempSpecPath} -o ${OUTPUT_FILE}`, {
       stdio: 'inherit',
       cwd: path.join(SCRIPT_DIR, '..'),
     })
@@ -41,6 +76,12 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error('❌ Error generating types:', error instanceof Error ? error.message : error)
     process.exit(1)
+  } finally {
+    try {
+      unlinkSync(tempSpecPath)
+    } catch {
+      // temp file is best-effort cleanup
+    }
   }
 }
 

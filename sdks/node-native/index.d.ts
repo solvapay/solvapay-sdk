@@ -498,6 +498,9 @@ export declare function retryNextDelayMs(argsJson: string): string
 /** Binding for `REVERSE_CHARGE_NOTE`. */
 export declare function REVERSE_CHARGE_NOTE(argsJson: string): string
 
+/** Binding for `selectActivePlanPurchase`. */
+export declare function selectActivePlanPurchase(argsJson: string): string
+
 /** Binding for `selectActivePurchases`. */
 export declare function selectActivePurchases(argsJson: string): string
 

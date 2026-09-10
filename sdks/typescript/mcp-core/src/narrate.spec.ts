@@ -100,9 +100,9 @@ describe('narrateManageAccount', () => {
     )
 
     expect(text).toContain('Global')
-    expect(text).toContain('$10.00')
-    expect(text).toContain('€9.00')
-    expect(text).toContain('/month')
+    expect(text).toContain('$10')
+    expect(text).toContain('€9')
+    expect(text).toContain('a month')
   })
 
   it('produces a cold-start welcome with plan list', () => {
@@ -128,12 +128,13 @@ describe('narrateManageAccount', () => {
       }),
     )
     expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
-    expect(text).toContain('No active plan.')
-    expect(text).toContain('Free · no payment required')
-    expect(text).toContain('Starter · pay as you go')
-    expect(text).toContain('Unlimited · recurring · $500.00/month')
-    expect(text).toContain('Docs: docs://solvapay/overview.md')
-    expect(text).not.toContain('Commands:')
+    expect(text).toContain('has no plan yet')
+    expect(text).not.toContain('so calls will fail')
+    expect(text).toContain('Free requires no payment')
+    expect(text).toContain('Starter is $0.01 per call')
+    expect(text).toContain('Unlimited is $500 a month')
+    expect(text).toContain('To continue, call `account` with view: "checkout".')
+    expect(text).not.toMatch(/Commands:\s*`\//)
   })
 
   it('labels one-time and hybrid plans distinctly instead of collapsing them to recurring', () => {
@@ -150,8 +151,8 @@ describe('narrateManageAccount', () => {
         ] as never,
       }),
     )
-    expect(text).toContain('Lifetime · one-time · $99.00')
-    expect(text).toContain('Team · subscription + usage · $49.00/month')
+    expect(text).toContain('Lifetime is $99 once')
+    expect(text).toContain('Team is $49 a month')
   })
 
   it('surfaces a trial from the trial option', () => {
@@ -167,7 +168,7 @@ describe('narrateManageAccount', () => {
         ] as never,
       }),
     )
-    expect(text).toContain('Pro · recurring · $29.00/month · 14-day trial')
+    expect(text).toContain('Pro is $29 a month · 14-day trial')
   })
 
   it('produces an account summary when there is an active purchase', () => {
@@ -178,6 +179,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planSnapshot: {
                 name: 'Unlimited',
                 isMetered: false,
@@ -198,10 +200,10 @@ describe('narrateManageAccount', () => {
     })
     const { text } = narrateManageAccount(payload)
     expect(text).toContain('**Acme Knowledge Base — your account**')
-    expect(text).toContain('Plan: Unlimited')
-    expect(text).toContain('$500.00/monthly')
-    expect(text).toContain('renews May')
-    expect(text).toContain('Balance: 100 credits')
+    expect(text).toContain('is on Unlimited, $500 a month')
+    expect(text).toContain('Unlimited calls')
+    expect(text).toContain('renewing May 1')
+    expect(text).toContain('Credits are not used on this plan')
   })
 
   function meteredAccount(
@@ -215,6 +217,7 @@ describe('narrateManageAccount', () => {
           customerRef: 'cus_1',
           purchases: [
             {
+              productRef: 'prd_x',
               planRef: 'pln_payg',
               planSnapshot: {
                 name: 'Pay as you go',
@@ -234,8 +237,7 @@ describe('narrateManageAccount', () => {
   it('prices a metered call from the rate frozen on the purchase snapshot', () => {
     // 2 minor units at parity, pegged at 100 credits per minor unit.
     const { text } = narrateManageAccount(meteredAccount([perUnit(2)]))
-    expect(text).toContain('Next call: $0.02')
-    expect(text).not.toContain('Cost per call:')
+    expect(text).toContain('200 credits per call')
   })
 
   it('applies the balance exchange rate to a non-USD charge', () => {
@@ -247,22 +249,21 @@ describe('narrateManageAccount', () => {
         creditsPerMinorUnit: 100,
       }),
     )
-    expect(text).toContain('Next call: SEK\u00a01.00')
-    expect(text).not.toContain('Cost per call:')
+    expect(text).toContain('1,057 credits per call')
   })
 
   it('omits cost per call when the charge currency is not the balance currency', () => {
     // The balance peg only carries the rate for its own display currency;
     // reusing it for a EUR charge would be wrong by the FX ratio.
     const { text } = narrateManageAccount(meteredAccount([perUnit(2, 'eur')]))
-    expect(text).not.toContain('Cost per call')
-    expect(text).toContain('Balance: 5,000 credits')
+    expect(text).not.toContain('credits per call')
+    expect(text).toContain('Balance 5,000 credits')
   })
 
   it('omits cost per call for a snapshot frozen before options existed', () => {
     const { text } = narrateManageAccount(meteredAccount(undefined))
-    expect(text).not.toContain('Cost per call')
-    expect(text).toContain('Balance: 5,000 credits')
+    expect(text).not.toContain('credits per call')
+    expect(text).toContain('Pay as you go')
   })
 
   it('omits cost per call for a zero-rate meter, which costs nothing', () => {
@@ -300,10 +301,11 @@ describe('narrateManageAccount', () => {
     )
     expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
     expect(text).toContain('Balance: 865,500 credits')
-    expect(text).toContain('No active plan.')
+    expect(text).toContain('has no plan yet')
+    expect(text).not.toContain('so calls will fail')
     expect(text).not.toContain('**Acme Knowledge Base — your account**')
-    expect(text).toContain('Docs: docs://solvapay/overview.md')
-    expect(text).not.toContain('Commands:')
+    expect(text).toContain('To continue, call `account` with view: "checkout".')
+    expect(text).not.toMatch(/Commands:\s*`\//)
   })
 })
 
@@ -327,6 +329,18 @@ describe('narrateUpgrade', () => {
             options: [cycle(), flat(20000)],
           } as never,
         ],
+        customer: {
+          purchase: {
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                planRef: 'pln_current',
+                planSnapshot: { name: 'Current' },
+              },
+            ],
+          },
+        } as never,
       }),
     )
     expect(text).toContain('**Upgrade — Acme Knowledge Base**')

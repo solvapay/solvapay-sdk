@@ -127,14 +127,79 @@ pub struct ActiveProduct {
 }
 
 fn is_plan_purchase(purchase: &Value) -> bool {
-    if purchase.get("origin").and_then(Value::as_str) == Some("credit_topup") {
+    if purchase.get("origin").and_then(Value::as_str) == Some("credit_topup")
+        || purchase
+            .pointer("/metadata/purpose")
+            .and_then(Value::as_str)
+            == Some("credit_topup")
+    {
         return false;
     }
-    !purchase.get("planSnapshot").is_none_or(Value::is_null)
-        || purchase
-            .get("planRef")
-            .and_then(Value::as_str)
-            .is_some_and(|s| !s.is_empty())
+    purchase
+        .get("planSnapshot")
+        .is_some_and(|snap| !snap.is_null())
+}
+
+fn purchase_start_ms(purchase: &Value) -> f64 {
+    purchase
+        .get("startDate")
+        .and_then(Value::as_str)
+        .and_then(crate::utc::rfc3339_utc_ms)
+        .unwrap_or(0.0)
+}
+
+fn is_paid_purchase(purchase: &Value) -> bool {
+    purchase
+        .get("amount")
+        .and_then(Value::as_f64)
+        .is_some_and(|amount| amount > 0.0)
+}
+
+/// Pick the customer's current plan purchase, or [`None`] if none match.
+///
+/// Filter: `status == "active"` (missing status is allowed), matching
+/// `productRef` when given, `planSnapshot` present, and neither
+/// `origin == "credit_topup"` nor `metadata.purpose == "credit_topup"`.
+/// Rank by newest `startDate`; paid-over-free is only a same-timestamp tiebreak.
+#[must_use]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "purchase",
+    emit_order = 21
+)]
+pub fn select_active_plan_purchase(purchases: Option<&Value>, product_ref: Option<&str>) -> Option<Value> {
+    let items = match purchases {
+        Some(Value::Array(items)) => items,
+        _ => return None,
+    };
+    let scope = product_ref.map(str::trim).filter(|s| !s.is_empty());
+    let mut candidates: Vec<&Value> = items
+        .iter()
+        .filter(|purchase| {
+            match purchase.get("status").and_then(Value::as_str) {
+                Some("active") | None => true,
+                Some(_) => false,
+            }
+        })
+        .filter(|purchase| is_plan_purchase(purchase))
+        .filter(|purchase| {
+            scope.is_none_or(|want| purchase.get("productRef").and_then(Value::as_str) == Some(want))
+        })
+        .collect();
+    if candidates.is_empty() {
+        return None;
+    }
+    candidates.sort_by(|a, b| {
+        let start = purchase_start_ms(b)
+            .partial_cmp(&purchase_start_ms(a))
+            .unwrap_or(std::cmp::Ordering::Equal);
+        if start != std::cmp::Ordering::Equal {
+            return start;
+        }
+        is_paid_purchase(b).cmp(&is_paid_purchase(a))
+    });
+    candidates.first().cloned().cloned()
 }
 
 /// Filter purchases to active plan rows for the account widget.

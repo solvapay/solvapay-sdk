@@ -20,10 +20,12 @@ class ResponseContext:
         customer: Mapping[str, object],
         product: Mapping[str, object],
         product_ref: str,
+        limits: Mapping[str, object] | None = None,
     ) -> None:
         self.customer = customer
         self.product = product
         self._product_ref = product_ref
+        self._limits = dict(limits) if limits is not None else None
         self._emitted: list[dict[str, object]] = []
 
     def emit(self, block: Mapping[str, object]) -> None:
@@ -33,7 +35,7 @@ class ResponseContext:
         self, data: object, options: Mapping[str, object] | None = None
     ) -> dict[str, object]:
         opts = dict(options) if options is not None else None
-        return make_response_result(data, opts, list(self._emitted))
+        return make_response_result(data, opts, list(self._emitted), self._limits)
 
     def gate(self, reason: str | None = None) -> None:
         payload: dict[str, object] = {"product": self._product_ref}

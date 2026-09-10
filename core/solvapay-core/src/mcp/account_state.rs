@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::helper_error::HelperErrorResult;
-use crate::pricing_options::{billing_cycle, counts_usage, usage_rate};
+use crate::pricing_options::{billing_cycle, charges, counts_usage, included_units, trial_days};
+use crate::purchase::select_active_plan_purchase;
 use crate::utc::rfc3339_utc_ms;
 
 /// Narrator plan shape used by account-state precedence.
@@ -26,6 +27,9 @@ pub enum NarratorPlanShape {
     /// Usage-based / PAYG.
     #[serde(rename = "usage-based")]
     UsageBased,
+    /// Paid plan whose options are not readable enough to classify further.
+    #[serde(rename = "paid-unknown")]
+    PaidUnknown,
 }
 
 /// Merge a live catalog plan over a frozen snapshot. `isMetered` comes
@@ -54,6 +58,25 @@ pub fn merge_plan(snapshot: Option<&Value>, catalog: Option<&Value>) -> Option<V
     }
 }
 
+fn is_paid_plan(plan: &Value) -> bool {
+    if plan.get("requiresPayment") == Some(&Value::Bool(false)) {
+        return false;
+    }
+    if charges(Some(plan))
+        .iter()
+        .any(|charge| charge.amount_minor > 0.0)
+    {
+        return true;
+    }
+    plan.get("price").and_then(Value::as_f64).unwrap_or(0.0) > 0.0
+}
+
+fn has_readable_options(plan: &Value) -> bool {
+    plan.get("options")
+        .and_then(Value::as_array)
+        .is_some_and(|opts| !opts.is_empty())
+}
+
 /// Resolve the narrator plan shape from a priced plan / snapshot.
 #[must_use]
 #[crate::solvapay_export(
@@ -67,30 +90,32 @@ pub fn merge_plan(snapshot: Option<&Value>, catalog: Option<&Value>) -> Option<V
 pub fn resolve_narrator_plan_shape(priced: Option<&Value>) -> Option<NarratorPlanShape> {
     let priced = priced.filter(|v| !v.is_null())?;
     if priced.get("trialing") == Some(&Value::Bool(true))
-        || priced
-            .get("trialDays")
-            .and_then(Value::as_f64)
-            .is_some_and(|days| days > 0.0)
+        || trial_days(Some(priced)).is_some_and(|days| days > 0)
     {
         return Some(NarratorPlanShape::Trial);
     }
-    if priced.get("requiresPayment") == Some(&Value::Bool(false)) {
+    if !is_paid_plan(priced) {
         return Some(NarratorPlanShape::Free);
     }
-    let recurring = billing_cycle(Some(priced)).is_some();
-    let metered = priced.get("isMetered") == Some(&Value::Bool(true))
-        || counts_usage(Some(priced))
-        || usage_rate(Some(priced), None).is_some();
-    if recurring && metered {
-        return Some(NarratorPlanShape::RecurringMetered);
+    let metered = priced.get("isMetered") == Some(&Value::Bool(true)) || counts_usage(Some(priced));
+    let unlimited_cap = included_units(Some(priced), None) == Some(0);
+    let readable = has_readable_options(priced);
+    if billing_cycle(Some(priced)).is_some() {
+        if metered && !unlimited_cap {
+            return Some(NarratorPlanShape::RecurringMetered);
+        }
+        if unlimited_cap || (readable && !metered) {
+            return Some(NarratorPlanShape::RecurringUnlimited);
+        }
+        return Some(NarratorPlanShape::PaidUnknown);
     }
-    if recurring {
-        return Some(NarratorPlanShape::RecurringUnlimited);
-    }
-    if metered {
+    if metered && !unlimited_cap {
         return Some(NarratorPlanShape::UsageBased);
     }
-    None
+    if unlimited_cap || (readable && !metered) {
+        return Some(NarratorPlanShape::RecurringUnlimited);
+    }
+    Some(NarratorPlanShape::PaidUnknown)
 }
 
 fn is_at_finite_cap(limits: Option<&Value>) -> bool {
@@ -185,7 +210,11 @@ pub fn resolve_account_state(input: Option<&Value>) -> String {
     }
     if matches!(
         shape,
-        Some(NarratorPlanShape::RecurringMetered | NarratorPlanShape::RecurringUnlimited)
+        Some(
+            NarratorPlanShape::RecurringMetered
+                | NarratorPlanShape::RecurringUnlimited
+                | NarratorPlanShape::PaidUnknown
+        )
     ) || has_purchase
     {
         return "C".to_owned();
@@ -214,7 +243,14 @@ pub fn derive_default_view(input: Option<&Value>) -> Result<String, HelperErrorR
                 .collect::<Vec<_>>()
         })
         .unwrap_or_else(|| vec!["checkout".into(), "topup".into(), "account".into()]);
-    let preferred = if input.get("hasActivePlan") != Some(&Value::Bool(true)) {
+    let product_ref = input.get("productRef").and_then(Value::as_str);
+    let has_active_plan = input
+        .get("hasActivePlan")
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| {
+            select_active_plan_purchase(input.get("purchases"), product_ref).is_some()
+        });
+    let preferred = if !has_active_plan {
         "checkout"
     } else if input.get("credits").and_then(Value::as_f64) == Some(0.0) {
         "topup"

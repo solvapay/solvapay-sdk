@@ -9,10 +9,11 @@ module SolvaPay
     class ResponseContext
       attr_reader :customer, :product
 
-      def initialize(customer:, product:, product_ref:)
+      def initialize(customer:, product:, product_ref:, limits: nil)
         @customer = customer
         @product = product
         @product_ref = product_ref
+        @limits = limits
         @emitted = []
       end
 
@@ -21,7 +22,7 @@ module SolvaPay
       end
 
       def respond(data, options = nil)
-        Layer2.make_response_result(data, options, @emitted.dup)
+        Layer2.make_response_result(data, options, @emitted.dup, @limits)
       end
 
       def gate(reason = nil)

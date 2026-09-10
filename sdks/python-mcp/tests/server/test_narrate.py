@@ -68,10 +68,11 @@ def test_narrate_manage_account_cold_start() -> None:
         )
     )["text"]
     assert str(text).startswith("**Welcome to Acme Knowledge Base**")
-    assert "Free · no payment required" in str(text)
-    assert "Starter · pay as you go" in str(text)
-    assert "Unlimited · recurring · $500.00" in str(text)
-    assert "Docs: docs://solvapay/overview.md" in str(text)
+    assert "has no plan yet" in str(text)
+    assert "Free requires no payment" in str(text)
+    assert "Starter is $0.01 per call" in str(text)
+    assert "Unlimited is $500 a month" in str(text)
+    assert 'To continue, call `account` with view: "checkout".' in str(text)
 
 
 def test_narrate_upgrade_lists_paid_plans() -> None:

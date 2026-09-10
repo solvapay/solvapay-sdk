@@ -80,6 +80,7 @@ function snapshotFromLimits(params: {
     withinLimits: boolean
     throttled: boolean
     overage: boolean
+    isCreditBased: boolean
   }>('buildCustomerSnapshot', { customerRef, limits })
   return {
     ref: snapshot.ref,
@@ -88,6 +89,7 @@ function snapshotFromLimits(params: {
     withinLimits: snapshot.withinLimits,
     throttled: snapshot.throttled,
     overage: snapshot.overage,
+    isCreditBased: snapshot.isCreditBased,
     plan,
     fresh: refresh,
   }
@@ -162,7 +164,7 @@ export function buildResponseContext(
   function respond<TData>(data: TData): ResponseResult<TData>
   function respond<TData>(data: TData, options: ResponseOptions): ResponseResult<TData>
   function respond<TData>(data: TData, options?: ResponseOptions): ResponseResult<TData> {
-    return makeResponseResult(data, options, emittedBlocks)
+    return makeResponseResult(data, options, emittedBlocks, limits)
   }
 
   /**

@@ -6,17 +6,25 @@
     "args": {
       "envelope": {
         "__solvapayResponse": true,
-        "data": { "foo": "bar", "list": [1, 2, 3] }
+        "data": {
+          "foo": "bar",
+          "list": [1, 2, 3]
+        }
       }
     }
   },
   "expect": {
     "result": {
       "content": [
-        { "type": "text", "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}" },
-        { "type": "text", "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}" }
+        {
+          "type": "text",
+          "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}"
+        }
       ],
-      "structuredContent": { "foo": "bar", "list": [1, 2, 3] }
+      "structuredContent": {
+        "foo": "bar",
+        "list": [1, 2, 3]
+      }
     }
   }
 }

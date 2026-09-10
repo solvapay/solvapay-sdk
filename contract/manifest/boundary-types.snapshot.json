@@ -1437,6 +1437,19 @@
             "ty": {
               "kind": "bool"
             }
+          },
+          {
+            "rustName": "is_credit_based",
+            "wireName": "isCreditBased",
+            "rustdoc": "True when the limits response carries credit-balance fields.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
           }
         ]
       }
@@ -2757,6 +2770,32 @@
             "ty": {
               "kind": "named",
               "name": "PaywallAutoRecharge"
+            }
+          },
+          {
+            "rustName": "credits_per_minor_unit",
+            "wireName": "creditsPerMinorUnit",
+            "rustdoc": "Credits per USD cent from `limits.balance`; omitted when the peg is absent.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "display_exchange_rate",
+            "wireName": "displayExchangeRate",
+            "rustdoc": "USD → display-currency rate from `limits.balance`; omitted when absent.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -5010,6 +5049,32 @@
               "kind": "named",
               "name": "PaywallRecoveryLinks"
             }
+          },
+          {
+            "rustName": "credits_per_minor_unit",
+            "wireName": "creditsPerMinorUnit",
+            "rustdoc": "Credits per USD cent from `limits.balance`; omitted when the peg is absent.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "display_exchange_rate",
+            "wireName": "displayExchangeRate",
+            "rustdoc": "USD → display-currency rate from `limits.balance`; omitted when absent.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
           }
         ]
       }
@@ -6397,6 +6462,19 @@
               "item": {
                 "kind": "value"
               }
+            }
+          },
+          {
+            "rustName": "limits",
+            "wireName": "limits",
+            "rustdoc": "Pre-check limits captured at `ctx.respond()` for honest nudge copy.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "value"
             }
           }
         ]
@@ -8507,7 +8585,7 @@
       "name": "resolve_return_url",
       "module": "checkout",
       "implTy": null,
-      "rustdoc": "Resolve returnUrl with JS-falsy precedence: body → options → origin → none.\n\nEmpty strings are falsy and fall through. `origin` is the already-parsed\nrequest origin (or [`None`] when URL parsing failed).\n\n# Arguments\n\n* `body_return_url` - `body.returnUrl`.\n* `options_return_url` - `options.returnUrl`.\n* `origin` - Parsed request origin.\n\n# Returns\n\nThe first non-empty candidate, or [`None`].",
+      "rustdoc": "Resolve returnUrl with JS-falsy precedence: body → options → origin → none.\n\nEmpty strings are falsy and fall through. When `body_return_url_null` is\n`true`, the body explicitly sent JSON `null` and the field is omitted —\noptions and origin must not fill it in.",
       "params": [
         {
           "rustName": "body_return_url",
@@ -8531,6 +8609,14 @@
           "optional": true,
           "ty": {
             "kind": "string"
+          }
+        },
+        {
+          "rustName": "body_return_url_null",
+          "byRef": false,
+          "optional": true,
+          "ty": {
+            "kind": "bool"
           }
         }
       ],
@@ -9972,7 +10058,7 @@
       "name": "make_response_result",
       "module": "mcp::envelope",
       "implTy": null,
-      "rustdoc": "Construct a branded [`ResponseEnvelope`].\n\n# Arguments\n\n* `data` - Handler return data (including JSON `null`).\n* `options` - Optional options object; omitted from JSON when `None`.\n* `emitted_blocks` - Emitted content blocks; key omitted when empty.\n\n# Returns\n\nEnvelope with `__solvapayResponse: true` and skip-absent optionals.",
+      "rustdoc": "Construct a branded [`ResponseEnvelope`].\n\n# Arguments\n\n* `data` - Handler return data (including JSON `null`).\n* `options` - Optional options object; omitted from JSON when `None`.\n* `emitted_blocks` - Emitted content blocks; key omitted when empty.\n* `limits` - Pre-check limits; omitted when `None`. JSON `null` is emitted.\n\n# Returns\n\nEnvelope with `__solvapayResponse: true` and skip-absent optionals.",
       "params": [
         {
           "rustName": "data",
@@ -9999,6 +10085,14 @@
             "item": {
               "kind": "value"
             }
+          }
+        },
+        {
+          "rustName": "limits",
+          "byRef": false,
+          "optional": true,
+          "ty": {
+            "kind": "value"
           }
         }
       ],
@@ -11659,6 +11753,36 @@
         "optional": false,
         "ty": {
           "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::purchase::select_active_plan_purchase": {
+      "name": "select_active_plan_purchase",
+      "module": "purchase",
+      "implTy": null,
+      "rustdoc": "Pick the customer's current plan purchase, or [`None`] if none match.\n\nFilter: `status == \"active\"` (missing status is allowed), matching\n`productRef` when given, `planSnapshot` present, and neither\n`origin == \"credit_topup\"` nor `metadata.purpose == \"credit_topup\"`.\nRank by newest `startDate`; paid-over-free is only a same-timestamp tiebreak.",
+      "params": [
+        {
+          "rustName": "purchases",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "product_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "value"
         }
       }
     },

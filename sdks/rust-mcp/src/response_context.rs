@@ -25,6 +25,8 @@ pub struct CustomerView {
     pub throttled: bool,
     /// Served under `onExceed: charge` past the included cap.
     pub overage: bool,
+    /// True when the limits response carries credit-balance fields.
+    pub is_credit_based: bool,
 }
 
 impl From<CustomerSnapshot> for CustomerView {
@@ -37,6 +39,7 @@ impl From<CustomerSnapshot> for CustomerView {
             plan: snap.plan,
             throttled: snap.throttled,
             overage: snap.overage,
+            is_credit_based: snap.is_credit_based,
         }
     }
 }
@@ -63,17 +66,25 @@ pub struct ResponseContext {
     product: ProductView,
     /// Product reference used when assembling a handler-invoked gate.
     product_ref: String,
+    /// Pre-check limits captured for honest nudge copy.
+    limits: Option<Value>,
     /// Content blocks queued by [`ResponseContext::emit`].
     emitted: Vec<Value>,
 }
 
 impl ResponseContext {
     /// Build a context for one payable invocation.
-    pub(crate) fn new(customer: CustomerView, product: ProductView, product_ref: String) -> Self {
+    pub(crate) fn new(
+        customer: CustomerView,
+        product: ProductView,
+        product_ref: String,
+        limits: Option<Value>,
+    ) -> Self {
         Self {
             customer,
             product,
             product_ref,
+            limits,
             emitted: Vec::new(),
         }
     }
@@ -104,7 +115,7 @@ impl ResponseContext {
         options: Option<Value>,
     ) -> Result<PayableResponse, PayableError> {
         let emitted = std::mem::take(&mut self.emitted);
-        let envelope = make_response_result(data, options, emitted);
+        let envelope = make_response_result(data, options, emitted, self.limits.clone());
         let value = serde_json::to_value(&envelope)
             .map_err(|e| PayableError::Handler(format!("serialize response envelope: {e}")))?;
         assert_response_result(&value)?;

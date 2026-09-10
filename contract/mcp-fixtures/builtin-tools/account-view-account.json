@@ -71,7 +71,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Welcome to Demo**\n\nNo active plan. Plans available:\nPro \u00b7 recurring\nDocs: docs://solvapay/overview.md\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)"
+          "text": "**Welcome to Demo**\n\nDemo has no plan yet. Pro requires no payment. Reply with a plan name to activate it.\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
         },
         {
           "type": "resource_link",
@@ -109,9 +109,6 @@
           }
         ],
         "customer": null,
-        "checkoutUrl": "https://checkout.example/s",
-        "checkoutPurpose": null,
-        "portalUrl": null,
         "taxIdFields": {
           "AT": {
             "label": "VAT ID",
@@ -189,7 +186,7 @@
             "helperText": "Enter your full VAT ID including the country code, e.g. IT12345678912"
           },
           "JP": {
-            "label": "Registration number (T\u014droku Bang\u014d)",
+            "label": "Registration number (Tōroku Bangō)",
             "example": "T1234567891234",
             "helperText": "Enter your tax ID, e.g. T1234567891234"
           },
@@ -263,7 +260,10 @@
             "example": "12-3456789",
             "helperText": "Enter your EIN, e.g. 12-3456789"
           }
-        }
+        },
+        "checkoutUrl": "https://checkout.example/s",
+        "checkoutPurpose": null,
+        "portalUrl": null
       },
       "_meta": {
         "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001",

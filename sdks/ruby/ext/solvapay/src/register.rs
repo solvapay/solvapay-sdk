@@ -72,6 +72,7 @@ use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
 use crate::decisions::retry_next_delay_ms;
+use crate::decisions::select_active_plan_purchase_binding;
 use crate::decisions::select_active_purchases_binding;
 use crate::decisions::should_retry_usage_error_binding;
 use crate::decisions::tier_bands_binding;
@@ -229,6 +230,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "classify_reactivate_error",
         function!(classify_reactivate_error_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "select_active_plan_purchase",
+        function!(select_active_plan_purchase_binding, 1),
     )?;
     native.define_singleton_method(
         "normalize_cancel_response",

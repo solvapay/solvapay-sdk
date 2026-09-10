@@ -25,6 +25,7 @@
             "customerRef": "cus_1",
             "purchases": [
               {
+                "productRef": "prd_x",
                 "planSnapshot": {
                   "name": "Unlimited",
                   "isMetered": false,
@@ -62,7 +63,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Acme Knowledge Base — your account**\n\nPlan: Unlimited · $500.00/monthly · renews May 1, 2026\nBalance: 100 credits (~$0.01)\nDocs: docs://solvapay/overview.md",
+      "text": "**Acme Knowledge Base — your account**\n\nAcme Knowledge Base is on Unlimited, $500 a month. Unlimited calls, renewing May 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\n\nTo continue, call `account` with view: \"checkout\".",
       "links": []
     }
   }

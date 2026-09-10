@@ -241,11 +241,13 @@ export function resolveReturnUrl(
   bodyReturnUrl?: string | null,
   optionsReturnUrl?: string | null,
   origin?: string | null,
+  bodyReturnUrlNull?: boolean | null,
 ): string | undefined {
   const result = dispatchSync<string | null>('resolveReturnUrl', {
     bodyReturnUrl: bodyReturnUrl ?? null,
     optionsReturnUrl: optionsReturnUrl ?? null,
     origin: origin ?? null,
+    bodyReturnUrlNull: bodyReturnUrlNull ?? null,
   })
   return result === null ? undefined : result
 }
@@ -275,6 +277,16 @@ export function resolvePurchaseCustomerRef(
   userId: string,
 ): string {
   return dispatchSync('resolvePurchaseCustomerRef', { customerRef: customerRef ?? null, userId })
+}
+
+export function selectActivePlanPurchase(
+  purchases: unknown | null | undefined,
+  productRef: string | null | undefined,
+): unknown | null {
+  return dispatchSync('selectActivePlanPurchase', {
+    purchases: purchases ?? null,
+    productRef: productRef ?? null,
+  })
 }
 
 export function selectActivePurchases<T extends { status?: string }>(purchases: T[]): T[] {

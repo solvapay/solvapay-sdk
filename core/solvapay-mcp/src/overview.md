@@ -41,4 +41,3 @@ need an authenticated caller return `Unauthorized` when it is missing.
 - `ui://<app>/mcp-app.html` — the embedded UI shell.
 - `tools/list` + `prompts/list` — programmatic discovery of the intent tools
   and their slash-command shortcuts.
-- Documentation: https://docs.solvapay.com/sdks/typescript/guides/mcp-app.

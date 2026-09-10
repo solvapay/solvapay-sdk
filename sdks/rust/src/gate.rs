@@ -55,6 +55,7 @@ impl From<solvapay_core::CustomerSnapshot> for CustomerSnapshot {
             plan: customer.plan,
             throttled: customer.throttled,
             overage: customer.overage,
+            is_credit_based: customer.is_credit_based,
         }
     }
 }
@@ -76,6 +77,8 @@ pub struct CustomerSnapshot {
     pub throttled: bool,
     /// `overage` from limits, or `false` when absent.
     pub overage: bool,
+    /// True when the limits response carries credit-balance fields.
+    pub is_credit_based: bool,
 }
 
 /// Allow arm returned from [`Client::gate`]; usage tracking delegates to the typed client.

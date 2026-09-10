@@ -8,12 +8,13 @@
 import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
-import { callNativeSync, verifyWebhookNative } from './native'
+import { callNativeSync, loadNativeBinding, verifyWebhookNative } from './native'
 import { rejectIfSeenEventIdSync } from './webhook-replay'
 import type { VerifyWebhookOptions } from './webhook-replay'
 import { installNativeDecisionApi } from './native-decisions'
 import { publishNativeSyncApi } from './native-registry'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
+import { warmWasm } from './wasm'
 
 // Install sync decision + core dispatch for Node.
 installNativeDecisionApi({ callNativeSync })
@@ -28,6 +29,11 @@ installMcpAdapterNative({
 // Ambient registry for mcp-core (and peers) — avoids server→mcp-core cycle
 // and the createRequire CJS/ESM dual-instance trap.
 publishNativeSyncApi()
+// Workers/edge may resolve this Node entry (nodejs_compat). Napi is absent
+// there; start WASM init so sync dispatch can fall through on first request.
+if (loadNativeBinding() === null) {
+  warmWasm()
+}
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'

@@ -55,7 +55,8 @@
           "remaining": 0,
           "withinLimits": true,
           "throttled": true,
-          "overage": true
+          "overage": true,
+          "isCreditBased": false
         },
         "consequence": "throttled",
         "requestId": "solvapay_1000_i"

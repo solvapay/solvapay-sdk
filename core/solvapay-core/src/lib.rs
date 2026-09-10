@@ -118,7 +118,7 @@ pub use mcp::{
     merge_plan, paywall_tool_result, plan_consequence, resolve_account_state, resolve_display_mode,
     resolve_narrator_plan_shape, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, McpContentBlock, McpDisplayModeState, McpPayableToolResult,
-    McpPaywallToolResult, McpViewMaps, MerchantBranding, PromptDescriptorMetadata,
+    McpPaywallToolResult, McpViewMaps, MerchantBranding, NarratorPlanShape, PromptDescriptorMetadata,
     PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
     MCP_TOOL_NAMES, PAID_TOOL_HINT, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
 };
@@ -163,7 +163,7 @@ pub use product_readiness::{
 };
 pub use purchase::{
     derive_active_products, is_cached_customer_ref_valid, resolve_purchase_customer_ref,
-    select_active_purchases, ActiveProduct,
+    select_active_plan_purchase, select_active_purchases, ActiveProduct,
 };
 pub use random::{iso8601_millis, random9_from_f64};
 pub use renewal::{

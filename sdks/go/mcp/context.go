@@ -18,13 +18,14 @@ func (r Response) valid() bool {
 
 // CustomerView is the merchant-facing customer snapshot on ResponseContext.
 type CustomerView struct {
-	Ref          string `json:"ref"`
-	Balance      any    `json:"balance"`
-	Remaining    any    `json:"remaining"`
-	WithinLimits any    `json:"withinLimits"`
-	Plan         any    `json:"plan"`
-	Throttled    bool   `json:"throttled"`
-	Overage      bool   `json:"overage"`
+	Ref           string `json:"ref"`
+	Balance       any    `json:"balance"`
+	Remaining     any    `json:"remaining"`
+	WithinLimits  any    `json:"withinLimits"`
+	Plan          any    `json:"plan"`
+	Throttled     bool   `json:"throttled"`
+	Overage       bool   `json:"overage"`
+	IsCreditBased bool   `json:"isCreditBased"`
 }
 
 // ProductView is the read-only product projection on ResponseContext.
@@ -53,6 +54,7 @@ type ResponseContext struct {
 
 	ctx        context.Context
 	productRef string
+	limits     json.RawMessage
 	emitted    []json.RawMessage
 }
 
@@ -72,7 +74,7 @@ func (rc *ResponseContext) Respond(data any, options map[string]any) (Response, 
 	if err != nil {
 		return Response{}, err
 	}
-	payload, err := makeResponseResult(rc.ctx, dataJSON, options, append([]json.RawMessage(nil), rc.emitted...))
+	payload, err := makeResponseResult(rc.ctx, dataJSON, options, append([]json.RawMessage(nil), rc.emitted...), rc.limits)
 	if err != nil {
 		return Response{}, err
 	}

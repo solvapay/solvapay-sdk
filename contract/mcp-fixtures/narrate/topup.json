@@ -36,7 +36,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Top up — Acme Knowledge Base**\n\nBalance: 865,500 credits (~$86.55)\nDocs: docs://solvapay/overview.md"
+      "text": "**Top up — Acme Knowledge Base**\n\nBalance: 865,500 credits (~$86.55)\nTo continue, call `account` with view: \"account\"."
     }
   }
 }

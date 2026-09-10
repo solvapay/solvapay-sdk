@@ -72,6 +72,8 @@ pub struct CustomerSnapshot {
     pub throttled: bool,
     /// `overage` from limits, or `false` when absent.
     pub overage: bool,
+    /// True when the limits response carries credit-balance fields.
+    pub is_credit_based: bool,
 }
 
 /// Degraded allow reason. Absent on a plain allow.
@@ -556,13 +558,12 @@ fn finish(
 
 /// Apply host-side snapshot defaults that used to live in five languages.
 fn customer_snapshot(customer_ref: &str, limits: &Value) -> CustomerSnapshot {
+    let parsed = serde_json::from_value::<crate::paywall_state::PaywallLimits>(limits.clone()).ok();
+    let signals = crate::paywall_state::credit_signals(parsed.as_ref());
     let obj = limits.as_object();
     CustomerSnapshot {
         customer_ref: customer_ref.to_owned(),
-        balance: obj
-            .and_then(|o| o.get("creditBalance"))
-            .and_then(Value::as_f64)
-            .unwrap_or(0.0),
+        balance: signals.credit_balance.unwrap_or(0.0),
         remaining: obj
             .and_then(|o| o.get("remaining"))
             .cloned()
@@ -583,6 +584,7 @@ fn customer_snapshot(customer_ref: &str, limits: &Value) -> CustomerSnapshot {
             .and_then(|o| o.get("overage"))
             .and_then(Value::as_bool)
             .unwrap_or(false),
+        is_credit_based: signals.is_credit_based,
     }
 }
 
@@ -1111,5 +1113,6 @@ mod tests {
         assert_eq!(snap.plan, json!("pl_pro"));
         assert!(snap.throttled);
         assert!(!snap.overage);
+        assert!(snap.is_credit_based);
     }
 }

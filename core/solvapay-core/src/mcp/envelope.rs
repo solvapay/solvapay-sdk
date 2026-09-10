@@ -21,6 +21,9 @@ pub struct ResponseEnvelope {
     /// Content blocks queued via `ctx.emit` before `respond`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub emitted_blocks: Vec<Value>,
+    /// Pre-check limits captured at `ctx.respond()` for honest nudge copy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limits: Option<Value>,
 }
 
 /// Construct a branded [`ResponseEnvelope`].
@@ -30,6 +33,7 @@ pub struct ResponseEnvelope {
 /// * `data` - Handler return data (including JSON `null`).
 /// * `options` - Optional options object; omitted from JSON when `None`.
 /// * `emitted_blocks` - Emitted content blocks; key omitted when empty.
+/// * `limits` - Pre-check limits; omitted when `None`. JSON `null` is emitted.
 ///
 /// # Returns
 ///
@@ -44,12 +48,14 @@ pub fn make_response_result(
     data: Value,
     options: Option<Value>,
     emitted_blocks: Vec<Value>,
+    limits: Option<Value>,
 ) -> ResponseEnvelope {
     ResponseEnvelope {
         solvapay_response: true,
         data,
         options,
         emitted_blocks,
+        limits,
     }
 }
 
@@ -91,7 +97,7 @@ mod tests {
 
     #[test]
     fn brand_always_true() {
-        let env = make_response_result(json!({ "ok": true }), None, vec![]);
+        let env = make_response_result(json!({ "ok": true }), None, vec![], None);
         assert!(env.solvapay_response);
         let value = serde_json::to_value(&env).unwrap();
         assert_eq!(value.get("__solvapayResponse"), Some(&json!(true)));
@@ -99,7 +105,7 @@ mod tests {
 
     #[test]
     fn options_none_omitted() {
-        let value = serde_json::to_value(make_response_result(json!(1), None, vec![])).unwrap();
+        let value = serde_json::to_value(make_response_result(json!(1), None, vec![], None)).unwrap();
         assert!(value.get("options").is_none());
     }
 
@@ -110,6 +116,7 @@ mod tests {
             json!(1),
             Some(options.clone()),
             vec![],
+            None,
         ))
         .unwrap();
         assert_eq!(value.get("options"), Some(&options));
@@ -117,7 +124,7 @@ mod tests {
 
     #[test]
     fn empty_emitted_blocks_omitted() {
-        let value = serde_json::to_value(make_response_result(json!(1), None, vec![])).unwrap();
+        let value = serde_json::to_value(make_response_result(json!(1), None, vec![], None)).unwrap();
         assert!(value.get("emittedBlocks").is_none());
     }
 
@@ -125,7 +132,7 @@ mod tests {
     fn nonempty_emitted_blocks_emitted() {
         let blocks = vec![json!({ "type": "text", "text": "note" })];
         let value =
-            serde_json::to_value(make_response_result(json!(1), None, blocks.clone())).unwrap();
+            serde_json::to_value(make_response_result(json!(1), None, blocks.clone(), None)).unwrap();
         assert_eq!(value.get("emittedBlocks"), Some(&json!(blocks)));
     }
 

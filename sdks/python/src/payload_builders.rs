@@ -504,7 +504,12 @@ pub fn make_response_result_binding(args_json: String) -> String {
             }
         };
 
-        to_value(&make_response_result(data, options, emitted_blocks))
+        let limits = match args.get("limits") {
+            None => None,
+            Some(value) => Some(value.clone()),
+        };
+
+        to_value(&make_response_result(data, options, emitted_blocks, limits))
     })
 }
 

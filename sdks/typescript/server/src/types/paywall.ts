@@ -66,6 +66,8 @@ export type PaywallGateRecoveryFields = {
   planStatus?: string
   autoRecharge?: LimitAutoRechargeDto
   links?: { topup?: string; checkout?: string; manage?: string }
+  creditsPerMinorUnit?: number
+  displayExchangeRate?: number
 }
 
 /**

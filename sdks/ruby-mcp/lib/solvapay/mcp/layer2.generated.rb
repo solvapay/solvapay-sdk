@@ -92,12 +92,14 @@ module SolvaPay
         # @param data Merchant handler data payload.
         # @param options Optional response options object.
         # @param emitted_blocks Content blocks queued via ctx.emit before respond.
+        # @param limits Pre-check limits captured at respond time for honest nudge copy.
         # @return Branded ResponseEnvelope.
-        def make_response_result(data, options = nil, emitted_blocks = nil)
+        def make_response_result(data, options = nil, emitted_blocks = nil, limits = nil)
           call_args = {} #: Hash[String, untyped]
           call_args["data"] = data
           call_args["options"] = options unless options.nil?
           call_args["emittedBlocks"] = emitted_blocks unless emitted_blocks.nil?
+          call_args["limits"] = limits unless limits.nil?
           as_object_map(SolvaPay::NativeDispatch.call_sync("make_response_result", call_args))
         end
 

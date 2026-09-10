@@ -111,6 +111,7 @@ export const resolveSellerIdentityDisplay: (a: number, b: number) => [number, nu
 export const resolveTaxBehavior: (a: number, b: number) => [number, number];
 export const resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
 export const retryNextDelayMs: (a: number, b: number) => [number, number];
+export const selectActivePlanPurchase: (a: number, b: number) => [number, number];
 export const selectActivePurchases: (a: number, b: number) => [number, number];
 export const shouldRetryUsageError: (a: number, b: number) => [number, number];
 export const shouldShowTaxRow: (a: number, b: number) => [number, number];

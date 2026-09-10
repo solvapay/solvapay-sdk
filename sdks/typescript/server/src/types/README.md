@@ -42,6 +42,13 @@ dto-gen facades against it. `generated.ts` is also re-exported from
 reference `src/types/__tests__/api-diff.test-d.ts` uses to validate dto-gen's
 `client.generated.d.ts`.
 
+`ProcessPaymentResult` in `client.ts` is the generated
+`/v1/sdk/payment-intents/{id}/process` 200 union. Type generation strips
+OpenAPI `discriminator` objects so `status` keeps the wire enums
+(`succeeded`, `timeout`, `failed`, `cancelled`, `processing`) instead of
+schema names. An `AssertEqual` pin in `client.ts` fails the typecheck if
+those enums drift.
+
 ## Typical flows
 
 ### Refresh wire types from a local backend

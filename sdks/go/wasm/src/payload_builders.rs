@@ -734,7 +734,12 @@ pub unsafe extern "C" fn sv_make_response_result_binding(
             }
         };
 
-        to_value(&make_response_result(data, options, emitted_blocks))
+        let limits = match args.get("limits") {
+            None => None,
+            Some(value) => Some(value.clone()),
+        };
+
+        to_value(&make_response_result(data, options, emitted_blocks, limits))
     }))
 }
 

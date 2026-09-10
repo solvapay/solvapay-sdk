@@ -153,6 +153,7 @@ pub fn invoke_payable_next(state: Option<Value>, event: Option<Value>) -> Result
 /// * `data` — Merchant handler data payload.
 /// * `options` — Optional response options object.
 /// * `emitted_blocks` — Content blocks queued via ctx.emit before respond.
+/// * `limits` — Pre-check limits captured at respond time for honest nudge copy.
 ///
 /// # Returns
 ///
@@ -161,6 +162,7 @@ pub fn make_response_result(
     data: Value,
     options: Option<Value>,
     emitted_blocks: Option<Value>,
+    limits: Option<Value>,
 ) -> Result<Value, String> {
     let mut call_args = serde_json::Map::new();
     call_args.insert("data".to_owned(), data);
@@ -169,6 +171,9 @@ pub fn make_response_result(
     }
     if let Some(value) = emitted_blocks {
         call_args.insert("emittedBlocks".to_owned(), value);
+    }
+    if let Some(value) = limits {
+        call_args.insert("limits".to_owned(), value);
     }
     call_sync("makeResponseResult", &Value::Object(call_args))
 }

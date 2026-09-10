@@ -85,6 +85,7 @@ SyncMethod = Literal[
     "classify_cancel_error",
     "derive_active_products",
     "classify_reactivate_error",
+    "select_active_plan_purchase",
     "normalize_cancel_response",
     "normalize_reactivate_response",
     "validate_purchase_ref",

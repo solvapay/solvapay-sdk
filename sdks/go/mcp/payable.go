@@ -242,6 +242,7 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 					Customer:   customer,
 					Product:    ProductView{Reference: opts.Product, Name: opts.Product},
 					productRef: opts.Product,
+					limits:     action.Limits,
 				}
 				returned, err := opts.Handler(ctx, args, rc)
 				var signal *GateSignal

@@ -71,6 +71,7 @@ use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
 use crate::decisions::retry_next_delay_ms;
+use crate::decisions::select_active_plan_purchase_binding;
 use crate::decisions::select_active_purchases_binding;
 use crate::decisions::should_retry_usage_error_binding;
 use crate::decisions::tier_bands_binding;
@@ -182,6 +183,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(classify_cancel_error_binding, m)?)?;
     m.add_function(wrap_pyfunction!(derive_active_products_binding, m)?)?;
     m.add_function(wrap_pyfunction!(classify_reactivate_error_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(select_active_plan_purchase_binding, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_cancel_response_binding, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_reactivate_response_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_purchase_ref_binding, m)?)?;

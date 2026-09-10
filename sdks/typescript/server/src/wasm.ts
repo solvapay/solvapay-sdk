@@ -95,6 +95,7 @@ export type WasmSyncMethod =
   | 'classifyCancelError'
   | 'deriveActiveProducts'
   | 'classifyReactivateError'
+  | 'selectActivePlanPurchase'
   | 'normalizeCancelResponse'
   | 'normalizeReactivateResponse'
   | 'validatePurchaseRef'

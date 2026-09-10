@@ -32,13 +32,16 @@
           {
             "type": "text",
             "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}"
-          },
-          {
-            "type": "text",
-            "text": "{\"foo\":\"bar\",\"list\":[1,2,3]}"
           }
         ],
-        "structuredContent": { "foo": "bar", "list": [1, 2, 3] }
+        "structuredContent": {
+          "foo": "bar",
+          "list": [
+            1,
+            2,
+            3
+          ]
+        }
       },
       "usage": [
         {
@@ -47,7 +50,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_hook",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

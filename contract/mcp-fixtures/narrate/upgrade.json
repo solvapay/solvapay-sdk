@@ -60,7 +60,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Upgrade — Acme Knowledge Base**\n\nPlans available:\nPro · recurring · $200.00/month\nDocs: docs://solvapay/overview.md"
+      "text": "**Upgrade — Acme Knowledge Base**\n\nPlans available:\nFree · no payment required\nPro · recurring · $200.00/month\nTo continue, call `account` with view: \"account\"."
     }
   }
 }

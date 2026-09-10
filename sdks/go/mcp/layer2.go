@@ -30,7 +30,7 @@ func paywallToolResult(ctx context.Context, message string, gate json.RawMessage
 	return PaywallToolResult(ctx, message, gate)
 }
 
-func makeResponseResult(ctx context.Context, data json.RawMessage, options map[string]any, emitted []json.RawMessage) (json.RawMessage, error) {
+func makeResponseResult(ctx context.Context, data json.RawMessage, options map[string]any, emitted []json.RawMessage, limits json.RawMessage) (json.RawMessage, error) {
 	var optionsArg any
 	if options != nil {
 		optionsArg = options
@@ -39,7 +39,11 @@ func makeResponseResult(ctx context.Context, data json.RawMessage, options map[s
 	if len(emitted) > 0 {
 		emittedArg = emitted
 	}
-	return MakeResponseResult(ctx, data, optionsArg, emittedArg)
+	var limitsArg any
+	if len(limits) > 0 {
+		limitsArg = json.RawMessage(limits)
+	}
+	return MakeResponseResult(ctx, data, optionsArg, emittedArg, limitsArg)
 }
 
 func assertResponseResult(ctx context.Context, value json.RawMessage) (json.RawMessage, error) {

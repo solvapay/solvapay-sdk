@@ -35,14 +35,18 @@
       "content": [
         {
           "type": "text",
-          "text": "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short."
+          "text": "This plan is already active. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. Call the `account` tool with view: 'topup' to add credits."
         }
       ],
       "structuredContent": {
         "status": "already_active",
         "planRef": "pln_pro",
         "creditBalance": 91000,
-        "creditsPerUnit": 100000
+        "creditsPerUnit": 100000,
+        "invalidateLimits": {
+          "customerRef": "cus_1",
+          "productRef": "prd_demo"
+        }
       }
     }
   }

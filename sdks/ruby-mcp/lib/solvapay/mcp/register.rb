@@ -119,6 +119,7 @@ module SolvaPay
               customer: snapshot,
               product: { "reference" => product, "name" => product },
               product_ref: product,
+              limits: limits,
             )
             begin
               returned = handler.call(args, ctx)

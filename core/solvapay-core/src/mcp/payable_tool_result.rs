@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::mcp::envelope::ResponseEnvelope;
-use crate::paywall_state::{build_nudge_message, PaywallState};
+use crate::paywall_state::{build_nudge_message, credit_signals, PaywallLimits, PaywallState};
 
 /// MCP tool result for an allowed payable handler (`SolvaPayCallToolResult` allow path).
 ///
@@ -27,18 +27,20 @@ fn compact_json(value: &Value) -> String {
 }
 
 /// Resolve nudge copy from an explicit message, else [`build_nudge_message`].
-fn resolve_nudge_text(nudge: &Value) -> String {
+fn resolve_nudge_text(nudge: &Value, limits: Option<&Value>) -> String {
     let message = nudge.get("message").and_then(Value::as_str).unwrap_or("");
     if !message.is_empty() {
         return message.to_owned();
     }
     let kind = nudge.get("kind").and_then(Value::as_str).unwrap_or("");
-    let state = if kind == "low-balance" {
+    let parsed = limits.and_then(|value| serde_json::from_value::<PaywallLimits>(value.clone()).ok());
+    let credit_based = credit_signals(parsed.as_ref()).is_credit_based;
+    let state = if kind == "low-balance" && credit_based {
         PaywallState::TopupRequired
     } else {
         PaywallState::UpgradeRequired
     };
-    build_nudge_message(&state, None)
+    build_nudge_message(&state, parsed.as_ref())
 }
 
 /// Unwrap a branded [`ResponseEnvelope`] into an MCP allow-path tool result.
@@ -72,7 +74,9 @@ pub fn build_payable_tool_result(envelope: &ResponseEnvelope) -> McpPayableToolR
         None => compact_data.clone(),
     };
 
-    let nudge_text = options.and_then(|o| o.get("nudge")).map(resolve_nudge_text);
+    let nudge_text = options
+        .and_then(|o| o.get("nudge"))
+        .map(|nudge| resolve_nudge_text(nudge, envelope.limits.as_ref()));
     let primary_text = match nudge_text.as_deref() {
         Some(nudge) if base_text.is_empty() => nudge.to_owned(),
         Some(nudge) => format!("{base_text}\n\n{nudge}"),
@@ -82,10 +86,11 @@ pub fn build_payable_tool_result(envelope: &ResponseEnvelope) -> McpPayableToolR
         .and_then(|o| o.get("dataInText"))
         .and_then(Value::as_bool)
         != Some(false);
+    let has_narration = text_override.is_some() || nudge_text.is_some();
 
     let mut content = envelope.emitted_blocks.clone();
     content.push(json!({ "type": "text", "text": primary_text }));
-    if data_in_text {
+    if data_in_text && has_narration {
         content.push(json!({ "type": "text", "text": compact_data }));
     }
     if let Some(nudge) = nudge_text {
@@ -125,10 +130,10 @@ mod tests {
 
     #[test]
     fn minimal_respond_compacts_data() {
-        let env = make_response_result(json!({ "foo": "bar", "list": [1, 2, 3] }), None, vec![]);
+        let env = make_response_result(json!({ "foo": "bar", "list": [1, 2, 3] }), None, vec![], None);
         let result = build_payable_tool_result(&env);
+        assert_eq!(result.content.len(), 1);
         assert_eq!(text_at(&result, 0), r#"{"foo":"bar","list":[1,2,3]}"#);
-        assert_eq!(text_at(&result, 1), r#"{"foo":"bar","list":[1,2,3]}"#);
         assert_eq!(
             result.structured_content,
             json!({ "foo": "bar", "list": [1, 2, 3] })
@@ -143,6 +148,7 @@ mod tests {
             json!({ "x": 1 }),
             Some(json!({ "text": "Found 1 result" })),
             vec![],
+            None,
         );
         let result = build_payable_tool_result(&env);
         assert_eq!(text_at(&result, 0), "Found 1 result");
@@ -156,6 +162,7 @@ mod tests {
             json!({ "foo": "bar" }),
             Some(json!({ "dataInText": false })),
             vec![],
+            None,
         );
         let result = build_payable_tool_result(&env);
         assert_eq!(result.content.len(), 1);
@@ -170,6 +177,7 @@ mod tests {
                 "nudge": { "kind": "low-balance", "message": "Running low on credits" }
             })),
             vec![],
+            None,
         );
         let result = build_payable_tool_result(&env);
         assert_eq!(text_at(&result, 0), "{\"y\":2}\n\nRunning low on credits");
@@ -197,6 +205,7 @@ mod tests {
                 json!({ "type": "text", "text": "intermediate 1" }),
                 json!({ "type": "text", "text": "intermediate 2" }),
             ],
+            None,
         );
         let result = build_payable_tool_result(&env);
         assert_eq!(
@@ -204,7 +213,6 @@ mod tests {
             vec![
                 json!({ "type": "text", "text": "intermediate 1" }),
                 json!({ "type": "text", "text": "intermediate 2" }),
-                json!({ "type": "text", "text": "{\"final\":true}" }),
                 json!({ "type": "text", "text": "{\"final\":true}" }),
             ]
         );
@@ -216,19 +224,35 @@ mod tests {
             json!({ "z": 3 }),
             Some(json!({ "nudge": { "kind": "low-balance", "message": "" } })),
             vec![],
+            None,
         );
         let result = build_payable_tool_result(&env);
-        let expected = build_nudge_message(&PaywallState::TopupRequired, None);
+        let expected = build_nudge_message(&PaywallState::UpgradeRequired, None);
         assert_eq!(text_at(&result, 0), format!("{{\"z\":3}}\n\n{expected}"));
         assert_eq!(text_at(&result, 1), r#"{"z":3}"#);
     }
 
     #[test]
+    fn empty_low_balance_nudge_uses_limits_credit_signals() {
+        let env = make_response_result(
+            json!({ "z": 3 }),
+            Some(json!({ "nudge": { "kind": "low-balance", "message": "" } })),
+            vec![],
+            Some(json!({ "creditBalance": 5.0, "creditsPerUnit": 10.0 })),
+        );
+        let result = build_payable_tool_result(&env);
+        let parsed: PaywallLimits =
+            serde_json::from_value(json!({ "creditBalance": 5.0, "creditsPerUnit": 10.0 })).unwrap();
+        let expected = build_nudge_message(&PaywallState::TopupRequired, Some(&parsed));
+        assert_eq!(text_at(&result, 0), format!("{{\"z\":3}}\n\n{expected}"));
+    }
+
+    #[test]
     fn key_order_is_insertion_not_sorted() {
-        let env = make_response_result(json!({ "zebra": 1, "apple": 2 }), None, vec![]);
+        let env = make_response_result(json!({ "zebra": 1, "apple": 2 }), None, vec![], None);
         let result = build_payable_tool_result(&env);
         assert_eq!(text_at(&result, 0), r#"{"zebra":1,"apple":2}"#);
-        assert_eq!(text_at(&result, 1), r#"{"zebra":1,"apple":2}"#);
+        assert_eq!(result.content.len(), 1);
         assert_ne!(text_at(&result, 0), r#"{"apple":2,"zebra":1}"#);
     }
 }

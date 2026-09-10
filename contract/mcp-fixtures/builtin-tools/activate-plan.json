@@ -33,12 +33,16 @@
       "content": [
         {
           "type": "text",
-          "text": "{\"status\":\"active\",\"planRef\":\"pln_pro\"}"
+          "text": "This plan is already active."
         }
       ],
       "structuredContent": {
         "status": "active",
-        "planRef": "pln_pro"
+        "planRef": "pln_pro",
+        "invalidateLimits": {
+          "customerRef": "cus_1",
+          "productRef": "prd_demo"
+        }
       }
     }
   }

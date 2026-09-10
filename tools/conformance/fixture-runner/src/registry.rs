@@ -28,11 +28,11 @@ use solvapay_core::{
     resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
-    should_retry_usage_error, should_show_tax_row, state_required_countries, tax_id_types,
-    tax_not_collected_note, tier_bands, tier_meters, to_major_units, topup_process_next,
-    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
+    select_active_plan_purchase, should_retry_usage_error, should_show_tax_row,
+    state_required_countries, tax_id_types, tax_not_collected_note, tier_bands, tier_meters,
+    to_major_units, topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_checkout_session_params,
+    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, BusinessDetailsInput, GateContent, PaywallGate,
     PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
@@ -677,6 +677,16 @@ fn invoke_resolve_tax_treatment_note(input: &FixtureInput) -> Result<Value, Bind
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
     to_value(&resolve_tax_treatment_note(treatment.as_deref()))
+}
+
+fn invoke_select_active_plan_purchase(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let purchases = optional_value(&args, "purchases");
+    let product_ref = optional_string(&args, "productRef")?;
+    to_value(&select_active_plan_purchase(
+        purchases.as_ref(),
+        product_ref.as_deref(),
+    ))
 }
 
 fn invoke_should_retry_usage_error(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1727,6 +1737,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_resolve_tax_treatment_note),
+        },
+    );
+    registry.register(
+        "selectActivePlanPurchase",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_select_active_plan_purchase),
         },
     );
     registry.register(

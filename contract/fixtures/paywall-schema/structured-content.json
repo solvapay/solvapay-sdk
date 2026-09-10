@@ -13,47 +13,107 @@
           "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
           "additionalProperties": true,
           "properties": {
-            "kind": { "const": "payment_required" },
-            "product": { "type": "string" },
-            "checkoutUrl": { "type": "string" },
-            "message": { "type": "string" },
-            "shortMessage": { "type": "string" },
-            "planRef": { "type": "string" },
-            "plans": { "type": "array" },
-            "meterName": { "type": "string" },
-            "unitPriceMinor": { "type": "number" },
-            "currency": { "type": "string" },
+            "kind": {
+              "const": "payment_required"
+            },
+            "product": {
+              "type": "string"
+            },
+            "checkoutUrl": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "shortMessage": {
+              "type": "string"
+            },
+            "planRef": {
+              "type": "string"
+            },
+            "plans": {
+              "type": "array"
+            },
+            "meterName": {
+              "type": "string"
+            },
+            "unitPriceMinor": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string"
+            },
             "included": {
               "type": "object",
               "properties": {
-                "total": { "type": "number" },
-                "used": { "type": "number" },
-                "remaining": { "type": "number" }
+                "total": {
+                  "type": "number"
+                },
+                "used": {
+                  "type": "number"
+                },
+                "remaining": {
+                  "type": "number"
+                }
               }
             },
-            "creditBalance": { "type": "number" },
-            "reason": { "type": "string" },
-            "nextAction": { "type": "string" },
-            "planName": { "type": "string" },
-            "creditsPerCall": { "type": "number" },
-            "shortfallCredits": { "type": "number" },
-            "remainingCalls": { "type": "number" },
-            "purchaseRef": { "type": "string" },
-            "planStatus": { "type": "string" },
+            "creditBalance": {
+              "type": "number"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "nextAction": {
+              "type": "string"
+            },
+            "planName": {
+              "type": "string"
+            },
+            "creditsPerCall": {
+              "type": "number"
+            },
+            "shortfallCredits": {
+              "type": "number"
+            },
+            "remainingCalls": {
+              "type": "number"
+            },
+            "purchaseRef": {
+              "type": "string"
+            },
+            "planStatus": {
+              "type": "string"
+            },
             "autoRecharge": {
               "type": "object",
               "properties": {
-                "enabled": { "type": "boolean" },
-                "status": { "type": "string" }
+                "enabled": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                }
               }
             },
             "links": {
               "type": "object",
               "properties": {
-                "topup": { "type": "string" },
-                "checkout": { "type": "string" },
-                "manage": { "type": "string" }
+                "topup": {
+                  "type": "string"
+                },
+                "checkout": {
+                  "type": "string"
+                },
+                "manage": {
+                  "type": "string"
+                }
               }
+            },
+            "creditsPerMinorUnit": {
+              "type": "number"
+            },
+            "displayExchangeRate": {
+              "type": "number"
             },
             "balance": {},
             "productDetails": {}
@@ -64,49 +124,111 @@
           "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
           "additionalProperties": true,
           "properties": {
-            "kind": { "const": "activation_required" },
-            "product": { "type": "string" },
-            "checkoutUrl": { "type": "string" },
-            "message": { "type": "string" },
-            "shortMessage": { "type": "string" },
-            "planRef": { "type": "string" },
-            "plans": { "type": "array" },
-            "meterName": { "type": "string" },
-            "unitPriceMinor": { "type": "number" },
-            "currency": { "type": "string" },
+            "kind": {
+              "const": "activation_required"
+            },
+            "product": {
+              "type": "string"
+            },
+            "checkoutUrl": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "shortMessage": {
+              "type": "string"
+            },
+            "planRef": {
+              "type": "string"
+            },
+            "plans": {
+              "type": "array"
+            },
+            "meterName": {
+              "type": "string"
+            },
+            "unitPriceMinor": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string"
+            },
             "included": {
               "type": "object",
               "properties": {
-                "total": { "type": "number" },
-                "used": { "type": "number" },
-                "remaining": { "type": "number" }
+                "total": {
+                  "type": "number"
+                },
+                "used": {
+                  "type": "number"
+                },
+                "remaining": {
+                  "type": "number"
+                }
               }
             },
-            "creditBalance": { "type": "number" },
-            "reason": { "type": "string" },
-            "nextAction": { "type": "string" },
-            "planName": { "type": "string" },
-            "creditsPerCall": { "type": "number" },
-            "shortfallCredits": { "type": "number" },
-            "remainingCalls": { "type": "number" },
-            "purchaseRef": { "type": "string" },
-            "planStatus": { "type": "string" },
+            "creditBalance": {
+              "type": "number"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "nextAction": {
+              "type": "string"
+            },
+            "planName": {
+              "type": "string"
+            },
+            "creditsPerCall": {
+              "type": "number"
+            },
+            "shortfallCredits": {
+              "type": "number"
+            },
+            "remainingCalls": {
+              "type": "number"
+            },
+            "purchaseRef": {
+              "type": "string"
+            },
+            "planStatus": {
+              "type": "string"
+            },
             "autoRecharge": {
               "type": "object",
               "properties": {
-                "enabled": { "type": "boolean" },
-                "status": { "type": "string" }
+                "enabled": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string"
+                }
               }
             },
             "links": {
               "type": "object",
               "properties": {
-                "topup": { "type": "string" },
-                "checkout": { "type": "string" },
-                "manage": { "type": "string" }
+                "topup": {
+                  "type": "string"
+                },
+                "checkout": {
+                  "type": "string"
+                },
+                "manage": {
+                  "type": "string"
+                }
               }
             },
-            "confirmationUrl": { "type": "string" },
+            "confirmationUrl": {
+              "type": "string"
+            },
+            "creditsPerMinorUnit": {
+              "type": "number"
+            },
+            "displayExchangeRate": {
+              "type": "number"
+            },
             "balance": {},
             "productDetails": {}
           }

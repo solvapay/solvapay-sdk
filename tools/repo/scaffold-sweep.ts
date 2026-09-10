@@ -32,7 +32,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -267,6 +267,20 @@ async function runRow(row: Row, cliPath: string, workspace: string): Promise<Row
     MCP_HOST: '127.0.0.1',
     SOLVAPAY_SECRET_KEY: process.env.SOLVAPAY_SECRET_KEY ?? 'sk_test_scaffold_sweep_stub',
     SOLVAPAY_PRODUCT_REF: process.env.SOLVAPAY_PRODUCT_REF ?? 'prd_scaffold_sweep_stub',
+  }
+  // `wrangler dev` reads `.env` / `.dev.vars` and does not inherit the parent
+  // process env. `--skip-init` leaves `.env` without `SOLVAPAY_SECRET_KEY`
+  // (that line is written by `solvapay init`), so seed the hermetic stub.
+  if (row.language === 'ts') {
+    const envFile = path.join(projectDir, '.env')
+    const existing = existsSync(envFile) ? readFileSync(envFile, 'utf8') : ''
+    const next = existing.includes('SOLVAPAY_SECRET_KEY=')
+      ? existing.replace(
+          /^SOLVAPAY_SECRET_KEY=.*$/m,
+          `SOLVAPAY_SECRET_KEY=${bootEnv.SOLVAPAY_SECRET_KEY}`,
+        )
+      : `${existing.replace(/\n?$/, '\n')}SOLVAPAY_SECRET_KEY=${bootEnv.SOLVAPAY_SECRET_KEY}\n`
+    writeFileSync(envFile, next)
   }
   const boot =
     row.language === 'ts'

@@ -101,6 +101,7 @@ export type NativeSyncMethod =
   | 'classifyCancelError'
   | 'deriveActiveProducts'
   | 'classifyReactivateError'
+  | 'selectActivePlanPurchase'
   | 'normalizeCancelResponse'
   | 'normalizeReactivateResponse'
   | 'validatePurchaseRef'

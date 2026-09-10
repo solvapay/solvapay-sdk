@@ -101,13 +101,15 @@ export function invokePayableNext(state?: unknown, event?: unknown): unknown {
  * @param data Merchant handler data payload.
  * @param options Optional response options object.
  * @param emittedBlocks Content blocks queued via ctx.emit before respond.
+ * @param limits Pre-check limits captured at respond time for honest nudge copy.
  * @returns Branded ResponseEnvelope.
  */
-export function makeResponseResult(data: unknown, options?: unknown, emittedBlocks?: unknown): unknown {
+export function makeResponseResult(data: unknown, options?: unknown, emittedBlocks?: unknown, limits?: unknown): unknown {
   const call_args: Record<string, unknown> = {}
   call_args['data'] = data
   if (options !== undefined) call_args['options'] = options
   if (emittedBlocks !== undefined) call_args['emittedBlocks'] = emittedBlocks
+  if (limits !== undefined) call_args['limits'] = limits
   return dispatchSync('makeResponseResult', call_args)
 }
 

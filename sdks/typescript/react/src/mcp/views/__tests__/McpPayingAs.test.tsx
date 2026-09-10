@@ -3,6 +3,7 @@ import React from 'react'
 import { describe, expect, it } from 'vitest'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../../../types'
+import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
 import { McpPayingAs } from '../McpPayingAs'
 
@@ -39,17 +40,7 @@ function stubContext(email: string | undefined): SolvaPayContextValue {
     activatePlan: async () => {
       throw new Error('unused')
     },
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: 'USD',
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      display: null,
-      refetch: async () => null,
-      adjustBalance: () => undefined,
-      reconcileAfterUsageDebit: () => undefined,
-    },
+    balance: mockBalanceStatus({ displayCurrency: 'USD' }),
     _config: {},
   }
 }
@@ -62,7 +53,11 @@ function renderPayingAs(
   return render(
     <SolvaPayContext.Provider value={stubContext(options.email)}>
       <McpDisplayModeProvider
-        value={{ displayMode, availableDisplayModes: ['inline', 'fullscreen'] }}
+        value={{
+          displayMode,
+          availableDisplayModes: ['inline', 'fullscreen'],
+          hostedRail: 'inline',
+        }}
       >
         <McpPayingAs {...props} />
       </McpDisplayModeProvider>

@@ -5045,6 +5045,16 @@
           "typedAs": null,
           "typedStyle": "turbofish",
           "local": null
+        },
+        {
+          "name": "limits",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -5060,7 +5070,7 @@
       "call": {
         "kind": "verbatim"
       },
-      "verbatimBody": "let args = args_map(&args_json)?;\n        let data = args\n            .get(\"data\")\n            .cloned()\n            .ok_or_else(|| SdkError::transport(\"args.data is required\".to_owned(), false))?;\n\n        let options = match args.get(\"options\") {\n            None => None,\n            Some(Value::Null) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n            Some(value) if value.is_object() => Some(value.clone()),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        let emitted_blocks = match args.get(\"emittedBlocks\") {\n            None => Vec::new(),\n            Some(Value::Array(items)) => items.clone(),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.emittedBlocks must be an array when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        to_value(&make_response_result(data, options, emitted_blocks))",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let data = args\n            .get(\"data\")\n            .cloned()\n            .ok_or_else(|| SdkError::transport(\"args.data is required\".to_owned(), false))?;\n\n        let options = match args.get(\"options\") {\n            None => None,\n            Some(Value::Null) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n            Some(value) if value.is_object() => Some(value.clone()),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        let emitted_blocks = match args.get(\"emittedBlocks\") {\n            None => Vec::new(),\n            Some(Value::Array(items)) => items.clone(),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.emittedBlocks must be an array when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        let limits = match args.get(\"limits\") {\n            None => None,\n            Some(value) => Some(value.clone()),\n        };\n\n        to_value(&make_response_result(data, options, emitted_blocks, limits))",
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": null,
@@ -7061,6 +7071,16 @@
           "typedAs": null,
           "typedStyle": "turbofish",
           "local": null
+        },
+        {
+          "name": "bodyReturnUrlNull",
+          "type": "bool",
+          "required": false,
+          "hostInjected": false,
+          "extract": "requireBool",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -7076,7 +7096,7 @@
       "call": {
         "kind": "verbatim"
       },
-      "verbatimBody": "let args = args_map(&args_json)?;\n        let body_return_url = optional_string(&args, \"bodyReturnUrl\")?;\n        let options_return_url = optional_string(&args, \"optionsReturnUrl\")?;\n        let origin = optional_string(&args, \"origin\")?;\n        match resolve_return_url(\n            body_return_url.as_deref(),\n            options_return_url.as_deref(),\n            origin.as_deref(),\n        ) {\n            None => Ok(Value::Null),\n            Some(url) => Ok(Value::String(url)),\n        }",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let body_return_url = optional_string(&args, \"bodyReturnUrl\")?;\n        let options_return_url = optional_string(&args, \"optionsReturnUrl\")?;\n        let origin = optional_string(&args, \"origin\")?;\n        let body_return_url_null = match args.get(\"bodyReturnUrlNull\") {\n            None | Some(Value::Null) => None,\n            Some(Value::Bool(flag)) => Some(*flag),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.bodyReturnUrlNull must be a boolean when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n        match resolve_return_url(\n            body_return_url.as_deref(),\n            options_return_url.as_deref(),\n            origin.as_deref(),\n            body_return_url_null,\n        ) {\n            None => Ok(Value::Null),\n            Some(url) => Ok(Value::String(url)),\n        }",
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": null,
@@ -7369,6 +7389,65 @@
       "verbatimBodyWasm": null,
       "dtoType": "SaveAutoRechargeParams",
       "coreCall": "save_auto_recharge",
+      "clientCallArgs": []
+    },
+    "selectActivePlanPurchase": {
+      "core": "solvapay_core::purchase::select_active_plan_purchase",
+      "names": {
+        "ts": "selectActivePlanPurchase",
+        "py": "select_active_plan_purchase",
+        "rb": "select_active_plan_purchase",
+        "go": "SelectActivePlanPurchase",
+        "rust": "select_active_plan_purchase",
+        "c": "selectActivePlanPurchase"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "purchases",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "productRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "product_ref"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 21,
+      "section": "purchase",
+      "doc": "Binding for `selectActivePlanPurchase`.",
+      "docWasm": null,
+      "rustFnName": "select_active_plan_purchase_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "purchases.as_ref()",
+          "product_ref.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "select_active_plan_purchase",
       "clientCallArgs": []
     },
     "selectActivePurchases": {

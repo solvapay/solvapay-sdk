@@ -33,12 +33,22 @@
     "result": {
       "toolResult": {
         "content": [
-          { "type": "text", "text": "intermediate 1" },
-          { "type": "text", "text": "intermediate 2" },
-          { "type": "text", "text": "{\"final\":true}" },
-          { "type": "text", "text": "{\"final\":true}" }
+          {
+            "type": "text",
+            "text": "intermediate 1"
+          },
+          {
+            "type": "text",
+            "text": "intermediate 2"
+          },
+          {
+            "type": "text",
+            "text": "{\"final\":true}"
+          }
         ],
-        "structuredContent": { "final": true }
+        "structuredContent": {
+          "final": true
+        }
       },
       "usage": [
         {
@@ -47,7 +57,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_hook",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

@@ -223,6 +223,7 @@ pub async fn invoke_payable(
                         name: product.clone(),
                     },
                     product.clone(),
+                    Some(limits),
                 );
                 match handler(args.clone(), ctx).await {
                     Err(PayableError::Gate { message, gate }) => {

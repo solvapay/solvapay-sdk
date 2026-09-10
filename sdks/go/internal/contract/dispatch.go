@@ -87,6 +87,7 @@ var SyncExports = map[string]string{
 	"deriveActiveProducts":                        "sv_derive_active_products_binding",
 	"buildPromptUserMessage":                      "sv_build_prompt_user_message_binding",
 	"classifyReactivateError":                     "sv_classify_reactivate_error_binding",
+	"selectActivePlanPurchase":                    "sv_select_active_plan_purchase_binding",
 	"normalizeCancelResponse":                     "sv_normalize_cancel_response_binding",
 	"validatePublicBaseUrl":                       "sv_validate_public_base_url_binding",
 	"buildPayableToolResult":                      "sv_build_payable_tool_result_binding",

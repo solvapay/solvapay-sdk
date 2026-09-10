@@ -17,8 +17,8 @@ use solvapay_core::{
     get_tax_id_field_label, get_tax_id_helper_text, headline_charges, included_units,
     is_error_result, meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
     normalize_reactivate_response, per_unit_charge, project_topup_process_outcome,
-    project_usage_snapshot, resolve_purchase_customer_ref, resolve_seller_identity_display,
-    select_active_purchases, trial_days, validate_activate_plan_params,
+    project_usage_snapshot,     resolve_purchase_customer_ref, resolve_seller_identity_display,
+    select_active_plan_purchase, select_active_purchases, trial_days, validate_activate_plan_params,
     validate_attach_business_details_params, validate_create_payment_intent_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, CreditsToDisplayInput, GetHistoryAction, PaywallLimits,
@@ -33,7 +33,7 @@ use solvapay_dto::{
 };
 use solvapay_mcp_core::{
     is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
-    narrate_already_active, narrated_tool_result, new_widget_session_id, parse_mode,
+    narrate_activate_plan_status, narrated_tool_result, new_widget_session_id, parse_mode,
     stamp_catalog_result, stamp_complete_result, tool_error_result, tool_result,
     HandleRequestInput, McpAuthMode, McpDescriptorsInput,
 };
@@ -230,20 +230,11 @@ fn default_mcp_views() -> Vec<String> {
 }
 
 fn default_view_input(payload: &Value, enabled: &[String]) -> Value {
-    let purchases = payload
-        .pointer("/customer/purchase/purchases")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    let has_active_plan = purchases.iter().any(|purchase| {
-        purchase.get("planSnapshot").is_some()
-            && purchase
-                .pointer("/metadata/purpose")
-                .and_then(Value::as_str)
-                != Some("credit_topup")
-    });
+    let purchases = payload.pointer("/customer/purchase/purchases");
     json!({
-        "hasActivePlan": has_active_plan,
+        "hasActivePlan": select_active_plan_purchase(purchases, payload.get("productRef").and_then(Value::as_str)).is_some(),
+        "purchases": purchases,
+        "productRef": payload.get("productRef"),
         "credits": payload.pointer("/customer/balance/credits"),
         "enabledViews": enabled,
     })
@@ -559,7 +550,7 @@ impl SolvaPayClient {
         let customer = match customer_ref {
             None => None,
             Some(customer_ref) => {
-                let purchase_result = check_purchase(self, customer_ref).await;
+                let mut purchase_result = check_purchase(self, customer_ref).await;
                 let payment_method = wrap_ok_or_placeholder(
                     self.get_payment_method(GetPaymentMethodParams {
                         customer_ref: customer_ref.to_owned(),
@@ -575,6 +566,20 @@ impl SolvaPayClient {
                 let limits_result = self
                     .check_limits(check_limits_request(customer_ref, &params.product_ref))
                     .await;
+                if let Ok(limits_value) = &limits_result {
+                    if let Some(needed) = limits_value.get("purchaseRef").and_then(Value::as_str) {
+                        let listed = purchase_result
+                            .get("purchases")
+                            .and_then(Value::as_array)
+                            .cloned()
+                            .unwrap_or_default();
+                        if !listed.iter().any(|purchase| {
+                            purchase.get("reference").and_then(Value::as_str) == Some(needed)
+                        }) {
+                            purchase_result = check_purchase(self, customer_ref).await;
+                        }
+                    }
+                }
                 let usage = match &limits_result {
                     Ok(limits) => serde_json::to_value(project_usage_snapshot(None, Some(limits)))
                         .unwrap_or(Value::Null),
@@ -619,15 +624,16 @@ impl SolvaPayClient {
 
         let checkout_customer = customer_ref.unwrap_or(ANONYMOUS_CUSTOMER_REF);
         let checkout_purpose = (params.view == "topup"
-            || params.view == "auto-recharge"
-            || paywall_reason.as_deref() == Some("topup_required"))
+            || (params.view != "checkout"
+                && params.view != "auto-recharge"
+                && paywall_reason.as_deref() == Some("topup_required")))
         .then_some(CreateCheckoutSessionRequestPurpose::CreditTopup);
         let checkout_req = CreateCheckoutSessionRequest {
             customer_ref: Some(checkout_customer.to_owned()),
             plan_ref: None,
             product_ref: Some(params.product_ref.clone()),
             purpose: checkout_purpose.clone(),
-            return_url: Some(params.public_base_url.clone()),
+            return_url: None,
         };
         let portal_req = customer_ref.map(|customer_ref| CreateCustomerSessionRequest {
             customer_ref: Some(customer_ref.to_owned()),
@@ -1095,7 +1101,7 @@ impl SolvaPayClient {
                 if let Some(err) = validate_activate_plan_params(Some(product_ref), plan_ref) {
                     return Ok(helper_error_tool(&err));
                 }
-                let activated = self
+                let mut activated = self
                     .execute_json(
                         Method::Post,
                         "/v1/sdk/activate".to_owned(),
@@ -1109,16 +1115,61 @@ impl SolvaPayClient {
                         solvapay_dto::error_templates::operations::activate_plan::DEFAULT,
                     )
                     .await?;
-                if activated.get("status").and_then(Value::as_str) == Some("already_active") {
-                    return Ok(json!({
-                        "content": [{
-                            "type": "text",
-                            "text": narrate_already_active(&activated)
-                        }],
-                        "structuredContent": activated,
-                    }));
+                if activated.get("status").and_then(Value::as_str) == Some("payment_required")
+                    && activated
+                        .get("checkoutUrl")
+                        .and_then(Value::as_str)
+                        .filter(|s| !s.is_empty())
+                        .is_none()
+                {
+                    if let Ok(session) = self
+                        .create_checkout_session_json(CreateCheckoutSessionRequest {
+                            customer_ref: Some(customer_ref.to_owned()),
+                            plan_ref: plan_ref.map(str::to_owned),
+                            product_ref: Some(product_ref.to_owned()),
+                            purpose: None,
+                            return_url: None,
+                        })
+                        .await
+                    {
+                        if let Some(url) = session.get("checkoutUrl").cloned() {
+                            if let Some(obj) = activated.as_object_mut() {
+                                obj.insert("checkoutUrl".to_owned(), url);
+                            }
+                        }
+                    }
                 }
-                Ok(wrap_ok(activated))
+                if activated.get("planName").is_none() {
+                    if let Some(plan_ref) = plan_ref {
+                        if let Ok(plans) = self.list_plans(product_ref).await {
+                            let items = plans.as_array().cloned().unwrap_or_default();
+                            if let Some(name) = items.iter().find_map(|plan| {
+                                (plan.get("reference").and_then(Value::as_str) == Some(plan_ref))
+                                    .then(|| plan.get("name").cloned())
+                                    .flatten()
+                            }) {
+                                if let Some(obj) = activated.as_object_mut() {
+                                    obj.insert("planName".to_owned(), name);
+                                }
+                            }
+                        }
+                    }
+                }
+                let text = narrate_activate_plan_status(&activated);
+                let mut structured = activated;
+                if let Some(obj) = structured.as_object_mut() {
+                    obj.insert(
+                        "invalidateLimits".to_owned(),
+                        json!({
+                            "customerRef": customer_ref,
+                            "productRef": product_ref,
+                        }),
+                    );
+                }
+                Ok(json!({
+                    "content": [{ "type": "text", "text": text }],
+                    "structuredContent": structured,
+                }))
             }
             other => Err(SdkError::transport(
                 format!("unknown builtin tool: {other}"),

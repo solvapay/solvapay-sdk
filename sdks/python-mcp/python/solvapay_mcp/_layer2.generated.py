@@ -110,11 +110,13 @@ def make_response_result(
     data: object,
     options: object | None = None,
     emitted_blocks: object | None = None,
+    limits: object | None = None,
 ) -> dict[str, object]:
     """Construct a branded handler response envelope (__solvapayResponse).
     @param data Merchant handler data payload.
     @param options Optional response options object.
     @param emitted_blocks Content blocks queued via ctx.emit before respond.
+    @param limits Pre-check limits captured at respond time for honest nudge copy.
     @returns Branded ResponseEnvelope.
     """
     call_args: dict[str, object] = {}
@@ -123,6 +125,8 @@ def make_response_result(
         call_args["options"] = options
     if emitted_blocks is not None:
         call_args["emittedBlocks"] = emitted_blocks
+    if limits is not None:
+        call_args["limits"] = limits
     return _as_object_map(call_native_sync("make_response_result", json.dumps(call_args)))
 
 def mcp_auth_gate(

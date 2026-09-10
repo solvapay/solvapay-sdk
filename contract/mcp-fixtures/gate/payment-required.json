@@ -31,24 +31,24 @@
         "content": [
           {
             "type": "text",
-            "text": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+            "text": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
           }
         ],
-        "isError": false,
         "structuredContent": {
           "kind": "payment_required",
           "product": "prd_demo",
           "checkoutUrl": "https://pay.test/x",
-          "planRef": "pl_basic",
-          "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md.",
+          "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
           "shortMessage": "Payment required",
+          "planRef": "pl_basic",
           "reason": "limit_reached",
           "nextAction": "checkout",
           "remainingCalls": 0.0,
           "links": {
             "checkout": "https://pay.test/x"
           }
-        }
+        },
+        "isError": false
       },
       "usage": [
         {
@@ -57,7 +57,9 @@
           "units": 1,
           "productRef": "prd_demo",
           "customerRef": "cus_from_hook",
-          "metadata": { "action": "requests" }
+          "metadata": {
+            "action": "requests"
+          }
         }
       ]
     }

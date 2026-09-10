@@ -198,6 +198,12 @@ pub struct PaywallGate {
     /// Global destinations. Per-plan URLs stay on `plans[].checkoutUrl`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub links: Option<PaywallRecoveryLinks>,
+    /// Credits per USD cent from `limits.balance`; omitted when the peg is absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_per_minor_unit: Option<f64>,
+    /// USD → display-currency rate from `limits.balance`; omitted when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_exchange_rate: Option<f64>,
 }
 
 impl Default for PaywallGate {
@@ -228,6 +234,8 @@ impl Default for PaywallGate {
             plan_status: None,
             auto_recharge: None,
             links: None,
+            credits_per_minor_unit: None,
+            display_exchange_rate: None,
         }
     }
 }
@@ -300,6 +308,8 @@ pub fn paywall_structured_content_schema() -> Value {
                             "manage": { "type": "string" }
                         }
                     },
+                    "creditsPerMinorUnit": { "type": "number" },
+                    "displayExchangeRate": { "type": "number" },
                     "balance": {},
                     "productDetails": {}
                 }
@@ -352,6 +362,8 @@ pub fn paywall_structured_content_schema() -> Value {
                         }
                     },
                     "confirmationUrl": { "type": "string" },
+                    "creditsPerMinorUnit": { "type": "number" },
+                    "displayExchangeRate": { "type": "number" },
                     "balance": {},
                     "productDetails": {}
                 }
@@ -495,6 +507,10 @@ struct RecoveryFields {
     auto_recharge: Option<PaywallAutoRecharge>,
     /// Global recovery destinations.
     links: Option<PaywallRecoveryLinks>,
+    /// Credits per USD cent from nested balance; omitted when absent.
+    credits_per_minor_unit: Option<f64>,
+    /// USD → display-currency rate from nested balance; omitted when absent.
+    display_exchange_rate: Option<f64>,
 }
 
 /// Active plan reference: `plan_ref` wins over deprecated `plan`; empty → `None`.
@@ -598,6 +614,13 @@ fn recovery_fields(limits: &PaywallGateLimits, state: &PaywallState) -> Recovery
         Some((amount, currency)) => (Some(amount), currency),
         None => (None, limits.currency.clone()),
     };
+    let (credits_per_minor_unit, display_exchange_rate) = match limits.balance.as_ref() {
+        Some(Value::Object(balance)) => (
+            balance.get("creditsPerMinorUnit").and_then(Value::as_f64),
+            balance.get("displayExchangeRate").and_then(Value::as_f64),
+        ),
+        _ => (None, None),
+    };
     RecoveryFields {
         plan_ref: active_plan_ref_of(limits).map(ToOwned::to_owned),
         plans: limits
@@ -619,6 +642,8 @@ fn recovery_fields(limits: &PaywallGateLimits, state: &PaywallState) -> Recovery
         plan_status: limits.plan_status.clone(),
         auto_recharge: limits.auto_recharge.clone(),
         links: recovery_links(limits, state),
+        credits_per_minor_unit,
+        display_exchange_rate,
     }
 }
 
@@ -695,6 +720,8 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
             remaining_calls: recovery.remaining_calls,
             purchase_ref: recovery.purchase_ref.clone(),
             auto_recharge: recovery.auto_recharge.clone(),
+            credits_per_minor_unit: recovery.credits_per_minor_unit,
+            display_exchange_rate: recovery.display_exchange_rate,
         },
     );
 
@@ -724,6 +751,8 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
         plan_status: recovery.plan_status.clone(),
         auto_recharge: recovery.auto_recharge.clone(),
         links: recovery.links.clone(),
+        credits_per_minor_unit: recovery.credits_per_minor_unit,
+        display_exchange_rate: recovery.display_exchange_rate,
     };
 
     if activation_branch {
@@ -829,7 +858,7 @@ mod tests {
                 "nextAction": "checkout",
                 "remainingCalls": 0.0,
                 "links": { "checkout": "https://pay.test/x" },
-                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
             })
         );
     }
@@ -848,7 +877,7 @@ mod tests {
                 "reason": "limit_reached",
                 "nextAction": "checkout",
                 "remainingCalls": 0.0,
-                "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'."
             })
         );
     }
@@ -870,7 +899,7 @@ mod tests {
                 "nextAction": "checkout",
                 "remainingCalls": 0.0,
                 "links": { "checkout": "https://pay.test/x" },
-                "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+                "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
             })
         );
     }
@@ -894,7 +923,7 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`. See docs://solvapay/overview.md.",
+                "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`.",
                 "checkoutUrl": "https://pay.test/confirm",
                 "confirmationUrl": "https://pay.test/confirm",
                 "planRef": "pl_pro",
@@ -928,7 +957,7 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
                 "checkoutUrl": "https://pay.test/x",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
@@ -969,7 +998,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
                 "planRef": "pl_pro",
                 "creditBalance": 0.0,
                 "reason": "topup_required",
@@ -1006,7 +1035,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. See docs://solvapay/overview.md.",
+                "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
                 "planRef": "pl_basic",
                 "creditBalance": 0.0,
                 "reason": "topup_required",
@@ -1047,7 +1076,7 @@ mod tests {
                 "nextAction": "checkout",
                 "remainingCalls": 0.0,
                 "links": { "checkout": "https://pay.test/x" },
-                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'. See docs://solvapay/overview.md."
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
             })
         );
     }

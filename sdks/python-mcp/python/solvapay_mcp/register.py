@@ -754,6 +754,7 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 customer=dict(snapshot),
                 product={"reference": spec.product, "name": spec.product},
                 product_ref=spec.product,
+                limits=limits,
             )
             try:
                 returned = await spec.handler(args, ctx)
