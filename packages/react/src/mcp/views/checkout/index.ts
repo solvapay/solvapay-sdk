@@ -10,6 +10,8 @@
 
 export { EmbeddedCheckout } from './EmbeddedCheckout'
 export type { EmbeddedCheckoutProps } from './EmbeddedCheckout'
+export { HostedCheckout } from './HostedCheckout'
+export type { HostedCheckoutProps } from './HostedCheckout'
 export type { BootstrapPlanLike, Cx, Step, SuccessMeta } from './shared'
 export {
   isPayg,

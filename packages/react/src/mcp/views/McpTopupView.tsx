@@ -16,10 +16,10 @@
  *  3. Success state — "Credits added" + `[ Add more credits ]` +
  *     `Manage account ↗`, same `Back to my account` back-link.
  *
- * Gated behind `useStripeProbe` with the same fallback logic as
- * `<McpCheckoutView>`: if the host sandbox's CSP refuses to load
- * `js.stripe.com` the embedded `PaymentElement` can't render, so we
- * drop back to the hosted customer portal.
+ * `useStripeProbe` starts at mount so Stripe.js can warm while the
+ * customer picks an amount. The probe only gates the payment step —
+ * a blocked host still sees the amount picker, then the hosted
+ * customer-portal handoff.
  *
  * When called from the paywall's secondary "Top up" button, the shell
  * doesn't have an Account tab to route back to (the paywall is a
@@ -27,16 +27,10 @@
  * skips the outer back-link.
  */
 
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import type { AutoRechargeInput } from '@solvapay/server'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
-import {
-  createDefaultAutoRechargeForm,
-  validateAutoRechargeForm,
-  type AutoRechargeFormState,
-} from '../../helpers/auto-recharge-form'
 import { useBalance } from '../../hooks/useBalance'
-import { useCopy } from '../../hooks/useCopy'
 import { useMerchant } from '../../hooks/useMerchant'
 import { useTopupAmountSelector } from '../../hooks/useTopupAmountSelector'
 import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
@@ -48,11 +42,14 @@ import { formatCompactCredits } from '../format-compact-credits'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
-import { useStripeProbe } from '../useStripeProbe'
+import { useStripeProbe, type StripeProbeState } from '../useStripeProbe'
 import { chargeAmountMinor } from './chargeAmount'
-import { AmountLadder, Eyebrow, SplitRow, Toggle } from '../primitives'
+import { AmountLadder, Eyebrow } from '../primitives'
 import { BackLink } from './BackLink'
-import { McpAutoRechargeFields } from './autoRecharge/McpAutoRechargeFields'
+import {
+  McpInlineAutoRecharge,
+  type McpInlineAutoRechargeHandle,
+} from './autoRecharge/McpInlineAutoRecharge'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { McpPaymentHeader } from './McpPaymentHeader'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -60,7 +57,11 @@ import { resolveMcpClassNames, type McpViewClassNames } from './types'
 const FALLBACK_TOPUP_CURRENCY = 'USD'
 
 export interface McpTopupViewProps {
-  /** Public SDK contract — null means "no key supplied". Normalized internally. */
+  /**
+   * Stripe publishable key used by `useStripeProbe`. Pass `null` to skip
+   * the probe: the amount step still renders, and the hosted portal
+   * handoff is forced only at the payment step.
+   */
   publishableKey?: string | null
   returnUrl: string
   /**
@@ -124,16 +125,12 @@ export function McpTopupView({
   const probe = useStripeProbe(publishableKey)
   const { merchant, loading: merchantLoading } = useMerchant()
 
-  if (probe === 'loading' || merchantLoading) {
+  if (merchantLoading) {
     return (
       <section className={cx.card} aria-label="Loading top-up">
         <p>Loading top-up…</p>
       </section>
     )
-  }
-
-  if (probe === 'blocked') {
-    return <HostedTopupFallback cx={cx} onBack={onBack} />
   }
 
   const defaultCurrency = resolveDefaultCurrency(merchant ?? undefined)
@@ -152,6 +149,7 @@ export function McpTopupView({
       topupCurrencies={topupCurrencies}
       onTopupSuccess={onTopupSuccess}
       onBack={onBack}
+      stripeProbe={probe}
       cx={cx}
     />
   )
@@ -165,6 +163,7 @@ function EmbeddedTopup({
   topupCurrencies,
   onTopupSuccess,
   onBack,
+  stripeProbe,
   cx,
 }: {
   returnUrl: string
@@ -172,6 +171,7 @@ function EmbeddedTopup({
   topupCurrencies: string[]
   onTopupSuccess?: (amountMinor: number) => void
   onBack?: () => void
+  stripeProbe: StripeProbeState
   cx: Cx
 }) {
   const [screen, setScreen] = useState<TopupScreen>({ step: 'amount' })
@@ -180,11 +180,7 @@ function EmbeddedTopup({
   const showCurrencySwitch = topupCurrencies.length > 1
   const { adjustBalance, credits, creditsPerMinorUnit, displayCurrency, displayExchangeRate } =
     useBalance()
-  const copy = useCopy()
-  const [autoRechargeForm, setAutoRechargeForm] = useState<AutoRechargeFormState>(() =>
-    createDefaultAutoRechargeForm(currency),
-  )
-  const [autoRechargeError, setAutoRechargeError] = useState<string | null>(null)
+  const autoRechargeRef = useRef<McpInlineAutoRechargeHandle>(null)
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
   const topupSelector = useTopupAmountSelector({ currency })
@@ -220,6 +216,19 @@ function EmbeddedTopup({
   }
 
   if (screen.step === 'payment') {
+    if (stripeProbe === 'loading') {
+      return (
+        <section className={cx.card} aria-label="Loading top-up">
+          <p>Loading top-up…</p>
+        </section>
+      )
+    }
+    if (stripeProbe === 'blocked') {
+      return (
+        <HostedTopupFallback cx={cx} onChangeAmount={() => setScreen({ step: 'amount' })} />
+      )
+    }
+
     const committedAmountMinor = screen.amountMinor
     const creditEstimate = estimateTopupCredits(
       committedAmountMinor,
@@ -328,51 +337,25 @@ function EmbeddedTopup({
         rowClassName={cx.amountCustom}
         currencyDisplay={currencyDisplay}
       />
-      <div className="solvapay-mcp-auto-recharge-inline">
-        <SplitRow>
-          <p>{copy.autoRechargeView.heading}</p>
-          <Toggle
-            checked={autoRechargeForm.enabled}
-            label={copy.autoRechargeView.heading}
-            onChange={enabled => {
-              setAutoRechargeError(null)
-              setAutoRechargeForm(current => ({ ...current, enabled }))
-            }}
-          />
-        </SplitRow>
-        {autoRechargeForm.enabled ? (
-          <McpAutoRechargeFields
-            form={autoRechargeForm}
-            onChange={next => {
-              setAutoRechargeError(null)
-              setAutoRechargeForm(next)
-            }}
-            currency={currency}
-            validationError={autoRechargeError}
-            creditsPerMinorUnit={creditsPerMinorUnit}
-            displayExchangeRate={displayExchangeRate}
-          />
-        ) : null}
-      </div>
+      <McpInlineAutoRecharge
+        ref={autoRechargeRef}
+        currency={currency}
+        creditsPerMinorUnit={creditsPerMinorUnit}
+        displayExchangeRate={displayExchangeRate}
+      />
       <AmountDueSummary locale={locale} currency={currency} />
       <AmountPicker.Confirm
         className={cx.button}
         onConfirm={amountMinor => {
-          const result = validateAutoRechargeForm(
-            autoRechargeForm,
-            currency,
-            { creditsPerMinorUnit, displayExchangeRate },
-            copy.autoRecharge,
-          )
-          if (!result.ok) {
-            setAutoRechargeError(result.error)
-            return
+          const result = autoRechargeRef.current?.validate()
+          if (result == null) {
+            throw new Error('McpTopupView: auto-recharge form is not mounted')
           }
-          setAutoRechargeError(null)
+          if (!result.ok) return
           setScreen({
             step: 'payment',
             amountMinor,
-            autoRecharge: result.payload.enabled ? result.payload : undefined,
+            autoRecharge: result.payload,
           })
           void notifyModelContext({
             text: `User confirmed topup of ${formatPrice(amountMinor, currency, {
@@ -562,10 +545,16 @@ function CustomAmountRow({
   )
 }
 
-function HostedTopupFallback({ cx, onBack }: { cx: Cx; onBack?: () => void }) {
+function HostedTopupFallback({
+  cx,
+  onChangeAmount,
+}: {
+  cx: Cx
+  onChangeAmount: () => void
+}) {
   return (
     <section className={cx.card} aria-label="Add credits">
-      {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
+      <BackLink label="Change amount" onClick={onChangeAmount} />
       <h2 className={cx.heading}>Add credits</h2>
       <p className={cx.muted}>
         {

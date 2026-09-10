@@ -24,7 +24,7 @@ export type { McpAppLike } from './adapter'
 export { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 export type { McpToolName } from '@solvapay/mcp-core'
 
-export { useStripeProbe } from './useStripeProbe'
+export { useStripeProbe, resetStripeProbeCacheForTests } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
 
 export { useHostLocale } from './useHostLocale'

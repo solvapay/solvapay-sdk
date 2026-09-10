@@ -10,11 +10,17 @@
  * payment step. No network call on this transition.
  */
 
-import React, { memo, useState } from 'react'
+import React, { memo, useRef, useState } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
+import { useBalance } from '../../../../hooks/useBalance'
 import { AmountPicker, useAmountPicker } from '../../../../primitives/AmountPicker'
 import { formatPrice, getMinorUnitsPerMajor } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
+import {
+  McpInlineAutoRecharge,
+  type McpInlineAutoRechargeHandle,
+} from '../../autoRecharge/McpInlineAutoRecharge'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
 interface AmountStepProps {
@@ -33,7 +39,7 @@ interface AmountStepProps {
   /** Override the topup currency from the switcher. */
   onCurrencyChange?: (code: string) => void
   onBack: () => void
-  onContinue: (amountMinor: number) => void
+  onContinue: (amountMinor: number, autoRecharge?: AutoRechargeInput) => void
   cx: Cx
 }
 
@@ -49,6 +55,8 @@ export const AmountStep = memo(function AmountStep({
   // consulted — credit topups settle into the merchant-wide wallet.
   const currency = (topupCurrency ?? 'USD').toUpperCase()
   const locale = useHostLocale()
+  const { creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const autoRechargeRef = useRef<McpInlineAutoRechargeHandle>(null)
 
   const [stagedAmountMinor, setStagedAmountMinor] = useState<number | null>(null)
 
@@ -87,9 +95,22 @@ export const AmountStep = memo(function AmountStep({
       >
         <PresetAmountRow cx={cx} currencyDisplay={currencyDisplay} />
         <CustomAmountRow rowClassName={cx.amountCustom} currencyDisplay={currencyDisplay} />
+        <McpInlineAutoRecharge
+          ref={autoRechargeRef}
+          currency={currency}
+          creditsPerMinorUnit={creditsPerMinorUnit}
+          displayExchangeRate={displayExchangeRate}
+        />
         <AmountPicker.Confirm
           className={cx.button}
-          onConfirm={amountMinor => onContinue(amountMinor)}
+          onConfirm={amountMinor => {
+            const result = autoRechargeRef.current?.validate()
+            if (result == null) {
+              throw new Error('AmountStep: auto-recharge form is not mounted')
+            }
+            if (!result.ok) return
+            onContinue(amountMinor, result.payload)
+          }}
         >
           {stagedAmountMinor
             ? `Continue — ${formatPrice(stagedAmountMinor, currency, { locale, currencyDisplay })}`

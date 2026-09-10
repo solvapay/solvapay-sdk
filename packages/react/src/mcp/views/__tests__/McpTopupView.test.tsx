@@ -75,7 +75,13 @@ vi.mock('../../../primitives/TopupForm', () => {
 })
 
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
-vi.mock('../../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
+const stripeProbeState = vi.hoisted(() => ({
+  value: 'ready' as 'loading' | 'ready' | 'blocked',
+}))
+
+vi.mock('../../useStripeProbe', () => ({
+  useStripeProbe: () => stripeProbeState.value,
+}))
 
 import { McpTopupView } from '../McpTopupView'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
@@ -193,6 +199,7 @@ const singleCurrencyUsdMerchant: Merchant = {
 beforeEach(() => {
   merchantCache.clear()
   taxState.topup = null
+  stripeProbeState.value = 'ready'
 })
 
 afterEach(() => {
@@ -449,5 +456,35 @@ describe('<McpTopupView> — topup currency picker', () => {
     await screen.findByTestId('topup-form-stub')
     fireEvent.click(screen.getByTestId('topup-form-submit'))
     expect(ctx.balance.adjustBalance).not.toHaveBeenCalled()
+  })
+})
+
+describe('<McpTopupView> — blocked probe still shows the amount step', () => {
+  beforeEach(() => {
+    stripeProbeState.value = 'blocked'
+  })
+
+  it('renders the amount step when the Stripe probe is blocked', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Continue/i })).toBeTruthy()
+    expect(screen.queryByText(/doesn't allow embedded payments/)).toBeNull()
+  })
+
+  it('renders the hosted handoff after the customer commits an amount', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByText(/doesn't allow embedded payments/)
+    expect(screen.queryByTestId('topup-form-stub')).toBeNull()
+    expect(screen.getByRole('button', { name: /Change amount/i })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
+    await screen.findByText('Add credits')
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
   })
 })
