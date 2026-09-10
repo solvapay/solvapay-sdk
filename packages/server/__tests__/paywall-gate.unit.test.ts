@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import { z } from 'zod'
 import { buildPaywallGate } from '../src/paywall-gate'
+import { PaywallStructuredContentSchema } from '../src/types/paywall-schema'
 import type { LimitResponseWithPlan } from '../src/types'
 
 describe('buildPaywallGate', () => {
@@ -346,5 +348,99 @@ describe('buildPaywallGate', () => {
     }
     const gate = buildPaywallGate('prd_x', limits)
     expect(gate.kind).toBe('activation_required')
+  })
+})
+
+describe('buildPaywallGate — published JSON Schema stays in sync', () => {
+  // `registerPayableTool` registers `z.union([merchantSchema,
+  // PaywallStructuredContentSchema])` as a payable tool's `outputSchema`,
+  // and the MCP server publishes it via `z.toJSONSchema(…, { io: 'output' })`.
+  // Output mode emits `additionalProperties: false`, so a key the gate
+  // builder emits but the schema does not declare is rejected by any client
+  // that validates `structuredContent` against the published schema
+  // (ChatGPT does; Zod's own `safeParse` silently strips it, which is why
+  // this drift survived server-side validation).
+  const maximalLimits: LimitResponseWithPlan = {
+    withinLimits: false,
+    remaining: 0,
+    planRef: 'pln_payg',
+    planName: 'Pay as you go',
+    purchaseRef: 'pur_1',
+    meterName: 'requests',
+    currency: 'USD',
+    checkoutUrl: 'https://pay.example.com/checkout',
+    confirmationUrl: 'https://pay.example.com/manage',
+    paywallReason: 'topup_required',
+    creditBalance: 12,
+    autoRecharge: { enabled: true, status: 'active' },
+    balance: {
+      creditBalance: 12,
+      creditsPerUnit: 200,
+      remainingUnits: 0,
+      currency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    },
+    plans: [
+      {
+        reference: 'pln_payg',
+        name: 'Pay as you go',
+        type: 'usage-based',
+        price: 1000,
+        currency: 'USD',
+        requiresPayment: true,
+        perUnitChargeMinor: 2,
+      },
+    ],
+  }
+
+  function declaredPropertiesFor(kind: string): Set<string> {
+    const json = z.toJSONSchema(PaywallStructuredContentSchema, {
+      target: 'draft-2020-12',
+      io: 'output',
+    }) as {
+      anyOf?: Array<Record<string, unknown>>
+      oneOf?: Array<Record<string, unknown>>
+    }
+    const branches = json.oneOf ?? json.anyOf ?? []
+    const branch = branches.find(b => {
+      const properties = b.properties as { kind?: { const?: unknown } } | undefined
+      return properties?.kind?.const === kind
+    })
+    if (!branch) throw new Error(`no published branch for kind "${kind}"`)
+    return new Set(Object.keys(branch.properties as Record<string, unknown>))
+  }
+
+  // A PAYG-only product swaps `payment_required` to `activation_required`
+  // (see `useActivationForTopup`), so the payment_required fixture needs a
+  // recurring paid plan alongside the PAYG one.
+  const recurringPlan = {
+    reference: 'pln_pro',
+    name: 'Pro',
+    type: 'recurring' as const,
+    price: 2900,
+    currency: 'USD',
+    requiresPayment: true,
+  }
+
+  it.each([
+    [
+      'payment_required',
+      { ...maximalLimits, plans: [...(maximalLimits.plans ?? []), recurringPlan] },
+    ],
+    ['activation_required', { ...maximalLimits, activationRequired: true }],
+  ])('declares every key a %s gate emits', (kind, limits) => {
+    const gate = buildPaywallGate('prd_x', limits as LimitResponseWithPlan)
+    expect(gate.kind).toBe(kind)
+
+    const declared = declaredPropertiesFor(kind as string)
+    const undeclared = Object.keys(gate).filter(key => !declared.has(key))
+    expect(undeclared).toEqual([])
+  })
+
+  it('carries the credit peg through to the gate', () => {
+    const gate = buildPaywallGate('prd_x', maximalLimits)
+    expect(gate.creditsPerMinorUnit).toBe(100)
+    expect(gate.displayExchangeRate).toBe(1)
   })
 })
