@@ -252,12 +252,18 @@ jobs:
       - name: cargo clippy solvapay-transport (wasm32)
         run: cargo clippy -p solvapay-transport --target wasm32-unknown-unknown --all-targets -- -D warnings
 
+      - name: cargo clippy solvapay + solvapay-mcp (wasm32)
+        run: cargo clippy -p solvapay -p solvapay-mcp --target wasm32-unknown-unknown -- -D warnings
+
       - name: wasm Fetch transport round-trip
         run: ./tools/conformance/test-wasm-transport.sh
 
       - name: assert tokio absent from solvapay-core / solvapay-transport graphs
         run: |
           # Normal edges only — tokio is allowed as a native test/dev-dep (wiremock).
+          # This invariant is scoped to core + transport. `sdks/rust` (`solvapay`)
+          # now compiles for wasm32-unknown-unknown (Cloudflare workers-rs) and
+          # intentionally keeps tokio (`sync` + `time`) in that graph.
           for pkg in solvapay-core solvapay-transport; do
             tree="$(cargo tree -p "$pkg" --target wasm32-unknown-unknown --edges normal)"
             if printf '%s\n' "$tree" | grep -qi 'tokio'; then
@@ -304,6 +310,41 @@ jobs:
           cargo build --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
           cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
           cargo clippy --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml --all-targets -- -D warnings
+
+      - name: cloudflare-worker-mcp example (native unit tests)
+        run: |
+          cargo test --manifest-path examples/rust/cloudflare-worker-mcp/Cargo.toml
+          cargo clippy --manifest-path examples/rust/cloudflare-worker-mcp/Cargo.toml --all-targets -- -D warnings
+
+  rust-cloudflare-worker:
+    name: rust-cloudflare-worker
+    runs-on: ubuntu-latest
+    needs:
+      - rust
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Cache worker-build
+        id: cache-worker-build
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/worker-build
+          key: ${{ runner.os }}-worker-build-0.1
+
+      - name: Install worker-build
+        if: steps.cache-worker-build.outputs.cache-hit != 'true'
+        run: cargo install worker-build
+
+      - name: worker-build cloudflare-worker-mcp
+        working-directory: examples/rust/cloudflare-worker-mcp
+        run: worker-build --release
 
   # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
   python-binding:
