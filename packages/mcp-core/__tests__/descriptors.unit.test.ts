@@ -12,6 +12,7 @@ import {
   INTENT_TOOL_NAMES,
   MCP_PROMPT_NAMES,
   MCP_TOOL_NAMES,
+  SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS,
   VIEWER_TOOL_NAME,
 } from '../src'
 
@@ -241,6 +242,53 @@ describe('buildSolvaPayDescriptors', () => {
     expect(blocked.isError).toBe(true)
     const sc = blocked.structuredContent as Record<string, unknown>
     expect(sc.status).toBe(400)
+  })
+
+  it('advertises only checkout, account, and topup on the viewer view param', () => {
+    expect([...SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS]).toEqual(['checkout', 'account', 'topup'])
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    expect(viewer, VIEWER_TOOL_NAME).toBeTruthy()
+    const json = z.toJSONSchema(z.object({ view: viewer!.inputSchema.view }))
+    const dumped = JSON.stringify(json)
+    expect(dumped).toContain('checkout')
+    expect(dumped).toContain('account')
+    expect(dumped).toContain('topup')
+    expect(dumped).not.toContain('auto-recharge')
+    expect(viewer!.inputSchema.view.description).not.toMatch(/auto-recharge/)
+    expect(viewer!.description).not.toMatch(/auto-recharge/)
+    expect(z.object({ view: viewer!.inputSchema.view }).safeParse({ view: 'checkout' }).success).toBe(
+      true,
+    )
+    expect(
+      z.object({ view: viewer!.inputSchema.view }).safeParse({ view: 'auto-recharge' }).success,
+    ).toBe(true)
+  })
+
+  it('collapses a leftover view auto-recharge stamp onto the account surface', async () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const result = await viewer.handler({ view: 'auto-recharge' }, {})
+    expect(result.isError).not.toBe(true)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.view).toBe('auto-recharge')
+    const text = result.content
+      .filter((block): block is { type: 'text'; text: string } => block.type === 'text')
+      .map(block => block.text)
+      .join('\n')
+    expect(text).toMatch(/Auto-recharge/)
   })
 
   it('rejects non-http publicBaseUrl', () => {

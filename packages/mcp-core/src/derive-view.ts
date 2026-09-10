@@ -13,7 +13,7 @@
  */
 
 import type { BootstrapCustomer, BootstrapPayload, SolvaPayMcpViewKind } from './types'
-import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
+import { SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS } from './types'
 import { selectActivePlanPurchase } from './active-purchase'
 
 const VIEW_PRIORITY: readonly SolvaPayMcpViewKind[] = ['checkout', 'topup', 'account']
@@ -37,7 +37,7 @@ function isOutOfCredits(customer: BootstrapCustomer | null | undefined): boolean
  */
 export function deriveDefaultView(
   data: Pick<BootstrapPayload, 'customer'> & Pick<Partial<BootstrapPayload>, 'productRef'>,
-  enabledViews: ReadonlySet<SolvaPayMcpViewKind> = new Set(SOLVAPAY_MCP_VIEW_KINDS),
+  enabledViews: ReadonlySet<SolvaPayMcpViewKind> = new Set(SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS),
 ): SolvaPayMcpViewKind {
   const customer = data.customer
   const preferred: SolvaPayMcpViewKind = !hasActivePlan(customer, data.productRef)

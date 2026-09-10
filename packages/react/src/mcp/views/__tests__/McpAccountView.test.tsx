@@ -683,7 +683,7 @@ describe('McpAccountView', () => {
       screen.getByText('The plan is active, but calls fail until you add credits.'),
     ).toBeTruthy()
     expect(screen.getByText('Turning it on stops this happening again.')).toBeTruthy()
-    const link = screen.getByRole('link', { name: /Turn on →/ })
+    const link = screen.getByRole('link', { name: /Turn on/ })
     expect(link).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
@@ -695,11 +695,11 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Turn on →/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute(
       'href',
       AUTO_RECHARGE_URL,
     )
-    expect(screen.queryByRole('button', { name: 'Turn on →' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
   })
 
   it('renders status without an action when the portal URL is missing', () => {
@@ -709,8 +709,8 @@ describe('McpAccountView', () => {
       productRef: 'prd_widget',
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.queryByRole('link', { name: /Turn on →/ })).toBeNull()
-    expect(screen.queryByRole('link', { name: /Manage →/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Turn on/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Manage/ })).toBeNull()
   })
 
   it('shows Manage when auto-recharge is already on', () => {
@@ -722,7 +722,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge on')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Manage →/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
       'href',
       AUTO_RECHARGE_URL,
     )
@@ -738,7 +738,7 @@ describe('McpAccountView', () => {
     })
     expect(screen.getByText('Auto-recharge starts once this payment clears')).toBeTruthy()
     expect(screen.queryByText('Auto-recharge on')).toBeNull()
-    expect(screen.getByRole('link', { name: /Manage →/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
       'href',
       AUTO_RECHARGE_URL,
     )
@@ -753,7 +753,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Payment failed — update your card to resume')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Fix card →/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Fix card/ })).toHaveAttribute(
       'href',
       AUTO_RECHARGE_URL,
     )

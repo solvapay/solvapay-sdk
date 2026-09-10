@@ -13,8 +13,12 @@
  *     outer "Back to my account" is intentionally dropped on this
  *     step so users don't have two competing back affordances on the
  *     same surface.
- *  3. Success state — "Credits added" + `[ Add more credits ]` +
- *     `Manage account ↗`, same `Back to my account` back-link.
+ *  3. Success state — terminal receipt only (check glyph, amount,
+ *     credits). No CTA below the receipt: by the time this step
+ *     mounts, `notifySuccess({ kind: 'topup' })` has already posted
+ *     a user-visible message to the conversation, so the agent
+ *     continues the flow on its own — same pattern as checkout's
+ *     `<SuccessStep>`.
  *
  * `useStripeProbe` starts at mount so Stripe.js can warm while the
  * customer picks an amount. The probe only gates the payment step —
@@ -194,23 +198,31 @@ function EmbeddedTopup({
   }
 
   if (screen.step === 'success') {
-    const displayAmount = formatPrice(screen.amountMinor, currency, { locale, free: '' })
+    const estimate = estimateTopupCredits(
+      screen.amountMinor,
+      currency,
+      displayCurrency,
+      creditsPerMinorUnit,
+      displayExchangeRate,
+    )
     return (
       <section className={cx.card} aria-label="Top-up success">
-        {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
-        <header className={cx.balanceRow}>
-          <h2 className={cx.heading}>Credits added</h2>
-          <BalanceBadge />
-        </header>
-        <p className={cx.muted}>{displayAmount} landed in your balance.</p>
-        <button type="button" className={cx.button} onClick={() => setScreen({ step: 'amount' })}>
-          Add more credits
-        </button>
-        <LaunchCustomerPortalButton
-          className={cx.button}
-          loadingClassName={cx.button}
-          errorClassName={cx.button}
-        />
+        <div className="solvapay-mcp-checkout-success-check" aria-hidden="true">
+          ✓
+        </div>
+        <h2 className={cx.heading}>Credits added</h2>
+        <dl className="solvapay-mcp-checkout-receipt" data-variant="payg">
+          <div className="solvapay-mcp-checkout-receipt-row">
+            <dt>Amount</dt>
+            <dd>{formatPrice(screen.amountMinor, currency, { locale, free: '' })}</dd>
+          </div>
+          {estimate.kind === 'available' ? (
+            <div className="solvapay-mcp-checkout-receipt-row">
+              <dt>Credits</dt>
+              <dd>+{estimate.credits.toLocaleString(locale)}</dd>
+            </div>
+          ) : null}
+        </dl>
       </section>
     )
   }

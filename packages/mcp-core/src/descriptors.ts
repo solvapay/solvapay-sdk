@@ -77,7 +77,7 @@ import {
 } from './resources/overview'
 import { narrateActivatePlan } from './narrate'
 import { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
-import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
+import { SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS } from './types'
 import type {
   McpToolExtra,
   SolvaPayBootstrapResourceDescriptor,
@@ -148,7 +148,7 @@ const INTENT_MODE_SCHEMA = z
     "Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL.",
   )
 
-const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
+const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS]
 
 export interface BuildSolvaPayDescriptorsOptions {
   /** Initialised SolvaPay instance. */
@@ -411,10 +411,26 @@ export function buildSolvaPayDescriptors(
     getCustomerRef,
   })
 
-  const enabledViewList = SOLVAPAY_MCP_VIEW_KINDS.filter(view => enabledViews.has(view))
-  if (enabledViewList.length > 0) {
+  const advertisedViewList = SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS.filter(view =>
+    enabledViews.has(view),
+  )
+  if (advertisedViewList.length > 0) {
+    const advertisedEnum = z.enum(
+      advertisedViewList as [
+        (typeof SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS)[number],
+        ...(typeof SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS)[number][],
+      ],
+    )
+    // Inspector / tools/list see only the advertised enum. A leftover
+    // `auto-recharge` still parses (maps to `account`) so old
+    // transcripts do not 400. The handler also accepts the raw stamp
+    // and keeps `view: 'auto-recharge'` so narrateAutoRecharge runs
+    // when the call bypasses this preprocess.
     const viewEnum = z
-      .enum(enabledViewList as [SolvaPayMcpViewKind, ...SolvaPayMcpViewKind[]])
+      .preprocess(
+        (value: unknown) => (value === 'auto-recharge' ? 'account' : value),
+        advertisedEnum,
+      )
       .optional()
       .describe(VIEW_PARAM_DESCRIPTION)
     pushTool({
@@ -434,11 +450,15 @@ export function buildSolvaPayDescriptors(
             args.view === 'auto-recharge'
               ? args.view
               : undefined
-          if (requested !== undefined && !enabledViews.has(requested)) {
+          if (
+            requested !== undefined &&
+            requested !== 'auto-recharge' &&
+            !enabledViews.has(requested)
+          ) {
             return toolErrorResult({
               error: `view '${requested}' is not enabled on this server`,
               status: 400,
-              details: `Enabled views: ${enabledViewList.join(', ')}. Pass one of those, or omit view to let the server pick.`,
+              details: `Enabled views: ${advertisedViewList.join(', ')}. Pass one of those, or omit view to let the server pick.`,
             })
           }
           const mode = parseMode(args.mode)

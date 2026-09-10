@@ -133,7 +133,10 @@ export function createBuildBootstrapPayload(
     try {
       const platform = await solvaPay.apiClient.getPlatformConfig?.()
       return platform?.stripePublishableKey ?? null
-    } catch {
+    } catch (err) {
+      console.warn('[solvapay] bootstrap: getPlatformConfig failed; stripePublishableKey omitted', {
+        error: err instanceof Error ? err.message : String(err),
+      })
       return null
     }
   }
@@ -231,6 +234,12 @@ export function createBuildBootstrapPayload(
       throw createBootstrapProductError(productResult)
     }
 
+    if (isErrorResult(plansResult)) {
+      console.warn('[solvapay] bootstrap: listPlans failed; plans omitted from payload', {
+        error: plansResult.error,
+        status: plansResult.status,
+      })
+    }
     const plans = isErrorResult(plansResult) ? [] : plansResult.plans
 
     const purchase = okOrNull(resolvedPurchaseResult)
