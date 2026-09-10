@@ -24,7 +24,7 @@ export type { McpAppLike } from './adapter'
 export { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 export type { McpToolName } from '@solvapay/mcp-core'
 
-export { useStripeProbe } from './useStripeProbe'
+export { useStripeProbe, resetStripeProbeCacheForTests } from './useStripeProbe'
 export type { StripeProbeState } from './useStripeProbe'
 
 export { useHostLocale } from './useHostLocale'
@@ -148,9 +148,6 @@ export type { McpPayingAsProps } from './views/McpPayingAs'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
-
-export { McpAutoRechargeView } from './views/McpAutoRechargeView'
-export type { McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 
 // Paywall / nudge surfaces were removed as part of the text-only
 // paywall refactor. Merchant paywall / nudge responses are plain

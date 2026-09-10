@@ -35,7 +35,7 @@
  *
  * ## Flow
  *
- *   1. `loadStripe(publishableKey)` with a ≤3s timeout. Reject /
+ *   1. `loadStripe(publishableKey)` with a ≤10s timeout. Reject /
  *      timeout → `'blocked'` (covers `script-src` blocks and slow
  *      CDNs).
  *   2. `stripe.elements({ mode: 'setup', currency: 'usd' })` +
@@ -49,14 +49,16 @@
  *        - stripe-domain `frame-src` violation → `'blocked'`.
  *        - `loaderror` → `'blocked'`.
  *        - `ready` → `'ready'` (but only when no violation has fired).
- *        - ≤2s element-mount timeout → `'blocked'`.
+ *        - ≤6s element-mount timeout → `'blocked'`.
  *   5. Always tear down (element unmount + host node removed +
  *      listener removed) on resolve, effect cleanup, and defensively
  *      on re-renders.
  *
- * Total worst-case budget ≤ 5s (script load up to 3s + iframe mount
- * up to 2s). Public return type unchanged: `'loading' | 'ready' |
- * 'blocked'`.
+ * Total worst-case budget ≤ 16s (script load up to 10s + iframe mount
+ * up to 6s). The checkout and top-up surfaces no longer block on this
+ * — they show plans / amounts immediately and only consult the probe
+ * at the payment step — so a slow cold load is no longer user-visible.
+ * Public return type unchanged: `'loading' | 'ready' | 'blocked'`.
  *
  * Note on the key: `publishableKey` is SolvaPay's **platform** Stripe pk
  * (same one the backend returns from `create_payment_intent`). It is used
@@ -73,31 +75,93 @@
 import { useEffect, useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 
-// Stripe.js takes ~1-2s to load on a warm cache. 3s is long enough to
-// distinguish a slow CDN from a CSP-blocked host without making the
-// user stare at a spinner.
-const STRIPE_LOAD_TIMEOUT_MS = 3_000
+export type StripeProbeState = 'loading' | 'ready' | 'blocked'
+
+type StripeProbeBlockedReason =
+  | 'no-publishable-key'
+  | 'load-timeout'
+  | 'load-rejected'
+  | 'load-null-instance'
+  | 'elements-create-threw'
+  | 'mount-timeout'
+  | 'loaderror'
+  | 'csp-frame-src'
+
+// Stripe.js takes ~1-2s to load on a warm cache and can take several
+// seconds on a cold CDN. Nothing user-facing blocks on this budget
+// anymore (the plan / amount steps render immediately), so 10s is
+// long enough to absorb a slow first load without a false timeout.
+const STRIPE_LOAD_TIMEOUT_MS = 10_000
 
 // Once Stripe.js is loaded, mounting a `paymentElement` and receiving
 // its `ready` event is purely a cross-origin iframe handshake — typically
-// <500ms on compliant hosts. 2s comfortably absorbs slow networks while
-// keeping the total worst-case probe budget at ≤5s.
-const ELEMENT_MOUNT_TIMEOUT_MS = 2_000
+// <500ms on compliant hosts. 6s absorbs slow networks now that the
+// timeout is no longer on the critical path of the plan picker.
+const ELEMENT_MOUNT_TIMEOUT_MS = 6_000
 
-export type StripeProbeState = 'loading' | 'ready' | 'blocked'
+const CACHEABLE_BLOCKED_REASONS = new Set<StripeProbeBlockedReason>([
+  'csp-frame-src',
+  'loaderror',
+  'load-rejected',
+  'load-null-instance',
+  'elements-create-threw',
+])
+
+const stripeProbeCache = new Map<string, StripeProbeState>()
+
+/**
+ * @internal Test-only: clear the session probe cache. Do not use in
+ * application code.
+ */
+export function resetStripeProbeCacheForTests(): void {
+  stripeProbeCache.clear()
+}
+
+function readCachedProbe(publishableKey: string | null): StripeProbeState {
+  if (!publishableKey) return 'blocked'
+  return stripeProbeCache.get(publishableKey) ?? 'loading'
+}
+
+function cacheProbeVerdict(
+  publishableKey: string,
+  next: StripeProbeState,
+  reason?: StripeProbeBlockedReason,
+): void {
+  if (next === 'ready') {
+    stripeProbeCache.set(publishableKey, 'ready')
+    return
+  }
+  if (next === 'blocked' && reason && CACHEABLE_BLOCKED_REASONS.has(reason)) {
+    stripeProbeCache.set(publishableKey, 'blocked')
+  }
+}
 
 export function useStripeProbe(publishableKey: string | null): StripeProbeState {
-  const [state, setState] = useState<StripeProbeState>(publishableKey ? 'loading' : 'blocked')
+  const [state, setState] = useState<StripeProbeState>(() => readCachedProbe(publishableKey))
 
   useEffect(() => {
     if (typeof document === 'undefined') return
     if (!publishableKey) {
+      console.warn('[solvapay-mcp] stripe probe blocked', {
+        reason: 'no-publishable-key',
+        elapsedMs: 0,
+        loadMs: null,
+      })
       setState('blocked')
+      return
+    }
+
+    const cached = stripeProbeCache.get(publishableKey)
+    if (cached) {
+      setState(cached)
       return
     }
 
     setState('loading')
 
+    const startedAt = Date.now()
+    let loadResolvedAt: number | null = null
+    let mountStartedAt: number | null = null
     let cancelled = false
     let resolved = false
     // Tracks whether Chrome dispatched a stripe-domain `frame-src`
@@ -153,7 +217,7 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
           sourceFile: event.sourceFile,
         },
       )
-      resolve('blocked')
+      resolve('blocked', 'csp-frame-src')
     }
     // Safe no-op under SSR since the effect short-circuits earlier
     // when `document` is undefined.
@@ -177,20 +241,44 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
       }
     }
 
-    const resolve = (next: StripeProbeState) => {
+    const logBlocked = (reason: StripeProbeBlockedReason) => {
+      console.warn('[solvapay-mcp] stripe probe blocked', {
+        reason,
+        elapsedMs: Date.now() - startedAt,
+        loadMs: loadResolvedAt !== null ? loadResolvedAt - startedAt : null,
+      })
+    }
+
+    const logReady = () => {
+      const now = Date.now()
+      console.warn('[solvapay-mcp] stripe probe ready', {
+        elapsedMs: now - startedAt,
+        loadMs: loadResolvedAt !== null ? loadResolvedAt - startedAt : null,
+        mountMs: mountStartedAt !== null ? now - mountStartedAt : null,
+      })
+    }
+
+    const resolve = (next: StripeProbeState, reason?: StripeProbeBlockedReason) => {
       if (cancelled || resolved) return
       resolved = true
+      if (next === 'ready') {
+        logReady()
+      } else if (reason) {
+        logBlocked(reason)
+      }
+      cacheProbeVerdict(publishableKey, next, reason)
       teardown()
       setState(next)
     }
 
     loadTimeoutId = setTimeout(() => {
       loadTimeoutId = null
-      resolve('blocked')
+      resolve('blocked', 'load-timeout')
     }, STRIPE_LOAD_TIMEOUT_MS)
 
     loadStripe(publishableKey, { developerTools: { assistant: { enabled: false } } })
       .then(stripe => {
+        loadResolvedAt = Date.now()
         if (cancelled || resolved) return
         // `loadStripe` resolved after the script-src timeout fired —
         // `resolved` is already true, bail.
@@ -199,7 +287,7 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
           loadTimeoutId = null
         }
         if (!stripe) {
-          resolve('blocked')
+          resolve('blocked', 'load-null-instance')
           return
         }
 
@@ -227,25 +315,27 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
             if (cspBlockedStripeFrame) return
             resolve('ready')
           })
-          element.on('loaderror', () => resolve('blocked'))
+          element.on('loaderror', () => resolve('blocked', 'loaderror'))
 
           elementTimeoutId = setTimeout(() => {
             elementTimeoutId = null
-            resolve('blocked')
+            resolve('blocked', 'mount-timeout')
           }, ELEMENT_MOUNT_TIMEOUT_MS)
 
+          mountStartedAt = Date.now()
           element.mount(host)
         } catch {
-          resolve('blocked')
+          resolve('blocked', 'elements-create-threw')
         }
       })
       .catch(() => {
+        loadResolvedAt = Date.now()
         if (cancelled || resolved) return
         if (loadTimeoutId !== null) {
           clearTimeout(loadTimeoutId)
           loadTimeoutId = null
         }
-        resolve('blocked')
+        resolve('blocked', 'load-rejected')
       })
 
     return () => {

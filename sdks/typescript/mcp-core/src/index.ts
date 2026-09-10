@@ -35,6 +35,7 @@ export type { IntentToolName, McpPromptName, McpToolName } from './tool-names'
 // ---- Neutral types ----
 export {
   OPEN_TOOL_FOR_VIEW,
+  SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS,
   SOLVAPAY_MCP_VIEW_KINDS,
   TOOL_FOR_VIEW,
   VIEW_FOR_OPEN_TOOL,
@@ -60,6 +61,7 @@ export type {
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
+  SolvaPayMcpAdvertisedViewKind,
   SolvaPayMcpViewKind,
   SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,

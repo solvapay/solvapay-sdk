@@ -8,15 +8,10 @@ import { merchantCache } from '../../../hooks/useMerchant'
 import { limitsCache } from '../../../hooks/useLimits'
 import { historyCache } from '../../../hooks/useHistory'
 import { paymentMethodCache } from '../../../hooks/usePaymentMethod'
-import {
-  autoRechargeCache,
-  autoRechargeCacheKeyFor,
-  writeAutoRechargeCache,
-} from '../../../hooks/autoRechargeCache'
+import { autoRechargeCache } from '../../../hooks/autoRechargeCache'
 import { seedUsageSnapshot } from '../../../hooks/useUsage'
 import type { TransportLimitsResult } from '../../../transport/types'
 import { createTransportCacheKey } from '../../../transport/cache-key'
-import type { AutoRechargeConfig, PaymentMethodInfo } from '@solvapay/server'
 import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { PlanLike } from '../../plan-actions'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
@@ -308,44 +303,7 @@ function seedMerchant(merchant: Merchant): SolvaPayConfig {
   return config
 }
 
-const reusableCard: PaymentMethodInfo = {
-  kind: 'card',
-  brand: 'visa',
-  last4: '4242',
-  expMonth: 12,
-  expYear: 2030,
-  reusable: true,
-}
-
-const nonReusableCard: PaymentMethodInfo = {
-  ...reusableCard,
-  reusable: false,
-}
-
-const enabledAutoRecharge: AutoRechargeConfig = {
-  enabled: true,
-  trigger: { type: 'balance', thresholdAmountMinor: 500 },
-  topup: { mode: 'fixed', amountMinor: 5000, currency: 'USD' },
-  fundingSourceType: 'saved_card',
-  paymentMethodId: 'pm_123',
-  status: 'active',
-  failureCount: 0,
-  monthlySpendMinor: 0,
-  updatedAt: '2026-01-01T00:00:00.000Z',
-}
-
-function seedPaymentMethod(config: SolvaPayConfig, paymentMethod: PaymentMethodInfo): void {
-  const key = createTransportCacheKey(config, config.api?.getPaymentMethod || '/api/payment-method')
-  paymentMethodCache.set(key, { paymentMethod, promise: null, timestamp: Date.now() })
-}
-
-function seedAutoRechargeOn(config: SolvaPayConfig): void {
-  writeAutoRechargeCache(autoRechargeCacheKeyFor(config), {
-    config: enabledAutoRecharge,
-    promise: null,
-    timestamp: Date.now(),
-  })
-}
+const AUTO_RECHARGE_URL = 'https://portal.test/manage?id=sess_1&tab=credits&intent=autorecharge'
 
 describe('McpAccountView', () => {
   beforeEach(() => {
@@ -712,19 +670,12 @@ describe('McpAccountView', () => {
       timestamp: Date.now(),
       promise: null,
     })
-    const onAutoRecharge = vi.fn()
-    const config: SolvaPayConfig = {
-      transport: makeTransport({
-        getPaymentMethod: vi.fn().mockResolvedValue(reusableCard),
-      }),
-    }
-    seedPaymentMethod(config, reusableCard)
-    const ctx = buildCtx({ _config: config }, [paygPurchase], 0)
+    const ctx = buildCtx({}, [paygPurchase], 0)
     renderAccount(ctx, {
       plans: catalogPlans,
       product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
       productRef: 'prd_widget',
-      onAutoRecharge,
+      autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     const pill = screen.getByText('Calls failing')
     expect(pill).toHaveAttribute('data-tone', 'accent')
@@ -733,58 +684,80 @@ describe('McpAccountView', () => {
       screen.getByText('The plan is active, but calls fail until you add credits.'),
     ).toBeTruthy()
     expect(screen.getByText('Turning it on stops this happening again.')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on →' }))
-    expect(onAutoRecharge).toHaveBeenCalledTimes(1)
+    const link = screen.getByRole('link', { name: /Turn on/ })
+    expect(link).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
-  it('hides the auto-recharge action when no card is on file', () => {
-    const onAutoRecharge = vi.fn()
+  it('renders the off row with a portal link even when no card is on file', () => {
     const ctx = buildCtx({}, [paygPurchase], 500)
     renderAccount(ctx, {
       plans: catalogPlans,
       productRef: 'prd_widget',
-      onAutoRecharge,
+      autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Turn on →' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Manage →' })).toBeNull()
+    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute(
+      'href',
+      AUTO_RECHARGE_URL,
+    )
+    expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
   })
 
-  it('hides the auto-recharge action when the card is not reusable', () => {
-    const onAutoRecharge = vi.fn()
-    const config: SolvaPayConfig = {
-      transport: makeTransport({
-        getPaymentMethod: vi.fn().mockResolvedValue(nonReusableCard),
-      }),
-    }
-    seedPaymentMethod(config, nonReusableCard)
-    const ctx = buildCtx({ _config: config }, [paygPurchase], 500)
+  it('renders status without an action when the portal URL is missing', () => {
+    const ctx = buildCtx({}, [paygPurchase], 500)
     renderAccount(ctx, {
       plans: catalogPlans,
       productRef: 'prd_widget',
-      onAutoRecharge,
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Turn on →' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Turn on/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Manage/ })).toBeNull()
   })
 
   it('shows Manage when auto-recharge is already on', () => {
-    const onAutoRecharge = vi.fn()
-    const config: SolvaPayConfig = {
-      transport: makeTransport({
-        getAutoRecharge: vi.fn().mockResolvedValue({ config: enabledAutoRecharge }),
-      }),
-    }
-    seedAutoRechargeOn(config)
-    const ctx = buildCtx({ _config: config }, [paygPurchase], 500)
+    const ctx = buildCtx({}, [paygPurchase], 500)
     renderAccount(ctx, {
       plans: catalogPlans,
       productRef: 'prd_widget',
-      onAutoRecharge,
+      autoRecharge: { enabled: true, status: 'active' },
+      autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge on')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Manage →' }))
-    expect(onAutoRecharge).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
+      'href',
+      AUTO_RECHARGE_URL,
+    )
+  })
+
+  it('shows the pending-setup line after a top-up that enabled auto-recharge', () => {
+    const ctx = buildCtx({}, [paygPurchase], 500)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      autoRecharge: { enabled: true, status: 'pending_setup' },
+      autoRechargeUrl: AUTO_RECHARGE_URL,
+    })
+    expect(screen.getByText('Auto-recharge starts once this payment clears')).toBeTruthy()
+    expect(screen.queryByText('Auto-recharge on')).toBeNull()
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
+      'href',
+      AUTO_RECHARGE_URL,
+    )
+  })
+
+  it('shows the failed-card line and Fix card link', () => {
+    const ctx = buildCtx({}, [paygPurchase], 500)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      autoRecharge: { enabled: true, status: 'failed' },
+      autoRechargeUrl: AUTO_RECHARGE_URL,
+    })
+    expect(screen.getByText('Payment failed — update your card to resume')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Fix card/ })).toHaveAttribute(
+      'href',
+      AUTO_RECHARGE_URL,
+    )
   })
 
   it('keeps other products off a product-scoped credit plan', () => {

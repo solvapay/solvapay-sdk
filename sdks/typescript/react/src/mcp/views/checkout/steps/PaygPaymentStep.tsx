@@ -8,6 +8,7 @@
  */
 
 import React, { memo } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { useBalance } from '../../../../hooks/useBalance'
 import { MandateText } from '../../../../primitives/MandateText'
 import { TopupForm, useTopupForm } from '../../../../primitives/TopupForm'
@@ -24,6 +25,7 @@ interface PaygPaymentStepProps {
   plan: BootstrapPlanLike
   amountMinor: number
   topupCurrency?: string | null
+  autoRecharge?: AutoRechargeInput
   returnUrl: string
   onBack: () => void
   onSuccess: (extras?: TopupFormSuccessExtras) => void
@@ -34,6 +36,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
   plan: _plan,
   amountMinor,
   topupCurrency,
+  autoRecharge,
   returnUrl,
   onBack,
   onSuccess,
@@ -62,6 +65,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
     <TopupForm.Root
       amount={amountMinor}
       currency={currency}
+      autoRecharge={autoRecharge}
       returnUrl={returnUrl}
       onSuccess={(_intent, extras) => onSuccess(extras)}
     >

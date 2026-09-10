@@ -53,6 +53,11 @@ export interface McpBootstrap {
     string,
     { label?: string | null; example?: string | null; helperText?: string | null }
   >
+  /**
+   * Hosted portal URL that opens the auto-recharge form. Null when no
+   * portal session could be minted.
+   */
+  autoRechargeUrl?: string | null
 }
 
 /**
@@ -313,6 +318,9 @@ export function parseBootstrapFromToolResult(
       structured?.taxIdFields && typeof structured.taxIdFields === 'object'
         ? (structured.taxIdFields as McpBootstrap['taxIdFields'])
         : undefined,
+    ...(typeof structured?.autoRechargeUrl === 'string'
+      ? { autoRechargeUrl: structured.autoRechargeUrl }
+      : {}),
   }
 }
 

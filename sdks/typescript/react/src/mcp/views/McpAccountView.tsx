@@ -11,7 +11,7 @@ import React from 'react'
 import { useLocale } from '../../hooks/useCopy'
 import { usePurchase } from '../../hooks/usePurchase'
 import { useLimits } from '../../hooks/useLimits'
-import type { BootstrapProduct } from '@solvapay/mcp-core'
+import type { BootstrapCustomer, BootstrapProduct } from '@solvapay/mcp-core'
 import { deriveActiveProducts } from '@solvapay/core'
 import { resolveAccountState, type AccountLimitsLike } from '../account-state'
 import { useDisplayMode } from '../hooks/useDisplayMode'
@@ -42,10 +42,15 @@ export interface McpAccountViewProps {
    */
   onTopup?: () => void
   /**
-   * Called when the user clicks "Turn on" or "Manage" on the
-   * auto-recharge row. Wired by the shell to the dedicated view.
+   * Auto-recharge snapshot from the bootstrap limits payload.
+   * Absent means unknown (older server) — the row renders as off.
    */
-  onAutoRecharge?: () => void
+  autoRecharge?: BootstrapCustomer['autoRecharge'] | null
+  /**
+   * Hosted portal URL that opens the auto-recharge form. The row
+   * renders status without an action when this is missing.
+   */
+  autoRechargeUrl?: string | null
   /**
    * Called when the user clicks "Pick a plan" or Change plan.
    * Wired by the shell to switch to checkout.
@@ -63,7 +68,8 @@ export function McpAccountView({
   productRef,
   classNames,
   onTopup,
-  onAutoRecharge,
+  autoRecharge,
+  autoRechargeUrl,
   onChangePlan,
   plans,
 }: McpAccountViewProps) {
@@ -115,7 +121,8 @@ export function McpAccountView({
         locale={locale}
         classNames={classNames}
         onTopup={onTopup}
-        onAutoRecharge={onAutoRecharge}
+        autoRecharge={autoRecharge}
+        autoRechargeUrl={autoRechargeUrl}
         onChangePlan={onChangePlan}
         showPortalCta={showPortalCta}
       />
