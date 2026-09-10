@@ -9,6 +9,7 @@ def make_response_result(
     data: object,
     options: Mapping[str, object] | None = None,
     emitted_blocks: list[dict[str, object]] | None = None,
+    limits: Mapping[str, object] | None = None,
 ) -> dict[str, object]: ...
 def mcp_native_cors(
     origin: object | None = None,

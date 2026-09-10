@@ -320,8 +320,12 @@ fn rbs_params(entry: &IrEntryPoint, keywords: bool) -> String {
                 } else {
                     format!("?{}: {ty}", param.names.rb)
                 }
-            } else {
+            } else if param.required {
                 format!("{ty} {}", param.names.rb)
+            } else if crate::emit_helpers::trailing_has_required(&required, i) {
+                format!("{ty}? {}", param.names.rb)
+            } else {
+                format!("?{ty}? {}", param.names.rb)
             }
         })
         .collect::<Vec<_>>();
