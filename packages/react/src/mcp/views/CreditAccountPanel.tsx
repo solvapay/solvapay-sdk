@@ -5,15 +5,15 @@
  */
 
 import React from 'react'
+import { ExternalLinkGlyph } from '../../components/ExternalLinkGlyph'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
-import { useAutoRecharge } from '../../hooks/useAutoRecharge'
 import { useBalance } from '../../hooks/useBalance'
 import { useCopy } from '../../hooks/useCopy'
+import { useExternalLinkClick } from '../../hooks/useExternalLink'
 import { useHistory } from '../../hooks/useHistory'
 import { useMerchant } from '../../hooks/useMerchant'
-import { usePaymentMethod } from '../../hooks/usePaymentMethod'
 import { useDisplayMode } from '../hooks/useDisplayMode'
-import type { BootstrapProduct } from '@solvapay/mcp-core'
+import type { BootstrapCustomer, BootstrapProduct } from '@solvapay/mcp-core'
 import { resolveRateDisplay } from '../account-state'
 import { formatProductTerms, type ActiveProduct } from '../derive-active-products'
 import { resolvePlanActions, resolvePlanShape, type PlanLike } from '../plan-actions'
@@ -32,7 +32,8 @@ export function CreditAccountPanel({
   locale,
   classNames,
   onTopup,
-  onAutoRecharge,
+  autoRecharge,
+  autoRechargeUrl,
   onChangePlan,
   showPortalCta,
 }: {
@@ -45,7 +46,8 @@ export function CreditAccountPanel({
   locale: string
   classNames?: McpViewClassNames
   onTopup?: () => void
-  onAutoRecharge?: () => void
+  autoRecharge?: BootstrapCustomer['autoRecharge'] | null
+  autoRechargeUrl?: string | null
   onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
@@ -53,8 +55,7 @@ export function CreditAccountPanel({
   const copy = useCopy()
   const balance = useBalance()
   const { merchant } = useMerchant()
-  const { config: autoRecharge } = useAutoRecharge()
-  const { paymentMethod } = usePaymentMethod()
+  const handleExternalClick = useExternalLinkClick()
   const { displayMode } = useDisplayMode()
   const isFullscreen = displayMode === 'fullscreen'
   const history = useHistory({
@@ -74,11 +75,28 @@ export function CreditAccountPanel({
     paidPlanCount,
   })
   const showChangePlan = Boolean(onChangePlan && (actions.changePlan || actions.upgrade))
-  const autoRechargeOn = Boolean(autoRecharge?.enabled)
-  const hasReusableCard = paymentMethod?.kind === 'card' && paymentMethod.reusable
-  const autoRechargeAction =
-    onAutoRecharge && (autoRechargeOn || hasReusableCard) ? onAutoRecharge : undefined
-  const autoRechargeActionLabel = autoRechargeOn ? copy.account.manage : copy.account.turnOn
+  const status = autoRecharge?.status
+  const enabled = autoRecharge?.enabled === true
+  const failed = status === 'failed'
+  const pendingSetup = enabled && status === 'pending_setup'
+  const title = failed
+    ? copy.autoRecharge.statusFailed
+    : pendingSetup
+      ? copy.account.autoRechargePending
+      : enabled
+        ? copy.account.autoRechargeOn
+        : copy.account.autoRechargeOff
+  const caption =
+    !enabled && !failed
+      ? accountState === 'D'
+        ? copy.account.autoRechargeOffFixCaption
+        : copy.account.autoRechargeOffCaption
+      : null
+  const actionLabel = failed
+    ? copy.account.fixCard
+    : enabled
+      ? copy.account.manage
+      : copy.account.turnOn
 
   return (
     <div className="solvapay-mcp-account">
@@ -107,19 +125,21 @@ export function CreditAccountPanel({
         ) : null}
         <SplitRow>
           <div className="solvapay-mcp-auto-recharge-copy">
-            <p>{autoRechargeOn ? copy.account.autoRechargeOn : copy.account.autoRechargeOff}</p>
-            {!autoRechargeOn ? (
-              <p className={cx.muted}>
-                {accountState === 'D'
-                  ? copy.account.autoRechargeOffFixCaption
-                  : copy.account.autoRechargeOffCaption}
-              </p>
-            ) : null}
+            <p>{title}</p>
+            {caption ? <p className={cx.muted}>{caption}</p> : null}
           </div>
-          {autoRechargeAction ? (
-            <button type="button" className={cx.linkButton} onClick={autoRechargeAction}>
-              {autoRechargeActionLabel}
-            </button>
+          {autoRechargeUrl ? (
+            <a
+              href={autoRechargeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cx.linkButton}
+              aria-label={`${actionLabel} (opens in a new tab)`}
+              onClick={handleExternalClick}
+            >
+              {actionLabel}
+              <ExternalLinkGlyph />
+            </a>
           ) : null}
         </SplitRow>
         {showPortalCta && !isFullscreen ? (

@@ -273,9 +273,13 @@ export interface SolvaPayCopy {
     addFunds: string
     autoRechargeOn: string
     autoRechargeOff: string
+    /** Status line while a top-up that enabled auto-recharge is still pending. */
+    autoRechargePending: string
     turnOn: string
-    /** On-state link that opens the dedicated auto-recharge view. */
+    /** On-state link that opens the hosted portal auto-recharge form. */
     manage: string
+    /** Failed-card link that opens the hosted portal auto-recharge form. */
+    fixCard: string
     /** Caption under auto-recharge off on a running credit plan (B). */
     autoRechargeOffCaption: string
     /** Caption under auto-recharge off when calls are already failing (D). */

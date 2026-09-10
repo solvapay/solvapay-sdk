@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadStripe } from '@stripe/stripe-js'
-import { useStripeProbe } from '../useStripeProbe'
+import { resetStripeProbeCacheForTests, useStripeProbe } from '../useStripeProbe'
 
 vi.mock('@stripe/stripe-js', () => ({
   loadStripe: vi.fn(),
@@ -67,6 +67,7 @@ function dispatchCspViolation(partial: {
 
 describe('useStripeProbe', () => {
   beforeEach(() => {
+    resetStripeProbeCacheForTests()
     loadStripeMock.mockReset()
     // Ensure prior tests' probe hosts can't leak into the next assert.
     document.body
@@ -98,14 +99,14 @@ describe('useStripeProbe', () => {
   })
 
   it("returns 'blocked' when loadStripe does not resolve within the load timeout", async () => {
-    // `loadStripe` never resolves → the 3s load timeout wins.
+    // `loadStripe` never resolves → the 10s load timeout wins.
     loadStripeMock.mockImplementationOnce(() => new Promise(() => {}))
     vi.useFakeTimers()
     const { result } = renderHook(() => useStripeProbe('pk_test_123'))
     expect(result.current).toBe('loading')
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_000)
+      await vi.advanceTimersByTimeAsync(10_000)
     })
     expect(result.current).toBe('blocked')
     expect(document.body.querySelector(PROBE_HOST_SELECTOR)).toBeNull()
@@ -170,7 +171,7 @@ describe('useStripeProbe', () => {
     expect(document.body.querySelector(PROBE_HOST_SELECTOR)).not.toBeNull()
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000)
+      await vi.advanceTimersByTimeAsync(6_000)
     })
 
     expect(result.current).toBe('blocked')
@@ -262,7 +263,10 @@ describe('useStripeProbe', () => {
       mock.fire('ready')
     })
     await waitFor(() => expect(result.current).toBe('ready'))
-    expect(warnSpy).not.toHaveBeenCalled()
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      '[solvapay-mcp] host CSP refused the Stripe iframe; falling back to hosted checkout.',
+      expect.anything(),
+    )
     warnSpy.mockRestore()
   })
 
@@ -338,5 +342,43 @@ describe('useStripeProbe', () => {
     })
     expect(errorSpy).not.toHaveBeenCalled()
     errorSpy.mockRestore()
+  })
+
+  it('skips loadStripe on a second mount when a ready verdict is cached', async () => {
+    const mock = createStripeMock()
+    loadStripeMock.mockResolvedValueOnce(mock.stripe)
+
+    const first = renderHook(() => useStripeProbe('pk_test_123'))
+    await waitFor(() => expect(mock.element.mount).toHaveBeenCalledTimes(1))
+    act(() => {
+      mock.fire('ready')
+    })
+    await waitFor(() => expect(first.result.current).toBe('ready'))
+    first.unmount()
+
+    loadStripeMock.mockClear()
+    const second = renderHook(() => useStripeProbe('pk_test_123'))
+    expect(second.result.current).toBe('ready')
+    expect(loadStripeMock).not.toHaveBeenCalled()
+    second.unmount()
+  })
+
+  it('does not cache a load-timeout, so the next mount re-probes', async () => {
+    loadStripeMock.mockImplementation(() => new Promise(() => {}))
+    vi.useFakeTimers()
+
+    const first = renderHook(() => useStripeProbe('pk_test_123'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(first.result.current).toBe('blocked')
+    first.unmount()
+
+    loadStripeMock.mockClear()
+    loadStripeMock.mockImplementation(() => new Promise(() => {}))
+    const second = renderHook(() => useStripeProbe('pk_test_123'))
+    expect(second.result.current).toBe('loading')
+    expect(loadStripeMock).toHaveBeenCalledTimes(1)
+    second.unmount()
   })
 })

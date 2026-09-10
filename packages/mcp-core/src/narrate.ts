@@ -962,6 +962,16 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   return withCheckout(data, lines)
 }
 
+/**
+ * Prefer the Phase 1 auto-recharge deep link. Fall back to the plain
+ * portal URL only when `autoRechargeUrl` is absent (older server that
+ * has not yet populated the sibling field). Explicit compatibility,
+ * not a silent default — a missing URL still yields no link.
+ */
+function autoRechargePortalUrl(data: BootstrapPayload): string | null {
+  return httpsUrl(data.autoRechargeUrl) ?? httpsUrl(data.portalUrl)
+}
+
 export function narrateAutoRecharge(data: BootstrapPayload): NarratorOutput {
   const lines: string[] = []
   lines.push(`**Auto-recharge — ${productName(data)}**`)
@@ -970,18 +980,29 @@ export function narrateAutoRecharge(data: BootstrapPayload): NarratorOutput {
   const bal = balanceRow(customer)
   if (bal) lines.push(bal)
   const enabled = customer?.autoRecharge?.enabled === true
-  lines.push(
-    enabled
-      ? 'Auto-recharge is on. It tops your balance up automatically so calls do not fail.'
-      : 'Auto-recharge is off. Turn it on from the account page — it stores a card and tops your balance up automatically so calls do not fail.',
-  )
-  const manage = manageRow(data)
-  if (manage) lines.push(manage)
+  const failed = customer?.autoRecharge?.status === 'failed'
+  if (failed) {
+    lines.push('Auto-recharge failed — update your card to resume')
+  } else {
+    lines.push(
+      enabled
+        ? 'Auto-recharge is on. It tops your balance up automatically so calls do not fail.'
+        : 'Auto-recharge is off. Turn it on from the link below — it stores a card and tops your balance up automatically so calls do not fail.',
+    )
+  }
+  const manageUrl = autoRechargePortalUrl(data)
+  if (manageUrl) {
+    lines.push(`Manage: ${namedManageMarkdown(manageUrl)} (${CHECKOUT_TTL})`)
+  }
   lines.push('')
   lines.push(recoveryLine(['account']))
   const links: NarratorOutput['links'] = []
-  const portal = hostedPortalLink(data)
-  if (portal) links.push({ ...portal, name: enabled ? 'Manage auto-recharge' : 'Turn on auto-recharge' })
+  if (manageUrl) {
+    links.push({
+      uri: manageUrl,
+      name: enabled ? 'Manage auto-recharge' : 'Turn on auto-recharge',
+    })
+  }
   return { text: lines.join('\n'), links }
 }
 

@@ -18,5 +18,6 @@ export const BootstrapPayloadSchema = z
     customer: z.record(z.string(), z.unknown()).nullable(),
     checkoutUrl: z.string().nullable().optional(),
     portalUrl: z.string().nullable().optional(),
+    autoRechargeUrl: z.string().nullable().optional(),
   })
   .passthrough()

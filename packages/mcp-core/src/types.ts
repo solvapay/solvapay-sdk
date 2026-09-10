@@ -171,14 +171,14 @@ export interface PaywallToolResult {
 /**
  * Which view a SolvaPay MCP server knows how to bootstrap.
  *
- * Each kind is a landing screen on the single `account` viewer:
- * `checkout`, `account`, `topup`, plus `auto-recharge` which is
- * reached by intent only (never a default). There is no `paywall` or `nudge`
- * view — those
- * responses are plain text narrations per the text-only paywall
- * refactor (merchant paywall / nudge tool results ship
- * `content[0].text` + `structuredContent = gate` and never open the
- * iframe).
+ * Advertised landings on the `account` viewer are `checkout`,
+ * `account`, and `topup`. `'auto-recharge'` is a deprecated leftover
+ * stamp: the tool schema does not offer it, but a leftover argument
+ * still opens the account surface (status row + portal link). There is
+ * no `paywall` or `nudge` view — those responses are plain text
+ * narrations per the text-only paywall refactor (merchant paywall /
+ * nudge tool results ship `content[0].text` + `structuredContent =
+ * gate` and never open the iframe).
  *
  * The legacy `'about'`, `'activate'`, and `'usage'` surfaces were
  * dropped earlier — About is served by tool descriptions + docs
@@ -186,12 +186,17 @@ export interface PaywallToolResult {
  * `PlanActivationDispatcher`, and Usage folds inline into the account
  * view.
  */
-export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup' | 'auto-recharge'
+export type SolvaPayMcpAdvertisedViewKind = 'checkout' | 'account' | 'topup'
+export type SolvaPayMcpViewKind = SolvaPayMcpAdvertisedViewKind | 'auto-recharge'
 
-export const SOLVAPAY_MCP_VIEW_KINDS = [
+export const SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS = [
   'checkout',
   'account',
   'topup',
+] as const satisfies readonly SolvaPayMcpAdvertisedViewKind[]
+
+export const SOLVAPAY_MCP_VIEW_KINDS = [
+  ...SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS,
   'auto-recharge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
 
@@ -226,6 +231,12 @@ export interface BootstrapPayload {
   checkoutUrl?: string | null
   /** Customer portal URL for the current customer, when one could be minted. */
   portalUrl?: string | null
+  /**
+   * Hosted portal URL that opens the auto-recharge form (`tab=credits&intent=autorecharge`).
+   * Null when no portal session could be minted. Suffixed in `@solvapay/mcp-core`
+   * from the same `customerUrl` as `portalUrl`.
+   */
+  autoRechargeUrl?: string | null
 }
 
 /**

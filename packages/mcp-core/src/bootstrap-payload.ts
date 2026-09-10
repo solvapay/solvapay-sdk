@@ -35,6 +35,7 @@ import {
 } from './helpers'
 import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
 import { selectActivePlanPurchase } from './active-purchase'
+import { autoRechargeUrlFrom } from './portal-links'
 
 export interface CreateBuildBootstrapPayloadOptions {
   solvaPay: SolvaPay
@@ -132,7 +133,10 @@ export function createBuildBootstrapPayload(
     try {
       const platform = await solvaPay.apiClient.getPlatformConfig?.()
       return platform?.stripePublishableKey ?? null
-    } catch {
+    } catch (err) {
+      console.warn('[solvapay] bootstrap: getPlatformConfig failed; stripePublishableKey omitted', {
+        error: err instanceof Error ? err.message : String(err),
+      })
       return null
     }
   }
@@ -230,6 +234,12 @@ export function createBuildBootstrapPayload(
       throw createBootstrapProductError(productResult)
     }
 
+    if (isErrorResult(plansResult)) {
+      console.warn('[solvapay] bootstrap: listPlans failed; plans omitted from payload', {
+        error: plansResult.error,
+        status: plansResult.status,
+      })
+    }
     const plans = isErrorResult(plansResult) ? [] : plansResult.plans
 
     const purchase = okOrNull(resolvedPurchaseResult)
@@ -295,6 +305,7 @@ export function createBuildBootstrapPayload(
       customer,
       checkoutUrl: checkout?.checkoutUrl ?? null,
       portalUrl: portal?.customerUrl ?? null,
+      autoRechargeUrl: autoRechargeUrlFrom(portal?.customerUrl),
     }
   }
 }

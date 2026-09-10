@@ -35,6 +35,7 @@ export type { IntentToolName, McpPromptName, McpToolName } from './tool-names'
 // ---- Neutral types ----
 export {
   OPEN_TOOL_FOR_VIEW,
+  SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS,
   SOLVAPAY_MCP_VIEW_KINDS,
   TOOL_FOR_VIEW,
   VIEW_FOR_OPEN_TOOL,
@@ -60,6 +61,7 @@ export type {
   SolvaPayCallToolResult,
   SolvaPayDocsResourceDescriptor,
   SolvaPayMcpCsp,
+  SolvaPayMcpAdvertisedViewKind,
   SolvaPayMcpViewKind,
   SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,
@@ -156,6 +158,8 @@ export {
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
+
+export { PORTAL_AUTO_RECHARGE_QUERY, autoRechargeUrlFrom } from './portal-links'
 
 export { createBuildBootstrapPayload } from './bootstrap-payload'
 export type {

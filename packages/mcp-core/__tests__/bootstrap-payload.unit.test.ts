@@ -238,6 +238,10 @@ describe('createBuildBootstrapPayload', () => {
     )
     expect(client.createCheckoutSession.mock.calls[0][0]).not.toHaveProperty('returnUrl')
     expect(payload.returnUrl).toBe('https://mcp.example.test')
+    expect(payload.portalUrl).toBe('https://example.test/portal')
+    expect(payload.autoRechargeUrl).toBe(
+      'https://example.test/portal?tab=credits&intent=autorecharge',
+    )
   })
 
   it('does not mint a credit-topup session for the auto-recharge view', async () => {
