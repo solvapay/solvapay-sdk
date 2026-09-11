@@ -12,13 +12,22 @@ import random
 import time
 from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass, field
-from typing import Any
+from types import ModuleType
+from typing import Protocol
 
 Handler = Callable[[dict[str, object], "WorkersResponseContext"], Awaitable[object]]
 GetCustomerRef = Callable[[dict[str, object]], str | Awaitable[str]]
 
 
-def _workers() -> Any:
+class _WorkersWasmClient(Protocol):
+    async def get_customer(self, args_json: str) -> str: ...
+    async def create_customer(self, args_json: str) -> str: ...
+    async def update_customer(self, args_json: str) -> str: ...
+    async def check_limits(self, args_json: str) -> str: ...
+    async def track_usage(self, args_json: str) -> str: ...
+
+
+def _workers() -> ModuleType:
     from solvapay_mcp import workers
 
     return workers
@@ -276,7 +285,7 @@ def _apply_gate_cache(cache_store: MutableMapping[str, dict[str, object]], cache
 
 
 async def _workers_ensure_customer(
-    client: Any,
+    client: _WorkersWasmClient,
     js_module: object,
     customer_ref: str,
     customer_cache: MutableMapping[str, tuple[str, int]],
@@ -413,7 +422,7 @@ async def _workers_ensure_customer(
 
 
 async def workers_gate(
-    client: Any,
+    client: _WorkersWasmClient,
     js_module: object,
     customer_ref: str,
     *,
@@ -511,7 +520,7 @@ async def workers_invoke_payable(
     spec: WorkersPayableSpec,
     args: dict[str, object],
     *,
-    client: Any,
+    client: _WorkersWasmClient,
     js_module: object,
     limits_cache: MutableMapping[str, dict[str, object]],
     customer_cache: MutableMapping[str, tuple[str, int]],
@@ -560,13 +569,17 @@ async def workers_invoke_payable(
             continue
         if kind == "invokeHandler":
             limits_raw = action.get("limits")
-            limits = limits_raw if isinstance(limits_raw, Mapping) else {}
+            handler_limits = (
+                {str(k): v for k, v in limits_raw.items()}
+                if isinstance(limits_raw, dict)
+                else {}
+            )
             snapshot = _call_js_sync(
                 js_module,
                 "buildCustomerSnapshot",
                 {
                     "customerRef": str(action.get("customerRef") or ""),
-                    "limits": dict(limits),
+                    "limits": dict(handler_limits),
                 },
             )
             if not isinstance(snapshot, Mapping):
@@ -576,7 +589,7 @@ async def workers_invoke_payable(
                 customer=dict(snapshot),
                 product={"reference": spec.product, "name": spec.product},
                 product_ref=spec.product,
-                limits=limits,
+                limits=handler_limits,
             )
             try:
                 returned = await spec.handler(args, ctx)
@@ -623,7 +636,7 @@ async def complete_invoke_handler(
     envelope: Mapping[str, object],
     *,
     registry: WorkersPayableRegistry,
-    client: Any,
+    client: _WorkersWasmClient,
     js_module: object,
     limits_cache: MutableMapping[str, dict[str, object]],
     customer_cache: MutableMapping[str, tuple[str, int]],

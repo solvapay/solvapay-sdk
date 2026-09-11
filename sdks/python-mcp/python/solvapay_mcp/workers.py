@@ -106,6 +106,32 @@ class WasmApiClient:
 
         return _call
 
+    async def _js_call(self, name: str, args_json: str) -> str:
+        bound = self.__getattr__(name)
+        if not callable(bound):
+            raise AttributeError(name)
+        raw = bound(args_json)
+        if inspect.isawaitable(raw):
+            raw = await raw
+        if not isinstance(raw, str):
+            raise TypeError(f"{name} returned unexpected envelope")
+        return raw
+
+    async def get_customer(self, args_json: str) -> str:
+        return await self._js_call("get_customer", args_json)
+
+    async def create_customer(self, args_json: str) -> str:
+        return await self._js_call("create_customer", args_json)
+
+    async def update_customer(self, args_json: str) -> str:
+        return await self._js_call("update_customer", args_json)
+
+    async def check_limits(self, args_json: str) -> str:
+        return await self._js_call("check_limits", args_json)
+
+    async def track_usage(self, args_json: str) -> str:
+        return await self._js_call("track_usage", args_json)
+
 
 def wasm_facade_api_client(js_client: object) -> WasmApiClient:
     """Same job as `facade_api_client`, for a wasm-bindgen `WasmClient`."""
