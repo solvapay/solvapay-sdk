@@ -3,7 +3,8 @@
 The native `solvapay` package is a maturin/PyO3 cdylib. Pyodide cannot load that
 `.so`. This module wraps the already-shipped workerd `WasmClient` (async
 `str -> str` JSON envelopes) so Starlette can call the same methods
-`facade_api_client` would.
+`facade_api_client` would. Payable merchant handlers run through
+`workers_payable` (`gateNext` / `invokePayableNext` / `mcpResume`).
 
 Delete this module when the locally-built PyEmscripten wheel lands — see
 `docs/contributing/pyodide-emscripten-wheel.md`.
@@ -14,7 +15,7 @@ from __future__ import annotations
 import inspect
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
@@ -129,24 +130,88 @@ async def _invoke_json(client: WasmApiClient, method: str, payload: dict[str, ob
     return unwrap_wasm_envelope(raw)
 
 
+def _jsonrpc_internal_error(rpc_id: object, message: str) -> JSONResponse:
+    return JSONResponse(
+        {
+            "jsonrpc": "2.0",
+            "id": rpc_id,
+            "error": {"code": -32603, "message": message},
+        },
+        status_code=200,
+    )
+
+
+async def _widget_envelope(
+    js_module: object,
+    rpc: Mapping[str, object],
+    *,
+    resource_uri: str,
+    public_base_url: str,
+    product_ref: str,
+    views: list[str] | None,
+    api_base_url: str | None,
+) -> dict[str, object] | None:
+    fn = getattr(js_module, "solvapayCall", None)
+    if fn is None or not callable(fn):
+        raise WorkersSolvaPayError("js module is missing solvapayCall")
+    args: dict[str, object] = {
+        "rpc": dict(rpc),
+        "resourceUri": resource_uri,
+        "publicBaseUrl": public_base_url,
+        "productRef": product_ref,
+    }
+    if views is not None:
+        args["views"] = views
+    if api_base_url is not None:
+        args["apiBaseUrl"] = api_base_url
+    raw = fn(json.dumps({"op": "mcpWidgetResource", "args": args}))
+    if inspect.isawaitable(raw):
+        raw = await raw
+    if not isinstance(raw, str):
+        raw = str(raw)
+    value = unwrap_wasm_envelope(raw)
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise WorkersSolvaPayError("mcpWidgetResource returned a non-object envelope")
+    return value
+
+
 def build_workers_http_app(
     js_client: object,
     *,
+    js_module: object,
+    widget_html: Callable[[], str],
     product_ref: str,
     public_base_url: str,
+    api_base_url: str | None = None,
+    views: list[str] | None = None,
     resource_uri: str = "ui://cloudflare-workers-mcp/mcp-app.html",
     mcp_path: str = "/mcp",
     hide_audiences: list[str] | None = None,
+    payable_registry: object | None = None,
 ) -> ASGIApp:
     """Starlette app: `/mcp` via `mcpDispatch`, everything else via `mcpOauthRequest`.
 
-    Custom Python payable handlers are not wired here — `invokeHandler` needs
-    `mcpResume` on the host, which stays on the native path. Builtin tools and
-    OAuth work through the wasm engine. The PyEmscripten wheel follow-up restores
-    unmodified `create_mcp_oauth_starlette` / `build_http_app`.
+    Custom Python payable handlers run through `invokeHandler` → `workers_payable`
+    → `mcpResume`. The PyEmscripten wheel follow-up restores unmodified
+    `create_mcp_oauth_starlette` / `build_http_app`.
     """
+    from solvapay_mcp.workers_payable import (
+        WorkersPayableRegistry,
+        complete_invoke_handler,
+    )
+
     client = wasm_facade_api_client(js_client)
     audiences = hide_audiences if hide_audiences is not None else ["ui"]
+    registry = (
+        payable_registry
+        if isinstance(payable_registry, WorkersPayableRegistry)
+        else WorkersPayableRegistry()
+    )
+    limits_cache: dict[str, dict[str, object]] = {}
+    customer_cache: dict[str, tuple[str, int]] = {}
+    claimed: dict[str, int] = {}
 
     async def health(_request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "server": "cloudflare-workers-mcp", "beta": True})
@@ -172,87 +237,113 @@ def build_workers_http_app(
                 },
                 status_code=400,
             )
-        config: dict[str, object] = {
-            "productRef": product_ref,
-            "publicBaseUrl": public_base_url,
-            "resourceUri": resource_uri,
-            "mcpPath": mcp_path,
-            "hideAudiences": audiences,
-        }
-        payload: dict[str, object] = {"rpc": rpc, "config": config}
-        auth = request.headers.get("authorization")
-        if auth:
-            payload["authHeader"] = auth
-        protocol = request.headers.get("mcp-protocol-version")
-        if protocol:
-            payload["mcpProtocolVersionHeader"] = protocol
-        ua = request.headers.get("user-agent")
-        if ua:
-            config["userAgent"] = ua
-        envelope = await _invoke_json(client, "mcp_dispatch", payload)
-        if not isinstance(envelope, dict):
-            raise WorkersSolvaPayError("mcpDispatch returned a non-object envelope")
-        kind = envelope.get("kind")
-        if kind == "challenge":
-            status = envelope.get("status")
+        try:
+            if rpc.get("method") == "resources/read":
+                widget = await _widget_envelope(
+                    js_module,
+                    rpc,
+                    resource_uri=resource_uri,
+                    public_base_url=public_base_url,
+                    product_ref=product_ref,
+                    views=views,
+                    api_base_url=api_base_url,
+                )
+                if widget is not None:
+                    result = widget.get("result")
+                    contents = result.get("contents") if isinstance(result, dict) else None
+                    first = contents[0] if isinstance(contents, list) and contents else None
+                    if not isinstance(first, dict):
+                        raise WorkersSolvaPayError("mcpWidgetResource omitted contents[0]")
+                    first["text"] = widget_html()
+                    return JSONResponse(widget, status_code=200)
+            config: dict[str, object] = {
+                "productRef": product_ref,
+                "publicBaseUrl": public_base_url,
+                "resourceUri": resource_uri,
+                "mcpPath": mcp_path,
+                "hideAudiences": audiences,
+                "payableTools": registry.dispatch_tools(),
+            }
+            if views is not None:
+                config["views"] = views
+            if api_base_url is not None:
+                config["apiBaseUrl"] = api_base_url
+            payload: dict[str, object] = {"rpc": rpc, "config": config}
+            auth = request.headers.get("authorization")
+            if auth:
+                payload["authHeader"] = auth
+            protocol = request.headers.get("mcp-protocol-version")
+            if protocol:
+                payload["mcpProtocolVersionHeader"] = protocol
+            ua = request.headers.get("user-agent")
+            if ua:
+                config["userAgent"] = ua
+            envelope = await _invoke_json(client, "mcp_dispatch", payload)
+            if not isinstance(envelope, dict):
+                raise WorkersSolvaPayError("mcpDispatch returned a non-object envelope")
+            kind = envelope.get("kind")
+            if kind == "challenge":
+                status = envelope.get("status")
+                return JSONResponse(
+                    envelope.get("body"),
+                    status_code=int(status) if isinstance(status, int) else 401,
+                    headers=_header_map(envelope.get("headers")),
+                )
+            if kind == "invokeHandler":
+                resumed = await complete_invoke_handler(
+                    envelope,
+                    registry=registry,
+                    client=client,
+                    js_module=js_module,
+                    limits_cache=limits_cache,
+                    customer_cache=customer_cache,
+                    claimed=claimed,
+                )
+                rpc_body = resumed.get("rpc")
+                return JSONResponse(rpc_body, status_code=200)
+            rpc_body = envelope.get("rpc") if kind == "rpc" else envelope
+            status = envelope.get("status") if kind == "rpc" else None
             return JSONResponse(
-                envelope.get("body"),
-                status_code=int(status) if isinstance(status, int) else 401,
-                headers=_header_map(envelope.get("headers")),
+                rpc_body,
+                status_code=int(status) if isinstance(status, int) else 200,
             )
-        if kind == "invokeHandler":
-            return JSONResponse(
-                {
-                    "jsonrpc": "2.0",
-                    "id": rpc.get("id"),
-                    "error": {
-                        "code": -32603,
-                        "message": (
-                            "invokeHandler is not available on the interim wasm FFI path; "
-                            "use builtin tools or the PyEmscripten wheel"
-                        ),
-                    },
-                },
-                status_code=200,
-            )
-        rpc_body = envelope.get("rpc") if kind == "rpc" else envelope
-        status = envelope.get("status") if kind == "rpc" else None
-        return JSONResponse(
-            rpc_body,
-            status_code=int(status) if isinstance(status, int) else 200,
-        )
+        except WorkersSolvaPayError as exc:
+            return _jsonrpc_internal_error(rpc.get("id"), str(exc))
 
     async def handle_oauth(request: Request) -> Response:
         if request.method == "OPTIONS":
             return Response(status_code=204)
-        body = (await request.body()).decode("utf-8")
-        headers = {key.lower(): value for key, value in request.headers.items()}
-        path = request.url.path
-        if request.url.query:
-            path = f"{path}?{request.url.query}"
-        envelope = await _invoke_json(
-            client,
-            "mcp_oauth_request",
-            {
-                "method": request.method,
-                "path": path,
-                "headers": headers,
-                "body": body,
-                "config": {
-                    "publicBaseUrl": public_base_url,
-                    "productRef": product_ref,
-                    "mcpPath": mcp_path,
+        try:
+            body = (await request.body()).decode("utf-8")
+            headers = {key.lower(): value for key, value in request.headers.items()}
+            path = request.url.path
+            if request.url.query:
+                path = f"{path}?{request.url.query}"
+            envelope = await _invoke_json(
+                client,
+                "mcp_oauth_request",
+                {
+                    "method": request.method,
+                    "path": path,
+                    "headers": headers,
+                    "body": body,
+                    "config": {
+                        "publicBaseUrl": public_base_url,
+                        "productRef": product_ref,
+                        "mcpPath": mcp_path,
+                    },
                 },
-            },
-        )
-        if not isinstance(envelope, dict):
-            raise WorkersSolvaPayError("mcpOauthRequest returned a non-object envelope")
-        status = envelope.get("status")
-        return JSONResponse(
-            envelope.get("body"),
-            status_code=int(status) if isinstance(status, int) else 500,
-            headers=_header_map(envelope.get("headers")),
-        )
+            )
+            if not isinstance(envelope, dict):
+                raise WorkersSolvaPayError("mcpOauthRequest returned a non-object envelope")
+            status = envelope.get("status")
+            return JSONResponse(
+                envelope.get("body"),
+                status_code=int(status) if isinstance(status, int) else 500,
+                headers=_header_map(envelope.get("headers")),
+            )
+        except WorkersSolvaPayError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=exc.status or 500)
 
     app = Starlette(
         routes=[

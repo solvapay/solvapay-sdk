@@ -15,7 +15,9 @@ use crate::bearer_verify::{
     extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
 };
 use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
-use crate::hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
+use crate::hide_tools::{
+    is_app_callable, is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput,
+};
 use crate::oauth::mcp_resource_identifier;
 
 /// Catalog TTL matching `defaultCatalogTTLMs` in `sdks/go/mcp/server.go`.
@@ -143,7 +145,8 @@ pub struct EngineConfig {
     /// Optional MCP mount path for OAuth resource identifiers.
     #[serde(default)]
     pub mcp_path: Option<String>,
-    /// Audiences hidden from `tools/list` and rejected on `tools/call`.
+    /// Audiences hidden from `tools/list`. App-callable tools stay invocable
+    /// on `tools/call`; other hidden tools are rejected with `-32601`.
     #[serde(default)]
     pub hide_audiences: Option<Vec<String>>,
     /// Accepted for wire compatibility. Ignored — a User-Agent must not bypass hiding.
@@ -429,6 +432,9 @@ fn hidden_tool_call_error(
     else {
         return Ok(None);
     };
+    if is_app_callable(tool) {
+        return Ok(None);
+    }
     if is_hidden_by_audience(tool, &audiences) {
         Ok(Some(rpc_err(
             id,
@@ -950,5 +956,59 @@ mod tests {
         let got = mcp_handle_request(&input).expect("handle");
         assert_eq!(got["status"], 400);
         assert_eq!(got["rpc"]["error"]["code"], -32020);
+    }
+
+    #[test]
+    fn create_payment_intent_stays_call_builtin_when_ui_audience_is_hidden() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": { "name": "create_payment_intent", "arguments": { "purpose": "topup" } }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html",
+                "hideAudiences": ["ui"],
+                "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+                "nowUnixSecs": 1700000000
+            },
+            "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU"
+        }));
+        assert_eq!(got["kind"], "callBuiltin", "{got}");
+        assert_eq!(got["name"], "create_payment_intent");
+    }
+
+    #[test]
+    fn hidden_merchant_tool_without_app_markers_is_method_not_found() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": { "name": "debug_flush", "arguments": {} }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html",
+                "hideAudiences": ["ui"],
+                "payableTools": [{ "name": "debug_flush", "_meta": { "audience": "ui" } }],
+                "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+                "nowUnixSecs": 1700000000
+            },
+            "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU"
+        }));
+        assert_eq!(got["kind"], "rpc", "{got}");
+        assert_eq!(got["rpc"]["error"]["code"], -32601);
+        assert!(
+            got["rpc"]["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("debug_flush"),
+            "{got}"
+        );
     }
 }

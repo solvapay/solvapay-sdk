@@ -13,6 +13,13 @@ module BitcoinAnalytics
         if env["REQUEST_METHOD"] == "OPTIONS"
           return [204, cors_headers(env), []]
         end
+        if env["PATH_INFO"] == "/health"
+          return [
+            200,
+            { "content-type" => "application/json" }.merge(cors_headers(env)),
+            [%({"status":"ok","server":"bitcoin-analytics-mcp"})],
+          ]
+        end
 
         status, headers, body = app.call(env)
         [status, headers.merge(cors_headers(env)), body]
@@ -56,6 +63,7 @@ module BitcoinAnalytics
       product_ref: product,
       public_base_url: public_base_url,
       source: source,
+      api_base_url: api_base,
     )
     $stdout.sync = true
     server = Puma::Server.new(app)

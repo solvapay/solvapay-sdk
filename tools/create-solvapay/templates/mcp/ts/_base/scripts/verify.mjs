@@ -188,6 +188,21 @@ async function main() {
           reason: 'no --credentials-file passed; cannot exercise SolvaPay bootstrap',
         }
 
+  // Widget transport tools are hidden from `tools/list` but must remain
+  // callable. `-32601 Method not found` is the only failure; any other
+  // outcome (including a business error) means the tool was reachable.
+  checks.transportToolCallable = args.noPlatform
+    ? {
+        status: 'skipped',
+        reason: '--no-platform: transport-tool call needs the SolvaPay backend (Tier-2)',
+      }
+    : bearerToken
+      ? await runTransportToolCallableCheck(base, rpcOptions)
+      : {
+          status: 'skipped',
+          reason: 'no --credentials-file passed; cannot exercise widget transport tools',
+        }
+
   const warnings = collectWarnings(checks)
   const summary = {
     workerUrl: base,
@@ -195,6 +210,7 @@ async function main() {
     paidPathVerification: {
       paywallGate: checks.paywallGate.status,
       merchantBootstrap: checks.merchantBootstrap.status,
+      transportToolCallable: checks.transportToolCallable.status,
     },
     warnings,
     overall: Object.values(checks).every(c => c.status !== 'failed') ? 'passed' : 'failed',
@@ -312,6 +328,11 @@ function collectWarnings(checks) {
       `Paid-path check skipped: merchantBootstrap (${checks.merchantBootstrap.reason}). Pass --credentials-file from mcpjam oauth login to exercise the SolvaPay bootstrap path.`,
     )
   }
+  if (checks.transportToolCallable?.status === 'skipped') {
+    warnings.push(
+      `Paid-path check skipped: transportToolCallable (${checks.transportToolCallable.reason}). Pass --credentials-file from mcpjam oauth login to confirm widget transport tools stay callable.`,
+    )
+  }
   return warnings
 }
 
@@ -384,6 +405,36 @@ async function runPaywallGateCheck(base, candidates, rpcOptions = {}) {
     status: 'skipped',
     reason:
       'no candidate tool returned a paywall gate (selections may all be `tier: "free"` or the customer has unused balance)',
+  }
+}
+
+/**
+ * Call `create_payment_intent` the way the widget does. Hidden-from-list
+ * must not mean uncallable: `-32601 Method not found` is the bug this
+ * check exists to catch. Any other outcome (including a business error)
+ * means the engine accepted the call.
+ */
+async function runTransportToolCallableCheck(base, rpcOptions) {
+  try {
+    await callTool(base, 'create_payment_intent', { purpose: 'topup' }, rpcOptions)
+    return { status: 'passed' }
+  } catch (err) {
+    const info = err instanceof RpcError ? err.info : undefined
+    const message = err?.message ?? String(err)
+    const code = info?.code
+    const body = typeof info?.body === 'string' ? info.body : ''
+    const methodNotFound =
+      code === -32601 ||
+      /Method not found/i.test(message) ||
+      /Method not found/i.test(body)
+    if (methodNotFound) {
+      return {
+        status: 'failed',
+        error: `create_payment_intent is not callable (${message})`,
+        info,
+      }
+    }
+    return { status: 'passed', info: { outcome: message } }
   }
 }
 

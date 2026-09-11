@@ -9,7 +9,6 @@ use std::sync::Arc;
 use common::driver::call_registered_payable;
 use common::mock_transport::{project_usage, MockTransport};
 use common::scenario::{HandlerSpec, Scenario, ToolScenario};
-use futures::future::BoxFuture;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
@@ -21,7 +20,8 @@ use rmcp::{ErrorData, ServerHandler, ServiceExt};
 use serde_json::{json, Map};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    register_payable_tool, PayableError, PayableHandler, PayableTool, ResponseContext,
+    register_payable_tool, PayableError, PayableFuture, PayableHandler, PayableTool,
+    ResponseContext,
 };
 
 struct FailingLimits;
@@ -112,7 +112,7 @@ async fn sdk_error_propagates_as_rmcp_error() {
     let mut router = ToolRouter::new();
     let handler: PayableHandler = Arc::new(|_, mut ctx: ResponseContext| {
         Box::pin(async move { ctx.respond(json!({ "ok": true }), None) })
-            as BoxFuture<'static, Result<_, PayableError>>
+            as PayableFuture<'static, Result<_, PayableError>>
     });
     register_payable_tool(
         &mut router,

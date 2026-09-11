@@ -101,6 +101,9 @@ pub async fn serve_http(source: SharedSource) -> Result<(), ExampleError> {
             hs256_secret: std::env::var("SOLVAPAY_MCP_HS256_SECRET").ok(),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     register_tools(

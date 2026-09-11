@@ -242,6 +242,15 @@ function registeredPrompts(server: McpServer): Record<string, RegisteredPromptLi
   )
 }
 
+/** Mirrors `is_app_callable` in `core/solvapay-mcp/src/hide_tools.rs`. */
+function isAppCallable(meta: unknown): boolean {
+  if (!isRecord(meta)) return false
+  const ui = isRecord(meta.ui) ? meta.ui : undefined
+  const visibility = Array.isArray(ui?.visibility) ? ui.visibility : []
+  const visibilityApp = visibility.some(value => value === 'app')
+  return visibilityApp || meta['openai/widgetAccessible'] === true
+}
+
 function stampWidgetResultMeta(raw: unknown, resourceUri: string | undefined): unknown {
   if (!resourceUri || !isRecord(raw)) return raw
   const meta = isRecord(raw._meta) ? { ...raw._meta } : {}
@@ -410,6 +419,7 @@ export function installEngineHandlers(
       hideAudiences !== undefined &&
       hideAudiences.length > 0 &&
       local !== undefined &&
+      !isAppCallable(local._meta) &&
       hideToolsByAudience(
         [{ name, ...(isRecord(local._meta) ? { _meta: local._meta } : {}) }],
         hideAudiences,

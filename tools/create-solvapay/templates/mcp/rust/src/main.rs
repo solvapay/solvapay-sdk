@@ -13,7 +13,8 @@ use futures::FutureExt;
 use serde_json::{json, Map, Value};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    McpHttpConfig, McpHttpRequest, McpHttpResponse, McpHttpServer, PayableHandler, PayableTool,
+    McpHttpConfig, McpHttpRequest, McpHttpResponse, McpHttpServer, PayableFuture, PayableHandler,
+    PayableTool,
 };
 
 #[derive(Clone)]
@@ -86,7 +87,7 @@ fn placeholder_handler() -> PayableHandler {
                 .to_owned();
             ctx.respond(json!({ "ok": true, "echoed": echoed }), None)
         }
-        .boxed()
+        .boxed() as PayableFuture<'static, _>
     })
 }
 
@@ -207,6 +208,9 @@ async fn main() {
             // None → UI-only tools (payment/transport) are hidden from
             // tools/list by default. Pass Some(vec![]) to show them.
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let mut fields = Map::new();

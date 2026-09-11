@@ -37,7 +37,7 @@ Point an MCP client at `http://localhost:8787/mcp`.
 
 ## Deploy
 
-Dev goldberg target at `goldberg-rust-dev.solvapay.app`, Worker
+Dev goldberg target at `mcp-rust-dev.solvapay.app`, Worker
 `solvapay-mcp-goldberg-rust-dev`, backend `https://api-dev.solvapay.com`.
 
 ```bash
@@ -52,15 +52,25 @@ pnpm preflight:dev
 pnpm deploy:dev
 ```
 
-MCP endpoint: `https://goldberg-rust-dev.solvapay.app/mcp`. Unauthenticated
-`tools/list` should 401 with `WWW-Authenticate` pointing at
-`https://goldberg-rust-dev.solvapay.app/.well-known/oauth-protected-resource`.
+MCP endpoint: `https://mcp-rust-dev.solvapay.app/mcp`. Unauthenticated
+`tools/call` should 401 with `WWW-Authenticate` pointing at
+`https://mcp-rust-dev.solvapay.app/.well-known/oauth-protected-resource`.
 
-The free-tier Worker size limit is 1 MB; this crate should sit well under the
-TypeScript example, which is near that ceiling.
+This Worker registers Guerrilla Mail's five inbox tools from
+`examples/rust/guerrillamail-mcp` (path dependency) over `worker::Fetch`. Inbox
+sessions live in an isolate-local `Mutex<HashMap>` (`thread_local!` server
+cache), so they survive reuse of the isolate but not eviction. Workers KV is the
+durable option if you need sessions across isolates.
+
+The free-tier Worker size limit is 1 MB; adding the inbox tools increased the
+wasm binary (dev deploy gzip was about 1.0 MiB). Re-check `wrangler deploy`
+output against that ceiling if you stay on the free tier — the TypeScript
+example sits near it as well.
 
 ## Tests (native, no workerd)
 
 ```bash
 cargo test --manifest-path examples/rust/cloudflare-worker-mcp/Cargo.toml
+cargo check --manifest-path examples/rust/cloudflare-worker-mcp/Cargo.toml --target wasm32-unknown-unknown
+cargo check --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml --target wasm32-unknown-unknown --lib
 ```

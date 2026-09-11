@@ -7,7 +7,7 @@ const baseConfig = {
   wranglerEnv: 'dev',
   workerName: 'solvapay-mcp-goldberg-rust-dev',
   dotEnvFile: '.env.dev',
-  expectedPublicBaseUrl: 'https://goldberg-rust-dev.solvapay.app',
+  expectedPublicBaseUrl: 'https://mcp-rust-dev.solvapay.app',
   requiredVars: [
     'SOLVAPAY_SECRET_KEY',
     'SOLVAPAY_PRODUCT_REF',
@@ -26,7 +26,7 @@ function okEnv() {
   return [
     'SOLVAPAY_SECRET_KEY=sk_test_abc',
     'SOLVAPAY_PRODUCT_REF=prd_abc',
-    'MCP_PUBLIC_BASE_URL=https://goldberg-rust-dev.solvapay.app',
+    'MCP_PUBLIC_BASE_URL=https://mcp-rust-dev.solvapay.app',
     'SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com',
   ].join('\n')
 }
@@ -53,7 +53,7 @@ describe('runPreflight', () => {
         [
           'SOLVAPAY_SECRET_KEY=sk_test_abc',
           'SOLVAPAY_PRODUCT_REF=prd_your_product_ref',
-          'MCP_PUBLIC_BASE_URL=https://goldberg-rust-dev.solvapay.app',
+          'MCP_PUBLIC_BASE_URL=https://mcp-rust-dev.solvapay.app',
           'SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com',
         ].join('\n'),
       spawn: spawnOk,
@@ -91,7 +91,7 @@ describe('runPreflight', () => {
         ].join('\n'),
       spawn: spawnOk,
     })
-    expect(result.errors.some(e => e.includes('goldberg-rust-dev.solvapay.app'))).toBe(true)
+    expect(result.errors.some(e => e.includes('mcp-rust-dev.solvapay.app'))).toBe(true)
     expect(result.errors.some(e => e.includes('api-dev'))).toBe(true)
     expect(result.errors.some(e => e.includes('must not point at production'))).toBe(true)
   })

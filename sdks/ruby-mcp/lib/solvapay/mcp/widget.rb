@@ -12,7 +12,8 @@ module SolvaPay
       File.read(MCP_APP_HTML_PATH, encoding: "UTF-8")
     end
 
-    def self.widget_html_rpc(rpc, resource_uri, public_base_url, product_ref, views = nil)
+    def self.widget_html_rpc(rpc, resource_uri, public_base_url, product_ref, views = nil, csp: nil, api_base_url: nil,
+                             branding: nil)
       args = {
         "rpc" => rpc,
         "resourceUri" => resource_uri,
@@ -20,6 +21,9 @@ module SolvaPay
         "productRef" => product_ref,
       } #: Hash[String, untyped]
       args["views"] = views unless views.nil?
+      args["csp"] = csp unless csp.nil?
+      args["apiBaseUrl"] = api_base_url unless api_base_url.nil? || api_base_url.to_s.empty?
+      args["branding"] = branding unless branding.nil?
       envelope = SolvaPay::Mcp::Core.call("mcpWidgetResource", args)
       return nil if envelope.nil?
 

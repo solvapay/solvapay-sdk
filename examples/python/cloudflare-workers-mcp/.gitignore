@@ -8,5 +8,7 @@
 !.env.dev.example
 __pycache__
 python_modules/
+src/vendor/
+dist/
 pylock.toml
 /.wrangler

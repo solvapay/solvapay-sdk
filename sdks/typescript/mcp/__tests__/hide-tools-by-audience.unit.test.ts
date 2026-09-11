@@ -1,8 +1,7 @@
 /**
  * `hideToolsByAudience` — filters UI-audience tools out of `tools/list`
- * and rejects `tools/call` for those names. Regression guard for the
- * workaround the Goldberg Supabase Edge example used to do inline via
- * `(server as any).server._requestHandlers`.
+ * and rejects `tools/call` for merchant tools without app-callable
+ * markers. Transport tools stay invocable from the widget.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
@@ -101,7 +100,55 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
     }
   })
 
-  it('does not invoke a hidden tool via tools/call', async () => {
+  it('does not invoke a hidden merchant tool via tools/call', async () => {
+    const server = buildServer({
+      hideToolsByAudience: ['ui'],
+      additionalTools: ({ server: srv }) => {
+        srv.registerTool(
+          'debug_flush',
+          {
+            title: 'Debug flush',
+            description: 'internal-only cache flush',
+            inputSchema: { scope: z.string() },
+            _meta: { audience: 'ui' },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
+          async () => ({
+            content: [{ type: 'text' as const, text: 'ok' }],
+          }),
+        )
+      },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handlers = (server as any).server._requestHandlers as Map<
+      string,
+      (req: unknown, extra: unknown) => Promise<unknown>
+    >
+    const handler = handlers.get('tools/call')
+    if (!handler) throw new Error('tools/call handler not registered')
+    const result = await handler(
+      {
+        method: 'tools/call',
+        params: { name: 'debug_flush', arguments: { scope: 'all' } },
+      },
+      {
+        signal: new AbortController().signal,
+        sendNotification: vi.fn(),
+        sendRequest: vi.fn(),
+        mcpReq: { requestState: () => undefined },
+      },
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({
+          code: -32601,
+          message: 'Method not found: debug_flush',
+        }),
+      }),
+    )
+  })
+
+  it('does not reject an app-callable transport tool via tools/call', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handlers = (server as any).server._requestHandlers as Map<
@@ -113,7 +160,7 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
     const result = await handler(
       {
         method: 'tools/call',
-        params: { name: UI_TOOLS[0], arguments: {} },
+        params: { name: MCP_TOOL_NAMES.createPayment, arguments: { purpose: 'topup' } },
       },
       {
         signal: new AbortController().signal,
@@ -122,11 +169,11 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
         mcpReq: { requestState: () => undefined },
       },
     )
-    expect(result).toEqual(
-      expect.objectContaining({
-        error: expect.objectContaining({ code: expect.any(Number) }),
-      }),
-    )
+    const error =
+      result !== null && typeof result === 'object' && 'error' in result
+        ? (result as { error?: { code?: unknown } }).error
+        : undefined
+    expect(error?.code).not.toBe(-32601)
   })
 
   it('does not leak audience filter into a second server instance', async () => {

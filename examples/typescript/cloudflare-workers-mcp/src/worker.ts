@@ -4,8 +4,8 @@
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over the Workers runtime with the
  * full `@modelcontextprotocol/server` wiring, `hideToolsByAudience` for
- * a trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
- * iframe still works), and `responseMode: 'json'` (correct shape for
+ * a trim LLM-facing catalogue (widget transport tools stay callable),
+ * and `responseMode: 'json'` (correct shape for
  * Workers isolates, which don't pin across requests).
  *
  * The only extra plumbing on top of the SDK handler is **browser-origin
@@ -94,11 +94,9 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     // Hide UI-only transport tools from the LLM-facing `tools/list`
     // (text hosts: Claude Desktop, MCPJam, Cursor) — keeps the model's
     // tool catalogue narrow to the two intent tools (`account`,
-    // `activate_plan`) plus this worker's
-    // demo tools. ChatGPT-originated tools/list requests are
-    // auto-detected and receive the full catalog so the iframe's
-    // `create_payment_intent` calls (plan + topup via `purpose`)
-    // pass ChatGPT's gateway catalogue check.
+    // `activate_plan`) plus this worker's demo tools. The widget still
+    // calls `create_payment_intent` (plan + topup via `purpose`) because
+    // those tools declare `_meta.ui.visibility: ["app"]`.
     hideToolsByAudience: ['ui'],
     ...(demoToolsEnabled(env as unknown as Record<string, string | undefined>)
       ? { additionalTools: registerDemoTools }

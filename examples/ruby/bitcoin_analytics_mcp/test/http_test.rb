@@ -60,6 +60,15 @@ class HttpTest < Minitest::Test
     assert_includes error.message, "MCP_PUBLIC_BASE_URL"
   end
 
+  def test_health_returns_ok
+    status, headers, body = call_app("GET", "/health")
+    assert_equal 200, status
+    assert_equal "application/json", headers["content-type"]
+    parsed = JSON.parse(body.join)
+    assert_equal "ok", parsed["status"]
+    assert_equal "bitcoin-analytics-mcp", parsed["server"]
+  end
+
   def test_default_bind_is_local_3030
     assert_equal "127.0.0.1", BitcoinAnalytics.bind_host(nil)
     assert_equal 3030, BitcoinAnalytics.bind_port(nil)

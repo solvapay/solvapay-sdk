@@ -150,6 +150,36 @@ class EngineHostTest < Minitest::Test
     assert csp.key?("resourceDomains")
   end
 
+  def test_resources_read_includes_api_base_in_csp
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
+      resource_uri: "ui://widget.html",
+      api_base_url: "https://api-dev.solvapay.com",
+    )
+    status, _headers, body = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "resources/read",
+            params: { uri: "ui://widget.html" },
+          },
+        ),
+      ),
+    )
+    assert_equal 200, status
+    parsed = JSON.parse(body.join)
+    connect = parsed.dig("result", "contents", 0, "_meta", "ui", "csp", "connectDomains")
+    assert_includes Array(connect), "https://api-dev.solvapay.com"
+  end
+
   def test_resources_read_stamps_modern_catalog_envelope
     client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
     engine = SolvaPay::Mcp::Engine.new(

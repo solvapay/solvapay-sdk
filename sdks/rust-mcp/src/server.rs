@@ -43,6 +43,12 @@ pub struct McpHttpConfig {
     /// Go SDK. Pass `Some(vec![])` to disable hiding, or other audiences to
     /// override.
     pub hide_audiences: Option<Vec<String>>,
+    /// Optional API origin auto-included in widget CSP `connectDomains`.
+    pub api_base_url: Option<String>,
+    /// Optional CSP overrides forwarded to descriptors / widget reads.
+    pub csp: Option<solvapay_mcp_core::SolvaPayMcpCsp>,
+    /// Optional branding JSON forwarded to descriptors / widget reads.
+    pub branding: Option<Value>,
 }
 
 struct RegisteredPayable {
@@ -68,6 +74,9 @@ pub struct McpHttpServer {
     hs256_secret: Option<String>,
     jwks_json: Option<Value>,
     hide_audiences: Option<Vec<String>>,
+    api_base_url: Option<String>,
+    csp: Option<solvapay_mcp_core::SolvaPayMcpCsp>,
+    branding: Option<Value>,
     payables: HashMap<String, RegisteredPayable>,
 }
 
@@ -94,10 +103,13 @@ impl McpHttpServer {
             jwks_json: config.jwks_json,
             // Default to hiding the `ui` audience, matching the Go SDK. An
             // explicit non-empty vec overrides; `Some(vec![])` disables.
-            hide_audiences: match config.hide_audiences {
-                Some(audiences) if !audiences.is_empty() => Some(audiences),
-                _ => Some(vec!["ui".to_owned()]),
-            },
+            hide_audiences: config
+                .hide_audiences
+                .filter(|a| !a.is_empty())
+                .or_else(|| Some(vec!["ui".to_owned()])),
+            api_base_url: config.api_base_url,
+            csp: config.csp,
+            branding: config.branding,
             payables: HashMap::new(),
         }
     }
@@ -156,11 +168,9 @@ impl McpHttpServer {
             return self.handle_oauth(&req).await;
         }
         if !req.method.eq_ignore_ascii_case("POST") {
-            let mut headers = BTreeMap::new();
-            headers.insert("allow".to_owned(), "POST, OPTIONS".to_owned());
             return Ok(McpHttpResponse {
                 status: 405,
-                headers,
+                headers: BTreeMap::from([("allow".to_owned(), "POST, OPTIONS".to_owned())]),
                 body: Vec::new(),
             });
         }
@@ -199,6 +209,17 @@ impl McpHttpServer {
             &self.resource_uri,
             &self.public_base_url,
             &self.product_ref,
+            crate::widget::WidgetDescriptorInputs {
+                views: self.views.as_ref().map(|views| json!(views)),
+                csp: self
+                    .csp
+                    .as_ref()
+                    .map(serde_json::to_value)
+                    .transpose()
+                    .map_err(|err| SdkError::transport(err.to_string(), false))?,
+                api_base_url: self.api_base_url.as_ref().map(|url| json!(url)),
+                branding: self.branding.clone(),
+            },
         )
         .map_err(|err| SdkError::transport(err, false))?
         {
@@ -237,9 +258,14 @@ impl McpHttpServer {
                     mcp_path: Some(self.mcp_path.clone()),
                     hide_audiences: self.hide_audiences.clone(),
                     user_agent: req.headers.get("user-agent").cloned(),
-                    csp: None,
-                    api_base_url: None,
-                    branding: None,
+                    csp: self.csp.clone(),
+                    api_base_url: self.api_base_url.clone(),
+                    branding: self
+                        .branding
+                        .clone()
+                        .map(serde_json::from_value)
+                        .transpose()
+                        .map_err(|err| SdkError::transport(err.to_string(), false))?,
                     jwks_json: self.jwks_json.clone(),
                     hs256_secret: self.hs256_secret.clone(),
                     expected_issuer: None,

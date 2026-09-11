@@ -22,9 +22,9 @@ export const go = {
   workerName: 'solvapay-mcp-goldberg-go-dev',
   dotEnvFile: '.env.go.dev',
   exampleFile: '.env.go.dev.example',
-  expectedPublicBaseUrl: 'https://goldberg-go-dev.solvapay.app',
+  expectedPublicBaseUrl: 'https://mcp-go-dev.solvapay.app',
   label: 'goldberg go container dev',
-  postDeployNotes: ['MCP endpoint: https://goldberg-go-dev.solvapay.app/mcp'],
+  postDeployNotes: ['MCP endpoint: https://mcp-go-dev.solvapay.app/mcp'],
 }
 
 export const ruby = {
@@ -33,9 +33,9 @@ export const ruby = {
   workerName: 'solvapay-mcp-goldberg-ruby-dev',
   dotEnvFile: '.env.ruby.dev',
   exampleFile: '.env.ruby.dev.example',
-  expectedPublicBaseUrl: 'https://goldberg-ruby-dev.solvapay.app',
+  expectedPublicBaseUrl: 'https://mcp-ruby-dev.solvapay.app',
   label: 'goldberg ruby container dev',
-  postDeployNotes: ['MCP endpoint: https://goldberg-ruby-dev.solvapay.app/mcp'],
+  postDeployNotes: ['MCP endpoint: https://mcp-ruby-dev.solvapay.app/mcp'],
 }
 
 export default go

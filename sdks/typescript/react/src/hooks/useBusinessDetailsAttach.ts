@@ -45,6 +45,8 @@ export type AttachBusinessDetailsFn = (params: {
   country?: string
   customerCountry?: string
   customerName?: string
+  customerState?: string
+  customerPostalCode?: string
   taxId?: string
   taxIdType?: import('@solvapay/core').TaxIdType
 }) => Promise<{ taxBreakdown: TaxBreakdown }>
@@ -133,6 +135,10 @@ export function useBusinessDetailsAttach(
             ? { customerCountry: input.customerCountry }
             : {}),
           ...(input.customerName !== undefined ? { customerName: input.customerName } : {}),
+          ...(input.customerState !== undefined ? { customerState: input.customerState } : {}),
+          ...(input.customerPostalCode !== undefined
+            ? { customerPostalCode: input.customerPostalCode }
+            : {}),
           ...(input.taxId !== undefined ? { taxId: input.taxId } : {}),
           ...(taxIdType !== undefined ? { taxIdType } : {}),
         })

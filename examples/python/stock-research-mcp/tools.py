@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-
-from mcp.server.lowlevel.server import Server
-from solvapay.facade import SolvaPay
-from solvapay_mcp import ResponseContext, register_payable_tool
+from typing import Any
 
 from analysis import classify_summary, corroborate_catalyst, filings_since
 from market_data import CompanyNotFoundError, MarketDataSource
@@ -17,29 +14,35 @@ _DISCLAIMER_SUFFIX = " Educational research only, not financial advice."
 
 
 def register_tools(
-    server: Server[object],
+    server: Any | None = None,
     *,
-    solvapay: SolvaPay,
+    solvapay: Any | None = None,
     product: str,
     source: MarketDataSource,
     customer_ref: CustomerRef | None = None,
+    register: Callable[..., None] | None = None,
 ) -> None:
     get_customer_ref = _customer_ref_hook(customer_ref) if customer_ref is not None else None
 
-    async def top_ranked_assets(_args: dict[str, object], ctx: ResponseContext) -> object:
+    def _register(name: str, **kwargs: object) -> None:
+        if register is not None:
+            register(name, product=product, **kwargs)
+            return
+        from solvapay_mcp import register_payable_tool
+
+        register_payable_tool(server, name, solvapay=solvapay, product=product, **kwargs)
+
+    async def top_ranked_assets(_args: dict[str, object], ctx: Any) -> object:
         feed = await source.top_ranked()
         return ctx.respond(feed)
 
-    async def company_brief(args: dict[str, object], ctx: ResponseContext) -> object:
+    async def company_brief(args: dict[str, object], ctx: Any) -> object:
         symbol = _required_symbol(args)
         company = await source.company(symbol)
         return ctx.respond(_brief_from_company(company))
 
-    register_payable_tool(
-        server,
+    _register(
         "top_ranked_assets",
-        solvapay=solvapay,
-        product=product,
         title="Top ranked assets",
         description=(
             "Five model-ranked assets with selection scores, catalysts, and the feed timestamp."
@@ -48,11 +51,8 @@ def register_tools(
         handler=top_ranked_assets,
         get_customer_ref=get_customer_ref,
     )
-    register_payable_tool(
-        server,
+    _register(
         "company_brief",
-        solvapay=solvapay,
-        product=product,
         title="Company brief",
         description=(
             "SEC-derived summary, latest earnings, and key filings for any ticker."
@@ -67,7 +67,7 @@ def register_tools(
         get_customer_ref=get_customer_ref,
     )
 
-    async def research_top_assets(_args: dict[str, object], ctx: ResponseContext) -> object:
+    async def research_top_assets(_args: dict[str, object], ctx: Any) -> object:
         feed = await source.top_ranked()
         companies = await asyncio.gather(
             *[source.company(str(row["symbol"])) for row in feed["stocks"]]
@@ -78,7 +78,7 @@ def register_tools(
         ]
         return ctx.respond({**feed, "stocks": stocks})
 
-    async def verify_catalyst_claims(_args: dict[str, object], ctx: ResponseContext) -> object:
+    async def verify_catalyst_claims(_args: dict[str, object], ctx: Any) -> object:
         feed = await source.top_ranked()
         companies = await asyncio.gather(
             *[source.company(str(row["symbol"])) for row in feed["stocks"]]
@@ -101,7 +101,7 @@ def register_tools(
             }
         )
 
-    async def detect_stale_rankings(_args: dict[str, object], ctx: ResponseContext) -> object:
+    async def detect_stale_rankings(_args: dict[str, object], ctx: Any) -> object:
         feed = await source.top_ranked()
         last_updated = str(feed.get("last_updated") or "")
         companies = await asyncio.gather(
@@ -134,7 +134,7 @@ def register_tools(
             }
         )
 
-    async def compare_symbols(args: dict[str, object], ctx: ResponseContext) -> object:
+    async def compare_symbols(args: dict[str, object], ctx: Any) -> object:
         requested = _required_symbols(args)
         feed = await source.top_ranked()
         ranked = {str(row["symbol"]): row for row in feed["stocks"]}
@@ -151,11 +151,8 @@ def register_tools(
             }
         )
 
-    register_payable_tool(
-        server,
+    _register(
         "research_top_assets",
-        solvapay=solvapay,
-        product=product,
         title="Research top ranked assets",
         description=(
             "Top 5 model-ranked assets, each enriched with a business brief."
@@ -164,11 +161,8 @@ def register_tools(
         handler=research_top_assets,
         get_customer_ref=get_customer_ref,
     )
-    register_payable_tool(
-        server,
+    _register(
         "verify_catalyst_claims",
-        solvapay=solvapay,
-        product=product,
         title="Verify catalyst claims",
         description=(
             "Check each ranked catalyst against four-quarter EPS beats and misses."
@@ -177,11 +171,8 @@ def register_tools(
         handler=verify_catalyst_claims,
         get_customer_ref=get_customer_ref,
     )
-    register_payable_tool(
-        server,
+    _register(
         "detect_stale_rankings",
-        solvapay=solvapay,
-        product=product,
         title="Detect stale rankings",
         description=(
             "Flag ranked symbols with SEC filings the ranking run could not have seen."
@@ -190,11 +181,8 @@ def register_tools(
         handler=detect_stale_rankings,
         get_customer_ref=get_customer_ref,
     )
-    register_payable_tool(
-        server,
+    _register(
         "compare_symbols",
-        solvapay=solvapay,
-        product=product,
         title="Compare symbols",
         description=(
             "Side-by-side business line, EPS surprise record, and latest filings."

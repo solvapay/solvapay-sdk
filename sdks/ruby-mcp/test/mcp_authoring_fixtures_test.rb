@@ -92,6 +92,7 @@ MCP_AUTHORING_FIXTURES = [
   "gate/activation-required.json",
   "gate/handler-invoked.json",
   "gate/payment-required.json",
+  "hide-tools/app-callable-tool-invoked.json",
   "hide-tools/filter-ui-audience.json",
   "hide-tools/hidden-tool-invoked.json",
   "hide-tools/keeps-private-without-audiences.json",
@@ -313,6 +314,9 @@ class McpAuthoringFixturesTest < Minitest::Test
           resource_uri: cfg["resourceUri"] || "ui://test/view.html",
           mcp_path: cfg["mcpPath"] || "/mcp",
           oauth_paths: cfg["oauthPaths"],
+          api_base_url: cfg["apiBaseUrl"],
+          csp: cfg["csp"],
+          branding: cfg["branding"],
         )
         if fn == "mcpDispatch"
           status, headers, body = engine.call(

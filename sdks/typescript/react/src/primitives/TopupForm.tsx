@@ -33,16 +33,25 @@ import {
 import type { Stripe, StripeElements } from '@stripe/stripe-js'
 import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
+import { composeRefs } from './composeRefs'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
 import { LegalFooter } from './LegalFooter'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
+import { useStripeAppearance } from './useStripeAppearance'
 import { useTopup } from '../hooks/useTopup'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
-import { type BusinessDetailsInput, type TaxBreakdown } from '@solvapay/core'
+import {
+  isCustomerAddressComplete,
+  resolveBuyerCountry,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
+import { useCustomer } from '../hooks/useCustomer'
+import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import type { TopupFormProps } from '../types'
 import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
 import { useBusinessDetailsAttach } from '../hooks/useBusinessDetailsAttach'
@@ -106,6 +115,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     returnUrl,
     submitButtonText: _submitButtonText,
     buttonClassName: _buttonClassName,
+    appearance,
     className,
     asChild,
     children,
@@ -152,12 +162,21 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
+  const [rootEl, setRootEl] = useState<HTMLElement | null>(null)
+  const attachRoot = useCallback((node: HTMLElement | null) => {
+    if (!node) return
+    setRootEl(prev => (prev === node ? prev : node))
+  }, [])
+  const resolvedAppearance = useStripeAppearance(rootEl, appearance)
+
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: toStripeElementLocale(locale) }
-  }, [clientSecret, locale])
-
-  const Comp = asChild ? Slot : 'section'
+    return {
+      clientSecret,
+      locale: toStripeElementLocale(locale),
+      ...(resolvedAppearance ? { appearance: resolvedAppearance } : {}),
+    }
+  }, [clientSecret, locale, resolvedAppearance])
 
   const outerError = !hasAmount
     ? copy.errors.configMissingAmount
@@ -171,7 +190,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       ? 'ready'
       : 'loading'
 
-  const canMountElements = !!(stripePromise && clientSecret && elementsOptions)
+  const appearanceReady = appearance !== undefined || rootEl !== null
+  const canMountElements = !!(
+    stripePromise &&
+    clientSecret &&
+    elementsOptions &&
+    appearanceReady
+  )
 
   const businessAttach = useBusinessDetailsAttach({
     processorPaymentId,
@@ -194,27 +219,47 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     businessAttach,
   }
 
-  const shell = (
-    <Comp
-      ref={forwardedRef as React.Ref<HTMLElement>}
+  const rootRef = composeRefs(forwardedRef as React.Ref<HTMLElement>, attachRoot)
+
+  if (asChild) {
+    const slotted = (
+      <Slot
+        ref={rootRef}
+        className={className}
+        data-solvapay-topup-form=""
+        data-state={dataState}
+        {...rest}
+      >
+        {children}
+      </Slot>
+    )
+    if (canMountElements) {
+      return (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{slotted}</Inner>
+        </Elements>
+      )
+    }
+    return <OfflineInner {...innerCommon}>{slotted}</OfflineInner>
+  }
+
+  return (
+    <section
+      ref={rootRef}
       className={className}
       data-solvapay-topup-form=""
       data-state={dataState}
       {...rest}
     >
-      {children}
-    </Comp>
+      {canMountElements ? (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{children}</Inner>
+        </Elements>
+      ) : (
+        <OfflineInner {...innerCommon}>{children}</OfflineInner>
+      )}
+    </section>
   )
-
-  if (canMountElements) {
-    return (
-      <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-        <Inner {...innerCommon}>{shell}</Inner>
-      </Elements>
-    )
-  }
-
-  return <OfflineInner {...innerCommon}>{shell}</OfflineInner>
 })
 
 type InnerProps = {
@@ -269,8 +314,11 @@ const Inner: React.FC<InnerProps> = ({
   children,
 }) => {
   const stripe = useStripe()
+  const stripeAvailable = !!stripe
+  const stripeRef = useRef(stripe)
   const elements = useElements()
   const copy = useCopy()
+  const customer = useCustomer()
 
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -278,7 +326,19 @@ const Inner: React.FC<InnerProps> = ({
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
-    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    stripeRef.current = stripe
+  })
+
+  useEffect(() => {
+    const stripeApi = stripeRef.current
+    if (
+      !stripeAvailable ||
+      !stripeApi ||
+      returnResumeStarted.current ||
+      typeof window === 'undefined'
+    ) {
+      return
+    }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
     if (!returnClientSecret) return
     returnResumeStarted.current = true
@@ -287,77 +347,74 @@ const Inner: React.FC<InnerProps> = ({
     void (async () => {
       setIsProcessing(true)
       setError(null)
-
-      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
-      if (cancelled) return
-      stripPaymentIntentParams()
-
-      if (retrieved.error || !retrieved.paymentIntent) {
-        setError(copy.errors.paymentUnexpected)
-        setIsProcessing(false)
-        return
-      }
-
-      let paymentIntent = retrieved.paymentIntent
-      if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+      try {
+        const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
         if (cancelled) return
-        if (actionResult.error || !actionResult.paymentIntent) {
-          setError(copy.errors.paymentRequires3ds)
-          setIsProcessing(false)
+        stripPaymentIntentParams()
+
+        if (retrieved.error || !retrieved.paymentIntent) {
+          setError(copy.errors.paymentUnexpected)
           return
         }
-        paymentIntent = actionResult.paymentIntent
-      }
 
-      if (paymentIntent.status === 'processing') {
-        setError(copy.errors.paymentPending)
-        setIsProcessing(false)
-        return
-      }
-
-      if (paymentIntent.status !== 'succeeded') {
-        setError(copy.errors.paymentProcessingFailed)
-        setIsProcessing(false)
-        return
-      }
-
-      let creditsAdded: number | undefined
-      if (processTopupPayment) {
-        try {
-          const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
-          if (result.status === 'processing') {
-            setError(copy.errors.paymentPending)
-            setIsProcessing(false)
+        let paymentIntent = retrieved.paymentIntent
+        if (paymentIntent.status === 'requires_action') {
+          const actionResult = await stripeApi.handleNextAction({
+            clientSecret: returnClientSecret,
+          })
+          if (cancelled) return
+          if (actionResult.error || !actionResult.paymentIntent) {
+            setError(copy.errors.paymentRequires3ds)
             return
           }
-          if (result.status === 'failed' || result.status === 'cancelled') {
-            setError(copy.errors.paymentUnexpected)
-            setIsProcessing(false)
-            onError?.(new Error(`Topup ${result.status}`))
-            return
-          }
-          if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
-            creditsAdded = result.creditsAdded
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          setError(msg)
-          setIsProcessing(false)
-          onError?.(err instanceof Error ? err : new Error(msg))
+          paymentIntent = actionResult.paymentIntent
+        }
+
+        if (paymentIntent.status === 'processing') {
+          setError(copy.errors.paymentPending)
           return
         }
-      }
 
-      if (cancelled) return
-      setIsProcessing(false)
-      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+        if (paymentIntent.status !== 'succeeded') {
+          setError(copy.errors.paymentProcessingFailed)
+          return
+        }
+
+        let creditsAdded: number | undefined
+        if (processTopupPayment) {
+          try {
+            const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+            if (result.status === 'processing') {
+              setError(copy.errors.paymentPending)
+              return
+            }
+            if (result.status === 'failed' || result.status === 'cancelled') {
+              setError(copy.errors.paymentUnexpected)
+              onError?.(new Error(`Topup ${result.status}`))
+              return
+            }
+            if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
+              creditsAdded = result.creditsAdded
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            setError(msg)
+            onError?.(err instanceof Error ? err : new Error(msg))
+            return
+          }
+        }
+
+        if (cancelled) return
+        await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      } finally {
+        setIsProcessing(false)
+      }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [stripe, copy, processTopupPayment, onSuccess, onError])
+  }, [stripeAvailable, copy, processTopupPayment, onSuccess, onError])
 
   const {
     businessDetails,
@@ -378,6 +435,7 @@ const Inner: React.FC<InnerProps> = ({
     !isProcessing &&
     !!clientSecret &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
+    isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching
 
   const submit = useCallback(async () => {
@@ -401,66 +459,80 @@ const Inner: React.FC<InnerProps> = ({
     setError(null)
     setIsProcessing(true)
 
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      const msg = submitError.message || copy.errors.paymentUnexpected
-      setError(msg)
-      setIsProcessing(false)
-      onError?.(new Error(msg))
-      return
-    }
+    try {
+      const result = await confirmPayment({
+        stripe,
+        elements,
+        clientSecret,
+        returnUrl,
+        billingDetails: buildConfirmBillingDetails({
+          name: customer.name,
+          email: customer.email,
+          country: resolveBuyerCountry(businessDetails) ?? undefined,
+          state: businessDetails.customerState,
+          postalCode: businessDetails.customerPostalCode,
+        }),
+        copy,
+      })
 
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: { return_url: returnUrl },
-      redirect: 'if_required',
-    })
-
-    if (confirmError) {
-      const msg = confirmError.message || copy.errors.paymentUnexpected
-      setError(msg)
-      setIsProcessing(false)
-      onError?.(new Error(msg))
-      return
-    }
-
-    let creditsAdded: number | undefined
-    if (paymentIntent && processTopupPayment) {
-      try {
-        const result = await processTopupPayment({ paymentIntentId: paymentIntent.id })
-        if (result.status === 'processing') {
-          setError(copy.errors.paymentPending)
-          setIsProcessing(false)
-          return
+      if (
+        result.status === 'error' ||
+        result.status === 'requires_action' ||
+        result.status === 'other'
+      ) {
+        setError(result.message)
+        if (result.status === 'error') {
+          onError?.(new Error(result.message))
         }
-        if (result.status === 'failed' || result.status === 'cancelled') {
-          setError(copy.errors.paymentUnexpected)
-          setIsProcessing(false)
-          onError?.(new Error(`Topup ${result.status}`))
-          return
-        }
-        if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
-          creditsAdded = result.creditsAdded
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setError(msg)
-        setIsProcessing(false)
-        onError?.(err instanceof Error ? err : new Error(msg))
         return
       }
-    }
 
-    setIsProcessing(false)
-    if (paymentIntent) {
-      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      if (result.status === 'pending') {
+        setError(result.message)
+        return
+      }
+
+      const paymentIntent = result.paymentIntent
+
+      let creditsAdded: number | undefined
+      if (paymentIntent && processTopupPayment) {
+        try {
+          const processResult = await processTopupPayment({ paymentIntentId: paymentIntent.id })
+          if (processResult.status === 'processing') {
+            setError(copy.errors.paymentPending)
+            return
+          }
+          if (processResult.status === 'failed' || processResult.status === 'cancelled') {
+            setError(copy.errors.paymentUnexpected)
+            onError?.(new Error(`Topup ${processResult.status}`))
+            return
+          }
+          if (
+            processResult.status === 'succeeded' &&
+            typeof processResult.creditsAdded === 'number'
+          ) {
+            creditsAdded = processResult.creditsAdded
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setError(msg)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+      }
+
+      if (paymentIntent) {
+        await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      }
+    } finally {
+      setIsProcessing(false)
     }
   }, [
     stripe,
     elements,
     clientSecret,
     returnUrl,
+    customer,
     copy,
     onSuccess,
     onError,

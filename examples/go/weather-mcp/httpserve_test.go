@@ -186,6 +186,57 @@ func TestProtectedResourceDiscoveryIsReachable(t *testing.T) {
 	}
 }
 
+func TestWidgetCspIncludesApiBaseURL(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(backend.Close)
+	client, err := solvapay.NewClient(context.Background(), "sk_test", solvapay.WithBaseURL(backend.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close(context.Background()) })
+	handler, err := newHTTPHandler(client, httpServeConfig{
+		ProductRef:    "prd_demo",
+		PublicBaseURL: testPublicOrigin,
+		Source:        newFixtureSource(),
+		Hs256Secret:   fixtureHs256Secret,
+		APIBaseURL:    "https://api-dev.solvapay.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := postMCP(handler, "resources/read", map[string]any{"uri": "ui://widget.html"}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	result, _ := parsed["result"].(map[string]any)
+	contents, _ := result["contents"].([]any)
+	if len(contents) == 0 {
+		t.Fatalf("missing contents: %s", rec.Body.String())
+	}
+	item, _ := contents[0].(map[string]any)
+	meta, _ := item["_meta"].(map[string]any)
+	ui, _ := meta["ui"].(map[string]any)
+	csp, _ := ui["csp"].(map[string]any)
+	connect, _ := csp["connectDomains"].([]any)
+	found := false
+	for _, domain := range connect {
+		if domain == "https://api-dev.solvapay.com" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("connectDomains missing api-dev: %#v", connect)
+	}
+}
+
 func TestHealthAndRootRoutes(t *testing.T) {
 	handler := newTestHandler(t)
 

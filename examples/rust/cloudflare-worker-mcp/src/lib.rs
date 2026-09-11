@@ -7,6 +7,9 @@
 
 mod http;
 
+#[cfg(target_arch = "wasm32")]
+mod fetch_source;
+
 pub use http::{
     apply_browser_cors, lowercase_headers, mcp_request, preflight_response, require_binding,
     CORS_ALLOW_METHODS, CORS_DEFAULT_ALLOW_HEADERS, CORS_EXPOSE,
@@ -18,10 +21,16 @@ mod worker_entry {
 
     use std::cell::RefCell;
     use std::rc::Rc;
+    use std::sync::Arc;
 
     use solvapay::{Client, Config, FetchTransport, SharedTransport};
+    use solvapay_example_guerrillamail_mcp::session::SessionStore;
+    use solvapay_example_guerrillamail_mcp::sources::{LIVE_AJAX_URL, SharedSource};
+    use solvapay_example_guerrillamail_mcp::tools::register_tools;
     use solvapay_mcp::{McpHttpConfig, McpHttpServer};
     use worker::{event, Context, Env, Error, Request, Response, Result};
+
+    use crate::fetch_source::FetchSource;
 
     use crate::http::{
         apply_browser_cors, lowercase_headers, mcp_request, preflight_response, require_binding,
@@ -50,20 +59,21 @@ mod worker_entry {
         let api_key = binding(env, "SOLVAPAY_SECRET_KEY")?;
         let product_ref = binding(env, "SOLVAPAY_PRODUCT_REF")?;
         let public_base_url = binding(env, "MCP_PUBLIC_BASE_URL")?;
+        let api_base_url = optional_binding(env, "SOLVAPAY_API_BASE_URL");
         #[allow(clippy::arc_with_non_send_sync)]
         let transport: SharedTransport = std::sync::Arc::new(FetchTransport::new());
         let client = Client::with_transport(
             transport,
             Config {
                 api_key,
-                api_base_url: optional_binding(env, "SOLVAPAY_API_BASE_URL"),
+                api_base_url: api_base_url.clone(),
                 ..Config::default()
             },
         );
-        Ok(McpHttpServer::new(
+        let mut server = McpHttpServer::new(
             client,
             McpHttpConfig {
-                product_ref,
+                product_ref: product_ref.clone(),
                 public_base_url,
                 resource_uri: Some("ui://cloudflare-worker-mcp/mcp-app.html".to_owned()),
                 mcp_path: Some("/mcp".to_owned()),
@@ -72,8 +82,26 @@ mod worker_entry {
                 hs256_secret: None,
                 jwks_json: None,
                 hide_audiences: Some(vec!["ui".to_owned()]),
+                api_base_url,
+                csp: None,
+                branding: None,
             },
-        ))
+        );
+        #[allow(clippy::arc_with_non_send_sync)]
+        let source: SharedSource = Arc::new(FetchSource::new(LIVE_AJAX_URL));
+        register_tools(
+            &mut server,
+            &product_ref,
+            source,
+            Arc::new(SessionStore::new()),
+            js_date_now(),
+        )
+        .map_err(|err| Error::RustError(err.to_string()))?;
+        Ok(server)
+    }
+
+    fn js_date_now() -> solvapay_example_guerrillamail_mcp::clock::UnixNow {
+        Arc::new(|| Ok((js_sys::Date::now() / 1000.0) as i64))
     }
 
     fn cached_server(env: &Env) -> Result<Rc<McpHttpServer>> {

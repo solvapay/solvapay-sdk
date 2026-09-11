@@ -6,12 +6,11 @@ mod common;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
 use serde_json::{json, Value};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    McpHttpConfig, McpHttpRequest, McpHttpServer, PayableError, PayableHandler, PayableTool,
-    ResponseContext,
+    McpHttpConfig, McpHttpRequest, McpHttpServer, PayableError, PayableFuture, PayableHandler,
+    PayableTool, ResponseContext,
 };
 
 use common::mock_transport::MockTransport;
@@ -43,11 +42,14 @@ async fn engine_loop_invoke_handler_then_resume() {
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
         Box::pin(async move { ctx.respond(json!({ "echo": args }), None) })
-            as BoxFuture<'static, Result<_, PayableError>>
+            as PayableFuture<'static, Result<_, PayableError>>
     });
     host.register_payable(
         PayableTool {
@@ -119,11 +121,14 @@ async fn tools_list_includes_registered_payable_descriptor() {
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let handler: PayableHandler = Arc::new(|_args, mut ctx: ResponseContext| {
         Box::pin(async move { ctx.respond(json!({}), None) })
-            as BoxFuture<'static, Result<_, PayableError>>
+            as PayableFuture<'static, Result<_, PayableError>>
     });
     host.register_payable(
         PayableTool {
@@ -209,6 +214,9 @@ async fn tools_list_default_hides_ui_audience_keeps_intent_tools() {
             jwks_json: None,
             // No override → the host must default to hiding the `ui` audience.
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let response = host
@@ -273,6 +281,9 @@ async fn resources_read_returns_widget_html() {
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: Some("https://api-dev.solvapay.com".to_owned()),
+            csp: None,
+            branding: None,
         },
     );
     let response = host
@@ -300,6 +311,15 @@ async fn resources_read_returns_widget_html() {
     );
     assert_eq!(text, solvapay_mcp::default_mcp_app_html());
     assert!(body["result"]["contents"][0]["_meta"]["ui"]["csp"]["resourceDomains"].is_array());
+    let connect = body["result"]["contents"][0]["_meta"]["ui"]["csp"]["connectDomains"]
+        .as_array()
+        .expect("connectDomains");
+    assert!(
+        connect
+            .iter()
+            .any(|value| value.as_str() == Some("https://api-dev.solvapay.com")),
+        "{connect:?}"
+    );
 }
 
 #[tokio::test]
@@ -323,6 +343,9 @@ async fn resources_read_stamps_modern_catalog_envelope() {
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let response = host
@@ -378,6 +401,9 @@ async fn handle_mcp_unparseable_json_is_jsonrpc_not_sdk_error() {
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     let response = host

@@ -7,10 +7,10 @@ from pathlib import Path
 import httpx
 import pytest
 
+from http_market_data import HttpMarketData
 from market_data import (
     RANKED_ROW_FIELDS,
     CompanyNotFoundError,
-    HttpMarketData,
     StubMarketData,
     normalize_ranked_feed,
 )

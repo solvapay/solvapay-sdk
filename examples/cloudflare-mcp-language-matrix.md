@@ -7,8 +7,8 @@ these servers is **MCP server**.
 | Language   | Path                                                | Why                                                                                                                                                                                                                                                                              |
 | ---------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TypeScript | `examples/typescript/cloudflare-workers-mcp`        | Already shipping. `@solvapay/mcp/fetch` + isolate-scoped handler.                                                                                                                                                                                                                |
-| Rust       | `examples/rust/cloudflare-worker-mcp`               | 100% `workers-rs`. No FFI. Four host shims in `sdks/rust` / `sdks/rust-mcp` (`Date.now`, `Math.random`, `setTimeout` sleep) so the SDK no longer panics on `wasm32-unknown-unknown`. `register_payable_tool` (rmcp `ToolRouter`) stays native-only; Workers use `McpHttpServer`. |
-| Python     | `examples/python/cloudflare-workers-mcp` (**beta**) | Idiomatic `Default(WorkerEntrypoint)` + Starlette. `solvapay` is a native PyO3 `.so`, so Pyodide cannot load it. Interim `solvapay_mcp.workers` shim over `@solvapay/server-wasm`. Wheel follow-up: `docs/contributing/pyodide-emscripten-wheel.md`.                             |
+| Rust       | `examples/rust/cloudflare-worker-mcp`               | 100% `workers-rs`. No FFI. Four host shims in `sdks/rust` / `sdks/rust-mcp` (`Date.now`, `Math.random`, `setTimeout` sleep) so the SDK no longer panics on `wasm32-unknown-unknown`. `register_payable_tool` (rmcp `ToolRouter`) stays native-only; Workers use `McpHttpServer`. Payable handlers use a cfg'd `PayableFuture` so wasm tools may await `!Send` Fetch futures. Domain tools: Guerrilla Mail inbox (`examples/rust/guerrillamail-mcp`). |
+| Python     | `examples/python/cloudflare-workers-mcp` (**beta**) | Idiomatic `Default(WorkerEntrypoint)` + Starlette. `solvapay` is a native PyO3 `.so`, so Pyodide cannot load it. Interim `solvapay_mcp.workers` shim over `@solvapay/server-wasm`, including the payable `invokeHandler` loop (`workers_payable`). Domain tools: stock-research (`examples/python/stock-research-mcp`). Wheel follow-up: `docs/contributing/pyodide-emscripten-wheel.md`. |
 | Go         | `examples/cloudflare-containers`                    | `sdks/go` embeds `solvapay_core.wasm` under wazero + `wasi_snapshot_preview1`. That cannot run nested inside a TinyGo wasm guest on workerd.                                                                                                                                     |
 | Ruby       | `examples/cloudflare-containers`                    | No Workers runtime. Native Magnus gem.                                                                                                                                                                                                                                           |
 
@@ -50,10 +50,10 @@ All five goldberg Workers share the `example-deploy` harness
 | Language   | Worker                             | Public origin                            | Command                         |
 | ---------- | ---------------------------------- | ---------------------------------------- | ------------------------------- |
 | TypeScript | `solvapay-mcp-goldberg-dev`        | `https://goldberg-demo-dev.solvapay.app` | `pnpm deploy:dev` in the TS dir |
-| Rust       | `solvapay-mcp-goldberg-rust-dev`   | `https://goldberg-rust-dev.solvapay.app` | `pnpm deploy:dev`               |
-| Python     | `solvapay-mcp-goldberg-python-dev` | `https://goldberg-python-dev.solvapay.app` | `pnpm deploy:dev`             |
-| Go         | `solvapay-mcp-goldberg-go-dev`     | `https://goldberg-go-dev.solvapay.app`   | `pnpm deploy:go`                |
-| Ruby       | `solvapay-mcp-goldberg-ruby-dev`   | `https://goldberg-ruby-dev.solvapay.app` | `pnpm deploy:ruby`              |
+| Rust       | `solvapay-mcp-goldberg-rust-dev`   | `https://mcp-rust-dev.solvapay.app` | `pnpm deploy:dev`               |
+| Python     | `solvapay-mcp-goldberg-python-dev` | `https://mcp-python-dev.solvapay.app` | `pnpm deploy:dev`             |
+| Go         | `solvapay-mcp-goldberg-go-dev`     | `https://mcp-go-dev.solvapay.app`        | `pnpm deploy:go`                |
+| Ruby       | `solvapay-mcp-goldberg-ruby-dev`   | `https://mcp-ruby-dev.solvapay.app`      | `pnpm deploy:ruby`              |
 
 Backend for every row: `https://api-dev.solvapay.com`. Go and Ruby products
 must expose a `requests` meter.

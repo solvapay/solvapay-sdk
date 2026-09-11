@@ -142,8 +142,11 @@ pnpm run deploy:prod   # builds + deploys to goldberg-demo.solvapay.app
 ```
 
 After deploy, **delete and re-add** any ChatGPT Custom Connector pointing at
-this worker — ChatGPT caches `tools/list` per org/connector and won't pick
-up the ChatGPT-aware `hideToolsByAudience` bypass until the cache is busted.
+this worker — ChatGPT caches `tools/list` per org/connector. With
+`hideToolsByAudience: ['ui']` the LLM catalog stays trimmed; the iframe still
+calls transport tools that declare `_meta.ui.visibility: ["app"]`. ChatGPT's
+gateway may still require those names in its cached catalog — if iframe checkout
+fails there, leave the tools listed instead of hiding `ui`.
 Verify the top-up iframe flow end-to-end (`topup` → Stripe form mounts).
 
 `pnpm run deploy:prod` runs `example-deploy` with `--target production`,
@@ -238,7 +241,7 @@ const handler = createSolvaPayMcpFetch({
 })
 ```
 
-`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the six UI transport tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`) from `tools/list` so the LLM only sees the two intent tools — `account`, `activate_plan` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
+`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the six UI transport tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`) from `tools/list` so the LLM only sees the two intent tools — `account`, `activate_plan` — alongside your own demo tools. Those transport tools stay callable from the widget iframe via SEP-1865 `_meta.ui.visibility: ["app"]`.
 
 ## Swapping in your own tools
 

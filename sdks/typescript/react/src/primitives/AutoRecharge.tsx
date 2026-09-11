@@ -1476,36 +1476,43 @@ function CardSetupInner({ onComplete }: { onComplete: () => void | Promise<void>
     setProcessing(true)
     setError(null)
 
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      setError(submitError.message ?? 'Card authorization failed')
+    try {
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        setError(submitError.message ?? 'Card authorization failed')
+        return
+      }
+
+      const { error: confirmError } = await stripe.confirmSetup({
+        elements,
+        confirmParams: {
+          return_url: typeof window !== 'undefined' ? window.location.href : '/',
+        },
+        redirect: 'if_required',
+      })
+
+      if (confirmError) {
+        setError(confirmError.message ?? 'Card authorization failed')
+        return
+      }
+
+      await onComplete()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Card authorization failed')
+    } finally {
       setProcessing(false)
-      return
     }
-
-    const { error: confirmError } = await stripe.confirmSetup({
-      elements,
-      confirmParams: {
-        return_url: typeof window !== 'undefined' ? window.location.href : '/',
-      },
-      redirect: 'if_required',
-    })
-
-    if (confirmError) {
-      setError(confirmError.message ?? 'Card authorization failed')
-      setProcessing(false)
-      return
-    }
-
-    await onComplete()
-    setProcessing(false)
   }
 
   return (
     <form onSubmit={handleSubmit} data-solvapay-auto-recharge-setup="">
       <h4>{copy.autoRecharge.setupHeading}</h4>
       <p>{copy.autoRecharge.setupDescription}</p>
-      <StripePaymentElement options={withPaymentElementDefaults()} />
+      <StripePaymentElement
+        options={withPaymentElementDefaults({
+          fields: { billingDetails: { address: 'if_required' } },
+        })}
+      />
       {error ? (
         <p role="alert" aria-live="polite" data-solvapay-auto-recharge-setup-error="">
           {error}

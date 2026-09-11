@@ -396,81 +396,80 @@ const PaidInner: React.FC<{
     void (async () => {
       setIsProcessing(true)
       setError(null)
-
-      const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
-      if (cancelled) return
-      stripPaymentIntentParams()
-
-      if (retrieved.error || !retrieved.paymentIntent) {
-        setError(copy.errors.paymentUnexpected)
-        setIsProcessing(false)
-        return
-      }
-
-      let paymentIntent = retrieved.paymentIntent
-      if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripeApi.handleNextAction({ clientSecret: returnClientSecret })
+      try {
+        const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
         if (cancelled) return
-        if (actionResult.error || !actionResult.paymentIntent) {
-          setError(copy.errors.paymentRequires3ds)
-          setIsProcessing(false)
+        stripPaymentIntentParams()
+
+        if (retrieved.error || !retrieved.paymentIntent) {
+          setError(copy.errors.paymentUnexpected)
           return
         }
-        paymentIntent = actionResult.paymentIntent
-      }
 
-      if (paymentIntent.status === 'processing') {
-        setError(copy.errors.paymentPending)
-        setIsProcessing(false)
-        return
-      }
-
-      if (paymentIntent.status !== 'succeeded') {
-        setError(copy.errors.paymentProcessingFailed)
-        setIsProcessing(false)
-        return
-      }
-
-      const reconcileResult = await reconcilePayment({
-        paymentIntentId: paymentIntent.id,
-        productRef,
-        planRef: planRef || resolvedPlanRef || undefined,
-        processPayment,
-        refetchPurchase: refetch,
-        copy,
-      })
-
-      if (cancelled) return
-
-      if (reconcileResult.status === 'success') {
-        const r = reconcileResult.result
-        if (r && 'type' in r && r.type === 'recurring') {
-          upsertPurchase(r.purchase)
-        } else if (r && 'type' in r && r.type === 'one-time') {
-          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
-        } else {
-          try {
-            await refetch()
-          } catch (error) {
-            console.error(
-              '[PaymentForm] secondary purchase refetch failed after return-path success',
-              error,
-            )
+        let paymentIntent = retrieved.paymentIntent
+        if (paymentIntent.status === 'requires_action') {
+          const actionResult = await stripeApi.handleNextAction({
+            clientSecret: returnClientSecret,
+          })
+          if (cancelled) return
+          if (actionResult.error || !actionResult.paymentIntent) {
+            setError(copy.errors.paymentRequires3ds)
+            return
           }
+          paymentIntent = actionResult.paymentIntent
         }
-        onSuccess?.(paymentIntent)
-        onResult?.({ kind: 'paid', paymentIntent })
-        setIsProcessing(false)
-        return
-      }
 
-      const msg =
-        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
-          ? reconcileResult.error.message
-          : copy.errors.paymentProcessingFailed
-      setError(msg)
-      onError?.(reconcileResult.error)
-      setIsProcessing(false)
+        if (paymentIntent.status === 'processing') {
+          setError(copy.errors.paymentPending)
+          return
+        }
+
+        if (paymentIntent.status !== 'succeeded') {
+          setError(copy.errors.paymentProcessingFailed)
+          return
+        }
+
+        const reconcileResult = await reconcilePayment({
+          paymentIntentId: paymentIntent.id,
+          productRef,
+          planRef: planRef || resolvedPlanRef || undefined,
+          processPayment,
+          refetchPurchase: refetch,
+          copy,
+        })
+
+        if (cancelled) return
+
+        if (reconcileResult.status === 'success') {
+          const r = reconcileResult.result
+          if (r && 'type' in r && r.type === 'recurring') {
+            upsertPurchase(r.purchase)
+          } else if (r && 'type' in r && r.type === 'one-time') {
+            upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
+          } else {
+            try {
+              await refetch()
+            } catch (error) {
+              console.error(
+                '[PaymentForm] secondary purchase refetch failed after return-path success',
+                error,
+              )
+            }
+          }
+          onSuccess?.(paymentIntent)
+          onResult?.({ kind: 'paid', paymentIntent })
+          return
+        }
+
+        const msg =
+          reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
+            ? reconcileResult.error.message
+            : copy.errors.paymentProcessingFailed
+        setError(msg)
+        onError?.(reconcileResult.error)
+      } finally {
+        setIsProcessing(false)
+      }
     })()
 
     return () => {

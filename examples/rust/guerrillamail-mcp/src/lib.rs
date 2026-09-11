@@ -16,6 +16,7 @@ use crate::tools::{register_tools, TOOL_INBOX_OPEN};
 pub mod clock;
 pub mod error;
 pub mod format;
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub mod http;
 pub mod session;
 pub mod sources;
@@ -112,6 +113,9 @@ pub fn build_host(
             hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
             jwks_json: None,
             hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
         },
     );
     register_tools(&mut host, product, source, store, now)?;

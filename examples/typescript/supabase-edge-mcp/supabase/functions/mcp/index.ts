@@ -95,8 +95,9 @@ const handler = createSolvaPayMcpFetch({
   // Kept explicit rather than relying on the default: Supabase Edge cannot
   // hold a stream, so single-JSON responses are load-bearing here.
   responseMode: 'json',
-  // Trim the LLM catalog to the four intent tools. Hidden tools are
-  // also rejected on tools/call — a User-Agent does not restore them.
+  // Trim the LLM catalog to the intent tools. Widget transport tools
+  // stay callable via `_meta.ui.visibility: ["app"]`. A User-Agent
+  // does not restore hidden catalog entries.
   hideToolsByAudience: ['ui'],
   onerror: error => {
     console.error('[supabase-edge-mcp] MCP handler error', error)

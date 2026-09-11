@@ -77,6 +77,7 @@ func main() {
 		handler, err := newHTTPHandler(client, httpServeConfig{
 			ProductRef:    product,
 			PublicBaseURL: public,
+			APIBaseURL:    apiBaseURL(),
 			Source:        source,
 		})
 		if err != nil {
@@ -107,11 +108,7 @@ func requireLiveClient(ctx context.Context) (*solvapay.Client, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	base := strings.TrimSpace(os.Getenv("SOLVAPAY_API_BASE_URL"))
-	if base == "" {
-		base = "http://localhost:3010"
-	}
-	opts := []solvapay.Option{solvapay.WithBaseURL(base)}
+	opts := []solvapay.Option{solvapay.WithBaseURL(apiBaseURL())}
 	client, err := solvapay.NewClient(ctx, key, opts...)
 	if err != nil {
 		return nil, "", err
@@ -125,6 +122,10 @@ func requireEnv(name string) (string, error) {
 		return "", fmt.Errorf("%s is required", name)
 	}
 	return value, nil
+}
+
+func apiBaseURL() string {
+	return envOr("SOLVAPAY_API_BASE_URL", "http://localhost:3010")
 }
 
 func envOr(name, fallback string) string {

@@ -80,6 +80,7 @@ release chore, not a one-off.
 ## Delete list when the wheel works
 
 - `sdks/python-mcp/python/solvapay_mcp/workers.py`
+- `sdks/python-mcp/python/solvapay_mcp/workers_payable.py`
 - `sdks/python-mcp/tests/test_workers_parity.py`
 - The example's `@solvapay/server-wasm` FFI and `WasmApiClient`
 - Restore `create_solvapay_mcp_server` + `create_mcp_oauth_starlette` +

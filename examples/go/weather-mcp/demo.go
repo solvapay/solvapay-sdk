@@ -65,6 +65,7 @@ func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
 			return "cus_demo", nil
 		},
 		fixtureHs256Secret,
+		"",
 	)
 	if err != nil {
 		return nil, err

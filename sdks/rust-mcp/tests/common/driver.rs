@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
@@ -12,7 +11,7 @@ use rmcp::{ErrorData, ServerHandler, ServiceExt};
 use serde_json::{json, Map, Value};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    register_payable_tool, GetCustomerRef, PayableError, PayableHandler, PayableTool,
+    register_payable_tool, GetCustomerRef, PayableError, PayableFuture, PayableHandler, PayableTool,
     ResponseContext,
 };
 
@@ -79,7 +78,7 @@ fn compile_handler(spec: HandlerSpec) -> PayableHandler {
                     ctx.respond(data, options)
                 }
             }
-        }) as BoxFuture<'static, Result<_, _>>
+        }) as PayableFuture<'static, Result<_, _>>
     })
 }
 

@@ -89,6 +89,7 @@ var mcpAuthoringFixtures = []string{
 	"gate/activation-required.json",
 	"gate/handler-invoked.json",
 	"gate/payment-required.json",
+	"hide-tools/app-callable-tool-invoked.json",
 	"hide-tools/filter-ui-audience.json",
 	"hide-tools/hidden-tool-invoked.json",
 	"hide-tools/keeps-private-without-audiences.json",

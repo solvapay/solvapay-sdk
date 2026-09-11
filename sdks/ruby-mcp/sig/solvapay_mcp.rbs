@@ -7,7 +7,16 @@ module SolvaPay
     MCP_APP_HTML_PATH: String
 
     def self.default_mcp_app_html: () -> String
-    def self.widget_html_rpc: (untyped rpc, String resource_uri, String public_base_url, String product_ref, ?Array[String]? views) -> Hash[String, untyped]?
+    def self.widget_html_rpc: (
+      untyped rpc,
+      String resource_uri,
+      String public_base_url,
+      String product_ref,
+      ?Array[String]? views,
+      ?csp: Hash[String, untyped]?,
+      ?api_base_url: String?,
+      ?branding: Hash[String, untyped]?
+    ) -> Hash[String, untyped]?
 
     module Core
       def self.call: (String opcode, untyped args) -> untyped
@@ -56,7 +65,10 @@ module SolvaPay
         ?oauth_paths: Hash[String, untyped]?,
         ?hs256_secret: String?,
         ?jwks_json: untyped,
-        ?hide_audiences: Array[String]?
+        ?hide_audiences: Array[String]?,
+        ?api_base_url: String?,
+        ?csp: Hash[String, untyped]?,
+        ?branding: Hash[String, untyped]?
       ) -> void
       def register_payable: (
         String name,

@@ -47,6 +47,13 @@ func postMCP(handler http.Handler, method string, params any, headers map[string
 			}
 		}
 	}
+	if method == "resources/read" {
+		if m, ok := params.(map[string]any); ok {
+			if uri, _ := m["uri"].(string); uri != "" {
+				req.Header.Set("Mcp-Name", uri)
+			}
+		}
+	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

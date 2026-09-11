@@ -77,17 +77,16 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
   serverVersion?: string
   /**
    * Hide tools whose `_meta.audience` matches one of these values
-   * from `tools/list`, and reject `tools/call` for those tools with
-   * JSON-RPC `-32601`. Pass `['ui']` to keep the LLM-facing
-   * catalogue to the four intent tools (`upgrade` /
-   * `manage_account` / `activate_plan` / `topup`) plus your own
-   * merchant-registered data tools.
+   * from `tools/list`. Pass `['ui']` to keep the LLM-facing
+   * catalogue to the intent tools (`account` / `activate_plan`)
+   * plus your own merchant-registered data tools.
    *
-   * Hidden tools are not invocable. A spoofable `User-Agent` (or
-   * `clientInfo.name`) does not restore them. MCP Apps hosts that
-   * need iframe-only transport tools should rely on SEP-1865
-   * `_meta.ui.visibility: ["app"]` rather than listing those tools
-   * to every client.
+   * Tools that declare SEP-1865 `_meta.ui.visibility: ["app"]` or
+   * `openai/widgetAccessible: true` stay invocable from the widget
+   * iframe even when hidden from the catalog. Other hidden tools
+   * are rejected on `tools/call` with JSON-RPC `-32601`. A spoofable
+   * `User-Agent` (or `clientInfo.name`) does not restore a hidden
+   * catalog entry.
    */
   hideToolsByAudience?: HideToolsByAudienceConfig
 }

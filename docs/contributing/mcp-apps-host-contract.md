@@ -106,7 +106,7 @@ server.server.oninitialized = () => {
 
 The Python SDK ships this as `client_supports_apps(ctx)`, Ruby as `MCP::Apps.client_supports?`. The logic is a lookup in `capabilities.extensions` plus a MIME-type check.
 
-We do none of it — `hideToolsByAudience.ts:110-141` matches `/openai-mcp/i` against the user agent or client name instead, which is why `mastercard-mcp-demo` needs a hand-ported `bypassWhen` for Claude.ai web. Two constraints when this is picked up: the ChatGPT user-agent bypass must stay (ChatGPT uses its own Apps SDK and may not advertise the extension, so this is an addition, not a swap), and client capabilities must be verified reachable under `responseMode: 'json'` before anything is built on them.
+We currently hide UI transport tools from `tools/list` via `hideAudiences: ["ui"]` (or TypeScript `hideToolsByAudience: ['ui']`). Those tools stay callable from the MCP App iframe because they declare SEP-1865 `_meta.ui.visibility: ["app"]`. A User-Agent must not restore the catalog. Capability-based registration (`getUiCapability`) is still the follow-up: ChatGPT's Apps SDK may not advertise the extension, so listing vs hiding for that host is a separate product decision, not a spoofable header check.
 
 **Deliberately out of scope for DEV-867.** Text-first narration must land regardless of what any host advertises; capability detection is an optimisation on top of a floor that has to work anyway.
 

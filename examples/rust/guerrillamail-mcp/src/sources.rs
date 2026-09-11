@@ -1,11 +1,12 @@
 //! Guerrilla Mail upstream: fixture replay and live HTTP.
 
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use std::time::Duration;
-
-use futures::future::BoxFuture;
 use serde_json::Value;
 
 use crate::error::ExampleError;
@@ -49,10 +50,24 @@ impl SourceResponse {
     }
 }
 
+/// Boxed Guerrilla Mail call future.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+/// Boxed Guerrilla Mail call future on wasm (`!Send`).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub type SourceFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+
 /// Injectable Guerrilla Mail client.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub trait Source: Send + Sync {
     /// Invoke one API function.
-    fn call(&self, request: SourceRequest) -> BoxFuture<'_, Result<SourceResponse, ExampleError>>;
+    fn call(&self, request: SourceRequest) -> SourceFuture<'_, Result<SourceResponse, ExampleError>>;
+}
+/// Injectable Guerrilla Mail client on wasm (isolate-local).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub trait Source {
+    /// Invoke one API function.
+    fn call(&self, request: SourceRequest) -> SourceFuture<'_, Result<SourceResponse, ExampleError>>;
 }
 
 /// Offline source that serves recorded JSON from `fixtures/`.
@@ -67,6 +82,7 @@ pub struct FixtureSource {
 
 impl FixtureSource {
     /// Load `{function}.json` from `dir`.
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
     #[must_use]
     pub fn from_dir(dir: impl Into<PathBuf>) -> Self {
         Self {
@@ -133,7 +149,7 @@ impl FixtureSource {
 }
 
 impl Source for FixtureSource {
-    fn call(&self, request: SourceRequest) -> BoxFuture<'_, Result<SourceResponse, ExampleError>> {
+    fn call(&self, request: SourceRequest) -> SourceFuture<'_, Result<SourceResponse, ExampleError>> {
         Box::pin(async move {
             let recorded = with_required_params(request);
             {
@@ -150,6 +166,7 @@ impl Source for FixtureSource {
 }
 
 /// Live HTTP source. Tests drive this through wiremock, never guerrillamail.com.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub struct LiveSource {
     /// Ajax endpoint (`https://api.guerrillamail.com/ajax.php` or wiremock).
     base_url: String,
@@ -157,6 +174,7 @@ pub struct LiveSource {
     client: reqwest::Client,
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 impl LiveSource {
     /// Talk to the confirmed HTTPS ajax endpoint.
     ///
@@ -196,8 +214,9 @@ impl LiveSource {
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 impl Source for LiveSource {
-    fn call(&self, request: SourceRequest) -> BoxFuture<'_, Result<SourceResponse, ExampleError>> {
+    fn call(&self, request: SourceRequest) -> SourceFuture<'_, Result<SourceResponse, ExampleError>> {
         Box::pin(async move {
             let pairs = Self::query_pairs(&request);
             let response = self

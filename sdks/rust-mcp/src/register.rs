@@ -1,10 +1,11 @@
 //! `register_payable_tool` and the payable decision sequence.
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use futures::future::BoxFuture;
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use rmcp::handler::server::router::tool::{ToolRoute, ToolRouter};
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
@@ -67,15 +68,34 @@ pub struct PayableTool {
     pub usage_type: Option<String>,
 }
 
+/// Boxed future returned by a payable handler.
+///
+/// Native targets require `Send` (tokio); `wasm32-unknown-unknown` futures are `!Send`.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+pub type PayableFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+/// Boxed future returned by a payable handler on wasm (`!Send`).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub type PayableFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+
 /// Merchant handler.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub type PayableHandler = Arc<
-    dyn Fn(JsonObject, ResponseContext) -> BoxFuture<'static, Result<PayableResponse, PayableError>>
+    dyn Fn(JsonObject, ResponseContext) -> PayableFuture<'static, Result<PayableResponse, PayableError>>
         + Send
         + Sync,
 >;
+/// Merchant handler on wasm (isolate-local, `!Send`).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub type PayableHandler = Arc<
+    dyn Fn(JsonObject, ResponseContext) -> PayableFuture<'static, Result<PayableResponse, PayableError>>,
+>;
 
 /// Optional customer-ref hook.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub type GetCustomerRef = Arc<dyn Fn(&JsonObject) -> Result<String, PayableError> + Send + Sync>;
+/// Optional customer-ref hook on wasm (`!Send`).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+pub type GetCustomerRef = Arc<dyn Fn(&JsonObject) -> Result<String, PayableError>>;
 
 /// Register a paywalled tool on an rmcp [`ToolRouter`].
 ///

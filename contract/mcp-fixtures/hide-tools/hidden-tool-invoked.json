@@ -9,7 +9,7 @@
         "id": 3,
         "method": "tools/call",
         "params": {
-          "name": "create_payment_intent",
+          "name": "debug_flush",
           "arguments": {}
         }
       },
@@ -19,6 +19,14 @@
         "resourceUri": "ui://test/view.html",
         "hideAudiences": [
           "ui"
+        ],
+        "payableTools": [
+          {
+            "name": "debug_flush",
+            "_meta": {
+              "audience": "ui"
+            }
+          }
         ],
         "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
         "nowUnixSecs": 1700000000
@@ -34,7 +42,7 @@
         "id": 3,
         "error": {
           "code": -32601,
-          "message": "Method not found: create_payment_intent"
+          "message": "Method not found: debug_flush"
         }
       }
     }

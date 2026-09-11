@@ -18,10 +18,10 @@ pub struct HideToolsInput {
 
 /// True when the tool's audience is one of `audiences`.
 ///
-/// `_meta["openai/visibility"] = "private"` marks a tool as app-only and counts
-/// as the `ui` audience even when `_meta.audience` is absent. It is never a hide
-/// signal on its own: app-only transport tools must stay in `tools/list` so the
-/// widget can call them, and the host is what excludes them from the model's list.
+/// `_meta["openai/visibility"] = "private"` is treated as the `ui` audience
+/// when `_meta.audience` is absent, so hiding `ui` also drops private tools
+/// from `tools/list`. That is a catalog filter only — see [`is_app_callable`]
+/// for whether a hidden tool may still be invoked.
 #[must_use]
 pub fn is_hidden_by_audience(tool: &Value, audiences: &[String]) -> bool {
     if audiences.is_empty() {
@@ -43,6 +43,21 @@ pub fn is_hidden_by_audience(tool: &Value, audiences: &[String]) -> bool {
             }
         });
     audiences.iter().any(|hidden| hidden == audience)
+}
+
+/// True when a tool declares itself callable from the MCP App iframe.
+/// SEP-1865 `_meta.ui.visibility` is primary; `openai/widgetAccessible`
+/// is the ChatGPT Apps SDK equivalent.
+#[must_use]
+pub fn is_app_callable(tool: &Value) -> bool {
+    let Some(meta) = tool.get("_meta") else {
+        return false;
+    };
+    let visibility_app = meta
+        .pointer("/ui/visibility")
+        .and_then(Value::as_array)
+        .is_some_and(|items| items.iter().any(|v| v.as_str() == Some("app")));
+    visibility_app || meta.get("openai/widgetAccessible") == Some(&Value::Bool(true))
 }
 
 /// Filter tools by `_meta.audience`. User-Agent is not a hide signal.

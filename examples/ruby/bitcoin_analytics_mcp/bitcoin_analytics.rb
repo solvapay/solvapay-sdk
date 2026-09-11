@@ -57,11 +57,12 @@ module BitcoinAnalytics
     server
   end
 
-  def build_http_app(client:, product_ref:, public_base_url:, source:)
+  def build_http_app(client:, product_ref:, public_base_url:, source:, api_base_url: nil)
     engine = SolvaPay::Mcp::Engine.new(
       client: client,
       product_ref: product_ref,
       public_base_url: public_base_url,
+      api_base_url: api_base_url,
     )
     Tools.register_engine(engine, product: product_ref, source: source)
     Cors.wrap(engine)

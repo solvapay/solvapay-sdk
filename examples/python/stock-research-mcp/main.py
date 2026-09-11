@@ -20,7 +20,8 @@ from http_serve import (
     mcp_bind_host,
     mcp_listen_port,
 )
-from market_data import HttpMarketData, MarketDataSource
+from http_market_data import HttpMarketData
+from market_data import MarketDataSource
 from tools import register_tools
 
 DEFAULT_PRODUCT = "prd_demo"

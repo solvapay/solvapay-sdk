@@ -78,6 +78,8 @@ const stripeMocks = vi.hoisted(() => ({
   submit: vi.fn(),
 }))
 
+const lastPaymentElementOptions: { current: unknown } = { current: undefined }
+
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="stripe-elements">{children}</div>
@@ -87,7 +89,10 @@ vi.mock('@stripe/react-stripe-js', () => ({
     retrieveSetupIntent: stripeMocks.retrieveSetupIntent,
   }),
   useElements: () => ({ submit: stripeMocks.submit }),
-  PaymentElement: () => <div data-testid="payment-element" />,
+  PaymentElement: (props: { options?: unknown }) => {
+    lastPaymentElementOptions.current = props.options
+    return <div data-testid="payment-element" />
+  },
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
@@ -172,6 +177,7 @@ beforeEach(() => {
   balanceMocks.displayExchangeRate = 1
   balanceMocks.displayCurrency = 'USD'
   stripeMocks.confirmSetup.mockReset().mockResolvedValue({ error: undefined })
+  lastPaymentElementOptions.current = undefined
   stripeMocks.retrieveSetupIntent.mockReset().mockResolvedValue({
     setupIntent: { status: 'succeeded' },
   })
@@ -675,5 +681,40 @@ describe('AutoRecharge card setup confirmation (DEV-581)', () => {
       expect(screen.getByText(enCopy.autoRecharge.setupAuthFailed)).toBeInTheDocument()
     })
     expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it('asks Stripe to collect a billing address if required', async () => {
+    saveReturnsSetupIntent()
+    renderAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await waitFor(() => expect(screen.getByTestId('payment-element')).toBeInTheDocument())
+    expect(lastPaymentElementOptions.current).toEqual(
+      expect.objectContaining({
+        fields: expect.objectContaining({
+          billingDetails: expect.objectContaining({ address: 'if_required' }),
+        }),
+      }),
+    )
+  })
+
+  it('leaves the setup button idle and renders the error when confirmSetup rejects', async () => {
+    saveReturnsSetupIntent()
+    stripeMocks.confirmSetup.mockRejectedValue(new Error('Missing billing address'))
+
+    renderAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: enCopy.autoRecharge.setupSubmit }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toMatch(/Missing billing address/)
+    })
+    const submit = screen.getByRole('button', { name: enCopy.autoRecharge.setupSubmit })
+    expect(submit).not.toBeDisabled()
   })
 })

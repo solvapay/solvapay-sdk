@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
 use rmcp::handler::server::router::tool::ToolRouter;
 use serde_json::json;
 use solvapay::transport::transport::{BoxFuture as TransportFuture, Transport};
@@ -11,7 +10,8 @@ use solvapay::transport::{HttpRequest, HttpResponse};
 use solvapay::SdkError;
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    register_payable_tool, PayableError, PayableHandler, PayableTool, ResponseContext,
+    register_payable_tool, PayableError, PayableFuture, PayableHandler, PayableTool,
+    ResponseContext,
 };
 
 struct Exhausted;
@@ -34,7 +34,7 @@ fn register_payable_tool_and_response_context_surface() {
     let mut router = ToolRouter::<()>::new();
     let handler: PayableHandler = Arc::new(|_, mut ctx: ResponseContext| {
         Box::pin(async move { ctx.respond(json!({ "ok": true }), None) })
-            as BoxFuture<'static, Result<_, PayableError>>
+            as PayableFuture<'static, Result<_, PayableError>>
     });
     register_payable_tool(
         &mut router,

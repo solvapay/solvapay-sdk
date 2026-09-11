@@ -259,6 +259,18 @@ describe('TopupForm primitive', () => {
     ).toThrow(MissingProviderError)
     spy.mockRestore()
   })
+
+  it('does not spread the appearance prop onto the DOM root', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000} appearance={{ theme: 'stripe' }} data-testid="root">
+          <TopupForm.SubmitButton />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+    const root = screen.getByTestId('root')
+    expect(root.getAttribute('appearance')).toBeNull()
+  })
 })
 
 // ---------- PaymentElement default options (Stripe Link disabled) ----------
@@ -280,6 +292,105 @@ describe('TopupForm primitive', () => {
 // fully credited.
 
 describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
+  it('keeps submit disabled until a buyer country is chosen', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+
+    expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('disabled')
+    expect(screen.getByTestId('submit')).toBeDisabled()
+
+    await selectBuyerCountry()
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+  })
+
+  it('passes billing_details.address.country on confirm once a country is chosen', async () => {
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
+          <TopupForm.SubmitButton data-testid="submit" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await selectBuyerCountry()
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => expect(stripeMocks.confirmPayment).toHaveBeenCalled())
+    const confirmArg = stripeMocks.confirmPayment.mock.calls[0]?.[0] as {
+      confirmParams?: {
+        payment_method_data?: { billing_details?: { address?: { country?: string } } }
+      }
+    }
+    expect(confirmArg.confirmParams?.payment_method_data?.billing_details?.address?.country).toBe(
+      'SE',
+    )
+  })
+
+  it('returns the submit button to idle and renders the error when confirm rejects', async () => {
+    stripeMocks.confirmPayment.mockRejectedValue(new Error('Missing billing address'))
+
+    render(
+      <Wrap value={ctx()}>
+        <TopupForm.Root amount={1000}>
+          <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
+          <TopupForm.SubmitButton data-testid="submit" />
+          <TopupForm.Error data-testid="error" />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('payment-element'))
+    })
+    await selectBuyerCountry()
+    await waitFor(() =>
+      expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('submit'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error').textContent).toMatch(/Missing billing address/)
+    })
+    expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle')
+  })
+
   it('awaits processTopupPayment before firing onSuccess', async () => {
     const onSuccess = vi.fn()
     const processTopupPayment = vi.fn().mockResolvedValue({ status: 'succeeded' })

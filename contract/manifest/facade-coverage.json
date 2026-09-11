@@ -868,8 +868,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -1385,8 +1384,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -2104,8 +2102,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -2235,8 +2232,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -2621,8 +2617,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -2790,8 +2785,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -4598,8 +4592,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -6698,8 +6691,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true
@@ -6822,8 +6814,7 @@
         "exposed": true
       },
       "python-mcp": {
-        "exposed": false,
-        "reason": "mcp-only facade; this op is exposed on the language SDK, not the MCP package"
+        "exposed": true
       },
       "ruby": {
         "exposed": true

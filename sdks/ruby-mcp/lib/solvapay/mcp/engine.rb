@@ -8,7 +8,8 @@ module SolvaPay
     # Rack adapter: OAuth via mcp_oauth_request, /mcp via mcp_dispatch.
     class Engine
       def initialize(client:, product_ref:, public_base_url:, resource_uri: "ui://widget.html", mcp_path: "/mcp",
-                     views: nil, oauth_paths: nil, hs256_secret: nil, jwks_json: nil, hide_audiences: nil)
+                     views: nil, oauth_paths: nil, hs256_secret: nil, jwks_json: nil, hide_audiences: nil,
+                     api_base_url: nil, csp: nil, branding: nil)
         raise ArgumentError, "client is required" if client.nil?
         raise ArgumentError, "product_ref is required" if product_ref.nil? || product_ref.empty?
         raise ArgumentError, "public_base_url is required" if public_base_url.nil? || public_base_url.empty?
@@ -25,6 +26,9 @@ module SolvaPay
         @jwks_json = jwks_json
         # Match Go/Rust: omit or empty means hide the `ui` audience.
         @hide_audiences = hide_audiences.nil? || hide_audiences.empty? ? ["ui"] : hide_audiences
+        @api_base_url = api_base_url
+        @csp = csp
+        @branding = branding
         @payables = {} #: Hash[String, untyped]
         @mutex = Mutex.new
       end
@@ -81,7 +85,16 @@ module SolvaPay
         rpc = nil
         begin
           rpc = JSON.parse(read_body(env))
-          html = SolvaPay::Mcp.widget_html_rpc(rpc, @resource_uri, @public_base_url, @product_ref, @views)
+          html = SolvaPay::Mcp.widget_html_rpc(
+            rpc,
+            @resource_uri,
+            @public_base_url,
+            @product_ref,
+            @views,
+            csp: @csp,
+            api_base_url: @api_base_url,
+            branding: @branding,
+          )
           return json_response(200, html) unless html.nil?
 
           payable_tools = @mutex.synchronize { payable_tool_specs }
@@ -100,6 +113,9 @@ module SolvaPay
           }
           params["config"]["hs256Secret"] = @hs256_secret unless @hs256_secret.nil? || @hs256_secret.empty?
           params["config"]["jwksJson"] = @jwks_json unless @jwks_json.nil?
+          params["config"]["apiBaseUrl"] = @api_base_url unless @api_base_url.nil? || @api_base_url.to_s.empty?
+          params["config"]["csp"] = @csp unless @csp.nil?
+          params["config"]["branding"] = @branding unless @branding.nil?
           auth = env["HTTP_AUTHORIZATION"]
           params["authHeader"] = auth unless auth.nil? || auth.empty?
           proto = env["HTTP_MCP_PROTOCOL_VERSION"]

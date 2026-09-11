@@ -7,7 +7,7 @@ const config = {
   wranglerEnv: 'dev',
   workerName: 'solvapay-mcp-goldberg-python-dev',
   dotEnvFile: '.env.dev',
-  expectedPublicBaseUrl: 'https://goldberg-python-dev.solvapay.app',
+  expectedPublicBaseUrl: 'https://mcp-python-dev.solvapay.app',
   requiredVars: [],
   overridableVars: ['SOLVAPAY_PRODUCT_REF', 'MCP_PUBLIC_BASE_URL', 'SOLVAPAY_API_BASE_URL'],
   label: 'python',
@@ -45,7 +45,7 @@ describe('runDeploy', () => {
         [
           'SOLVAPAY_SECRET_KEY=sk_test_abc',
           'SOLVAPAY_PRODUCT_REF=prd_abc',
-          'MCP_PUBLIC_BASE_URL=https://goldberg-python-dev.solvapay.app',
+          'MCP_PUBLIC_BASE_URL=https://mcp-python-dev.solvapay.app',
           'SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com',
         ].join('\n'),
       spawn: () => ({ status: 0 }),
@@ -60,7 +60,7 @@ describe('runDeploy', () => {
       '--var',
       'SOLVAPAY_PRODUCT_REF:prd_abc',
       '--var',
-      'MCP_PUBLIC_BASE_URL:https://goldberg-python-dev.solvapay.app',
+      'MCP_PUBLIC_BASE_URL:https://mcp-python-dev.solvapay.app',
       '--var',
       'SOLVAPAY_API_BASE_URL:https://api-dev.solvapay.com',
     ])

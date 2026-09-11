@@ -119,9 +119,9 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
     apiBaseUrl,
     responseMode: 'json',
-    // Hide UI-only transport tools from tools/list and reject them on
-    // tools/call. The LLM catalogue stays the four intent tools plus
-    // this worker's generated tools.
+    // Hide UI-only transport tools from tools/list. They stay callable
+    // from the widget iframe. The LLM catalogue stays the intent tools
+    // plus this worker's generated tools.
     hideToolsByAudience: ['ui'],
     additionalTools: ctx => registerTools(ctx, env),
   })

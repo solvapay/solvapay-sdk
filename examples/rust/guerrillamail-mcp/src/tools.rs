@@ -2,9 +2,8 @@
 
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
 use serde_json::{json, Map, Value};
-use solvapay_mcp::{PayableError, PayableHandler, PayableTool, ResponseContext};
+use solvapay_mcp::{PayableError, PayableFuture, PayableHandler, PayableTool, ResponseContext};
 
 use crate::clock::UnixNow;
 use crate::error::ExampleError;
@@ -178,7 +177,7 @@ fn inbox_open_handler(
                 }),
                 None,
             )
-        }) as BoxFuture<'static, Result<_, PayableError>>
+        }) as PayableFuture<'static, Result<_, PayableError>>
     })
 }
 
@@ -235,7 +234,7 @@ fn inbox_list_handler(source: SharedSource, store: Arc<SessionStore>) -> Payable
                 }),
                 None,
             )
-        }) as BoxFuture<'static, Result<_, PayableError>>
+        }) as PayableFuture<'static, Result<_, PayableError>>
     })
 }
 
@@ -271,7 +270,7 @@ fn message_read_handler(source: SharedSource, store: Arc<SessionStore>) -> Payab
                 }),
                 None,
             )
-        }) as BoxFuture<'static, Result<_, PayableError>>
+        }) as PayableFuture<'static, Result<_, PayableError>>
     })
 }
 
@@ -295,7 +294,7 @@ fn message_delete_handler(source: SharedSource, store: Arc<SessionStore>) -> Pay
                 }),
                 None,
             )
-        }) as BoxFuture<'static, Result<_, PayableError>>
+        }) as PayableFuture<'static, Result<_, PayableError>>
     })
 }
 
@@ -341,7 +340,7 @@ fn inbox_extend_handler(
                 }),
                 None,
             )
-        }) as BoxFuture<'static, Result<_, PayableError>>
+        }) as PayableFuture<'static, Result<_, PayableError>>
     })
 }
 

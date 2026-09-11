@@ -3,6 +3,15 @@
   "main": "src/worker.py",
   "compatibility_date": "2026-04-26",
   "compatibility_flags": ["python_workers"],
+  "find_additional_modules": true,
+  "preserve_file_names": true,
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.js"],
+      "fallthrough": true
+    }
+  ],
   "vars": {
     "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",
     "MCP_PUBLIC_BASE_URL": "https://your-worker.example.com"
@@ -14,15 +23,24 @@
     "dev": {
       "name": "solvapay-mcp-goldberg-python-dev",
       "compatibility_flags": ["python_workers"],
+      "find_additional_modules": true,
+      "preserve_file_names": true,
+      "rules": [
+        {
+          "type": "ESModule",
+          "globs": ["**/*.js"],
+          "fallthrough": true
+        }
+      ],
       "routes": [
         {
-          "pattern": "goldberg-python-dev.solvapay.app",
+          "pattern": "mcp-python-dev.solvapay.app",
           "custom_domain": true
         }
       ],
       "vars": {
         "SOLVAPAY_PRODUCT_REF": "prd_replace_me",
-        "MCP_PUBLIC_BASE_URL": "https://goldberg-python-dev.solvapay.app",
+        "MCP_PUBLIC_BASE_URL": "https://mcp-python-dev.solvapay.app",
         "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
       },
       "observability": {

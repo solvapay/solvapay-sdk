@@ -49,7 +49,9 @@ pub use descriptors::{
     append_paid_tool_description, mcp_descriptors, union_payable_output_schema, McpDescriptors,
     McpDescriptorsInput, McpToolDescriptor,
 };
-pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
+pub use hide_tools::{
+    is_app_callable, is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput,
+};
 pub use narrate::{
     mcp_narrate, narrate_activate_plan_status, narrate_already_active, narrated_tool_result,
     new_widget_session_id, parse_mode, tool_error_result, tool_result, ui_placeholder,

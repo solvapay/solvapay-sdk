@@ -343,6 +343,15 @@ func (s *Server) dispatch(ctx context.Context, rpc any, req *mcpsdk.CallToolRequ
 	if len(s.cfg.HideAudiences) > 0 {
 		asMap(params["config"])["hideAudiences"] = s.cfg.HideAudiences
 	}
+	if s.cfg.APIBaseURL != "" {
+		asMap(params["config"])["apiBaseUrl"] = s.cfg.APIBaseURL
+	}
+	if s.cfg.CSP != nil {
+		asMap(params["config"])["csp"] = s.cfg.CSP
+	}
+	if s.cfg.Branding != nil {
+		asMap(params["config"])["branding"] = s.cfg.Branding
+	}
 	if s.cfg.Hs256Secret != "" {
 		asMap(params["config"])["hs256Secret"] = s.cfg.Hs256Secret
 	}

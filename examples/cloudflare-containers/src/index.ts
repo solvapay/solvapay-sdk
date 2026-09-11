@@ -27,14 +27,14 @@ export class WeatherMcp extends Container<Env> {
   defaultPort = 3030
   sleepAfter = '10m'
 
-  override envVars = forwardedEnv(this.env)
+  override envVars = { ...forwardedEnv(this.env), WEATHER_MCP_SOURCE: 'live' }
 }
 
 export class BitcoinMcp extends Container<Env> {
   defaultPort = 3030
   sleepAfter = '10m'
 
-  override envVars = forwardedEnv(this.env)
+  override envVars = { ...forwardedEnv(this.env), MCP_SOURCE: 'live' }
 }
 
 export interface WorkerEnv extends Env {

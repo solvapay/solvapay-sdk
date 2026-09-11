@@ -51,6 +51,7 @@ files = [
   "python/solvapay_mcp/asgi",
   "python/solvapay_mcp/server",
   "python/solvapay_mcp/workers.py",
+  "python/solvapay_mcp/workers_payable.py",
 ]
 warn_unused_ignores = true
 mypy_path = "python"

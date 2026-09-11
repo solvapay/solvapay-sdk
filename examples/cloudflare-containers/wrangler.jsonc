@@ -27,13 +27,13 @@
       "name": "solvapay-mcp-goldberg-go-dev",
       "routes": [
         {
-          "pattern": "goldberg-go-dev.solvapay.app",
+          "pattern": "mcp-go-dev.solvapay.app",
           "custom_domain": true
         }
       ],
       "vars": {
         "SOLVAPAY_PRODUCT": "prd_replace_me",
-        "MCP_PUBLIC_BASE_URL": "https://goldberg-go-dev.solvapay.app",
+        "MCP_PUBLIC_BASE_URL": "https://mcp-go-dev.solvapay.app",
         "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
       },
       "observability": { "enabled": true },
@@ -56,13 +56,13 @@
       "name": "solvapay-mcp-goldberg-ruby-dev",
       "routes": [
         {
-          "pattern": "goldberg-ruby-dev.solvapay.app",
+          "pattern": "mcp-ruby-dev.solvapay.app",
           "custom_domain": true
         }
       ],
       "vars": {
         "SOLVAPAY_PRODUCT": "prd_replace_me",
-        "MCP_PUBLIC_BASE_URL": "https://goldberg-ruby-dev.solvapay.app",
+        "MCP_PUBLIC_BASE_URL": "https://mcp-ruby-dev.solvapay.app",
         "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
       },
       "observability": { "enabled": true },

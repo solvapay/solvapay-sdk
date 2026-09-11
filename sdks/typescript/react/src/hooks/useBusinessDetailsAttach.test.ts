@@ -221,4 +221,36 @@ describe('useBusinessDetailsAttach', () => {
     expect(attachBusinessDetails).toHaveBeenCalled()
     expect(result.current.fieldErrors.taxId).toBe('Invalid VAT ID')
   })
+
+  it('forwards customerState and customerPostalCode on the attach payload', async () => {
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+
+    const { result } = renderHook(() =>
+      useBusinessDetailsAttach({
+        processorPaymentId: 'pi_test_123',
+        attachBusinessDetails,
+      }),
+    )
+
+    act(() => {
+      result.current.setBusinessDetails({
+        customerCountry: 'US',
+        customerState: 'CA',
+        customerPostalCode: '94107',
+      })
+    })
+
+    await waitFor(
+      () => {
+        expect(attachBusinessDetails).toHaveBeenCalledWith({
+          paymentIntentId: 'pi_test_123',
+          isBusiness: false,
+          customerCountry: 'US',
+          customerState: 'CA',
+          customerPostalCode: '94107',
+        })
+      },
+      { timeout: 2000 },
+    )
+  })
 })
