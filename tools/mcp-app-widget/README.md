@@ -13,6 +13,8 @@ pnpm exec tsx tools/mcp-app-widget/vendor.ts
 
 `check.ts` fails CI when any SDK copy drifts from the canonical file,
 when the artifact is a stub (no bundled script / bootstrap URI / too
-small), or when the inlined browser WebAssembly core is missing. The
-bundle inlines the public-safe WASM as a base64 string — never a
+small), or when the inlined browser WebAssembly core is missing. A
+headless boot test in `__tests__/widget-boot.test.ts` loads the
+canonical HTML and fails if the bundle throws or leaves `#root` empty.
+The bundle inlines the public-safe WASM as a base64 string — never a
 `data:` URL.

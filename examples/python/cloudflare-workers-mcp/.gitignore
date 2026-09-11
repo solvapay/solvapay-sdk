@@ -1,5 +1,12 @@
 .venv
+.venv-workers
 .dev.vars
 .env
+.env.dev
+.env.dev.local
+!.env.example
+!.env.dev.example
 __pycache__
+python_modules/
+pylock.toml
 /.wrangler

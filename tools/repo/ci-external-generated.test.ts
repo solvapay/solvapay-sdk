@@ -15,6 +15,16 @@ describe('ci.yml externalGenerated coverage', () => {
     expect(ci).not.toMatch(/git diff --exit-code -- sdks\/go\/solvapay_core\.wasm/)
   })
 
+  it('installs Chromium before the mcpAppWidget rebuild-and-boot gate', () => {
+    const ci = ciYml()
+    const chromium = ci.indexOf(
+      'pnpm --filter @solvapay/mcp-app-widget exec playwright-core install --with-deps chromium',
+    )
+    const widget = ci.indexOf('pnpm generated:external --rebuild --id mcpAppWidget')
+    expect(chromium).toBeGreaterThan(-1)
+    expect(widget).toBeGreaterThan(chromium)
+  })
+
   it('covers every externalGenerated id in exactly one --rebuild invocation', () => {
     const ci = ciYml()
     const ids = loadRepoPathsManifest().externalGenerated.map(entry => entry.id)

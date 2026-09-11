@@ -20,5 +20,24 @@
   },
   "observability": {
     "enabled": true
+  },
+  "env": {
+    "dev": {
+      "name": "solvapay-mcp-goldberg-rust-dev",
+      "routes": [
+        {
+          "pattern": "goldberg-rust-dev.solvapay.app",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "SOLVAPAY_PRODUCT_REF": "prd_replace_me",
+        "MCP_PUBLIC_BASE_URL": "https://goldberg-rust-dev.solvapay.app",
+        "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
+      },
+      "observability": {
+        "enabled": true
+      }
+    }
   }
 }

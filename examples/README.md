@@ -103,6 +103,7 @@ cd examples/go/weather-mcp && go test ./...
 
 Cloudflare language matrix (Rust / Python Workers, Go / Ruby containers):
 [`cloudflare-mcp-language-matrix.md`](./cloudflare-mcp-language-matrix.md).
+Dev goldberg deploys (api-dev custom domains) are listed there.
 
 ```bash
 cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml

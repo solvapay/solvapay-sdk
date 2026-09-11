@@ -52,7 +52,7 @@
     "enabled": true,
   },
   // Prod env override — invoked via `pnpm deploy:prod`
-  // (`scripts/deploy.mjs --prod` -> `wrangler deploy --env production`).
+  // (`example-deploy --target production` -> `wrangler deploy --env production`).
   // `vars` and `routes` are intentionally redeclared here because
   // wrangler does NOT inherit them from the top-level config; setting
   // `name` explicitly avoids wrangler's auto-suffix (which would
@@ -62,14 +62,10 @@
   // the API call fails with that string as the account path segment.
   //
   // Real `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` /
-  // `SOLVAPAY_API_BASE_URL` come from `.env.prod` via deploy.mjs's
+  // `SOLVAPAY_API_BASE_URL` come from dotenv via example-deploy
   // `--var KEY:VALUE` overrides at deploy time. Placeholders below
-  // keep a bare `wrangler deploy --env production` (no .env.prod) from
+  // keep a bare `wrangler deploy --env …` (no dotenv) from
   // accidentally connecting to someone else's merchant.
-  //
-  // Dev env override — invoked via `pnpm deploy:dev`
-  // (`scripts/deploy.mjs --dev` -> `wrangler deploy --env dev`).
-  // Real values come from `.env.dev` via deploy.mjs's `--var` overrides.
   //
   // Secrets are scoped per worker name:
   //   wrangler secret put SOLVAPAY_SECRET_KEY --env dev

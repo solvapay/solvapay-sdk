@@ -6,12 +6,15 @@
   "scripts": {
     "predev": "pnpm --filter @solvapay/server-wasm run build:wasm",
     "dev": "uv run pywrangler dev",
-    "deploy": "uv run pywrangler deploy"
+    "deploy": "uv run pywrangler deploy",
+    "preflight:dev": "example-deploy preflight --config deploy.config.mjs",
+    "deploy:dev": "pnpm --filter @solvapay/server-wasm run build:wasm && example-deploy deploy --config deploy.config.mjs"
   },
   "dependencies": {
     "@solvapay/server-wasm": "workspace:*"
   },
   "devDependencies": {
+    "@solvapay/example-deploy": "workspace:*",
     "wrangler": "^4.47.0"
   }
 }

@@ -6,14 +6,17 @@
   "scripts": {
     "dev:go": "wrangler dev --env go",
     "dev:ruby": "wrangler dev --env ruby",
-    "deploy:go": "wrangler deploy --env go",
-    "deploy:ruby": "wrangler deploy --env ruby",
+    "preflight:go": "example-deploy preflight --config deploy.config.mjs --target go",
+    "preflight:ruby": "example-deploy preflight --config deploy.config.mjs --target ruby",
+    "deploy:go": "example-deploy deploy --config deploy.config.mjs --target go",
+    "deploy:ruby": "example-deploy deploy --config deploy.config.mjs --target ruby",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.0.31"
   },
   "devDependencies": {
+    "@solvapay/example-deploy": "workspace:*",
     "@cloudflare/workers-types": "^4.20251124.0",
     "wrangler": "^4.47.0",
     "typescript": "^5.9.2"

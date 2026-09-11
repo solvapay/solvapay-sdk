@@ -54,7 +54,7 @@
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx tools/repo/check-dependency-health.ts",
     "loc": "tsx tools/repo/count-loc.ts",
-    "test:contract": "vitest run tools/shared tools/codegen tools/conformance tools/repo",
+    "test:contract": "vitest run tools/shared tools/codegen tools/conformance tools/repo tools/example-deploy",
     "test:mcp-contract": "vitest run tools/conformance/mcp-authoring",
     "snapshot:openapi": "tsx tools/codegen/snapshot-openapi.ts",
     "snapshot:openapi:check": "tsx tools/codegen/snapshot-openapi.ts --check",

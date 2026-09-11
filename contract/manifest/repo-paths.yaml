@@ -415,7 +415,7 @@ externalGenerated:
     generator: pnpm exec tsx tools/mcp-app-widget/vendor.ts
     marker: null
     verify: command
-    verifyCommand: pnpm exec tsx tools/mcp-app-widget/check.ts
+    verifyCommand: pnpm --filter @solvapay/mcp-app-widget test && pnpm exec tsx tools/mcp-app-widget/check.ts
 
 # Marker-carrying files that are not generated artifacts (inverse header gate).
 markerExemptions:

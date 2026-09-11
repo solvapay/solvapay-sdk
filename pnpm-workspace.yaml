@@ -5,6 +5,7 @@ packages:
   - 'internal/*'
   - 'examples/typescript/*'
   - 'examples/python/cloudflare-workers-mcp'
+  - 'examples/rust/cloudflare-worker-mcp'
   - 'examples/cloudflare-containers'
 
 overrides:

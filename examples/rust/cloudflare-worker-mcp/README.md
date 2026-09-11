@@ -37,14 +37,27 @@ Point an MCP client at `http://localhost:8787/mcp`.
 
 ## Deploy
 
+Dev goldberg target at `goldberg-rust-dev.solvapay.app`, Worker
+`solvapay-mcp-goldberg-rust-dev`, backend `https://api-dev.solvapay.com`.
+
 ```bash
-npx wrangler secret put SOLVAPAY_SECRET_KEY
-npx wrangler deploy
+cd examples/rust/cloudflare-worker-mcp
+cp .env.dev.example .env.dev
+# fill sk_test_/sk_sandbox_, prd_… (same merchant as the TS goldberg demo)
+
+# One-time — secret is scoped to solvapay-mcp-goldberg-rust-dev
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env dev
+
+pnpm preflight:dev
+pnpm deploy:dev
 ```
 
-Set `MCP_PUBLIC_BASE_URL` to the deployed origin (OAuth issuer). The free-tier
-Worker size limit is 1 MB; this crate should sit well under the TypeScript
-example, which is near that ceiling.
+MCP endpoint: `https://goldberg-rust-dev.solvapay.app/mcp`. Unauthenticated
+`tools/list` should 401 with `WWW-Authenticate` pointing at
+`https://goldberg-rust-dev.solvapay.app/.well-known/oauth-protected-resource`.
+
+The free-tier Worker size limit is 1 MB; this crate should sit well under the
+TypeScript example, which is near that ceiling.
 
 ## Tests (native, no workerd)
 

@@ -72,6 +72,9 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      - name: Install Chromium for MCP App widget boot test
+        run: pnpm --filter @solvapay/mcp-app-widget exec playwright-core install --with-deps chromium
+
       - name: Check vendored MCP App widget
         run: pnpm generated:external --rebuild --id mcpAppWidget
 

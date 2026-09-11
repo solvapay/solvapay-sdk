@@ -41,3 +41,19 @@ Cloudflare's registry (an example image, not an SDK publish).
 Build context is the **repo root** because both examples `replace` / `require`
 the unpublished local SDKs (`sdks/go` + `//go:embed solvapay_core.wasm`;
 `sdks/ruby` native extension).
+
+## Dev deploys (api-dev)
+
+All five goldberg Workers share the `example-deploy` harness
+(`tools/example-deploy`). Dev only — no prod targets for the non-TS languages.
+
+| Language   | Worker                             | Public origin                            | Command                         |
+| ---------- | ---------------------------------- | ---------------------------------------- | ------------------------------- |
+| TypeScript | `solvapay-mcp-goldberg-dev`        | `https://goldberg-demo-dev.solvapay.app` | `pnpm deploy:dev` in the TS dir |
+| Rust       | `solvapay-mcp-goldberg-rust-dev`   | `https://goldberg-rust-dev.solvapay.app` | `pnpm deploy:dev`               |
+| Python     | `solvapay-mcp-goldberg-python-dev` | `https://goldberg-python-dev.solvapay.app` | `pnpm deploy:dev`             |
+| Go         | `solvapay-mcp-goldberg-go-dev`     | `https://goldberg-go-dev.solvapay.app`   | `pnpm deploy:go`                |
+| Ruby       | `solvapay-mcp-goldberg-ruby-dev`   | `https://goldberg-ruby-dev.solvapay.app` | `pnpm deploy:ruby`              |
+
+Backend for every row: `https://api-dev.solvapay.com`. Go and Ruby products
+must expose a `requests` meter.

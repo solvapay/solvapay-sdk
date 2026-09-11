@@ -83,6 +83,11 @@ export default defineConfig({
     assetsInlineLimit: Number.MAX_SAFE_INTEGER,
     rollupOptions: {
       input: 'mcp-app.html',
+      // Rolldown splits Zod into several init wrappers because
+      // @modelcontextprotocol/sdk imports zod, zod/v3, zod/v4, zod/v4-mini
+      // and zod/v4/core as distinct entries, then evaluates the SDK's
+      // top-level schemas before ZodLazy exists. rolldown#9238.
+      output: { strictExecutionOrder: true },
     },
     outDir: '../dist',
     emptyOutDir: true,

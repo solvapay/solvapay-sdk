@@ -2,5 +2,9 @@
 /build
 /worker
 .env
+.env.dev
+.env.dev.local
+!.env.example
+!.env.dev.example
 .dev.vars
 wrangler.toml

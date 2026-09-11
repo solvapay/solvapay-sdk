@@ -1,0 +1,15 @@
+{
+  "name": "@example/cloudflare-worker-mcp-rust",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Workers MCP example in Rust (workers-rs).",
+  "scripts": {
+    "preflight:dev": "example-deploy preflight --config deploy.config.mjs",
+    "deploy:dev": "example-deploy deploy --config deploy.config.mjs",
+    "serve:local": "wrangler dev"
+  },
+  "devDependencies": {
+    "@solvapay/example-deploy": "workspace:*",
+    "wrangler": "^4.47.0"
+  }
+}

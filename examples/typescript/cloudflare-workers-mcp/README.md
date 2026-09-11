@@ -114,8 +114,9 @@ pnpm run deploy:dev   # builds + deploys to goldberg-demo-dev.solvapay.app
 MCP endpoint: `https://goldberg-demo-dev.solvapay.app/mcp`. Add a **separate**
 ChatGPT Custom Connector from prod — ChatGPT caches `tools/list` per connector.
 
-`pnpm run deploy:dev` runs `node scripts/deploy.mjs --dev`, which sources
-`.env.dev` and passes `--env dev` to `wrangler deploy`.
+`pnpm run deploy:dev` runs the shared `example-deploy` harness
+(`tools/example-deploy`) with `--target dev`, which sources `.env.dev`
+and passes `--env dev` to `wrangler deploy`.
 
 ### Deploy the live demo
 
@@ -145,8 +146,8 @@ this worker — ChatGPT caches `tools/list` per org/connector and won't pick
 up the ChatGPT-aware `hideToolsByAudience` bypass until the cache is busted.
 Verify the top-up iframe flow end-to-end (`topup` → Stripe form mounts).
 
-`pnpm run deploy:prod` runs `node scripts/deploy.mjs --prod`, which
-sources `.env.prod` instead of `.env` and passes `--env production`
+`pnpm run deploy:prod` runs `example-deploy` with `--target production`,
+which sources `.env.prod` instead of `.env` and passes `--env production`
 to `wrangler deploy`. Everything else (the `--var` override
 mechanism, secret separation) works the same way as the regular
 deploy.
@@ -162,8 +163,8 @@ else's merchant or backend environment. The `[env.dev]` and
 `[env.production]` blocks ship their own placeholders for the same
 reason.
 
-`pnpm run deploy` runs [`scripts/deploy.mjs`](./scripts/deploy.mjs),
-which sources `.env` (gitignored) and passes your real values
+`pnpm run deploy` runs the shared [`example-deploy`](../../../tools/example-deploy)
+harness, which sources `.env` (gitignored) and passes your real values
 through to `wrangler deploy --var KEY:VALUE` for:
 
 - `SOLVAPAY_PRODUCT_REF`

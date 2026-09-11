@@ -11,10 +11,40 @@ fronts the **unmodified** servers:
 
 ## Local vs deploy
 
-| Command                                          | Image                                           | Registry                                |
-| ------------------------------------------------ | ----------------------------------------------- | --------------------------------------- |
-| `pnpm dev:go` / `pnpm dev:ruby` (`wrangler dev`) | local Docker                                    | no push                                 |
-| `pnpm deploy:go` / `pnpm deploy:ruby`            | built, then **pushed** to Cloudflare's registry | example image only — not an SDK publish |
+| Command             | Worker                           | Public URL                               | Image                                      |
+| ------------------- | -------------------------------- | ---------------------------------------- | ------------------------------------------ |
+| `pnpm dev:go`       | local                            | `http://localhost:8787`                  | local Docker, no push                      |
+| `pnpm dev:ruby`     | local                            | `http://localhost:8787`                  | local Docker, no push                      |
+| `pnpm deploy:go`    | `solvapay-mcp-goldberg-go-dev`   | `https://goldberg-go-dev.solvapay.app`   | built then **pushed** (example image only) |
+| `pnpm deploy:ruby`  | `solvapay-mcp-goldberg-ruby-dev` | `https://goldberg-ruby-dev.solvapay.app` | built then **pushed** (example image only) |
+
+Named wrangler envs do **not** inherit top-level `vars`. Each `[env.go]` /
+`[env.ruby]` block redeclares `vars`, `observability`, and a custom-domain
+route. Real values come from `.env.go.dev` / `.env.ruby.dev` via the shared
+`example-deploy` harness.
+
+## Deploy (dev)
+
+Images are `--platform=linux/amd64`. On an arm64 Mac they build under
+emulation — run a local `docker buildx build --platform linux/amd64` to
+completion *before* `wrangler deploy` if you want to catch failures early.
+
+```bash
+cd examples/cloudflare-containers
+cp .env.go.dev.example .env.go.dev
+cp .env.ruby.dev.example .env.ruby.dev
+# fill sk_test_/sk_sandbox_ and a prd_… that exposes a `requests` meter
+
+# One-time secrets (scoped per Worker)
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env go
+pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env ruby
+
+pnpm preflight:go && pnpm deploy:go
+pnpm preflight:ruby && pnpm deploy:ruby
+```
+
+Workers Paid is required. `wrangler deploy` pushes the image to Cloudflare's
+registry — that is a deploy of this example image, not an SDK publish.
 
 ## Build context
 
