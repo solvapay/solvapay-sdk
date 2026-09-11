@@ -1,5 +1,14 @@
 # @solvapay/next
 
+## 1.3.9
+
+### Patch Changes
+
+- c67e78e: Stop asking an already-paying customer to switch plan on a credit shortfall, and stop minting hosted checkout sessions with a non-browsable MCP endpoint as `returnUrl`. Pass `returnUrl: null` to `createCheckoutSessionCore` to omit the field instead of falling back to the request origin.
+- Updated dependencies [c67e78e]
+- Updated dependencies [c67e78e]
+  - @solvapay/server@2.6.0
+
 ## 1.3.8
 
 ### Patch Changes
