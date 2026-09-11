@@ -56,6 +56,7 @@ import {
 } from './autoRecharge/McpInlineAutoRecharge'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { McpPaymentHeader } from './McpPaymentHeader'
+import { MCP_PAYMENT_ELEMENT_OPTIONS } from './paymentElementOptions'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
@@ -242,6 +243,9 @@ function EmbeddedTopup({
     }
 
     const committedAmountMinor = screen.amountMinor
+    // Auto-recharge is what makes the backend set `setup_future_usage`, so it
+    // is also what the mandate has to disclose.
+    const savesCard = screen.autoRecharge != null
     const creditEstimate = estimateTopupCredits(
       committedAmountMinor,
       currency,
@@ -308,7 +312,7 @@ function EmbeddedTopup({
               />
               <div className={cx.topupForm}>
                 <TopupForm.Loading />
-                <TopupForm.PaymentElement />
+                <TopupForm.PaymentElement options={MCP_PAYMENT_ELEMENT_OPTIONS} />
                 <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
                   <TopupForm.BusinessDetails.Fields />
                 </TopupForm.BusinessDetails.Root>
@@ -317,7 +321,12 @@ function EmbeddedTopup({
                   Top up{' '}
                   <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
                 </TopupForm.SubmitButton>
-                <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
+                <MandateText
+                  mode="topup"
+                  amountMinor={committedAmountMinor}
+                  currency={currency}
+                  savesPaymentMethod={savesCard}
+                />
               </div>
             </McpHostedBody>
           </McpHostedLayout>
