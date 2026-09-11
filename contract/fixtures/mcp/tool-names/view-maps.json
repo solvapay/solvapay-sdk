@@ -1,0 +1,21 @@
+{
+  "suite": "mcp",
+  "case": "view-maps",
+  "input": {
+    "fn": "mcpViewMaps",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "TOOL_FOR_VIEW": {
+        "checkout": "account",
+        "account": "account",
+        "topup": "account",
+        "auto-recharge": "account"
+      },
+      "VIEW_FOR_TOOL": {
+        "account": "account"
+      }
+    }
+  }
+}

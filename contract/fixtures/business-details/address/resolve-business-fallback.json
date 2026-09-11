@@ -1,0 +1,16 @@
+{
+  "suite": "business-details",
+  "case": "resolve-business-fallback",
+  "input": {
+    "fn": "resolveBuyerCountry",
+    "args": {
+      "input": {
+        "isBusiness": true,
+        "country": "DE"
+      }
+    }
+  },
+  "expect": {
+    "result": "DE"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "row-9-failed-auto-upgrade",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "needsUpgrade": true,
+        "planRef": "pln_pro",
+        "purchaseRef": "pur_1",
+        "remaining": 0
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

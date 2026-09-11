@@ -1,0 +1,18 @@
+{
+  "suite": "oauth",
+  "case": "error-inspect-derive-code",
+  "input": {
+    "fn": "mcpOauthErrorInspect",
+    "args": {
+      "kind": "derive-code",
+      "status": 401,
+      "body": {
+        "error": "Unauthorized",
+        "message": "Client authentication failed"
+      }
+    }
+  },
+  "expect": {
+    "result": "invalid_client"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "suite": "error-model",
+  "case": "webhook-timestamp-too-old",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Webhook",
+      "code": "timestamp_too_old"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Webhook signature timestamp too old",
+      "kind": "Webhook",
+      "code": "timestamp_too_old"
+    }
+  }
+}

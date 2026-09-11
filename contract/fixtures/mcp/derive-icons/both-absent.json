@@ -1,0 +1,15 @@
+{
+  "suite": "mcp",
+  "case": "both-absent",
+  "input": {
+    "fn": "deriveIcons",
+    "args": {
+      "branding": {
+        "brandName": "Acme"
+      }
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

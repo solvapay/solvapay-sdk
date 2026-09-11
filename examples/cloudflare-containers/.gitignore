@@ -1,0 +1,8 @@
+/node_modules
+/.wrangler
+.dev.vars
+.env
+.env.go.dev
+.env.ruby.dev
+!.env.go.dev.example
+!.env.ruby.dev.example

@@ -1,0 +1,11 @@
+{
+  "suite": "paywall",
+  "case": "product-ref-neither-set-returns-absent",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {}
+  },
+  "expect": {
+    "result": null
+  }
+}

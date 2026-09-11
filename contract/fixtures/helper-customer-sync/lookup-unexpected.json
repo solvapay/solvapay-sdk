@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "lookup-unexpected",
+  "input": {
+    "fn": "classifyLookupError",
+    "args": {
+      "message": "timeout"
+    }
+  },
+  "expect": {
+    "result": "unexpected"
+  }
+}

@@ -1,0 +1,16 @@
+module MCP
+  VERSION: String
+
+  class Server
+    def initialize: (?name: String, ?version: String, ?tools: Array[untyped]) -> void
+    def define_tool: (?name: String?, ?title: String?, ?description: String?, ?input_schema: untyped) { (?server_context: untyped, **untyped) -> untyped } -> void
+    def handle_json: (String request) -> String?
+  end
+
+  class Tool
+    class Response
+      def initialize: (untyped content, ?error: bool, ?structured_content: untyped, ?meta: untyped) -> void
+      def to_h: () -> Hash[Symbol, untyped]
+    end
+  end
+end

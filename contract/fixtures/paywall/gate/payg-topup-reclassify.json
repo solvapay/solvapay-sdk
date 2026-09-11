@@ -1,0 +1,68 @@
+{
+  "suite": "paywall",
+  "case": "payg-topup-reclassify",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          },
+          {
+            "reference": "pl_hybrid",
+            "type": "hybrid",
+            "requiresPayment": true
+          }
+        ],
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
+      "shortMessage": "Activation required",
+      "plans": [
+        {
+          "reference": "pl_pro",
+          "type": "usage-based",
+          "requiresPayment": true
+        },
+        {
+          "reference": "pl_hybrid",
+          "type": "hybrid",
+          "requiresPayment": true
+        }
+      ],
+      "balance": {
+        "creditBalance": 0,
+        "creditsPerUnit": 1,
+        "currency": "usd"
+      },
+      "planRef": "pl_pro",
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 1,
+      "shortfallCredits": 1,
+      "remainingCalls": 0,
+      "links": {
+        "topup": "https://pay.test/x"
+      }
+    }
+  }
+}

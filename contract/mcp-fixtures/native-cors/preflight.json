@@ -1,0 +1,25 @@
+{
+  "suite": "native-cors",
+  "case": "preflight",
+  "input": {
+    "fn": "mcpNativeCors",
+    "args": {
+      "origin": "cursor://mcp/x",
+      "requestedMethod": "POST",
+      "requestedHeaders": "authorization, content-type, mcp-session-id",
+      "preflight": true
+    }
+  },
+  "expect": {
+    "result": {
+      "allowed": true,
+      "headers": {
+        "Access-Control-Allow-Origin": "cursor://mcp/x",
+        "Vary": "Origin",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, content-type, mcp-session-id",
+        "Access-Control-Max-Age": "600"
+      }
+    }
+  }
+}

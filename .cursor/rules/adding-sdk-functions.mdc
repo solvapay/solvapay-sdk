@@ -1,0 +1,174 @@
+---
+description: End-to-end flow for adding a function to the SolvaPay SDK boundary — #[solvapay_export], manifest catalog, pnpm gen, golden fixtures, and the gate loop
+globs: core/solvapay-core/src/**,core/solvapay-transport/src/**,contract/manifest/**,contract/fixtures/**,tools/codegen/**,tools/conformance/**
+alwaysApply: false
+---
+
+# Adding a function to the SDK boundary
+
+The authoring surface is Rust-first. You write a `pub fn`, mark it with
+`#[solvapay_export]`, catalog it once in the manifest, and `pnpm gen` emits it on
+six language surfaces (TypeScript, Python, Ruby, Go, Rust, C) plus the parity and
+conformance harnesses.
+
+Depth lives in `docs/contributing/solvapay-export.md` (every attribute key, the
+residue boundary, error messages) and `docs/contributing/sdk-codegen.md` (the
+day-to-day runbook). Design rationale: `docs/contributing/codegen-ast-derivation.md`.
+
+## Hard rules
+
+- **Never hand-edit a file with an `@generated` banner.** Change the source — Rust
+  fn, attribute, manifest, or fixture — and run `pnpm gen`. The header gate and
+  `pnpm gen:check` both fail on a hand edit.
+- **The export is explicit and per-item, never derived from `pub` visibility.** An
+  accidental export ships on six surfaces.
+- **Manifest `bindings:` is retired.** `tools/shared/manifest-schema.ts` rejects a
+  non-empty `bindings:` with `bindings: was retired; annotate #[solvapay_export]`.
+  Same for `boundaryTypes:`.
+- **`contract/manifest/binding-residue.yaml` is a last resort.** Put it in the
+  attribute if it is a property of the boundary; put it in residue only if it is
+  shim-emission detail the AST cannot supply. The residue key count must not grow —
+  check it before and after with
+  `grep -cE '^[A-Za-z_]' contract/manifest/binding-residue.yaml`.
+- **Read the snapshot diffs.** `contract/manifest/binding-symbols.snapshot.json` and
+  `boundary-types.snapshot.json` are the reviewed forcing function: they are what
+  tell you whether the attribute said what you meant. Do not just let them pass.
+- **Decisions belong in core.** Anything expressible as JSON-in → JSON-out goes in
+  `core/solvapay-core`; facades are conversion shims only.
+
+## Flow A — core helper or decision (the common case)
+
+1. **Implement** a `pub fn` in `core/solvapay-core/src/<topic>.rs`, with rustdoc.
+2. **Annotate** it:
+
+   ```rust
+   #[crate::solvapay_export(
+       artifact = "payloadBuilders",
+       catalog = "coreHelper",
+       section = "business-details",
+       emit_order = 1
+   )]
+   pub fn derive_tax_id_type(country: &str) -> Option<TaxIdType> {
+   ```
+
+   For a plain sync helper those four keys are the whole attribute — args,
+   extracts, call tokens and serialize kind all derive from the signature.
+   `artifact = "decisions"` for a JSON decision (see
+   `core/solvapay-core/src/customer_ref.rs`), `"payloadBuilders"` for a
+   presentation/payload shaper. Pin `rust_fn_name` alongside `id` when the public
+   name diverges from the Rust name — the derived shim name follows the Rust fn,
+   not the `id`.
+3. **Catalog** it in `contract/manifest/sdk-contract.yaml` under the section named by
+   the attribute's `catalog` — `coreHelpers:` or `topLevel:`. Non-routed entries need
+   `names:` for all six languages, `params:`, `sync:`, and `docs:` — **`docs:` is
+   required here**, there is no OpenAPI fallback off a route. Add `availability:`
+   only for a surface that is hand-written or omitted, and never with an empty
+   `reason:`. `catalog = "none"` means the opposite: an internal boundary symbol that
+   gets a shim on every surface but no public catalog entry, so skip this step.
+4. **Fixtures** under `contract/fixtures/<suite>/<case>.json`: `suite`, `case`,
+   `input.fn` (the canonical binding id), `input.args`, and exactly one of
+   `expect.result` / `expect.error`. Format table: `contract/fixtures/README.md`.
+5. **`pnpm gen`**, then review the two snapshot diffs.
+6. **Register the fixture on the TS side**: `registry.register('<id>', …)` inside
+   `createDefaultRegistry()` in `tools/conformance/lib/fixture-harness.ts`. The Rust
+   side generates itself into `tools/conformance/fixture-runner/src/registry.rs`;
+   only a hand-routed invoke needs `routing` / `extras` / `order` edits in
+   `tools/codegen/dto-gen/assets/fixture-runner-emit.snapshot.json` plus a body under
+   `tools/conformance/fixture-runner/src/bindings/`.
+7. **Gate loop** (below), then a changeset if a published package's surface changed.
+
+## Flow B — new HTTP route
+
+1. **Refresh the OpenAPI snapshot**: `pnpm snapshot:openapi --from-stack` (provider
+   `:3002`, payment `:3003`, billing `:3004`, commerce `:3005`, webhook `:3008`;
+   identity `:3001` owns no SDK routes). Offline: `--from-file <path>`.
+2. **Scaffold the catalog entry**:
+
+   ```bash
+   pnpm gen:scaffold operation myNewOp --method POST --path /v1/sdk/my-new-op
+   ```
+
+   That derives schema refs, path-param and body `params:`, six `names:`, TODO
+   `docs:`, and the default `sync:` matrix. It does not touch Rust.
+3. **Implement** the method on `SolvaPayClient` in
+   `core/solvapay-transport/src/client.rs`:
+
+   ```rust
+   #[solvapay_core::solvapay_export(
+       catalog = "operation",
+       section = "Group A",
+       emit_order = 0,
+       dto_type = "CreateCustomerRequest"
+   )]
+   pub async fn create_customer(&self, params: CreateCustomerRequest) -> Result<CreateCustomerResult, SdkError>
+   ```
+
+   Transport defaults supply `artifact`, `sync` and `envelope`. Templated routes add
+   `split_path_refs` **in path order** (`"productRef,planRef"`); nullary routes take
+   the one-line form and derive `ClientIgnore`.
+4. **Docs**: replace the TODO prose, or drop `docs:` entirely and let dto-gen fall
+   back to the OpenAPI `description` (then `summary`). Manifest `docs:` always wins.
+5. **Fixtures** under `contract/fixtures/client/<method-kebab>/<case>.json`, including
+   the `wire.request` / `wire.response` mock.
+6. Same gate loop.
+
+## Signature shapes the scanner cannot take
+
+The scanner runs in skip-unsupported mode: an annotated fn it cannot map is
+**dropped silently**. It resurfaces as an orphan residue key or an orphan catalog
+entry — and if the symbol has neither, not at all. Blocking shapes:
+
+| Shape                                                    | Scanner message                                                        |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Generic fns, generic impls, trait impls, `#[cfg(test)]`   | `generic functions are not scanned` (or skipped before parsing)        |
+| Tuple structs reached as a boundary type                 | `tuple structs are not supported`                                      |
+| Tuple enum variants                                      | `tuple enum variants are not supported`                                |
+| Data-carrying enums without `#[serde(tag)]` / `untagged` | `data-carrying enum must be #[serde(tag = ...)] or #[serde(untagged)]` |
+| `#[serde(flatten)]`                                      | `#[serde(flatten)] is not supported`                                   |
+| Map keys that are not `String`                           | `<Map> key must be String`                                             |
+| Non-identifier parameter patterns                        | `unsupported parameter pattern`                                        |
+
+Reshape the boundary rather than widening the scanner — the far side is JSON either
+way. Only `pub fn` items and `pub` inherent-impl methods are read; the attribute on
+a struct or enum does nothing (boundary types come from transitive closure over
+annotated signatures plus `typed_as` values).
+
+## Gate loop
+
+```bash
+pnpm gen              # regenerate; review the snapshot diffs
+pnpm gen:check        # working-tree idempotence drift gate (authoritative)
+pnpm manifest:check   # schema + OpenAPI cross-check + catalog reconciliation
+pnpm parity:check     # cross-language signature parity
+pnpm test:fixtures    # Rust fixture-runner over contract/fixtures
+pnpm test:contract    # TS harness + tools suites
+pnpm gates            # the pre-push set (also what CI gates on)
+```
+
+`pnpm gates` runs `gen:check`, `manifest:check`, `parity:check` and `test:fixtures`
+plus `snapshot:openapi:check`, `docs:coverage`, `docs:parity`, `delegation:check`,
+`checks:required` and `generated:external --markers-only`. It does **not** include
+`test:contract` — run that separately. On
+`orphan catalog entry operation.<id> has no binding linker`, run `pnpm gen:bindings`
+for `#[solvapay_export]` suggestions (it prints targets; it never writes YAML).
+`pnpm preflight` reports which work tier the machine supports.
+
+## Local traps
+
+- `pnpm build:native` / `test:native` overwrite tracked WASI artifacts with
+  host-target output. Committing the diff breaks the `node-binding-wasi` CI gate.
+  Restore before pushing:
+
+  ```bash
+  git checkout -- sdks/wasm/pkg/ sdks/go/solvapay_core.wasm \
+    sdks/node-native/index.d.ts sdks/node-native/index.js \
+    sdks/node-native/server-native.wasi-browser.js sdks/node-native/server-native.wasi.cjs
+  ```
+
+- `pnpm gen` regenerates Ruby sources but not the Magnus extension. After a gen that
+  adds a helper: `cd sdks/ruby && bundle install && bundle exec rake compile` — else
+  you get `undefined method … for module SolvaPay::Native` from a stale `.bundle`.
+- `wasm-opt not found` on the Go WASI build is an intentional fallback. Do not commit
+  a locally shrunk blob; the canonical bytes come from linux/amd64.
+- `pnpm test:live` is opt-in and needs `SOLVAPAY_LIVE_BASE_URL` +
+  `SOLVAPAY_LIVE_API_KEY`. Its fail-fast message is correct behavior, not a bug.

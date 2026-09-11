@@ -1,0 +1,42 @@
+{
+  "suite": "dispatch",
+  "case": "challenge",
+  "input": {
+    "fn": "mcpDispatch",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "upgrade",
+          "arguments": {}
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "challenge",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer resource_metadata=\"https://app.example.com/.well-known/oauth-protected-resource\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32001,
+          "message": "Unauthorized"
+        }
+      }
+    }
+  }
+}

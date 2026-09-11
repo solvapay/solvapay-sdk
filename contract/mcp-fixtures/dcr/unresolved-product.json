@@ -1,0 +1,18 @@
+{
+  "suite": "dcr",
+  "case": "unresolved-product",
+  "input": {
+    "fn": "mcpDcrDiagnostics",
+    "args": {
+      "productRef": "prd_missing",
+      "apiBaseUrl": "https://api.solvapay.com",
+      "status": 400,
+      "bodyText": "Invalid identifier"
+    }
+  },
+  "expect": {
+    "result": {
+      "message": "[solvapay] OAuth DCR failed (400) productRef=prd_missing apiBaseUrl=https://api.solvapay.com. The platform could not resolve this productRef (often a wrong/missing product or API base URL mismatch). A 400 \"Invalid identifier\" here means the product did not resolve — not that the DCR body was malformed. Run `npx solvapay doctor` or check SOLVAPAY_PRODUCT_REF / SOLVAPAY_API_BASE_URL."
+    }
+  }
+}

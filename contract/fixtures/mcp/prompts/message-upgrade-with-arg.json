@@ -1,0 +1,26 @@
+{
+  "suite": "mcp",
+  "case": "message-upgrade-with-arg",
+  "input": {
+    "fn": "buildPromptUserMessage",
+    "args": {
+      "promptName": "upgrade",
+      "args": {
+        "planRef": "pln_pro"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "messages": [
+        {
+          "role": "user",
+          "content": {
+            "type": "text",
+            "text": "Call the `account` tool with view: \"checkout\", then activate plan pln_pro."
+          }
+        }
+      ]
+    }
+  }
+}

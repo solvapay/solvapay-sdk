@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "product-ref-require-missing-throws",
+  "input": {
+    "fn": "requireProductRef",
+    "args": {}
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "No product ref resolved. Pass productRef to payable() or set SOLVAPAY_PRODUCT_REF. Run `npx solvapay doctor` to diagnose.",
+      "kind": "Api",
+      "code": "missing_product_ref"
+    }
+  }
+}

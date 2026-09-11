@@ -1,0 +1,17 @@
+{
+  "suite": "paywall",
+  "case": "cached-remaining-0-block-evict",
+  "input": {
+    "fn": "evaluateCachedLimits",
+    "args": {
+      "remaining": 0
+    }
+  },
+  "expect": {
+    "result": {
+      "withinLimits": false,
+      "remaining": 0,
+      "evict": true
+    }
+  }
+}

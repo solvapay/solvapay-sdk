@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "price-usd-uppercase",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 1000,
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": "$10"
+  }
+}

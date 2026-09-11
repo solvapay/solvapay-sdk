@@ -1,0 +1,14 @@
+{
+  "suite": "paywall",
+  "case": "boundary-cost-unknown-remaining-zero",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "creditBalance": 50,
+        "remaining": 0
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

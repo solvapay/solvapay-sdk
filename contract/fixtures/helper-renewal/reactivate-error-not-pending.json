@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-not-pending",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "not pending cancellation" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be reactivated",
+      "status": 400,
+      "details": "not pending cancellation"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+.venv/
+.typecheck-venv/
+.ci-venv/
+target/
+*.so
+*.dylib
+*.dll
+*.pyd
+dist/
+wheels/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.whl

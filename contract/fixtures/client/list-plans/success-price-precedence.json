@@ -1,0 +1,45 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "listPlans",
+    "args": {
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "list-plans-success-price-precedence",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_fixture/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": [
+        {
+          "reference": "plan_basic",
+          "name": "Basic",
+          "price": 1000,
+          "data": {
+            "price": 9999,
+            "meterName": "requests"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "reference": "plan_basic",
+        "name": "Basic",
+        "price": 1000,
+        "meterName": "requests"
+      }
+    ]
+  }
+}

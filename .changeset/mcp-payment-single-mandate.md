@@ -1,5 +1,6 @@
 ---
 '@solvapay/react': minor
+'@solvapay/release-train': patch
 ---
 
 Drop Stripe's duplicate mandate line from the MCP payment surfaces. Enabling auto-recharge makes the backend set `setup_future_usage`, which made Stripe's `PaymentElement` render its own terms sentence ("you allow <merchant> to charge your card for future payments…") between the card fields and the country selector — a second authorization in Stripe's wording, directly above the `MandateText` that already states the charge. `McpTopupView` and the checkout PAYG step now pass `terms: { card: 'never' }` and own the full mandate.

@@ -1,0 +1,40 @@
+{
+  "suite": "engine",
+  "case": "subscriptions-listen",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "subscriptions/listen",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {}
+          }
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "_meta": {
+            "io.modelcontextprotocol/subscriptionId": 1
+          },
+          "resultType": "complete"
+        }
+      }
+    }
+  }
+}

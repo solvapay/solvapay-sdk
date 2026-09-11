@@ -1,0 +1,28 @@
+{
+  "list": [
+    {
+      "mail_from": "a@example.com",
+      "mail_subject": "One",
+      "mail_excerpt": "a",
+      "mail_id": 10,
+      "mail_timestamp": 0,
+      "mail_read": 0,
+      "size": 10
+    },
+    {
+      "mail_from": "b@example.com",
+      "mail_subject": "Two",
+      "mail_excerpt": "b",
+      "mail_id": 11,
+      "mail_timestamp": 0,
+      "mail_read": 0,
+      "size": 10
+    }
+  ],
+  "count": "25",
+  "email": "solvatestinbox@guerrillamailblock.com",
+  "alias": "solva-alias",
+  "ts": 1700000000,
+  "sid_token": "sid_alpha",
+  "auth": { "success": true, "error_codes": [] }
+}

@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-cannot-be-reactivated",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "Purchase cannot be reactivated" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be reactivated",
+      "status": 400,
+      "details": "Purchase cannot be reactivated"
+    }
+  }
+}

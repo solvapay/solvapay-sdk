@@ -1,0 +1,24 @@
+{
+  "suite": "plan-pricing",
+  "case": "consequence-free",
+  "input": {
+    "fn": "planConsequence",
+    "args": {
+      "plan": {
+        "reference": "pln_free",
+        "name": "Free",
+        "requiresPayment": false,
+        "options": [
+          { "kind": "billingCycle", "interval": "month" },
+          { "kind": "limit", "cap": 100, "meter": "requests" }
+        ]
+      },
+      "locale": "en-US",
+      "balance": null,
+      "merchantName": "Test"
+    }
+  },
+  "expect": {
+    "result": "100 calls per month, then calls fail. No card needed."
+  }
+}

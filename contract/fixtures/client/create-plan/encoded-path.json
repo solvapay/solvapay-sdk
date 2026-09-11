@@ -1,0 +1,51 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createPlan",
+    "args": {
+      "productRef": "foo/../purchases",
+      "name": "Basic",
+      "currency": "usd",
+      "options": [
+        { "kind": "billingCycle", "interval": "month" },
+        { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+      ]
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-plan-encoded-path",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/foo%2F..%2Fpurchases/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "productRef": "foo/../purchases",
+        "name": "Basic",
+        "currency": "usd",
+        "options": [
+          { "kind": "billingCycle", "interval": "month" },
+          { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "plan_basic",
+        "name": "Basic",
+        "currency": "usd"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "plan_basic",
+      "name": "Basic",
+      "currency": "usd"
+    }
+  }
+}

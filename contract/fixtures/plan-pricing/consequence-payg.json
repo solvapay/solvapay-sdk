@@ -1,0 +1,33 @@
+{
+  "suite": "plan-pricing",
+  "case": "consequence-payg",
+  "input": {
+    "fn": "planConsequence",
+    "args": {
+      "plan": {
+        "reference": "pln_payg",
+        "name": "Pay as you go",
+        "requiresPayment": true,
+        "options": [
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      },
+      "locale": "en-US",
+      "balance": {
+        "displayCurrency": "USD",
+        "creditsPerMinorUnit": 100,
+        "displayExchangeRate": 1
+      },
+      "merchantName": "Test"
+    }
+  },
+  "expect": {
+    "result": "From 200 credits per call, drawn from your credit balance. Credits work across every Test product."
+  }
+}

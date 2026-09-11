@@ -1,0 +1,15 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-outcome-cancelled",
+  "input": {
+    "fn": "projectTopupProcessOutcome",
+    "args": {
+      "status": "cancelled"
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "cancelled"
+    }
+  }
+}

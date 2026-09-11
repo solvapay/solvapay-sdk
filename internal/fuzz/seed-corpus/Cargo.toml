@@ -1,0 +1,18 @@
+[package]
+name = "seed-corpus"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Write committed libFuzzer seeds from contract fixtures (step 55-a)"
+
+[[bin]]
+name = "seed-corpus"
+path = "main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solvapay-c = { path = "../../../sdks/capi" }
+solvapay-core = { path = "../../../core/solvapay-core" }
+repo-paths = { path = "../../../tools/shared/repo-paths" }

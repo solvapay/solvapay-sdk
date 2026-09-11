@@ -1,0 +1,34 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getProduct",
+    "args": {
+      "productRef": "foo/../purchases"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-product-encoded-path",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/products/foo%2F..%2Fpurchases",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "foo/../purchases",
+        "name": "Top"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "name": "Top",
+      "reference": "foo/../purchases"
+    }
+  }
+}

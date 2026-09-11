@@ -1,0 +1,20 @@
+{
+  "suite": "error-model",
+  "case": "transport-retryable",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Transport",
+      "message": "connection reset",
+      "retryable": true
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "connection reset",
+      "kind": "Transport",
+      "code": "retryable"
+    }
+  }
+}

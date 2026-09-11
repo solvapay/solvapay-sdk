@@ -1,0 +1,14 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-valid",
+  "input": {
+    "fn": "validateTopupPaymentIntentParams",
+    "args": {
+      "amount": 1000,
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

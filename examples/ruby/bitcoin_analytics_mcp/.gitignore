@@ -1,0 +1,4 @@
+.bundle/
+vendor/bundle/
+.env
+.env.local

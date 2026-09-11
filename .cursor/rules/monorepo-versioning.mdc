@@ -1,6 +1,6 @@
 ---
 description: Internal peerDependency ranges and Changesets conventions for the SDK monorepo — avoid major-version cascades
-globs: packages/*/package.json,.changeset/*.md
+globs: sdks/typescript/*/package.json,tools/*/package.json,.changeset/*.md
 alwaysApply: false
 ---
 
@@ -40,15 +40,19 @@ do not cascade.
 
 ### Note on pre-1.0 peers
 
-For a `0.x` peer, `workspace:^` publishes as `^0.2.4`, which only satisfies `0.2.x`.
-A future `0.3.0` (minor) of that peer will cascade a major onto every dependent — this
+For a `0.x` peer, `workspace:^` publishes as `^0.3.1`, which only satisfies `0.3.x`.
+A future `0.4.0` (minor) of that peer will cascade a major onto every dependent — this
 is correct semver, and pnpm's `workspace:` protocol cannot express a wider range.
 
-While a peer is intentionally pre-1.0 (e.g. `@solvapay/mcp-core`, consumed by
-`@solvapay/react` and `@solvapay/mcp`), keep `workspace:^` and ship that peer's changes
-as **patch** so they stay inside the dependents' `^0.2.x` caret range and do not cascade.
-Pre-1.0 has no minor/patch compatibility contract, so an additive change is fine as a
-patch here.
+While a peer is intentionally pre-1.0 (e.g. `@solvapay/mcp-core`, currently on the
+`0.3.x` line and consumed by `@solvapay/react` and `@solvapay/mcp`), keep `workspace:^`
+and ship that peer's changes as **patch** so they stay inside the dependents' caret
+range and do not cascade. Pre-1.0 has no minor/patch compatibility contract, so an
+additive change is fine as a patch here.
+
+`@solvapay/react` currently spans the last such crossing explicitly
+(`"@solvapay/mcp-core": "^0.2.8 || ^0.3.0"`) — see the narrow exception below for when
+that is the right call.
 
 Only take a `minor`/`major` on such a peer as a **deliberate** act — most notably a 1.0
 stabilization, after which `workspace:^` publishes `^1.0.0` and future minors stay in

@@ -1,0 +1,16 @@
+{
+  "suite": "native-cors",
+  "case": "rejected-loose-scheme",
+  "input": {
+    "fn": "mcpNativeCors",
+    "args": {
+      "origin": "cursor:x"
+    }
+  },
+  "expect": {
+    "result": {
+      "allowed": false,
+      "headers": {}
+    }
+  }
+}

@@ -1,0 +1,85 @@
+/**
+ * Cloudflare Containers in front of the unmodified Go / Ruby MCP servers.
+ *
+ * Requires Workers Paid. `wrangler dev` builds against local Docker and does
+ * not push. `wrangler deploy` pushes the image to Cloudflare's registry —
+ * that is a deploy of this example image, not a publish of any SDK.
+ *
+ * Image build context MUST be the repository root (Go `replace` + embedded
+ * wasm; Ruby native gem). Wrangler is invoked from this directory with
+ * `--config` and Dockerfiles that `COPY` from `../..`.
+ *
+ * Named envs do not inherit top-level `vars` / `observability` / `routes`.
+ * Each block redeclares them. Real values come from `.env.go.dev` /
+ * `.env.ruby.dev` via `example-deploy --var` overrides.
+ */
+{
+  "name": "solvapay-mcp-containers",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-26",
+  "observability": { "enabled": true },
+  "vars": {
+    "SOLVAPAY_PRODUCT": "prd_your_product_ref",
+    "MCP_PUBLIC_BASE_URL": "https://your-worker.example.com"
+  },
+  "env": {
+    "go": {
+      "name": "solvapay-mcp-goldberg-go-dev",
+      "routes": [
+        {
+          "pattern": "mcp-go-dev.solvapay.app",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "SOLVAPAY_PRODUCT": "prd_replace_me",
+        "MCP_PUBLIC_BASE_URL": "https://mcp-go-dev.solvapay.app",
+        "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
+      },
+      "observability": { "enabled": true },
+      "containers": [
+        {
+          "class_name": "WeatherMcp",
+          "image": "./Dockerfile.go",
+          "image_build_context": "../..",
+          "max_instances": 2
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "WEATHER_MCP", "class_name": "WeatherMcp" }]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["WeatherMcp"] }
+      ]
+    },
+    "ruby": {
+      "name": "solvapay-mcp-goldberg-ruby-dev",
+      "routes": [
+        {
+          "pattern": "mcp-ruby-dev.solvapay.app",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "SOLVAPAY_PRODUCT": "prd_replace_me",
+        "MCP_PUBLIC_BASE_URL": "https://mcp-ruby-dev.solvapay.app",
+        "SOLVAPAY_API_BASE_URL": "https://api-dev.solvapay.com"
+      },
+      "observability": { "enabled": true },
+      "containers": [
+        {
+          "class_name": "BitcoinMcp",
+          "image": "./Dockerfile.ruby",
+          "image_build_context": "../..",
+          "max_instances": 2
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "BITCOIN_MCP", "class_name": "BitcoinMcp" }]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["BitcoinMcp"] }
+      ]
+    }
+  }
+}

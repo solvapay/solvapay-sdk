@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "name-fallback-metadata-name",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1IiwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiTWV0YSBOYW1lIn19.not-a-signature",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "u",
+      "email": null,
+      "name": "Meta Name"
+    }
+  }
+}

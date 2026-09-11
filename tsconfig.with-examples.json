@@ -2,15 +2,15 @@
   "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
-    { "path": "packages/core" },
-    { "path": "packages/server" },
-    { "path": "packages/react" },
-    { "path": "packages/demo-services" },
-    { "path": "packages/test-utils" },
-    { "path": "examples/express-basic" },
-    { "path": "examples/mcp-oauth-bridge" },
-    { "path": "examples/mcp-time-app" },
-    { "path": "examples/checkout-demo" },
-    { "path": "examples/hosted-checkout-demo" }
+    { "path": "sdks/typescript/core" },
+    { "path": "sdks/typescript/server" },
+    { "path": "sdks/typescript/react" },
+    { "path": "internal/demo-services" },
+    { "path": "internal/test-utils" },
+    { "path": "examples/typescript/express-basic" },
+    { "path": "examples/typescript/mcp-oauth-bridge" },
+    { "path": "examples/typescript/mcp-time-app" },
+    { "path": "examples/typescript/checkout-demo" },
+    { "path": "examples/typescript/hosted-checkout-demo" }
   ]
 }

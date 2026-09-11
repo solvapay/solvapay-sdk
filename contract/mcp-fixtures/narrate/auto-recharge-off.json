@@ -1,0 +1,43 @@
+{
+  "suite": "narrate",
+  "case": "auto-recharge-off",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "auto-recharge",
+      "payload": {
+        "view": "auto-recharge",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_1",
+          "autoRecharge": { "enabled": false, "status": "disabled" },
+          "purchase": null,
+          "paymentMethod": null,
+          "balance": {
+            "credits": 1000,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Auto-recharge — Acme Knowledge Base**\n\nBalance: 1,000 credits (~$0.10)\nAuto-recharge is off. Turn it on from the link below — it stores a card and tops your balance up automatically so calls do not fail.\n\nTo continue, call `account` with view: \"account\"."
+    }
+  }
+}

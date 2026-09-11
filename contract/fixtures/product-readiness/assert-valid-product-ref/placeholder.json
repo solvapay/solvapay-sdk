@@ -1,0 +1,19 @@
+{
+  "suite": "product-readiness",
+  "case": "assert-valid-placeholder",
+  "input": {
+    "fn": "assertValidProductRef",
+    "args": {
+      "productRef": "__SOLVAPAY_PRODUCT_REF__",
+      "context": "test"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "test: productRef is still the scaffolder placeholder \"__SOLVAPAY_PRODUCT_REF__\". Run `npx solvapay init` (or `npx solvapay doctor`) to set a real product reference.",
+      "kind": "Api",
+      "code": "placeholder_product_ref"
+    }
+  }
+}

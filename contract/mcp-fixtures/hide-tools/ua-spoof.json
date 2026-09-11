@@ -1,0 +1,35 @@
+{
+  "suite": "hide-tools",
+  "case": "ua-spoof",
+  "input": {
+    "fn": "mcpHideToolsByAudience",
+    "args": {
+      "tools": [
+        {
+          "name": "upgrade",
+          "_meta": {}
+        },
+        {
+          "name": "create_payment_intent",
+          "_meta": {
+            "audience": "ui"
+          }
+        }
+      ],
+      "audiences": [
+        "ui"
+      ],
+      "userAgent": "openai-mcp/1.0.0 (ChatGPT)"
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "upgrade",
+          "_meta": {}
+        }
+      ]
+    }
+  }
+}

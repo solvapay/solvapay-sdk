@@ -1,0 +1,19 @@
+{
+  "suite": "default-gate",
+  "case": "payment-required",
+  "input": {
+    "fn": "mcpDefaultGate",
+    "args": {
+      "product": "prd_demo"
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "",
+      "message": "Payment required",
+      "shortMessage": "Payment required"
+    }
+  }
+}

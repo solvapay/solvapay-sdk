@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "process-missing-params",
+  "input": {
+    "fn": "validateProcessPaymentIntentParams",
+    "args": {
+      "paymentIntentId": "",
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "paymentIntentId and productRef are required",
+      "status": 400
+    }
+  }
+}

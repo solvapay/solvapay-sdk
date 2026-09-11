@@ -1,0 +1,14 @@
+{
+  "suite": "oauth",
+  "case": "path-protected-resource",
+  "input": {
+    "fn": "mcpOauthPath",
+    "args": {
+      "kind": "protected-resource-path",
+      "mcpPath": "/mcp"
+    }
+  },
+  "expect": {
+    "result": "/.well-known/oauth-protected-resource/mcp"
+  }
+}

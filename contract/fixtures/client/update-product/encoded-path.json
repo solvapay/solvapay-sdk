@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "updateProduct",
+    "args": {
+      "productRef": "foo/../purchases",
+      "name": "Updated"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "update-product-encoded-path",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/foo%2F..%2Fpurchases",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Updated"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "foo/../purchases",
+        "name": "Updated"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "foo/../purchases",
+      "name": "Updated"
+    }
+  }
+}

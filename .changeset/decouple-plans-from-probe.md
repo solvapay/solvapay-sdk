@@ -1,5 +1,6 @@
 ---
 '@solvapay/react': patch
+'@solvapay/release-train': patch
 ---
 
 MCP checkout and top-up now always show plans and amounts. The Stripe CSP probe still starts at mount so Stripe.js can warm in the background, but a blocked or slow host only falls back to hosted checkout at the payment step — a cold Stripe.js load can no longer hide the plan picker. Passing `publishableKey={null}` keeps the same plan/amount steps and forces the hosted handoff only when the customer continues to pay.

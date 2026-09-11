@@ -1,0 +1,21 @@
+{
+  "suite": "webhook-verification",
+  "case": "invalid-signature-length-mismatch",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"type\":\"purchase.created\",\"id\":\"evt_fixture_1\",\"created\":1782864000,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"id\":\"pur_fixture_1\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1782864000,v1=deadbeef",
+      "secret": "whsec_test_fixture_secret"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Invalid webhook signature",
+      "kind": "Webhook",
+      "code": "invalid_signature"
+    }
+  }
+}

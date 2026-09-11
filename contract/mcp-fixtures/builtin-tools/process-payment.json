@@ -1,0 +1,45 @@
+{
+  "suite": "builtin-tools",
+  "case": "process-payment",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "process_payment",
+      "args": {
+        "paymentIntentId": "pi_1",
+        "productRef": "prd_demo"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents/pi_1/process",
+      "status": 200,
+      "body": {
+        "status": "succeeded",
+        "message": "ok"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"status\":\"succeeded\",\"message\":null}"
+        }
+      ],
+      "structuredContent": {
+        "status": "succeeded",
+        "message": null
+      }
+    }
+  }
+}

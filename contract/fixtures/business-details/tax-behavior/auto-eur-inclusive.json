@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "auto-eur-inclusive",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "auto",
+      "currency": "EUR"
+    }
+  },
+  "expect": {
+    "result": "inclusive"
+  }
+}

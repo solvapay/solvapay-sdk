@@ -1,0 +1,428 @@
+import { describe, it, expect } from 'vitest'
+import { z } from 'zod'
+import { buildPaywallGate } from '../src/paywall-gate'
+import { PaywallStructuredContentSchema } from '../src/types/paywall-schema'
+import type { LimitResponseWithPlan } from '../src/types'
+
+describe('buildPaywallGate', () => {
+  const baseLimits: LimitResponseWithPlan = {
+    withinLimits: false,
+    remaining: 0,
+    plan: 'free',
+    checkoutUrl: 'https://pay.example.com/checkout',
+  }
+
+  it('builds a payment_required gate when activationRequired is false/undefined', () => {
+    const gate = buildPaywallGate('prd_x', baseLimits)
+    expect(gate.kind).toBe('payment_required')
+    expect(gate.product).toBe('prd_x')
+    expect(gate.checkoutUrl).toBe('https://pay.example.com/checkout')
+    // Text hosts recover via the `account` tool (checkout view) plus a pasteable URL.
+    expect(gate.message).toMatch(/`account` tool/)
+    expect(gate.message).toMatch(/view: 'checkout'/)
+    expect(gate.message).toContain('https://pay.example.com/checkout')
+  })
+
+  it('inlines balance and productDetails on payment_required gates when present', () => {
+    const balance = { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 }
+    const product = { name: 'API', ref: 'prd_x', provider: 'acme' }
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      balance,
+      product,
+    })
+    if (gate.kind !== 'payment_required') {
+      throw new Error('expected payment_required gate')
+    }
+    expect(gate.balance).toEqual(balance)
+    expect(gate.productDetails).toEqual(product)
+  })
+
+  it('builds an activation_required gate when activationRequired is true', () => {
+    const plans = [
+      {
+        reference: 'pln_usage',
+        name: 'Usage',
+        type: 'usage-based' as const,
+        price: 0,
+        currency: 'USD',
+        requiresPayment: false,
+      },
+    ]
+    const balance = { creditBalance: 100, remainingUnits: 100, creditsPerUnit: 1 }
+    const productCtx = { name: 'API', ref: 'prd_x', provider: 'acme' }
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      activationRequired: true,
+      confirmationUrl: 'https://pay.example.com/confirm',
+      plans,
+      balance,
+      product: productCtx,
+    })
+
+    expect(gate.kind).toBe('activation_required')
+    expect(gate.product).toBe('prd_x')
+    if (gate.kind !== 'activation_required') return
+    expect(gate.checkoutUrl).toBe('https://pay.example.com/confirm')
+    expect(gate.confirmationUrl).toBe('https://pay.example.com/confirm')
+    expect(gate.plans).toEqual(plans)
+    expect(gate.balance).toEqual(balance)
+    expect(gate.productDetails).toEqual(productCtx)
+    expect(gate.message).toMatch(/activate_plan/i)
+  })
+
+  it('uses checkoutUrl when confirmationUrl is missing for activation gates', () => {
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      activationRequired: true,
+    })
+    expect(gate.kind).toBe('activation_required')
+    if (gate.kind !== 'activation_required') return
+    expect(gate.checkoutUrl).toBe('https://pay.example.com/checkout')
+  })
+
+  it('falls back to empty checkoutUrl when no URL is available', () => {
+    const gate = buildPaywallGate('prd_x', {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'free',
+    })
+    if (gate.kind !== 'payment_required') {
+      throw new Error('expected payment_required gate')
+    }
+    expect(gate.checkoutUrl).toBe('')
+  })
+
+  it('produces the same gate shape that paywall.decide() emits internally', () => {
+    // This is the regression contract: extracting the helper must not
+    // drift from the inline construction in paywall.decide(). We mirror
+    // the structured fields the inline block builds and assert they
+    // match the helper output.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'free',
+      checkoutUrl: 'https://example.com/checkout',
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+      product: { name: 'API', ref: 'prd_test', provider: 'acme' },
+    }
+    const gate = buildPaywallGate('prd_test', limits)
+    expect(gate).toMatchObject({
+      kind: 'payment_required',
+      product: 'prd_test',
+      checkoutUrl: 'https://example.com/checkout',
+      balance: limits.balance,
+      productDetails: limits.product,
+    })
+    expect(gate.message.length).toBeGreaterThan(0)
+  })
+
+  it('swaps to activation_required when state is topup_required and every paid plan is PAYG', () => {
+    // Regression for the chat-checkout-demo TOPUP scenario: customer hits
+    // a paywall on an active usage-based plan with zero credits, and the
+    // product only offers PAYG remediation. The gate must emit
+    // `activation_required` (with the PAYG plans attached) so the React
+    // SDK's `isTopupGate` discriminator picks the topup-flavored heading
+    // ("Add credits to continue") instead of the generic upgrade copy.
+    const paygPlan: LimitResponseWithPlan['plans'] extends Array<infer P> ? P : never = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      type: 'usage-based',
+      price: 1000,
+      currency: 'USD',
+      requiresPayment: true,
+    }
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [paygPlan],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+      product: { name: 'TopupProduct', ref: 'prd_topup', provider: 'acme' },
+    }
+    const gate = buildPaywallGate('prd_topup', limits)
+    expect(gate.kind).toBe('activation_required')
+    if (gate.kind !== 'activation_required') return
+    expect(gate.plans).toEqual([paygPlan])
+    expect(gate.balance).toEqual(limits.balance)
+    expect(gate.productDetails).toEqual(limits.product)
+    // Narration text still drives off the topup state, so it names the
+    // `topup` recovery tool — unchanged by the kind swap.
+    expect(gate.message).toMatch(/topup/i)
+  })
+
+  it('keeps payment_required when state is topup_required but no plans are attached', () => {
+    // Without plan-shape information we cannot promise the user "credits"
+    // on the React side — `isTopupGate` would fall through to neutral
+    // activation copy, which is worse than the upgrade copy. Stay on
+    // `payment_required` so the message stays accurate.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('payment_required')
+  })
+
+  it('keeps payment_required when state is topup_required but a non-PAYG paid plan is offered', () => {
+    // Mixed-plan products (PAYG + recurring) leave the customer a real
+    // upgrade choice in addition to topup, so `payment_required` ("Upgrade
+    // to continue" / "Pick a plan") stays the right framing.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [
+        {
+          reference: 'pln_payg',
+          name: 'Pay as you go',
+          type: 'usage-based',
+          price: 1000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+        {
+          reference: 'pln_pro',
+          name: 'Pro',
+          type: 'recurring',
+          price: 2000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+      ],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('payment_required')
+  })
+
+  it('prefers measured used/limit over plan-derived included arithmetic', () => {
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      plan: 'plan_free',
+      planRef: 'plan_free',
+      used: 2,
+      limit: 5,
+      remaining: 3,
+      plans: [
+        {
+          reference: 'plan_free',
+          name: 'Free',
+          type: 'hybrid',
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+          freeUnits: 3,
+        },
+      ],
+    })
+    expect(gate.included).toEqual({ total: 5, used: 2, remaining: 3 })
+  })
+
+  it('routes recovery links.topup from paywallReason instead of URL shape', () => {
+    const gate = buildPaywallGate('prd_topup', {
+      withinLimits: false,
+      remaining: 0,
+      plan: '',
+      paywallReason: 'topup_required',
+      checkoutUrl: 'https://pay.example.com/customer/checkout?id=chk_1',
+    })
+    expect(gate.links?.topup).toBe('https://pay.example.com/customer/checkout?id=chk_1')
+    expect(gate.links?.checkout).toBeUndefined()
+  })
+
+  it('swaps to activation_required for a credit shortfall once plans are forwarded', () => {
+    // Forwarding plans[] wakes useActivationForTopup for rows 5 and 6.
+    // The React isTopupGate discriminator sees kind: activation_required.
+    // buildGateMessage still switches on state.kind (topup_required), so
+    // the message branch is unchanged by this kind swap.
+    const paygPlan = {
+      reference: 'pln_payg',
+      name: 'Pay as you go',
+      type: 'usage-based' as const,
+      price: 1000,
+      currency: 'USD',
+      requiresPayment: true,
+    }
+    const gate = buildPaywallGate('prd_topup', {
+      withinLimits: false,
+      remaining: 0,
+      plan: '',
+      planRef: 'pln_payg',
+      purchaseRef: 'pur_1',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [paygPlan],
+      creditBalance: 91_000,
+      creditsPerUnit: 100_000,
+      balance: { creditBalance: 91_000, creditsPerUnit: 100_000, currency: 'USD' },
+    })
+    expect(gate.kind).toBe('activation_required')
+    expect(gate.reason).toBe('topup_required')
+    expect(gate.nextAction).toBe('topup')
+    expect(gate.message).toMatch(/9,000 short/)
+    expect(gate.message).not.toMatch(/don't have an active plan/)
+  })
+
+  it('ignores Free plans when checking PAYG-only — Free + PAYG still swaps to activation_required', () => {
+    // Free plans don't represent a paid remediation, so a product that
+    // offers Free + a single PAYG plan still counts as topup-only for the
+    // kind-swap check.
+    const limits: LimitResponseWithPlan = {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_payg',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans: [
+        {
+          reference: 'pln_free',
+          name: 'Free',
+          type: 'recurring',
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+        },
+        {
+          reference: 'pln_payg',
+          name: 'Pay as you go',
+          type: 'usage-based',
+          price: 1000,
+          currency: 'USD',
+          requiresPayment: true,
+        },
+      ],
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    }
+    const gate = buildPaywallGate('prd_x', limits)
+    expect(gate.kind).toBe('activation_required')
+  })
+
+  it('attaches recovery fields on both gate branches', () => {
+    const plans = [
+      {
+        reference: 'pln_rec',
+        name: 'Pro',
+        type: 'recurring' as const,
+        price: 1000,
+        currency: 'USD',
+        requiresPayment: true,
+        freeUnits: 3,
+        perUnitChargeMinor: 2,
+      },
+    ]
+    const gate = buildPaywallGate('prd_x', {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_rec',
+      meterName: 'lookups',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans,
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    })
+    expect(gate.planRef).toBe('pln_rec')
+    expect(gate.plans).toEqual(plans)
+    expect(gate.meterName).toBe('lookups')
+    expect(gate.unitPriceMinor).toBe(2)
+    expect(gate.currency).toBe('USD')
+    expect(gate.included).toEqual({ total: 3, used: 3, remaining: 0 })
+    expect(gate.creditBalance).toBe(0)
+  })
+})
+
+describe('buildPaywallGate — published JSON Schema stays in sync', () => {
+  // `registerPayableTool` registers `z.union([merchantSchema,
+  // PaywallStructuredContentSchema])` as a payable tool's `outputSchema`,
+  // and the MCP server publishes it via `z.toJSONSchema(…, { io: 'output' })`.
+  // Output mode emits `additionalProperties: false`, so a key the gate
+  // builder emits but the schema does not declare is rejected by any client
+  // that validates `structuredContent` against the published schema
+  // (ChatGPT does; Zod's own `safeParse` silently strips it, which is why
+  // this drift survived server-side validation).
+  const maximalLimits: LimitResponseWithPlan = {
+    withinLimits: false,
+    remaining: 0,
+    planRef: 'pln_payg',
+    planName: 'Pay as you go',
+    purchaseRef: 'pur_1',
+    meterName: 'requests',
+    currency: 'USD',
+    checkoutUrl: 'https://pay.example.com/checkout',
+    confirmationUrl: 'https://pay.example.com/manage',
+    paywallReason: 'topup_required',
+    creditBalance: 12,
+    autoRecharge: { enabled: true, status: 'active' },
+    balance: {
+      creditBalance: 12,
+      creditsPerUnit: 200,
+      remainingUnits: 0,
+      currency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    },
+    plans: [
+      {
+        reference: 'pln_payg',
+        name: 'Pay as you go',
+        type: 'usage-based',
+        price: 1000,
+        currency: 'USD',
+        requiresPayment: true,
+        perUnitChargeMinor: 2,
+      },
+    ],
+  }
+
+  function declaredPropertiesFor(kind: string): Set<string> {
+    const json = z.toJSONSchema(PaywallStructuredContentSchema, {
+      target: 'draft-2020-12',
+      io: 'output',
+    }) as {
+      anyOf?: Array<Record<string, unknown>>
+      oneOf?: Array<Record<string, unknown>>
+    }
+    const branches = json.oneOf ?? json.anyOf ?? []
+    const branch = branches.find(b => {
+      const properties = b.properties as { kind?: { const?: unknown } } | undefined
+      return properties?.kind?.const === kind
+    })
+    if (!branch) throw new Error(`no published branch for kind "${kind}"`)
+    return new Set(Object.keys(branch.properties as Record<string, unknown>))
+  }
+
+  // A PAYG-only product swaps `payment_required` to `activation_required`
+  // (see `useActivationForTopup`), so the payment_required fixture needs a
+  // recurring paid plan alongside the PAYG one.
+  const recurringPlan = {
+    reference: 'pln_pro',
+    name: 'Pro',
+    type: 'recurring' as const,
+    price: 2900,
+    currency: 'USD',
+    requiresPayment: true,
+  }
+
+  it.each([
+    [
+      'payment_required',
+      { ...maximalLimits, plans: [...(maximalLimits.plans ?? []), recurringPlan] },
+    ],
+    ['activation_required', { ...maximalLimits, activationRequired: true }],
+  ])('declares every key a %s gate emits', (kind, limits) => {
+    const gate = buildPaywallGate('prd_x', limits as LimitResponseWithPlan)
+    expect(gate.kind).toBe(kind)
+
+    const declared = declaredPropertiesFor(kind as string)
+    const undeclared = Object.keys(gate).filter(key => !declared.has(key))
+    expect(undeclared).toEqual([])
+  })
+
+  it('carries the credit peg through to the gate', () => {
+    const gate = buildPaywallGate('prd_x', maximalLimits)
+    expect(gate.creditsPerMinorUnit).toBe(100)
+    expect(gate.displayExchangeRate).toBe(1)
+  })
+})

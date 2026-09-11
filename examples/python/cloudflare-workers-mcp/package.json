@@ -1,0 +1,20 @@
+{
+  "name": "@example/cloudflare-workers-mcp-python",
+  "private": true,
+  "type": "module",
+  "description": "Beta Cloudflare Python Worker for SolvaPay MCP via @solvapay/server-wasm FFI.",
+  "scripts": {
+    "predev": "pnpm --filter @solvapay/server-wasm run build:wasm && node scripts/stage-server-wasm.mjs",
+    "dev": "uv run pywrangler dev",
+    "deploy": "uv run pywrangler deploy",
+    "preflight:dev": "example-deploy preflight --config deploy.config.mjs",
+    "deploy:dev": "pnpm --filter @solvapay/server-wasm run build:wasm && node scripts/stage-server-wasm.mjs && example-deploy deploy --config deploy.config.mjs"
+  },
+  "dependencies": {
+    "@solvapay/server-wasm": "workspace:*"
+  },
+  "devDependencies": {
+    "@solvapay/example-deploy": "workspace:*",
+    "wrangler": "^4.47.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "suite": "mcp",
+  "case": "with-options-text",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": { "rows": [] },
+      "options": { "text": "custom narration" }
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "rows": [] },
+      "options": { "text": "custom narration" }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "be-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "BE",
+      "taxId": "BE2123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["taxId"],
+            "message": "Enter a valid tax ID for BE"
+          }
+        ]
+      }
+    }
+  }
+}

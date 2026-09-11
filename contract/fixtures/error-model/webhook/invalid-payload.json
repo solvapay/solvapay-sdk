@@ -1,0 +1,19 @@
+{
+  "suite": "error-model",
+  "case": "webhook-invalid-payload",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Webhook",
+      "code": "invalid_payload"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Invalid webhook payload: body is not valid JSON",
+      "kind": "Webhook",
+      "code": "invalid_payload"
+    }
+  }
+}

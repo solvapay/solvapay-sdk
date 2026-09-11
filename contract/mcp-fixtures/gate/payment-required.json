@@ -1,0 +1,67 @@
+{
+  "suite": "gate",
+  "case": "payment-required",
+  "input": {
+    "fn": "registerPayable",
+    "args": {
+      "tool": {
+        "name": "echo_paid",
+        "title": "Echo paid",
+        "description": "Paid echo",
+        "args": {}
+      },
+      "product": "prd_demo",
+      "customerRef": "cus_from_hook",
+      "customerRefSource": "hook",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "pl_basic",
+        "checkoutUrl": "https://pay.test/x"
+      },
+      "handler": {
+        "kind": "respond",
+        "data": { "ok": true }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "toolResult": {
+        "content": [
+          {
+            "type": "text",
+            "text": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
+          }
+        ],
+        "structuredContent": {
+          "kind": "payment_required",
+          "product": "prd_demo",
+          "checkoutUrl": "https://pay.test/x",
+          "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+          "shortMessage": "Payment required",
+          "planRef": "pl_basic",
+          "reason": "limit_reached",
+          "nextAction": "checkout",
+          "remainingCalls": 0.0,
+          "links": {
+            "checkout": "https://pay.test/x"
+          }
+        },
+        "isError": false
+      },
+      "usage": [
+        {
+          "outcome": "paywall",
+          "actionType": "api_call",
+          "units": 1,
+          "productRef": "prd_demo",
+          "customerRef": "cus_from_hook",
+          "metadata": {
+            "action": "requests"
+          }
+        }
+      ]
+    }
+  }
+}

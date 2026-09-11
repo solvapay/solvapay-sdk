@@ -1,0 +1,21 @@
+{
+  "suite": "plan-pricing",
+  "case": "trial-days-14",
+  "input": {
+    "fn": "trialDays",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "trial",
+            "days": 14,
+            "onEnd": "convert"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": 14
+  }
+}

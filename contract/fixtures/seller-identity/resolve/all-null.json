@@ -1,0 +1,19 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-all-null",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "US",
+      "vatNumber": null,
+      "taxId": null,
+      "companyNumber": null
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": null,
+      "companyNumber": null
+    }
+  }
+}

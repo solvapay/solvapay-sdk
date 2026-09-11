@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "gr-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "GR",
+      "taxId": "GR123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["taxId"],
+            "message": "Enter a valid tax ID for GR"
+          }
+        ]
+      }
+    }
+  }
+}

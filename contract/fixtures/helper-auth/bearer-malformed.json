@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-malformed",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer not.a.jwt.shape",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Unauthorized",
+      "status": 401,
+      "details": "Malformed authentication token"
+    }
+  }
+}

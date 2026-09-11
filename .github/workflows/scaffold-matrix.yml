@@ -1,0 +1,84 @@
+name: Scaffold matrix (Tier-1)
+
+# Hermetic scaffold sweep: for each language, `create-solvapay` scaffolds a
+# from-scratch paid MCP server on the `--dev` (checkout) lane, installs it,
+# boots it, and runs the generated `verify.mjs`. No SolvaPay registry, no
+# running platform — the paid path is the platform-backed Tier-2 sweep, which
+# is not part of CI.
+#
+# This is the acceptance test for the scaffolder. Until the Phase 1–2 repairs
+# land it is expected to be red on some rows (that is why it exists).
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/create-solvapay/**'
+      - 'tools/repo/scaffold-sweep.ts'
+      - 'tools/shared/**'
+      - 'sdks/**'
+      - 'contract/manifest/repo-paths.yaml'
+      - '.github/workflows/scaffold-matrix.yml'
+
+concurrency:
+  group: scaffold-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    name: sweep ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    # One red row must not hide the state of the others.
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ts, python, ruby, go, rust]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Ruby headers are needed both for the ruby row (native gems:
+      # json_schemer → bigdecimal, rb_sys) and the rust row (the rust-mcp
+      # crate's Magnus/rb-sys member needs Ruby headers for cargo build —
+      # same step as .github/workflows/live-rust.yml).
+      - name: Setup Ruby
+        if: matrix.language == 'ruby' || matrix.language == 'rust'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Setup Python + uv
+        if: matrix.language == 'python'
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup Rust
+        if: matrix.language == 'rust'
+        run: rustup show
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Builds the TS packages + create-solvapay CLI. Required so ts `link:`
+      # deps resolve to built dist/ and so the scaffolder itself is runnable.
+      - name: Build packages
+        run: pnpm build:packages
+
+      - name: Scaffold sweep (${{ matrix.language }})
+        run: pnpm exec tsx tools/repo/scaffold-sweep.ts --only ${{ matrix.language }} --skip-build

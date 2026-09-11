@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "minor-units-sek-100",
+  "input": {
+    "fn": "minorUnitsPerMajor",
+    "args": {
+      "currency": "SEK"
+    }
+  },
+  "expect": {
+    "result": 100
+  }
+}

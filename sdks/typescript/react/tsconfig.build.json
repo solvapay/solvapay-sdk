@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    // Keep `@solvapay/server` as a real package import during the library
+    // build so tsup can externalize it. Path-mapping to server/src would
+    // pull the native/WASM barrel into the React client bundle.
+    "paths": {
+      "@solvapay/mcp-core": ["../mcp-core/src"],
+      "@solvapay/core": ["../core/src"],
+      "@solvapay/core/browser-wasm": ["../core/src/browser-wasm"]
+    }
+  },
+  "references": [],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.test-d.ts"]
+}

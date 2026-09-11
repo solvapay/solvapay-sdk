@@ -1,0 +1,14 @@
+[project]
+name = "solvapay-example-cloudflare-workers-mcp"
+version = "0.0.0"
+description = "Beta Python Worker MCP example (not published)"
+requires-python = ">=3.12"
+dependencies = [
+  "starlette>=0.38",
+]
+
+[dependency-groups]
+dev = ["workers-py", "workers-runtime-sdk"]
+
+[tool.pywrangler]
+main = "src/worker.py"

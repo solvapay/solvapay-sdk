@@ -1,0 +1,28 @@
+{
+  "suite": "oauth-proxy",
+  "case": "discovery-post-405",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "POST",
+      "path": "/.well-known/oauth-authorization-server",
+      "headers": {},
+      "body": "",
+      "config": {
+        "publicBaseUrl": "https://app.example.com",
+        "productRef": "prd_demo"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 405,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "method_not_allowed"
+      }
+    }
+  }
+}

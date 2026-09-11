@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "trackUsage",
+    "args": {
+      "customerRef": "cus_fixture",
+      "actionType": "api_call",
+      "units": 1
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "track-usage-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/usages",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "actionType": "api_call",
+        "units": 1
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Track usage failed (400): bad",
+      "status": 400
+    }
+  }
+}

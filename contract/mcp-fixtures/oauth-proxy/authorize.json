@@ -1,0 +1,26 @@
+{
+  "suite": "oauth-proxy",
+  "case": "authorize",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "GET",
+      "path": "/oauth/authorize?client_id=abc",
+      "headers": {},
+      "body": "",
+      "config": {
+        "publicBaseUrl": "https://app.example.com",
+        "productRef": "prd_demo"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 302,
+      "headers": {
+        "location": "https://api.example.com/v1/customer/auth/authorize?client_id=abc"
+      },
+      "body": null
+    }
+  }
+}

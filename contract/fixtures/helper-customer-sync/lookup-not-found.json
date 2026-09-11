@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "lookup-not-found",
+  "input": {
+    "fn": "classifyLookupError",
+    "args": {
+      "message": "customer not found"
+    }
+  },
+  "expect": {
+    "result": "expectedMissing"
+  }
+}

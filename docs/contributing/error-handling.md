@@ -1,12 +1,72 @@
 # SDK error handling (contributors)
 
-This page is for maintainers working on SDK internals and adapters.
+This page is for maintainers working on SDK internals and adapters. Errors, like
+all shared behavior, originate in the Rust core and are mapped once per binding
+into each language's idiomatic exception type (see [architecture.md](./architecture.md)).
 
-## Error taxonomy
+## The `SdkError` model (Rust core)
 
-- `SolvaPayError`: base SDK error type
-- `PaywallError`: payment required or limit exceeded, includes structured payload
-- native errors: framework/runtime/network failures from host code
+`core/solvapay-core/src/error.rs` defines `SdkError`, the single
+cross-language error surface. It has four kinds:
+
+| Kind        | Meaning                                                           | Maps to (TS)                    |
+| ----------- | ----------------------------------------------------------------- | ------------------------------- |
+| `Api`       | Backend/API failure; carries a rendered message template + status | `SolvaPayError`                 |
+| `Paywall`   | Payment required / limit exceeded; carries the full gate          | `PaywallError` (402 formatting) |
+| `Webhook`   | Webhook verification failure; carries a stable `WebhookErrorCode` | `SolvaPayError`                 |
+| `Transport` | Transport / I/O failure — the **only** transport error surface    | `SolvaPayError`                 |
+
+Messages come from manifest-frozen templates (`error_templates.rs`, generated),
+so wording is consistent across surfaces and stable across releases.
+
+## One conversion layer per binding
+
+Wrappers do **not** re-encode domain failures. Each binding maps `SdkError` once,
+at the FFI/facade boundary, into the host exception type, then rethrows/rejects.
+Integrators in every language see the same stable `code` vocabulary and the same
+message templates; only the exception _class_ name and language idioms differ.
+
+Panics never cross a language boundary as an unwind. Containment is per facade
+(§7.6) — not a single `catch_unwind` on every export:
+
+| Facade                                                                  | Mechanism                                                                                                                                               |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C (`sdks/capi`)                                                         | `catch_unwind` on every `extern "C"` edge, including async-equivalent `solvapay_client_call`                                                            |
+| Python sync (`version`, `verify_webhook`, decisions, payload builders)  | `catch_unwind` / `run_envelope_sync` in `lib.rs`                                                                                                        |
+| Python async / blocking client methods                                  | PyO3 converts a panic to `PanicException`; the debug `panic-probe` feature also wraps `catch_unwind` at the export                                      |
+| Node sync (`napiVersion`, `verifyWebhook`, decisions, payload builders) | `catch_unwind` / `run_envelope_sync` in `lib.rs`                                                                                                        |
+| Node async `NativeClient` (`#[napi]` futures)                           | napi-rs intercepts the panic at the addon boundary and rejects the JS `Promise` / throws `Error` — it does not unwind into V8                           |
+| Ruby sync (`version`, `verify_webhook`, decisions, payload builders)    | `catch_unwind` in `lib.rs`                                                                                                                              |
+| Ruby client methods                                                     | `without_gvl_envelope` catches the panic **before** Magnus ≥0.8, which would otherwise raise an uncatchable `fatal`                                     |
+| `@solvapay/server-wasm` and `sdks/go` WASI guest                        | `panic = "abort"` on `wasm-release` (documented in-crate). A trap becomes a JS exception or a wazero host error; it does not abort the customer process |
+
+The workspace Clippy lints (`unwrap_used`, `expect_used`, `panic`) stop _our_ panics. A dependency panic is what the table above contains. The `panic-probe` cargo feature (never default, never in publish artifacts) exports a deliberate panic so each language test can assert a language-level error. Release artifact gates scan for the `SOLVAPAY_PANIC_PROBE` marker string and fail if it is present.
+
+## Stable codes and frozen templates
+
+- **Webhook** and **transport** errors carry _stable_ codes. New codes may be
+  added; existing codes and message strings must not change until a major
+  version (redesign-v2 §6.4).
+- Existing per-method thrown messages (§2.3) are frozen in the manifest as
+  templates. Do not change a message string in a way that would alter a
+  consumer's observed error; add a new template/code instead.
+
+## Public TypeScript shapes (unchanged)
+
+The public TS error surface is preserved — consumers still catch:
+
+- `SolvaPayError` — base SDK error type
+- `PaywallError` — payment required / limit exceeded, with structured payload
+
+These are the host-mapped views of `SdkError`; their shapes are a compatibility
+guarantee.
+
+## Adapter behavior
+
+- `http` adapters map paywall errors to HTTP `402`
+- `next` adapters return consistent `NextResponse` error payloads
+- `mcp` adapters preserve structured content for tool clients (note: a paywall
+  tool result is `isError: false` — a user-actionable gate, not a tool failure)
 
 ## Design goals
 
@@ -14,20 +74,36 @@ This page is for maintainers working on SDK internals and adapters.
 - return actionable details without leaking secrets
 - preserve root-cause context in logs while keeping external messages concise
 
-## Adapter behavior
+## Webhook verification vs replay
 
-- `http` adapters should map paywall errors to HTTP `402`
-- `next` adapters should return consistent `NextResponse` error payloads
-- `mcp` adapters should preserve structured content for tool clients
+`verify_webhook` in `core/solvapay-core/src/webhook.rs` is signature + clock
+only. It has no replay/nonce store (core purity: no HTTP, no env, no timers,
+no caches). The ±300 s `timestamp_too_old` window rejects stale `SV-Signature`
+headers; a retry of the same event inside that window still verifies.
+
+Integrators must dedupe on **`event.id`** (also the `SV-Event-Id` header).
+`SV-Delivery` is unique **per attempt**, so it does not prevent processing the
+same event twice when SolvaPay retries.
+
+TypeScript facades accept an optional `seenEventId` callback on
+`verifyWebhook` / `solvapayWebhook`. Return `true` when the id is already
+processed. The hook throws `SolvaPayError` with `code: 'duplicate_event'`;
+HTTP handlers should answer **2xx** for that code so the sender stops retrying.
+Do not add this store to core — keep it host-side.
 
 ## Contributor checklist
 
-- validate error shape changes across `@solvapay/server`, `@solvapay/next`, and examples
-- add unit tests for new branches and edge cases
-- update integration examples if response shape or status handling changes
+- change error behavior in the Rust core (or the manifest templates), not in a
+  single facade — one conversion layer per binding
+- add/adjust `contract/fixtures/` golden fixtures for new error branches and
+  confirm both `pnpm test:contract` and the `fixture-runner` stay green
+- never change an existing stable code or frozen message string without a major
+- validate error shape across `@solvapay/server`, `@solvapay/next`, and examples
 - keep user-facing copy short and deterministic
 
 ## Related docs
 
-- `docs/contributing/testing.md`
+- [`architecture.md`](./architecture.md) — where the error model lives
+- [`testing.md`](./testing.md) — fixtures and dual-impl suites
+- [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) §4.4 / §6.4 — full rationale
 - `CONTRIBUTING.md`

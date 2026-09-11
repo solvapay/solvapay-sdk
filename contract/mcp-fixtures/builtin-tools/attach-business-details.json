@@ -1,0 +1,48 @@
+{
+  "suite": "builtin-tools",
+  "case": "attach-business-details",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "attach_business_details",
+      "args": {
+        "paymentIntentId": "pi_1",
+        "isBusiness": true,
+        "country": "DE"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents/pi_1/business-details",
+      "status": 200,
+      "body": {
+        "tax": {
+          "amount": 19
+        }
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"tax\":{\"amount\":19}}"
+        }
+      ],
+      "structuredContent": {
+        "tax": {
+          "amount": 19
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-normalize-invalid",
+  "input": {
+    "fn": "normalizeReactivateResponse",
+    "args": { "response": null }
+  },
+  "expect": {
+    "result": {
+      "error": "Invalid response from reactivate purchase endpoint",
+      "status": 500
+    }
+  }
+}

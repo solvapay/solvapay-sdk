@@ -1,0 +1,21 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-casing",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "BEARER eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyLTIifQ.l6eH4WLkFt1fHBG8EoW3zEYeRTYpC2VPpzHYjdmxRI0",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "user-2",
+      "email": null,
+      "name": null
+    }
+  }
+}

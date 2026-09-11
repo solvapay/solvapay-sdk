@@ -1,0 +1,14 @@
+{
+  "suite": "helper-payment",
+  "case": "attach-validation-fallback",
+  "input": {
+    "fn": "attachBusinessDetailsValidationError",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "error": "Invalid business details",
+      "status": 400
+    }
+  }
+}

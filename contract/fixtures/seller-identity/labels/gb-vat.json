@@ -1,0 +1,13 @@
+{
+  "suite": "seller-identity",
+  "case": "label-gb-vat",
+  "input": {
+    "fn": "getSellerTaxIdentifierDisplayLabel",
+    "args": {
+      "country": "GB"
+    }
+  },
+  "expect": {
+    "result": "VAT number"
+  }
+}

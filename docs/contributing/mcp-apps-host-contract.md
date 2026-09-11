@@ -11,20 +11,20 @@ There is **no normative client-precedence rule**. Two clarification SEPs that ap
 - **SEP-1624** closed unmerged on 2026-03-04. Its MUST that `content` and `structuredContent` be semantically equivalent never shipped.
 - **SEP-2200** was voted, re-voted, then explicitly deferred/declined by core maintainers on 2026-05-25. The note was that the real fix is polymorphic `tools/call` return types in a future spec. "Clients SHOULD prefer `content`" and "Clients SHOULD NOT forward both fields" have **no force**.
 
-The spec has never said anything binding about which field a client forwards to the model. What *is* in force, unchanged across 2025-06-18, 2025-11-25, 2026-07-28 and draft, is a **server-directed SHOULD**:
+The spec has never said anything binding about which field a client forwards to the model. What _is_ in force, unchanged across 2025-06-18, 2025-11-25, 2026-07-28 and draft, is a **server-directed SHOULD**:
 
 > For backwards compatibility, a tool that returns structured content SHOULD also return the serialized JSON in a TextContent block.
 
 Host behaviour is observed, not specified. Dated matrix (not spec):
 
-| Surface | Observed | Date |
-| --- | --- | --- |
-| **Claude Desktop chat** | Reads `content`, ignores `structuredContent`. | 2026-09 |
-| **Claude Code** | Prefers `structuredContent` and **drops text blocks** when it is set; forwards image and resource blocks. First-party docs: [code.claude.com/docs/en/agent-sdk/custom-tools](https://code.claude.com/docs/en/agent-sdk/custom-tools). | 2026-09 |
-| **Claude Desktop MCP Apps view** | Strips `structuredContent` before forwarding. | 2026-09 |
-| **ChatGPT Apps** | Passes both. | 2026-09 |
-| **VS Code** | Matches Claude Code. | 2026-09 |
-| **Grok Bot** | `content[].text` markdown only. Flattens `resource_link` to `Resource: <uri> (<name>)` (not a chip). Ignores slash commands and `docs://`. Does not mount `ui://`. `structuredContent` and `_meta` were never observed. Confirmed with a captured session, 2026-09-03 — this is evidence, not a prediction. | 2026-09-03 |
+| Surface                          | Observed                                                                                                                                                                                                                                                                                                    | Date       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| **Claude Desktop chat**          | Reads `content`, ignores `structuredContent`.                                                                                                                                                                                                                                                               | 2026-09    |
+| **Claude Code**                  | Prefers `structuredContent` and **drops text blocks** when it is set; forwards image and resource blocks. First-party docs: [code.claude.com/docs/en/agent-sdk/custom-tools](https://code.claude.com/docs/en/agent-sdk/custom-tools).                                                                       | 2026-09    |
+| **Claude Desktop MCP Apps view** | Strips `structuredContent` before forwarding.                                                                                                                                                                                                                                                               | 2026-09    |
+| **ChatGPT Apps**                 | Passes both.                                                                                                                                                                                                                                                                                                | 2026-09    |
+| **VS Code**                      | Matches Claude Code.                                                                                                                                                                                                                                                                                        | 2026-09    |
+| **Grok Bot**                     | `content[].text` markdown only. Flattens `resource_link` to `Resource: <uri> (<name>)` (not a chip). Ignores slash commands and `docs://`. Does not mount `ui://`. `structuredContent` and `_meta` were never observed. Confirmed with a captured session, 2026-09-03 — this is evidence, not a prediction. | 2026-09-03 |
 
 Grok Bot is the strongest case for the rule because it has no second lane. If a response works there, it works everywhere.
 
@@ -49,15 +49,15 @@ The MCP Apps specification (2026-01-26) is explicit, and this is the strongest e
 > - **Tools MUST return meaningful content array even when UI is available**
 > - Servers MAY register different tool variants based on host capabilities
 
-And on the host side: *"If host does not support MCP Apps, tool behaves as standard tool (text-only fallback)."*
+And on the host side: _"If host does not support MCP Apps, tool behaves as standard tool (text-only fallback)."_
 
-A one-line "shown in the panel" placeholder does not satisfy "meaningful content array." The Ruby SDK's MCP Apps guide states the same rule as a one-liner: *"The extension is optional: always return a meaningful text result."*
+A one-line "shown in the panel" placeholder does not satisfy "meaningful content array." The Ruby SDK's MCP Apps guide states the same rule as a one-liner: _"The extension is optional: always return a meaningful text result."_
 
 ## 3. What this changes in implementation
 
 ### 3a. Keep the narration short, not just present
 
-*"content goes to the model. Keep it short."* Our narrators emit a full markdown block (title, plan list, balance row, commands line). Sending that on every intent call, including on hosts that also render the iframe, is the token waste MCP Apps exists to eliminate.
+_"content goes to the model. Keep it short."_ Our narrators emit a full markdown block (title, plan list, balance row, commands line). Sending that on every intent call, including on hosts that also render the iframe, is the token waste MCP Apps exists to eliminate.
 
 The resolution is not to go back to a placeholder. The short line must be **self-sufficient**: plan, remaining or balance, reason, one recovery tool, and the https URL, in one or two lines. Trim the narrators rather than adding rows to them.
 
@@ -106,7 +106,7 @@ server.server.oninitialized = () => {
 
 The Python SDK ships this as `client_supports_apps(ctx)`, Ruby as `MCP::Apps.client_supports?`. The logic is a lookup in `capabilities.extensions` plus a MIME-type check.
 
-We do none of it — `hideToolsByAudience.ts:110-141` matches `/openai-mcp/i` against the user agent or client name instead, which is why `mastercard-mcp-demo` needs a hand-ported `bypassWhen` for Claude.ai web. Two constraints when this is picked up: the ChatGPT user-agent bypass must stay (ChatGPT uses its own Apps SDK and may not advertise the extension, so this is an addition, not a swap), and client capabilities must be verified reachable under `responseMode: 'json'` before anything is built on them.
+We currently hide UI transport tools from `tools/list` via `hideAudiences: ["ui"]` (or TypeScript `hideToolsByAudience: ['ui']`). Those tools stay callable from the MCP App iframe because they declare SEP-1865 `_meta.ui.visibility: ["app"]`. A User-Agent must not restore the catalog. Capability-based registration (`getUiCapability`) is still the follow-up: ChatGPT's Apps SDK may not advertise the extension, so listing vs hiding for that host is a separate product decision, not a spoofable header check.
 
 **Deliberately out of scope for DEV-867.** Text-first narration must land regardless of what any host advertises; capability detection is an optimisation on top of a floor that has to work anyway.
 
@@ -139,17 +139,17 @@ The scaffolder's `scripts/verify.mjs` `paywallGate` check asserts this against a
 
 ## 6. `outputSchema` is an obligation you take on, not a requirement
 
-No released spec says "if a tool returns `structuredContent`, declare an `outputSchema`." What *is* normative: **once you declare `outputSchema`, the server MUST return `structuredContent` that conforms.** Clients SHOULD validate. A merchant who declares a schema and then returns a superset gets rejected by strict clients.
+No released spec says "if a tool returns `structuredContent`, declare an `outputSchema`." What _is_ normative: **once you declare `outputSchema`, the server MUST return `structuredContent` that conforms.** Clients SHOULD validate. A merchant who declares a schema and then returns a superset gets rejected by strict clients.
 
 That is why `registerPayable` takes `outputSchema` as opt-in and never auto-derives it. Declaring it is a validation/hydration benefit plus a conformance MUST.
 
-The `account` viewer declares `BootstrapPayloadSchema`. The paywall gate declares `PaywallStructuredContentSchema` (re-exported from both the Node and edge bundles so `@solvapay/mcp` can import it on Cloudflare Workers). Fields the backend omits are optional in the schema, never required-with-a-default.
+The `account` viewer declares `BootstrapPayloadSchema`. The paywall gate declares `PaywallStructuredContentSchema` (re-exported from both the Node and edge bundles so `@solvapay/mcp` can import it on Cloudflare Workers). That Zod object is derived from `solvapay-core::paywall_structured_content_schema`. Fields the backend omits are optional in the schema, never required-with-a-default.
 
 Separately, the tools spec's server-directed SHOULD still stands: a tool that returns structured content SHOULD also return the serialized JSON in a TextContent block. That is `ResponseOptions.dataInText` (default `true`) — a trailing text block after the narration, so `content[0]` stays the human summary and hosts that drop `structuredContent` still receive the payload.
 
 ## 7. What we already do correctly
 
-`updateModelContext` is implemented at [`packages/react/src/mcp/bridge.tsx`](../../packages/react/src/mcp/bridge.tsx) with the properties the talk calls for: feature-detected, errors swallowed so a non-compliant host cannot break the user flow, and emitted at committed milestones (plan select, payment success, top-up confirmed), covered by `__tests__/update-model-context.emissions.test.tsx`. `app.sendMessage` is wired for user-visible follow-ups. This is what tells the model a plan went active without spending a tool call.
+`updateModelContext` is implemented at [`sdks/typescript/react/src/mcp/bridge.tsx`](../../sdks/typescript/react/src/mcp/bridge.tsx) with the properties the talk calls for: feature-detected, errors swallowed so a non-compliant host cannot break the user flow, and emitted at committed milestones (plan select, payment success, top-up confirmed), covered by `__tests__/update-model-context.emissions.test.tsx`. `app.sendMessage` is wired for user-visible follow-ups. This is what tells the model a plan went active without spending a tool call.
 
 Our app-only transport tools are correct in kind: `visibility: ["app"]` is the spec's own mechanism, defaulting to `["model", "app"]`, with hosts required to exclude non-model tools from the agent's list.
 

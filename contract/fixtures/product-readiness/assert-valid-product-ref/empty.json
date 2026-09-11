@@ -1,0 +1,19 @@
+{
+  "suite": "product-readiness",
+  "case": "assert-valid-empty",
+  "input": {
+    "fn": "assertValidProductRef",
+    "args": {
+      "productRef": "",
+      "context": "test"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "test: productRef is required (expected a prd_* reference).",
+      "kind": "Api",
+      "code": "invalid_product_ref"
+    }
+  }
+}

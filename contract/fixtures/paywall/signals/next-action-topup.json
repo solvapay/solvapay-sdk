@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "next-action-topup",
+  "input": {
+    "fn": "nextActionFor",
+    "args": { "state": { "kind": "topup_required" } }
+  },
+  "expect": { "result": "topup" }
+}

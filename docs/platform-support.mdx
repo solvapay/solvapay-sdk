@@ -1,0 +1,64 @@
+---
+title: 'Platform support'
+description: 'Prebuilt versus compile-from-source coverage for each SolvaPay SDK.'
+---
+
+Prebuilt artifacts are listed in [`contract/manifest/support-matrix.yaml`](../contract/manifest/support-matrix.yaml). Adding a platform is one edit there; CI and publish matrices must follow it.
+
+## TypeScript / Node (`@solvapay/server-native`)
+
+Prebuilt napi binaries for:
+
+- macOS x64 and arm64
+- Linux glibc and musl, x64 and arm64
+- Windows x64 and arm64
+
+Node 22, 24, and 26. Unsupported Node platforms fail to load. There is no native-to-wasm fallback on the main `@solvapay/server` entry. Edge and browser use `@solvapay/server-wasm`.
+
+`@solvapay/server-native` and its eight platform packages must be on npm **before, or in the same batch as**, the next `@solvapay/server` release that depends on them.
+
+## Python (`solvapay`)
+
+One `abi3-py39` wheel per platform covers CPython 3.9–3.14:
+
+- manylinux2014 x86_64 and aarch64 (glibc 2.17 floor, pinned — not `manylinux: auto`)
+- musllinux_1_1 x86_64 and aarch64
+- macOS universal2
+- Windows x64 and arm64
+
+Free-threaded CPython (3.13t / 3.14t) is **not supported**. Those builds cannot load `abi3` wheels and this train does not ship `abi3t` wheels. Use a regular CPython build, or compile the sdist yourself.
+
+The `solvapay-mcp` adapter is a pure-Python package published after `solvapay`.
+
+## Ruby (`solvapay`)
+
+Platform gems ship Ruby ABIs **3.1, 3.2, 3.3, and 3.4** for:
+
+- Linux gnu, x86_64 and aarch64
+- macOS x64 and arm64
+
+Linux musl is **source-gem only**. Current rb-sys-dock hosts do not register `native:*-linux-musl` rake tasks.
+
+Windows is **source-gem only**. rb-sys/bindgen currently fails inside LLVM AVX10.2/AMX headers on mingw. Windows users install the source gem and compile with a Rust toolchain.
+
+The gemspec's `required_ruby_version >= 3.0` is the source-gem floor. Prebuilt gems tighten that to the ABIs listed above.
+
+`solvapay-mcp` is a pure-Ruby gem published after `solvapay`.
+
+## Rust (`solvapay`)
+
+Source crate. The consumer's toolchain compiles it. crates.io order:
+
+`solvapay-export` → `solvapay-dto` → `solvapay-core` → `solvapay-mcp-core` → `solvapay-transport` → `solvapay`.
+
+## Go (`github.com/solvapay/solvapay-sdk/sdks/go`)
+
+One module. wazero plus an embedded `wasm32-wasip1` guest. `CGO_ENABLED=0`. Every GOOS/GOARCH uses the same artifact.
+
+## Not supported
+
+These architectures are not covered by prebuilt artifacts or CI, in any language:
+
+- armv7, i686, ppc64le, s390x, riscv64
+
+There is no "best effort" source-build row for them.

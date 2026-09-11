@@ -19,19 +19,89 @@ name: Publish Stable Releases
 # governed by the App's own installation permissions and bypass that
 # restriction cleanly. Required repo secrets: `RELEASE_APP_ID`,
 # `RELEASE_APP_KEY` (full `.pem`), `NPM_TOKEN`.
+# Manual `workflow_dispatch` defaults to dry-run: full pre-publish gates, then
+# `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN, skips
+# changesets/action). Set `dry_run=false` to take the real publish/PR path.
+# Push-to-main is always the real path. Inputs resolve against the dispatched
+# ref (the workflow only has to exist on the default branch for dispatch to
+# be enabled), so a feature branch can be dry-run before merge. `force_native`
+# is dry-run only: it runs the 8-target native matrix even when changesets
+# are pending. It cannot enable a real native publish.
+#
+# Publish-leg (`.changeset/` has no pending `*.md` besides README.md): build
+# the 8 native targets, rewrite `file:` pins, publish the platform packages,
+# then run changesets. The Version Packages PR leg skips the native matrix
+# unless a dry-run dispatch sets `force_native`.
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip changesets/action; run gates + pnpm -r publish --dry-run (no NPM_TOKEN)'
+        required: false
+        type: boolean
+        default: true
+      force_native:
+        description: 'Dry-run only: run the 8-target native matrix even with pending changesets'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: publish-stable
   cancel-in-progress: false
 
 jobs:
-  release:
+  detect:
     runs-on: ubuntu-latest
+    outputs:
+      publish_leg: ${{ steps.detect.outputs.publish_leg }}
+      native_leg: ${{ steps.detect.outputs.native_leg }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Detect publish leg
+        id: detect
+        shell: bash
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          FORCE_NATIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_native }}
+        run: |
+          set -euo pipefail
+          extras="$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print)"
+          if [ -n "${extras}" ]; then
+            publish_leg=false
+          else
+            publish_leg=true
+          fi
+          echo "publish_leg=${publish_leg}" >> "$GITHUB_OUTPUT"
+          if [ "${publish_leg}" = "true" ] || { [ "${DRY_RUN}" = "true" ] && [ "${FORCE_NATIVE}" = "true" ]; }; then
+            native_leg=true
+          else
+            native_leg=false
+          fi
+          echo "native_leg=${native_leg}" >> "$GITHUB_OUTPUT"
+          echo "pending changeset files:"
+          echo "${extras:-<none>}"
+
+  native-build:
+    needs: detect
+    if: needs.detect.outputs.native_leg == 'true'
+    uses: ./.github/workflows/native-build.yml
+
+  release:
+    needs: [detect, native-build]
+    if: ${{ !cancelled() && needs.detect.result == 'success' && needs.native-build.result != 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      SOLVAPAY_CORE_SHA: ${{ github.sha }}
     # The default `GITHUB_TOKEN` is held to read-only here. All
     # write-side GitHub API calls (commit, branch push, "Version
     # Packages" PR open/update) flow through the `solvapay-release-bot`
@@ -49,8 +119,10 @@ jobs:
       # authored as `solvapay-release-bot[bot]` and are not subject to
       # the org's "GitHub Actions cannot create or approve pull requests"
       # restriction, which only governs the default `GITHUB_TOKEN`.
+      # Dry-run dispatches skip this so they need no RELEASE_APP_* secrets.
       - name: Generate release-bot token
         id: app-token
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
@@ -60,18 +132,16 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Deno
         run: |
@@ -100,10 +170,11 @@ jobs:
       # Catches the "stale preview baseline" failure mode we hit in April
       # 2026, where `core`/`auth`/`solvapay` sat at `1.0.8-preview.10` on
       # main and `pnpm publish` baked that string into every workspace dep
-      # reference of the freshly-published siblings. Fail loud here rather
-      # than after npm has already accepted the broken manifests.
-      - name: Reject pre-release versions in workspace
-        run: node scripts/assert-stable-workspace-versions.mjs
+      # reference of the freshly-published siblings. Also requires every
+      # workspace:* production dep of a publishable package to already exist
+      # on the npm registry (or a declared UNPUBLISHED_DEP_ALLOWLIST entry).
+      - name: Release dry-run gate
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --registry
 
       - name: Check dependency health
         run: pnpm deps:check
@@ -117,18 +188,103 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against the
       # workspace source of the packages this run publishes. There is
       # deliberately no dist-tag-pinned counterpart here: this workflow
       # ships `@latest`, so gating on `@preview` would validate an
       # artifact the run did not produce, and gating on `@latest` would
-      # validate the *previous* release. Revisit adding a `@latest` gate
-      # once 0.3.0 has shipped and `@latest` carries `responseMode`.
+      # validate the *previous* release.
       - name: Validate fetch-runtime — Deno gate (workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
+      - name: Install native binding deps
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: npx napi create-npm-dirs
+
+      - name: Download native binding artifacts
+        if: needs.detect.outputs.native_leg == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/node-native/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: |
+          mkdir -p artifacts
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate
+        if: needs.detect.outputs.native_leg == 'true'
+        working-directory: sdks/node-native
+        run: node scripts/check-artifacts.mjs
+
+      - name: Prepare native publish pins
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm exec tsx tools/repo/prepare-native-publish.ts
+
+      # prepare-native-publish rewrites file: pins to semver. pnpm exec / -r
+      # then refuse a frozen lockfile unless the workspace is reconciled.
+      # The lockfile change is CI-local and is not committed.
+      - name: Reconcile lockfile after native pins
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: Publish native platform packages
+        if: needs.detect.outputs.native_leg == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts --dry-run
+          else
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts
+          fi
+
+      - name: Verify native platform packages landed on npm
+        if: ${{ needs.detect.outputs.native_leg == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: pnpm exec tsx tools/repo/verify-native-platform-publishes.ts
+
+      - name: Assert no local-path production deps
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --assert-no-local-paths
+
+      - name: Dry-run npm publish
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          git fetch --no-tags origin +main:main
+          pnpm changeset status
+          pnpm -r publish --dry-run --no-git-checks
+
+      - name: Tier A — print lockstep tags (no writes)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
+          pnpm exec tsx tools/repo/resolve-release-channel.ts \
+            --ref refs/heads/main \
+            --run "${GITHUB_RUN_NUMBER}" \
+            --ecosystem npm \
+            --assert-tags \
+            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
+          echo "Tier A: lockstep tags are free on origin"
+
       - name: Create Release PR or publish
         id: changesets
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: changesets/action@v1
         with:
           # `pnpm changeset:version` is the monorepo's wrapper around
@@ -153,4 +309,21 @@ jobs:
       # re-parsing the publish log.
       - name: Verify published packages landed on npm
         if: steps.changesets.outputs.published == 'true'
-        run: node scripts/verify-npm-publishes.mjs --packages='${{ steps.changesets.outputs.publishedPackages }}'
+        run: node tools/repo/verify-npm-publishes.mjs --packages='${{ steps.changesets.outputs.publishedPackages }}'
+
+      # Production language tags fire publish-python/ruby/go/rust. Only
+      # when npm actually published (not the Version Packages *open* leg).
+      # The script no-ops if the lockstep sentinel did not move, or if no
+      # RELEASE_PROD_* repo variable is true. GITHUB_TOKEN must be the App
+      # token so the tag push triggers those workflows.
+      - name: Push production language tags
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_PROD_PYTHON: ${{ vars.RELEASE_PROD_PYTHON }}
+          RELEASE_PROD_RUBY: ${{ vars.RELEASE_PROD_RUBY }}
+          RELEASE_PROD_GO: ${{ vars.RELEASE_PROD_GO }}
+          RELEASE_PROD_RUST: ${{ vars.RELEASE_PROD_RUST }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pnpm exec tsx tools/repo/push-production-tags.ts

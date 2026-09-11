@@ -1,0 +1,14 @@
+{
+  "suite": "native-cors",
+  "case": "no-origin",
+  "input": {
+    "fn": "mcpNativeCors",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "allowed": false,
+      "headers": {}
+    }
+  }
+}

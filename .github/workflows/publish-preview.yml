@@ -1,26 +1,63 @@
 name: Publish Preview Snapshot
 
-# On every push to `dev`, run the pre-publish gates and cut a
-# changesets snapshot to the `@preview` dist-tag. Each publish is
-# addressable as `@solvapay/<pkg>@0.0.0-preview-<shortsha>` (stable
-# version pin) plus a mutable `@preview` pointer at the latest.
+# Manual `workflow_dispatch` only. Defaults to dry-run: full pre-publish
+# gates, then `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN).
+# Set `dry_run=false` to cut a real `@preview` snapshot
+# (`@solvapay/<pkg>@0.0.0-preview-<shortsha>` plus a mutable `@preview`
+# pointer). Inputs resolve against the dispatched ref (the workflow only
+# has to exist on the default branch for dispatch to be enabled), so a
+# feature branch can be dry-run before merge. `force_native` is dry-run
+# only: it runs the 8-target native matrix without publishing.
+#
+# Non-dry-run also builds and publishes the 8 native platform packages, then
+# (when `include_languages` is true) pushes the four rehearsal tags with the
+# release-bot App token so language preview workflows fire.
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip snapshot publish; run gates + pnpm -r publish --dry-run (no NPM_TOKEN)'
+        required: false
+        type: boolean
+        default: true
+      force_native:
+        description: 'Dry-run only: run the 8-target native matrix even with pending changesets'
+        required: false
+        type: boolean
+        default: false
+      include_languages:
+        description: 'After npm preview, push rehearsal language tags (Python, Ruby, Rust, Go)'
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: publish-preview
   cancel-in-progress: false
 
 jobs:
+  native-build:
+    if: ${{ !inputs.dry_run || inputs.force_native }}
+    uses: ./.github/workflows/native-build.yml
+
   publish-preview:
+    needs: native-build
+    if: ${{ !cancelled() && needs.native-build.result != 'failure' }}
     runs-on: ubuntu-latest
+    env:
+      SOLVAPAY_CORE_SHA: ${{ github.sha }}
     permissions:
       contents: read
 
     steps:
+      - name: Generate release-bot token
+        id: app-token
+        if: ${{ !inputs.dry_run && inputs.include_languages }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
@@ -29,13 +66,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Deno
         run: |
@@ -61,6 +96,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read release-train sentinel
+        id: sentinel
+        run: echo "sentinel=$(node -p "require('./internal/release-train/package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Check dependency health
         run: pnpm deps:check
 
@@ -73,23 +112,110 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — type-checks examples/supabase-edge-mcp against the
-      # workspace source of the packages this run is about to publish,
-      # via examples/supabase-edge-mcp/deno.workspace.json. This is the
-      # blocking gate: it validates the exact code being shipped, and
-      # unlike a gate pinned to the `@preview` dist-tag it cannot
-      # deadlock (a broken publish used to freeze the tag that the gate
-      # read, so the run that would have fixed it could never get past
-      # its own gate). The same check runs on PRs in ci.yml, so a break
-      # is normally caught before merge.
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against the
+      # workspace source of the packages this run is about to publish, via
+      # examples/typescript/supabase-edge-mcp/deno.workspace.json. This is the
+      # blocking gate: it validates the exact code being shipped, and unlike a
+      # gate pinned to the `@preview` dist-tag it cannot deadlock. The same
+      # check runs on PRs in ci.yml, so a break is normally caught before merge.
       - name: Validate fetch-runtime — Deno gate (workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
       - name: Version snapshot
+        if: ${{ !inputs.dry_run }}
         run: pnpm changeset version --snapshot preview
+
+      - name: Install native binding deps
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: npx napi create-npm-dirs
+
+      - name: Download native binding artifacts
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/node-native/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: |
+          mkdir -p artifacts
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        working-directory: sdks/node-native
+        run: node scripts/check-artifacts.mjs
+
+      - name: Prepare native publish pins
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        run: pnpm exec tsx tools/repo/prepare-native-publish.ts
+
+      # prepare-native-publish rewrites file: pins to semver. pnpm exec / -r
+      # then refuse a frozen lockfile unless the workspace is reconciled.
+      # The lockfile change is CI-local and is not committed.
+      - name: Reconcile lockfile after native pins
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: Publish native platform packages
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts --dry-run
+          else
+            pnpm exec tsx tools/repo/publish-native-platform-packages.ts
+          fi
+
+      - name: Verify native platform packages landed on npm
+        if: ${{ !inputs.dry_run }}
+        run: pnpm exec tsx tools/repo/verify-native-platform-publishes.ts
+
+      - name: Assert no local-path production deps
+        if: ${{ !inputs.dry_run || inputs.force_native }}
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --assert-no-local-paths
+
+      - name: Dry-run npm publish
+        if: ${{ inputs.dry_run }}
+        run: |
+          git fetch --no-tags origin +main:main
+          pnpm changeset status
+          pnpm -r publish --dry-run --no-git-checks
+
+      # Print only. Dry-run does not post language rehearsal tags (the npm
+      # path never does), so colliding origin tags must not fail the job.
+      - name: Tier A — print rehearsal tags (no writes)
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        env:
+          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
+        run: |
+          set -euo pipefail
+          pnpm exec tsx tools/repo/resolve-release-channel.ts \
+            --ref refs/heads/main \
+            --channel rehearsal \
+            --version "${SENTINEL}" \
+            --run "${GITHUB_RUN_NUMBER}" \
+            --ecosystem npm
+          echo "Tier A: rehearsal tags for ${SENTINEL} (printed only; dry-run does not post language previews)"
 
       - name: Publish snapshot to @preview
         id: publish
+        if: ${{ !inputs.dry_run }}
         run: |
           set -o pipefail
           pnpm changeset publish --tag preview --no-git-tag 2>&1 | tee publish.log
@@ -105,7 +231,8 @@ jobs:
       # and fails the job if any package isn't fetchable after a retry
       # window.
       - name: Verify published packages landed on npm
-        run: node scripts/verify-npm-publishes.mjs publish.log
+        if: ${{ !inputs.dry_run }}
+        run: node tools/repo/verify-npm-publishes.mjs publish.log
 
       # Post-publish `@preview` gate — re-type-checks the same example
       # against the tag this run just moved, using
@@ -118,4 +245,14 @@ jobs:
       # failure reports a broken published preview loudly instead of
       # withholding the publish that would fix it.
       - name: Validate fetch-runtime — Deno gate (published @preview tarballs)
+        if: ${{ !inputs.dry_run }}
         run: pnpm --filter @example/supabase-edge-mcp validate
+
+      - name: Push rehearsal tags
+        if: ${{ !inputs.dry_run && inputs.include_languages }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pnpm exec tsx tools/repo/push-rehearsal-tags.ts --version "${SENTINEL}" --replace

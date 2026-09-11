@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+# Warn when staged external blobs differ from committed hashes.
+pnpm -s exec tsx tools/repo/warn-external-blobs.ts --staged
+
+# When the contract manifest or OpenAPI snapshot changes, regenerate surfaces
+# and re-stage generated outputs. CI `pnpm gen:check` remains authoritative.
+
+changed=$(git diff --cached --name-only -- \
+  contract/manifest/sdk-contract.yaml \
+  contract/openapi/sdk-v1.snapshot.json)
+
+if [ -z "$changed" ]; then
+  exit 0
+fi
+
+echo "contract changed — running pnpm gen…"
+pnpm gen || exit 1
+
+# Re-stage generated artifacts that gen may have rewritten.
+git add -- $(pnpm -s exec tsx tools/repo/list-generated-paths.ts)

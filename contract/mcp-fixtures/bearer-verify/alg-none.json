@@ -1,0 +1,32 @@
+{
+  "suite": "bearer-verify",
+  "case": "alg-none",
+  "input": {
+    "fn": "mcpVerifyBearer",
+    "args": {
+      "token": "eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.",
+      "jwksJson": {
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "fixture-rsa-1",
+            "alg": "RS256",
+            "use": "sig",
+            "n": "r7g6SkSR2i6LhgAMgcBYIDkbOMWr3rFSx_vwLeZhLwIO0NMNJM2l62SPcuff_fbckM0i2nQpEqL3YVHdwUD7vr6KoZuGZfmoTgM7y6Mu27tPzwJCHW2mcf0fHRg2QzYFGW3dGgrfcNE5YdtuFkDAOPlPcxol7BM9Dvx-QSC2SCgNngsuOonTWNIo2t0G7QNiNpVCccXj6ZQx-HiScLsJefIEtoKFPeyWbIETzHJe_AyBP9kOLdXnoLBWNKcb51e0nRIORn9_EIdpMXv_kFwjB7_Mswrl21fVqNAKYLE5cejdqvxERlX_FLzaH7shFQhOSzh2uBm_vWCLa_cRk5JGuQ",
+            "e": "AQAB"
+          }
+        ]
+      },
+      "expectedIssuer": "https://mcp.example.com",
+      "expectedAudience": "https://mcp.example.com",
+      "nowUnixSecs": 1700000000
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "unauthorized",
+      "status": 401,
+      "message": "Invalid or expired authentication token"
+    }
+  }
+}

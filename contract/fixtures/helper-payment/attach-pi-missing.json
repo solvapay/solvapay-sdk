@@ -1,0 +1,16 @@
+{
+  "suite": "helper-payment",
+  "case": "attach-pi-missing",
+  "input": {
+    "fn": "validateAttachBusinessDetailsParams",
+    "args": {
+      "paymentIntentId": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "paymentIntentId is required",
+      "status": 400
+    }
+  }
+}

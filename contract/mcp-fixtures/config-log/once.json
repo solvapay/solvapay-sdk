@@ -1,0 +1,17 @@
+{
+  "suite": "config-log",
+  "case": "once",
+  "input": {
+    "fn": "mcpConfigLog",
+    "args": {
+      "apiBaseUrl": "https://api.solvapay.com",
+      "productRef": "prd_demo",
+      "publicBaseUrl": "https://mcp.example.com"
+    }
+  },
+  "expect": {
+    "result": {
+      "message": "[solvapay] mcp config apiBaseUrl=https://api.solvapay.com productRef=prd_demo publicBaseUrl=https://mcp.example.com"
+    }
+  }
+}

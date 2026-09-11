@@ -1,0 +1,13 @@
+{
+  "suite": "seller-identity",
+  "case": "label-us-ein",
+  "input": {
+    "fn": "getSellerTaxIdentifierDisplayLabel",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "EIN"
+  }
+}

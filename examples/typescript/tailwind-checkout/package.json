@@ -1,0 +1,37 @@
+{
+  "name": "tailwind-checkout",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack --port 3011",
+    "build": "[ -e '.env' ] || cp .env.example .env && next build --webpack",
+    "start": "next start --port 3011",
+    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs"
+  },
+  "dependencies": {
+    "@solvapay/auth": "workspace:*",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/examples-shared": "workspace:*",
+    "@solvapay/next": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "@stripe/react-stripe-js": "^6.0.0",
+    "@stripe/stripe-js": "^9.0.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@solvapay/server-native": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}

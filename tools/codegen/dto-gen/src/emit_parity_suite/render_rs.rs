@@ -1,0 +1,392 @@
+//! Rust signature-parity suite renderer.
+
+use std::collections::BTreeSet;
+use std::fmt::Write as _;
+
+use crate::emit_client_rs::RustParam;
+use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
+use crate::ir::IrDefaults;
+
+use super::descriptor::ParitySuiteDescriptor;
+
+/// Renders `tests/signature_parity_generated.rs` from the shared descriptor.
+pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
+    let ops = &desc.client_ops;
+    let defaults = ops
+        .first()
+        .map(|entry| entry.defaults.clone())
+        .unwrap_or_default();
+
+    let mut dto_types = BTreeSet::new();
+    let mut needs_value = false;
+    let mut rows = Vec::new();
+    for entry in ops {
+        collect_type(&entry.rust_ok_type, &mut dto_types, &mut needs_value);
+        for param in &entry.rust_params {
+            collect_type(&param.ty, &mut dto_types, &mut needs_value);
+        }
+        rows.push((
+            entry.names.rust.clone(),
+            entry.rust_params.clone(),
+            entry.rust_ok_type.clone(),
+        ));
+    }
+
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::LineSlash, "rs-parity-out")
+    );
+    output.push_str(
+        "//! Generated signature-parity suite (§2.8) — typed surface, arity, sync matrix, defaults.\n\n\
+         #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]\n\n\
+         use solvapay::{\n\
+         \x20   ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS,\n\
+         \x20   Client, Config, DEFAULT_LIMITS_CACHE_TTL_MS, REQUEST_ID_FORMAT, RetryPolicy,\n\
+         \x20   SdkError, USAGE_ACTION_TYPE,\n\
+         };\n\
+         #[cfg(feature = \"blocking\")]\n\
+         use solvapay::blocking::BlockingClient;\n",
+    );
+    if needs_value {
+        output.push_str("use serde_json::Value;\n");
+    }
+    if !dto_types.is_empty() {
+        output.push_str("use solvapay_dto::{\n");
+        for ty in &dto_types {
+            let _ = writeln!(output, "    {ty},");
+        }
+        output.push_str("};\n");
+    }
+    output.push('\n');
+
+    output.push_str(
+        "/// Catalogued client operation signatures: name → &[(param_name, required)].\n\
+         pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[\n",
+    );
+    for entry in ops {
+        let params = entry
+            .params
+            .iter()
+            .map(|param| {
+                format!(
+                    "(\"{}\", {})",
+                    param.names.rust,
+                    if param.required { "true" } else { "false" }
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let _ = writeln!(output, "    (\"{}\", &[{params}]),", entry.names.rust);
+    }
+    output.push_str("];\n\n");
+
+    write_rs_defaults(&mut output, &defaults);
+
+    output.push_str(
+        "fn _parity_sink<T>() -> T {\n\
+         \x20   unreachable!(\"signature-parity typed surface; never executed\")\n\
+         }\n\n\
+         /// Compile-time typed surface: params and `Result` ok-type must match the facade.\n\
+         /// Never executed.\n\
+         #[allow(dead_code, unused_variables)]\n\
+         async fn _assert_typed_surface(c: &Client) {\n",
+    );
+    for (name, params, ok_type) in &rows {
+        let args = format_sink_args(params);
+        let _ = writeln!(
+            output,
+            "    let _: Result<{ok_type}, SdkError> = c.{name}({args}).await;"
+        );
+    }
+    output.push_str("}\n\n");
+
+    output.push_str(
+        "#[cfg(feature = \"blocking\")]\n\
+         #[allow(dead_code, unused_variables)]\n\
+         fn _assert_typed_surface_blocking(c: &BlockingClient) {\n",
+    );
+    for (name, params, ok_type) in &rows {
+        let args = format_sink_args(params);
+        let _ = writeln!(
+            output,
+            "    let _: Result<{ok_type}, SdkError> = c.{name}({args});"
+        );
+    }
+    output.push_str("}\n\n");
+
+    let n = ops.len();
+    let _ = writeln!(
+        output,
+        "#[test]\n\
+         fn operation_signatures_count_is_{n}() {{\n\
+         \x20   assert_eq!(OPERATION_SIGNATURES.len(), {n});\n\
+         }}\n"
+    );
+    output.push_str(
+        "#[test]\n\
+         fn operation_signatures_are_sorted_unique() {\n\
+         \x20   let names: Vec<&str> = OPERATION_SIGNATURES.iter().map(|(n, _)| *n).collect();\n\
+         \x20   let mut sorted = names.clone();\n\
+         \x20   sorted.sort_unstable();\n\
+         \x20   sorted.dedup();\n\
+         \x20   assert_eq!(names, sorted);\n\
+         }\n\n\
+         #[test]\n\
+         fn runtime_defaults_match_config_and_retry_policy() {\n\
+         \x20   assert_eq!(EXPECTED_LIMITS_CACHE_TTL_MS, DEFAULT_LIMITS_CACHE_TTL_MS);\n\
+         \x20   assert_eq!(EXPECTED_LIMITS_CACHE_TTL_MS, Config::default().limits_cache_ttl_ms);\n\
+         \x20   let retry = RetryPolicy::default();\n\
+         \x20   assert_eq!(EXPECTED_MAX_RETRIES, retry.max_retries);\n\
+         \x20   assert_eq!(EXPECTED_INITIAL_DELAY_MS, retry.initial_delay_ms);\n\
+         \x20   assert_eq!(EXPECTED_CUSTOMER_DEDUP_TTL_MS, CUSTOMER_DEDUP_TTL_MS);\n\
+         \x20   assert_eq!(EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_MAX_CACHE_SIZE);\n\
+         \x20   assert_eq!(EXPECTED_ANONYMOUS_CUSTOMER_REF, ANONYMOUS_CUSTOMER_REF);\n\
+         \x20   assert_eq!(EXPECTED_REQUEST_ID_FORMAT, REQUEST_ID_FORMAT);\n\
+         \x20   assert_eq!(EXPECTED_USAGE_ACTION_TYPE, USAGE_ACTION_TYPE);\n\
+         }\n",
+    );
+
+    Ok(output)
+}
+
+fn write_rs_defaults(output: &mut String, defaults: &IrDefaults) {
+    let _ = writeln!(
+        output,
+        "/// Frozen limits-cache TTL from the contract manifest `defaults:`.\n\
+         const EXPECTED_LIMITS_CACHE_TTL_MS: u64 = {};",
+        defaults.limits_cache_ttl_ms
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen retry max from the contract manifest `defaults:`.\n\
+         const EXPECTED_MAX_RETRIES: u32 = {};",
+        defaults.max_retries
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen initial retry delay from the contract manifest `defaults:`.\n\
+         const EXPECTED_INITIAL_DELAY_MS: u64 = {};",
+        defaults.initial_delay_ms
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen customer-dedup TTL from the contract manifest `defaults:`.\n\
+         const EXPECTED_CUSTOMER_DEDUP_TTL_MS: u64 = {};",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen customer-dedup max cache size from the contract manifest `defaults:`.\n\
+         const EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE: usize = {};",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen anonymous customer ref from the contract manifest `defaults:`.\n\
+         const EXPECTED_ANONYMOUS_CUSTOMER_REF: &str = \"{}\";",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen trackUsage request-id format from the contract manifest `defaults:`.\n\
+         const EXPECTED_REQUEST_ID_FORMAT: &str = \"{}\";",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen trackUsage actionType from the contract manifest `defaults:`.\n\
+         const EXPECTED_USAGE_ACTION_TYPE: &str = \"{}\";\n",
+        defaults.usage_action_type
+    );
+}
+
+fn format_sink_args(params: &[RustParam]) -> String {
+    params
+        .iter()
+        .map(|param| format!("_parity_sink::<{}>()", param.ty))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn collect_type(ty: &str, dto_types: &mut BTreeSet<String>, needs_value: &mut bool) {
+    if ty == "()" || ty == "&str" || ty.contains("::") {
+        return;
+    }
+    if ty == "Value" {
+        *needs_value = true;
+        return;
+    }
+    if let Some(inner) = ty
+        .strip_prefix("Option<")
+        .and_then(|rest| rest.strip_suffix('>'))
+    {
+        collect_type(inner, dto_types, needs_value);
+        return;
+    }
+    dto_types.insert(ty.to_owned());
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use crate::emit_parity_suite_rs;
+    use crate::ir::{
+        Ir, IrAvailability, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink,
+        IrBindingSymbol, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntryPoint, IrEntrySection,
+        IrEnvelopeMode, IrErrorKind, IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget,
+        IrSerializeKind, IrSyncKind, IrTypeRef,
+    };
+    use std::collections::BTreeMap;
+
+    fn empty_ir() -> Ir {
+        Ir {
+            types: BTreeMap::new(),
+            overlay_helpers: BTreeMap::new(),
+            overlays: BTreeMap::new(),
+            routes: vec![],
+            error_templates: crate::ir::IrErrorTemplates::default(),
+            entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
+        }
+    }
+
+    fn names(rust: &str) -> IrLangNames {
+        IrLangNames {
+            ts: rust.into(),
+            py: rust.into(),
+            rb: rust.into(),
+            go: rust.into(),
+            rust: rust.into(),
+            c: rust.into(),
+        }
+    }
+
+    fn split_op(id: &str, rust: &str, params: Vec<IrParam>) -> (IrEntryPoint, IrBindingSymbol) {
+        let split_path_refs: Vec<String> = params.iter().map(|p| p.name.clone()).collect();
+        let entry = IrEntryPoint {
+            id: id.into(),
+            section: IrEntrySection::Operation,
+            names: names(rust),
+            optional_on_client: false,
+            params,
+            type_params: vec![],
+            request: None,
+            response: Some("void".into()),
+            availability: IrAvailability {
+                ts: vec![IrSyncKind::Async],
+                py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                rb: vec![IrSyncKind::Sync],
+                go: vec![IrSyncKind::Sync],
+                rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+            },
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: rust.into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let binding = IrBindingSymbol {
+            id: id.into(),
+            core: format!("solvapay_transport::SolvaPayClient::{rust}"),
+            names: names(rust),
+            catalog: IrBindingCatalogLink::Operation(id.into()),
+            args: vec![],
+            split_path_refs,
+            return_shape: "value".into(),
+            sync: IrSyncKind::Async,
+            envelope: IrEnvelopeMode::Async,
+            artifact: IrBindingArtifact::Client,
+            emit_order: 0,
+            section: None,
+            doc: String::new(),
+            doc_wasm: None,
+            rust_fn_name: rust.into(),
+            call: IrBindingCall::Wrap {
+                serialize: IrSerializeKind::ClientSplit,
+                args: vec![],
+            },
+            verbatim_body: None,
+            verbatim_body_wasm: None,
+            dto_type: None,
+            core_call: Some(rust.into()),
+            client_call_args: vec![],
+            ts_wrapper: None,
+        };
+        (entry, binding)
+    }
+
+    fn param_string(name: &str, rust: &str) -> IrParam {
+        IrParam {
+            name: name.into(),
+            names: names(rust),
+            required: true,
+            ty: IrTypeRef::String,
+            default_value: None,
+            doc: String::new(),
+        }
+    }
+
+    fn ir_with(entry: IrEntryPoint, binding: IrBindingSymbol) -> Ir {
+        let mut ir = empty_ir();
+        ir.entry_points.insert(entry.id.clone(), entry);
+        ir.binding_symbols.insert(binding.id.clone(), binding);
+        ir
+    }
+
+    #[test]
+    fn emits_count_assert_defaults_and_no_tautologies() {
+        let output = emit_parity_suite_rs(&empty_ir()).unwrap();
+        assert!(output.contains("assert_eq!(OPERATION_SIGNATURES.len(), 0)"));
+        assert!(output.contains("EXPECTED_LIMITS_CACHE_TTL_MS"));
+        assert!(output.contains("EXPECTED_MAX_RETRIES"));
+        assert!(output.contains("EXPECTED_INITIAL_DELAY_MS"));
+        assert!(output.contains("_assert_typed_surface"));
+        assert!(output.contains("_parity_sink"));
+        assert!(output.contains("#[cfg(feature = \"blocking\")]"));
+        assert!(output.contains("_assert_typed_surface_blocking"));
+        assert!(!output.contains("2 == 2"));
+        assert!(!output.contains("or true"));
+    }
+
+    #[test]
+    fn swapped_params_change_emitted_call_order() {
+        let left_params = vec![
+            param_string("productRef", "product_ref"),
+            param_string("planRef", "plan_ref"),
+        ];
+        let right_params = vec![
+            param_string("planRef", "plan_ref"),
+            IrParam {
+                name: "overrides".into(),
+                names: names("overrides"),
+                required: false,
+                ty: IrTypeRef::Named("CloneProductOverrides".into()),
+                default_value: None,
+                doc: String::new(),
+            },
+        ];
+        let (left_entry, left_binding) = split_op("deletePlan", "delete_plan", left_params);
+        let (right_entry, right_binding) = split_op("deletePlan", "delete_plan", right_params);
+        let left = emit_parity_suite_rs(&ir_with(left_entry, left_binding)).unwrap();
+        let right = emit_parity_suite_rs(&ir_with(right_entry, right_binding)).unwrap();
+        assert_ne!(left, right);
+        assert!(left.contains("_parity_sink::<&str>(), _parity_sink::<&str>()"));
+        assert!(left.contains("(\"product_ref\", true), (\"plan_ref\", true)"));
+        assert!(right
+            .contains("_parity_sink::<&str>(), _parity_sink::<Option<CloneProductOverrides>>()"));
+        assert!(right.contains("CloneProductOverrides"));
+    }
+}

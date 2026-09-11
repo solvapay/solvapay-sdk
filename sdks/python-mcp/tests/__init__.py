@@ -1,0 +1,1 @@
+# Payable MCP adapter tests

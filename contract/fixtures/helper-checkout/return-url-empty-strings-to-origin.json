@@ -1,0 +1,15 @@
+{
+  "suite": "helper-checkout",
+  "case": "return-url-empty-strings-to-origin",
+  "input": {
+    "fn": "resolveReturnUrl",
+    "args": {
+      "bodyReturnUrl": "",
+      "optionsReturnUrl": "",
+      "origin": "https://origin"
+    }
+  },
+  "expect": {
+    "result": "https://origin"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "helper-error",
+  "case": "null",
+  "input": {
+    "fn": "isErrorResult",
+    "args": {
+      "result": null
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

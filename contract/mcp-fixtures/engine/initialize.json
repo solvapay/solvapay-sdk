@@ -1,0 +1,48 @@
+{
+  "suite": "engine",
+  "case": "initialize",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "fixture",
+            "version": "0"
+          }
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {
+            "tools": {},
+            "resources": {},
+            "prompts": {}
+          },
+          "serverInfo": {
+            "name": "solvapay-mcp",
+            "version": "0.1.0"
+          }
+        }
+      }
+    }
+  }
+}

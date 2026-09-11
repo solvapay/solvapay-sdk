@@ -1,0 +1,33 @@
+{
+  "suite": "plan-pricing",
+  "case": "meter-name-from-limit",
+  "input": {
+    "fn": "meterName",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 0,
+            "currency": "usd"
+          },
+          {
+            "kind": "limit",
+            "cap": 3,
+            "scope": "billing_period",
+            "meter": "tokens",
+            "onExceed": "block"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": "tokens"
+  }
+}

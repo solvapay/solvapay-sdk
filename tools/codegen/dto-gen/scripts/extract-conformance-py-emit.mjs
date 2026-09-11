@@ -1,0 +1,143 @@
+#!/usr/bin/env node
+// Extracts Python fixture-conformance chrome from sdks/python/tests/contract/
+// into assets/conformance-py-emit.snapshot.json.
+
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
+const CONTRACT = join(REPO_ROOT, 'sdks', 'python', 'tests', 'contract');
+const OUT_PATH = join(
+  REPO_ROOT,
+  'tools',
+  'codegen',
+  'dto-gen',
+  'assets',
+  'conformance-py-emit.snapshot.json',
+);
+
+const FILE_ORDER = [
+  '__init__.py',
+  'clock.py',
+  'names.py',
+  'fixture_loader.py',
+  'compare.py',
+  'stub_backend.py',
+  'host_adapters.py',
+  'dispatch.py',
+];
+
+const NOW_MS_BLOCK =
+  /(?:    if snake == "[^"]+":\n        clock = fixture\.input\.clock\n        if clock is None:\n            raise ValueError\("input\.clock is required for [^"]+"\)\n        args\["nowMs"\] = parse_iso8601_utc_to_unix_ms\(clock\)\n)+/;
+
+const HOST_FNS_INNER = /HOST_FNS = frozenset\(\n    \{\n((?:        "[^"]+",\n)+)    \}\n\)/;
+
+function stripGeneratedHeader(src) {
+  if (!src.startsWith('# @generated')) {
+    return src;
+  }
+  const nl = src.indexOf('\n');
+  let rest = nl === -1 ? '' : src.slice(nl + 1);
+  if (rest.startsWith('\n')) {
+    rest = rest.slice(1);
+  }
+  return rest;
+}
+
+function extractQuoted(inner) {
+  return [...inner.matchAll(/"([^"]+)"/g)].map(match => match[1]);
+}
+
+function extractSuccessCases(namesSrc) {
+  const match = namesSrc.match(/return file_stem in \{\n((?:        "[^"]+",\n)+)    \}/);
+  if (!match) {
+    throw new Error('names.py missing is_success_case set');
+  }
+  return extractQuoted(match[1]);
+}
+
+function extractErrorCases(namesSrc) {
+  const matches = [...namesSrc.matchAll(/file_stem == "([^"]+)"/g)].map(match => match[1]);
+  if (matches.length === 0) {
+    throw new Error('names.py missing is_error_case exact stems');
+  }
+  return matches;
+}
+
+function extractDispatchSpecialCases(dispatchSrc) {
+  const special = {};
+  const assertMatch = dispatchSrc.match(
+    /if snake == "([^"]+)":\n            return Outcome\(ok=False, error_name="Error"/,
+  );
+  if (!assertMatch) {
+    throw new Error('dispatch.py missing assert_response_result special case');
+  }
+  special[assertMatch[1]] = 'js_error';
+  const validateMatch = dispatchSrc.match(
+    /if snake == "([^"]+)" and isinstance\(value, str\):\n        return Outcome\(ok=False, error_name="Error"/,
+  );
+  if (!validateMatch) {
+    throw new Error('dispatch.py missing validate_public_base_url special case');
+  }
+  special[validateMatch[1]] = 'option_string_as_error';
+  return special;
+}
+
+const onDisk = new Set(
+  readdirSync(CONTRACT).filter(name => name.endsWith('.py') && !name.startsWith('.')),
+);
+for (const name of FILE_ORDER) {
+  if (!onDisk.has(name)) {
+    throw new Error(`missing contract module ${name}`);
+  }
+}
+for (const name of onDisk) {
+  if (!FILE_ORDER.includes(name)) {
+    throw new Error(`unexpected contract module ${name} — add it to FILE_ORDER or exclude it`);
+  }
+}
+
+const files = {};
+let hostFns;
+let successCases;
+let errorCases;
+let dispatchSpecialCases;
+
+for (const name of FILE_ORDER) {
+  let body = stripGeneratedHeader(readFileSync(join(CONTRACT, name), 'utf8'));
+  if (name === 'names.py') {
+    successCases = extractSuccessCases(body);
+    errorCases = extractErrorCases(body);
+  }
+  if (name === 'host_adapters.py') {
+    const hostMatch = body.match(HOST_FNS_INNER);
+    if (!hostMatch) {
+      throw new Error('host_adapters.py missing HOST_FNS frozenset');
+    }
+    hostFns = extractQuoted(hostMatch[1]);
+    body = body.replace(hostMatch[0], 'HOST_FNS = frozenset(\n    {\n{{HOST_FNS}}\n    }\n)');
+  }
+  if (name === 'dispatch.py') {
+    dispatchSpecialCases = extractDispatchSpecialCases(body);
+    if (!NOW_MS_BLOCK.test(body)) {
+      throw new Error('dispatch.py missing nowMs clock-injection block');
+    }
+    body = body.replace(NOW_MS_BLOCK, '{{NOW_MS_INJECTION}}');
+  }
+  files[name] = { body };
+}
+
+const snapshot = {
+  files,
+  hostFns,
+  successCases,
+  errorCases,
+  dispatchSpecialCases,
+};
+
+writeFileSync(OUT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
+console.log(
+  `wrote ${OUT_PATH} files=${FILE_ORDER.length} hostFns=${hostFns.length} successCases=${successCases.length}`,
+);

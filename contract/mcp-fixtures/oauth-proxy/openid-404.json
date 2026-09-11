@@ -1,0 +1,24 @@
+{
+  "suite": "oauth-proxy",
+  "case": "openid-404",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "GET",
+      "path": "/.well-known/openid-configuration",
+      "headers": {},
+      "body": "",
+      "config": {
+        "publicBaseUrl": "https://app.example.com",
+        "productRef": "prd_demo"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 404,
+      "headers": {},
+      "body": null
+    }
+  }
+}

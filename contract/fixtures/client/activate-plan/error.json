@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "activatePlan",
+    "args": {
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture",
+      "planRef": "plan_basic"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "activate-plan-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/activate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "productRef": "prd_fixture",
+        "planRef": "plan_basic"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Activate plan failed (400): bad",
+      "status": 400
+    }
+  }
+}

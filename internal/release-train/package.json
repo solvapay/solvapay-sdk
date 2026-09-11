@@ -1,0 +1,6 @@
+{
+  "name": "@solvapay/release-train",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lockstep version source of truth for the Rust, Python, Ruby, and Go SDKs"
+}

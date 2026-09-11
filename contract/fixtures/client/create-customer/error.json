@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createCustomer",
+    "args": {
+      "email": "c@example.com",
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-customer-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "email": "c@example.com",
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create customer failed (400): bad",
+      "status": 400
+    }
+  }
+}

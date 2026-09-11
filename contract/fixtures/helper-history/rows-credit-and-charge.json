@@ -1,0 +1,64 @@
+{
+  "suite": "helper-history",
+  "case": "rows-credit-and-charge",
+  "input": {
+    "fn": "historyRows",
+    "args": {
+      "input": {
+        "locale": "en-US",
+        "charges": [
+          {
+            "reference": "pur_starter",
+            "customerRef": "cus_abc",
+            "productName": "Widget API",
+            "status": "active",
+            "startDate": "2026-08-12T00:00:00Z",
+            "createdAt": "2026-08-12T00:00:00Z",
+            "amount": 3000,
+            "currency": "USD",
+            "isRecurring": true,
+            "billingCycle": "monthly",
+            "planSnapshot": { "name": "Starter" }
+          }
+        ],
+        "creditActivity": [
+          {
+            "type": "USAGE",
+            "amount": -200,
+            "balance": 599800,
+            "productName": "Cool MCP",
+            "productRef": "prd_widget",
+            "timestamp": "2026-09-05T14:22:00.000Z"
+          }
+        ],
+        "merchant": {
+          "city": "San Francisco",
+          "stateOrCounty": "CA",
+          "websiteUrl": "https://www.aaa.com/path"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [
+        {
+          "charge": "Starter · monthly",
+          "date": "Aug 12, 2026",
+          "amount": "$30"
+        }
+      ],
+      "creditActivity": [
+        {
+          "title": "Cool MCP",
+          "subtitle": null,
+          "when": "Sep 5, 14:22",
+          "credits": "−200",
+          "balance": "599,800"
+        }
+      ],
+      "merchantPlace": "San Francisco, CA",
+      "websiteHost": "aaa.com"
+    }
+  }
+}

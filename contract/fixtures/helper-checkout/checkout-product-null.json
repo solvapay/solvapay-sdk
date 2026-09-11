@@ -1,0 +1,16 @@
+{
+  "suite": "helper-checkout",
+  "case": "checkout-product-null",
+  "input": {
+    "fn": "validateCheckoutSessionParams",
+    "args": {
+      "productRef": null
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: productRef is required",
+      "status": 400
+    }
+  }
+}

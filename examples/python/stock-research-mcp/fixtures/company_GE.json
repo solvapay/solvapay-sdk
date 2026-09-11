@@ -1,0 +1,144 @@
+{
+  "ticker": "GE",
+  "cik": "0000040545",
+  "company": "GE Aerospace",
+  "summary": {
+    "status": "ok",
+    "text": "ABOUT GE AEROSPACE. General Electric Company operates as GE Aerospace (GE Aerospace or the Company). GE Aerospace is a global aerospace leader with the industry's largest and growing commercial propulsion fleet. The Company’s installed base of approximately 50,000 commercial and 30,000 military engines, including parked aircraft in addition to fleet in service, supports our aftermarket services business, which represents approximately 70% of revenue, reflecting the strength of customer demand across our business. Through FLIGHT DECK, the Company's proprietary lean operating model, GE Aerospace is prioritizing safety, quality, delivery and cost, to drive focused execution and bridge strategy to results. We are focused on delivering against our strategic priorities for today (ramping services and equipment), tomorrow (expanding capacity and capabilities) and the future (inventing the future of flight). Our global team is building on more than a century of innovation and learning, as we invent the future of flight, lift people up and bring them home safely."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 2.02,
+      "estimateEPS": 1.9151,
+      "surprise": 0.1049,
+      "surprisePercent": 5.4775,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 2.02,
+        "estimateEPS": 1.9151,
+        "surprise": 0.1049,
+        "surprisePercent": 5.4775,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 1.86,
+        "estimateEPS": 1.6467,
+        "surprise": 0.2133,
+        "surprisePercent": 12.9532,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 1.57,
+        "estimateEPS": 1.4695,
+        "surprise": 0.1005,
+        "surprisePercent": 6.8391,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 1.66,
+        "estimateEPS": 1.4967,
+        "surprise": 0.1633,
+        "surprisePercent": 10.9107,
+        "result": "beat"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-01-29",
+        "accessionNumber": "0000040545-26-000008",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000008/ge-20251231.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-07-16",
+        "accessionNumber": "0000040545-26-000049",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000049/ge-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-07-16",
+        "accessionNumber": "0000040545-26-000047",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000047/ge-20260716.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "4",
+        "filingDate": "2026-08-12",
+        "accessionNumber": "0001953063-26-000009",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000195306326000009/xslF345X06/wk-form4_1786565044.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-28",
+        "accessionNumber": "0002052951-26-000007",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000205295126000007/xslF345X06/wk-form4_1785269156.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-27",
+        "accessionNumber": "0002015929-26-000007",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000201592926000007/xslF345X06/wk-form4_1785182682.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-07-24",
+        "accessionNumber": "0001969223-26-000798",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000196922326000798/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-07-23",
+        "accessionNumber": "0001969223-26-000793",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000196922326000793/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "13F-HR",
+        "filingDate": "2026-07-23",
+        "accessionNumber": "0000040545-26-000053",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000053/xslForm13F_X02/primary_doc.xml"
+      },
+      {
+        "form": "S-8",
+        "filingDate": "2026-07-16",
+        "accessionNumber": "0000040545-26-000051",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000051/geaerospace-formsx8globale.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-07-16",
+        "accessionNumber": "0000040545-26-000049",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000049/ge-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-07-16",
+        "accessionNumber": "0000040545-26-000047",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000004054526000047/ge-20260716.htm"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-02",
+        "accessionNumber": "0001216503-26-000008",
+        "url": "https://www.sec.gov/Archives/edgar/data/40545/000121650326000008/xslF345X06/wk-form4_1783022807.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000040545&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/GE"
+  },
+  "generatedAt": "2026-08-25T22:23:25.766Z"
+}

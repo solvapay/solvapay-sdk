@@ -1,0 +1,33 @@
+{
+  "suite": "engine",
+  "case": "unsupported-method",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "not/a/method",
+        "params": {}
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32601,
+          "message": "Method not found: not/a/method"
+        }
+      }
+    }
+  }
+}

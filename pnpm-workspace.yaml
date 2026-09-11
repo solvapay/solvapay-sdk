@@ -1,4 +1,27 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
-  - 'examples/*'
+  - 'sdks/typescript/*'
+  - 'sdks/*'
+  - 'tools/*'
+  - 'internal/*'
+  - 'examples/typescript/*'
+  - 'examples/python/cloudflare-workers-mcp'
+  - 'examples/rust/cloudflare-worker-mcp'
+  - 'examples/cloudflare-containers'
+
+overrides:
+  next: 16.2.7
+
+# pnpm 10 flipped the default to false; the repo relies on true.
+linkWorkspacePackages: true
+
+# pnpm 11 replaced onlyBuiltDependencies with this allow-list.
+allowBuilds:
+  '@google/genai': true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  workerd: true
+
+# 2.0.0 published 2026-09-08; pin gate requires latest, so skip the age floor.
+minimumReleaseAgeExclude:
+  - '@modelcontextprotocol/ext-apps@2.0.0'

@@ -1,0 +1,28 @@
+{
+  "suite": "plan-pricing",
+  "case": "credits-currency-mismatch",
+  "input": {
+    "fn": "creditsPerUnitFromBalance",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "eur",
+            "meter": "requests"
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

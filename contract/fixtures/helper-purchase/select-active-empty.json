@@ -1,0 +1,9 @@
+{
+  "suite": "helper-purchase",
+  "case": "select-active-empty",
+  "input": {
+    "fn": "selectActivePurchases",
+    "args": { "purchases": [] }
+  },
+  "expect": { "result": [] }
+}

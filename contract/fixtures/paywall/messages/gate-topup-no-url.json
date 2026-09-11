@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "gate-topup-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "topup_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": "",
+        "shortMessage": "Payment required"
+      }
+    }
+  },
+  "expect": {
+    "result": "Included usage is exhausted. Call the `account` tool with view: 'topup'. Or call the `account` tool with view: 'checkout' to pick a plan."
+  }
+}

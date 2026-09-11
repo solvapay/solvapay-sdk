@@ -1,0 +1,19 @@
+{
+  "suite": "error-model",
+  "case": "webhook-invalid-signature",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Webhook",
+      "code": "invalid_signature"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Invalid webhook signature",
+      "kind": "Webhook",
+      "code": "invalid_signature"
+    }
+  }
+}

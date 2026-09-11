@@ -1,0 +1,11 @@
+{
+  "suite": "business-details",
+  "case": "postal-countries",
+  "input": {
+    "fn": "POSTAL_CODE_REQUIRED_COUNTRIES",
+    "args": {}
+  },
+  "expect": {
+    "result": ["US", "CA", "GB"]
+  }
+}

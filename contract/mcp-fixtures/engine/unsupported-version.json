@@ -1,0 +1,43 @@
+{
+  "suite": "engine",
+  "case": "unsupported-version",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "1900-01-01",
+            "io.modelcontextprotocol/clientCapabilities": {}
+          }
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "status": 400,
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32022,
+          "message": "Unsupported protocol version",
+          "data": {
+            "supported": ["2026-07-28", "2025-06-18"],
+            "requested": "1900-01-01"
+          }
+        }
+      }
+    }
+  }
+}

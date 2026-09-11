@@ -7,15 +7,15 @@ We have a quick list of common questions to get you started engaging with this p
 ## Workflow
 
 - Run `pnpm changeset` whenever you make a user-visible change to a package. Pick the affected packages and semver level (patch / minor / major).
-- On merges to `dev` we publish a `@preview` snapshot (see `.github/workflows/publish-preview.yml`).
+- Dispatch `.github/workflows/publish-preview.yml` with `dry_run=false` to publish a `@preview` snapshot. Merges to `dev` do not publish.
 - On merges to `main` `changesets/action` opens / updates a "Version Packages" PR; merging that PR publishes stable releases.
 
 Starting versions after the 2026-04-24 rename:
 
-| Package | Starts at |
-| --- | --- |
-| `@solvapay/mcp-core` | `0.1.0` |
-| `@solvapay/mcp` | `0.1.0` |
-| `@solvapay/mcp-express` | `0.1.0` |
-| `@solvapay/mcp-fetch` | `0.1.0` |
-| `@solvapay/fetch` | `1.0.0` (hard rename from `@solvapay/supabase`) |
+| Package                 | Starts at                                       |
+| ----------------------- | ----------------------------------------------- |
+| `@solvapay/mcp-core`    | `0.1.0`                                         |
+| `@solvapay/mcp`         | `0.1.0`                                         |
+| `@solvapay/mcp-express` | `0.1.0`                                         |
+| `@solvapay/mcp-fetch`   | `0.1.0`                                         |
+| `@solvapay/fetch`       | `1.0.0` (hard rename from `@solvapay/supabase`) |

@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "current": { "high": 2, "medium": 1, "low": 1 },
+  "next_3_blocks": { "block_1": 1, "block_2": 1, "block_3": 1 },
+  "mempool": { "size_mb": "7.29", "congestion": "low" },
+  "prediction": { "trend": "stable", "confidence_pct": 70 }
+}

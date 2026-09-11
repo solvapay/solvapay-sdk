@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "error": "Multiple wallets are loaded. Specify a wallet."
+}

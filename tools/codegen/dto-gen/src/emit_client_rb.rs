@@ -1,0 +1,547 @@
+//! Emit the public sync Ruby client and generated portable helper forwarding.
+
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
+
+use crate::doc_render::render_entry_doc_lines;
+use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
+use crate::ir::{
+    Ir, IrBindingArg, IrBindingArtifact, IrBindingCatalogLink, IrBindingSymbol, IrEntryPoint,
+    IrRubyReceiver,
+};
+
+fn ruby_file_header(flag: &str, trailer: &str) -> String {
+    format!(
+        "{}{trailer}\n\n",
+        generated_header(CommentStyle::Hash, flag)
+    )
+}
+
+/// Public Ruby files emitted from canonical catalog and binding IR.
+pub struct EmittedRubyPublic {
+    /// `lib/solvapay/client.rb`.
+    pub client_rb: String,
+    /// `lib/solvapay/helpers.generated.rb`.
+    pub helpers_rb: String,
+}
+
+/// Emits public Ruby keyword wrappers and portable helper forwarding.
+///
+/// # Errors
+///
+/// Returns formatting failures as [`crate::error::GenError`].
+pub fn emit_client_rb(ir: &Ir) -> GenResult<EmittedRubyPublic> {
+    Ok(EmittedRubyPublic {
+        client_rb: emit_client(ir),
+        helpers_rb: emit_helpers(ir),
+    })
+}
+
+fn emit_client(ir: &Ir) -> String {
+    let operation_bindings = binding_by_catalog(ir, IrBindingArtifact::Client);
+    let mut output = ruby_file_header("rb-client-out", "# frozen_string_literal: true");
+    output.push_str("module SolvaPay\n  class Client\n");
+    output.push_str(
+        "    def initialize(api_key: nil, api_base_url: nil, native_client: nil)\n\
+         \x20     key = api_key || ENV.fetch(\"SOLVAPAY_SECRET_KEY\", nil)\n\
+         \x20     if native_client.nil? && (key.nil? || key.empty?)\n\
+         \x20       raise SolvaPayError.new(\"SOLVAPAY_SECRET_KEY is required\", code: \"missing_api_key\")\n\
+         \x20     end\n\n\
+         \x20     base = api_base_url || ENV.fetch(\"SOLVAPAY_API_BASE_URL\", nil)\n\n\
+         \x20     @native_client = native_client || NativeDispatch.build_client(api_key: key, api_base_url: base)\n\
+         \x20   end\n\n",
+    );
+
+    for (id, entry) in operations(ir) {
+        let Some(binding) = operation_bindings.get(id.as_str()) else {
+            continue;
+        };
+        emit_method(&mut output, entry, &binding.names.rb, true);
+    }
+    while output.ends_with("\n\n") {
+        output.pop();
+    }
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
+    output.push_str("  end\nend\n");
+    output
+}
+
+fn emit_helpers(ir: &Ir) -> String {
+    let mut output = ruby_file_header(
+        "rb-client-out",
+        "# frozen_string_literal: true\n\n# Generated portable helper forwarding.",
+    );
+    output.push_str("module SolvaPay\n");
+    let mut bindings: Vec<_> = ir
+        .binding_symbols
+        .values()
+        .filter(|binding| {
+            matches!(
+                binding.catalog,
+                IrBindingCatalogLink::TopLevel(_) | IrBindingCatalogLink::CoreHelper(_)
+            )
+        })
+        .collect();
+    bindings.sort_by(|left, right| left.id.cmp(&right.id));
+
+    for binding in bindings {
+        let id = match &binding.catalog {
+            IrBindingCatalogLink::TopLevel(id) | IrBindingCatalogLink::CoreHelper(id) => id,
+            _ => continue,
+        };
+        let Some(entry) = ir.entry_points.get(id) else {
+            continue;
+        };
+        if !entry.emission.rb.is_generated() {
+            continue;
+        }
+        if entry.ruby_target.receiver == IrRubyReceiver::Constant {
+            write_yard(&mut output, entry, "  ");
+            let _ = writeln!(
+                output,
+                "  {} = NativeDispatch.call_sync(\"{}\", {{}}).freeze",
+                entry.ruby_target.name, binding.names.rb
+            );
+            continue;
+        }
+        emit_module_helper(&mut output, entry, binding);
+    }
+    while output.ends_with("\n\n") {
+        output.pop();
+    }
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
+    output.push_str("end\n");
+    output
+}
+
+fn emit_args_hash(output: &mut String, entry: &IrEntryPoint, indent: &str) {
+    if let [param] = entry.params.as_slice() {
+        if param.name == "params" {
+            let _ = writeln!(
+                output,
+                "{indent}args = {} #: Hash[String, untyped]",
+                param.names.rb
+            );
+            return;
+        }
+    }
+    output.push_str(indent);
+    output.push_str("args = {} #: Hash[String, untyped]\n");
+    for param in &entry.params {
+        if param.name == "params" {
+            // Native JSON is `{ pathKey, ...body }`. Nesting under "params" is dropped
+            // by split_path_refs body parse (updateCustomer 400: no updatable fields).
+            let each = format!(
+                "{indent}{}.each do |key, value|\n{indent}  args[key.to_s] = value\n{indent}end",
+                param.names.rb
+            );
+            if param.required {
+                let _ = writeln!(output, "{each}");
+            } else {
+                let _ = writeln!(
+                    output,
+                    "{indent}unless {}.nil?\n{each}\n{indent}end",
+                    param.names.rb
+                );
+            }
+            continue;
+        }
+        if param.required {
+            let _ = writeln!(
+                output,
+                "{indent}args[\"{}\"] = {}",
+                param.name, param.names.rb
+            );
+        } else {
+            let _ = writeln!(
+                output,
+                "{indent}args[\"{}\"] = {} unless {}.nil?",
+                param.name, param.names.rb, param.names.rb
+            );
+        }
+    }
+}
+
+fn emit_method(output: &mut String, entry: &IrEntryPoint, native_name: &str, client: bool) {
+    write_yard(output, entry, "    ");
+    let signature = ruby_signature(entry);
+    let _ = writeln!(output, "    def {}{signature}", entry.ruby_target.name);
+    emit_args_hash(output, entry, "      ");
+    if client {
+        let _ = writeln!(
+            output,
+            "      NativeDispatch.call_client(@native_client, \"{native_name}\", args)"
+        );
+    } else {
+        let _ = writeln!(
+            output,
+            "      NativeDispatch.call_sync(\"{native_name}\", args)"
+        );
+    }
+    output.push_str("    end\n\n");
+}
+
+fn emit_module_helper(output: &mut String, entry: &IrEntryPoint, binding: &IrBindingSymbol) {
+    write_yard(output, entry, "  ");
+    let signature = if entry.params.is_empty() && !binding.args.is_empty() {
+        let public_args: Vec<&IrBindingArg> = binding
+            .args
+            .iter()
+            .filter(|arg| !arg.host_injected)
+            .collect();
+        let mut names = Vec::new();
+        for arg in public_args.iter().filter(|arg| arg.required) {
+            names.push(format!("{}:", snake(&arg.name)));
+        }
+        for arg in public_args.iter().filter(|arg| !arg.required) {
+            names.push(format!("{}: nil", snake(&arg.name)));
+        }
+        if names.is_empty() {
+            String::new()
+        } else {
+            format!("({})", names.join(", "))
+        }
+    } else {
+        ruby_signature(entry)
+    };
+    let _ = writeln!(output, "  def self.{}{signature}", entry.ruby_target.name);
+    if entry.params.is_empty() {
+        output.push_str("    args = {} #: Hash[String, untyped]\n");
+        for arg in binding.args.iter().filter(|arg| !arg.host_injected) {
+            let ruby_name = snake(&arg.name);
+            if arg.required {
+                let _ = writeln!(output, "    args[\"{}\"] = {ruby_name}", arg.name);
+            } else {
+                let _ = writeln!(
+                    output,
+                    "    args[\"{}\"] = {ruby_name} unless {ruby_name}.nil?",
+                    arg.name
+                );
+            }
+        }
+    } else {
+        emit_args_hash(output, entry, "    ");
+    }
+    let _ = writeln!(
+        output,
+        "    NativeDispatch.call_sync(\"{}\", args)\n  end\n",
+        binding.names.rb
+    );
+}
+
+/// Builds a YARD comment body from the shared IR doc model (`# @param` / `# @return`).
+fn render_yard(entry: &IrEntryPoint) -> String {
+    render_entry_doc_lines(entry, |p| p.names.rb.as_str())
+        .into_iter()
+        .map(|line| {
+            if let Some(rest) = line.strip_prefix("@returns ") {
+                format!("@return {rest}")
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn write_yard(output: &mut String, entry: &IrEntryPoint, indent: &str) {
+    let doc = render_yard(entry);
+    let trimmed = doc.trim();
+    if trimmed.is_empty() {
+        return;
+    }
+    for line in trimmed.lines() {
+        let _ = writeln!(output, "{indent}# {line}");
+    }
+}
+
+fn ruby_signature(entry: &IrEntryPoint) -> String {
+    if entry.params.is_empty() {
+        return String::new();
+    }
+    let params = entry
+        .params
+        .iter()
+        .map(|param| {
+            if param.required {
+                format!("{}:", param.names.rb)
+            } else {
+                let default = param
+                    .default_value
+                    .as_ref()
+                    .map(ruby_value)
+                    .unwrap_or_else(|| "nil".into());
+                format!("{}: {default}", param.names.rb)
+            }
+        })
+        .collect::<Vec<_>>();
+    format!("({})", params.join(", "))
+}
+
+fn ruby_value(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "nil".into(),
+        serde_json::Value::Bool(value) => value.to_string(),
+        serde_json::Value::Number(value) => value.to_string(),
+        serde_json::Value::String(value) => format!("{value:?}"),
+        _ => "nil".into(),
+    }
+}
+
+fn operations(ir: &Ir) -> Vec<(&String, &IrEntryPoint)> {
+    let mut entries: Vec<_> = ir
+        .entry_points
+        .iter()
+        .filter(|(_, entry)| {
+            entry.ruby_target.receiver == IrRubyReceiver::ClientInstance
+                && !entry.availability.rb.is_empty()
+        })
+        .collect();
+    entries.sort_by(|left, right| left.0.cmp(right.0));
+    entries
+}
+
+fn binding_by_catalog(ir: &Ir, artifact: IrBindingArtifact) -> BTreeMap<String, &IrBindingSymbol> {
+    ir.binding_symbols
+        .values()
+        .filter(|binding| binding.artifact == artifact)
+        .filter_map(|binding| match &binding.catalog {
+            IrBindingCatalogLink::Operation(id) => Some((id.clone(), binding)),
+            _ => None,
+        })
+        .collect()
+}
+
+fn snake(value: &str) -> String {
+    let mut output = String::new();
+    for (index, character) in value.chars().enumerate() {
+        if character.is_uppercase() {
+            if index > 0 {
+                output.push('_');
+            }
+            output.extend(character.to_lowercase());
+        } else {
+            output.push(character);
+        }
+    }
+    output
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::ir::{
+        IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntrySection, IrErrorKind,
+        IrLangNames, IrParam, IrRubyTarget, IrSyncKind, IrTypeRef,
+    };
+
+    #[test]
+    fn renders_required_and_optional_keyword_payloads() {
+        let entry = IrEntryPoint {
+            id: "sample".into(),
+            section: IrEntrySection::Operation,
+            names: names("sample"),
+            optional_on_client: false,
+            params: vec![
+                param("customerRef", "customer_ref", true, ""),
+                param("metadata", "metadata", false, ""),
+            ],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "sample".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "sample", true);
+        assert!(output.contains("def sample(customer_ref:, metadata: nil)"));
+        assert!(output.contains("args[\"customerRef\"] = customer_ref"));
+        assert!(output.contains("unless metadata.nil?"));
+    }
+
+    #[test]
+    fn emits_whole_body_params_as_the_args_hash() {
+        let entry = IrEntryPoint {
+            id: "createPlan".into(),
+            section: IrEntrySection::Operation,
+            names: names("create_plan"),
+            optional_on_client: true,
+            params: vec![param(
+                "params",
+                "params",
+                true,
+                "Plan creation fields including product ref.",
+            )],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "create_plan".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "create_plan", true);
+        assert!(output.contains("args = params #: Hash[String, untyped]"));
+        assert!(
+            !output.contains("args[\"params\"]"),
+            "whole-body params must not nest under a params key: {output}"
+        );
+    }
+
+    #[test]
+    fn emits_path_plus_params_as_flat_native_json() {
+        let entry = IrEntryPoint {
+            id: "updateCustomer".into(),
+            section: IrEntrySection::Operation,
+            names: names("update_customer"),
+            optional_on_client: false,
+            params: vec![
+                param("customerRef", "customer_ref", true, "Customer reference."),
+                param("params", "params", true, "Fields to patch on the customer."),
+            ],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "update_customer".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "update_customer", true);
+        assert!(output.contains("args[\"customerRef\"] = customer_ref"));
+        assert!(output.contains("params.each do |key, value|"));
+        assert!(output.contains("args[key.to_s] = value"));
+        assert!(
+            !output.contains("args[\"params\"]"),
+            "path+body params must flatten onto the native JSON object: {output}"
+        );
+    }
+
+    #[test]
+    fn emits_yard_above_client_method() {
+        let entry = IrEntryPoint {
+            id: "checkLimits".into(),
+            section: IrEntrySection::Operation,
+            names: names("check_limits"),
+            optional_on_client: false,
+            params: vec![param(
+                "params",
+                "params",
+                true,
+                "Limits request including customer and product refs.",
+            )],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "check_limits".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel {
+                summary:
+                    "Check remaining usage/spend limits for a customer against a product's plan."
+                        .into(),
+                returns: Some(
+                    "Current remaining limits, optionally including plan details.".into(),
+                ),
+            },
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "check_limits", true);
+        assert!(output.contains(
+            "    # Check remaining usage/spend limits for a customer against a product's plan.\n\
+             \x20   # @param params Limits request including customer and product refs.\n\
+             \x20   # @return Current remaining limits, optionally including plan details.\n\
+             \x20   def check_limits(params:)"
+        ));
+        assert!(!output.contains("@returns"));
+    }
+
+    fn param(name: &str, rb: &str, required: bool, doc: &str) -> IrParam {
+        IrParam {
+            name: name.into(),
+            names: IrLangNames {
+                ts: name.into(),
+                py: rb.into(),
+                rb: rb.into(),
+                go: name.into(),
+                rust: rb.into(),
+                c: name.into(),
+            },
+            required,
+            ty: IrTypeRef::String,
+            default_value: None,
+            doc: doc.into(),
+        }
+    }
+
+    fn names(value: &str) -> IrLangNames {
+        IrLangNames {
+            ts: value.into(),
+            py: value.into(),
+            rb: value.into(),
+            go: value.into(),
+            rust: value.into(),
+            c: value.into(),
+        }
+    }
+
+    fn availability() -> IrAvailability {
+        IrAvailability {
+            ts: vec![IrSyncKind::Async],
+            py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+            rb: vec![IrSyncKind::Sync],
+            go: vec![IrSyncKind::Sync],
+            rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+        }
+    }
+}

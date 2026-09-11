@@ -1,0 +1,41 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createPaymentIntent",
+    "args": {
+      "productRef": "prod_fixture",
+      "planRef": "plan_basic",
+      "customerRef": "cus_fixture",
+      "idempotencyKey": "err_key"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-payment-intent-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture",
+        "Idempotency-Key": "err_key"
+      },
+      "body": {
+        "productRef": "prod_fixture",
+        "planRef": "plan_basic",
+        "customerRef": "cus_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create payment intent failed (400): bad",
+      "status": 400
+    }
+  }
+}

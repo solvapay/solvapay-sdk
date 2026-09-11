@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-409",
+  "input": {
+    "fn": "classifyCreateError",
+    "args": {
+      "message": "HTTP 409 Conflict"
+    }
+  },
+  "expect": {
+    "result": "conflict"
+  }
+}

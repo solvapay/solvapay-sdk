@@ -1,0 +1,35 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-next-soft-success-no-baseline",
+  "input": {
+    "fn": "topupProcessNext",
+    "args": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1",
+        "canGetBalance": true,
+        "pollAttempt": 0,
+        "pending": "processPayment"
+      },
+      "event": {
+        "kind": "processPaymentResult",
+        "status": "succeeded"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1",
+        "canGetBalance": true,
+        "pollAttempt": 0,
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "status": "succeeded"
+      }
+    }
+  }
+}

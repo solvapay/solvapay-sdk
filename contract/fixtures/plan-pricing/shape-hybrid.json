@@ -1,0 +1,39 @@
+{
+  "suite": "plan-pricing",
+  "case": "shape-hybrid",
+  "input": {
+    "fn": "planPricingShape",
+    "args": {
+      "priced": {
+        "requiresPayment": true,
+        "currency": "USD",
+        "options": [
+          { "kind": "billingCycle", "interval": "month" },
+          { "kind": "charge", "per": "flat", "amountMinor": 3000, "currency": "usd" },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "shape": "hybrid",
+      "headlineMinor": 3000,
+      "currency": "USD",
+      "cycle": { "interval": "month" },
+      "rate": {
+        "per": "unit",
+        "amountMinor": 2,
+        "currency": "usd",
+        "meter": "requests",
+        "tiered": false
+      }
+    }
+  }
+}

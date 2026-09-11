@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-not-found",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "Purchase pur_1 not found" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase not found",
+      "status": 404,
+      "details": "Purchase pur_1 not found"
+    }
+  }
+}

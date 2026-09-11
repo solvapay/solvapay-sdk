@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-currency-missing",
+  "input": {
+    "fn": "validateTopupPaymentIntentParams",
+    "args": {
+      "amount": 1000,
+      "currency": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: currency",
+      "status": 400
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "suite": "helper-error",
+  "case": "paywall-402",
+  "input": {
+    "fn": "mapRouteError",
+    "args": {
+      "kind": "paywall",
+      "message": "Payment required",
+      "operationName": "paywall"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Payment required",
+      "status": 402,
+      "details": "Payment required"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomer",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers/cus_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 500,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Get customer failed (500): bad",
+      "status": 500
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "suite": "builtin-tools",
+  "case": "get_history",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "get_history",
+      "args": {
+        "limit": 20
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/sdk/purchases",
+      "status": 200,
+      "body": {
+        "purchases": [
+          {
+            "reference": "pur_1"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/credits/activity",
+      "status": 200,
+      "body": {
+        "entries": [
+          {
+            "id": "evt_1"
+          }
+        ]
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"charges\":[{\"reference\":\"pur_1\"}],\"creditActivity\":{\"entries\":[{\"id\":\"evt_1\"}]}}"
+        }
+      ],
+      "structuredContent": {
+        "charges": [
+          {
+            "reference": "pur_1"
+          }
+        ],
+        "creditActivity": {
+          "entries": [
+            {
+              "id": "evt_1"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

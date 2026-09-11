@@ -1,0 +1,14 @@
+{
+  "suite": "tax-summary",
+  "case": "vat-label-whole-25",
+  "input": {
+    "fn": "formatVatSummaryLabel",
+    "args": {
+      "treatment": "standard",
+      "taxRate": 25
+    }
+  },
+  "expect": {
+    "result": "VAT (25%)"
+  }
+}

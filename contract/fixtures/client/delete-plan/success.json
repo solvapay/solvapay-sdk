@@ -1,0 +1,29 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "deletePlan",
+    "args": {
+      "productRef": "prd_fixture",
+      "planRef": "plan_basic"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "delete-plan-success",
+  "wire": {
+    "request": {
+      "method": "DELETE",
+      "path": "/v1/sdk/products/prd_fixture/plans/plan_basic",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": null
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

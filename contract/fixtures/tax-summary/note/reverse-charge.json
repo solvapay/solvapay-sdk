@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "note-reverse-charge",
+  "input": {
+    "fn": "resolveTaxTreatmentNote",
+    "args": {
+      "treatment": "reverse_charge"
+    }
+  },
+  "expect": {
+    "result": "VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction."
+  }
+}

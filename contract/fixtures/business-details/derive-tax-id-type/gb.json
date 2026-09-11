@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "gb",
+  "input": {
+    "fn": "deriveTaxIdType",
+    "args": {
+      "country": "GB"
+    }
+  },
+  "expect": {
+    "result": "gb_vat"
+  }
+}

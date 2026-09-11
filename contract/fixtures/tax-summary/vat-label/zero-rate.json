@@ -1,0 +1,14 @@
+{
+  "suite": "tax-summary",
+  "case": "vat-label-zero-rate",
+  "input": {
+    "fn": "formatVatSummaryLabel",
+    "args": {
+      "treatment": "standard",
+      "taxRate": 0
+    }
+  },
+  "expect": {
+    "result": "VAT"
+  }
+}

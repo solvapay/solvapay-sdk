@@ -1,0 +1,20 @@
+{
+  "suite": "mcp",
+  "case": "tool-names-table",
+  "input": {
+    "fn": "MCP_TOOL_NAMES",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "createPayment": "create_payment_intent",
+      "processPayment": "process_payment",
+      "createHostedSession": "create_hosted_session",
+      "setRenewal": "set_renewal",
+      "activatePlan": "activate_plan",
+      "attachBusinessDetails": "attach_business_details",
+      "getHistory": "get_history",
+      "account": "account"
+    }
+  }
+}

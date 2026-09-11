@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = [".", "seed-corpus"]
+
+[package]
+name = "solvapay-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Detached libFuzzer targets for solvapay-core / solvapay-c (step 55-a)"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+solvapay-core = { path = "../../core/solvapay-core" }
+solvapay-c = { path = "../../sdks/capi" }
+
+[[bin]]
+name = "webhook_verify"
+path = "fuzz_targets/webhook_verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "envelope_args"
+path = "fuzz_targets/envelope_args.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "c_handle"
+path = "fuzz_targets/c_handle.rs"
+test = false
+doc = false
+bench = false

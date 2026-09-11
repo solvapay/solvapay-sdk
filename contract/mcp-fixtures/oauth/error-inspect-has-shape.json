@@ -1,0 +1,16 @@
+{
+  "suite": "oauth",
+  "case": "error-inspect-has-shape",
+  "input": {
+    "fn": "mcpOauthErrorInspect",
+    "args": {
+      "kind": "has-shape",
+      "body": {
+        "error": "invalid_grant"
+      }
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

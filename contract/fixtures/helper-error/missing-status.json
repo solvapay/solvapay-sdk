@@ -1,0 +1,15 @@
+{
+  "suite": "helper-error",
+  "case": "missing-status",
+  "input": {
+    "fn": "isErrorResult",
+    "args": {
+      "result": {
+        "error": "boom"
+      }
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "cloneProduct",
+    "args": {
+      "productRef": "prd_fixture",
+      "name": "Clone"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "clone-product-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/prd_fixture/clone",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Clone"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Clone product failed (400): bad",
+      "status": 400
+    }
+  }
+}

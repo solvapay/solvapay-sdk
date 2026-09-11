@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "assignCredits",
+    "args": {
+      "customerRef": "foo/../purchases",
+      "credits": 25
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "assign-credits-encoded-path",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers/foo%2F..%2Fpurchases/credits",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "credits": 25
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "customerRef": "foo/../purchases",
+        "credits": 25
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "foo/../purchases",
+      "credits": 25
+    }
+  }
+}

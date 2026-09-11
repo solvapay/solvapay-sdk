@@ -1,0 +1,51 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCreditActivity",
+    "args": {
+      "customerRef": "cus_123",
+      "limit": 20
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-credit-activity-success",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/credits/activity",
+      "query": {
+        "customerRef": "cus_123",
+        "limit": "20"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "entries": [
+          {
+            "type": "USAGE",
+            "amount": -200,
+            "balance": 599800
+          }
+        ],
+        "hasMore": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "entries": [
+        {
+          "type": "USAGE",
+          "amount": -200,
+          "balance": 599800
+        }
+      ],
+      "hasMore": true
+    }
+  }
+}

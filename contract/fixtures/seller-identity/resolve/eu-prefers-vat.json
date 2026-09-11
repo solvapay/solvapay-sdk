@@ -1,0 +1,25 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-eu-prefers-vat",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "DE",
+      "vatNumber": "DE123456789",
+      "taxId": "DE999999999",
+      "companyNumber": "HRB12345"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "VAT number",
+        "value": "DE123456789"
+      },
+      "companyNumber": {
+        "label": "Company number",
+        "value": "HRB12345"
+      }
+    }
+  }
+}

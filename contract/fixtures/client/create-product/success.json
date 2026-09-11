@@ -1,0 +1,41 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createProduct",
+    "args": {
+      "name": "Fixture Product",
+      "config": {},
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-product-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Fixture Product",
+        "config": {},
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "prd_fixture",
+        "name": "Fixture Product"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "prd_fixture",
+      "name": "Fixture Product"
+    }
+  }
+}

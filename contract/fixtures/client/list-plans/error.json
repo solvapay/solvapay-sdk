@@ -1,0 +1,32 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "listPlans",
+    "args": {
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "list-plans-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_fixture/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 404,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "List plans failed (404): bad",
+      "status": 404
+    }
+  }
+}

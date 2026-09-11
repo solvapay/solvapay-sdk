@@ -1,0 +1,11 @@
+{
+  "suite": "helper-purchase",
+  "case": "select-active-missing-status",
+  "input": {
+    "fn": "selectActivePurchases",
+    "args": {
+      "purchases": [{ "reference": "pur_1" }]
+    }
+  },
+  "expect": { "result": [] }
+}

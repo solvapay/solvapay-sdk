@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "auto-cad-exclusive",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "auto",
+      "currency": "CAD"
+    }
+  },
+  "expect": {
+    "result": "exclusive"
+  }
+}

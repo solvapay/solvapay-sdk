@@ -1,0 +1,26 @@
+{
+  "suite": "paywall",
+  "case": "short-message-activation",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "activationRequired": true,
+        "remaining": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_demo",
+      "checkoutUrl": "",
+      "message": "Your plan needs activation. Call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`.",
+      "shortMessage": "Activation required",
+      "reason": "activation_required",
+      "nextAction": "activate",
+      "remainingCalls": 0
+    }
+  }
+}

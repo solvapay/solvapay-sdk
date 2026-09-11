@@ -1,0 +1,32 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "deleteProduct",
+    "args": {
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "delete-product-error",
+  "wire": {
+    "request": {
+      "method": "DELETE",
+      "path": "/v1/sdk/products/prd_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 500,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Delete product failed (500): bad",
+      "status": 500
+    }
+  }
+}

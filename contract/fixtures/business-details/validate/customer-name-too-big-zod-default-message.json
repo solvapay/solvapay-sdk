@@ -1,0 +1,24 @@
+{
+  "suite": "business-details",
+  "case": "customer-name-too-big-zod-default-message",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["customerName"],
+            "message": "Too big: expected string to have <=100 characters"
+          }
+        ]
+      }
+    }
+  }
+}

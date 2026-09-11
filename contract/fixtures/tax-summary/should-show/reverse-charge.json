@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "should-show-reverse-charge",
+  "input": {
+    "fn": "shouldShowTaxRow",
+    "args": {
+      "treatment": "reverse_charge"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

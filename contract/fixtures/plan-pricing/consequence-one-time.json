@@ -1,0 +1,21 @@
+{
+  "suite": "plan-pricing",
+  "case": "consequence-one-time",
+  "input": {
+    "fn": "planConsequence",
+    "args": {
+      "plan": {
+        "reference": "pln_pro",
+        "name": "Pro",
+        "requiresPayment": true,
+        "options": [{ "kind": "charge", "per": "flat", "amountMinor": 9000, "currency": "usd" }]
+      },
+      "locale": "en-US",
+      "balance": null,
+      "merchantName": "Test"
+    }
+  },
+  "expect": {
+    "result": "Unlimited calls, one time. No credits used, no renewal."
+  }
+}

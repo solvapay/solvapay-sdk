@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "should-show-not-collecting",
+  "input": {
+    "fn": "shouldShowTaxRow",
+    "args": {
+      "treatment": "not_collecting"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

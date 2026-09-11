@@ -1,0 +1,17 @@
+{
+  "suite": "helper-activation",
+  "case": "missing-plan-ref",
+  "input": {
+    "fn": "validateActivatePlanParams",
+    "args": {
+      "productRef": "prod_1",
+      "planRef": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameters: productRef and planRef are required",
+      "status": 400
+    }
+  }
+}

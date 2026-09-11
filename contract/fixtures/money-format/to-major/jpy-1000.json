@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "to-major-jpy-1000",
+  "input": {
+    "fn": "toMajorUnits",
+    "args": {
+      "amountMinor": 1000,
+      "currency": "jpy"
+    }
+  },
+  "expect": {
+    "result": 1000.0
+  }
+}

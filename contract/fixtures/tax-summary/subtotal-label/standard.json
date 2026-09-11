@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "subtotal-label-standard",
+  "input": {
+    "fn": "formatSubtotalLabel",
+    "args": {
+      "treatment": "standard"
+    }
+  },
+  "expect": {
+    "result": "Subtotal (excl. VAT)"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "suite": "oauth-proxy",
+  "case": "token-502",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "POST",
+      "path": "/oauth/token",
+      "headers": {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "body": "grant_type=authorization_code",
+      "config": {
+        "publicBaseUrl": "https://app.example.com",
+        "productRef": "prd_demo"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 502,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "upstream_unreachable"
+      }
+    }
+  }
+}

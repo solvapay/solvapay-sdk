@@ -1,0 +1,17 @@
+{
+  "suite": "paywall",
+  "case": "activation-trumps-all",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "activationRequired": true,
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "activation_required" } }
+}

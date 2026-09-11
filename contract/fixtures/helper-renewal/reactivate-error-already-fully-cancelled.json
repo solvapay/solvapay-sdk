@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-error-already-fully-cancelled",
+  "input": {
+    "fn": "classifyReactivateError",
+    "args": { "message": "already been fully cancelled" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be reactivated",
+      "status": 400,
+      "details": "already been fully cancelled"
+    }
+  }
+}

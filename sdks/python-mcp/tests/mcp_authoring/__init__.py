@@ -1,0 +1,1 @@
+# MCP-authoring conformance harness

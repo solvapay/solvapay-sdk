@@ -1,0 +1,40 @@
+{
+  "suite": "oauth",
+  "case": "request-protected-resource-mcp-path",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource",
+      "headers": {},
+      "body": "",
+      "config": {
+        "publicBaseUrl": "https://mcp.example.com",
+        "productRef": "prd_demo",
+        "mcpPath": "/mcp"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorization_servers": [
+          "https://mcp.example.com"
+        ],
+        "scopes_supported": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "coerce-values",
+  "input": {
+    "fn": "coerceCustomerOptions",
+    "args": {
+      "email": "a@b.com",
+      "name": "Ada"
+    }
+  },
+  "expect": {
+    "result": {
+      "email": "a@b.com",
+      "name": "Ada"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "suite": "plan-pricing",
+  "case": "billing-cycle-count-1-omitted",
+  "input": {
+    "fn": "billingCycle",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "year",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "interval": "year"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-interval-free",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 0,
+      "currency": "usd",
+      "interval": "month"
+    }
+  },
+  "expect": {
+    "result": "Free"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@solvapay/server-native-linux-x64-musl",
+  "version": "0.1.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "server-native.linux-x64-musl.node",
+  "files": [
+    "server-native.linux-x64-musl.node"
+  ],
+  "description": "SolvaPay napi-rs Node binding (step 36 scaffold)",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "musl"
+  ]
+}

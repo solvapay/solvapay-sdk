@@ -1,6 +1,6 @@
 ---
-title: "Installation"
-description: "Manual setup for SolvaPay SDK packages and environment variables."
+title: 'Installation'
+description: 'Manual setup for SolvaPay SDK packages and environment variables.'
 ---
 
 > Recommended: use [CLI setup](./cli) — `npx solvapay init` for existing projects, or
@@ -9,7 +9,7 @@ description: "Manual setup for SolvaPay SDK packages and environment variables."
 
 ## Prerequisites
 
-- Node.js version 18.17 or higher
+- Node.js 18.17 or higher — 20 or higher for `@solvapay/mcp` and `@solvapay/mcp-core`
 - npm, yarn, or pnpm
 - TypeScript 5.0+ (recommended)
 
@@ -69,15 +69,27 @@ Optional:
 SOLVAPAY_API_BASE_URL=https://api.solvapay.com
 ```
 
-## Stub mode
+## Running without a secret key
 
-If `SOLVAPAY_SECRET_KEY` is not set, SDK calls run in stub mode for local testing.
+`createSolvaPay()` requires a secret key — it throws `Missing apiKey` when neither
+`config.apiKey` nor `SOLVAPAY_SECRET_KEY` is set. There is no automatic stub mode.
+
+To run keyless for local development or tests, inject your own `apiClient`. Anything
+implementing `SolvaPayClient` works; the repo ships a demo stub at
+[`examples/typescript/shared/stub-api-client.ts`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/typescript/shared/stub-api-client.ts).
 
 ```typescript
 import { createSolvaPay } from '@solvapay/server'
+import { createStubClient } from '../shared/stub-api-client'
 
-const solvaPay = createSolvaPay()
+const solvaPay = createSolvaPay({
+  apiClient: createStubClient({ freeTierLimit: 5 }),
+})
 ```
+
+When `apiClient` is supplied, the SDK never constructs a real API client, so no key is
+read. See [`examples/typescript/express-basic`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic)
+for a complete keyless example.
 
 ## Next steps
 

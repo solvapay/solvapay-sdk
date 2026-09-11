@@ -1,0 +1,20 @@
+{
+  "suite": "mcp",
+  "case": "data-in-text-false",
+  "input": {
+    "fn": "buildPayableToolResult",
+    "args": {
+      "envelope": {
+        "__solvapayResponse": true,
+        "data": { "foo": "bar" },
+        "options": { "dataInText": false }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [{ "type": "text", "text": "{\"foo\":\"bar\"}" }],
+      "structuredContent": { "foo": "bar" }
+    }
+  }
+}

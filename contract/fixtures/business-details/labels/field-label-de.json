@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "field-label-de",
+  "input": {
+    "fn": "getTaxIdFieldLabel",
+    "args": {
+      "country": "DE"
+    }
+  },
+  "expect": {
+    "result": "VAT ID"
+  }
+}

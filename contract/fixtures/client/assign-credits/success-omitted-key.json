@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "assignCredits",
+    "args": {
+      "customerRef": "cus_fixture",
+      "credits": 25
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "assign-credits-success-omitted-key",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers/cus_fixture/credits",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "credits": 25
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_fixture",
+        "credits": 25
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "cus_fixture",
+      "credits": 25
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "zero-decimal-jpy-true",
+  "input": {
+    "fn": "isZeroDecimalCurrency",
+    "args": {
+      "currency": "JPY"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

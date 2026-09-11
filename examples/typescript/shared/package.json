@@ -1,0 +1,25 @@
+{
+  "name": "@solvapay/examples-shared",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared utilities for SolvaPay examples",
+  "type": "module",
+  "main": "./stub-api-client.ts",
+  "exports": {
+    ".": "./stub-api-client.ts",
+    "./stub-api-client": "./stub-api-client.ts",
+    "./next-stub": "./next-stub.ts",
+    "./next-route-dispatcher": "./next-route-dispatcher.ts",
+    "./solvapay-next-config": "./solvapay-next-config.mjs"
+  },
+  "scripts": {
+    "test": "node --test solvapay-next-config.test.mjs"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  },
+  "devDependencies": {
+    "@solvapay/next": "workspace:*",
+    "@solvapay/server": "workspace:*"
+  }
+}

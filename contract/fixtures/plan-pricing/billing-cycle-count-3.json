@@ -1,0 +1,24 @@
+{
+  "suite": "plan-pricing",
+  "case": "billing-cycle-count-3",
+  "input": {
+    "fn": "billingCycle",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month",
+            "count": 3
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "interval": "month",
+      "count": 3
+    }
+  }
+}

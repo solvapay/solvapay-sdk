@@ -1,0 +1,20 @@
+{
+  "suite": "resolve-auth",
+  "case": "free-no-bearer",
+  "input": {
+    "fn": "mcpResolveAuth",
+    "args": {
+      "rpcMethod": "server/discover",
+      "authMode": "tools-call",
+      "publicBaseUrl": "https://mcp.example.com",
+      "jsonRpcId": 1
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "allow",
+      "authInfo": null,
+      "customerRef": null
+    }
+  }
+}

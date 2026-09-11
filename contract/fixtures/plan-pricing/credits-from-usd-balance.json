@@ -1,0 +1,36 @@
+{
+  "suite": "plan-pricing",
+  "case": "credits-from-usd-balance",
+  "input": {
+    "fn": "creditsPerUnitFromBalance",
+    "args": {
+      "priced": {
+        "type": "usage-based",
+        "reference": "pln_AE3A91MU",
+        "name": "Pay as you go",
+        "requiresPayment": true,
+        "currency": "USD",
+        "options": [
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          },
+          {
+            "kind": "autoAssigned"
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": 200
+  }
+}

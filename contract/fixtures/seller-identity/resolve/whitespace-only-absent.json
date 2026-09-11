@@ -1,0 +1,19 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-whitespace-only-absent",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "DE",
+      "vatNumber": "   ",
+      "taxId": "  ",
+      "companyNumber": "\t"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": null,
+      "companyNumber": null
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "suite": "mcp",
+  "case": "display-mode-fullscreen",
+  "input": {
+    "fn": "resolveDisplayMode",
+    "args": {
+      "ctx": {
+        "displayMode": "fullscreen",
+        "availableDisplayModes": ["inline", "fullscreen", "unknown"],
+        "containerDimensions": { "width": 1200, "maxWidth": 1400 },
+        "safeAreaInsets": { "top": 12, "right": 0, "bottom": 8, "left": 0 }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "displayMode": "fullscreen",
+      "availableDisplayModes": ["inline", "fullscreen"],
+      "containerDimensions": { "width": 1200, "maxWidth": 1400 },
+      "safeAreaInsets": { "top": 12, "right": 0, "bottom": 8, "left": 0 },
+      "hostedRail": "hosted"
+    }
+  }
+}

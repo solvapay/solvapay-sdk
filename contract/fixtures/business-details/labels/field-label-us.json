@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "field-label-us",
+  "input": {
+    "fn": "getTaxIdFieldLabel",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "EIN (Employer Identification Number)"
+  }
+}

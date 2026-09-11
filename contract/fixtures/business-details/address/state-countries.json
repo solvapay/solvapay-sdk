@@ -1,0 +1,11 @@
+{
+  "suite": "business-details",
+  "case": "state-countries",
+  "input": {
+    "fn": "STATE_REQUIRED_COUNTRIES",
+    "args": {}
+  },
+  "expect": {
+    "result": ["US", "CA", "IN"]
+  }
+}

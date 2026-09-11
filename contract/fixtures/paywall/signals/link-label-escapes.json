@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "link-label-escapes",
+  "input": {
+    "fn": "linkLabel",
+    "args": { "name": "Plan [Pro]" }
+  },
+  "expect": { "result": "Plan \\[Pro\\]" }
+}

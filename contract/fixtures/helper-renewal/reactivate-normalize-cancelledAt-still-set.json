@@ -1,0 +1,19 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-normalize-cancelledAt-still-set",
+  "input": {
+    "fn": "normalizeReactivateResponse",
+    "args": {
+      "response": {
+        "reference": "pur_1",
+        "cancelledAt": "2026-07-01T00:00:00Z"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase reactivation failed: cancelledAt is still set",
+      "status": 500
+    }
+  }
+}

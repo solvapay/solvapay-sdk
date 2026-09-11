@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "example-us",
+  "input": {
+    "fn": "getTaxIdExample",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "12-3456789"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "suite": "plan-pricing",
+  "case": "credits-from-sek-balance",
+  "input": {
+    "fn": "creditsPerUnitFromBalance",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 100,
+            "currency": "sek",
+            "meter": "requests"
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "SEK",
+        "displayExchangeRate": 9.46,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": 1057
+  }
+}

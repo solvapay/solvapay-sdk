@@ -1,0 +1,25 @@
+{
+  "suite": "paywall",
+  "case": "recurring-at-cap-with-counters",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_free",
+        "remaining": 0,
+        "meterName": "merchant_lookups",
+        "plans": [
+          {
+            "reference": "pl_free",
+            "type": "recurring",
+            "requiresPayment": false,
+            "freeUnits": 3,
+            "perUnitChargeMinor": 2,
+            "currency": "usd"
+          }
+        ]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "limit_reached" } }
+}

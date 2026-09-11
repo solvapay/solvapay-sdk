@@ -1,0 +1,36 @@
+{
+  "suite": "builtin-tools",
+  "case": "activate-plan-no-ref",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "activate_plan",
+      "args": {
+        "mode": "text"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": null,
+      "widgetSessionId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "Pass `planRef` to activate a specific plan. To list plans, call `account` with view: \"checkout\"."
+        }
+      ],
+      "structuredContent": {
+        "error": "activate_plan requires a planRef",
+        "status": 400,
+        "details": "Pass `planRef` to activate a specific plan. To list plans, call `account` with view: \"checkout\"."
+      }
+    }
+  }
+}

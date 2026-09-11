@@ -1,0 +1,19 @@
+{
+  "suite": "retry-schedule",
+  "case": "should-retry-veto-first-attempt",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "throw": "boom" }, { "throw": "boom" }, { "throw": "boom" }],
+      "options": { "maxRetries": 2 },
+      "shouldRetry": { "vetoAt": [0] }
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [],
+      "events": ["call:0", "shouldRetry:0=false"],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

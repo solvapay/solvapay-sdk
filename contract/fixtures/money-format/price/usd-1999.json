@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "price-usd-1999",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 1999,
+      "currency": "usd"
+    }
+  },
+  "expect": {
+    "result": "$19.99"
+  }
+}

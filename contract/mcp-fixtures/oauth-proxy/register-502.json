@@ -1,0 +1,30 @@
+{
+  "suite": "oauth-proxy",
+  "case": "register-502",
+  "input": {
+    "fn": "mcpOauthRequest",
+    "args": {
+      "method": "POST",
+      "path": "/oauth/register",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{}",
+      "config": {
+        "publicBaseUrl": "https://app.example.com",
+        "productRef": "prd_demo"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 502,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": {
+        "error": "upstream_unreachable"
+      }
+    }
+  }
+}

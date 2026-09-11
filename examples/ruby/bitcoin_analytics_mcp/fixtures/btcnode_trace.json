@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "inputs": [
+    {
+      "value": 6.8686,
+      "funding_sources": [{ "value": 1.0 }, { "value": 2.5 }]
+    },
+    {
+      "value": 0.1,
+      "funding_sources": [{ "value": 0.1 }]
+    }
+  ]
+}

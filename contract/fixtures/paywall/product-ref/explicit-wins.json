@@ -1,0 +1,14 @@
+{
+  "suite": "paywall",
+  "case": "product-ref-explicit-wins",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {
+      "metadataProduct": "prd_explicit",
+      "envProduct": "prd_from_env"
+    }
+  },
+  "expect": {
+    "result": "prd_explicit"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "delays-reconcile-table",
+  "input": {
+    "fn": "BALANCE_RECONCILE_DELAYS_MS",
+    "args": {}
+  },
+  "expect": {
+    "result": [500, 1000, 2000, 4000, 8000, 16000]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "state-label-us",
+  "input": {
+    "fn": "getStateFieldLabel",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "State"
+  }
+}
