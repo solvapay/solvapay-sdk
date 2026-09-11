@@ -1,5 +1,12 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.3
+
+### Patch Changes
+
+- b3b5b72: Checkout PAYG amount step now collects the same inline auto-recharge toggle as top-up. The account tool no longer advertises `view: auto-recharge`; leftover stamps still open the account surface.
+- 35da494: MCP account now shows real auto-recharge status and links out to the hosted portal form. Top-up `create_payment_intent` forwards `autoRecharge` so the inline toggle actually persists. `McpAutoRechargeView` and the `views.autoRecharge` override are removed — `view: 'auto-recharge'` renders the account surface.
+
 ## 0.4.2
 
 ### Patch Changes
