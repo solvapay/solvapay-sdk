@@ -1,5 +1,11 @@
 # @solvapay/mcp changelog
 
+## 0.4.2
+
+### Patch Changes
+
+- c67e78e: One ordered active-plan selector, invalidate the limits cache after `activate_plan`, stop double-emitting merchant JSON, and narrate every activate_plan status. Gate and account copy share one recovery vocabulary, print credit amounts next to money when the backend sends the peg, and point auto-recharge at the account portal.
+
 ## 0.4.1
 
 ### Patch Changes

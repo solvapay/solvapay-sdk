@@ -1,5 +1,11 @@
 # @solvapay/react changelog
 
+## 2.2.2
+
+### Patch Changes
+
+- 567db3e: The customer's active plan is no longer selectable in the plan picker. The active PAYG plan is no longer auto-selected — topping up happens from the account surface, not by re-activating the current plan from the list.
+
 ## 2.2.1
 
 ### Patch Changes
