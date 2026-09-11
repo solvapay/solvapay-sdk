@@ -11,12 +11,12 @@ fronts the **unmodified** servers:
 
 ## Local vs deploy
 
-| Command             | Worker                           | Public URL                               | Image                                      |
-| ------------------- | -------------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `pnpm dev:go`       | local                            | `http://localhost:8787`                  | local Docker, no push                      |
-| `pnpm dev:ruby`     | local                            | `http://localhost:8787`                  | local Docker, no push                      |
-| `pnpm deploy:go`    | `solvapay-mcp-goldberg-go-dev`   | `https://mcp-go-dev.solvapay.app`   | built then **pushed** (example image only) |
-| `pnpm deploy:ruby`  | `solvapay-mcp-goldberg-ruby-dev` | `https://mcp-ruby-dev.solvapay.app` | built then **pushed** (example image only) |
+| Command            | Worker                           | Public URL                          | Image                                      |
+| ------------------ | -------------------------------- | ----------------------------------- | ------------------------------------------ |
+| `pnpm dev:go`      | local                            | `http://localhost:8787`             | local Docker, no push                      |
+| `pnpm dev:ruby`    | local                            | `http://localhost:8787`             | local Docker, no push                      |
+| `pnpm deploy:go`   | `solvapay-mcp-goldberg-go-dev`   | `https://mcp-go-dev.solvapay.app`   | built then **pushed** (example image only) |
+| `pnpm deploy:ruby` | `solvapay-mcp-goldberg-ruby-dev` | `https://mcp-ruby-dev.solvapay.app` | built then **pushed** (example image only) |
 
 Named wrangler envs do **not** inherit top-level `vars`. Each `[env.go]` /
 `[env.ruby]` block redeclares `vars`, `observability`, and a custom-domain
@@ -28,7 +28,7 @@ route. Real values come from `.env.go.dev` / `.env.ruby.dev` via the shared
 Images are `--platform=linux/amd64`. On an arm64 Mac they build under
 emulation. The first Ruby image compiles the Magnus native extension plus
 the Rust workspace — budget tens of minutes. Run a local
-`docker buildx build --platform linux/amd64` to completion *before*
+`docker buildx build --platform linux/amd64` to completion _before_
 `wrangler deploy` if you want to catch failures early.
 
 ```bash

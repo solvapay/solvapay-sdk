@@ -80,14 +80,20 @@ pub type PayableFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 /// Merchant handler.
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub type PayableHandler = Arc<
-    dyn Fn(JsonObject, ResponseContext) -> PayableFuture<'static, Result<PayableResponse, PayableError>>
+    dyn Fn(
+            JsonObject,
+            ResponseContext,
+        ) -> PayableFuture<'static, Result<PayableResponse, PayableError>>
         + Send
         + Sync,
 >;
 /// Merchant handler on wasm (isolate-local, `!Send`).
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 pub type PayableHandler = Arc<
-    dyn Fn(JsonObject, ResponseContext) -> PayableFuture<'static, Result<PayableResponse, PayableError>>,
+    dyn Fn(
+        JsonObject,
+        ResponseContext,
+    ) -> PayableFuture<'static, Result<PayableResponse, PayableError>>,
 >;
 
 /// Optional customer-ref hook.

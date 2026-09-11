@@ -191,12 +191,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       : 'loading'
 
   const appearanceReady = appearance !== undefined || rootEl !== null
-  const canMountElements = !!(
-    stripePromise &&
-    clientSecret &&
-    elementsOptions &&
-    appearanceReady
-  )
+  const canMountElements = !!(stripePromise && clientSecret && elementsOptions && appearanceReady)
 
   const businessAttach = useBusinessDetailsAttach({
     processorPaymentId,

@@ -11,8 +11,8 @@ use rmcp::{ErrorData, ServerHandler, ServiceExt};
 use serde_json::{json, Map, Value};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    register_payable_tool, GetCustomerRef, PayableError, PayableFuture, PayableHandler, PayableTool,
-    ResponseContext,
+    register_payable_tool, GetCustomerRef, PayableError, PayableFuture, PayableHandler,
+    PayableTool, ResponseContext,
 };
 
 use super::mock_transport::MockTransport;

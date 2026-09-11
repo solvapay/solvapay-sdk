@@ -35,7 +35,9 @@ vi.mock('../../../primitives/TopupForm', () => {
     </section>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const PaymentElement: React.FC<{ options?: { terms?: { card?: string } } }> = ({ options }) => (
+    <div data-testid="payment-element" data-terms-card={options?.terms?.card ?? ''} />
+  )
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
@@ -74,7 +76,11 @@ vi.mock('../../../primitives/TopupForm', () => {
   }
 })
 
-vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
+vi.mock('../../../primitives/MandateText', () => ({
+  MandateText: ({ savesPaymentMethod }: { savesPaymentMethod?: boolean }) => (
+    <p data-testid="mandate" data-saves-card={savesPaymentMethod ? 'true' : 'false'} />
+  ),
+}))
 const stripeProbeState = vi.hoisted(() => ({
   value: 'ready' as 'loading' | 'ready' | 'blocked',
 }))
@@ -345,6 +351,39 @@ describe('<McpTopupView> — topup currency picker', () => {
       topupAmountMajor: 10,
       currency: 'USD',
     })
+  })
+
+  it('hides Stripe’s terms line and moves the saved-card disclosure into the mandate', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '5' },
+    })
+    fireEvent.change(screen.getByLabelText('Add each time'), {
+      target: { value: '10' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.getByTestId('payment-element').getAttribute('data-terms-card')).toBe('never')
+    expect(screen.getByTestId('mandate').getAttribute('data-saves-card')).toBe('true')
+  })
+
+  it('leaves the saved-card disclosure off the mandate when auto-recharge is off', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.getByTestId('payment-element').getAttribute('data-terms-card')).toBe('never')
+    expect(screen.getByTestId('mandate').getAttribute('data-saves-card')).toBe('false')
   })
 
   it('keeps the amount step and shows an error when auto-recharge is invalid', async () => {

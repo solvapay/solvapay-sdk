@@ -19,6 +19,12 @@
  * i18n template signature untouched while lifting the legal commitment
  * to the point of charge.
  *
+ * `savesPaymentMethod` marks a confirm that also stores the card for
+ * later off-session charges (auto-recharge). The MCP payment surfaces
+ * turn Stripe's own `terms` line off, so this component is the only
+ * place that discloses the storage — the topup template appends a
+ * saved-card sentence when the flag is set.
+ *
  * When the merchant record omits `termsUrl` / `privacyUrl`, we fall back
  * to SolvaPay's hosted legal pages so the mandate sentence always carries
  * working links. SolvaPay is the underlying processor on every charge, so
@@ -33,6 +39,7 @@ import { usePlan } from '../hooks/usePlan'
 import { useProduct } from '../hooks/useProduct'
 import { useMerchant } from '../hooks/useMerchant'
 import { useCopy, useLocale } from '../hooks/useCopy'
+import { useExternalLinkClick } from '../hooks/useExternalLink'
 import { formatPrice } from '../utils/format'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { usePlanSelection } from '../components/PlanSelectionContext'
@@ -48,13 +55,29 @@ export type MandateTextProps = {
   mode?: 'topup'
   amountMinor?: number
   currency?: string
+  /**
+   * Set when the confirm also stores the card for later off-session
+   * charges (auto-recharge), so the mandate discloses the storage.
+   */
+  savesPaymentMethod?: boolean
   asChild?: boolean
 } & Omit<React.HTMLAttributes<HTMLParagraphElement>, 'children'> & {
     children?: React.ReactNode
   }
 
 export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(function MandateText(
-  { planRef, productRef, variant, mode, amountMinor, currency, asChild, children, ...rest },
+  {
+    planRef,
+    productRef,
+    variant,
+    mode,
+    amountMinor,
+    currency,
+    savesPaymentMethod,
+    asChild,
+    children,
+    ...rest
+  },
   forwardedRef,
 ) {
   const solva = useContext(SolvaPayContext)
@@ -62,6 +85,7 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(fu
 
   const locale = useLocale()
   const copy = useCopy()
+  const handleExternalClick = useExternalLinkClick()
   const planSelection = usePlanSelection()
   const resolvedPlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
   const resolvedProductRef = productRef ?? planSelection?.productRef
@@ -100,8 +124,9 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(fu
       product: product ? { name: product.name } : undefined,
       amountFormatted,
       trialDays: plan?.trialDays,
+      savesPaymentMethod,
     }),
-    [merchant, plan, product, amountFormatted],
+    [merchant, plan, product, amountFormatted, savesPaymentMethod],
   )
 
   const template = copy.mandate[resolvedVariant]
@@ -111,7 +136,7 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(fu
   const Comp = asChild ? Slot : 'p'
   return (
     <Comp ref={forwardedRef} data-solvapay-mandate-text="" data-variant={resolvedVariant} {...rest}>
-      {children ?? linkifyMandateText(text, ctx.merchant, copy)}
+      {children ?? linkifyMandateText(text, ctx.merchant, copy, handleExternalClick)}
     </Comp>
   )
 })
@@ -128,6 +153,7 @@ function linkifyMandateText(
   text: string,
   merchant: MandateContext['merchant'],
   copy: SolvaPayCopy,
+  onLinkClick: (event: React.MouseEvent<HTMLAnchorElement>) => void,
 ): React.ReactNode[] {
   const entries = [
     { url: merchant.termsUrl, label: copy.legalFooter.terms },
@@ -147,6 +173,7 @@ function linkifyMandateText(
         target="_blank"
         rel="noopener noreferrer"
         data-solvapay-mandate-link=""
+        onClick={onLinkClick}
       >
         {match.label || match.url}
       </a>
