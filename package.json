@@ -69,7 +69,7 @@
     "@commitlint/types": "^20.5.0",
     "@eslint/js": "^9.39.4",
     "@fastify/swagger": "^9.7.0",
-    "@fastify/swagger-ui": "^5.2.5",
+    "@fastify/swagger-ui": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
