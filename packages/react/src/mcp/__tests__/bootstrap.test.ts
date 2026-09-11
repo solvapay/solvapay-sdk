@@ -210,6 +210,23 @@ describe('parseBootstrapFromToolResult', () => {
     expect(bootstrap.view).toBe('checkout')
   })
 
+  it('copies autoRechargeUrl off the structured payload', () => {
+    const bootstrap = parseBootstrapFromToolResult(
+      {
+        structuredContent: {
+          productRef: 'prd_7TGKZI27',
+          returnUrl: 'https://example.test/r',
+          autoRechargeUrl: 'https://pay.example/manage?tab=credits&intent=autorecharge',
+        },
+      },
+      'account',
+      'account',
+    )
+    expect(bootstrap.autoRechargeUrl).toBe(
+      'https://pay.example/manage?tab=credits&intent=autorecharge',
+    )
+  })
+
   it('throws when an errored response has no recognizable bootstrap shape', () => {
     expect(() =>
       parseBootstrapFromToolResult(

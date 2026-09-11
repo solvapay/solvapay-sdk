@@ -30,6 +30,8 @@ const recoveryFields = {
   creditsPerCall: z.number().optional(),
   shortfallCredits: z.number().optional(),
   remainingCalls: z.number().optional(),
+  creditsPerMinorUnit: z.number().optional(),
+  displayExchangeRate: z.number().optional(),
   purchaseRef: z.string().optional(),
   planStatus: z.string().optional(),
   autoRecharge: z

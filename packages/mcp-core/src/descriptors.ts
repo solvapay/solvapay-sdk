@@ -47,6 +47,7 @@ import {
   listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
+  type AutoRechargeInput,
   type SolvaPay,
 } from '@solvapay/server'
 import { z } from 'zod'
@@ -76,7 +77,7 @@ import {
 } from './resources/overview'
 import { narrateActivatePlan } from './narrate'
 import { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
-import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
+import { SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS } from './types'
 import type {
   McpToolExtra,
   SolvaPayBootstrapResourceDescriptor,
@@ -147,7 +148,7 @@ const INTENT_MODE_SCHEMA = z
     "Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL.",
   )
 
-const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
+const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS]
 
 export interface BuildSolvaPayDescriptorsOptions {
   /** Initialised SolvaPay instance. */
@@ -246,6 +247,20 @@ export interface SolvaPayDescriptorBundle {
    * embed the full payload in its `structuredContent`.
    */
   buildBootstrapPayload: BuildBootstrapPayloadFn
+}
+
+/**
+ * Narrow the optional `autoRecharge` tool arg. The input schema already
+ * gated the shape; this only recovers a typed value from
+ * `Record<string, unknown>` so we can forward it without inventing
+ * defaults.
+ */
+function readAutoRechargeArg(value: unknown): AutoRechargeInput | undefined {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined
+  }
+  // Schema-gated shape; assertion recovers the server input type.
+  return value as AutoRechargeInput
 }
 
 /**
@@ -396,10 +411,26 @@ export function buildSolvaPayDescriptors(
     getCustomerRef,
   })
 
-  const enabledViewList = SOLVAPAY_MCP_VIEW_KINDS.filter(view => enabledViews.has(view))
-  if (enabledViewList.length > 0) {
+  const advertisedViewList = SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS.filter(view =>
+    enabledViews.has(view),
+  )
+  if (advertisedViewList.length > 0) {
+    const advertisedEnum = z.enum(
+      advertisedViewList as [
+        (typeof SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS)[number],
+        ...(typeof SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS)[number][],
+      ],
+    )
+    // Inspector / tools/list see only the advertised enum. A leftover
+    // `auto-recharge` still parses (maps to `account`) so old
+    // transcripts do not 400. The handler also accepts the raw stamp
+    // and keeps `view: 'auto-recharge'` so narrateAutoRecharge runs
+    // when the call bypasses this preprocess.
     const viewEnum = z
-      .enum(enabledViewList as [SolvaPayMcpViewKind, ...SolvaPayMcpViewKind[]])
+      .preprocess(
+        (value: unknown) => (value === 'auto-recharge' ? 'account' : value),
+        advertisedEnum,
+      )
       .optional()
       .describe(VIEW_PARAM_DESCRIPTION)
     pushTool({
@@ -419,11 +450,15 @@ export function buildSolvaPayDescriptors(
             args.view === 'auto-recharge'
               ? args.view
               : undefined
-          if (requested !== undefined && !enabledViews.has(requested)) {
+          if (
+            requested !== undefined &&
+            requested !== 'auto-recharge' &&
+            !enabledViews.has(requested)
+          ) {
             return toolErrorResult({
               error: `view '${requested}' is not enabled on this server`,
               status: 400,
-              details: `Enabled views: ${enabledViewList.join(', ')}. Pass one of those, or omit view to let the server pick.`,
+              details: `Enabled views: ${advertisedViewList.join(', ')}. Pass one of those, or omit view to let the server pick.`,
             })
           }
           const mode = parseMode(args.mode)
@@ -502,7 +537,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation).',
+      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.',
     inputSchema: {
       purpose: z
         .enum(['plan', 'topup'])
@@ -512,6 +547,16 @@ export function buildSolvaPayDescriptors(
       currency: z.string().optional(),
       amount: z.number().int().positive().optional(),
       description: z.string().optional(),
+      autoRecharge: z
+        .object({
+          enabled: z.boolean(),
+          triggerType: z.literal('balance'),
+          thresholdAmountMajor: z.number().positive().optional(),
+          topupAmountMajor: z.number().positive().optional(),
+          maxMonthlySpendMajor: z.number().positive().optional(),
+          currency: z.string().length(3),
+        })
+        .optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false }),
@@ -526,6 +571,16 @@ export function buildSolvaPayDescriptors(
             error: 'create_payment_intent requires purpose',
             status: 400,
             details: 'Pass purpose: "plan" or purpose: "topup".',
+          })
+        }
+
+        const autoRecharge = readAutoRechargeArg(args.autoRecharge)
+
+        if (purpose === 'plan' && autoRecharge) {
+          return toolErrorResult({
+            error: 'create_payment_intent plan does not accept autoRecharge',
+            status: 400,
+            details: 'autoRecharge is only honoured on purpose: "topup".',
           })
         }
 
@@ -544,7 +599,7 @@ export function buildSolvaPayDescriptors(
 
           const result = await createTopupPaymentIntentCore(
             buildRequest(extra, { method: 'POST' }),
-            { amount, currency, description },
+            { amount, currency, description, ...(autoRecharge ? { autoRecharge } : {}) },
             { solvaPay },
           )
           if (isErrorResult(result)) return toolErrorResult(result)

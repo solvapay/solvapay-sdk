@@ -35,7 +35,9 @@ vi.mock('../../../primitives/TopupForm', () => {
     </section>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const PaymentElement: React.FC<{ options?: { terms?: { card?: string } } }> = ({ options }) => (
+    <div data-testid="payment-element" data-terms-card={options?.terms?.card ?? ''} />
+  )
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
@@ -74,8 +76,18 @@ vi.mock('../../../primitives/TopupForm', () => {
   }
 })
 
-vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
-vi.mock('../../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
+vi.mock('../../../primitives/MandateText', () => ({
+  MandateText: ({ savesPaymentMethod }: { savesPaymentMethod?: boolean }) => (
+    <p data-testid="mandate" data-saves-card={savesPaymentMethod ? 'true' : 'false'} />
+  ),
+}))
+const stripeProbeState = vi.hoisted(() => ({
+  value: 'ready' as 'loading' | 'ready' | 'blocked',
+}))
+
+vi.mock('../../useStripeProbe', () => ({
+  useStripeProbe: () => stripeProbeState.value,
+}))
 
 import { McpTopupView } from '../McpTopupView'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
@@ -152,6 +164,7 @@ function renderTopup(
   displayCurrency = 'USD',
   displayMode: 'inline' | 'fullscreen' = 'inline',
   creditsPerMinorUnit: number | null = 100,
+  onBack?: () => void,
 ) {
   const transport = createMockTransport(merchant)
   const config: SolvaPayConfig = { transport }
@@ -163,7 +176,11 @@ function renderTopup(
         value={{ displayMode, availableDisplayModes: ['inline', 'fullscreen'] }}
       >
         <McpBridgeProvider app={app}>
-          <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
+          <McpTopupView
+            publishableKey="pk_test"
+            returnUrl="https://example.test/r"
+            {...(onBack ? { onBack } : {})}
+          />
         </McpBridgeProvider>
       </McpDisplayModeProvider>
     </SolvaPayContext.Provider>,
@@ -193,6 +210,7 @@ const singleCurrencyUsdMerchant: Merchant = {
 beforeEach(() => {
   merchantCache.clear()
   taxState.topup = null
+  stripeProbeState.value = 'ready'
 })
 
 afterEach(() => {
@@ -329,6 +347,39 @@ describe('<McpTopupView> — topup currency picker', () => {
     })
   })
 
+  it('hides Stripe’s terms line and moves the saved-card disclosure into the mandate', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '5' },
+    })
+    fireEvent.change(screen.getByLabelText('Add each time'), {
+      target: { value: '10' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.getByTestId('payment-element').getAttribute('data-terms-card')).toBe('never')
+    expect(screen.getByTestId('mandate').getAttribute('data-saves-card')).toBe('true')
+  })
+
+  it('leaves the saved-card disclosure off the mandate when auto-recharge is off', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.getByTestId('payment-element').getAttribute('data-terms-card')).toBe('never')
+    expect(screen.getByTestId('mandate').getAttribute('data-saves-card')).toBe('false')
+  })
+
   it('keeps the amount step and shows an error when auto-recharge is invalid', async () => {
     renderTopup(singleCurrencyUsdMerchant)
     await screen.findByText('Add credits')
@@ -449,5 +500,60 @@ describe('<McpTopupView> — topup currency picker', () => {
     await screen.findByTestId('topup-form-stub')
     fireEvent.click(screen.getByTestId('topup-form-submit'))
     expect(ctx.balance.adjustBalance).not.toHaveBeenCalled()
+  })
+
+  it('renders a terminal success receipt with no back link or CTAs', async () => {
+    const onBack = vi.fn()
+    renderTopup(singleCurrencyUsdMerchant, 'USD', 'inline', 100, onBack)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('topup-form-submit'))
+    })
+
+    const receipt = screen.getByLabelText('Top-up success')
+    expect(screen.getByRole('heading', { name: 'Credits added' })).toBeTruthy()
+    expect(receipt.textContent).toMatch(/Amount/)
+    expect(receipt.textContent).toMatch(/\$25/)
+    expect(receipt.textContent).toMatch(/Credits/)
+    expect(receipt.textContent).toMatch(/\+250,000/)
+    expect(screen.queryByRole('button', { name: /Back to my account/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Add more credits/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Manage account/i })).toBeNull()
+    expect(onBack).not.toHaveBeenCalled()
+  })
+})
+
+describe('<McpTopupView> — blocked probe still shows the amount step', () => {
+  beforeEach(() => {
+    stripeProbeState.value = 'blocked'
+  })
+
+  it('renders the amount step when the Stripe probe is blocked', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Continue/i })).toBeTruthy()
+    expect(screen.queryByText(/doesn't allow embedded payments/)).toBeNull()
+  })
+
+  it('renders the hosted handoff after the customer commits an amount', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByText(/doesn't allow embedded payments/)
+    expect(screen.queryByTestId('topup-form-stub')).toBeNull()
+    expect(screen.getByRole('button', { name: /Change amount/i })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
+    await screen.findByText('Add credits')
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
   })
 })

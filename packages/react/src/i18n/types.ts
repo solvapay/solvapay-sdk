@@ -28,6 +28,12 @@ export type MandateContext = {
   }
   amountFormatted: string
   trialDays?: number
+  /**
+   * True when the confirm also stores the card for later off-session
+   * charges (auto-recharge). The mandate has to disclose the storage,
+   * because SolvaPay surfaces hide Stripe's own `terms` line.
+   */
+  savesPaymentMethod?: boolean
 }
 
 export type MandateTemplate = string | ((ctx: MandateContext) => string)
@@ -273,9 +279,13 @@ export interface SolvaPayCopy {
     addFunds: string
     autoRechargeOn: string
     autoRechargeOff: string
+    /** Status line while a top-up that enabled auto-recharge is still pending. */
+    autoRechargePending: string
     turnOn: string
-    /** On-state link that opens the dedicated auto-recharge view. */
+    /** On-state link that opens the hosted portal auto-recharge form. */
     manage: string
+    /** Failed-card link that opens the hosted portal auto-recharge form. */
+    fixCard: string
     /** Caption under auto-recharge off on a running credit plan (B). */
     autoRechargeOffCaption: string
     /** Caption under auto-recharge off when calls are already failing (D). */

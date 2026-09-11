@@ -16,7 +16,8 @@
  * paying the bridge cost.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { PlanSelector } from '../../../primitives/PlanSelector'
 import { useCheckoutFlow } from '../../../hooks/useCheckoutFlow'
 import { usePurchase } from '../../../hooks/usePurchase'
@@ -30,8 +31,10 @@ import { AmountStep } from './steps/AmountStep'
 import { PaygPaymentStep } from './steps/PaygPaymentStep'
 import { RecurringPaymentStep } from './steps/RecurringPaymentStep'
 import { SuccessStep } from './steps/SuccessStep'
+import type { StripeProbeState } from '../../useStripeProbe'
 import type { BootstrapPlanLike, Cx } from './shared'
 import { isPayg, planSortByPaygFirstThenAsc } from './shared'
+import { HostedCheckout } from './HostedCheckout'
 
 export interface EmbeddedCheckoutProps {
   productRef: string
@@ -68,6 +71,11 @@ export interface EmbeddedCheckoutProps {
    */
   initialPlanRef?: string
   autoAdvance?: boolean
+  /**
+   * Payment-capability check started by `<McpCheckoutView>`. The plan
+   * and amount steps ignore it; only the payment step branches.
+   */
+  stripeProbe: StripeProbeState
   cx: Cx
   /**
    * Accepted for API stability — earlier revisions rendered
@@ -90,6 +98,7 @@ export function EmbeddedCheckout({
   onBack,
   initialPlanRef,
   autoAdvance,
+  stripeProbe,
   cx,
   children,
 }: EmbeddedCheckoutProps) {
@@ -142,6 +151,7 @@ export function EmbeddedCheckout({
           onBack={onBack}
           initialPlanRef={initialPlanRef}
           autoAdvance={autoAdvance}
+          stripeProbe={stripeProbe}
           cx={cx}
         />
       </PlanSelector.Root>
@@ -161,6 +171,7 @@ interface McpCheckoutBodyProps {
   onBack?: () => void
   initialPlanRef?: string
   autoAdvance?: boolean
+  stripeProbe: StripeProbeState
   cx: Cx
 }
 
@@ -175,6 +186,7 @@ function McpCheckoutBody({
   onBack,
   initialPlanRef,
   autoAdvance,
+  stripeProbe,
   cx,
 }: McpCheckoutBodyProps) {
   const bridge = useMcpBridge()
@@ -218,6 +230,7 @@ function McpCheckoutBody({
   }, [bridge, onClose])
 
   const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
+  const [autoRecharge, setAutoRecharge] = useState<AutoRechargeInput | undefined>()
 
   const onPlanContinue = useCallback(() => {
     if (selectedPlanShape) {
@@ -278,9 +291,13 @@ function McpCheckoutBody({
         plan={selectedPlanShape}
         topupCurrency={flow.topupCurrency}
         topupCurrencies={flow.topupCurrencies}
-        onCurrencyChange={flow.setTopupCurrency}
+        onCurrencyChange={code => {
+          setAutoRecharge(undefined)
+          flow.setTopupCurrency(code)
+        }}
         onBack={() => flow.back()}
-        onContinue={amountMinor => {
+        onContinue={(amountMinor, nextAutoRecharge) => {
+          setAutoRecharge(nextAutoRecharge)
           flow.selectAmount(amountMinor)
           void flow.advance()
         }}
@@ -290,12 +307,27 @@ function McpCheckoutBody({
   }
 
   if (flow.step === 'payment') {
+    if (stripeProbe === 'loading') {
+      return <p>Loading checkout…</p>
+    }
+    if (stripeProbe === 'blocked') {
+      return (
+        <HostedCheckout
+          productRef={productRef}
+          planRef={flow.selectedPlanRef ?? undefined}
+          planName={selectedPlanShape?.name ?? undefined}
+          onPurchaseSuccess={onPurchaseSuccess}
+          cx={cx}
+        />
+      )
+    }
     if (flow.branch === 'payg' && selectedPlanShape && flow.selectedAmountMinor != null) {
       return (
         <PaygPaymentStep
           plan={selectedPlanShape}
           amountMinor={flow.selectedAmountMinor}
           topupCurrency={flow.topupCurrency}
+          autoRecharge={autoRecharge}
           returnUrl={returnUrl}
           onBack={() => flow.back()}
           onSuccess={extras => flow.notifyPaymentSuccess(undefined, extras)}

@@ -8,6 +8,7 @@
  */
 
 import React, { memo } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { useBalance } from '../../../../hooks/useBalance'
 import { MandateText } from '../../../../primitives/MandateText'
 import { TopupForm, useTopupForm } from '../../../../primitives/TopupForm'
@@ -17,6 +18,7 @@ import { useHostLocale } from '../../../useHostLocale'
 import { chargeAmountMinor } from '../../chargeAmount'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import { McpPaymentHeader } from '../../McpPaymentHeader'
+import { MCP_PAYMENT_ELEMENT_OPTIONS } from '../../paymentElementOptions'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -24,6 +26,7 @@ interface PaygPaymentStepProps {
   plan: BootstrapPlanLike
   amountMinor: number
   topupCurrency?: string | null
+  autoRecharge?: AutoRechargeInput
   returnUrl: string
   onBack: () => void
   onSuccess: (extras?: TopupFormSuccessExtras) => void
@@ -34,6 +37,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
   plan: _plan,
   amountMinor,
   topupCurrency,
+  autoRecharge,
   returnUrl,
   onBack,
   onSuccess,
@@ -62,6 +66,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
     <TopupForm.Root
       amount={amountMinor}
       currency={currency}
+      autoRecharge={autoRecharge}
       returnUrl={returnUrl}
       onSuccess={(_intent, extras) => onSuccess(extras)}
     >
@@ -99,7 +104,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
 
           <div className={cx.topupForm}>
             <TopupForm.Loading />
-            <TopupForm.PaymentElement />
+            <TopupForm.PaymentElement options={MCP_PAYMENT_ELEMENT_OPTIONS} />
             <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
               <TopupForm.BusinessDetails.Fields />
             </TopupForm.BusinessDetails.Root>
@@ -108,7 +113,12 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
             <TopupForm.SubmitButton className={cx.button}>
               <PaygChargeCta amountMinor={amountMinor} currency={currency} />
             </TopupForm.SubmitButton>
-            <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
+            <MandateText
+              mode="topup"
+              amountMinor={amountMinor}
+              currency={currency}
+              savesPaymentMethod={autoRecharge != null}
+            />
           </div>
         </McpHostedBody>
       </McpHostedLayout>

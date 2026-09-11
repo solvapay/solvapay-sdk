@@ -42,7 +42,10 @@ export const enCopy: SolvaPayCopy = {
       const product = ctx.product?.name
         ? ` to add credits to your ${ctx.product.name} balance`
         : ' to add credits to your balance'
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Credits are non-refundable once used. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      const savedCard = ctx.savesPaymentMethod
+        ? ` You also authorize ${ctx.merchant.legalName} to save this card and charge it for future auto-recharges, which you can turn off any time.`
+        : ''
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Credits are non-refundable once used.${savedCard} Payments are processed by SolvaPay.${termsSentence(ctx)}`
     },
     usageMetered: (ctx: MandateContext) => {
       const measures = ctx.plan?.measures ?? 'request'
@@ -295,8 +298,10 @@ export const enCopy: SolvaPayCopy = {
     addFunds: 'Add funds',
     autoRechargeOn: 'Auto-recharge on',
     autoRechargeOff: 'Auto-recharge off',
-    turnOn: 'Turn on →',
-    manage: 'Manage →',
+    autoRechargePending: 'Auto-recharge starts once this payment clears',
+    turnOn: 'Turn on',
+    manage: 'Manage',
+    fixCard: 'Fix card',
     autoRechargeOffCaption: 'Calls fail the moment the balance runs out.',
     autoRechargeOffFixCaption: 'Turning it on stops this happening again.',
     callsFailingCaption: 'The plan is active, but calls fail until you add credits.',

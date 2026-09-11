@@ -33,12 +33,16 @@ vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
     amount: number
     currency?: string
+    autoRecharge?: unknown
     returnUrl?: string
     onSuccess?: () => void
     className?: string
     children?: React.ReactNode
-  }> = ({ onSuccess, children }) => (
-    <div data-testid="topup-form-stub">
+  }> = ({ autoRecharge, onSuccess, children }) => (
+    <div
+      data-testid="topup-form-stub"
+      data-auto-recharge={autoRecharge ? JSON.stringify(autoRecharge) : ''}
+    >
       <button type="button" data-testid="topup-form-submit" onClick={() => onSuccess?.()}>
         submit topup
       </button>
@@ -145,8 +149,12 @@ vi.mock('../../../primitives/MandateText', () => ({
   MandateText: () => <p data-testid="mandate-text" />,
 }))
 
+const stripeProbeState = vi.hoisted(() => ({
+  value: 'ready' as 'loading' | 'ready' | 'blocked',
+}))
+
 vi.mock('../../useStripeProbe', () => ({
-  useStripeProbe: () => 'ready',
+  useStripeProbe: () => stripeProbeState.value,
 }))
 
 // ------------------------------------------------------------------
@@ -344,6 +352,7 @@ beforeEach(() => {
   merchantCache.clear()
   taxState.payment = null
   taxState.topup = null
+  stripeProbeState.value = 'ready'
 })
 
 afterEach(() => {
@@ -1126,6 +1135,106 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length).toBeGreaterThan(
       0,
     )
+  })
+})
+
+describe('<McpCheckoutView> — blocked probe still shows plans', () => {
+  beforeEach(() => {
+    stripeProbeState.value = 'blocked'
+  })
+
+  it('renders the plan picker when the Stripe probe is blocked', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => {
+      expect(screen.getByText('Pay as you go')).toBeTruthy()
+      expect(screen.getByText('Pro')).toBeTruthy()
+    })
+    expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
+    expect(screen.queryByText('Upgrade your plan')).toBeNull()
+  })
+
+  it('renders the hosted handoff after the customer advances to payment', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Complete your Pro purchase')).toBeTruthy()
+    })
+    expect(screen.queryByTestId('payment-form-stub')).toBeNull()
+  })
+})
+
+describe('<McpCheckoutView> — PAYG auto-recharge', () => {
+  async function advanceToAmountStep() {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+  }
+
+  it('shows the Auto-recharge toggle on AmountStep', async () => {
+    await advanceToAmountStep()
+    expect(screen.getByRole('switch', { name: 'Auto-recharge' })).toBeTruthy()
+  })
+
+  it('forwards a validated auto-recharge payload into TopupForm on Continue', async () => {
+    await advanceToAmountStep()
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '5' },
+    })
+    fireEvent.change(screen.getByLabelText('Add each time'), {
+      target: { value: '10' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    const form = await screen.findByTestId('topup-form-stub')
+    expect(JSON.parse(form.getAttribute('data-auto-recharge') ?? '')).toEqual({
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+    })
+  })
+
+  it('omits autoRecharge when the toggle is left off', async () => {
+    await advanceToAmountStep()
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    const form = await screen.findByTestId('topup-form-stub')
+    expect(form.getAttribute('data-auto-recharge')).toBe('')
+  })
+
+  it('keeps the amount step and shows an error when auto-recharge is invalid', async () => {
+    await advanceToAmountStep()
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.queryByTestId('topup-form-stub')).toBeNull()
+    expect(screen.getByRole('alert').textContent).toMatch(/threshold/i)
+    expect(screen.getByText(/How many credits/)).toBeTruthy()
   })
 })
 

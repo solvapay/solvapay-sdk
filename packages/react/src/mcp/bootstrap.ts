@@ -44,6 +44,11 @@ export interface McpBootstrap {
   plans: BootstrapPlan[]
   /** Per-customer snapshot — null when the bootstrap call was unauthenticated. */
   customer: BootstrapCustomer | null
+  /**
+   * Hosted portal URL that opens the auto-recharge form. Null when no
+   * portal session could be minted.
+   */
+  autoRechargeUrl?: string | null
 }
 
 /**
@@ -306,6 +311,9 @@ export function parseBootstrapFromToolResult(
     product: (structured?.product ?? { reference: ref }) as BootstrapProduct,
     plans: Array.isArray(structured?.plans) ? (structured.plans as BootstrapPlan[]) : [],
     customer: (structured?.customer ?? null) as BootstrapCustomer | null,
+    ...(typeof structured?.autoRechargeUrl === 'string'
+      ? { autoRechargeUrl: structured.autoRechargeUrl }
+      : {}),
   }
 }
 
