@@ -1,6 +1,9 @@
 export type {
   SolvaPayTransport,
   TransportBalanceResult,
+  TransportCaptureSessionResult,
+  TransportCredentialDescriptors,
+  TransportCredentialResult,
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,
   TransportLimitsResult,

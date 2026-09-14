@@ -61,6 +61,24 @@ export {
 } from './PaymentForm'
 
 export {
+  CardFields,
+  CardFieldsRoot,
+  CardFieldsCardholder,
+  CardFieldsNumber,
+  CardFieldsExpiry,
+  CardFieldsCvc,
+  CardFieldsFieldError,
+  CardFieldsLoading,
+  CardFieldsBrandIcon,
+} from './CardFields'
+export type {
+  CardFieldsRootProps,
+  CardFieldsLoadingProps,
+  FieldErrorProps,
+  BrandIconProps,
+} from './CardFields'
+
+export {
   ActivationFlow,
   ActivationFlowRoot,
   ActivationFlowSummary,

@@ -213,6 +213,34 @@ export interface SolvaPayTransport {
     taxIdType?: TaxIdType
   }) => Promise<{ taxBreakdown: TaxBreakdown }>
 
+  /**
+   * Mints a short-lived, write-only grant for the vault capture surface.
+   *
+   * Optional because only hosts that render vault fields need it. A host that
+   * uses the PSP element never calls it, and the transport that does not
+   * implement it throws UnsupportedTransportMethodError, as with every other
+   * optional method here.
+   */
+  createCaptureSession?: (params: {
+    productRef?: string
+    planRef?: string
+    customerRef?: string
+  }) => Promise<TransportCaptureSessionResult>
+
+  /**
+   * Records a credential the vault has already stored, against our customer.
+   *
+   * Takes the vault handle and the non-sensitive descriptors. No card data
+   * crosses this boundary, by construction: the browser sent it to the vault
+   * and the vault returned a handle.
+   */
+  createCredential?: (params: {
+    handle: string
+    descriptors: TransportCredentialDescriptors
+    customerRef?: string
+    setAsDefault?: boolean
+  }) => Promise<TransportCredentialResult>
+
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
@@ -236,4 +264,31 @@ export class UnsupportedTransportMethodError extends Error {
     this.name = 'UnsupportedTransportMethodError'
     this.method = method
   }
+}
+
+/** Mirrors the vault capture session contract in `../vault/types`. */
+export interface TransportCaptureSessionResult {
+  token: string
+  tenantId: string
+  environment: 'sandbox' | 'live'
+  /** Epoch milliseconds. */
+  expiresAt: number
+}
+
+export interface TransportCredentialDescriptors {
+  brand: string
+  last4: string
+  bin?: string | null
+  expMonth: number
+  expYear: number
+  funding?: string | null
+  issuerCountry?: string | null
+  fingerprint?: string | null
+}
+
+export interface TransportCredentialResult {
+  /** Our own credential reference, not the vault handle. */
+  credentialRef: string
+  /** True when this card was already stored for the customer. */
+  existing: boolean
 }

@@ -273,6 +273,8 @@ export interface SolvaPayConfig {
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
     getHistory?: string // Default: '/api/history'
+    createCaptureSession?: string // Default: '/api/capture-session'
+    createCredential?: string // Default: '/api/credentials'
   }
 
   /**

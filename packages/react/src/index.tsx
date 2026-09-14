@@ -41,6 +41,36 @@ export {
 } from './components/PaymentFormContext'
 export type { PaymentFormContextValue, PaymentElementKind } from './components/PaymentFormContext'
 
+// Vault capture surface. The alternative to the PSP element: sensitive inputs
+// are iframes served by the vault, so the card never reaches this page or our
+// servers, and the credential it produces names no rail.
+export { CardFields } from './primitives/CardFields'
+export {
+  CardFieldsContext,
+  useCardFields,
+  CardFieldsProvider,
+} from './components/CardFieldsContext'
+export type { CardFieldsContextValue } from './components/CardFieldsContext'
+export { useCaptureSession } from './hooks/useCaptureSession'
+export type { UseCaptureSessionOptions, UseCaptureSessionResult } from './hooks/useCaptureSession'
+export {
+  CaptureError,
+  REQUIRED_CAPTURE_FIELDS,
+  assertIntegrityForLive,
+  type CaptureEnvironment,
+  type CaptureErrorCode,
+  type CaptureFieldName,
+  type CaptureFieldOptions,
+  type CaptureFieldState,
+  type CaptureFieldStyle,
+  type CaptureSession,
+  type CaptureState,
+  type CapturedCredential,
+  type CardBrand,
+  type CredentialDescriptors,
+  type VaultScriptConfig,
+} from './vault'
+
 // Hooks
 export { usePurchase } from './hooks/usePurchase'
 export { useCustomer } from './hooks/useCustomer'
