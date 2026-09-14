@@ -187,6 +187,13 @@ class ScriptedPayableModule:
             }
         )
 
+    def overlayClaimedLimits(self, args_json: str) -> str:
+        args = json.loads(args_json)
+        limits = args.get("limits")
+        if not isinstance(limits, dict):
+            raise AssertionError(args)
+        return _ok(limits)
+
     def gateNext(self, args_json: str) -> str:
         args = json.loads(args_json)
         event = args.get("event") or {}

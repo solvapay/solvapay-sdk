@@ -14,7 +14,7 @@ use crate::auth_gate::{mcp_auth_gate, AuthGateInput, AuthGateResult, McpAuthMode
 use crate::bearer_verify::{
     extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
 };
-use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
+use crate::descriptor_schemas::{mcp_descriptors, McpDescriptorsInput};
 use crate::hide_tools::{
     is_app_callable, is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput,
 };
@@ -160,7 +160,7 @@ pub struct EngineConfig {
     pub api_base_url: Option<String>,
     /// Optional branding forwarded to [`mcp_descriptors`].
     #[serde(default)]
-    pub branding: Option<crate::descriptors::BrandingIn>,
+    pub branding: Option<crate::descriptor_schemas::BrandingIn>,
     /// JWKS document for bearer verification.
     #[serde(default)]
     pub jwks_json: Option<Value>,
@@ -330,7 +330,9 @@ fn method_not_found(rpc: &Value, method: &str, modern: bool) -> Value {
     }
 }
 
-fn descriptors_for(config: &EngineConfig) -> Result<crate::descriptors::McpDescriptors, String> {
+fn descriptors_for(
+    config: &EngineConfig,
+) -> Result<crate::descriptor_schemas::McpDescriptors, String> {
     mcp_descriptors(&McpDescriptorsInput {
         resource_uri: config.resource_uri.clone(),
         public_base_url: config.public_base_url.clone(),
@@ -357,7 +359,7 @@ fn payable_list_item(spec: &PayableToolSpec) -> Value {
         "title": title,
         "inputSchema": input_schema,
     });
-    item["description"] = json!(crate::descriptors::append_paid_tool_description(
+    item["description"] = json!(solvapay_core::append_paid_tool_description(
         spec.description.as_deref()
     ));
     if let Some(annotations) = &spec.annotations {
@@ -367,7 +369,8 @@ fn payable_list_item(spec: &PayableToolSpec) -> Value {
         item["_meta"] = meta.clone();
     }
     if let Some(output_schema) = &spec.output_schema {
-        item["outputSchema"] = crate::descriptors::union_payable_output_schema(output_schema);
+        item["outputSchema"] =
+            crate::descriptor_schemas::union_payable_output_schema(output_schema);
     }
     with_legacy_ui_meta(item)
 }
@@ -388,7 +391,7 @@ fn merge_payable_specs(tools: &mut Vec<Value>, payable_tools: &[PayableToolConfi
     }
 }
 
-fn tool_list_item(tool: &crate::descriptors::McpToolDescriptor) -> Value {
+fn tool_list_item(tool: &crate::descriptor_schemas::McpToolDescriptor) -> Value {
     let title = tool
         .title
         .as_deref()

@@ -37,7 +37,7 @@ import type { PlansHelperError } from './plans'
 import type { ProductHelperError } from './product'
 import type { RenewalHelperError } from './renewal'
 import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
-import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'
+import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, DefaultMcpBearerExpectations, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'
 import type { BalancePegLike, PricedLike } from './pricing-options-types'
 
 export type NarratorPlanShape = 'trial' | 'free' | 'recurring-metered' | 'recurring-unlimited' | 'usage-based'
@@ -637,6 +637,45 @@ export function evaluateClaimedLimits(
   claimed: number,
 ): FreshLimitsEvaluation {
   return dispatchSync('evaluateClaimedLimits', { withinLimits, remaining, claimed })
+}
+
+export function overlayClaimedLimits(limits: unknown, claimed: number): unknown {
+  return dispatchSync('overlayClaimedLimits', { limits, claimed })
+}
+
+export function compileStringFieldInputSchemaJson(fields: unknown | null | undefined): unknown {
+  return dispatchSync('compileStringFieldInputSchemaJson', { fields: fields ?? null })
+}
+
+export function ensureOutputSchemaObjectType(schema: unknown): unknown {
+  return dispatchSync('ensureOutputSchemaObjectType', { schema })
+}
+
+export function extractBearerToken(authorizationHeader: string | null | undefined): string | null {
+  return dispatchSync('extractBearerToken', { authorizationHeader: authorizationHeader ?? null })
+}
+
+export function decodeJwtPayloadUnverified(token: string): unknown | null {
+  return dispatchSync('decodeJwtPayloadUnverified', { token })
+}
+
+export function customerRefFromClaims(
+  claims: unknown,
+  claimPriority: unknown | null | undefined,
+): string | null {
+  return dispatchSync('customerRefFromClaims', { claims, claimPriority: claimPriority ?? null })
+}
+
+export function defaultMcpBearerExpectations(
+  publicBaseUrl: string,
+  mcpPath: string | null | undefined,
+  nowUnixSecs: number,
+): DefaultMcpBearerExpectations {
+  return dispatchSync('defaultMcpBearerExpectations', {
+    publicBaseUrl,
+    mcpPath: mcpPath ?? null,
+    nowUnixSecs,
+  })
 }
 
 export function resolvePlanShape(priced: unknown | null | undefined): NarratorPlanShape | null {

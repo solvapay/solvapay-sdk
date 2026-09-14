@@ -24,11 +24,12 @@ import {
   isErrorResult,
   mapRouteError,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
-  evaluateClaimedLimits,
+  overlayClaimedLimits,
   requireProductRef,
   resolveCheckLimitsParams,
   resolveCustomerRef,
 } from './native-decisions'
+import { runGeneratedGateLoop } from './drivers.generated'
 import { CUSTOMER_DEDUP_MAX_CACHE_SIZE } from './defaults'
 import { trackUsageWithRetry } from './track-usage-retry'
 import { createRequestDeduplicator } from './utils'
@@ -145,22 +146,6 @@ const sharedCheckLimitsDeduplicator = createRequestDeduplicator<LimitResponseWit
 
 const sharedCheckLimitsClaims = new Map<string, number>()
 
-function overlayClaimedLimits(
-  limits: LimitResponseWithPlan,
-  claimed: number,
-): LimitResponseWithPlan {
-  const remaining = typeof limits.remaining === 'number' ? limits.remaining : 0
-  const withinLimits = limits.withinLimits === true
-  const evaluation = evaluateClaimedLimits(withinLimits, remaining, claimed)
-  if (remaining === -1 || (withinLimits && remaining === 0)) {
-    return { ...limits, withinLimits: evaluation.withinLimits, remaining: evaluation.remaining }
-  }
-  if (!evaluation.withinLimits) {
-    return { ...limits, withinLimits: false, remaining: 0 }
-  }
-  return { ...limits, withinLimits: true, remaining: evaluation.remaining + 1 }
-}
-
 interface LimitsCacheEntry {
   remaining: number
   checkoutUrl?: string
@@ -242,6 +227,12 @@ export class SolvaPayPaywall {
   invalidateLimits(customerRef: string, product?: string): void {
     const aliases = new Set<string>([customerRef])
     if (!customerRef.startsWith('cus_')) aliases.add(`cus_${customerRef}`)
+    for (const [key, entry] of this.customerCache) {
+      if (key === customerRef || entry.backendRef === customerRef) {
+        aliases.add(key)
+        aliases.add(entry.backendRef)
+      }
+    }
 
     for (const key of [...this.limitsCache.keys()]) {
       const [ref, prod] = key.split(':')
@@ -322,8 +313,7 @@ export class SolvaPayPaywall {
       ? getCustomerRef(args)
       : args.auth?.customer_ref || 'anonymous'
 
-    let state: unknown = null
-    let event: Record<string, unknown> = {
+    const startEvent: Record<string, unknown> = {
       kind: 'start',
       customerRef: inputCustomerRef,
       product,
@@ -334,99 +324,79 @@ export class SolvaPayPaywall {
       ...(metadata.toolName ? { toolName: metadata.toolName } : {}),
     }
 
-    for (;;) {
-      const out = gateNext(state, event) as { state: unknown; action: GateAction }
-      state = out.state
-      const action = out.action
+    const { state, action } = await runGeneratedGateLoop(
+      (driverState, event) =>
+        gateNext(driverState, event) as { state: unknown; action: GateAction },
+      {
+        ensureCustomer: customerRef => this.ensureCustomer(customerRef, customerRef),
+        readLimitsCache: async key => {
+          const cached = this.limitsCache.get(key)
+          if (!cached) {
+            return { found: false }
+          }
+          return {
+            found: true,
+            remaining: cached.remaining,
+            limits: cached.limits,
+            timestampMs: cached.timestamp,
+          }
+        },
+        checkLimits: async action => {
+          if (typeof action.cacheDeleteKey === 'string') {
+            this.limitsCache.delete(action.cacheDeleteKey)
+          }
+          const dedupKey = `${action.customerRef}:${action.productRef}:${action.meterName}`
+          const limitsCheck = await sharedCheckLimitsDeduplicator.deduplicate(
+            dedupKey,
+            async () => {
+              sharedCheckLimitsClaims.set(dedupKey, 0)
+              return this.apiClient.checkLimits({
+                customerRef: action.customerRef,
+                productRef: action.productRef,
+                meterName: action.meterName,
+                includeCheckoutSession: action.includeCheckoutSession,
+              })
+            },
+          )
+          const claimed = (sharedCheckLimitsClaims.get(dedupKey) ?? 0) + 1
+          sharedCheckLimitsClaims.set(dedupKey, claimed)
+          return overlayClaimedLimits(limitsCheck, claimed) as LimitResponseWithPlan
+        },
+        applyCache: cache => this.applyGateCache(cache as GateCacheOp | undefined),
+        nowMs: () => Date.now(),
+      },
+      startEvent,
+    )
 
-      if (action.kind === 'ensureCustomer') {
-        const backendRef = await this.ensureCustomer(
-          String(action.customerRef),
-          String(action.customerRef),
-        )
-        event = { kind: 'customerResolved', backendRef, nowMs: Date.now() }
-        continue
+    if (action.kind === 'gate') {
+      await this.postUsageRequest(action.request)
+      if (action.gate == null) {
+        throw new SolvaPayError('gate_next gate action missing gate payload')
       }
-
-      if (action.kind === 'readLimitsCache') {
-        const key = String(action.key)
-        const cached = this.limitsCache.get(key)
-        const now = Date.now()
-        event = cached
-          ? {
-              kind: 'limitsCacheEntry',
-              found: true,
-              remaining: cached.remaining,
-              limits: cached.limits,
-              timestampMs: cached.timestamp,
-              nowMs: now,
-            }
-          : { kind: 'limitsCacheEntry', found: false, nowMs: now }
-        continue
+      return {
+        outcome: 'gate',
+        gate: action.gate as PaywallStructuredContent,
+        limits: action.limits as LimitResponseWithPlan,
+        customerRef: String(action.customerRef),
+        requestId: String(action.requestId),
       }
-
-      if (action.kind === 'checkLimits') {
-        if (typeof action.cacheDeleteKey === 'string') {
-          this.limitsCache.delete(action.cacheDeleteKey)
-        }
-        const dedupKey = `${String(action.customerRef)}:${String(action.productRef)}:${String(action.meterName)}`
-        const limitsCheck = await sharedCheckLimitsDeduplicator.deduplicate(dedupKey, async () => {
-          sharedCheckLimitsClaims.set(dedupKey, 0)
-          return this.apiClient.checkLimits({
-            customerRef: String(action.customerRef),
-            productRef: String(action.productRef),
-            meterName: String(action.meterName),
-            includeCheckoutSession: action.includeCheckoutSession === true,
-          })
-        })
-        const claimed = (sharedCheckLimitsClaims.get(dedupKey) ?? 0) + 1
-        sharedCheckLimitsClaims.set(dedupKey, claimed)
-        event = {
-          kind: 'limitsResult',
-          limits: overlayClaimedLimits(limitsCheck, claimed),
-          nowMs: Date.now(),
-        }
-        continue
-      }
-
-      if (action.kind === 'gate') {
-        this.applyGateCache(action.cache)
-        await this.postUsageRequest(action.request)
-        if (action.gate == null) {
-          throw new SolvaPayError('gate_next gate action missing gate payload')
-        }
-        return {
-          outcome: 'gate',
-          // Driver emits PaywallGate; boundary types it as unknown.
-          gate: action.gate as PaywallStructuredContent,
-          limits: action.limits as LimitResponseWithPlan,
-          customerRef: String(action.customerRef),
-          requestId: action.requestId,
-        }
-      }
-
-      if (action.kind === 'allow') {
-        this.applyGateCache(action.cache)
-        return {
-          outcome: 'allow',
-          args,
-          limits: action.limits as LimitResponseWithPlan,
-          customerRef: String(action.customerRef),
-          driverState: state,
-          requestId: action.requestId,
-          ...(action.consequence !== undefined ? { consequence: action.consequence } : {}),
-        }
-      }
-
-      if (action.kind === 'emitUsage' || action.kind === 'skipUsage') {
-        throw new SolvaPayError(
-          `gate_next returned ${action.kind} during decide; usage actions belong on handler events`,
-        )
-      }
-
-      const unexpected: never = action
-      throw new SolvaPayError(`gate_next returned unknown action: ${JSON.stringify(unexpected)}`)
     }
+
+    if (action.kind === 'allow') {
+      return {
+        outcome: 'allow',
+        args,
+        limits: action.limits as LimitResponseWithPlan,
+        customerRef: String(action.customerRef),
+        driverState: state,
+        requestId: String(action.requestId),
+        ...(action.consequence !== undefined
+          ? { consequence: action.consequence as 'throttled' | 'overage' }
+          : {}),
+      }
+    }
+
+    throw new SolvaPayError(`gate_next returned unknown action: ${JSON.stringify(action)}`)
   }
 
   /**

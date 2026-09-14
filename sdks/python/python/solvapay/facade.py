@@ -15,6 +15,8 @@ import threading
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from functools import wraps
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar
 
 from solvapay.defaults import _CUSTOMER_DEDUP_MAX_CACHE_SIZE, _DEFAULT_LIMITS_CACHE_TTL_MS
@@ -24,6 +26,16 @@ from solvapay.retry import with_retry_blocking
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
+
+_DRIVERS_PATH = Path(__file__).resolve().parent / "drivers.generated.py"
+_drivers_spec = spec_from_file_location("solvapay._drivers_generated", _DRIVERS_PATH)
+if _drivers_spec is None or _drivers_spec.loader is None:
+    raise ImportError(f"cannot load generated drivers from {_DRIVERS_PATH}")
+_drivers_mod = module_from_spec(_drivers_spec)
+_drivers_spec.loader.exec_module(_drivers_mod)
+run_generated_gate_loop_async = _drivers_mod.run_generated_gate_loop_async
+run_generated_payable_loop = _drivers_mod.run_generated_payable_loop
+run_generated_payable_loop_async = _drivers_mod.run_generated_payable_loop_async
 
 
 class _InflightWaiter:
@@ -306,28 +318,13 @@ _shared_limits_dedup = _LimitsDeduplicator()
 
 
 def _overlay_claimed_limits(limits: dict[str, Any], claimed: int) -> dict[str, Any]:
-    remaining = limits.get("remaining")
-    remaining_f = float(remaining) if isinstance(remaining, (int, float)) else 0.0
-    within = limits.get("withinLimits") is True
     evaluation = _call_sync_decision(
-        "evaluate_claimed_limits",
-        {"withinLimits": within, "remaining": remaining_f, "claimed": float(claimed)},
+        "overlay_claimed_limits",
+        {"limits": limits, "claimed": float(claimed)},
     )
     if not isinstance(evaluation, dict):
-        raise SolvaPayError("evaluate_claimed_limits returned unexpected value")
-    overlaid = dict(limits)
-    if remaining_f == -1.0 or (within and remaining_f == 0.0):
-        overlaid["withinLimits"] = evaluation.get("withinLimits")
-        overlaid["remaining"] = evaluation.get("remaining")
-        return overlaid
-    if evaluation.get("withinLimits") is not True:
-        overlaid["withinLimits"] = False
-        overlaid["remaining"] = 0
-        return overlaid
-    rem = evaluation.get("remaining")
-    overlaid["withinLimits"] = True
-    overlaid["remaining"] = (float(rem) if isinstance(rem, (int, float)) else 0.0) + 1.0
-    return overlaid
+        raise SolvaPayError("overlay_claimed_limits returned unexpected value")
+    return {str(k): v for k, v in evaluation.items()}
 
 
 class SolvaPay:
@@ -464,8 +461,7 @@ class SolvaPay:
         blocking: bool,
     ) -> PayableGateResult:
         started_ms = _now_ms()
-        state: dict[str, Any] | None = None
-        event: dict[str, Any] = {
+        start_event: dict[str, Any] = {
             "kind": "start",
             "customerRef": customer_ref,
             "product": product,
@@ -474,49 +470,37 @@ class SolvaPay:
             "randomUnit": random.random(),
             "limitsCacheTTLMs": self._limits_cache_ttl,
         }
-        action: dict[str, Any]
-        while True:
-            out = _call_sync_decision("gate_next", {"state": state, "event": event})
-            if not isinstance(out, dict):
-                raise SolvaPayError("gate_next returned unexpected value")
-            raw_state = out.get("state")
-            state = raw_state if isinstance(raw_state, dict) else None
-            raw_action = out.get("action")
-            if not isinstance(raw_action, dict):
-                raise SolvaPayError("gate_next returned unexpected action")
-            action = raw_action
-            kind = action.get("kind")
-            if kind == "ensureCustomer":
-                backend = await self._ensure_customer(
-                    str(action.get("customerRef")),
-                    blocking=blocking,
+
+        class _Host:
+            def __init__(self, facade: SolvaPay, *, blocking: bool) -> None:
+                self._facade = facade
+                self._blocking = blocking
+
+            def now_ms(self) -> int:
+                return _now_ms()
+
+            def read_limits_cache(self, key: str) -> dict[str, Any] | None:
+                cached = self._facade._limits_cache.get(key)
+                if not isinstance(cached, dict):
+                    return None
+                return {
+                    "remaining": cached["remaining"],
+                    "limits": cached.get("limits"),
+                    "timestampMs": cached["timestamp"],
+                }
+
+            def apply_cache(self, cache: object) -> None:
+                self._facade._apply_gate_cache(cache)
+
+            async def ensure_customer(self, customer_ref: str) -> str:
+                return await self._facade._ensure_customer(
+                    customer_ref, blocking=self._blocking
                 )
-                event = {"kind": "customerResolved", "backendRef": backend, "nowMs": _now_ms()}
-                continue
-            if kind == "readLimitsCache":
-                key = str(action.get("key"))
-                cached = self._limits_cache.get(key)
-                now = _now_ms()
-                if cached is not None:
-                    event = {
-                        "kind": "limitsCacheEntry",
-                        "found": True,
-                        "remaining": cached["remaining"],
-                        "limits": cached.get("limits"),
-                        "timestampMs": cached["timestamp"],
-                        "nowMs": now,
-                    }
-                else:
-                    event = {
-                        "kind": "limitsCacheEntry",
-                        "found": False,
-                        "nowMs": now,
-                    }
-                continue
-            if kind == "checkLimits":
+
+            async def check_limits(self, action: dict[str, Any]) -> object:
                 delete_key = action.get("cacheDeleteKey")
                 if isinstance(delete_key, str):
-                    self._limits_cache.pop(delete_key, None)
+                    self._facade._limits_cache.pop(delete_key, None)
                 args_json = json.dumps(
                     {
                         "customerRef": action.get("customerRef"),
@@ -525,12 +509,12 @@ class SolvaPay:
                         "includeCheckoutSession": bool(action.get("includeCheckoutSession")),
                     }
                 )
-                client = self.get_api_client()
+                client = self._facade.get_api_client()
                 dedup_key = (
                     f"{action.get('customerRef')}:{action.get('productRef')}:"
                     f"{action.get('meterName')}"
                 )
-                if blocking:
+                if self._blocking:
                     limits_value = _shared_limits_dedup.run_blocking(
                         dedup_key,
                         lambda c=client, a=args_json: _unwrap_envelope(
@@ -551,17 +535,22 @@ class SolvaPay:
                 if not isinstance(limits_value, dict):
                     raise SolvaPayError("checkLimits returned a non-object body")
                 claimed = _shared_limits_dedup.next_claim(dedup_key)
-                event = {
-                    "kind": "limitsResult",
-                    "limits": _overlay_claimed_limits(limits_value, claimed),
-                    "nowMs": _now_ms(),
-                }
-                continue
-            if kind in ("allow", "gate"):
-                break
-            raise SolvaPayError(f"gate_next returned unknown action kind: {kind}")
+                return _overlay_claimed_limits(limits_value, claimed)
 
-        self._apply_gate_cache(action.get("cache"))
+        def _gate_next(state: object, event: object) -> dict[str, Any]:
+            out = _call_sync_decision("gate_next", {"state": state, "event": event})
+            if not isinstance(out, dict):
+                raise SolvaPayError("gate_next returned unexpected value")
+            return out
+
+        stepped = await run_generated_gate_loop_async(
+            _gate_next, _Host(self, blocking=blocking), start_event
+        )
+        state = stepped.get("state") if isinstance(stepped.get("state"), dict) else None
+        action = stepped.get("action")
+        if not isinstance(action, dict):
+            raise SolvaPayError("gate_next returned unexpected action")
+        kind = action.get("kind")
         backend_ref = str(action.get("customerRef"))
         last_limits = action.get("limits") if isinstance(action.get("limits"), dict) else {}
         request = action.get("request") if isinstance(action.get("request"), dict) else None

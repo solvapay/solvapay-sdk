@@ -8,7 +8,8 @@
 use serde_json::{Map, Value};
 use solvapay_core::{
     assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
-    build_prompt_user_message, build_tool_descriptor_metadata, credits_to_display_minor_units,
+    build_prompt_user_message, build_tool_descriptor_metadata, business_country_display_names,
+    business_country_options_table, country_to_tax_id_type, credits_to_display_minor_units,
     derive_icons, derive_tax_id_type, format_price, format_subtotal_label,
     format_vat_summary_label, get_business_country_options, get_customer_address_field_errors,
     get_postal_code_field_label, get_postal_code_placeholder,
@@ -19,7 +20,8 @@ use solvapay_core::{
     mcp_view_maps, minor_units_per_major, paywall_tool_result, postal_code_required_countries,
     resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, state_required_countries, tax_id_types, tax_not_collected_note,
+    should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
+    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     to_major_units, validate_business_details, validate_public_base_url,
     BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
     CreditsToDisplayInput, MerchantBranding, PaywallGate, ResponseEnvelope, SdkError,
@@ -541,6 +543,18 @@ pub fn mcp_view_maps_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details ---
+
+/// Binding for `BUSINESS_COUNTRY_OPTIONS`.
+pub fn business_country_options_table_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&business_country_options_table())
+    })
+}
+
+// --- MCP payload / descriptors ---
+
 /// Binding for `deriveIcons` — absent/empty branding → JSON `null`.
 pub fn derive_icons_binding(args_json: String) -> String {
     run_envelope_sync(|| {
@@ -564,6 +578,14 @@ pub fn is_tax_id_type_binding(args_json: String) -> String {
     })
 }
 
+/// Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+pub fn business_country_display_names_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&business_country_display_names())
+    })
+}
+
 // --- MCP payload / descriptors ---
 
 /// Binding for `buildToolDescriptorMetadata`.
@@ -582,6 +604,18 @@ pub fn build_tool_descriptor_metadata_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details ---
+
+/// Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+pub fn supported_business_countries_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&supported_business_countries())
+    })
+}
+
+// --- MCP payload / descriptors ---
+
 /// Binding for `buildPromptDescriptorMetadata`.
 pub fn build_prompt_descriptor_metadata_binding(args_json: String) -> String {
     run_envelope_sync(|| {
@@ -591,6 +625,18 @@ pub fn build_prompt_descriptor_metadata_binding(args_json: String) -> String {
         to_value(&build_prompt_descriptor_metadata(&options))
     })
 }
+
+// --- business-details ---
+
+/// Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+pub fn country_to_tax_id_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&country_to_tax_id_type())
+    })
+}
+
+// --- MCP payload / descriptors ---
 
 /// Binding for `buildPromptUserMessage`.
 pub fn build_prompt_user_message_binding(args_json: String) -> String {
@@ -616,6 +662,18 @@ pub fn build_prompt_user_message_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details ---
+
+/// Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+pub fn tax_id_example_by_country_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_id_example_by_country())
+    })
+}
+
+// --- MCP payload / descriptors ---
+
 /// Binding for `validatePublicBaseUrl` — invalid → error message string; valid → `null`.
 pub fn validate_public_base_url_binding(args_json: String) -> String {
     run_envelope_sync(|| {
@@ -628,6 +686,18 @@ pub fn validate_public_base_url_binding(args_json: String) -> String {
     })
 }
 
+// --- business-details ---
+
+/// Binding for `TAX_BEHAVIORS`.
+pub fn tax_behaviors_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_behaviors())
+    })
+}
+
+// --- MCP payload / descriptors ---
+
 /// Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
 pub fn build_payable_tool_result_binding(args_json: String) -> String {
     run_envelope_sync(|| {
@@ -636,6 +706,18 @@ pub fn build_payable_tool_result_binding(args_json: String) -> String {
         to_value(&build_payable_tool_result(&envelope))
     })
 }
+
+// --- business-details ---
+
+/// Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+pub fn tax_exclusive_currencies_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_exclusive_currencies())
+    })
+}
+
+// --- MCP payload / descriptors ---
 
 /// Binding for `invokePayableNext`.
 pub fn invoke_payable_next_binding(args_json: String) -> String {

@@ -177,9 +177,15 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 
 **HTTP client — `solvapay-transport`:** the `Transport` trait plus the reqwest
 (native) and Fetch (wasm32) implementations and the client shell that wires auth
-headers, idempotency, and retry, with 38 routed client methods plus 7
-routeless MCP composites (`mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`,
-`mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks`) →
+headers, idempotency, and retry. Three op surfaces live in the manifest
+(`contract/manifest/sdk-contract.yaml`); do not add a fourth hand table:
+
+| Surface                         | Count | Source of truth                                                                                                          | Dispatch                                                  |
+| ------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Routed `SolvaPayClient` methods | 38    | `operations:` catalog                                                                                                    | `solvapay-transport` client                               |
+| MCP composites                  | 7     | `mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`, `mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks` | transport client (async)                                  |
+| MCP `syncOp`                    | ~20   | `mcp:` entries with `surface: syncOp`                                                                                    | `solvapay-mcp` `dispatch_sync` / generated `MCP_SYNC_OPS` |
+
 `core/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.
 
 **TypeScript delegation glue:**
@@ -196,14 +202,14 @@ routeless MCP composites (`mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource
 Five first-party surfaces, plus an optional C ABI. All expose the same public
 capabilities; only syntax differs (cross-surface parity is enforced in CI).
 
-| Surface      | Binding toolchain                                                                    | Status                                                                   |
-| ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| TypeScript   | napi-rs (Node native), wasm-bindgen (edge + browser)                                 | GA — the published `@solvapay/*` packages                                |
-| Python       | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter                              | Built + tested in CI; publish is TestPyPI-gated (not GA)                 |
-| Ruby         | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter                             | Built + tested in CI; publish gated (not GA)                             |
-| Go           | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter    | Built + tested in CI; nested module tags `sdks/go/v*` (not GA)           |
-| Rust         | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                   |
-| C ABI (opt.) | cbindgen + opaque handles (`sdks/capi`)                                              | Generated `dispatch.rs` (golden-tested); opaque handles + `ctest` engine |
+| Surface      | Binding toolchain                                                                    | Status                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript   | napi-rs (Node native), wasm-bindgen (edge + browser)                                 | GA — the published `@solvapay/*` packages                                                                                                                                                    |
+| Python       | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter                              | Built + tested in CI; publish is TestPyPI-gated (not GA)                                                                                                                                     |
+| Ruby         | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter                             | Built + tested in CI; publish gated (not GA)                                                                                                                                                 |
+| Go           | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter    | Built + tested in CI; nested module tags `sdks/go/v*` (not GA)                                                                                                                               |
+| Rust         | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                                                                                                                                       |
+| C ABI (opt.) | cbindgen + opaque handles (`sdks/capi`)                                              | **Policy:** `solvapay_client_call` stays HTTP-ops-only. That is a recorded product choice, not a platform limit. Helpers may still have generated shims; `ctest` is smoke + contract replay. |
 
 The TypeScript surface further splits by runtime:
 
@@ -329,6 +335,31 @@ decisions still go through a JSON-in / JSON-out core function.
 - Per-package versioning is driven by Changesets; branch/release flow is in
   [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and
   [`docs/publishing.mdx`](../publishing.mdx).
+
+## Op surfaces
+
+Counts are generated into [`contract/manifest/op-surfaces.generated.md`](../../contract/manifest/op-surfaces.generated.md)
+from the contract manifest (routed client methods, MCP composites, MCP `syncOp`).
+`core/solvapay-mcp/src/sync_dispatch.generated.rs` is emitted from the same `syncOp` list.
+
+## Forced host asymmetries (not debt)
+
+These are platform constraints, not missing ports:
+
+- TypeScript host loops are `async`; Ruby / Go / C are blocking (`sync:` in the contract manifest).
+- Go embeds a `wasm32-wasip1` blob (`go:embed` + wazero). `pnpm gen` rebuilds
+  it when `GEN_GO_WASM=1` (CI linux/amd64 is the committed blob). Hosts differ
+  bit-for-bit, so `pnpm gen:check` does not rewrite it.
+- TypeScript splits Node napi vs edge/browser wasm; the browser profile omits edge-only symbols (`wasm-profiles.yaml`).
+- Rust facades `pub use` the core crate.
+- `verifyWebhook` and `withRetry` are hand-written in every host (clock / sleep).
+
+## MCP auth entry points
+
+- **Async resolve (`mcpResolveAuth`)** — Fetch / Express / ASGI / Go HTTP middleware. Fetches JWKS, can fall back to userinfo, and may cache. This is the verification path.
+- **Sync gate (`mcpAuthGate`)** — Used by `authChallenge()` and fixture replay. Produces the 401 reconnect envelope (`WWW-Authenticate` + JSON-RPC `-32001`). It does not fetch JWKS; pass verification material or a pre-verified customer ref.
+
+A missing customer ref on a payable tool must raise (never attribute usage to `"anonymous"`). HTTP reconnect uses the 401 challenge bytes from `mcpAuthGate` / `mcpDispatch`.
 
 ## Where to read next
 

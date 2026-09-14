@@ -101,6 +101,121 @@ async fn engine_loop_invoke_handler_then_resume() {
 }
 
 #[tokio::test]
+async fn widget_read_then_action_lands_in_tool_result() {
+    let backend = MockTransport::new(json!({
+        "withinLimits": true,
+        "remaining": 42,
+        "plan": "pl_pro",
+        "creditBalance": 5000
+    }));
+    let client = Client::with_transport(
+        backend,
+        Config {
+            api_key: "sk_test".to_owned(),
+            ..Config::default()
+        },
+    );
+    let mut host = McpHttpServer::new(
+        client,
+        McpHttpConfig {
+            product_ref: "prd_demo".to_owned(),
+            public_base_url: "https://app.example.com".to_owned(),
+            resource_uri: Some("ui://test/view.html".to_owned()),
+            mcp_path: Some("/mcp".to_owned()),
+            views: None,
+            oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
+            hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
+        },
+    );
+    let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
+        Box::pin(async move {
+            ctx.respond(
+                json!({
+                    "widgetAction": args.get("action").cloned().unwrap_or(json!("checkout")),
+                    "echo": args,
+                }),
+                None,
+            )
+        }) as PayableFuture<'static, Result<_, PayableError>>
+    });
+    host.register_payable(
+        PayableTool {
+            name: "complete_checkout".to_owned(),
+            product: "prd_demo".to_owned(),
+            title: None,
+            description: None,
+            input_schema: None,
+            output_schema: None,
+            usage_type: None,
+        },
+        handler,
+        None,
+    )
+    .expect("register");
+
+    let widget = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: [(
+                "authorization".to_owned(),
+                "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA".to_owned(),
+            )]
+            .into_iter()
+            .collect(),
+            body: serde_json::to_vec(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "resources/read",
+                "params": { "uri": "ui://test/view.html" }
+            }))
+            .unwrap(),
+        })
+        .await
+        .expect("widget read");
+    assert_eq!(widget.status, 200);
+    let widget_body: Value = serde_json::from_slice(&widget.body).unwrap();
+    assert_eq!(widget_body["jsonrpc"], "2.0");
+    assert!(
+        widget_body["result"]["contents"].is_array(),
+        "{widget_body}"
+    );
+
+    let action = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: [(
+                "authorization".to_owned(),
+                "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA".to_owned(),
+            )]
+            .into_iter()
+            .collect(),
+            body: serde_json::to_vec(&json!({
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "complete_checkout",
+                    "arguments": { "action": "topup", "amount": 12 }
+                }
+            }))
+            .unwrap(),
+        })
+        .await
+        .expect("widget action");
+    assert_eq!(action.status, 200);
+    let body: Value = serde_json::from_slice(&action.body).unwrap();
+    assert_eq!(body["result"]["structuredContent"]["widgetAction"], "topup");
+    assert_eq!(body["result"]["structuredContent"]["echo"]["amount"], 12);
+}
+
+#[tokio::test]
 async fn tools_list_includes_registered_payable_descriptor() {
     let client = Client::with_transport(
         MockTransport::new(json!({})),
@@ -378,6 +493,91 @@ async fn resources_read_stamps_modern_catalog_envelope() {
         body["result"]["contents"][0]["text"],
         solvapay_mcp::default_mcp_app_html()
     );
+}
+
+const VALID_BEARER: &str = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA";
+const EXPIRED_BEARER: &str = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjoxfQ.e1H0GdQd_FYWpWGUQUi2qC5IjcjvC6ZngrlLVr2tdRw";
+
+fn account_call_body(id: u64) -> Vec<u8> {
+    serde_json::to_vec(&json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": "tools/call",
+        "params": { "name": "solvapay_account", "arguments": {} }
+    }))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn reconnects_after_expired_bearer() {
+    let client = Client::with_transport(
+        MockTransport::new(json!({
+            "withinLimits": true,
+            "remaining": 42,
+            "plan": "pl_pro",
+            "creditBalance": 5000
+        })),
+        Config {
+            api_key: "sk_test".to_owned(),
+            ..Config::default()
+        },
+    );
+    let host = McpHttpServer::new(
+        client,
+        McpHttpConfig {
+            product_ref: "prd_demo".to_owned(),
+            public_base_url: "https://app.example.com".to_owned(),
+            resource_uri: Some("ui://test/view.html".to_owned()),
+            mcp_path: Some("/mcp".to_owned()),
+            views: None,
+            oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
+            hide_audiences: None,
+            api_base_url: None,
+            csp: None,
+            branding: None,
+        },
+    );
+    let ok = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: [("authorization".to_owned(), VALID_BEARER.to_owned())]
+                .into_iter()
+                .collect(),
+            body: account_call_body(10),
+        })
+        .await
+        .expect("valid");
+    assert_eq!(ok.status, 200);
+    let challenge = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: [("authorization".to_owned(), EXPIRED_BEARER.to_owned())]
+                .into_iter()
+                .collect(),
+            body: account_call_body(11),
+        })
+        .await
+        .expect("expired");
+    assert_eq!(challenge.status, 401);
+    let body: Value = serde_json::from_slice(&challenge.body).unwrap();
+    assert_eq!(body["error"]["code"], -32001);
+    assert_eq!(body["error"]["message"], "Unauthorized");
+    let retry = host
+        .handle(McpHttpRequest {
+            method: "POST".to_owned(),
+            path: "/mcp".to_owned(),
+            headers: [("authorization".to_owned(), VALID_BEARER.to_owned())]
+                .into_iter()
+                .collect(),
+            body: account_call_body(12),
+        })
+        .await
+        .expect("retry");
+    assert_eq!(retry.status, 200);
 }
 
 #[tokio::test]

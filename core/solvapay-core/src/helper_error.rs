@@ -60,3 +60,28 @@ impl HelperErrorResult {
         Self::with_details("Transport", 400, details)
     }
 }
+
+/// Map [`crate::error::SdkError`] onto the helper-error wire shape.
+pub fn helper_error_from_sdk(error: &crate::error::SdkError, op: &str) -> HelperErrorResult {
+    match error {
+        crate::error::SdkError::Api {
+            message,
+            status,
+            code,
+        } => HelperErrorResult::with_details(
+            code.clone().unwrap_or_else(|| "Api".to_owned()),
+            status.unwrap_or(400),
+            format!("{op}: {message}"),
+        ),
+        crate::error::SdkError::Paywall { message, .. } => {
+            HelperErrorResult::with_details("Paywall", 402, format!("{op}: {message}"))
+        }
+        #[cfg(feature = "webhook-verify")]
+        crate::error::SdkError::Webhook { message, .. } => {
+            HelperErrorResult::with_details("Webhook", 400, format!("{op}: {message}"))
+        }
+        crate::error::SdkError::Transport { message, .. } => {
+            HelperErrorResult::transport(format!("{op}: {message}"))
+        }
+    }
+}

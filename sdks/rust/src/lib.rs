@@ -14,6 +14,8 @@
 
 mod client;
 mod config;
+#[path = "drivers.generated.rs"]
+mod drivers_generated;
 mod gate;
 mod helpers_generated;
 mod host_time;
@@ -45,6 +47,9 @@ pub use solvapay_transport::ReqwestTransport;
 #[cfg(target_arch = "wasm32")]
 pub use solvapay_transport::FetchTransport;
 
+pub use drivers_generated::{
+    run_generated_payable_loop, PayableDriverHost, PayableGateEffect, PayableHandlerEffect,
+};
 pub use helpers_generated::*;
 pub use retry::{with_retry, with_retry_if};
 

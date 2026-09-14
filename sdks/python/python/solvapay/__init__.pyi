@@ -568,6 +568,12 @@ def _verify_webhook_at(
     body: str, signature: str, secret: str, now_unix_secs: int
 ) -> str: ...
 
+BUSINESS_COUNTRY_DISPLAY_NAMES: object
+"""Map of supported business country codes to display names."""
+BUSINESS_COUNTRY_OPTIONS: list[object]
+"""Ordered list of business country options for seller identity forms."""
+COUNTRY_TO_TAX_ID_TYPE: object
+"""Map of business country codes to default tax ID types."""
 def postal_code_required_countries() -> list[str]:
     """Countries that require a postal or ZIP code for Stripe Tax.
     @returns Country code list.
@@ -582,6 +588,14 @@ def state_required_countries() -> list[str]:
     @returns Country code list.
     """
     ...
+SUPPORTED_BUSINESS_COUNTRIES: list[str]
+"""Frozen list of country codes supported for seller business details."""
+TAX_BEHAVIORS: list[str]
+"""Frozen set of supported tax behavior values."""
+TAX_EXCLUSIVE_CURRENCIES: list[str]
+"""Currencies that default to tax-exclusive pricing behavior."""
+TAX_ID_EXAMPLE_BY_COUNTRY: object
+"""Map of country codes to example tax ID strings."""
 TAX_ID_TYPES: list[str]
 """Frozen set of supported tax ID type values.
 @returns Tax ID type list.

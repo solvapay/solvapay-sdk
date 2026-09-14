@@ -175,6 +175,39 @@ export function getBusinessCountryOptions(): BusinessCountryOption[] {
   return dispatchSync('getBusinessCountryOptions', {})
 }
 
+/** Ordered list of business country options for seller identity forms. */
+export function BUSINESS_COUNTRY_OPTIONS(): BusinessCountryOption[] {
+  return dispatchSync('BUSINESS_COUNTRY_OPTIONS', {})
+}
+
+/** Map of supported business country codes to display names. */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(): unknown {
+  return dispatchSync('BUSINESS_COUNTRY_DISPLAY_NAMES', {})
+}
+
+/** Frozen list of country codes supported for seller business details. */
+export function SUPPORTED_BUSINESS_COUNTRIES(): string[] {
+  return dispatchSync('SUPPORTED_BUSINESS_COUNTRIES', {})
+}
+
+/** Map of business country codes to default tax ID types. */
+export function COUNTRY_TO_TAX_ID_TYPE(): unknown {
+  return dispatchSync('COUNTRY_TO_TAX_ID_TYPE', {})
+}
+
+/** Map of country codes to example tax ID strings. */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(): unknown {
+  return dispatchSync('TAX_ID_EXAMPLE_BY_COUNTRY', {})
+}
+
+/** Frozen set of supported tax behavior values. */
+export function TAX_BEHAVIORS(): string[] { return dispatchSync('TAX_BEHAVIORS', {}) }
+
+/** Currencies that default to tax-exclusive pricing behavior. */
+export function TAX_EXCLUSIVE_CURRENCIES(): string[] {
+  return dispatchSync('TAX_EXCLUSIVE_CURRENCIES', {})
+}
+
 // --- credit-display ---
 
 /**

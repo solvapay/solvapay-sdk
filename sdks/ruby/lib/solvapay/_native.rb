@@ -111,21 +111,28 @@ module SolvaPay
       TAX_ID_TYPES
       is_cached_customer_ref_valid
       mcp_view_maps
+      BUSINESS_COUNTRY_OPTIONS
       derive_icons
       is_tax_id_type
       resolve_purchase_customer_ref
+      BUSINESS_COUNTRY_DISPLAY_NAMES
       build_tool_descriptor_metadata
       select_active_purchases
+      SUPPORTED_BUSINESS_COUNTRIES
       build_prompt_descriptor_metadata
       classify_cancel_error
       derive_active_products
+      COUNTRY_TO_TAX_ID_TYPE
       build_prompt_user_message
       classify_reactivate_error
       select_active_plan_purchase
+      TAX_ID_EXAMPLE_BY_COUNTRY
       normalize_cancel_response
       validate_public_base_url
+      TAX_BEHAVIORS
       build_payable_tool_result
       normalize_reactivate_response
+      TAX_EXCLUSIVE_CURRENCIES
       validate_purchase_ref
       project_usage_snapshot
       resolve_check_limits_params
@@ -178,12 +185,19 @@ module SolvaPay
       get_history_next
       evaluate_claimed_limits
       history_rows
+      overlay_claimed_limits
       resolve_plan_shape
       resolve_account_state
       derive_default_view
       resolve_display_mode
       plan_consequence
       format_compact_credits
+      extract_bearer_token
+      decode_jwt_payload_unverified
+      customer_ref_from_claims
+      default_mcp_bearer_expectations
+      compile_string_field_input_schema_json
+      ensure_output_schema_object_type
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

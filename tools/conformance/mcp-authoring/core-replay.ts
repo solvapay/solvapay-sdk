@@ -19,6 +19,7 @@ import {
 import { NativeClient } from '../../../sdks/node-native/index.js'
 import type { Fixture } from '../lib/fixture-schema.js'
 import { fixtureHttpStubs, isUnreachableExpect, withFixtureHttp } from './http-stub.js'
+import { MCP_SYNC_OPS_VIA_NATIVE_CALL } from './sync-ops.generated.js'
 
 const CLIENT_OPS = new Set([
   'mcpBootstrap',
@@ -243,9 +244,6 @@ export async function replayMcpCoreFixture(
         ...(args.nowUnixSecs !== undefined ? { nowUnixSecs: Number(args.nowUnixSecs) } : {}),
       })
       break
-    case 'mcpVerifyBearer':
-      got = callMcpSyncOp(fn, args)
-      break
     case 'mcpDcrDiagnostics':
       got = mcpDcrDiagnostics(args)
       break
@@ -265,18 +263,11 @@ export async function replayMcpCoreFixture(
         args.userAgent as string | undefined,
       )
       break
-    case 'mcpNarrate':
-    case 'mcpDefaultGate':
-    case 'mcpNativeCors':
-    case 'mcpHandleRequest':
-    case 'mcpResume':
-    case 'mcpOauthPath':
-    case 'mcpOauthErrorInspect':
-    case 'mcpOverviewResource':
-    case 'mcpWidgetResource':
-      got = callMcpSyncOp(fn, args)
-      break
     default:
+      if ((MCP_SYNC_OPS_VIA_NATIVE_CALL as readonly string[]).includes(fn)) {
+        got = callMcpSyncOp(fn, args)
+        break
+      }
       throw new Error(`no TypeScript core binding for ${fn}`)
   }
   assertCoreResult(rel, fn, got, expectResult)

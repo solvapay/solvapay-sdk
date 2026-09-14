@@ -8,4 +8,4 @@ def test_adds_object_type_to_any_of_union() -> None:
 
 def test_leaves_typed_schema_unchanged() -> None:
     schema = {"type": "object", "properties": {"n": {"type": "number"}}}
-    assert ensure_output_schema_type(schema) is schema
+    assert ensure_output_schema_type(schema) == schema

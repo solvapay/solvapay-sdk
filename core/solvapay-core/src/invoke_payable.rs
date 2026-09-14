@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::gate_driver::{gate_next, GateAction, GateNextOutput};
 use crate::helper_error::HelperErrorResult;
 use crate::mcp::{
     assert_response_result, build_payable_tool_result, paywall_tool_result, ResponseEnvelope,
@@ -120,6 +121,7 @@ pub fn invoke_payable_next(
         "handlerPaywall" => on_handler_paywall(require_state(state)?, event),
         "handlerOk" => on_handler_ok(require_state(state)?, event),
         "handlerErr" => on_handler_err(require_state(state)?, event),
+        "gateStep" => on_gate_step(require_state(state)?, event),
         other => Err(HelperErrorResult::transport(format!(
             "invoke_payable_next unknown event kind: {other}"
         ))),
@@ -172,13 +174,79 @@ fn on_gate_allow(
     }
     let limits = event.get("limits").cloned().unwrap_or(json!({}));
     let customer_ref = state.customer_ref.clone();
-    Ok(InvokePayableNextOutput {
+    Ok(allow_handler(state, customer_ref, limits))
+}
+
+/// Drive one `gate_next` step and map a terminal allow/gate into payable actions.
+///
+/// Intermediate gate I/O stays on the host `gate_next` loop. This arm exists so
+/// `invoke_payable_next` does not keep a second copy of allow/paywall sequencing.
+fn on_gate_step(
+    state: InvokePayableState,
+    event: &Value,
+) -> Result<InvokePayableNextOutput, HelperErrorResult> {
+    let gate_state = event.get("gateState");
+    let gate_event = event.get("event").ok_or_else(|| {
+        HelperErrorResult::transport("invoke_payable_next gateStep.event is required")
+    })?;
+    let gate_out = gate_next(gate_state, Some(gate_event))?;
+    map_gate_terminal(state, gate_out)
+}
+
+/// Map a terminal gate step into invoke-payable allow/done.
+fn map_gate_terminal(
+    mut state: InvokePayableState,
+    gate_out: GateNextOutput,
+) -> Result<InvokePayableNextOutput, HelperErrorResult> {
+    match gate_out.action {
+        GateAction::Allow {
+            customer_ref,
+            limits,
+            ..
+        } => {
+            state.customer_ref = customer_ref.clone();
+            Ok(allow_handler(state, customer_ref, limits))
+        }
+        GateAction::Gate { gate, .. } => {
+            let message = if gate.message.is_empty() {
+                "Payment required".to_owned()
+            } else {
+                gate.message.clone()
+            };
+            let result =
+                serde_json::to_value(paywall_tool_result(&message, &gate)).map_err(|err| {
+                    HelperErrorResult::transport(format!("serialize paywall result: {err}"))
+                })?;
+            Ok(done(state, result, None))
+        }
+        GateAction::EnsureCustomer { .. } => Err(non_terminal_gate("ensureCustomer")),
+        GateAction::ReadLimitsCache { .. } => Err(non_terminal_gate("readLimitsCache")),
+        GateAction::CheckLimits { .. } => Err(non_terminal_gate("checkLimits")),
+        GateAction::EmitUsage { .. } => Err(non_terminal_gate("emitUsage")),
+        GateAction::SkipUsage => Err(non_terminal_gate("skipUsage")),
+    }
+}
+
+/// Host-step kinds that are not terminal for invoke-payable.
+fn non_terminal_gate(kind: &str) -> HelperErrorResult {
+    HelperErrorResult::transport(format!(
+        "invoke_payable_next gateStep expected terminal allow/gate, got {kind}"
+    ))
+}
+
+/// Continue after a gate allow: invoke the paid handler.
+fn allow_handler(
+    state: InvokePayableState,
+    customer_ref: String,
+    limits: Value,
+) -> InvokePayableNextOutput {
+    InvokePayableNextOutput {
         state,
         action: InvokePayableAction::InvokeHandler {
             customer_ref,
             limits,
         },
-    })
+    }
 }
 
 /// Handle a `handlerPaywall` event: format the paywall tool result and stop.
@@ -317,30 +385,17 @@ fn done(
 
 /// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<InvokePayableState, HelperErrorResult> {
-    let value = state
-        .ok_or_else(|| HelperErrorResult::transport("invoke_payable_next state is required"))?;
-    serde_json::from_value(value.clone()).map_err(|err| {
-        HelperErrorResult::transport(format!("invoke_payable_next invalid state: {err}"))
-    })
+    crate::driver_util::require_state(state, "invoke_payable_next")
 }
 
-/// Read a required string field from a JSON object.
+/// Read a required number field from a JSON object.
 fn require_f64(value: &Value, key: &str) -> Result<f64, HelperErrorResult> {
-    value.get(key).and_then(Value::as_f64).ok_or_else(|| {
-        HelperErrorResult::transport(format!("invoke_payable_next {key} is required"))
-    })
+    crate::driver_util::require_f64(value, key, "invoke_payable_next")
 }
 
 /// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| {
-            HelperErrorResult::transport(format!("invoke_payable_next {key} is required"))
-        })
+    crate::driver_util::require_str(value, key, "invoke_payable_next")
 }
 
 #[cfg(test)]
@@ -436,6 +491,50 @@ mod tests {
                 assert_eq!(track.duration_ms, 30.0);
                 assert_eq!(track.request["metadata"]["action"], "requests");
                 assert_eq!(track.request["outcome"], "success");
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn gate_step_maps_gate_next_allow() {
+        let started = start_out();
+        let gate_started = crate::gate_driver::gate_next(
+            None,
+            Some(&json!({
+                "kind": "start",
+                "customerRef": "cus_abc",
+                "product": "prd_1",
+                "usageType": "requests",
+                "startedMs": 10,
+                "randomUnit": 0.25,
+            })),
+        )
+        .unwrap();
+        let gate_state = serde_json::to_value(&gate_started.state).unwrap();
+        let out = invoke_payable_next(
+            Some(&serde_json::to_value(&started.state).unwrap()),
+            Some(&json!({
+                "kind": "gateStep",
+                "gateState": gate_state,
+                "event": {
+                    "kind": "limitsCacheEntry",
+                    "found": true,
+                    "remaining": 5,
+                    "limits": { "withinLimits": true, "remaining": 5 },
+                    "timestampMs": 1_000,
+                    "nowMs": 1_010,
+                },
+            })),
+        )
+        .unwrap();
+        match &out.action {
+            InvokePayableAction::InvokeHandler {
+                customer_ref,
+                limits,
+            } => {
+                assert_eq!(customer_ref, "cus_abc");
+                assert_eq!(limits["remaining"], 5);
             }
             other => panic!("unexpected {other:?}"),
         }

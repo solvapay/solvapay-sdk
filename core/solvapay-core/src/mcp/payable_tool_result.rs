@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::mcp::envelope::ResponseEnvelope;
+use crate::mcp::handler_envelope::ResponseEnvelope;
 use crate::paywall_state::{build_nudge_message, credit_signals, PaywallLimits, PaywallState};
 
 /// MCP tool result for an allowed payable handler (`SolvaPayCallToolResult` allow path).
@@ -122,7 +122,7 @@ mod tests {
     )]
 
     use super::*;
-    use crate::mcp::envelope::make_response_result;
+    use crate::mcp::handler_envelope::make_response_result;
     use serde_json::json;
 
     fn text_at(result: &McpPayableToolResult, index: usize) -> &str {

@@ -351,6 +351,24 @@ export type CustomerSnapshot = {
 }
 
 /**
+ * Issuer / audience / clock defaults matching `mcp_auth_gate`.
+ */
+export type DefaultMcpBearerExpectations = {
+  /**
+   * `iss` — public origin without a trailing slash.
+   */
+  expectedIssuer: string
+  /**
+   * `aud` — origin plus optional MCP path.
+   */
+  expectedAudience: string
+  /**
+   * Unix seconds forwarded to bearer verify.
+   */
+  nowUnixSecs: number
+}
+
+/**
  * Next host action or a terminal resolve.
  */
 export type EnsureCustomerAction =

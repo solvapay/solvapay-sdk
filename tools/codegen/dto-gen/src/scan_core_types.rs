@@ -27,7 +27,7 @@ pub struct CoreScan {
 
 /// Parse one Rust source file (or snippet) into core struct/enum IR.
 ///
-/// `module` is the `solvapay-core` module path (`customer_sync`, `mcp::envelope`).
+/// `module` is the `solvapay-core` module path (`customer_sync`, `mcp::handler_envelope`).
 ///
 /// # Errors
 ///

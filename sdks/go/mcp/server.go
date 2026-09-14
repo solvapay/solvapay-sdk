@@ -116,16 +116,7 @@ func NewServer(ctx context.Context, client *solvapay.Client, cfg ServerConfig) (
 		Name:     "SolvaPay widget",
 		MIMEType: MCPAppMIMEType,
 		Meta:     uiMeta,
-	}, func(_ context.Context, _ *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
-		return &mcpsdk.ReadResourceResult{
-			Contents: []*mcpsdk.ResourceContents{{
-				URI:      bundle.Resource.URI,
-				MIMEType: MCPAppMIMEType,
-				Text:     cfg.ReadHTML(),
-				Meta:     uiMeta,
-			}},
-		}, nil
-	})
+	}, s.widgetReadHandler())
 
 	s.registerNamedResource(bundle.Docs)
 	s.registerNamedResource(bundle.Bootstrap)
@@ -258,7 +249,7 @@ func (s *Server) dispatchToolHandler(name string) mcpsdk.ToolHandler {
 			stampWidgetResultMeta(out, s.cfg.ResourceURI)
 			return out, nil
 		case "challenge":
-			return nil, fmt.Errorf("unauthorized: tool %s requires a bearer token for tools/call (authMode %s)", name, s.cfg.AuthMode)
+			return nil, challengeErrorFromEnvelope(asMap(envelope))
 		case "invokeHandler":
 			return s.resumePayableFromEnvelope(ctx, asMap(envelope))
 		default:
@@ -416,6 +407,92 @@ func (s *Server) resumePayableFromEnvelope(ctx context.Context, envelope map[str
 		return nil, err
 	}
 	return payloadToCallToolResult(raw)
+}
+
+// DispatchChallengeError is the 401 JSON-RPC reconnect envelope from mcpDispatch.
+type DispatchChallengeError struct {
+	Status  int
+	Headers map[string]string
+	Body    any
+}
+
+func (e *DispatchChallengeError) Error() string {
+	return "Unauthorized"
+}
+
+func challengeErrorFromEnvelope(envelope map[string]any) error {
+	return &DispatchChallengeError{
+		Status:  asInt(envelope["status"], 401),
+		Headers: asStringMap(envelope["headers"]),
+		Body:    envelope["body"],
+	}
+}
+
+func (s *Server) widgetReadHandler() mcpsdk.ResourceHandler {
+	return func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		params := map[string]any{"uri": s.cfg.ResourceURI}
+		if req != nil && req.Params != nil {
+			if req.Params.URI != "" {
+				params["uri"] = req.Params.URI
+			}
+			if req.Params.Meta != nil {
+				params["_meta"] = req.Params.Meta
+			}
+		}
+		rpc := map[string]any{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"method":  "resources/read",
+			"params":  params,
+		}
+		var views any
+		if len(s.cfg.Views) > 0 {
+			views = s.cfg.Views
+		}
+		var api any
+		if s.cfg.APIBaseURL != "" {
+			api = s.cfg.APIBaseURL
+		}
+		raw, err := McpWidgetResource(
+			ctx,
+			rpc,
+			s.cfg.ResourceURI,
+			s.cfg.PublicBaseURL,
+			s.cfg.ProductRef,
+			views,
+			s.cfg.CSP,
+			api,
+			s.cfg.Branding,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(raw) == 0 || string(raw) == "null" {
+			return nil, fmt.Errorf("mcpWidgetResource returned no envelope")
+		}
+		var envelope map[string]any
+		if err := json.Unmarshal(raw, &envelope); err != nil {
+			return nil, err
+		}
+		result := asMap(envelope["result"])
+		contents, _ := result["contents"].([]any)
+		if len(contents) == 0 {
+			return nil, fmt.Errorf("mcpWidgetResource omitted contents[0]")
+		}
+		first := asMap(contents[0])
+		first["text"] = s.cfg.ReadHTML()
+		contents[0] = first
+		result["contents"] = contents
+		outRaw, err := json.Marshal(result)
+		if err != nil {
+			return nil, err
+		}
+		var out mcpsdk.ReadResourceResult
+		if err := json.Unmarshal(outRaw, &out); err != nil {
+			return nil, err
+		}
+		return &out, nil
+	}
 }
 
 func widgetUIMeta(csp CSP) mcpsdk.Meta {

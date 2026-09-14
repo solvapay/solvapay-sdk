@@ -1,9 +1,14 @@
 /**
- * MCP OAuth bearer helpers. Claim trust goes through Rust `mcpVerifyBearer`
- * (RS256/ES256 via JWKS, or an explicit HS256 secret). Unsigned decode is
- * not an auth path.
+ * MCP OAuth bearer helpers. Claim trust goes through Rust `mcpVerifyBearer`.
+ * Structural parse / prefix / expectations live in core.
  */
 
+import {
+  customerRefFromClaims,
+  decodeJwtPayloadUnverified,
+  defaultMcpBearerExpectations as defaultMcpBearerExpectationsCore,
+  extractBearerToken as extractBearerTokenCore,
+} from '@solvapay/core'
 import { callMcpSyncOp } from './native-mcp'
 
 export class McpBearerAuthError extends Error {
@@ -39,46 +44,28 @@ export type McpVerifyBearerUnauthorized = {
 
 export type McpVerifyBearerResult = McpVerifyBearerOk | McpVerifyBearerUnauthorized
 
-function base64UrlDecode(input: string): string {
-  const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
-  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
-  const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0))
-  return new TextDecoder().decode(bytes)
-}
-
 /** Issuer/audience defaults matching Rust `mcp_auth_gate`. */
 export function defaultMcpBearerExpectations(
   publicBaseUrl: string,
   mcpPath?: string | null,
   nowUnixSecs: number = Math.floor(Date.now() / 1000),
 ): Pick<McpVerifyBearerOptions, 'expectedIssuer' | 'expectedAudience' | 'nowUnixSecs'> {
-  const issuer = publicBaseUrl.replace(/\/+$/, '')
-  const raw = mcpPath?.trim() ?? ''
-  const path = raw.replace(/\/+$/, '')
-  const audience = path.length > 0 ? `${issuer}${path.startsWith('/') ? path : `/${path}`}` : issuer
-  return { expectedIssuer: issuer, expectedAudience: audience, nowUnixSecs }
+  return defaultMcpBearerExpectationsCore(publicBaseUrl, mcpPath ?? null, nowUnixSecs)
 }
 
 export function extractBearerToken(authorization?: string | null): string | null {
-  if (!authorization) return null
-  if (!authorization.startsWith('Bearer ')) return null
-  return authorization.slice(7).trim() || null
+  return extractBearerTokenCore(authorization ?? null)
 }
 
 /** Structural payload parse. Not an authorization check. */
 export function decodeJwtPayload(token: string): Record<string, unknown> {
-  const parts = token.split('.')
-  if (parts.length < 2) {
-    throw new McpBearerAuthError('Invalid JWT format')
+  const payload = decodeJwtPayloadUnverified(token)
+  if (payload === null || payload === undefined || typeof payload !== 'object') {
+    throw new McpBearerAuthError(
+      token.split('.').length < 2 ? 'Invalid JWT format' : 'Invalid JWT payload',
+    )
   }
-
-  try {
-    const payloadText = base64UrlDecode(parts[1])
-    const payload = JSON.parse(payloadText) as Record<string, unknown>
-    return payload
-  } catch {
-    throw new McpBearerAuthError('Invalid JWT payload')
-  }
+  return payload as Record<string, unknown>
 }
 
 export function getCustomerRefFromJwtPayload(
@@ -86,14 +73,10 @@ export function getCustomerRefFromJwtPayload(
   options: McpBearerCustomerRefOptions = {},
 ): string {
   const claimPriority = options.claimPriority || ['customerRef', 'customer_ref', 'sub']
-
-  for (const claim of claimPriority) {
-    const value = payload[claim]
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim()
-    }
+  const ref = customerRefFromClaims(payload, options.claimPriority ?? null)
+  if (typeof ref === 'string' && ref.trim()) {
+    return ref.trim()
   }
-
   throw new McpBearerAuthError(
     `No customer reference claim found (checked: ${claimPriority.join(', ')})`,
   )

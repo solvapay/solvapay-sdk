@@ -7,32 +7,37 @@ use serde_json::{Map, Value};
 use solvapay_core::{
     append_paid_tool_description, attach_business_details_validation_error, billing_cycle,
     build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_payable_tool_result, build_paywall_gate, charges, classify_cancel_error,
-    classify_create_error, classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, counts_usage, credit_signals,
-    credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
-    derive_default_view, ensure_customer_next, evaluate_balance_observation,
+    build_payable_tool_result, build_paywall_gate, business_country_display_names,
+    business_country_options_table, charges, classify_cancel_error, classify_create_error,
+    classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
+    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
+    customer_ref_from_claims, decide_paywall_outcome, decode_jwt_payload_unverified,
+    default_mcp_bearer_expectations, derive_active_products, derive_default_view,
+    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
     evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    extract_backend_customer_ref, format_compact_credits, format_price, format_subtotal_label,
-    format_vat_summary_label, gate_next, get_business_country_options,
+    extract_backend_customer_ref, extract_bearer_token, format_compact_credits, format_price,
+    format_subtotal_label, format_vat_summary_label, gate_next, get_business_country_options,
     get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
     get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
     headline_charges, history_rows, included_units, invoke_payable_next,
     is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
     is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
     is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, next_action_for,
-    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
-    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
-    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    normalize_cancel_response, normalize_reactivate_response, overlay_claimed_limits,
+    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
     postal_code_required_countries, project_topup_process_outcome, resolve_account_state,
     resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
     select_active_plan_purchase, should_retry_usage_error, should_show_tax_row,
-    state_required_countries, tax_id_types, tax_not_collected_note, tier_bands, tier_meters,
-    to_major_units, topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    state_required_countries, supported_business_countries, tax_behaviors,
+    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
+    tier_bands, tier_meters, to_major_units, topup_process_next, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, BusinessDetailsInput, GateContent, PaywallGate,
     PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
@@ -42,6 +47,21 @@ use solvapay_core::{
 use crate::extract::*;
 use crate::model::FixtureInput;
 use crate::runner::{Binding, BindingError, BindingRegistry};
+
+fn invoke_business_country_display_names(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&business_country_display_names())
+}
+
+fn invoke_business_country_options_table(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&business_country_options_table())
+}
+
+fn invoke_country_to_tax_id_type(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&country_to_tax_id_type())
+}
 
 fn invoke_postal_code_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
@@ -56,6 +76,26 @@ fn invoke_reverse_charge_note(input: &FixtureInput) -> Result<Value, BindingErro
 fn invoke_state_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&state_required_countries())
+}
+
+fn invoke_supported_business_countries(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&supported_business_countries())
+}
+
+fn invoke_tax_behaviors(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&tax_behaviors())
+}
+
+fn invoke_tax_exclusive_currencies(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&tax_exclusive_currencies())
+}
+
+fn invoke_tax_id_example_by_country(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&tax_id_example_by_country())
 }
 
 fn invoke_tax_id_types(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -193,6 +233,14 @@ fn invoke_coerce_customer_options(input: &FixtureInput) -> Result<Value, Binding
     to_value(&coerce_customer_options(email.as_deref(), name.as_deref()))
 }
 
+fn invoke_compile_string_field_input_schema_json(
+    input: &FixtureInput,
+) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let fields = optional_value(&args, "fields");
+    result_as_value(compile_string_field_input_schema_json(fields.as_ref()))
+}
+
 fn invoke_counts_usage(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
@@ -217,6 +265,16 @@ fn invoke_credits_per_unit_from_balance(input: &FixtureInput) -> Result<Value, B
     ))
 }
 
+fn invoke_customer_ref_from_claims(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let claims = optional_value(&args, "claims");
+    let claim_priority = optional_value(&args, "claimPriority");
+    to_value(&customer_ref_from_claims(
+        claims.as_ref().unwrap_or(&Value::Null),
+        claim_priority.as_ref(),
+    ))
+}
+
 fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let within_limits = require_bool(&args, "withinLimits")?;
@@ -228,6 +286,24 @@ fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingE
         &product,
         limits.as_ref(),
         checkout_url.as_deref(),
+    ))
+}
+
+fn invoke_decode_jwt_payload_unverified(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let token = require_string(&args, "token")?;
+    to_value(&decode_jwt_payload_unverified(&token))
+}
+
+fn invoke_default_mcp_bearer_expectations(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let public_base_url = require_string(&args, "publicBaseUrl")?;
+    let mcp_path = optional_string(&args, "mcpPath")?;
+    let now_unix_secs = require_i64(&args, "nowUnixSecs")?;
+    to_value(&default_mcp_bearer_expectations(
+        &public_base_url,
+        mcp_path.as_deref(),
+        now_unix_secs,
     ))
 }
 
@@ -252,6 +328,14 @@ fn invoke_ensure_customer_next(input: &FixtureInput) -> Result<Value, BindingErr
     let state = optional_value(&args, "state");
     let event = optional_value(&args, "event");
     result_as_value(ensure_customer_next(state.as_ref(), event.as_ref()))
+}
+
+fn invoke_ensure_output_schema_object_type(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let schema = optional_value(&args, "schema");
+    to_value(&ensure_output_schema_object_type(
+        schema.as_ref().unwrap_or(&Value::Null),
+    ))
 }
 
 fn invoke_evaluate_balance_observation(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -289,6 +373,12 @@ fn invoke_extract_backend_customer_ref(input: &FixtureInput) -> Result<Value, Bi
     Ok(Value::String(
         extract_backend_customer_ref(response, &fallback).to_owned(),
     ))
+}
+
+fn invoke_extract_bearer_token(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let authorization_header = optional_string(&args, "authorizationHeader")?;
+    to_value(&extract_bearer_token(authorization_header.as_deref()))
 }
 
 fn invoke_format_compact_credits(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -511,6 +601,16 @@ fn invoke_normalize_reactivate_response(input: &FixtureInput) -> Result<Value, B
     let args = args_map(input);
     let response = args.get("response").cloned().unwrap_or(Value::Null);
     result_as_value(normalize_reactivate_response(&response))
+}
+
+fn invoke_overlay_claimed_limits(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let limits = optional_value(&args, "limits");
+    let claimed = require_f64(&args, "claimed")?;
+    to_value(&overlay_claimed_limits(
+        limits.as_ref().unwrap_or(&Value::Null),
+        claimed,
+    ))
 }
 
 fn invoke_paywall_error_to_client_payload(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1439,6 +1539,27 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_business_country_display_names),
+        },
+    );
+    registry.register(
+        "BUSINESS_COUNTRY_OPTIONS",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_business_country_options_table),
+        },
+    );
+    registry.register(
+        "COUNTRY_TO_TAX_ID_TYPE",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_country_to_tax_id_type),
+        },
+    );
+    registry.register(
         "POSTAL_CODE_REQUIRED_COUNTRIES",
         Binding {
             id: "core",
@@ -1457,6 +1578,34 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_state_required_countries),
+        },
+    );
+    registry.register(
+        "SUPPORTED_BUSINESS_COUNTRIES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_supported_business_countries),
+        },
+    );
+    registry.register(
+        "TAX_BEHAVIORS",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tax_behaviors),
+        },
+    );
+    registry.register(
+        "TAX_EXCLUSIVE_CURRENCIES",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tax_exclusive_currencies),
+        },
+    );
+    registry.register(
+        "TAX_ID_EXAMPLE_BY_COUNTRY",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tax_id_example_by_country),
         },
     );
     registry.register(
@@ -1495,10 +1644,38 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "compileStringFieldInputSchemaJson",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_compile_string_field_input_schema_json),
+        },
+    );
+    registry.register(
         "creditSignals",
         Binding {
             id: "core",
             invoke: Box::new(invoke_credit_signals),
+        },
+    );
+    registry.register(
+        "customerRefFromClaims",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_customer_ref_from_claims),
+        },
+    );
+    registry.register(
+        "decodeJwtPayloadUnverified",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_decode_jwt_payload_unverified),
+        },
+    );
+    registry.register(
+        "defaultMcpBearerExpectations",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_default_mcp_bearer_expectations),
         },
     );
     registry.register(
@@ -1523,6 +1700,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "ensureOutputSchemaObjectType",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_ensure_output_schema_object_type),
+        },
+    );
+    registry.register(
         "evaluateBalanceObservation",
         Binding {
             id: "core",
@@ -1534,6 +1718,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_evaluate_claimed_limits),
+        },
+    );
+    registry.register(
+        "extractBearerToken",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_extract_bearer_token),
         },
     );
     registry.register(
@@ -1667,6 +1858,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_next_action_for),
+        },
+    );
+    registry.register(
+        "overlayClaimedLimits",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_overlay_claimed_limits),
         },
     );
     registry.register(

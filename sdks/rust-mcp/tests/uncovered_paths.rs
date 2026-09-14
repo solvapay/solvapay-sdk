@@ -71,7 +71,7 @@ impl ServerHandler for ErrServer {
 }
 
 #[tokio::test]
-async fn unresolvable_customer_ref_falls_back_to_anonymous() {
+async fn unresolvable_customer_ref_errors() {
     let scenario = Scenario {
         tool: ToolScenario {
             name: "echo".to_owned(),
@@ -92,12 +92,11 @@ async fn unresolvable_customer_ref_falls_back_to_anonymous() {
         },
     };
     let backend = MockTransport::new(scenario.limits.clone());
-    let tool_result = call_registered_payable(backend.clone(), &scenario)
+    let err = call_registered_payable(backend.clone(), &scenario)
         .await
-        .expect("call");
-    assert_eq!(tool_result["structuredContent"], json!({ "ok": true }));
-    let usage = project_usage(&backend.usages());
-    assert_eq!(usage[0]["customerRef"], "anonymous");
+        .expect_err("missing customer ref");
+    assert!(err.to_string().contains("customer_ref missing"));
+    assert!(project_usage(&backend.usages()).is_empty());
 }
 
 #[tokio::test]
@@ -144,7 +143,9 @@ async fn sdk_error_propagates_as_rmcp_error() {
     running_client.cancel().await.ok();
     let msg = err.to_string();
     assert!(
-        msg.contains("limits down") || msg.to_lowercase().contains("internal"),
+        msg.contains("limits down")
+            || msg.contains("customer_ref missing")
+            || msg.to_lowercase().contains("internal"),
         "{msg}"
     );
 }

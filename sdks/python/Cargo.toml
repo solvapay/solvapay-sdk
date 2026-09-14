@@ -24,7 +24,7 @@ pyo3-async-runtimes = { version = "0.28.0", features = ["tokio-runtime"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-solvapay-core = { path = "../../core/solvapay-core" }
+solvapay-core = { path = "../../core/solvapay-core", features = ["conformance"] }
 solvapay-dto = { path = "../../core/solvapay-dto" }
 solvapay-transport = { path = "../../core/solvapay-transport" }
 solvapay-mcp-core = { path = "../../core/solvapay-mcp" }

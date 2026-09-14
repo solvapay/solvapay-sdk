@@ -3,7 +3,7 @@ module github.com/solvapay/solvapay-sdk/sdks/go
 go 1.25.0
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/tetratelabs/wazero v1.9.0
 )
 

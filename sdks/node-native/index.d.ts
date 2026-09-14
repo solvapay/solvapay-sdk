@@ -22,35 +22,31 @@ export declare class NativeClient {
   constructor(apiKey: string, apiBaseUrl?: string | undefined | null)
   /** `POST /v1/sdk/customers` */
   createCustomer(argsJson: string): Promise<string>
-  /**
-   * `PATCH /v1/sdk/customers/{customerRef}`
-   *
-   * Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
-   */
+  /** `PATCH /v1/sdk/customers/{customerRef}` */
   updateCustomer(argsJson: string): Promise<string>
-  /** Customer lookup by ref / externalRef / email. */
+  /** `GET /v1/sdk/customers…` */
   getCustomer(argsJson: string): Promise<string>
-  /** Grant credits to a customer. */
+  /** `POST /v1/sdk/customers/{customerRef}/credits` */
   assignCredits(argsJson: string): Promise<string>
-  /** Credit balance for a customer. */
+  /** `GET /v1/sdk/customers/{customerRef}/balance` */
   getCustomerBalance(argsJson: string): Promise<string>
-  /** User info for a customer/product pair. */
+  /** `POST /v1/sdk/user-info` */
   getUserInfo(argsJson: string): Promise<string>
-  /** Hosted checkout session. */
+  /** `POST /v1/sdk/checkout-sessions` */
   createCheckoutSession(argsJson: string): Promise<string>
-  /** Customer portal session. */
+  /** `POST /v1/sdk/customers/customer-sessions` */
   createCustomerSession(argsJson: string): Promise<string>
-  /** Merchant profile (`args_json` ignored; pass `"{}"`). */
+  /** `GET /v1/sdk/merchant` */
   getMerchant(argsJson: string): Promise<string>
-  /** Platform config (`args_json` ignored; pass `"{}"`). */
+  /** `GET /v1/sdk/platform-config` */
   getPlatformConfig(argsJson: string): Promise<string>
-  /** `POST /v1/sdk/payment-intents` (plan checkout). */
+  /** `POST /v1/sdk/payment-intents` */
   createPaymentIntent(argsJson: string): Promise<string>
-  /** `POST /v1/sdk/payment-intents` (credit top-up). */
+  /** `POST /v1/sdk/payment-intents` */
   createTopupPaymentIntent(argsJson: string): Promise<string>
-  /** `POST /v1/sdk/payment-intents/{id}/process` */
+  /** `POST /v1/sdk/payment-intents/{paymentIntentId}/process` */
   processPaymentIntent(argsJson: string): Promise<string>
-  /** `POST /v1/sdk/payment-intents/{id}/business-details` */
+  /** `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details` */
   attachBusinessDetails(argsJson: string): Promise<string>
   /** `POST /v1/sdk/activate` */
   activatePlan(argsJson: string): Promise<string>
@@ -60,73 +56,41 @@ export declare class NativeClient {
   trackUsage(argsJson: string): Promise<string>
   /** `POST /v1/sdk/usages/bulk` */
   trackUsageBulk(argsJson: string): Promise<string>
-  /**
-   * `GET /v1/sdk/products/{productRef}`
-   *
-   * Args JSON is `{ productRef }`.
-   */
+  /** `GET /v1/sdk/products/{productRef}` */
   getProduct(argsJson: string): Promise<string>
-  /** `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`). */
+  /** `GET /v1/sdk/products` */
   listProducts(argsJson: string): Promise<string>
   /** `POST /v1/sdk/products` */
   createProduct(argsJson: string): Promise<string>
-  /**
-   * `PUT /v1/sdk/products/{productRef}`
-   *
-   * Args JSON is `{ productRef, ...params }`.
-   */
+  /** `PUT /v1/sdk/products/{productRef}` */
   updateProduct(argsJson: string): Promise<string>
-  /**
-   * `DELETE /v1/sdk/products/{productRef}`
-   *
-   * Args JSON is `{ productRef }`. Success value is `null`.
-   */
+  /** `DELETE /v1/sdk/products/{productRef}` */
   deleteProduct(argsJson: string): Promise<string>
-  /**
-   * `POST /v1/sdk/products/{productRef}/clone`
-   *
-   * Args JSON is `{ productRef, name? }`.
-   */
+  /** `POST /v1/sdk/products/{productRef}/clone` */
   cloneProduct(argsJson: string): Promise<string>
   /** `POST /v1/sdk/products/mcp/bootstrap` */
   bootstrapMcpProduct(argsJson: string): Promise<string>
-  /**
-   * `PUT /v1/sdk/products/{productRef}/mcp/plans`
-   *
-   * Args JSON is `{ productRef, ...params }`.
-   */
+  /** `PUT /v1/sdk/products/{productRef}/mcp/plans` */
   configureMcpPlans(argsJson: string): Promise<string>
-  /**
-   * `GET /v1/sdk/products/{productRef}/plans`
-   *
-   * Args JSON is `{ productRef }`.
-   */
+  /** `GET /v1/sdk/products/{productRef}/plans` */
   listPlans(argsJson: string): Promise<string>
-  /** `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body). */
+  /** `POST /v1/sdk/products/{productRef}/plans` */
   createPlan(argsJson: string): Promise<string>
-  /**
-   * `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-   *
-   * Args JSON is `{ productRef, planRef, ...params }`.
-   */
+  /** `PUT /v1/sdk/products/{productRef}/plans/{planRef}` */
   updatePlan(argsJson: string): Promise<string>
-  /**
-   * `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-   *
-   * Args JSON is `{ productRef, planRef }`. Success value is `null`.
-   */
+  /** `DELETE /v1/sdk/products/{productRef}/plans/{planRef}` */
   deletePlan(argsJson: string): Promise<string>
   /** `POST /v1/sdk/purchases/{purchaseRef}/cancel` */
   cancelPurchase(argsJson: string): Promise<string>
   /** `POST /v1/sdk/purchases/{purchaseRef}/reactivate` */
   reactivatePurchase(argsJson: string): Promise<string>
-  /** `GET /v1/sdk/payment-method` */
+  /** `GET /v1/sdk/payment-method?customerRef=` */
   getPaymentMethod(argsJson: string): Promise<string>
-  /** `GET /v1/sdk/auto-recharge` */
+  /** `GET /v1/sdk/auto-recharge?customerRef=` */
   getAutoRecharge(argsJson: string): Promise<string>
   /** `PUT /v1/sdk/auto-recharge` */
   saveAutoRecharge(argsJson: string): Promise<string>
-  /** `DELETE /v1/sdk/auto-recharge` */
+  /** `DELETE /v1/sdk/auto-recharge?customerRef=` */
   disableAutoRecharge(argsJson: string): Promise<string>
   /** `GET /v1/sdk/purchases` */
   listPurchases(argsJson: string): Promise<string>
@@ -193,6 +157,12 @@ export declare function buildPromptUserMessage(argsJson: string): string
 /** Binding for `buildToolDescriptorMetadata`. */
 export declare function buildToolDescriptorMetadata(argsJson: string): string
 
+/** Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`. */
+export declare function BUSINESS_COUNTRY_DISPLAY_NAMES(argsJson: string): string
+
+/** Binding for `BUSINESS_COUNTRY_OPTIONS`. */
+export declare function BUSINESS_COUNTRY_OPTIONS(argsJson: string): string
+
 /** Binding for `charges`. */
 export declare function charges(argsJson: string): string
 
@@ -217,6 +187,12 @@ export declare function classifyReactivateError(argsJson: string): string
 /** Binding for `coerceCustomerOptions`. */
 export declare function coerceCustomerOptions(argsJson: string): string
 
+/** Binding for `compileStringFieldInputSchemaJson`. */
+export declare function compileStringFieldInputSchemaJson(argsJson: string): string
+
+/** Binding for `COUNTRY_TO_TAX_ID_TYPE`. */
+export declare function COUNTRY_TO_TAX_ID_TYPE(argsJson: string): string
+
 /** Binding for `countsUsage`. */
 export declare function countsUsage(argsJson: string): string
 
@@ -229,8 +205,17 @@ export declare function creditsPerUnitFromBalance(argsJson: string): string
 /** Binding for `creditsToDisplayMinorUnits` (`null` when undefined). */
 export declare function creditsToDisplayMinorUnits(argsJson: string): string
 
+/** Binding for `customerRefFromClaims`. */
+export declare function customerRefFromClaims(argsJson: string): string
+
 /** Binding for `decidePaywallOutcome`. */
 export declare function decidePaywallOutcome(argsJson: string): string
+
+/** Binding for `decodeJwtPayloadUnverified`. */
+export declare function decodeJwtPayloadUnverified(argsJson: string): string
+
+/** Binding for `defaultMcpBearerExpectations`. */
+export declare function defaultMcpBearerExpectations(argsJson: string): string
 
 /** Binding for `deriveActiveProducts`. */
 export declare function deriveActiveProducts(argsJson: string): string
@@ -246,6 +231,9 @@ export declare function deriveTaxIdType(argsJson: string): string
 
 /** Binding for `ensureCustomerNext`. */
 export declare function ensureCustomerNext(argsJson: string): string
+
+/** Binding for `ensureOutputSchemaObjectType`. */
+export declare function ensureOutputSchemaObjectType(argsJson: string): string
 
 /** Binding for `evaluateBalanceObservation`. */
 export declare function evaluateBalanceObservation(argsJson: string): string
@@ -264,6 +252,9 @@ export declare function evaluateProductReadiness(argsJson: string): string
 
 /** Binding for `extractBackendCustomerRef`. */
 export declare function extractBackendCustomerRef(argsJson: string): string
+
+/** Binding for `extractBearerToken`. */
+export declare function extractBearerToken(argsJson: string): string
 
 /** Binding for `formatCompactCredits`. */
 export declare function formatCompactCredits(argsJson: string): string
@@ -397,6 +388,9 @@ export declare function normalizeCancelResponse(argsJson: string): string
  */
 export declare function normalizeReactivateResponse(argsJson: string): string
 
+/** Binding for `overlayClaimedLimits`. */
+export declare function overlayClaimedLimits(argsJson: string): string
+
 /**
  * Binding for `paywallErrorToClientPayload`.
  *
@@ -518,6 +512,18 @@ export declare function solvapayCall(argsJson: string): string
 
 /** Binding for `STATE_REQUIRED_COUNTRIES`. */
 export declare function STATE_REQUIRED_COUNTRIES(argsJson: string): string
+
+/** Binding for `SUPPORTED_BUSINESS_COUNTRIES`. */
+export declare function SUPPORTED_BUSINESS_COUNTRIES(argsJson: string): string
+
+/** Binding for `TAX_BEHAVIORS`. */
+export declare function TAX_BEHAVIORS(argsJson: string): string
+
+/** Binding for `TAX_EXCLUSIVE_CURRENCIES`. */
+export declare function TAX_EXCLUSIVE_CURRENCIES(argsJson: string): string
+
+/** Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`. */
+export declare function TAX_ID_EXAMPLE_BY_COUNTRY(argsJson: string): string
 
 /** Binding for `TAX_ID_TYPES`. */
 export declare function TAX_ID_TYPES(argsJson: string): string

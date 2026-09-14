@@ -546,10 +546,24 @@ def validate_business_details() -> Any:
     return call_native_sync("validate_business_details", json.dumps(payload))
 
 _CONSTANT_IDS = frozenset({
+    # Map of supported business country codes to display names.
+    "BUSINESS_COUNTRY_DISPLAY_NAMES",
+    # Ordered list of business country options for seller identity forms.
+    "BUSINESS_COUNTRY_OPTIONS",
+    # Map of business country codes to default tax ID types.
+    "COUNTRY_TO_TAX_ID_TYPE",
     # Buyer-facing note when VAT reverse charge applies.
     "REVERSE_CHARGE_NOTE",
     # Map of seller tax identifier types to display labels.
     "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    # Frozen list of country codes supported for seller business details.
+    "SUPPORTED_BUSINESS_COUNTRIES",
+    # Frozen set of supported tax behavior values.
+    "TAX_BEHAVIORS",
+    # Currencies that default to tax-exclusive pricing behavior.
+    "TAX_EXCLUSIVE_CURRENCIES",
+    # Map of country codes to example tax ID strings.
+    "TAX_ID_EXAMPLE_BY_COUNTRY",
     # Frozen set of supported tax ID type values.
     "TAX_ID_TYPES",
     # Buyer-facing note when tax is not collected on the purchase.

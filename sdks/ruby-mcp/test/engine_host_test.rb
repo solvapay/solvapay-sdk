@@ -2,6 +2,8 @@
 
 require "json"
 require "uri"
+require "base64"
+require "openssl"
 require "minitest/autorun"
 require "solvapay"
 require "solvapay/mcp"
@@ -215,6 +217,111 @@ class EngineHostTest < Minitest::Test
     assert_equal 60_000, parsed.dig("result", "ttlMs")
     assert_equal "public", parsed.dig("result", "cacheScope")
     assert_equal SolvaPay::Mcp.default_mcp_app_html, parsed.dig("result", "contents", 0, "text")
+  end
+
+  def test_reconnects_after_expired_bearer
+    stub = LimitsStub.new
+    client = SolvaPay::Client.new(api_key: "sk_test", api_base_url: stub.url)
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
+    )
+    expired_payload = {
+      sub: "cus_1",
+      iss: "https://app.example.com",
+      aud: "https://app.example.com/mcp",
+      exp: 1,
+    }
+    header = Base64.urlsafe_encode64({ alg: "HS256" }.to_json, padding: false)
+    body = Base64.urlsafe_encode64(expired_payload.to_json, padding: false)
+    sig = OpenSSL::HMAC.digest("SHA256", HS256_SECRET, "#{header}.#{body}")
+    expired = "Bearer #{header}.#{body}.#{Base64.urlsafe_encode64(sig, padding: false)}"
+
+    ok = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 10,
+            method: "tools/call",
+            params: { name: "solvapay_account", arguments: {} },
+          },
+        ),
+        "HTTP_AUTHORIZATION" => BEARER,
+      ),
+    )
+    assert_equal 200, ok[0]
+
+    challenge = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 11,
+            method: "tools/call",
+            params: { name: "solvapay_account", arguments: {} },
+          },
+        ),
+        "HTTP_AUTHORIZATION" => expired,
+      ),
+    )
+    assert_equal 401, challenge[0]
+    parsed = JSON.parse(challenge[2].join)
+    assert_equal(-32_001, parsed.dig("error", "code"))
+
+    retry_ok = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 12,
+            method: "tools/call",
+            params: { name: "solvapay_account", arguments: {} },
+          },
+        ),
+        "HTTP_AUTHORIZATION" => BEARER,
+      ),
+    )
+    assert_equal 200, retry_ok[0]
+  ensure
+    stub&.shutdown
+  end
+
+  def test_tools_call_without_bearer_returns_401_challenge
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
+    )
+    status, headers, body = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 11,
+            method: "tools/call",
+            params: { name: "solvapay_account", arguments: {} },
+          },
+        ),
+      ),
+    )
+    assert_equal 401, status
+    assert_match(/WWW-Authenticate/i, headers.keys.join(" "))
+    parsed = JSON.parse(body.join)
+    assert_equal(-32_001, parsed.dig("error", "code"))
+    assert_equal "Unauthorized", parsed.dig("error", "message")
   end
 
   def test_unparseable_json_returns_parse_error

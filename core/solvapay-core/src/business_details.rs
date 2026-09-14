@@ -1567,6 +1567,126 @@ pub fn get_business_country_options() -> Vec<BusinessCountryOption> {
     options
 }
 
+/// Catalog table for `BUSINESS_COUNTRY_OPTIONS`.
+#[must_use]
+#[crate::solvapay_export(
+    id = "BUSINESS_COUNTRY_OPTIONS",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 18
+)]
+pub fn business_country_options_table() -> Vec<BusinessCountryOption> {
+    get_business_country_options()
+}
+
+/// Map of supported business country codes to English display names.
+#[must_use]
+#[crate::solvapay_export(
+    id = "BUSINESS_COUNTRY_DISPLAY_NAMES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 19
+)]
+pub fn business_country_display_names() -> Value {
+    let mut map = serde_json::Map::new();
+    for country in COUNTRIES {
+        map.insert(
+            country.code.to_owned(),
+            Value::String(country.display_name.to_owned()),
+        );
+    }
+    Value::Object(map)
+}
+
+/// Supported business country codes (ISO 3166-1 alpha-2).
+#[must_use]
+#[crate::solvapay_export(
+    id = "SUPPORTED_BUSINESS_COUNTRIES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 20
+)]
+pub fn supported_business_countries() -> Vec<&'static str> {
+    COUNTRIES.iter().map(|country| country.code).collect()
+}
+
+/// Map of country codes to Stripe tax-ID types.
+#[must_use]
+#[crate::solvapay_export(
+    id = "COUNTRY_TO_TAX_ID_TYPE",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 21
+)]
+pub fn country_to_tax_id_type() -> Value {
+    let mut map = serde_json::Map::new();
+    for country in COUNTRIES {
+        map.insert(
+            country.code.to_owned(),
+            Value::String(
+                match country.tax_id_type {
+                    TaxIdType::EuVat => "eu_vat",
+                    TaxIdType::GbVat => "gb_vat",
+                    TaxIdType::UsEin => "us_ein",
+                    TaxIdType::JpTrn => "jp_trn",
+                }
+                .to_owned(),
+            ),
+        );
+    }
+    Value::Object(map)
+}
+
+/// Map of country codes to example tax ID strings.
+#[must_use]
+#[crate::solvapay_export(
+    id = "TAX_ID_EXAMPLE_BY_COUNTRY",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 22
+)]
+pub fn tax_id_example_by_country() -> Value {
+    let mut map = serde_json::Map::new();
+    for country in COUNTRIES {
+        map.insert(
+            country.code.to_owned(),
+            Value::String(country.example.to_owned()),
+        );
+    }
+    Value::Object(map)
+}
+
+/// Tax behavior input values.
+#[must_use]
+#[crate::solvapay_export(
+    id = "TAX_BEHAVIORS",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 23
+)]
+pub fn tax_behaviors() -> &'static [&'static str] {
+    &TAX_BEHAVIORS
+}
+
+/// Currencies that resolve `auto` → exclusive.
+#[must_use]
+#[crate::solvapay_export(
+    id = "TAX_EXCLUSIVE_CURRENCIES",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 24
+)]
+pub fn tax_exclusive_currencies() -> &'static [&'static str] {
+    &TAX_EXCLUSIVE_CURRENCIES
+}
+
 /// Tax behavior input values.
 pub const TAX_BEHAVIORS: [&str; 3] = ["auto", "inclusive", "exclusive"];
 
@@ -1847,6 +1967,27 @@ mod tests {
         }
         assert_eq!(tax_id_types(), TAX_ID_TYPES.as_slice());
         assert!(!is_tax_id_type("ae_trn"));
+    }
+
+    #[test]
+    fn catalog_constant_tables_match_country_entries() {
+        let names = business_country_display_names();
+        let examples = tax_id_example_by_country();
+        let types = country_to_tax_id_type();
+        let countries = supported_business_countries();
+        assert_eq!(countries.len(), COUNTRIES.len());
+        assert_eq!(names["SE"], json!("Sweden"));
+        assert_eq!(examples["US"], json!("12-3456789"));
+        assert_eq!(types["GB"], json!("gb_vat"));
+        assert_eq!(tax_behaviors(), TAX_BEHAVIORS.as_slice());
+        assert_eq!(
+            tax_exclusive_currencies(),
+            TAX_EXCLUSIVE_CURRENCIES.as_slice()
+        );
+        assert_eq!(
+            business_country_options_table().len(),
+            get_business_country_options().len()
+        );
     }
 
     #[test]

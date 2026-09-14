@@ -264,6 +264,8 @@ export {
   evaluateBalanceObservation,
   evaluateCachedLimits,
   evaluateClaimedLimits,
+  overlayClaimedLimits,
+  extractBearerToken,
   evaluateFreshLimits,
   gateNext,
   getHistoryNext,

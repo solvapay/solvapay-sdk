@@ -145,6 +145,11 @@ fn derive_one(
         .doc
         .clone()
         .unwrap_or_else(|| derive_doc(func, artifact, &id));
+    let client_call_args = if res.client_call_args.is_empty() {
+        derive_client_call_args(func, artifact, &split_path_refs)
+    } else {
+        res.client_call_args.clone()
+    };
     Ok(IrBindingSymbol {
         id: id.clone(),
         core: binding_core_path(func),
@@ -166,9 +171,53 @@ fn derive_one(
         verbatim_body_wasm: res.verbatim_body_wasm.clone(),
         dto_type,
         core_call,
-        client_call_args: res.client_call_args.clone(),
+        client_call_args,
         ts_wrapper: res.ts_wrapper.as_ref().map(lower_ts_wrapper),
     })
+}
+
+fn derive_client_call_args(
+    func: &IrCoreFn,
+    artifact: IrBindingArtifact,
+    split_path_refs: &[String],
+) -> Vec<String> {
+    if artifact != IrBindingArtifact::Client || split_path_refs.is_empty() {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let mut ref_i = 0usize;
+    for param in &func.params {
+        if ref_i < split_path_refs.len() {
+            out.push(format!("&refs[{ref_i}]"));
+            ref_i += 1;
+            continue;
+        }
+        if param.ty.optional {
+            out.push(format!("Some({})", param.rust_name));
+        } else {
+            out.push(param.rust_name.clone());
+        }
+    }
+    out
+}
+
+/// Residue keys that do not change the derived symbol and can be deleted.
+///
+/// # Errors
+///
+/// Derive failures.
+pub fn redundant_residue_keys(ir: &Ir, residue: &BindingResidueManifest) -> GenResult<Vec<String>> {
+    let full = derive_all_export_bindings(ir, residue)?;
+    let mut redundant = Vec::new();
+    for key in residue.keys() {
+        let mut reduced = residue.clone();
+        reduced.remove(key);
+        let without = derive_all_export_bindings(ir, &reduced)?;
+        if full.get(key) == without.get(key) {
+            redundant.push(key.clone());
+        }
+    }
+    Ok(redundant)
 }
 
 fn binding_core_path(func: &IrCoreFn) -> String {
@@ -401,7 +450,8 @@ fn call_arg_token(param: &IrCoreParam) -> String {
     if param.by_ref {
         return match &param.ty.ty {
             IrCoreFieldTy::Value | IrCoreFieldTy::Vec(_) | IrCoreFieldTy::Map(_) => {
-                local.to_owned()
+                // Value extracts are always `Option<Value>` (`optional_value`).
+                format!("{local}.as_ref().unwrap_or(&Value::Null)")
             }
             _ => format!("&{local}"),
         };
@@ -558,6 +608,18 @@ mod tests {
             },
         };
         assert_eq!(call_arg_token(&opt), "email.as_deref()");
+        let required_value = IrCoreParam {
+            rust_name: "limits".into(),
+            by_ref: true,
+            ty: IrCoreParamTy {
+                optional: false,
+                ty: IrCoreFieldTy::Value,
+            },
+        };
+        assert_eq!(
+            call_arg_token(&required_value),
+            "limits.as_ref().unwrap_or(&Value::Null)"
+        );
     }
 
     #[test]
@@ -717,6 +779,58 @@ mod tests {
                 serialize: IrSerializeKind::ClientIgnore,
                 args: vec![],
             }
+        );
+    }
+
+    #[test]
+    fn client_split_call_args_from_signature() {
+        let func = IrCoreFn {
+            name: "clone_product".into(),
+            module: "client".into(),
+            impl_ty: Some("SolvaPayClient".into()),
+            crate_name: "solvapay_transport".into(),
+            rustdoc: "`POST /v1/sdk/products/{productRef}/clone` — clone.".into(),
+            params: vec![
+                IrCoreParam {
+                    rust_name: "product_ref".into(),
+                    by_ref: true,
+                    ty: IrCoreParamTy {
+                        optional: false,
+                        ty: IrCoreFieldTy::String,
+                    },
+                },
+                IrCoreParam {
+                    rust_name: "overrides".into(),
+                    by_ref: false,
+                    ty: IrCoreParamTy {
+                        optional: true,
+                        ty: IrCoreFieldTy::Named("CloneProductOverrides".into()),
+                    },
+                },
+            ],
+            return_ty: IrCoreParamTy {
+                optional: false,
+                ty: IrCoreFieldTy::Result {
+                    ok: Box::new(IrCoreFieldTy::Value),
+                    err: Box::new(IrCoreFieldTy::Named("SdkError".into())),
+                },
+            },
+            exported: Some(IrExportAttr {
+                catalog: Some("operation".into()),
+                section: Some("Group C".into()),
+                dto_type: Some("CloneProductOverrides".into()),
+                split_path_refs: vec!["productRef".into()],
+                ..IrExportAttr::default()
+            }),
+            is_async: true,
+        };
+        let mut fns = BTreeMap::new();
+        fns.insert(func.core_path(), func);
+        let derived = derive_export_bindings(&fns, &BTreeMap::new()).unwrap();
+        let symbol = derived.get("cloneProduct").unwrap();
+        assert_eq!(
+            symbol.client_call_args,
+            vec!["&refs[0]".to_owned(), "Some(overrides)".to_owned()]
         );
     }
 }

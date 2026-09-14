@@ -203,7 +203,6 @@ export {
   deriveOAuthErrorCode,
   hasOAuthErrorShape,
   toOAuthErrorBody,
-  VALID_OAUTH_TOKEN_ERROR_CODES,
 } from './oauth-error-normalize'
 export type { OAuthErrorBody, OAuthTokenErrorCode } from './oauth-error-normalize'
 

@@ -22,19 +22,25 @@ use crate::decisions::classify_lookup_error_binding;
 use crate::decisions::classify_paywall_state_binding;
 use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
+use crate::decisions::compile_string_field_input_schema_json_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
+use crate::decisions::customer_ref_from_claims_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::decode_jwt_payload_unverified_binding;
+use crate::decisions::default_mcp_bearer_expectations_binding;
 use crate::decisions::derive_active_products_binding;
 use crate::decisions::derive_default_view_binding;
 use crate::decisions::ensure_customer_next_binding;
+use crate::decisions::ensure_output_schema_object_type_binding;
 use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_claimed_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::extract_bearer_token_binding;
 use crate::decisions::format_compact_credits_binding;
 use crate::decisions::gate_next_binding;
 use crate::decisions::get_history_next_binding;
@@ -50,6 +56,7 @@ use crate::decisions::meter_name_binding;
 use crate::decisions::next_action_for_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
+use crate::decisions::overlay_claimed_limits_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
@@ -94,6 +101,9 @@ use crate::payload_builders::build_payable_tool_result_binding;
 use crate::payload_builders::build_prompt_descriptor_metadata_binding;
 use crate::payload_builders::build_prompt_user_message_binding;
 use crate::payload_builders::build_tool_descriptor_metadata_binding;
+use crate::payload_builders::business_country_display_names_binding;
+use crate::payload_builders::business_country_options_table_binding;
+use crate::payload_builders::country_to_tax_id_type_binding;
 use crate::payload_builders::credits_to_display_minor_units_binding;
 use crate::payload_builders::derive_icons_binding;
 use crate::payload_builders::derive_tax_id_type_binding;
@@ -130,6 +140,10 @@ use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
 use crate::payload_builders::state_required_countries_binding;
+use crate::payload_builders::supported_business_countries_binding;
+use crate::payload_builders::tax_behaviors_binding;
+use crate::payload_builders::tax_exclusive_currencies_binding;
+use crate::payload_builders::tax_id_example_by_country_binding;
 use crate::payload_builders::tax_id_types_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
@@ -385,6 +399,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     native.define_singleton_method("history_rows", function!(history_rows_binding, 1))?;
     native.define_singleton_method(
+        "overlay_claimed_limits",
+        function!(overlay_claimed_limits_binding, 1),
+    )?;
+    native.define_singleton_method(
         "resolve_plan_shape",
         function!(resolve_plan_shape_binding, 1),
     )?;
@@ -404,6 +422,30 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "format_compact_credits",
         function!(format_compact_credits_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "extract_bearer_token",
+        function!(extract_bearer_token_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "decode_jwt_payload_unverified",
+        function!(decode_jwt_payload_unverified_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "customer_ref_from_claims",
+        function!(customer_ref_from_claims_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "default_mcp_bearer_expectations",
+        function!(default_mcp_bearer_expectations_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "compile_string_field_input_schema_json",
+        function!(compile_string_field_input_schema_json_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "ensure_output_schema_object_type",
+        function!(ensure_output_schema_object_type_binding, 1),
     )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
@@ -539,27 +581,52 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     native.define_singleton_method("TAX_ID_TYPES", function!(tax_id_types_binding, 1))?;
     native.define_singleton_method("mcp_view_maps", function!(mcp_view_maps_binding, 1))?;
+    native.define_singleton_method(
+        "BUSINESS_COUNTRY_OPTIONS",
+        function!(business_country_options_table_binding, 1),
+    )?;
     native.define_singleton_method("derive_icons", function!(derive_icons_binding, 1))?;
     native.define_singleton_method("is_tax_id_type", function!(is_tax_id_type_binding, 1))?;
     native.define_singleton_method(
+        "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        function!(business_country_display_names_binding, 1),
+    )?;
+    native.define_singleton_method(
         "build_tool_descriptor_metadata",
         function!(build_tool_descriptor_metadata_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "SUPPORTED_BUSINESS_COUNTRIES",
+        function!(supported_business_countries_binding, 1),
     )?;
     native.define_singleton_method(
         "build_prompt_descriptor_metadata",
         function!(build_prompt_descriptor_metadata_binding, 1),
     )?;
     native.define_singleton_method(
+        "COUNTRY_TO_TAX_ID_TYPE",
+        function!(country_to_tax_id_type_binding, 1),
+    )?;
+    native.define_singleton_method(
         "build_prompt_user_message",
         function!(build_prompt_user_message_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "TAX_ID_EXAMPLE_BY_COUNTRY",
+        function!(tax_id_example_by_country_binding, 1),
     )?;
     native.define_singleton_method(
         "validate_public_base_url",
         function!(validate_public_base_url_binding, 1),
     )?;
+    native.define_singleton_method("TAX_BEHAVIORS", function!(tax_behaviors_binding, 1))?;
     native.define_singleton_method(
         "build_payable_tool_result",
         function!(build_payable_tool_result_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "TAX_EXCLUSIVE_CURRENCIES",
+        function!(tax_exclusive_currencies_binding, 1),
     )?;
     native.define_singleton_method(
         "invoke_payable_next",

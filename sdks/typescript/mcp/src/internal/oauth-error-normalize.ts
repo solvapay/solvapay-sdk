@@ -8,6 +8,5 @@ export {
   deriveOAuthErrorCode,
   hasOAuthErrorShape,
   toOAuthErrorBody,
-  VALID_OAUTH_TOKEN_ERROR_CODES,
 } from '@solvapay/mcp-core'
 export type { OAuthErrorBody, OAuthTokenErrorCode } from '@solvapay/mcp-core'

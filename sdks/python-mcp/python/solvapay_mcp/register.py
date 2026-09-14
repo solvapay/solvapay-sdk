@@ -24,7 +24,7 @@ from mcp.types import (
 from pydantic import TypeAdapter
 from solvapay import build_customer_snapshot
 from solvapay.errors import PaywallError, SolvaPayError
-from solvapay.facade import SolvaPay
+from solvapay.facade import SolvaPay, run_generated_payable_loop_async
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 
 from solvapay_mcp._layer2 import (
@@ -64,9 +64,12 @@ _request_user_agent: ContextVar[str | None] = ContextVar(
 
 def ensure_output_schema_type(schema: object) -> object:
     """MCP 2.2 `Tool.outputSchema` requires `type`. Core anyOf/oneOf unions omit it."""
-    if isinstance(schema, dict) and "type" not in schema:
-        return {**schema, "type": "object"}
-    return schema
+    from solvapay import _native as native
+
+    return native.call_native_sync(
+        "ensure_output_schema_object_type",
+        json.dumps({"schema": schema}),
+    )
 
 
 class MissingCustomerRefError(SolvaPayError):
@@ -683,40 +686,19 @@ def _invoke_payable_next(state: object, event: Mapping[str, object]) -> dict[str
     return {str(k): v for k, v in out.items()}
 
 
-def _as_action_map(out: Mapping[str, object]) -> dict[str, object]:
-    raw = out.get("action")
-    if not isinstance(raw, dict):
-        raise SolvaPayError("invoke_payable_next returned unexpected action")
-    return {str(k): v for k, v in raw.items()}
-
-
 async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[str, object]:
     try:
         customer_ref = await _resolve_customer_ref(args, spec.get_customer_ref)
-    except MissingCustomerRefError as err:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": str(err)}],
-            "structuredContent": {
-                "error": "Unauthorized",
-                "status": 401,
-                "details": str(err),
-            },
-        }
-    state: object = None
-    event: dict[str, object] = {
-        "kind": "start",
-        "customerRef": customer_ref,
-        "product": spec.product,
-        "usageType": spec.usage_type,
-        "startedMs": _now_ms(),
-    }
-    while True:
-        out = _invoke_payable_next(state, event)
-        state = out.get("state")
-        action = _as_action_map(out)
-        kind = action.get("kind")
-        if kind == "runGate":
+    except MissingCustomerRefError:
+        raise
+    class _Host:
+        def now_ms(self) -> int:
+            return _now_ms()
+
+        def random_unit(self) -> float:
+            return random.random()
+
+        async def run_gate(self, action: dict[str, object]) -> dict[str, object]:
             gate_result = await spec.solvapay.gate(
                 str(action.get("customerRef")),
                 product=str(action.get("product") or spec.product),
@@ -725,9 +707,8 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 gate = dict(gate_result.content)
                 message = str(gate.get("message") or "Payment required")
                 if _format_gate_override is not None:
-                    return _format_gate(message, gate)
-                event = {"kind": "gatePaywall", "gate": gate, "message": message}
-                continue
+                    return {"kind": "return", "result": _format_gate(message, gate)}
+                return {"kind": "paywall", "gate": gate, "message": message}
             if not isinstance(gate_result, PayableAllowResult):
                 raise TypeError("unexpected gate result")
             limits: Mapping[str, object] = {}
@@ -735,13 +716,13 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
             maybe_limits = decision.get("limits") if isinstance(decision, Mapping) else None
             if isinstance(maybe_limits, Mapping):
                 limits = maybe_limits
-            event = {
-                "kind": "gateAllow",
+            return {
+                "kind": "allow",
                 "customerRef": gate_result.customer_ref,
                 "limits": dict(limits),
             }
-            continue
-        if kind == "invokeHandler":
+
+        async def invoke_handler(self, action: dict[str, object]) -> dict[str, object]:
             limits_raw = action.get("limits")
             limits = limits_raw if isinstance(limits_raw, Mapping) else {}
             snapshot = build_customer_snapshot(
@@ -762,33 +743,27 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 gate = dict(err.structured_content)
                 message = str(err)
                 if _format_gate_override is not None:
-                    return _format_gate(message, gate)
-                event = {"kind": "handlerPaywall", "gate": gate, "message": message}
-                continue
+                    return {"kind": "return", "result": _format_gate(message, gate)}
+                return {"kind": "paywall", "gate": gate, "message": message}
             except Exception as err:
-                event = {
-                    "kind": "handlerErr",
-                    "message": str(err),
-                    "nowMs": _now_ms(),
-                    "randomUnit": random.random(),
-                }
-                continue
-            envelope = assert_response_result(returned)
-            event = {
-                "kind": "handlerOk",
-                "envelope": envelope,
-                "nowMs": _now_ms(),
-                "randomUnit": random.random(),
-            }
-            continue
-        if kind == "done":
-            track = action.get("track")
-            if isinstance(track, Mapping):
-                request = track.get("request")
-                if isinstance(request, Mapping):
-                    spec.solvapay.get_api_client().track_usage_blocking(json.dumps(dict(request)))
-            result = action.get("result")
-            if not isinstance(result, dict):
-                raise SolvaPayError("invoke_payable_next done missing result")
-            return {str(k): v for k, v in result.items()}
-        raise SolvaPayError(f"invoke_payable_next unknown action kind: {kind}")
+                return {"kind": "err", "message": str(err)}
+            return {"kind": "ok", "envelope": assert_response_result(returned)}
+
+        async def track_usage(self, request: object) -> None:
+            if isinstance(request, Mapping):
+                spec.solvapay.get_api_client().track_usage_blocking(json.dumps(dict(request)))
+
+    result = await run_generated_payable_loop_async(
+        _invoke_payable_next,
+        _Host(),
+        {
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": spec.product,
+            "usageType": spec.usage_type,
+            "startedMs": _now_ms(),
+        },
+    )
+    if not isinstance(result, dict):
+        raise SolvaPayError("invoke_payable_next done missing result")
+    return {str(k): v for k, v in result.items()}

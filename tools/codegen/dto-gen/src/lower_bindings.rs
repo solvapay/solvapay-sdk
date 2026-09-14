@@ -51,7 +51,7 @@ pub(crate) fn lower_arg(owner: &str, arg: &BindingArgDef) -> GenResult<IrBinding
         extract,
         typed_as: arg.typed_as.clone(),
         typed_style,
-        local: arg.local.clone(),
+        local: arg.local.clone().filter(|local| local != &arg.name),
     })
 }
 

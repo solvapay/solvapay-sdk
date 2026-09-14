@@ -8,6 +8,8 @@
     clippy::missing_docs_in_private_items
 )]
 
+#[path = "common/host_fns.generated.rs"]
+mod host_fns;
 mod support;
 
 use std::collections::BTreeSet;
@@ -229,15 +231,32 @@ fn client_fixtures_root() -> PathBuf {
 #[tokio::test]
 async fn facade_replays_driver_loop_fixtures() {
     let fixtures = load_driver_loop_fixtures();
-    assert_eq!(fixtures.len(), 5, "expected five driver-loop fixtures");
+    assert_eq!(
+        fixtures.len(),
+        5,
+        "expected five wired driver-loop fixtures"
+    );
+    assert!(
+        host_fns::HOST_FNS.contains(&"driveGate"),
+        "generated host fns must include driveGate"
+    );
     let transport = ReqwestTransport::new().expect("build ReqwestTransport");
     let shared: SharedTransport = Arc::new(transport);
     let mut failures: Vec<String> = Vec::new();
+    let mut driven = 0;
     for (path, fixture) in &fixtures {
-        if let Err(err) = run_driver_loop(Arc::clone(&shared), fixture).await {
-            failures.push(format!("{} ({}): {err}", path.display(), fixture.case));
+        match fixture.input.fn_name.as_str() {
+            "driveGate" | "drivePayable" => {
+                driven += 1;
+                if let Err(err) = run_driver_loop(Arc::clone(&shared), fixture).await {
+                    failures.push(format!("{} ({}): {err}", path.display(), fixture.case));
+                }
+            }
+            "gateNext" => {}
+            other => failures.push(format!("{}: unsupported driver fn {other}", path.display())),
         }
     }
+    assert_eq!(driven, 5, "expected five host-loop driver-loop fixtures");
     assert!(
         failures.is_empty(),
         "driver-loop fixture failures ({}):\n{}",

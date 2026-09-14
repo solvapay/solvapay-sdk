@@ -12,10 +12,14 @@ use rmcp::handler::server::router::tool::{ToolRoute, ToolRouter};
 use rmcp::model::Tool;
 use rmcp::model::{CallToolResult, JsonObject};
 use serde_json::{json, Map, Value};
-use solvapay::{Allow, Client, GateOpts, GateOutcome, SdkError};
+use solvapay::{
+    run_generated_payable_loop, Allow, Client, GateOpts, GateOutcome, PayableDriverHost,
+    PayableGateEffect, PayableHandlerEffect, SdkError,
+};
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+use solvapay_core::mcp::compile_string_field_input_schema;
 use solvapay_core::{
-    build_customer_snapshot, invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op,
-    HelperErrorResult, InvokePayableAction, PaywallGate,
+    build_customer_snapshot, resolve_customer_ref as resolve_customer_ref_op, PaywallGate,
 };
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use solvapay_mcp_core::union_payable_output_schema;
@@ -41,6 +45,9 @@ pub enum PayableError {
     /// Limits / transport / SDK failure (protocol error, not a tool result).
     #[error("{}", .0.message())]
     Sdk(Box<SdkError>),
+    /// Bearer / hook produced no customer identity.
+    #[error("customer_ref missing from MCP auth context")]
+    MissingCustomerRef,
 }
 
 impl From<SdkError> for PayableError {
@@ -183,120 +190,158 @@ pub async fn invoke_payable(
 ) -> Result<CallToolResult, PayableError> {
     let started_ms = now_ms();
     let customer_ref = resolve_customer_ref(&args, get_customer_ref.as_ref())?;
-    let mut state: Option<Value> = None;
-    let mut event = json!({
-        "kind": "start",
-        "customerRef": customer_ref,
-        "product": product,
-        "usageType": usage_type,
-        "startedMs": started_ms,
-    });
-    loop {
-        let out = invoke_payable_next(state.as_ref(), Some(&event)).map_err(helper_to_payable)?;
-        state = Some(serde_json::to_value(&out.state).map_err(|err| {
-            PayableError::Handler(format!("serialize invoke_payable state: {err}"))
-        })?);
-        match out.action {
-            InvokePayableAction::RunGate {
-                customer_ref: gate_ref,
-                product: gate_product,
-                usage_type: gate_usage,
-            } => {
-                let outcome = client
-                    .gate(
-                        &gate_ref,
-                        GateOpts {
-                            product: gate_product,
-                            usage_type: gate_usage,
-                        },
-                    )
-                    .await?;
-                match outcome {
-                    GateOutcome::Paywall(gate) => {
-                        if paywall_override_active() {
-                            let message = paywall_message(&gate);
-                            return format_gate(&message, &gate);
-                        }
-                        let message = paywall_message(&gate);
-                        event = json!({
-                            "kind": "gatePaywall",
-                            "gate": gate,
-                            "message": message,
-                        });
-                    }
-                    GateOutcome::Allow(allow) => {
-                        let snap = allow.customer();
-                        let limits = allow_limits_value(&allow);
-                        event = json!({
-                            "kind": "gateAllow",
-                            "customerRef": snap.customer_ref,
-                            "limits": limits,
-                        });
-                    }
+    let host = PayableLoopHost {
+        client,
+        product,
+        handler,
+        args,
+    };
+    let result = run_generated_payable_loop(
+        &host,
+        json!({
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": host.product,
+            "usageType": usage_type,
+            "startedMs": started_ms,
+        }),
+    )
+    .await
+    .map_err(|err| PayableError::Sdk(Box::new(err)))?;
+    json_to_call_tool_result(result)
+}
+
+/// Host I/O for the generated invoke-payable loop.
+struct PayableLoopHost {
+    /// SolvaPay client used for gate and usage.
+    client: Client,
+    /// Product reference for the payable tool.
+    product: String,
+    /// Integrator handler invoked after an allow.
+    handler: PayableHandler,
+    /// Tool arguments passed through to the handler.
+    args: JsonObject,
+}
+
+impl PayableDriverHost for PayableLoopHost {
+    fn now_ms(&self) -> i64 {
+        now_ms()
+    }
+
+    fn random_unit(&self) -> f64 {
+        random_unit()
+    }
+
+    async fn run_gate(
+        &self,
+        customer_ref: &str,
+        product: &str,
+        usage_type: &str,
+    ) -> Result<PayableGateEffect, SdkError> {
+        let outcome = self
+            .client
+            .gate(
+                customer_ref,
+                GateOpts {
+                    product: product.to_owned(),
+                    usage_type: usage_type.to_owned(),
+                },
+            )
+            .await?;
+        match outcome {
+            GateOutcome::Paywall(gate) => {
+                let message = paywall_message(&gate);
+                if paywall_override_active() {
+                    let result = format_gate(&message, &gate).map_err(payable_to_sdk)?;
+                    return Ok(PayableGateEffect::Early(call_tool_to_value(&result)?));
                 }
+                Ok(PayableGateEffect::Paywall {
+                    gate: serde_json::to_value(gate).map_err(|err| {
+                        SdkError::transport(format!("serialize paywall gate: {err}"), false)
+                    })?,
+                    message,
+                })
             }
-            InvokePayableAction::InvokeHandler {
-                customer_ref: handler_ref,
-                limits,
-            } => {
-                let ctx = ResponseContext::new(
-                    CustomerView::from(solvapay::CustomerSnapshot::from(build_customer_snapshot(
-                        &handler_ref,
-                        Some(&limits),
-                    ))),
-                    ProductView {
-                        reference: product.clone(),
-                        name: product.clone(),
-                    },
-                    product.clone(),
-                    Some(limits),
-                );
-                match handler(args.clone(), ctx).await {
-                    Err(PayableError::Gate { message, gate }) => {
-                        if paywall_override_active() {
-                            return format_gate(&message, &gate);
-                        }
-                        event = json!({
-                            "kind": "handlerPaywall",
-                            "gate": *gate,
-                            "message": message,
-                        });
-                    }
-                    Err(PayableError::Handler(msg)) => {
-                        event = json!({
-                            "kind": "handlerErr",
-                            "message": msg,
-                            "nowMs": now_ms(),
-                            "randomUnit": random_unit(),
-                        });
-                    }
-                    Err(PayableError::Sdk(err)) => return Err(PayableError::Sdk(err)),
-                    Ok(response) => {
-                        let envelope_value = serde_json::to_value(&response.0).map_err(|e| {
-                            PayableError::Handler(format!("serialize response envelope: {e}"))
-                        })?;
-                        assert_response_result(&envelope_value)?;
-                        event = json!({
-                            "kind": "handlerOk",
-                            "envelope": envelope_value,
-                            "nowMs": now_ms(),
-                            "randomUnit": random_unit(),
-                        });
-                    }
-                }
-            }
-            InvokePayableAction::Done { result, track } => {
-                if let Some(track) = track {
-                    let params: solvapay_dto::TrackUsageRequest =
-                        serde_json::from_value(track.request).map_err(|err| {
-                            PayableError::Handler(format!("invoke_payable track.request: {err}"))
-                        })?;
-                    client.track_usage(params).await?;
-                }
-                return json_to_call_tool_result(result);
+            GateOutcome::Allow(allow) => {
+                let snap = allow.customer();
+                Ok(PayableGateEffect::Allow {
+                    customer_ref: snap.customer_ref,
+                    limits: allow_limits_value(&allow),
+                })
             }
         }
     }
+
+    async fn invoke_handler(
+        &self,
+        customer_ref: &str,
+        limits: Value,
+    ) -> Result<PayableHandlerEffect, SdkError> {
+        let ctx = ResponseContext::new(
+            CustomerView::from(solvapay::CustomerSnapshot::from(build_customer_snapshot(
+                customer_ref,
+                Some(&limits),
+            ))),
+            ProductView {
+                reference: self.product.clone(),
+                name: self.product.clone(),
+            },
+            self.product.clone(),
+            Some(limits),
+        );
+        match (self.handler)(self.args.clone(), ctx).await {
+            Err(PayableError::Gate { message, gate }) => {
+                if paywall_override_active() {
+                    let result = format_gate(&message, &gate).map_err(payable_to_sdk)?;
+                    return Ok(PayableHandlerEffect::Early(call_tool_to_value(&result)?));
+                }
+                Ok(PayableHandlerEffect::Paywall {
+                    gate: serde_json::to_value(*gate).map_err(|err| {
+                        SdkError::transport(format!("serialize handler gate: {err}"), false)
+                    })?,
+                    message,
+                })
+            }
+            Err(PayableError::Handler(msg)) => Ok(PayableHandlerEffect::Err { message: msg }),
+            Err(PayableError::Sdk(err)) => Err(*err),
+            Err(PayableError::MissingCustomerRef) => Err(SdkError::transport(
+                "customer_ref missing from MCP auth context",
+                false,
+            )),
+            Ok(response) => {
+                let envelope_value = serde_json::to_value(&response.0).map_err(|err| {
+                    SdkError::transport(format!("serialize response envelope: {err}"), false)
+                })?;
+                assert_response_result(&envelope_value).map_err(payable_to_sdk)?;
+                Ok(PayableHandlerEffect::Ok {
+                    envelope: envelope_value,
+                })
+            }
+        }
+    }
+
+    async fn track_usage(&self, request: Value) -> Result<(), SdkError> {
+        let params: solvapay_dto::TrackUsageRequest =
+            serde_json::from_value(request).map_err(|err| {
+                SdkError::transport(format!("invoke_payable track.request: {err}"), false)
+            })?;
+        self.client.track_usage(params).await?;
+        Ok(())
+    }
+}
+
+/// Collapse a payable error into a transport [`SdkError`].
+fn payable_to_sdk(err: PayableError) -> SdkError {
+    match err {
+        PayableError::Sdk(err) => *err,
+        other => SdkError::transport(other.to_string(), false),
+    }
+}
+
+/// Serialize an MCP call-tool result to JSON.
+fn call_tool_to_value(result: &CallToolResult) -> Result<Value, SdkError> {
+    serde_json::to_value(result)
+        .map_err(|err| SdkError::transport(format!("serialize call tool result: {err}"), false))
 }
 
 /// Host clock as unix milliseconds.
@@ -326,15 +371,6 @@ fn random_unit() -> f64 {
             .map_or(0, |d| d.subsec_nanos());
         f64::from(nanos % 1_000_000) / 1_000_000.0
     }
-}
-
-/// Map a helper-error result into [`PayableError`].
-fn helper_to_payable(err: HelperErrorResult) -> PayableError {
-    PayableError::Sdk(Box::new(SdkError::Api {
-        message: err.details.unwrap_or(err.error),
-        status: Some(err.status),
-        code: None,
-    }))
 }
 
 /// Paywall copy: gate message, or `"Payment required"` when empty.
@@ -371,46 +407,22 @@ fn resolve_customer_ref(
         None => None,
     };
     let args_ref = args.get("customer_ref").and_then(Value::as_str);
-    Ok(resolve_customer_ref_op(
-        hook_ref.as_deref(),
-        None,
-        None,
-        None,
-        None,
-        None,
-        args_ref,
-    ))
+    let resolved =
+        resolve_customer_ref_op(hook_ref.as_deref(), None, None, None, None, None, args_ref);
+    if resolved.is_empty() || resolved == "anonymous" {
+        return Err(PayableError::MissingCustomerRef);
+    }
+    Ok(resolved)
 }
 
 /// Compile a string-field map into a JSON Schema object.
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 fn compile_input_schema(fields: Option<&Map<String, Value>>) -> Result<JsonObject, PayableError> {
-    let mut schema = JsonObject::new();
-    schema.insert("type".to_owned(), json!("object"));
-    let Some(fields) = fields else {
-        schema.insert("properties".to_owned(), json!({}));
-        return Ok(schema);
-    };
-    let mut properties = JsonObject::new();
-    let mut required = Vec::new();
-    for (key, spec) in fields {
-        let obj = spec.as_object().ok_or_else(|| {
-            PayableError::Handler(format!("unsupported inputSchema for field {key}"))
-        })?;
-        let typ = obj.get("type").and_then(Value::as_str);
-        if typ != Some("string") {
-            return Err(PayableError::Handler(format!(
-                "unsupported inputSchema for field {key}"
-            )));
-        }
-        properties.insert(key.clone(), json!({ "type": "string" }));
-        required.push(key.clone());
-    }
-    schema.insert("properties".to_owned(), Value::Object(properties));
-    if !required.is_empty() {
-        schema.insert("required".to_owned(), json!(required));
-    }
-    Ok(schema)
+    let value = compile_string_field_input_schema(fields)
+        .map_err(|err| PayableError::Handler(err.details.unwrap_or(err.error)))?;
+    value.as_object().cloned().ok_or_else(|| {
+        PayableError::Handler("compile_string_field_input_schema must return an object".to_owned())
+    })
 }
 
 #[cfg(test)]

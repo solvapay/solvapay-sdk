@@ -175,6 +175,19 @@ fn generated_ids_match_enumerated_expectation() {
         "goMcpLayer2",
         "tsMcpNative",
         "rsMcpLayer2",
+        "tsDrivers",
+        "tsMcpDrivers",
+        "pyDrivers",
+        "goDrivers",
+        "rbDrivers",
+        "rsDrivers",
+        "syncOpsRs",
+        "syncOpsTs",
+        "tsConformance",
+        "rsConformance",
+        "syncDispatchRs",
+        "tsCoreBarrel",
+        "opSurfaces",
     ];
     assert_eq!(ids, expected);
 }

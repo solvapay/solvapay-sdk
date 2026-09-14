@@ -245,6 +245,61 @@ async def test_strict_auth_challenges_unauthenticated_initialize(
     }
 
 
+HS256_SECRET = "solvapay-mcp-fixture-hs256-secret-32b!!"
+VALID_BEARER = (
+    "Bearer eyJhbGciOiJIUzI1NiJ9."
+    "eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ."
+    "JJYQV2sX8FHbvr2_EQ_MEdPQM0RCxfWqpp2lDBLKUnA"
+)
+EXPIRED_BEARER = (
+    "Bearer eyJhbGciOiJIUzI1NiJ9."
+    "eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjoxfQ."
+    "eryZmFUsjolIh8T0NnpTmBQPkTxIY3QZNU1ZfQDn3mc"
+)
+
+
+@pytest.fixture
+async def signed_client() -> AsyncIterator[httpx.AsyncClient]:
+    mcp_app = Starlette(routes=[Route("/mcp", _mcp, methods=["POST", "OPTIONS", "GET"])])
+    app = create_mcp_oauth_starlette(
+        mcp_app,
+        public_base_url="https://mcp.example.com",
+        api_base_url="https://api.test",
+        product_ref="prd_demo",
+        hs256_secret=HS256_SECRET,
+        oauth_client=_oauth_recording(),
+    )
+    asgi = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=asgi, base_url="https://mcp.example.com"
+    ) as test_client:
+        yield test_client
+
+
+@pytest.mark.asyncio
+async def test_reconnects_after_expired_bearer(signed_client: httpx.AsyncClient) -> None:
+    ok = await signed_client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "upgrade"}},
+        headers={"authorization": VALID_BEARER},
+    )
+    assert ok.status_code == 200
+    challenge = await signed_client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "upgrade"}},
+        headers={"authorization": EXPIRED_BEARER},
+    )
+    assert challenge.status_code == 401
+    assert challenge.json()["error"]["code"] == -32001
+    assert challenge.json()["error"]["message"] == "Unauthorized"
+    retry = await signed_client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "upgrade"}},
+        headers={"authorization": VALID_BEARER},
+    )
+    assert retry.status_code == 200
+
+
 @pytest.mark.asyncio
 async def test_native_scheme_cors_on_401(client: httpx.AsyncClient) -> None:
     response = await client.post(

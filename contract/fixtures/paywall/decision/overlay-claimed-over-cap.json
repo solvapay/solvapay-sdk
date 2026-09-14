@@ -1,0 +1,18 @@
+{
+  "suite": "paywall",
+  "case": "overlay-claimed-over-cap",
+  "input": {
+    "fn": "overlayClaimedLimits",
+    "args": {
+      "limits": { "withinLimits": true, "remaining": 1, "plan": "pl_pro" },
+      "claimed": 3
+    }
+  },
+  "expect": {
+    "result": {
+      "withinLimits": false,
+      "remaining": 0,
+      "plan": "pl_pro"
+    }
+  }
+}

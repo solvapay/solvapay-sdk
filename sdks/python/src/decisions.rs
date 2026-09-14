@@ -12,14 +12,17 @@ use solvapay_core::{
     attach_business_details_validation_error, billing_cycle, build_create_customer_params,
     build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate, charges,
     classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
-    classify_paywall_state, classify_reactivate_error, coerce_customer_options, counts_usage,
-    credit_signals, credits_per_unit_from_balance, decide_paywall_outcome, derive_active_products,
-    derive_default_view, ensure_customer_next, evaluate_balance_observation,
-    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, format_compact_credits, gate_next,
-    get_history_next, headline_charges, history_rows, included_units, is_cached_customer_ref_valid,
-    is_email_conflict, is_error_result, link_label, map_route_error, meter_name, next_action_for,
-    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
+    compile_string_field_input_schema_json, counts_usage, credit_signals,
+    credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
+    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
+    derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
+    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
+    extract_bearer_token, format_compact_credits, gate_next, get_history_next, headline_charges,
+    history_rows, included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
+    link_label, map_route_error, meter_name, next_action_for, normalize_cancel_response,
+    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
     paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
     plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
@@ -1142,6 +1145,22 @@ pub fn history_rows_binding(args_json: String) -> String {
     })
 }
 
+// --- paywall-decision ---
+
+/// Binding for `overlayClaimedLimits`.
+#[pyfunction(name = "overlay_claimed_limits")]
+pub fn overlay_claimed_limits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let limits = optional_value(&args, "limits");
+        let claimed = require_f64(&args, "claimed")?;
+        to_value(&overlay_claimed_limits(
+            limits.as_ref().unwrap_or(&Value::Null),
+            claimed,
+        ))
+    })
+}
+
 // --- mcp-account ---
 
 /// Binding for `resolvePlanShape`.
@@ -1213,6 +1232,82 @@ pub fn format_compact_credits_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let credits = require_f64(&args, "credits")?;
         result_as_value(format_compact_credits(credits))
+    })
+}
+
+// --- auth ---
+
+/// Binding for `extractBearerToken`.
+#[pyfunction(name = "extract_bearer_token")]
+pub fn extract_bearer_token_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let authorization_header = optional_string(&args, "authorizationHeader")?;
+        to_value(&extract_bearer_token(authorization_header.as_deref()))
+    })
+}
+
+/// Binding for `decodeJwtPayloadUnverified`.
+#[pyfunction(name = "decode_jwt_payload_unverified")]
+pub fn decode_jwt_payload_unverified_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let token = require_string(&args, "token")?;
+        to_value(&decode_jwt_payload_unverified(&token))
+    })
+}
+
+/// Binding for `customerRefFromClaims`.
+#[pyfunction(name = "customer_ref_from_claims")]
+pub fn customer_ref_from_claims_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let claims = optional_value(&args, "claims");
+        let claim_priority = optional_value(&args, "claimPriority");
+        to_value(&customer_ref_from_claims(
+            claims.as_ref().unwrap_or(&Value::Null),
+            claim_priority.as_ref(),
+        ))
+    })
+}
+
+/// Binding for `defaultMcpBearerExpectations`.
+#[pyfunction(name = "default_mcp_bearer_expectations")]
+pub fn default_mcp_bearer_expectations_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let public_base_url = require_string(&args, "publicBaseUrl")?;
+        let mcp_path = optional_string(&args, "mcpPath")?;
+        let now_unix_secs = require_i64(&args, "nowUnixSecs")?;
+        to_value(&default_mcp_bearer_expectations(
+            &public_base_url,
+            mcp_path.as_deref(),
+            now_unix_secs,
+        ))
+    })
+}
+
+// --- mcp-schema ---
+
+/// Binding for `compileStringFieldInputSchemaJson`.
+#[pyfunction(name = "compile_string_field_input_schema_json")]
+pub fn compile_string_field_input_schema_json_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let fields = optional_value(&args, "fields");
+        result_as_value(compile_string_field_input_schema_json(fields.as_ref()))
+    })
+}
+
+/// Binding for `ensureOutputSchemaObjectType`.
+#[pyfunction(name = "ensure_output_schema_object_type")]
+pub fn ensure_output_schema_object_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let schema = optional_value(&args, "schema");
+        to_value(&ensure_output_schema_object_type(
+            schema.as_ref().unwrap_or(&Value::Null),
+        ))
     })
 }
 

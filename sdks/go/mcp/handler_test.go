@@ -147,6 +147,41 @@ func TestHandlerResourcesReadFixesMCPJam(t *testing.T) {
 	}
 }
 
+const expiredBearerCus1 = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjoxfQ.e1H0GdQd_FYWpWGUQUi2qC5IjcjvC6ZngrlLVr2tdRw"
+
+func TestHandlerReconnectsAfterExpiredBearer(t *testing.T) {
+	_, handler := newTestHandler(t)
+	ok := postMCP(t, handler, "tools/call", map[string]any{
+		"name":      "account",
+		"arguments": map[string]any{},
+	}, map[string]string{"Authorization": testBearerCus1})
+	if ok.Code != http.StatusOK {
+		t.Fatalf("valid status %d body %s", ok.Code, ok.Body.String())
+	}
+	challenge := postMCP(t, handler, "tools/call", map[string]any{
+		"name":      "account",
+		"arguments": map[string]any{},
+	}, map[string]string{"Authorization": expiredBearerCus1})
+	if challenge.Code != http.StatusUnauthorized {
+		t.Fatalf("expired status %d body %s", challenge.Code, challenge.Body.String())
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(challenge.Body.Bytes(), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	rpcErr, _ := parsed["error"].(map[string]any)
+	if rpcErr["code"] != float64(-32001) || rpcErr["message"] != "Unauthorized" {
+		t.Fatalf("error = %#v", rpcErr)
+	}
+	retry := postMCP(t, handler, "tools/call", map[string]any{
+		"name":      "account",
+		"arguments": map[string]any{},
+	}, map[string]string{"Authorization": testBearerCus1})
+	if retry.Code != http.StatusOK {
+		t.Fatalf("retry status %d body %s", retry.Code, retry.Body.String())
+	}
+}
+
 func TestHandlerUnauthenticatedToolsCallChallenges(t *testing.T) {
 	_, handler := newTestHandler(t)
 	rec := postMCP(t, handler, "tools/call", map[string]any{

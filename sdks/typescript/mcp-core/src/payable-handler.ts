@@ -6,6 +6,7 @@
 
 import type { LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
 import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
+import { runGeneratedPayableLoop } from './drivers.generated'
 import { defaultGetCustomerRef } from './helpers'
 import { assertResponseResult, callMcpSyncOp, invokePayableNext } from './native-mcp'
 import { buildResponseContext } from './response-context'
@@ -109,104 +110,77 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     extra?: McpToolExtra,
   ): Promise<SolvaPayCallToolResult> => {
     const customerRef = await resolvePayableCustomerRef(args, extra, getCustomerRef)
-    let state: unknown = null
-    let event: Record<string, unknown> = {
-      kind: 'start',
-      customerRef,
-      product,
-      usageType,
-      startedMs: nowMs(),
-    }
-    let allowCustomerRef: string | null = null
-
-    for (;;) {
-      const out = invokePayableNext(state, event)
-      state = out.state
-      const action = out.action as InvokeAction | undefined
-      if (action == null || typeof action.kind !== 'string') {
-        throw new Error('invokePayableNext returned no action')
-      }
-      const kind = action.kind
-      if (kind === 'runGate') {
-        const decision = await solvaPay.paywall.decide(
-          { auth: { customer_ref: String(action.customerRef ?? customerRef) } } as PaywallArgs,
-          { product: String(action.product ?? product) },
-        )
-        if (decision.outcome === 'gate') {
-          const message =
-            decision.gate.kind === 'activation_required'
-              ? 'Activation required'
-              : 'Payment required'
-          event = {
-            kind: 'gatePaywall',
-            gate: decision.gate,
-            message: decision.gate.message || message,
-          }
-          continue
+    const result = await runGeneratedPayableLoop(
+      (state, event) => {
+        const out = invokePayableNext(state, event)
+        const action = out.action as InvokeAction | undefined
+        if (action == null || typeof action.kind !== 'string') {
+          throw new Error('invokePayableNext returned no action')
         }
-        allowCustomerRef = decision.customerRef
-        event = {
-          kind: 'gateAllow',
-          customerRef: decision.customerRef,
-          limits: decision.limits,
-        }
-        continue
-      }
-      if (kind === 'invokeHandler') {
-        const limits = (action.limits ?? null) as LimitResponseWithPlan | null
-        const handlerRef = String(action.customerRef ?? allowCustomerRef ?? '')
-        const { ctx: responseCtx } = buildResponseContext({
-          customerRef: handlerRef,
-          limits,
-          product,
-          solvaPay,
-        })
-        try {
-          const returned = await handler(args as TArgs, responseCtx)
-          const envelope = assertResponseResult(returned)
-          event = {
-            kind: 'handlerOk',
-            envelope,
-            nowMs: nowMs(),
-            randomUnit: Math.random(),
-          }
-        } catch (err) {
-          if (err instanceof PaywallError) {
-            event = {
-              kind: 'handlerPaywall',
-              gate: err.structuredContent,
-              message: err.message,
-            }
-            continue
-          }
-          const message = err instanceof Error ? err.message : String(err)
-          if (message.includes('registerPayable handler returned a raw value')) {
-            throw err instanceof Error ? err : new Error(message)
-          }
-          event = {
-            kind: 'handlerErr',
-            message,
-            nowMs: nowMs(),
-            randomUnit: Math.random(),
-          }
-        }
-        continue
-      }
-      if (kind === 'done') {
-        const track = action.track
-        if (track?.request && typeof track.request === 'object') {
-          await solvaPay.apiClient.trackUsage(
-            track.request as Parameters<SolvaPay['apiClient']['trackUsage']>[0],
+        return { state: out.state, action: action as { kind: string; [key: string]: unknown } }
+      },
+      {
+        nowMs,
+        randomUnit: () => Math.random(),
+        runGate: async action => {
+          const decision = await solvaPay.paywall.decide(
+            { auth: { customer_ref: String(action.customerRef ?? customerRef) } } as PaywallArgs,
+            { product: String(action.product ?? product) },
           )
-        }
-        const result = action.result as SolvaPayCallToolResult
-        if (isPaywallStructuredContent(result.structuredContent)) {
-          return { ...result, isError: false }
-        }
-        return result
-      }
-      throw new Error(`invokePayableNext unknown action kind: ${String(kind)}`)
+          if (decision.outcome === 'gate') {
+            return { kind: 'paywall', gate: decision.gate, message: decision.gate.message }
+          }
+          return {
+            kind: 'allow',
+            customerRef: decision.customerRef,
+            limits: decision.limits,
+          }
+        },
+        invokeHandler: async action => {
+          const limits = (action.limits ?? null) as LimitResponseWithPlan | null
+          const { ctx: responseCtx } = buildResponseContext({
+            customerRef: String(action.customerRef),
+            limits,
+            product,
+            solvaPay,
+          })
+          try {
+            const returned = await handler(args as TArgs, responseCtx)
+            return { kind: 'ok', envelope: assertResponseResult(returned) }
+          } catch (err) {
+            if (err instanceof PaywallError) {
+              return {
+                kind: 'paywall',
+                gate: err.structuredContent,
+                message: err.message,
+              }
+            }
+            const message = err instanceof Error ? err.message : String(err)
+            if (message.includes('registerPayable handler returned a raw value')) {
+              return { kind: 'fatal', error: err instanceof Error ? err : new Error(message) }
+            }
+            return { kind: 'err', message }
+          }
+        },
+        trackUsage: async request => {
+          await solvaPay.apiClient.trackUsage(
+            request as Parameters<SolvaPay['apiClient']['trackUsage']>[0],
+          )
+        },
+      },
+      {
+        kind: 'start',
+        customerRef,
+        product,
+        usageType,
+        startedMs: nowMs(),
+      },
+    )
+    const toolResult = result as SolvaPayCallToolResult
+    if (isPaywallStructuredContent(toolResult.structuredContent)) {
+      return { ...toolResult, isError: false }
     }
+    return toolResult
   }
 }
 

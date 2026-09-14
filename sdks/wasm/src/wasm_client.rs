@@ -88,8 +88,6 @@ impl WasmClient {
     }
 
     /// `PATCH /v1/sdk/customers/{customerRef}`
-    ///
-    /// Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
     #[wasm_bindgen(js_name = "updateCustomer")]
     pub async fn update_customer(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -103,7 +101,7 @@ impl WasmClient {
         .await
     }
 
-    /// Customer lookup by ref / externalRef / email.
+    /// `GET /v1/sdk/customers…`
     #[wasm_bindgen(js_name = "getCustomer")]
     pub async fn get_customer(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -114,7 +112,7 @@ impl WasmClient {
         .await
     }
 
-    /// Grant credits to a customer.
+    /// `POST /v1/sdk/customers/{customerRef}/credits`
     #[wasm_bindgen(js_name = "assignCredits")]
     pub async fn assign_credits(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -125,7 +123,7 @@ impl WasmClient {
         .await
     }
 
-    /// Credit balance for a customer.
+    /// `GET /v1/sdk/customers/{customerRef}/balance`
     #[wasm_bindgen(js_name = "getCustomerBalance")]
     pub async fn get_customer_balance(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -136,7 +134,7 @@ impl WasmClient {
         .await
     }
 
-    /// User info for a customer/product pair.
+    /// `POST /v1/sdk/user-info`
     #[wasm_bindgen(js_name = "getUserInfo")]
     pub async fn get_user_info(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -147,7 +145,7 @@ impl WasmClient {
         .await
     }
 
-    /// Hosted checkout session.
+    /// `POST /v1/sdk/checkout-sessions`
     #[wasm_bindgen(js_name = "createCheckoutSession")]
     pub async fn create_checkout_session(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -158,7 +156,7 @@ impl WasmClient {
         .await
     }
 
-    /// Customer portal session.
+    /// `POST /v1/sdk/customers/customer-sessions`
     #[wasm_bindgen(js_name = "createCustomerSession")]
     pub async fn create_customer_session(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -169,14 +167,14 @@ impl WasmClient {
         .await
     }
 
-    /// Merchant profile (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/merchant`
     #[wasm_bindgen(js_name = "getMerchant")]
     pub async fn get_merchant(&self, _args_json: String) -> String {
         let client = Rc::clone(&self.client);
         run_envelope(async move { client.get_merchant().await }).await
     }
 
-    /// Platform config (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/platform-config`
     #[wasm_bindgen(js_name = "getPlatformConfig")]
     pub async fn get_platform_config(&self, _args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -185,7 +183,7 @@ impl WasmClient {
 
     // --- Group B -------------------------------------------------------------
 
-    /// `POST /v1/sdk/payment-intents` (plan checkout).
+    /// `POST /v1/sdk/payment-intents`
     #[wasm_bindgen(js_name = "createPaymentIntent")]
     pub async fn create_payment_intent(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -196,7 +194,7 @@ impl WasmClient {
         .await
     }
 
-    /// `POST /v1/sdk/payment-intents` (credit top-up).
+    /// `POST /v1/sdk/payment-intents`
     #[wasm_bindgen(js_name = "createTopupPaymentIntent")]
     pub async fn create_topup_payment_intent(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -207,7 +205,7 @@ impl WasmClient {
         .await
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/process`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
     #[wasm_bindgen(js_name = "processPaymentIntent")]
     pub async fn process_payment_intent(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -218,7 +216,7 @@ impl WasmClient {
         .await
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/business-details`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
     #[wasm_bindgen(js_name = "attachBusinessDetails")]
     pub async fn attach_business_details(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -276,8 +274,6 @@ impl WasmClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`.
     #[wasm_bindgen(js_name = "getProduct")]
     pub async fn get_product(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -288,7 +284,7 @@ impl WasmClient {
         .await
     }
 
-    /// `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/products`
     #[wasm_bindgen(js_name = "listProducts")]
     pub async fn list_products(&self, _args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -307,8 +303,6 @@ impl WasmClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     #[wasm_bindgen(js_name = "updateProduct")]
     pub async fn update_product(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -323,8 +317,6 @@ impl WasmClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`. Success value is `null`.
     #[wasm_bindgen(js_name = "deleteProduct")]
     pub async fn delete_product(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -336,8 +328,6 @@ impl WasmClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/clone`
-    ///
-    /// Args JSON is `{ productRef, name? }`.
     #[wasm_bindgen(js_name = "cloneProduct")]
     pub async fn clone_product(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -363,8 +353,6 @@ impl WasmClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/mcp/plans`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     #[wasm_bindgen(js_name = "configureMcpPlans")]
     pub async fn configure_mcp_plans(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -379,8 +367,6 @@ impl WasmClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}/plans`
-    ///
-    /// Args JSON is `{ productRef }`.
     #[wasm_bindgen(js_name = "listPlans")]
     pub async fn list_plans(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -391,7 +377,7 @@ impl WasmClient {
         .await
     }
 
-    /// `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+    /// `POST /v1/sdk/products/{productRef}/plans`
     #[wasm_bindgen(js_name = "createPlan")]
     pub async fn create_plan(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -403,8 +389,6 @@ impl WasmClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef, ...params }`.
     #[wasm_bindgen(js_name = "updatePlan")]
     pub async fn update_plan(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -419,8 +403,6 @@ impl WasmClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef }`. Success value is `null`.
     #[wasm_bindgen(js_name = "deletePlan")]
     pub async fn delete_plan(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -453,7 +435,7 @@ impl WasmClient {
         .await
     }
 
-    /// `GET /v1/sdk/payment-method`
+    /// `GET /v1/sdk/payment-method?customerRef=`
     #[wasm_bindgen(js_name = "getPaymentMethod")]
     pub async fn get_payment_method(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -464,7 +446,7 @@ impl WasmClient {
         .await
     }
 
-    /// `GET /v1/sdk/auto-recharge`
+    /// `GET /v1/sdk/auto-recharge?customerRef=`
     #[wasm_bindgen(js_name = "getAutoRecharge")]
     pub async fn get_auto_recharge(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);
@@ -486,7 +468,7 @@ impl WasmClient {
         .await
     }
 
-    /// `DELETE /v1/sdk/auto-recharge`
+    /// `DELETE /v1/sdk/auto-recharge?customerRef=`
     #[wasm_bindgen(js_name = "disableAutoRecharge")]
     pub async fn disable_auto_recharge(&self, args_json: String) -> String {
         let client = Rc::clone(&self.client);

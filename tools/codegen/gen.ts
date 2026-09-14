@@ -224,6 +224,19 @@ export function runGen(options: CliOptions): CliResult {
       stderr: `${gen.stderr}${types.stderr}${profiles.stderr}`,
     }
   }
+  if (!options.check && process.env.GEN_SKIP_GO_WASM !== '1') {
+    const wasm = spawnSync('bash', ['sdks/go/scripts/build-wasm.sh'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    })
+    if (wasm.status !== 0) {
+      return {
+        exitCode: wasm.status ?? 1,
+        stdout: `${gen.stdout}${wasm.stdout ?? ''}`,
+        stderr: `${gen.stderr}${wasm.stderr || 'GEN_GO_WASM build failed\n'}`,
+      }
+    }
+  }
   const coverage = runFacadeCoverage({ check: false })
   if (coverage.exitCode !== 0) {
     return {

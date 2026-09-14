@@ -23,7 +23,7 @@ rb-sys = { version = "0.9.128", default-features = false }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-solvapay-core = { path = "../../../../core/solvapay-core" }
+solvapay-core = { path = "../../../../core/solvapay-core", features = ["conformance"] }
 solvapay-dto = { path = "../../../../core/solvapay-dto" }
 solvapay-transport = { path = "../../../../core/solvapay-transport" }
 solvapay-mcp-core = { path = "../../../../core/solvapay-mcp" }

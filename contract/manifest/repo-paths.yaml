@@ -284,6 +284,42 @@ generated:
   - id: rsMcpLayer2
     path: sdks/rust-mcp/src/layer2_generated.rs
     flag: --rs-mcp-layer2-out
+  - id: tsDrivers
+    path: sdks/typescript/server/src/drivers.generated.ts
+    flag: --ts-drivers-out
+  - id: tsMcpDrivers
+    path: sdks/typescript/mcp-core/src/drivers.generated.ts
+    flag: --ts-mcp-drivers-out
+  - id: pyDrivers
+    path: sdks/python/python/solvapay/drivers.generated.py
+    flag: --py-drivers-out
+  - id: goDrivers
+    path: sdks/go/drivers_generated.go
+    flag: --go-drivers-out
+  - id: rbDrivers
+    path: sdks/ruby/lib/solvapay/drivers.generated.rb
+    flag: --rb-drivers-out
+  - id: rsDrivers
+    path: sdks/rust/src/drivers.generated.rs
+    flag: --rs-drivers-out
+  - id: syncOpsRs
+    path: core/solvapay-mcp/src/sync_ops.generated.rs
+    flag: --sync-ops-rs-out
+  - id: syncOpsTs
+    path: tools/conformance/mcp-authoring/sync-ops.generated.ts
+    flag: --sync-ops-ts-out
+  - id: tsConformance
+    path: tools/conformance/lib/host-fns.generated.ts
+    flag: --ts-conformance-out
+  - id: rsConformance
+    path: sdks/rust/tests/common/host_fns.generated.rs
+    flag: --rs-conformance-out
+  - id: syncDispatchRs
+    path: core/solvapay-mcp/src/sync_dispatch.generated.rs
+  - id: tsCoreBarrel
+    path: sdks/typescript/core/src/barrel.generated.ts
+  - id: opSurfaces
+    path: contract/manifest/op-surfaces.generated.md
 
 # GENERATED_PATHS order (not the same as dto-gen flag order).
 drift:
@@ -338,6 +374,19 @@ drift:
   - goMcpLayer2
   - tsMcpNative
   - rsMcpLayer2
+  - tsDrivers
+  - tsMcpDrivers
+  - pyDrivers
+  - goDrivers
+  - rbDrivers
+  - rsDrivers
+  - syncOpsRs
+  - syncOpsTs
+  - tsConformance
+  - rsConformance
+  - syncDispatchRs
+  - tsCoreBarrel
+  - opSurfaces
 
 # SHA256 registry for binary artifacts in `externalGenerated` (`shasum -a 256` format).
 sha256Registry: contract/manifest/generated-binaries.sha256
@@ -443,6 +492,10 @@ markerExemptions:
     reason: writes the generated-file marker into browser-symbols.generated.json
   - pattern: .cursor/plans/**
     reason: plans that name the generated-file marker
+  - pattern: tools/conformance/check-touch-set.ts
+    reason: gate tooling that names the generated-file marker
+  - pattern: tools/conformance/check-touch-set.test.ts
+    reason: gate tooling that names the generated-file marker
   - pattern: tools/codegen/check-generated-headers.ts
     reason: gate tooling that names the marker
   - pattern: tools/codegen/check-generated-headers.test.ts

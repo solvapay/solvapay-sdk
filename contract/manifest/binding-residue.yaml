@@ -1,5 +1,11 @@
 # Shim-emission residue for #[solvapay_export] symbols. Keyed by canonical id.
 # dto-gen errors if a key has no matching exported symbol.
+# A key that does not change the derived symbol is rejected (`cargo test -p dto-gen --test residue_drain`).
+#
+# Remaining classes (missing manifest capability, do not restate args/docs):
+# - verbatimBody / omitCoreCall — Option/map/error-shape shims the AST cannot emit
+# - tsWrapper — TypeScript generics, PricedLike param types, dispatchArgs, signatures
+# - host-injected / extract / typedAs when they diverge from the scanned signature
 MCP_TOOL_NAMES:
   verbatimBody: |-
     let _args = args_map(&args_json)?;
@@ -94,71 +100,6 @@ buildCreateCustomerParams:
     - email.as_deref()
     - name.as_deref()
     - now_ms
-buildCustomerSnapshot:
-  args:
-    - name: customerRef
-      type: string
-      required: true
-      extract: requireString
-      local: customer_ref
-    - name: limits
-      type: value
-      required: false
-      extract: optionalValue
-      local: limits
-  callArgs:
-    - "&customer_ref"
-    - limits.as_ref()
-buildGateMessage:
-  args:
-    - name: state
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: PaywallState
-      local: state
-    - name: gate
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: GateContent
-      local: gate
-  callArgs:
-    - "&state"
-    - "&gate"
-buildNudgeMessage:
-  args:
-    - name: state
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: PaywallState
-      local: state
-    - name: limits
-      type: value
-      required: false
-      extract: optionalTyped
-      typedAs: PaywallLimits
-      local: limits
-  callArgs:
-    - "&state"
-    - limits.as_ref()
-buildPaywallGate:
-  args:
-    - name: productRef
-      type: string
-      required: true
-      extract: requireString
-      local: product_ref
-    - name: limits
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: PaywallGateLimits
-      local: limits
-  callArgs:
-    - "&product_ref"
-    - "&limits"
 buildPromptDescriptorMetadata:
   verbatimBody: |-
     let args = args_map(&args_json)?;
@@ -221,76 +162,6 @@ buildToolDescriptorMetadata:
       type: value
       required: false
   omitCoreCall: true
-classifyCancelError:
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-  callArgs:
-    - "&message"
-classifyCreateError:
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-  callArgs:
-    - "&message"
-classifyCustomerRef:
-  args:
-    - name: customerRef
-      type: string
-      required: true
-      extract: requireString
-      local: customer_ref
-  callArgs:
-    - "&customer_ref"
-classifyLookupError:
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-  callArgs:
-    - "&message"
-classifyPaywallState:
-  args:
-    - name: limits
-      type: value
-      required: false
-      extract: optionalTyped
-      typedAs: PaywallLimits
-      local: limits
-  callArgs:
-    - limits.as_ref()
-classifyReactivateError:
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-  callArgs:
-    - "&message"
-coerceCustomerOptions:
-  args:
-    - name: email
-      type: string?
-      required: false
-      extract: optionalString
-      local: email
-    - name: name
-      type: string?
-      required: false
-      extract: optionalString
-      local: name
-  callArgs:
-    - email.as_deref()
-    - name.as_deref()
 creditsToDisplayMinorUnits:
   tsWrapper:
     returnType: number | null
@@ -412,30 +283,6 @@ deriveTaxIdType:
       type: string
       required: true
   omitCoreCall: true
-evaluateCachedLimits:
-  args:
-    - name: remaining
-      type: f64
-      required: true
-      extract: requireF64
-      local: remaining
-  callArgs:
-    - remaining
-evaluateFreshLimits:
-  args:
-    - name: withinLimits
-      type: bool
-      required: true
-      extract: requireBool
-      local: within_limits
-    - name: remaining
-      type: f64
-      required: true
-      extract: requireF64
-      local: remaining
-  callArgs:
-    - within_limits
-    - remaining
 extractBackendCustomerRef:
   tsWrapper:
     paramTypes:
@@ -529,36 +376,6 @@ getTaxIdHelperText:
       type: string
       required: true
   omitCoreCall: true
-isCachedCustomerRefValid:
-  args:
-    - name: externalRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: external_ref
-    - name: userId
-      type: string
-      required: true
-      extract: requireString
-      local: user_id
-    - name: customerRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: customer_ref
-  callArgs:
-    - external_ref.as_deref()
-    - "&user_id"
-    - customer_ref.as_deref()
-isEmailConflict:
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-  callArgs:
-    - "&message"
 isErrorResult:
   tsWrapper:
     returnType: result is RouteErrorResult
@@ -570,24 +387,6 @@ isErrorResult:
       local: value
   callArgs:
     - "&value"
-isUnlimitedRemaining:
-  args:
-    - name: remaining
-      type: f64
-      required: true
-      extract: requireF64
-      local: remaining
-  callArgs:
-    - remaining
-isZeroDecimalCurrency:
-  args:
-    - name: currency
-      type: string
-      required: true
-      extract: requireString
-      local: currency
-  callArgs:
-    - "&currency"
 makeResponseResult:
   verbatimBody: |-
     let args = args_map(&args_json)?;
@@ -692,8 +491,6 @@ mapRouteError:
       type: f64?
       required: false
   omitCoreCall: true
-mcpViewMaps:
-  args: []
 minorUnitsPerMajor:
   verbatimBody: |-
     let args = args_map(&args_json)?;
@@ -1018,16 +815,6 @@ requireProductRef:
       required: false
       extract: optionalString
       local: env_product
-resolveAuthenticatedUser:
-  args:
-    - name: input
-      type: value
-      required: true
-      extract: requireTyped
-      local: input
-      typedAs: AuthResolutionInput
-  callArgs:
-    - "&input"
 evaluateProductReadiness:
   tsWrapper:
     signature: |-
@@ -1065,21 +852,6 @@ assertValidProductRef:
       required: true
       extract: requireString
       local: context
-resolvePurchaseCustomerRef:
-  args:
-    - name: customerRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: customer_ref
-    - name: userId
-      type: string
-      required: true
-      extract: requireString
-      local: user_id
-  callArgs:
-    - customer_ref.as_deref()
-    - "&user_id"
 resolveReturnUrl:
   tsWrapper:
     optionalStyle: optionalNull
@@ -1251,30 +1023,6 @@ selectActivePurchases:
       type: value
       required: true
   omitCoreCall: true
-validateActivatePlanParams:
-  args:
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-    - name: planRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: plan_ref
-  callArgs:
-    - product_ref.as_deref()
-    - plan_ref.as_deref()
-validateAttachBusinessDetailsParams:
-  args:
-    - name: paymentIntentId
-      type: string?
-      required: false
-      extract: optionalString
-      local: payment_intent_id
-  callArgs:
-    - payment_intent_id.as_deref()
 validateBusinessDetails:
   verbatimBody: |-
     let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {
@@ -1283,63 +1031,6 @@ validateBusinessDetails:
             to_value(&validate_business_details(&input))
   args: []
   omitCoreCall: true
-validateCheckoutSessionParams:
-  args:
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-  callArgs:
-    - product_ref.as_deref()
-validateCreatePaymentIntentParams:
-  args:
-    - name: planRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: plan_ref
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-  callArgs:
-    - plan_ref.as_deref()
-    - product_ref.as_deref()
-validateGetProductParams:
-  args:
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-  callArgs:
-    - product_ref.as_deref()
-validateListPlansParams:
-  args:
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-  callArgs:
-    - product_ref.as_deref()
-validateProcessPaymentIntentParams:
-  args:
-    - name: paymentIntentId
-      type: string?
-      required: false
-      extract: optionalString
-      local: payment_intent_id
-    - name: productRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: product_ref
-  callArgs:
-    - payment_intent_id.as_deref()
-    - product_ref.as_deref()
 validatePublicBaseUrl:
   verbatimBody: |-
     let args = args_map(&args_json)?;
@@ -1355,30 +1046,6 @@ validatePublicBaseUrl:
       type: string
       required: true
   omitCoreCall: true
-validatePurchaseRef:
-  args:
-    - name: purchaseRef
-      type: string?
-      required: false
-      extract: optionalString
-      local: purchase_ref
-  callArgs:
-    - purchase_ref.as_deref()
-validateTopupPaymentIntentParams:
-  args:
-    - name: amount
-      type: f64?
-      required: false
-      extract: optionalF64
-      local: amount
-    - name: currency
-      type: string?
-      required: false
-      extract: optionalString
-      local: currency
-  callArgs:
-    - amount
-    - currency.as_deref()
 verifyWebhook:
   args:
     - name: body
@@ -1395,126 +1062,3 @@ verifyWebhook:
       required: true
       hostInjected: true
 
-# Client shim residue (Phase 4b) — docs / call-arg tokens the signature cannot say.
-activatePlan:
-  doc: "`POST /v1/sdk/activate`"
-assignCredits:
-  doc: "Grant credits to a customer."
-attachBusinessDetails:
-  doc: "`POST /v1/sdk/payment-intents/{id}/business-details`"
-bootstrapMcpProduct:
-  doc: "`POST /v1/sdk/products/mcp/bootstrap`"
-cancelPurchase:
-  doc: "`POST /v1/sdk/purchases/{purchaseRef}/cancel`"
-checkLimits:
-  doc: "`POST /v1/sdk/limits`"
-cloneProduct:
-  doc: |-
-    `POST /v1/sdk/products/{productRef}/clone`
-    
-    Args JSON is `{ productRef, name? }`.
-  clientCallArgs:
-    - "&refs[0]"
-    - "Some(overrides)"
-configureMcpPlans:
-  doc: |-
-    `PUT /v1/sdk/products/{productRef}/mcp/plans`
-    
-    Args JSON is `{ productRef, ...params }`.
-  clientCallArgs:
-    - "&refs[0]"
-    - "params"
-createCheckoutSession:
-  doc: "Hosted checkout session."
-createCustomerSession:
-  doc: "Customer portal session."
-createPaymentIntent:
-  doc: "`POST /v1/sdk/payment-intents` (plan checkout)."
-createPlan:
-  doc: "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body)."
-createProduct:
-  doc: "`POST /v1/sdk/products`"
-createTopupPaymentIntent:
-  doc: "`POST /v1/sdk/payment-intents` (credit top-up)."
-deletePlan:
-  doc: |-
-    `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-    
-    Args JSON is `{ productRef, planRef }`. Success value is `null`.
-  clientCallArgs:
-    - "&refs[0]"
-    - "&refs[1]"
-deleteProduct:
-  doc: |-
-    `DELETE /v1/sdk/products/{productRef}`
-    
-    Args JSON is `{ productRef }`. Success value is `null`.
-  clientCallArgs:
-    - "&refs[0]"
-disableAutoRecharge:
-  doc: "`DELETE /v1/sdk/auto-recharge`"
-getAutoRecharge:
-  doc: "`GET /v1/sdk/auto-recharge`"
-getCustomer:
-  doc: "Customer lookup by ref / externalRef / email."
-getCustomerBalance:
-  doc: "Credit balance for a customer."
-getMerchant:
-  doc: "Merchant profile (`args_json` ignored; pass `\"{}\"`)."
-getPaymentMethod:
-  doc: "`GET /v1/sdk/payment-method`"
-getPlatformConfig:
-  doc: "Platform config (`args_json` ignored; pass `\"{}\"`)."
-getProduct:
-  doc: |-
-    `GET /v1/sdk/products/{productRef}`
-    
-    Args JSON is `{ productRef }`.
-  clientCallArgs:
-    - "&refs[0]"
-getUserInfo:
-  doc: "User info for a customer/product pair."
-listPlans:
-  doc: |-
-    `GET /v1/sdk/products/{productRef}/plans`
-    
-    Args JSON is `{ productRef }`.
-  clientCallArgs:
-    - "&refs[0]"
-listProducts:
-  doc: "`GET /v1/sdk/products` (`args_json` ignored; pass `\"{}\"`)."
-processPaymentIntent:
-  doc: "`POST /v1/sdk/payment-intents/{id}/process`"
-reactivatePurchase:
-  doc: "`POST /v1/sdk/purchases/{purchaseRef}/reactivate`"
-saveAutoRecharge:
-  doc: "`PUT /v1/sdk/auto-recharge`"
-trackUsage:
-  doc: "`POST /v1/sdk/usages`"
-trackUsageBulk:
-  doc: "`POST /v1/sdk/usages/bulk`"
-updateCustomer:
-  doc: |-
-    `PATCH /v1/sdk/customers/{customerRef}`
-    
-    Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
-  clientCallArgs:
-    - "&refs[0]"
-    - "params"
-updatePlan:
-  doc: |-
-    `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-    
-    Args JSON is `{ productRef, planRef, ...params }`.
-  clientCallArgs:
-    - "&refs[0]"
-    - "&refs[1]"
-    - "params"
-updateProduct:
-  doc: |-
-    `PUT /v1/sdk/products/{productRef}`
-    
-    Args JSON is `{ productRef, ...params }`.
-  clientCallArgs:
-    - "&refs[0]"
-    - "params"

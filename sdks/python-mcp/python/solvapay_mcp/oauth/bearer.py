@@ -18,32 +18,28 @@ class McpBearerAuthError(Exception):
         self.name = "McpBearerAuthError"
 
 
-def decode_jwt_payload(token: str) -> dict[str, object]:
-    """Structural payload parse. Not an authorization check."""
-    import base64
+def _core_call(op: str, args: dict[str, object]) -> object:
     import json
 
-    parts = token.split(".")
-    if len(parts) < 2:
-        raise McpBearerAuthError("Invalid JWT format")
-    padded = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
-    try:
-        raw = base64.urlsafe_b64decode(padded.encode("ascii"))
-        payload = json.loads(raw)
-    except (ValueError, json.JSONDecodeError) as err:
-        raise McpBearerAuthError("Invalid JWT payload") from err
+    from solvapay import _native as native
+
+    return native.call_native_sync(op, json.dumps(args))
+
+
+def decode_jwt_payload(token: str) -> dict[str, object]:
+    payload = _core_call("decode_jwt_payload_unverified", {"token": token})
     if not isinstance(payload, dict):
-        raise McpBearerAuthError("Invalid JWT payload")
+        raise McpBearerAuthError(
+            "Invalid JWT format" if len(token.split(".")) < 2 else "Invalid JWT payload"
+        )
     return {str(k): v for k, v in payload.items()}
 
 
 def extract_bearer_token(authorization: str | None) -> str | None:
-    if not authorization:
-        return None
-    if not authorization.startswith("Bearer "):
-        return None
-    token = authorization[7:].strip()
-    return token or None
+    result = _core_call("extract_bearer_token", {"authorizationHeader": authorization})
+    if isinstance(result, str) and result.strip():
+        return result.strip()
+    return None
 
 
 def get_customer_ref_from_jwt_payload(
@@ -52,10 +48,12 @@ def get_customer_ref_from_jwt_payload(
     claim_priority: list[str] | None = None,
 ) -> str:
     priority = claim_priority or ["customerRef", "customer_ref", "sub"]
-    for claim in priority:
-        value = payload.get(claim)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
+    result = _core_call(
+        "customer_ref_from_claims",
+        {"claims": dict(payload), "claimPriority": claim_priority},
+    )
+    if isinstance(result, str) and result.strip():
+        return result.strip()
     raise McpBearerAuthError(
         f"No customer reference claim found (checked: {', '.join(priority)})"
     )
@@ -127,11 +125,24 @@ def default_mcp_bearer_expectations(
 ) -> McpBearerExpectations:
     import time
 
-    issuer = public_base_url.rstrip("/")
-    path = (mcp_path or "").strip().rstrip("/")
-    audience = f"{issuer}{path if path.startswith('/') else f'/{path}'}" if path else issuer
+    clock = int(now_unix_secs if now_unix_secs is not None else time.time())
+    value = _core_call(
+        "default_mcp_bearer_expectations",
+        {
+            "publicBaseUrl": public_base_url,
+            "mcpPath": mcp_path,
+            "nowUnixSecs": clock,
+        },
+    )
+    if not isinstance(value, dict):
+        raise TypeError("default_mcp_bearer_expectations returned a non-object")
+    issuer = value.get("expectedIssuer")
+    audience = value.get("expectedAudience")
+    now = value.get("nowUnixSecs")
+    if not isinstance(issuer, str) or not isinstance(audience, str):
+        raise TypeError("default_mcp_bearer_expectations missing issuer/audience")
     return {
         "expected_issuer": issuer,
         "expected_audience": audience,
-        "now_unix_secs": int(now_unix_secs if now_unix_secs is not None else time.time()),
+        "now_unix_secs": int(now) if isinstance(now, int | float) else clock,
     }

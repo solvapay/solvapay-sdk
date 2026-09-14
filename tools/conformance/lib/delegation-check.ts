@@ -42,7 +42,13 @@ export const PERMITTED_ALLOWLIST_REASONS = [
 
 export type PermittedAllowlistReason = (typeof PERMITTED_ALLOWLIST_REASONS)[number]
 
-export type PackageName = '@solvapay/server' | '@solvapay/core'
+export type PackageName =
+  | '@solvapay/server'
+  | '@solvapay/core'
+  | '@solvapay/mcp-core'
+  | '@solvapay/mcp'
+  | '@solvapay/next'
+  | '@solvapay/auth'
 
 export type AllowlistEntry = {
   package: PackageName
@@ -290,6 +296,10 @@ export function buildExportInventory(repoRoot: string): ExportInventoryEntry[] {
   const serverRoot = tsPackageRel('server')
   const serverEntry = joinRel(repoRoot, serverRoot, 'src', 'index.ts')
   const coreEntry = joinRel(repoRoot, tsPackageRel('core'), 'src', 'index.ts')
+  const mcpCoreEntry = joinRel(repoRoot, tsPackageRel('mcp-core'), 'src', 'index.ts')
+  const mcpEntry = joinRel(repoRoot, tsPackageRel('mcp'), 'src', 'index.ts')
+  const nextEntry = joinRel(repoRoot, tsPackageRel('next'), 'src', 'index.ts')
+  const authEntry = joinRel(repoRoot, tsPackageRel('auth'), 'src', 'index.ts')
 
   const configPath = ts.findConfigFile(
     joinRel(repoRoot, serverRoot),
@@ -311,12 +321,19 @@ export function buildExportInventory(repoRoot: string): ExportInventoryEntry[] {
         },
       }
 
-  const program = loadProgram([serverEntry, coreEntry], config.options)
+  const program = loadProgram(
+    [serverEntry, coreEntry, mcpCoreEntry, mcpEntry, nextEntry, authEntry],
+    config.options,
+  )
   const inventory: ExportInventoryEntry[] = []
 
   for (const [pkg, entry] of [
     ['@solvapay/server', serverEntry],
     ['@solvapay/core', coreEntry],
+    ['@solvapay/mcp-core', mcpCoreEntry],
+    ['@solvapay/mcp', mcpEntry],
+    ['@solvapay/next', nextEntry],
+    ['@solvapay/auth', authEntry],
   ] as const) {
     for (const symbol of valueExportsOf(program, entry)) {
       const resolved = resolveDefinitionSources(program, entry, symbol)

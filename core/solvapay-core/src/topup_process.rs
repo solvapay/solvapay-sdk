@@ -296,11 +296,7 @@ fn resolved(
 
 /// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<TopupProcessState, HelperErrorResult> {
-    let value = state
-        .ok_or_else(|| HelperErrorResult::transport("topup_process_next state is required"))?;
-    serde_json::from_value(value.clone()).map_err(|err| {
-        HelperErrorResult::transport(format!("topup_process_next invalid state: {err}"))
-    })
+    crate::driver_util::require_state(state, "topup_process_next")
 }
 
 /// Fail if the driver is not waiting for the expected host step.
@@ -308,26 +304,12 @@ fn require_pending(
     state: &TopupProcessState,
     expected: TopupPending,
 ) -> Result<(), HelperErrorResult> {
-    if state.pending == expected {
-        Ok(())
-    } else {
-        Err(HelperErrorResult::transport(format!(
-            "topup_process_next expected pending {expected:?}, got {:?}",
-            state.pending
-        )))
-    }
+    crate::driver_util::require_pending(&state.pending, &expected, "topup_process_next")
 }
 
 /// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| {
-            HelperErrorResult::transport(format!("topup_process_next {key} is required"))
-        })
+    crate::driver_util::require_str(value, key, "topup_process_next")
 }
 
 #[cfg(test)]

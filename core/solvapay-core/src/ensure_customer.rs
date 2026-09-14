@@ -514,25 +514,14 @@ fn cache_write(
     }
 }
 
-/// Deserialize driver state.
+/// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<EnsureCustomerState, HelperErrorResult> {
-    let value = state
-        .ok_or_else(|| HelperErrorResult::transport("ensure_customer_next state is required"))?;
-    serde_json::from_value(value.clone()).map_err(|err| {
-        HelperErrorResult::transport(format!("ensure_customer_next invalid state: {err}"))
-    })
+    crate::driver_util::require_state(state, "ensure_customer_next")
 }
 
-/// Required non-empty string field.
+/// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| {
-            HelperErrorResult::transport(format!("ensure_customer_next {key} is required"))
-        })
+    crate::driver_util::require_str(value, key, "ensure_customer_next")
 }
 
 /// Required boolean field.

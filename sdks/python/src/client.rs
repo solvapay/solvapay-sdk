@@ -145,8 +145,6 @@ impl SolvaPayClient {
     }
 
     /// `PATCH /v1/sdk/customers/{customerRef}`
-    ///
-    /// Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
     fn update_customer<'py>(
         &self,
         py: Python<'py>,
@@ -193,7 +191,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Customer lookup by ref / externalRef / email.
+    /// `GET /v1/sdk/customers…`
     fn get_customer<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -222,7 +220,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Grant credits to a customer.
+    /// `POST /v1/sdk/customers/{customerRef}/credits`
     fn assign_credits<'py>(
         &self,
         py: Python<'py>,
@@ -255,7 +253,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Credit balance for a customer.
+    /// `GET /v1/sdk/customers/{customerRef}/balance`
     fn get_customer_balance<'py>(
         &self,
         py: Python<'py>,
@@ -288,7 +286,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// User info for a customer/product pair.
+    /// `POST /v1/sdk/user-info`
     fn get_user_info<'py>(
         &self,
         py: Python<'py>,
@@ -321,7 +319,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Hosted checkout session.
+    /// `POST /v1/sdk/checkout-sessions`
     fn create_checkout_session<'py>(
         &self,
         py: Python<'py>,
@@ -354,7 +352,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Customer portal session.
+    /// `POST /v1/sdk/customers/customer-sessions`
     fn create_customer_session<'py>(
         &self,
         py: Python<'py>,
@@ -387,7 +385,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Merchant profile (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/merchant`
     fn get_merchant<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let _ = args_json;
         let client = Arc::clone(&self.client);
@@ -408,7 +406,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Platform config (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/platform-config`
     fn get_platform_config<'py>(
         &self,
         py: Python<'py>,
@@ -435,7 +433,7 @@ impl SolvaPayClient {
 
     // --- Group B ---
 
-    /// `POST /v1/sdk/payment-intents` (plan checkout).
+    /// `POST /v1/sdk/payment-intents`
     fn create_payment_intent<'py>(
         &self,
         py: Python<'py>,
@@ -468,7 +466,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents` (credit top-up).
+    /// `POST /v1/sdk/payment-intents`
     fn create_topup_payment_intent<'py>(
         &self,
         py: Python<'py>,
@@ -501,7 +499,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/process`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
     fn process_payment_intent<'py>(
         &self,
         py: Python<'py>,
@@ -534,7 +532,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/business-details`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
     fn attach_business_details<'py>(
         &self,
         py: Python<'py>,
@@ -694,8 +692,6 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`.
     fn get_product<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -724,7 +720,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/products`
     fn list_products<'py>(
         &self,
         py: Python<'py>,
@@ -783,8 +779,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     fn update_product<'py>(
         &self,
         py: Python<'py>,
@@ -826,8 +820,6 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`. Success value is `null`.
     fn delete_product<'py>(
         &self,
         py: Python<'py>,
@@ -861,8 +853,6 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/clone`
-    ///
-    /// Args JSON is `{ productRef, name? }`.
     fn clone_product<'py>(
         &self,
         py: Python<'py>,
@@ -937,8 +927,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/mcp/plans`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     fn configure_mcp_plans<'py>(
         &self,
         py: Python<'py>,
@@ -986,8 +974,6 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}/plans`
-    ///
-    /// Args JSON is `{ productRef }`.
     fn list_plans<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -1016,7 +1002,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+    /// `POST /v1/sdk/products/{productRef}/plans`
     fn create_plan<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -1046,8 +1032,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef, ...params }`.
     fn update_plan<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -1085,8 +1069,6 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef }`. Success value is `null`.
     fn delete_plan<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
         let client = Arc::clone(&self.client);
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
@@ -1181,7 +1163,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/payment-method`
+    /// `GET /v1/sdk/payment-method?customerRef=`
     fn get_payment_method<'py>(
         &self,
         py: Python<'py>,
@@ -1214,7 +1196,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/auto-recharge`
+    /// `GET /v1/sdk/auto-recharge?customerRef=`
     fn get_auto_recharge<'py>(
         &self,
         py: Python<'py>,
@@ -1280,7 +1262,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `DELETE /v1/sdk/auto-recharge`
+    /// `DELETE /v1/sdk/auto-recharge?customerRef=`
     fn disable_auto_recharge<'py>(
         &self,
         py: Python<'py>,

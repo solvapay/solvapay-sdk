@@ -301,3 +301,26 @@ func TestPayableToolCallUnauthenticatedChallenges(t *testing.T) {
 		t.Fatalf("WWW-Authenticate = %q", www)
 	}
 }
+
+func TestCompileInputSchemaDelegatesToCore(t *testing.T) {
+	raw, err := compileInputSchema(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if schema["type"] != "object" {
+		t.Fatalf("type = %v", schema["type"])
+	}
+	props, _ := schema["properties"].(map[string]any)
+	if len(props) != 0 {
+		t.Fatalf("empty fields must compile to empty properties, got %#v", props)
+	}
+
+	_, err = compileInputSchema(map[string]any{"n": map[string]any{"type": "number"}})
+	if err == nil {
+		t.Fatal("non-string field must fail through core")
+	}
+}

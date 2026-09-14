@@ -3,6 +3,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -125,8 +126,7 @@ impl Client {
     /// Paywall gate for a customer and product (§2.4). Sequencing is [`gate_next`].
     pub async fn gate(&self, customer_ref: &str, opts: GateOpts) -> Result<GateOutcome, SdkError> {
         let started_ms = now_ms();
-        let mut state: Option<Value> = None;
-        let mut event = serde_json::json!({
+        let start_event = serde_json::json!({
             "kind": "start",
             "customerRef": customer_ref,
             "product": opts.product,
@@ -135,112 +135,42 @@ impl Client {
             "randomUnit": self.random_unit(),
             "limitsCacheTTLMs": self.inner.limits_cache_ttl_ms,
         });
-        loop {
-            let out = gate_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
-            state = Some(serde_json::to_value(&out.state).map_err(|err| {
-                SdkError::transport(format!("serialize gate state: {err}"), false)
-            })?);
-            match out.action {
-                GateAction::EnsureCustomer {
-                    customer_ref: ref_to_ensure,
-                } => {
-                    let backend = self.ensure_customer(&ref_to_ensure).await?;
-                    event = serde_json::json!({
-                        "kind": "customerResolved",
-                        "backendRef": backend,
-                        "nowMs": now_ms(),
-                    });
-                }
-                GateAction::ReadLimitsCache { key } => {
-                    let now = now_ms();
-                    let hit = {
-                        let gate = self.inner.gate.lock().await;
-                        gate.limits_cache.get(&key).map(|entry| {
-                            (entry.remaining, entry.limits.clone(), entry.timestamp_ms)
-                        })
-                    };
-                    if let Some((remaining, limits, timestamp_ms)) = hit {
-                        event = serde_json::json!({
-                            "kind": "limitsCacheEntry",
-                            "found": true,
-                            "remaining": remaining,
-                            "limits": limits,
-                            "timestampMs": timestamp_ms,
-                            "nowMs": now,
-                        });
-                    } else {
-                        event = serde_json::json!({
-                            "kind": "limitsCacheEntry",
-                            "found": false,
-                            "nowMs": now,
-                        });
-                    }
-                }
-                GateAction::CheckLimits {
-                    customer_ref: backend,
-                    product_ref,
-                    meter_name,
-                    include_checkout_session,
-                    cache_delete_key,
-                } => {
-                    if let Some(key) = cache_delete_key {
-                        let mut gate = self.inner.gate.lock().await;
-                        gate.limits_cache.remove(&key);
-                    }
-                    let limits = self
-                        .fetch_limits(
-                            &backend,
-                            &product_ref,
-                            &meter_name,
-                            include_checkout_session,
-                        )
-                        .await?;
-                    event = serde_json::json!({
-                        "kind": "limitsResult",
-                        "limits": limits,
-                        "nowMs": now_ms(),
-                    });
-                }
-                GateAction::Allow {
-                    customer_ref: backend_ref,
-                    product,
-                    meter_name,
-                    limits,
-                    customer,
-                    consequence,
-                    cache,
-                    request_id,
-                } => {
-                    self.apply_gate_cache(cache).await;
-                    return Ok(GateOutcome::Allow(Allow {
-                        client: self.clone(),
-                        backend_ref,
-                        product,
-                        meter_name,
-                        limits,
-                        customer: Allow::from_core_customer(customer),
-                        consequence,
-                        request_id,
-                        driver_state: state.clone().unwrap_or(Value::Null),
-                    }));
-                }
-                GateAction::Gate {
-                    gate,
-                    cache,
-                    request,
-                    ..
-                } => {
-                    self.apply_gate_cache(cache).await;
-                    self.post_usage_request(request).await?;
-                    return Ok(GateOutcome::Paywall(gate));
-                }
-                GateAction::EmitUsage { .. } | GateAction::SkipUsage => {
-                    return Err(SdkError::transport(
-                        "gate_next returned a usage action during decide",
-                        false,
-                    ));
-                }
+        let (state, action) =
+            crate::drivers_generated::run_generated_gate_loop(self, start_event).await?;
+        match action {
+            GateAction::Allow {
+                customer_ref: backend_ref,
+                product,
+                meter_name,
+                limits,
+                customer,
+                consequence,
+                cache: _,
+                request_id,
+            } => Ok(GateOutcome::Allow(Allow {
+                client: self.clone(),
+                backend_ref,
+                product,
+                meter_name,
+                limits,
+                customer: Allow::from_core_customer(customer),
+                consequence,
+                request_id,
+                driver_state: state,
+            })),
+            GateAction::Gate {
+                gate,
+                cache: _,
+                request,
+                ..
+            } => {
+                self.post_usage_request(request).await?;
+                Ok(GateOutcome::Paywall(gate))
             }
+            other => Err(SdkError::transport(
+                format!("gate_next returned unexpected terminal action: {other:?}"),
+                false,
+            )),
         }
     }
 
@@ -533,6 +463,56 @@ impl Client {
                 }
             }
         }
+    }
+}
+
+#[allow(clippy::manual_async_fn)]
+impl crate::drivers_generated::GateDriverHost for Client {
+    fn now_ms(&self) -> i64 {
+        now_ms() as i64
+    }
+
+    fn ensure_customer(
+        &self,
+        customer_ref: &str,
+    ) -> impl Future<Output = Result<String, SdkError>> {
+        async move { self.ensure_customer(customer_ref).await }
+    }
+
+    fn read_limits_cache(&self, key: &str) -> impl Future<Output = Option<(f64, Value, u64)>> {
+        async move {
+            let gate = self.inner.gate.lock().await;
+            gate.limits_cache
+                .get(key)
+                .map(|entry| (entry.remaining, entry.limits.clone(), entry.timestamp_ms))
+        }
+    }
+
+    fn check_limits(
+        &self,
+        customer_ref: &str,
+        product_ref: &str,
+        meter_name: &str,
+        include_checkout_session: bool,
+        cache_delete_key: Option<&str>,
+    ) -> impl Future<Output = Result<Value, SdkError>> {
+        async move {
+            if let Some(key) = cache_delete_key {
+                let mut gate = self.inner.gate.lock().await;
+                gate.limits_cache.remove(key);
+            }
+            self.fetch_limits(
+                customer_ref,
+                product_ref,
+                meter_name,
+                include_checkout_session,
+            )
+            .await
+        }
+    }
+
+    fn apply_cache(&self, cache: Option<GateCacheOp>) -> impl Future<Output = ()> {
+        async move { self.apply_gate_cache(cache).await }
     }
 }
 

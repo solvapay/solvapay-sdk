@@ -15,7 +15,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-solvapay-core = { path = "../../core/solvapay-core" }
+solvapay-core = { path = "../../core/solvapay-core", features = ["conformance"] }
 solvapay-c = { path = "../../sdks/capi" }
 
 [[bin]]

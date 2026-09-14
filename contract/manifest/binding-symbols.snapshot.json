@@ -1,6 +1,114 @@
 {
   "_comment": "generated — do not edit; regenerate with dto-gen --dump-bindings",
   "bindings": {
+    "BUSINESS_COUNTRY_DISPLAY_NAMES": {
+      "core": "solvapay_core::business_details::business_country_display_names",
+      "names": {
+        "ts": "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        "py": "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        "rb": "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        "go": "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        "rust": "BUSINESS_COUNTRY_DISPLAY_NAMES",
+        "c": "BUSINESS_COUNTRY_DISPLAY_NAMES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "BUSINESS_COUNTRY_DISPLAY_NAMES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 19,
+      "section": "business-details",
+      "doc": "Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.",
+      "docWasm": null,
+      "rustFnName": "business_country_display_names_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "business_country_display_names",
+      "clientCallArgs": []
+    },
+    "BUSINESS_COUNTRY_OPTIONS": {
+      "core": "solvapay_core::business_details::business_country_options_table",
+      "names": {
+        "ts": "BUSINESS_COUNTRY_OPTIONS",
+        "py": "BUSINESS_COUNTRY_OPTIONS",
+        "rb": "BUSINESS_COUNTRY_OPTIONS",
+        "go": "BUSINESS_COUNTRY_OPTIONS",
+        "rust": "BUSINESS_COUNTRY_OPTIONS",
+        "c": "BUSINESS_COUNTRY_OPTIONS"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "BUSINESS_COUNTRY_OPTIONS"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 18,
+      "section": "business-details",
+      "doc": "Binding for `BUSINESS_COUNTRY_OPTIONS`.",
+      "docWasm": null,
+      "rustFnName": "business_country_options_table_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "business_country_options_table",
+      "clientCallArgs": []
+    },
+    "COUNTRY_TO_TAX_ID_TYPE": {
+      "core": "solvapay_core::business_details::country_to_tax_id_type",
+      "names": {
+        "ts": "COUNTRY_TO_TAX_ID_TYPE",
+        "py": "COUNTRY_TO_TAX_ID_TYPE",
+        "rb": "COUNTRY_TO_TAX_ID_TYPE",
+        "go": "COUNTRY_TO_TAX_ID_TYPE",
+        "rust": "COUNTRY_TO_TAX_ID_TYPE",
+        "c": "COUNTRY_TO_TAX_ID_TYPE"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "COUNTRY_TO_TAX_ID_TYPE"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 21,
+      "section": "business-details",
+      "doc": "Binding for `COUNTRY_TO_TAX_ID_TYPE`.",
+      "docWasm": null,
+      "rustFnName": "country_to_tax_id_type_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "country_to_tax_id_type",
+      "clientCallArgs": []
+    },
     "MCP_TOOL_NAMES": {
       "core": "solvapay_core::mcp::mcp_tool_names_json",
       "names": {
@@ -174,6 +282,150 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "state_required_countries",
+      "clientCallArgs": []
+    },
+    "SUPPORTED_BUSINESS_COUNTRIES": {
+      "core": "solvapay_core::business_details::supported_business_countries",
+      "names": {
+        "ts": "SUPPORTED_BUSINESS_COUNTRIES",
+        "py": "SUPPORTED_BUSINESS_COUNTRIES",
+        "rb": "SUPPORTED_BUSINESS_COUNTRIES",
+        "go": "SUPPORTED_BUSINESS_COUNTRIES",
+        "rust": "SUPPORTED_BUSINESS_COUNTRIES",
+        "c": "SUPPORTED_BUSINESS_COUNTRIES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "SUPPORTED_BUSINESS_COUNTRIES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 20,
+      "section": "business-details",
+      "doc": "Binding for `SUPPORTED_BUSINESS_COUNTRIES`.",
+      "docWasm": null,
+      "rustFnName": "supported_business_countries_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "supported_business_countries",
+      "clientCallArgs": []
+    },
+    "TAX_BEHAVIORS": {
+      "core": "solvapay_core::business_details::tax_behaviors",
+      "names": {
+        "ts": "TAX_BEHAVIORS",
+        "py": "TAX_BEHAVIORS",
+        "rb": "TAX_BEHAVIORS",
+        "go": "TAX_BEHAVIORS",
+        "rust": "TAX_BEHAVIORS",
+        "c": "TAX_BEHAVIORS"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TAX_BEHAVIORS"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 23,
+      "section": "business-details",
+      "doc": "Binding for `TAX_BEHAVIORS`.",
+      "docWasm": null,
+      "rustFnName": "tax_behaviors_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tax_behaviors",
+      "clientCallArgs": []
+    },
+    "TAX_EXCLUSIVE_CURRENCIES": {
+      "core": "solvapay_core::business_details::tax_exclusive_currencies",
+      "names": {
+        "ts": "TAX_EXCLUSIVE_CURRENCIES",
+        "py": "TAX_EXCLUSIVE_CURRENCIES",
+        "rb": "TAX_EXCLUSIVE_CURRENCIES",
+        "go": "TAX_EXCLUSIVE_CURRENCIES",
+        "rust": "TAX_EXCLUSIVE_CURRENCIES",
+        "c": "TAX_EXCLUSIVE_CURRENCIES"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TAX_EXCLUSIVE_CURRENCIES"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 24,
+      "section": "business-details",
+      "doc": "Binding for `TAX_EXCLUSIVE_CURRENCIES`.",
+      "docWasm": null,
+      "rustFnName": "tax_exclusive_currencies_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tax_exclusive_currencies",
+      "clientCallArgs": []
+    },
+    "TAX_ID_EXAMPLE_BY_COUNTRY": {
+      "core": "solvapay_core::business_details::tax_id_example_by_country",
+      "names": {
+        "ts": "TAX_ID_EXAMPLE_BY_COUNTRY",
+        "py": "TAX_ID_EXAMPLE_BY_COUNTRY",
+        "rb": "TAX_ID_EXAMPLE_BY_COUNTRY",
+        "go": "TAX_ID_EXAMPLE_BY_COUNTRY",
+        "rust": "TAX_ID_EXAMPLE_BY_COUNTRY",
+        "c": "TAX_ID_EXAMPLE_BY_COUNTRY"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TAX_ID_EXAMPLE_BY_COUNTRY"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 22,
+      "section": "business-details",
+      "doc": "Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.",
+      "docWasm": null,
+      "rustFnName": "tax_id_example_by_country_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tax_id_example_by_country",
       "clientCallArgs": []
     },
     "TAX_ID_TYPES": {
@@ -410,7 +662,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "context"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -454,7 +706,7 @@
       "artifact": "client",
       "emitOrder": 3,
       "section": "Group A",
-      "doc": "Grant credits to a customer.",
+      "doc": "`POST /v1/sdk/customers/{customerRef}/credits`",
       "docWasm": null,
       "rustFnName": "assign_credits",
       "call": {
@@ -490,7 +742,7 @@
       "artifact": "client",
       "emitOrder": 13,
       "section": "Group B",
-      "doc": "`POST /v1/sdk/payment-intents/{id}/business-details`",
+      "doc": "`POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`",
       "docWasm": null,
       "rustFnName": "attach_business_details",
       "call": {
@@ -679,7 +931,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "email"
+          "local": null
         },
         {
           "name": "name",
@@ -689,7 +941,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "name"
+          "local": null
         },
         {
           "name": "nowMs",
@@ -762,7 +1014,7 @@
           "extract": "optionalValue",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "limits"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -812,7 +1064,7 @@
           "extract": "requireTyped",
           "typedAs": "PaywallState",
           "typedStyle": "turbofish",
-          "local": "state"
+          "local": null
         },
         {
           "name": "gate",
@@ -822,7 +1074,7 @@
           "extract": "requireTyped",
           "typedAs": "GateContent",
           "typedStyle": "turbofish",
-          "local": "gate"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -872,7 +1124,7 @@
           "extract": "requireTyped",
           "typedAs": "PaywallState",
           "typedStyle": "turbofish",
-          "local": "state"
+          "local": null
         },
         {
           "name": "limits",
@@ -882,7 +1134,7 @@
           "extract": "optionalTyped",
           "typedAs": "PaywallLimits",
           "typedStyle": "turbofish",
-          "local": "limits"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -931,7 +1183,7 @@
           "extract": "requireTyped",
           "typedAs": "ResponseEnvelope",
           "typedStyle": "annotation",
-          "local": "envelope"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -990,7 +1242,7 @@
           "extract": "requireTyped",
           "typedAs": "PaywallGateLimits",
           "typedStyle": "turbofish",
-          "local": "limits"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1322,7 +1574,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1370,7 +1622,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1466,7 +1718,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1515,7 +1767,7 @@
           "extract": "optionalTyped",
           "typedAs": "PaywallLimits",
           "typedStyle": "turbofish",
-          "local": "limits"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1563,7 +1815,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1613,7 +1865,7 @@
       "artifact": "client",
       "emitOrder": 23,
       "section": "Group C",
-      "doc": "`POST /v1/sdk/products/{productRef}/clone`\n\nArgs JSON is `{ productRef, name? }`.",
+      "doc": "`POST /v1/sdk/products/{productRef}/clone`",
       "docWasm": null,
       "rustFnName": "clone_product",
       "call": {
@@ -1652,7 +1904,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "email"
+          "local": null
         },
         {
           "name": "name",
@@ -1662,7 +1914,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "name"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -1689,6 +1941,54 @@
       "coreCall": "coerce_customer_options",
       "clientCallArgs": []
     },
+    "compileStringFieldInputSchemaJson": {
+      "core": "solvapay_core::mcp::compile_string_field_input_schema_json",
+      "names": {
+        "ts": "compileStringFieldInputSchemaJson",
+        "py": "compile_string_field_input_schema_json",
+        "rb": "compile_string_field_input_schema_json",
+        "go": "CompileStringFieldInputSchemaJson",
+        "rust": "compile_string_field_input_schema_json",
+        "c": "compileStringFieldInputSchemaJson"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "fields",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 90,
+      "section": "mcp-schema",
+      "doc": "Binding for `compileStringFieldInputSchemaJson`.",
+      "docWasm": null,
+      "rustFnName": "compile_string_field_input_schema_json_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "fields.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "compile_string_field_input_schema_json",
+      "clientCallArgs": []
+    },
     "configureMcpPlans": {
       "core": "solvapay_transport::SolvaPayClient::configure_mcp_plans",
       "names": {
@@ -1713,7 +2013,7 @@
       "artifact": "client",
       "emitOrder": 25,
       "section": "Group C",
-      "doc": "`PUT /v1/sdk/products/{productRef}/mcp/plans`\n\nArgs JSON is `{ productRef, ...params }`.",
+      "doc": "`PUT /v1/sdk/products/{productRef}/mcp/plans`",
       "docWasm": null,
       "rustFnName": "configure_mcp_plans",
       "call": {
@@ -1801,7 +2101,7 @@
       "artifact": "client",
       "emitOrder": 6,
       "section": "Group A",
-      "doc": "Hosted checkout session.",
+      "doc": "`POST /v1/sdk/checkout-sessions`",
       "docWasm": null,
       "rustFnName": "create_checkout_session",
       "call": {
@@ -1873,7 +2173,7 @@
       "artifact": "client",
       "emitOrder": 7,
       "section": "Group A",
-      "doc": "Customer portal session.",
+      "doc": "`POST /v1/sdk/customers/customer-sessions`",
       "docWasm": null,
       "rustFnName": "create_customer_session",
       "call": {
@@ -1909,7 +2209,7 @@
       "artifact": "client",
       "emitOrder": 10,
       "section": "Group B",
-      "doc": "`POST /v1/sdk/payment-intents` (plan checkout).",
+      "doc": "`POST /v1/sdk/payment-intents`",
       "docWasm": null,
       "rustFnName": "create_payment_intent",
       "call": {
@@ -1945,7 +2245,7 @@
       "artifact": "client",
       "emitOrder": 27,
       "section": "Group C",
-      "doc": "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).",
+      "doc": "`POST /v1/sdk/products/{productRef}/plans`",
       "docWasm": null,
       "rustFnName": "create_plan",
       "call": {
@@ -2017,7 +2317,7 @@
       "artifact": "client",
       "emitOrder": 11,
       "section": "Group B",
-      "doc": "`POST /v1/sdk/payment-intents` (credit top-up).",
+      "doc": "`POST /v1/sdk/payment-intents`",
       "docWasm": null,
       "rustFnName": "create_topup_payment_intent",
       "call": {
@@ -2226,6 +2526,65 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "customerRefFromClaims": {
+      "core": "solvapay_core::jwt_util::customer_ref_from_claims",
+      "names": {
+        "ts": "customerRefFromClaims",
+        "py": "customer_ref_from_claims",
+        "rb": "customer_ref_from_claims",
+        "go": "CustomerRefFromClaims",
+        "rust": "customer_ref_from_claims",
+        "c": "customerRefFromClaims"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "claims",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "claimPriority",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "claim_priority"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 82,
+      "section": "auth",
+      "doc": "Binding for `customerRefFromClaims`.",
+      "docWasm": null,
+      "rustFnName": "customer_ref_from_claims_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "claims.as_ref().unwrap_or(&Value::Null)",
+          "claim_priority.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "customer_ref_from_claims",
+      "clientCallArgs": []
+    },
     "decidePaywallOutcome": {
       "core": "solvapay_core::paywall_decision::decide_paywall_outcome",
       "names": {
@@ -2258,7 +2617,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "product"
+          "local": null
         },
         {
           "name": "checkoutUrl",
@@ -2278,7 +2637,7 @@
           "extract": "optionalValue",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "limits"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -2307,6 +2666,124 @@
       "coreCall": "decide_paywall_outcome",
       "clientCallArgs": []
     },
+    "decodeJwtPayloadUnverified": {
+      "core": "solvapay_core::jwt_util::decode_jwt_payload_unverified",
+      "names": {
+        "ts": "decodeJwtPayloadUnverified",
+        "py": "decode_jwt_payload_unverified",
+        "rb": "decode_jwt_payload_unverified",
+        "go": "DecodeJwtPayloadUnverified",
+        "rust": "decode_jwt_payload_unverified",
+        "c": "decodeJwtPayloadUnverified"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "token",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 81,
+      "section": "auth",
+      "doc": "Binding for `decodeJwtPayloadUnverified`.",
+      "docWasm": null,
+      "rustFnName": "decode_jwt_payload_unverified_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&token"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "decode_jwt_payload_unverified",
+      "clientCallArgs": []
+    },
+    "defaultMcpBearerExpectations": {
+      "core": "solvapay_core::jwt_util::default_mcp_bearer_expectations",
+      "names": {
+        "ts": "defaultMcpBearerExpectations",
+        "py": "default_mcp_bearer_expectations",
+        "rb": "default_mcp_bearer_expectations",
+        "go": "DefaultMcpBearerExpectations",
+        "rust": "default_mcp_bearer_expectations",
+        "c": "defaultMcpBearerExpectations"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "publicBaseUrl",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "public_base_url"
+        },
+        {
+          "name": "mcpPath",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "mcp_path"
+        },
+        {
+          "name": "nowUnixSecs",
+          "type": "i64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireI64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "now_unix_secs"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 83,
+      "section": "auth",
+      "doc": "Binding for `defaultMcpBearerExpectations`.",
+      "docWasm": null,
+      "rustFnName": "default_mcp_bearer_expectations_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&public_base_url",
+          "mcp_path.as_deref()",
+          "now_unix_secs"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "default_mcp_bearer_expectations",
+      "clientCallArgs": []
+    },
     "deletePlan": {
       "core": "solvapay_transport::SolvaPayClient::delete_plan",
       "names": {
@@ -2332,7 +2809,7 @@
       "artifact": "client",
       "emitOrder": 29,
       "section": "Group C",
-      "doc": "`DELETE /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef }`. Success value is `null`.",
+      "doc": "`DELETE /v1/sdk/products/{productRef}/plans/{planRef}`",
       "docWasm": null,
       "rustFnName": "delete_plan",
       "call": {
@@ -2373,7 +2850,7 @@
       "artifact": "client",
       "emitOrder": 22,
       "section": "Group C",
-      "doc": "`DELETE /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`. Success value is `null`.",
+      "doc": "`DELETE /v1/sdk/products/{productRef}`",
       "docWasm": null,
       "rustFnName": "delete_product",
       "call": {
@@ -2607,7 +3084,7 @@
       "artifact": "client",
       "emitOrder": 35,
       "section": "Group C",
-      "doc": "`DELETE /v1/sdk/auto-recharge`",
+      "doc": "`DELETE /v1/sdk/auto-recharge?customerRef=`",
       "docWasm": null,
       "rustFnName": "disable_auto_recharge",
       "call": {
@@ -2678,6 +3155,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "ensure_customer_next",
+      "clientCallArgs": []
+    },
+    "ensureOutputSchemaObjectType": {
+      "core": "solvapay_core::mcp::ensure_output_schema_object_type",
+      "names": {
+        "ts": "ensureOutputSchemaObjectType",
+        "py": "ensure_output_schema_object_type",
+        "rb": "ensure_output_schema_object_type",
+        "go": "EnsureOutputSchemaObjectType",
+        "rust": "ensure_output_schema_object_type",
+        "c": "ensureOutputSchemaObjectType"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "schema",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 91,
+      "section": "mcp-schema",
+      "doc": "Binding for `ensureOutputSchemaObjectType`.",
+      "docWasm": null,
+      "rustFnName": "ensure_output_schema_object_type_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "schema.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "ensure_output_schema_object_type",
       "clientCallArgs": []
     },
     "evaluateBalanceObservation": {
@@ -2761,7 +3286,7 @@
           "extract": "requireF64",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "remaining"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -2889,7 +3414,7 @@
           "extract": "requireF64",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "remaining"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -2972,7 +3497,7 @@
           "extract": "requireObject",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "response"
+          "local": null
         },
         {
           "name": "fallback",
@@ -2982,7 +3507,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "fallback"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -3007,6 +3532,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "extract_backend_customer_ref",
+      "clientCallArgs": []
+    },
+    "extractBearerToken": {
+      "core": "solvapay_core::jwt_util::extract_bearer_token",
+      "names": {
+        "ts": "extractBearerToken",
+        "py": "extract_bearer_token",
+        "rb": "extract_bearer_token",
+        "go": "ExtractBearerToken",
+        "rust": "extract_bearer_token",
+        "c": "extractBearerToken"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "authorizationHeader",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "authorization_header"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 80,
+      "section": "auth",
+      "doc": "Binding for `extractBearerToken`.",
+      "docWasm": null,
+      "rustFnName": "extract_bearer_token_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "authorization_header.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "extract_bearer_token",
       "clientCallArgs": []
     },
     "fetchJwks": {
@@ -3387,7 +3960,7 @@
       "artifact": "client",
       "emitOrder": 33,
       "section": "Group C",
-      "doc": "`GET /v1/sdk/auto-recharge`",
+      "doc": "`GET /v1/sdk/auto-recharge?customerRef=`",
       "docWasm": null,
       "rustFnName": "get_auto_recharge",
       "call": {
@@ -3494,7 +4067,7 @@
       "artifact": "client",
       "emitOrder": 2,
       "section": "Group A",
-      "doc": "Customer lookup by ref / externalRef / email.",
+      "doc": "`GET /v1/sdk/customers…`",
       "docWasm": null,
       "rustFnName": "get_customer",
       "call": {
@@ -3578,7 +4151,7 @@
       "artifact": "client",
       "emitOrder": 4,
       "section": "Group A",
-      "doc": "Credit balance for a customer.",
+      "doc": "`GET /v1/sdk/customers/{customerRef}/balance`",
       "docWasm": null,
       "rustFnName": "get_customer_balance",
       "call": {
@@ -3673,7 +4246,7 @@
       "artifact": "client",
       "emitOrder": 8,
       "section": "Group A",
-      "doc": "Merchant profile (`args_json` ignored; pass `\"{}\"`).",
+      "doc": "`GET /v1/sdk/merchant`",
       "docWasm": null,
       "rustFnName": "get_merchant",
       "call": {
@@ -3709,7 +4282,7 @@
       "artifact": "client",
       "emitOrder": 32,
       "section": "Group C",
-      "doc": "`GET /v1/sdk/payment-method`",
+      "doc": "`GET /v1/sdk/payment-method?customerRef=`",
       "docWasm": null,
       "rustFnName": "get_payment_method",
       "call": {
@@ -3745,7 +4318,7 @@
       "artifact": "client",
       "emitOrder": 9,
       "section": "Group A",
-      "doc": "Platform config (`args_json` ignored; pass `\"{}\"`).",
+      "doc": "`GET /v1/sdk/platform-config`",
       "docWasm": null,
       "rustFnName": "get_platform_config",
       "call": {
@@ -3881,7 +4454,7 @@
       "artifact": "client",
       "emitOrder": 18,
       "section": "Group C",
-      "doc": "`GET /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`.",
+      "doc": "`GET /v1/sdk/products/{productRef}`",
       "docWasm": null,
       "rustFnName": "get_product",
       "call": {
@@ -3920,7 +4493,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "country"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -4152,7 +4725,7 @@
       "artifact": "client",
       "emitOrder": 5,
       "section": "Group A",
-      "doc": "User info for a customer/product pair.",
+      "doc": "`POST /v1/sdk/user-info`",
       "docWasm": null,
       "rustFnName": "get_user_info",
       "call": {
@@ -4522,7 +5095,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -4766,7 +5339,7 @@
           "extract": "requireF64",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "remaining"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -4815,7 +5388,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "currency"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -4914,7 +5487,7 @@
       "artifact": "client",
       "emitOrder": 26,
       "section": "Group C",
-      "doc": "`GET /v1/sdk/products/{productRef}/plans`\n\nArgs JSON is `{ productRef }`.",
+      "doc": "`GET /v1/sdk/products/{productRef}/plans`",
       "docWasm": null,
       "rustFnName": "list_plans",
       "call": {
@@ -4952,7 +5525,7 @@
       "artifact": "client",
       "emitOrder": 19,
       "section": "Group C",
-      "doc": "`GET /v1/sdk/products` (`args_json` ignored; pass `\"{}\"`).",
+      "doc": "`GET /v1/sdk/products`",
       "docWasm": null,
       "rustFnName": "list_products",
       "call": {
@@ -5576,7 +6149,7 @@
           "extract": "rawValueOrNull",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "response"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -5624,7 +6197,7 @@
           "extract": "rawValueOrNull",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "response"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -5648,6 +6221,65 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "normalize_reactivate_response",
+      "clientCallArgs": []
+    },
+    "overlayClaimedLimits": {
+      "core": "solvapay_core::paywall_decision::overlay_claimed_limits",
+      "names": {
+        "ts": "overlayClaimedLimits",
+        "py": "overlay_claimed_limits",
+        "rb": "overlay_claimed_limits",
+        "go": "OverlayClaimedLimits",
+        "rust": "overlay_claimed_limits",
+        "c": "overlayClaimedLimits"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "limits",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "claimed",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 60,
+      "section": "paywall-decision",
+      "doc": "Binding for `overlayClaimedLimits`.",
+      "docWasm": null,
+      "rustFnName": "overlay_claimed_limits_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "limits.as_ref().unwrap_or(&Value::Null)",
+          "claimed"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "overlay_claimed_limits",
       "clientCallArgs": []
     },
     "paywallErrorToClientPayload": {
@@ -5767,7 +6399,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         },
         {
           "name": "structuredContent",
@@ -6136,7 +6768,7 @@
       "artifact": "client",
       "emitOrder": 12,
       "section": "Group B",
-      "doc": "`POST /v1/sdk/payment-intents/{id}/process`",
+      "doc": "`POST /v1/sdk/payment-intents/{paymentIntentId}/process`",
       "docWasm": null,
       "rustFnName": "process_payment_intent",
       "call": {
@@ -6256,7 +6888,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "status"
+          "local": null
         },
         {
           "name": "message",
@@ -6266,7 +6898,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "message"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -6508,7 +7140,7 @@
           "extract": "requireTyped",
           "typedAs": "AuthResolutionInput",
           "typedStyle": "turbofish",
-          "local": "input"
+          "local": null
         }
       ],
       "splitPathRefs": [],
@@ -7964,7 +8596,7 @@
       "artifact": "client",
       "emitOrder": 1,
       "section": "Group A",
-      "doc": "`PATCH /v1/sdk/customers/{customerRef}`\n\nArgs JSON is `{ customerRef, ...body }` — Rust splits path vs body.",
+      "doc": "`PATCH /v1/sdk/customers/{customerRef}`",
       "docWasm": null,
       "rustFnName": "update_customer",
       "call": {
@@ -8006,7 +8638,7 @@
       "artifact": "client",
       "emitOrder": 28,
       "section": "Group C",
-      "doc": "`PUT /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef, ...params }`.",
+      "doc": "`PUT /v1/sdk/products/{productRef}/plans/{planRef}`",
       "docWasm": null,
       "rustFnName": "update_plan",
       "call": {
@@ -8048,7 +8680,7 @@
       "artifact": "client",
       "emitOrder": 21,
       "section": "Group C",
-      "doc": "`PUT /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef, ...params }`.",
+      "doc": "`PUT /v1/sdk/products/{productRef}`",
       "docWasm": null,
       "rustFnName": "update_product",
       "call": {
@@ -8642,7 +9274,7 @@
           "extract": "optionalF64",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "amount"
+          "local": null
         },
         {
           "name": "currency",
@@ -8652,7 +9284,7 @@
           "extract": "optionalString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": "currency"
+          "local": null
         }
       ],
       "splitPathRefs": [],

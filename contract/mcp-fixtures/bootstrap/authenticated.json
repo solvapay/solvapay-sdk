@@ -138,9 +138,6 @@
       ],
       "customer": {
         "ref": "cus_1",
-        "canCall": true,
-        "remainingCalls": 2.0,
-        "nextAction": "checkout",
         "purchase": {
           "customerRef": "cus_1",
           "email": null,
@@ -163,9 +160,12 @@
           "meterRef": null,
           "total": null,
           "used": 0,
-          "remaining": null,
+          "remaining": 2,
           "percentUsed": null
-        }
+        },
+        "canCall": true,
+        "remainingCalls": 2.0,
+        "nextAction": "checkout"
       },
       "checkoutUrl": "https://checkout.example/s",
       "checkoutPurpose": null,

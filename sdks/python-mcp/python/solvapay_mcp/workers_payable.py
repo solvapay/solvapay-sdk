@@ -12,11 +12,30 @@ import random
 import time
 from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass, field
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from types import ModuleType
 from typing import Protocol
 
 Handler = Callable[[dict[str, object], "WorkersResponseContext"], Awaitable[object]]
 GetCustomerRef = Callable[[dict[str, object]], str | Awaitable[str]]
+
+
+def _load_generated_drivers() -> ModuleType:
+    import solvapay
+
+    path = Path(solvapay.__file__).resolve().parent / "drivers.generated.py"
+    spec = spec_from_file_location("solvapay._drivers_generated_workers", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load generated drivers from {path}")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_generated_drivers = _load_generated_drivers()
+run_generated_gate_loop_async = _generated_drivers.run_generated_gate_loop_async
+run_generated_payable_loop_async = _generated_drivers.run_generated_payable_loop_async
 
 
 class _WorkersWasmClient(Protocol):
@@ -224,37 +243,22 @@ def _resolve_customer_ref(
     if isinstance(raw, str):
         payload["argsCustomerRef"] = raw
     result = _call_js_sync(js_module, "resolveCustomerRef", payload)
-    if isinstance(result, str) and result.strip():
+    if isinstance(result, str) and result.strip() and result.strip() != "anonymous":
         return result.strip()
-    return "anonymous"
+    raise _workers().WorkersSolvaPayError("customer_ref missing from MCP auth context")
 
 
 def _overlay_claimed_limits(
     js_module: object, limits: dict[str, object], claimed: int
 ) -> dict[str, object]:
-    remaining = limits.get("remaining")
-    remaining_f = float(remaining) if isinstance(remaining, int | float) else 0.0
-    within = limits.get("withinLimits") is True
     evaluation = _call_js_sync(
         js_module,
-        "evaluateClaimedLimits",
-        {"withinLimits": within, "remaining": remaining_f, "claimed": float(claimed)},
+        "overlayClaimedLimits",
+        {"limits": limits, "claimed": float(claimed)},
     )
     if not isinstance(evaluation, dict):
-        raise _workers().WorkersSolvaPayError("evaluateClaimedLimits returned a non-object value")
-    overlaid = dict(limits)
-    if remaining_f == -1.0 or (within and remaining_f == 0.0):
-        overlaid["withinLimits"] = evaluation.get("withinLimits")
-        overlaid["remaining"] = evaluation.get("remaining")
-        return overlaid
-    if evaluation.get("withinLimits") is not True:
-        overlaid["withinLimits"] = False
-        overlaid["remaining"] = 0
-        return overlaid
-    rem = evaluation.get("remaining")
-    overlaid["withinLimits"] = True
-    overlaid["remaining"] = (float(rem) if isinstance(rem, int | float) else 0.0) + 1.0
-    return overlaid
+        raise _workers().WorkersSolvaPayError("overlayClaimedLimits returned a non-object value")
+    return {str(k): v for k, v in evaluation.items()}
 
 
 def _apply_gate_cache(cache_store: MutableMapping[str, dict[str, object]], cache: object) -> None:
@@ -433,8 +437,7 @@ async def workers_gate(
     claimed: dict[str, int],
 ) -> tuple[str, dict[str, object] | None, dict[str, object] | None]:
     """Drive `gateNext`. Returns (kind, allow_limits_or_none, gate_or_none)."""
-    state: object = None
-    event: dict[str, object] = {
+    start_event: dict[str, object] = {
         "kind": "start",
         "customerRef": customer_ref,
         "product": product,
@@ -442,39 +445,30 @@ async def workers_gate(
         "startedMs": _now_ms(),
         "randomUnit": random.random(),
     }
-    while True:
-        out = _call_js_sync(js_module, "gateNext", {"state": state, "event": event})
-        payload = _as_object_map(out, "gateNext")
-        raw_state = payload.get("state")
-        state = raw_state if isinstance(raw_state, dict) else None
-        raw_action = payload.get("action")
-        if not isinstance(raw_action, dict):
-            raise _workers().WorkersSolvaPayError("gateNext returned unexpected action")
-        action = {str(k): v for k, v in raw_action.items()}
-        kind = action.get("kind")
-        if kind == "ensureCustomer":
-            backend = await _workers_ensure_customer(
-                client, js_module, str(action.get("customerRef")), customer_cache
-            )
-            event = {"kind": "customerResolved", "backendRef": backend, "nowMs": _now_ms()}
-            continue
-        if kind == "readLimitsCache":
-            key = str(action.get("key"))
+
+    class _Host:
+        def now_ms(self) -> int:
+            return _now_ms()
+
+        def read_limits_cache(self, key: str) -> dict[str, object] | None:
             cached = limits_cache.get(key)
-            now = _now_ms()
-            if cached is not None:
-                event = {
-                    "kind": "limitsCacheEntry",
-                    "found": True,
-                    "remaining": cached["remaining"],
-                    "limits": cached.get("limits"),
-                    "timestampMs": cached["timestamp"],
-                    "nowMs": now,
-                }
-            else:
-                event = {"kind": "limitsCacheEntry", "found": False, "nowMs": now}
-            continue
-        if kind == "checkLimits":
+            if cached is None:
+                return None
+            return {
+                "remaining": cached["remaining"],
+                "limits": cached.get("limits"),
+                "timestampMs": cached["timestamp"],
+            }
+
+        def apply_cache(self, cache: object) -> None:
+            _apply_gate_cache(limits_cache, cache)
+
+        async def ensure_customer(self, customer_ref: str) -> str:
+            return await _workers_ensure_customer(
+                client, js_module, customer_ref, customer_cache
+            )
+
+        async def check_limits(self, action: dict[str, object]) -> object:
             delete_key = action.get("cacheDeleteKey")
             if isinstance(delete_key, str):
                 limits_cache.pop(delete_key, None)
@@ -494,26 +488,31 @@ async def workers_gate(
                 f"{action.get('meterName')}"
             )
             claimed[dedup_key] = claimed.get(dedup_key, 0) + 1
-            event = {
-                "kind": "limitsResult",
-                "limits": _overlay_claimed_limits(
-                    js_module, dict(limits_value), claimed[dedup_key]
-                ),
-                "nowMs": _now_ms(),
-            }
-            continue
-        if kind in ("allow", "gate"):
-            _apply_gate_cache(limits_cache, action.get("cache"))
-            if kind == "gate":
-                gate = action.get("gate")
-                if not isinstance(gate, dict):
-                    raise _workers().WorkersSolvaPayError(
-                        "gateNext gate action missing gate payload"
-                    )
-                return "paywall", None, dict(gate)
-            last_limits = action.get("limits") if isinstance(action.get("limits"), dict) else {}
-            return "allow", dict(last_limits) if isinstance(last_limits, dict) else {}, None
-        raise _workers().WorkersSolvaPayError(f"gateNext returned unknown action kind: {kind}")
+            return _overlay_claimed_limits(js_module, dict(limits_value), claimed[dedup_key])
+
+    def _gate_next(state: object, event: object) -> dict[str, object]:
+        out = _call_js_sync(js_module, "gateNext", {"state": state, "event": event})
+        payload = _as_object_map(out, "gateNext")
+        raw_action = payload.get("action")
+        if not isinstance(raw_action, dict):
+            raise _workers().WorkersSolvaPayError("gateNext returned unexpected action")
+        return {
+            "state": payload.get("state"),
+            "action": {str(k): v for k, v in raw_action.items()},
+        }
+
+    stepped = await run_generated_gate_loop_async(_gate_next, _Host(), start_event)
+    action = stepped["action"]
+    kind = action.get("kind")
+    if kind == "gate":
+        gate = action.get("gate")
+        if not isinstance(gate, dict):
+            raise _workers().WorkersSolvaPayError("gateNext gate action missing gate payload")
+        return "paywall", None, dict(gate)
+    last_limits = action.get("limits") if isinstance(action.get("limits"), dict) else {}
+    return "allow", dict(last_limits) if isinstance(last_limits, dict) else {}, None
+
+
 
 
 async def workers_invoke_payable(
@@ -528,24 +527,26 @@ async def workers_invoke_payable(
 ) -> dict[str, object]:
     """Port of `_invoke_payable` over wasm exports + `WasmClient`."""
     customer_ref = _resolve_customer_ref(js_module, args, spec.get_customer_ref)
-    state: object = None
-    event: dict[str, object] = {
-        "kind": "start",
-        "customerRef": customer_ref,
-        "product": spec.product,
-        "usageType": spec.usage_type,
-        "startedMs": _now_ms(),
-    }
-    while True:
+
+    def _payable_next(state: object, event: object) -> dict[str, object]:
         out = _call_js_sync(js_module, "invokePayableNext", {"state": state, "event": event})
         payload = _as_object_map(out, "invokePayableNext")
-        state = payload.get("state")
         raw_action = payload.get("action")
         if not isinstance(raw_action, dict):
             raise _workers().WorkersSolvaPayError("invokePayableNext returned unexpected action")
-        action = {str(k): v for k, v in raw_action.items()}
-        kind = action.get("kind")
-        if kind == "runGate":
+        return {
+            "state": payload.get("state"),
+            "action": {str(k): v for k, v in raw_action.items()},
+        }
+
+    class _Host:
+        def now_ms(self) -> int:
+            return _now_ms()
+
+        def random_unit(self) -> float:
+            return random.random()
+
+        async def run_gate(self, action: dict[str, object]) -> dict[str, object]:
             gate_kind, limits, gate = await workers_gate(
                 client,
                 js_module,
@@ -558,21 +559,21 @@ async def workers_invoke_payable(
             )
             if gate_kind == "paywall":
                 assert gate is not None
-                message = str(gate.get("message") or "Payment required")
-                event = {"kind": "gatePaywall", "gate": gate, "message": message}
-                continue
-            event = {
-                "kind": "gateAllow",
+                return {
+                    "kind": "paywall",
+                    "gate": gate,
+                    "message": str(gate.get("message") or "Payment required"),
+                }
+            return {
+                "kind": "allow",
                 "customerRef": str(action.get("customerRef") or customer_ref),
                 "limits": dict(limits or {}),
             }
-            continue
-        if kind == "invokeHandler":
+
+        async def invoke_handler(self, action: dict[str, object]) -> dict[str, object]:
             limits_raw = action.get("limits")
             handler_limits = (
-                {str(k): v for k, v in limits_raw.items()}
-                if isinstance(limits_raw, dict)
-                else {}
+                {str(k): v for k, v in limits_raw.items()} if isinstance(limits_raw, dict) else {}
             )
             snapshot = _call_js_sync(
                 js_module,
@@ -594,42 +595,38 @@ async def workers_invoke_payable(
             try:
                 returned = await spec.handler(args, ctx)
             except PaywallError as err:
-                gate = dict(err.structured_content)
-                event = {
-                    "kind": "handlerPaywall",
-                    "gate": gate,
+                return {
+                    "kind": "paywall",
+                    "gate": dict(err.structured_content),
                     "message": str(err),
                 }
-                continue
             except Exception as err:
-                event = {
-                    "kind": "handlerErr",
-                    "message": str(err),
-                    "nowMs": _now_ms(),
-                    "randomUnit": random.random(),
-                }
-                continue
-            envelope = _call_js_sync(js_module, "assertResponseResult", {"value": returned})
-            event = {
-                "kind": "handlerOk",
-                "envelope": envelope,
-                "nowMs": _now_ms(),
-                "randomUnit": random.random(),
+                return {"kind": "err", "message": str(err)}
+            return {
+                "kind": "ok",
+                "envelope": _call_js_sync(js_module, "assertResponseResult", {"value": returned}),
             }
-            continue
-        if kind == "done":
-            track = action.get("track")
-            if isinstance(track, Mapping):
-                request = track.get("request")
-                if isinstance(request, Mapping):
-                    _workers().unwrap_wasm_envelope(
-                        await client.track_usage(json.dumps(dict(request)))
-                    )
-            result = action.get("result")
-            if not isinstance(result, dict):
-                raise _workers().WorkersSolvaPayError("invokePayableNext done missing result")
-            return {str(k): v for k, v in result.items()}
-        raise _workers().WorkersSolvaPayError(f"invokePayableNext unknown action kind: {kind}")
+
+        async def track_usage(self, request: object) -> None:
+            if isinstance(request, Mapping):
+                _workers().unwrap_wasm_envelope(
+                    await client.track_usage(json.dumps(dict(request)))
+                )
+
+    result = await run_generated_payable_loop_async(
+        _payable_next,
+        _Host(),
+        {
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": spec.product,
+            "usageType": spec.usage_type,
+            "startedMs": _now_ms(),
+        },
+    )
+    if not isinstance(result, dict):
+        raise _workers().WorkersSolvaPayError("invokePayableNext done missing result")
+    return {str(k): v for k, v in result.items()}
 
 
 async def complete_invoke_handler(

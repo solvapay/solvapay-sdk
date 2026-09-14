@@ -623,27 +623,17 @@ fn limits_key(backend: &str, product: &str, meter: &str) -> String {
 
 /// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<GateDriverState, HelperErrorResult> {
-    let value = state.ok_or_else(|| HelperErrorResult::transport("gate_next state is required"))?;
-    serde_json::from_value(value.clone())
-        .map_err(|err| HelperErrorResult::transport(format!("gate_next invalid state: {err}")))
+    crate::driver_util::require_state(state, "gate_next")
 }
 
-/// Read a required string field from a JSON object.
+/// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| HelperErrorResult::transport(format!("gate_next {key} is required")))
+    crate::driver_util::require_str(value, key, "gate_next")
 }
 
 /// Read a required number field from a JSON object.
 fn require_f64(value: &Value, key: &str) -> Result<f64, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_f64)
-        .ok_or_else(|| HelperErrorResult::transport(format!("gate_next {key} must be a number")))
+    crate::driver_util::require_f64(value, key, "gate_next")
 }
 
 #[cfg(test)]

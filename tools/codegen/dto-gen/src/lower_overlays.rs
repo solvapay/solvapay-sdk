@@ -441,6 +441,7 @@ mod tests {
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
+            driver_loops: None,
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("LimitResponseWithPlan").expect("overlay") {
@@ -538,6 +539,7 @@ mod tests {
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
+            driver_loops: None,
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("TopupProcessResult").expect("overlay") {

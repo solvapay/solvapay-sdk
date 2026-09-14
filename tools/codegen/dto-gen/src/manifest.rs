@@ -34,6 +34,40 @@ pub struct Manifest {
     /// Manifest-frozen runtime defaults used by every language facade.
     #[serde(default)]
     pub defaults: DefaultsDef,
+    /// Generated host driver loops.
+    #[serde(default, rename = "driverLoops")]
+    pub driver_loops: Option<DriverLoopsDef>,
+}
+
+/// Host driver loop catalog (`driverLoops:`).
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct DriverLoopsDef {
+    /// Paywall `gate_next` loop.
+    #[serde(default)]
+    pub gate: Option<DriverLoopDef>,
+}
+
+/// One generated driver loop.
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct DriverLoopDef {
+    /// I/O actions and the host events they produce.
+    #[serde(default)]
+    pub io: Vec<DriverIoDef>,
+    /// Terminal action kinds.
+    #[serde(default)]
+    pub terminal: Vec<String>,
+    /// Usage action kinds that must not appear during decide.
+    #[serde(default)]
+    pub usage: Vec<String>,
+}
+
+/// One I/O action → event pair.
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct DriverIoDef {
+    /// `GateAction` kind.
+    pub action: String,
+    /// Host event `kind` returned after the I/O.
+    pub event: String,
 }
 
 /// TS overlay for core boundary types (`boundaryTypesTs:`).

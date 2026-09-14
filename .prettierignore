@@ -24,6 +24,7 @@ docs/api.json
 **/*.generated.d.ts
 **/*.generated.ts
 **/*.generated.test.ts
+**/*.generated.md
 sdks/typescript/server/src/types/generated.ts
 sdks/typescript/core/src/native-core.ts
 sdks/typescript/core/src/native-helpers.ts

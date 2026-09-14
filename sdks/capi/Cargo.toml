@@ -12,7 +12,7 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 name = "solvapay_c"
 
 [dependencies]
-solvapay-core = { path = "../../core/solvapay-core", default-features = false, features = ["server"] }
+solvapay-core = { path = "../../core/solvapay-core", default-features = false, features = ["server", "conformance"] }
 solvapay-mcp-core = { path = "../../core/solvapay-mcp" }
 solvapay-dto = { path = "../../core/solvapay-dto" }
 solvapay-transport = { path = "../../core/solvapay-transport" }

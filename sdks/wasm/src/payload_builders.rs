@@ -9,6 +9,7 @@
 
 use serde_json::Value;
 use solvapay_core::{
+    business_country_display_names, business_country_options_table, country_to_tax_id_type,
     credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
     format_vat_summary_label, get_business_country_options, get_customer_address_field_errors,
     get_postal_code_field_label, get_postal_code_placeholder,
@@ -18,7 +19,8 @@ use solvapay_core::{
     is_zero_decimal_currency, minor_units_per_major, postal_code_required_countries,
     resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, state_required_countries, tax_id_types, tax_not_collected_note,
+    should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
+    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     to_major_units, validate_business_details, BusinessDetailsInput, CreditsToDisplayInput,
     SdkError, SellerIdentityInput,
 };
@@ -474,6 +476,15 @@ pub fn tax_id_types_binding(args_json: String) -> String {
     })
 }
 
+/// Binding for `BUSINESS_COUNTRY_OPTIONS`.
+#[wasm_bindgen(js_name = "BUSINESS_COUNTRY_OPTIONS")]
+pub fn business_country_options_table_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&business_country_options_table())
+    })
+}
+
 /// Binding for `isTaxIdType`.
 #[wasm_bindgen(js_name = "isTaxIdType")]
 pub fn is_tax_id_type_binding(args_json: String) -> String {
@@ -481,6 +492,60 @@ pub fn is_tax_id_type_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let value = require_string(&args, "value")?;
         Ok(Value::Bool(is_tax_id_type(&value)))
+    })
+}
+
+/// Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+#[wasm_bindgen(js_name = "BUSINESS_COUNTRY_DISPLAY_NAMES")]
+pub fn business_country_display_names_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&business_country_display_names())
+    })
+}
+
+/// Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+#[wasm_bindgen(js_name = "SUPPORTED_BUSINESS_COUNTRIES")]
+pub fn supported_business_countries_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&supported_business_countries())
+    })
+}
+
+/// Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+#[wasm_bindgen(js_name = "COUNTRY_TO_TAX_ID_TYPE")]
+pub fn country_to_tax_id_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&country_to_tax_id_type())
+    })
+}
+
+/// Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+#[wasm_bindgen(js_name = "TAX_ID_EXAMPLE_BY_COUNTRY")]
+pub fn tax_id_example_by_country_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_id_example_by_country())
+    })
+}
+
+/// Binding for `TAX_BEHAVIORS`.
+#[wasm_bindgen(js_name = "TAX_BEHAVIORS")]
+pub fn tax_behaviors_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_behaviors())
+    })
+}
+
+/// Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+#[wasm_bindgen(js_name = "TAX_EXCLUSIVE_CURRENCIES")]
+pub fn tax_exclusive_currencies_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&tax_exclusive_currencies())
     })
 }
 

@@ -21,19 +21,25 @@ use crate::decisions::classify_lookup_error_binding;
 use crate::decisions::classify_paywall_state_binding;
 use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
+use crate::decisions::compile_string_field_input_schema_json_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
+use crate::decisions::customer_ref_from_claims_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::decode_jwt_payload_unverified_binding;
+use crate::decisions::default_mcp_bearer_expectations_binding;
 use crate::decisions::derive_active_products_binding;
 use crate::decisions::derive_default_view_binding;
 use crate::decisions::ensure_customer_next_binding;
+use crate::decisions::ensure_output_schema_object_type_binding;
 use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_claimed_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::extract_bearer_token_binding;
 use crate::decisions::format_compact_credits_binding;
 use crate::decisions::gate_next_binding;
 use crate::decisions::get_history_next_binding;
@@ -49,6 +55,7 @@ use crate::decisions::meter_name_binding;
 use crate::decisions::next_action_for_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
+use crate::decisions::overlay_claimed_limits_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
@@ -93,6 +100,9 @@ use crate::payload_builders::build_payable_tool_result_binding;
 use crate::payload_builders::build_prompt_descriptor_metadata_binding;
 use crate::payload_builders::build_prompt_user_message_binding;
 use crate::payload_builders::build_tool_descriptor_metadata_binding;
+use crate::payload_builders::business_country_display_names_binding;
+use crate::payload_builders::business_country_options_table_binding;
+use crate::payload_builders::country_to_tax_id_type_binding;
 use crate::payload_builders::credits_to_display_minor_units_binding;
 use crate::payload_builders::derive_icons_binding;
 use crate::payload_builders::derive_tax_id_type_binding;
@@ -129,6 +139,10 @@ use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
 use crate::payload_builders::state_required_countries_binding;
+use crate::payload_builders::supported_business_countries_binding;
+use crate::payload_builders::tax_behaviors_binding;
+use crate::payload_builders::tax_exclusive_currencies_binding;
+use crate::payload_builders::tax_id_example_by_country_binding;
 use crate::payload_builders::tax_id_types_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
@@ -243,12 +257,28 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_history_next_binding, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_claimed_limits_binding, m)?)?;
     m.add_function(wrap_pyfunction!(history_rows_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(overlay_claimed_limits_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_plan_shape_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_account_state_binding, m)?)?;
     m.add_function(wrap_pyfunction!(derive_default_view_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_display_mode_binding, m)?)?;
     m.add_function(wrap_pyfunction!(plan_consequence_binding, m)?)?;
     m.add_function(wrap_pyfunction!(format_compact_credits_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_bearer_token_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(decode_jwt_payload_unverified_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(customer_ref_from_claims_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        default_mcp_bearer_expectations_binding,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        compile_string_field_input_schema_json_binding,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        ensure_output_schema_object_type_binding,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(format_price_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_show_tax_row_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_business_details_binding, m)?)?;
@@ -299,16 +329,23 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(state_required_countries_binding, m)?)?;
     m.add_function(wrap_pyfunction!(tax_id_types_binding, m)?)?;
     m.add_function(wrap_pyfunction!(mcp_view_maps_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(business_country_options_table_binding, m)?)?;
     m.add_function(wrap_pyfunction!(derive_icons_binding, m)?)?;
     m.add_function(wrap_pyfunction!(is_tax_id_type_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(business_country_display_names_binding, m)?)?;
     m.add_function(wrap_pyfunction!(build_tool_descriptor_metadata_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(supported_business_countries_binding, m)?)?;
     m.add_function(wrap_pyfunction!(
         build_prompt_descriptor_metadata_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(country_to_tax_id_type_binding, m)?)?;
     m.add_function(wrap_pyfunction!(build_prompt_user_message_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(tax_id_example_by_country_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_public_base_url_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(tax_behaviors_binding, m)?)?;
     m.add_function(wrap_pyfunction!(build_payable_tool_result_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(tax_exclusive_currencies_binding, m)?)?;
     m.add_function(wrap_pyfunction!(invoke_payable_next_binding, m)?)?;
     Ok(())
 }

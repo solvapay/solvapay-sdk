@@ -50,6 +50,7 @@ function isErrorCase(fileName: string): boolean {
 const fixtureFiles = discoverFixtureFiles(FIXTURES_ROOT)
 
 const NON_CLIENT_FIXTURES = [
+  'auth/extract-bearer-case-insensitive.json',
   'business-details/address/postal-countries.json',
   'business-details/address/postal-label-us.json',
   'business-details/address/postal-placeholder-us.json',
@@ -377,6 +378,7 @@ const NON_CLIENT_FIXTURES = [
   'helper-usage/meter-fields-absent.json',
   'helper-usage/meter-id-fallback.json',
   'helper-usage/no-active-purchase.json',
+  'helper-usage/null-purchase-honors-limits.json',
   'helper-usage/one-period-only.json',
   'helper-usage/percent-used-clamp.json',
   'helper-usage/remaining-clamp.json',
@@ -511,6 +513,10 @@ const NON_CLIENT_FIXTURES = [
   'paywall/decision/gate-next-start-null-usage-type.json',
   'paywall/decision/gate-next-start-records-tool-name.json',
   'paywall/decision/invoke-payable-next-start-run-gate.json',
+  'paywall/decision/overlay-claimed-over-cap.json',
+  'paywall/decision/overlay-claimed-throttle.json',
+  'paywall/decision/overlay-claimed-under-cap.json',
+  'paywall/decision/overlay-claimed-unlimited.json',
   'paywall/decision/resolve-default.json',
   'paywall/decision/resolve-empty-string-falls-through.json',
   'paywall/decision/resolve-env-fallback.json',

@@ -188,14 +188,7 @@ fn on_results(
 }
 
 fn require_state(state: Option<&Value>) -> Result<GetHistoryState, HelperErrorResult> {
-    let Some(state) = state.filter(|v| !v.is_null()) else {
-        return Err(HelperErrorResult::transport(
-            "get_history_next state is required",
-        ));
-    };
-    serde_json::from_value(state.clone()).map_err(|err| {
-        HelperErrorResult::transport(format!("get_history_next state is invalid: {err}"))
-    })
+    crate::driver_util::require_state(state, "get_history_next")
 }
 
 /// One charge table row.

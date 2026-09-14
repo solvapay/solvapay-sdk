@@ -1,0 +1,13 @@
+{
+  "suite": "auth",
+  "case": "extract-bearer-case-insensitive",
+  "input": {
+    "fn": "extractBearerToken",
+    "args": {
+      "authorizationHeader": "bearer abc.def.ghi"
+    }
+  },
+  "expect": {
+    "result": "abc.def.ghi"
+  }
+}

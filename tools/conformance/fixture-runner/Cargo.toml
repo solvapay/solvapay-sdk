@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-solvapay-core = { path = "../../../core/solvapay-core" }
+solvapay-core = { path = "../../../core/solvapay-core", features = ["conformance"] }
 thiserror = { workspace = true }
 walkdir = { workspace = true }
 

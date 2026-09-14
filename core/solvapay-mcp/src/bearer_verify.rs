@@ -6,6 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use solvapay_core::extract_bearer_token_ref;
+
+pub use solvapay_core::customer_ref_from_claims;
 
 /// Frozen 401 status.
 const STATUS_UNAUTHORIZED: u16 = 401;
@@ -85,44 +88,7 @@ fn unauthorized(message: &'static str) -> VerifyBearerResult {
 /// Case-insensitive `bearer ` prefix; empty → none.
 #[must_use]
 pub fn extract_bearer_token(authorization_header: Option<&str>) -> Option<&str> {
-    let header = authorization_header?;
-    if header.len() < 7 {
-        return None;
-    }
-    if !header[..7].eq_ignore_ascii_case("bearer ") {
-        return None;
-    }
-    let token = header[7..].trim();
-    if token.is_empty() {
-        None
-    } else {
-        Some(token)
-    }
-}
-
-/// Walk `customerRef` → `customer_ref` → `sub` (or `claim_priority`).
-#[must_use]
-pub fn customer_ref_from_claims(
-    claims: &Value,
-    claim_priority: Option<&[String]>,
-) -> Option<String> {
-    let default = ["customerRef", "customer_ref", "sub"];
-    let owned: Vec<String>;
-    let names: Vec<&str> = if let Some(priority) = claim_priority.filter(|p| !p.is_empty()) {
-        owned = priority.to_vec();
-        owned.iter().map(String::as_str).collect()
-    } else {
-        default.to_vec()
-    };
-    for claim in names {
-        if let Some(s) = claims.get(claim).and_then(Value::as_str) {
-            let trimmed = s.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_owned());
-            }
-        }
-    }
-    None
+    extract_bearer_token_ref(authorization_header)
 }
 
 /// Verify an MCP OAuth access token (RS256 / ES256 via JWKS, or explicit HS256).
@@ -170,8 +136,11 @@ fn verify_inner(input: &VerifyBearerInput) -> VerifyBearerResult {
     if !audience_matches(&payload, &input.expected_audience) {
         return unauthorized(MSG_AUDIENCE);
     }
-    let Some(customer_ref) = customer_ref_from_claims(&payload, input.claim_priority.as_deref())
-    else {
+    let claim_priority = input
+        .claim_priority
+        .as_ref()
+        .map(|names| Value::Array(names.iter().cloned().map(Value::String).collect()));
+    let Some(customer_ref) = customer_ref_from_claims(&payload, claim_priority.as_ref()) else {
         return unauthorized(MSG_MISSING_REF);
     };
     VerifyBearerResult::Ok {

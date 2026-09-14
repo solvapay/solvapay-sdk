@@ -149,7 +149,8 @@ human.
 - Semver intent (what is a breaking change)
 
 Escape-hatch usage is small enough to enumerate in review: 27 `verbatimBody` +
-1 `verbatimBodyWasm`, 8 `typedAs`, 2 `hostInjected`, 9 `clientCallArgs`.
+1 `verbatimBodyWasm`, plus `tsWrapper` / extract overrides. Client split-call
+tokens and restated `args:`/`doc:` blocks are derived from the signature.
 
 ## Five implementation phases
 
@@ -263,14 +264,12 @@ attribute: 69 in `solvapay-core`, and the 36 client methods in
 
 One deviation from the plan above: the **28 verbatim bodies were relocated, not
 retired.** Shim-emission residue that the AST cannot supply now lives in
-`contract/manifest/binding-residue.yaml` (1,377 lines, 104 keys, keyed by
-canonical id; dto-gen errors on a key with no matching exported symbol). Its
-field census is the escape-hatch list from
-[Derivable vs never derivable](#derivable-vs-never-derivable) — 27
-`verbatimBody` + 1 `verbatimBodyWasm`, 9 `clientCallArgs`, 26 `tsWrapper`, 24
-`omitCoreCall` — plus `args:`/`doc:`/`callArgs:` overrides. Net hand-maintained
-descriptor YAML falls by 2,197 lines. Shrinking that residue is follow-on work;
-do not let it grow.
+`contract/manifest/binding-residue.yaml` (keyed by canonical id; dto-gen errors
+on a key with no matching exported symbol). Restated `args:` / `doc:` /
+`clientCallArgs` were drained; the remaining keys are `verbatimBody`,
+`tsWrapper`, and extract/host-injected overrides the scanner cannot see.
+`residue_drain` plus `pnpm residue:check` reject both redundant keys and a
+growing key count.
 
 ### Phase 5 — generated facade conformance harnesses
 

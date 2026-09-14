@@ -121,8 +121,6 @@ impl SolvaPayClient {
     }
 
     /// `PATCH /v1/sdk/customers/{customerRef}`
-    ///
-    /// Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
     pub(crate) fn update_customer(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -143,7 +141,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Customer lookup by ref / externalRef / email.
+    /// `GET /v1/sdk/customers…`
     pub(crate) fn get_customer(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -157,7 +155,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Grant credits to a customer.
+    /// `POST /v1/sdk/customers/{customerRef}/credits`
     pub(crate) fn assign_credits(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -171,7 +169,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Credit balance for a customer.
+    /// `GET /v1/sdk/customers/{customerRef}/balance`
     pub(crate) fn get_customer_balance(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -185,7 +183,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// User info for a customer/product pair.
+    /// `POST /v1/sdk/user-info`
     pub(crate) fn get_user_info(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -199,7 +197,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Hosted checkout session.
+    /// `POST /v1/sdk/checkout-sessions`
     pub(crate) fn create_checkout_session(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -213,7 +211,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Customer portal session.
+    /// `POST /v1/sdk/customers/customer-sessions`
     pub(crate) fn create_customer_session(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -227,7 +225,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Merchant profile (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/merchant`
     pub(crate) fn get_merchant(&self, args_json: String) -> String {
         let _ = args_json;
         let client = Arc::clone(&self.client);
@@ -238,7 +236,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// Platform config (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/platform-config`
     pub(crate) fn get_platform_config(&self, args_json: String) -> String {
         let _ = args_json;
         let client = Arc::clone(&self.client);
@@ -251,7 +249,7 @@ impl SolvaPayClient {
 
     // --- Group B ---
 
-    /// `POST /v1/sdk/payment-intents` (plan checkout).
+    /// `POST /v1/sdk/payment-intents`
     pub(crate) fn create_payment_intent(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -265,7 +263,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents` (credit top-up).
+    /// `POST /v1/sdk/payment-intents`
     pub(crate) fn create_topup_payment_intent(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -279,7 +277,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/process`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
     pub(crate) fn process_payment_intent(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -293,7 +291,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/payment-intents/{id}/business-details`
+    /// `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
     pub(crate) fn attach_business_details(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -366,8 +364,6 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`.
     pub(crate) fn get_product(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -381,7 +377,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+    /// `GET /v1/sdk/products`
     pub(crate) fn list_products(&self, args_json: String) -> String {
         let _ = args_json;
         let client = Arc::clone(&self.client);
@@ -407,8 +403,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     pub(crate) fn update_product(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -427,8 +421,6 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}`
-    ///
-    /// Args JSON is `{ productRef }`. Success value is `null`.
     pub(crate) fn delete_product(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -443,8 +435,6 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/clone`
-    ///
-    /// Args JSON is `{ productRef, name? }`.
     pub(crate) fn clone_product(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -477,8 +467,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/mcp/plans`
-    ///
-    /// Args JSON is `{ productRef, ...params }`.
     pub(crate) fn configure_mcp_plans(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -500,8 +488,6 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}/plans`
-    ///
-    /// Args JSON is `{ productRef }`.
     pub(crate) fn list_plans(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -515,7 +501,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+    /// `POST /v1/sdk/products/{productRef}/plans`
     pub(crate) fn create_plan(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -530,8 +516,6 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef, ...params }`.
     pub(crate) fn update_plan(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -550,8 +534,6 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-    ///
-    /// Args JSON is `{ productRef, planRef }`. Success value is `null`.
     pub(crate) fn delete_plan(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -593,7 +575,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/payment-method`
+    /// `GET /v1/sdk/payment-method?customerRef=`
     pub(crate) fn get_payment_method(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -607,7 +589,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `GET /v1/sdk/auto-recharge`
+    /// `GET /v1/sdk/auto-recharge?customerRef=`
     pub(crate) fn get_auto_recharge(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {
@@ -635,7 +617,7 @@ impl SolvaPayClient {
         })
     }
 
-    /// `DELETE /v1/sdk/auto-recharge`
+    /// `DELETE /v1/sdk/auto-recharge?customerRef=`
     pub(crate) fn disable_auto_recharge(&self, args_json: String) -> String {
         let client = Arc::clone(&self.client);
         without_gvl_envelope(|| {

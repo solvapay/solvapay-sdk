@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{Map, Value};
 
-use crate::envelope::{err_envelope, parse_args_json};
+use crate::ffi_envelope::{err_envelope, parse_args_json};
 use crate::{
     resolve_authenticated_user, AuthResolutionInput, PaywallGate, SdkError, WebhookError,
     WebhookErrorCode,

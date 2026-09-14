@@ -362,10 +362,13 @@ describe('manifest CLI', () => {
   })
 
   it('committed manifest declares every sync_dispatch op', () => {
-    const dispatchSrc = readFileSync(
-      path.join(process.cwd(), 'core/solvapay-mcp/src/sync_dispatch.rs'),
-      'utf8',
-    )
+    const dispatchSrc = [
+      readFileSync(path.join(process.cwd(), 'core/solvapay-mcp/src/sync_dispatch.rs'), 'utf8'),
+      readFileSync(
+        path.join(process.cwd(), 'core/solvapay-mcp/src/sync_dispatch.generated.rs'),
+        'utf8',
+      ),
+    ].join('\n')
     const opNames = [...dispatchSrc.matchAll(/"([A-Za-z][A-Za-z0-9]+)"\s*=>/g)].map(m => m[1])
     expect(opNames.length).toBeGreaterThan(0)
 

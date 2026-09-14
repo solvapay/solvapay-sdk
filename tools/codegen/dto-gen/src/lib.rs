@@ -18,8 +18,11 @@ pub mod emit_conformance_chrome;
 pub mod emit_conformance_go;
 pub mod emit_conformance_py;
 pub mod emit_conformance_rb;
+pub mod emit_conformance_rs;
+pub mod emit_conformance_ts;
 pub mod emit_core_types_ts;
 pub mod emit_core_wrappers_ts;
+pub mod emit_drivers;
 pub mod emit_fixture_runner_rs;
 pub mod emit_helpers;
 pub mod emit_helpers_go;
@@ -31,6 +34,7 @@ pub mod emit_native_rb;
 pub mod emit_parity_suite;
 pub mod emit_pyi_py;
 pub mod emit_rbs_rb;
+pub mod emit_sync_ops;
 pub mod emit_ts;
 pub mod error;
 pub mod header;
@@ -45,7 +49,9 @@ pub mod name;
 pub mod parse;
 pub mod scan_core_types;
 
-pub use derive_bindings::{derive_export_bindings, install_derived_bindings};
+pub use derive_bindings::{
+    derive_export_bindings, install_derived_bindings, redundant_residue_keys,
+};
 pub use doc_coverage::check_doc_coverage;
 pub use doc_parity::{check_doc_parity, EmittedSurface};
 pub use emit::{emit_crate, EmittedCrate};
@@ -60,8 +66,13 @@ pub use emit_conformance_c::emit_conformance_c;
 pub use emit_conformance_go::emit_conformance_go;
 pub use emit_conformance_py::emit_conformance_py;
 pub use emit_conformance_rb::emit_conformance_rb;
+pub use emit_conformance_rs::emit_conformance_rs;
+pub use emit_conformance_ts::emit_conformance_ts;
 pub use emit_core_types_ts::emit_core_types_ts;
 pub use emit_core_wrappers_ts::{emit_core_wrappers_ts, CoreWrapperKind};
+pub use emit_drivers::{
+    emit_drivers_go, emit_drivers_py, emit_drivers_rb, emit_drivers_rs, emit_drivers_ts,
+};
 pub use emit_fixture_runner_rs::emit_fixture_runner;
 pub use emit_helpers_go::emit_helpers_go;
 pub use emit_helpers_py::emit_helpers_py;
@@ -75,6 +86,10 @@ pub use emit_parity_suite::{
 };
 pub use emit_pyi_py::emit_pyi_py;
 pub use emit_rbs_rb::{emit_mcp_rbs_rb, emit_rbs_rb};
+pub use emit_sync_ops::{
+    emit_op_surfaces_md, emit_sync_dispatch_rs, emit_sync_ops_rs, emit_sync_ops_ts,
+    emit_ts_core_barrel,
+};
 pub use emit_ts::emit_overlays_ts;
 pub use error::{GenError, GenResult};
 pub use ir::Ir;
@@ -220,6 +235,26 @@ pub struct GenOutputs<'a> {
     pub ts_mcp_native_out: Option<&'a Path>,
     /// `--rs-mcp-layer2-out`
     pub rs_mcp_layer2_out: Option<&'a Path>,
+    /// `--ts-drivers-out`
+    pub ts_drivers_out: Option<&'a Path>,
+    /// `--ts-mcp-drivers-out`
+    pub ts_mcp_drivers_out: Option<&'a Path>,
+    /// `--py-drivers-out`
+    pub py_drivers_out: Option<&'a Path>,
+    /// `--go-drivers-out`
+    pub go_drivers_out: Option<&'a Path>,
+    /// `--rb-drivers-out`
+    pub rb_drivers_out: Option<&'a Path>,
+    /// `--rs-drivers-out`
+    pub rs_drivers_out: Option<&'a Path>,
+    /// `--sync-ops-rs-out`
+    pub sync_ops_rs_out: Option<&'a Path>,
+    /// `--sync-ops-ts-out`
+    pub sync_ops_ts_out: Option<&'a Path>,
+    /// `--ts-conformance-out`
+    pub ts_conformance_out: Option<&'a Path>,
+    /// `--rs-conformance-out`
+    pub rs_conformance_out: Option<&'a Path>,
 }
 
 /// Reads an OpenAPI snapshot (+ optional manifest), builds IR, and writes generated sources.
@@ -460,8 +495,82 @@ pub fn generate_from_snapshot(
                 emit_mcp_rs,
                 true,
             ),
+            (
+                "--ts-drivers-out",
+                outputs.ts_drivers_out,
+                emit_drivers_ts,
+                false,
+            ),
+            (
+                "--ts-mcp-drivers-out",
+                outputs.ts_mcp_drivers_out,
+                emit_drivers_ts,
+                false,
+            ),
+            (
+                "--py-drivers-out",
+                outputs.py_drivers_out,
+                emit_drivers_py,
+                false,
+            ),
+            (
+                "--go-drivers-out",
+                outputs.go_drivers_out,
+                emit_drivers_go,
+                false,
+            ),
+            (
+                "--rb-drivers-out",
+                outputs.rb_drivers_out,
+                emit_drivers_rb,
+                false,
+            ),
+            (
+                "--rs-drivers-out",
+                outputs.rs_drivers_out,
+                emit_drivers_rs,
+                true,
+            ),
+            (
+                "--sync-ops-rs-out",
+                outputs.sync_ops_rs_out,
+                emit_sync_ops_rs,
+                true,
+            ),
+            (
+                "--sync-ops-ts-out",
+                outputs.sync_ops_ts_out,
+                emit_sync_ops_ts,
+                false,
+            ),
+            (
+                "--ts-conformance-out",
+                outputs.ts_conformance_out,
+                emit_conformance_ts,
+                false,
+            ),
+            (
+                "--rs-conformance-out",
+                outputs.rs_conformance_out,
+                emit_conformance_rs,
+                true,
+            ),
         ],
     )?;
+
+    if let Some(path) = outputs.sync_ops_rs_out {
+        let dispatch = path.with_file_name("sync_dispatch.generated.rs");
+        write_contents(&dispatch, &emit_sync_dispatch_rs(&ir)?)?;
+        rustfmt_files(&[dispatch])?;
+        write_contents(
+            Path::new("contract/manifest/op-surfaces.generated.md"),
+            &emit_op_surfaces_md(&ir),
+        )?;
+    }
+    if let Some(path) = outputs.core_helpers_ts_out {
+        let barrel = path.with_file_name("barrel.generated.ts");
+        write_contents(&barrel, &emit_ts_core_barrel(&ir))?;
+    }
 
     if let Some(dir) = outputs.node_bindings_out {
         let emitted = emit_bindings(&ir, Toolchain::Node)?;
@@ -796,6 +905,16 @@ mod output_dispatch_tests {
             "--go-mcp-layer2-out",
             "--ts-mcp-native-out",
             "--rs-mcp-layer2-out",
+            "--ts-drivers-out",
+            "--ts-mcp-drivers-out",
+            "--py-drivers-out",
+            "--go-drivers-out",
+            "--rb-drivers-out",
+            "--rs-drivers-out",
+            "--sync-ops-rs-out",
+            "--sync-ops-ts-out",
+            "--ts-conformance-out",
+            "--rs-conformance-out",
         ];
         let paths: Vec<PathBuf> = flags
             .iter()

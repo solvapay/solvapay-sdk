@@ -79,8 +79,6 @@ pub unsafe extern "C" fn sv_create_customer(args_ptr: *mut u8, args_len: usize) 
 
 /// `PATCH /v1/sdk/customers/{customerRef}`
 ///
-/// Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -98,7 +96,7 @@ pub unsafe extern "C" fn sv_update_customer(args_ptr: *mut u8, args_len: usize) 
     }))
 }
 
-/// Customer lookup by ref / externalRef / email.
+/// `GET /v1/sdk/customers…`
 ///
 /// # Safety
 ///
@@ -114,7 +112,7 @@ pub unsafe extern "C" fn sv_get_customer(args_ptr: *mut u8, args_len: usize) -> 
     }))
 }
 
-/// Grant credits to a customer.
+/// `POST /v1/sdk/customers/{customerRef}/credits`
 ///
 /// # Safety
 ///
@@ -130,7 +128,7 @@ pub unsafe extern "C" fn sv_assign_credits(args_ptr: *mut u8, args_len: usize) -
     }))
 }
 
-/// Credit balance for a customer.
+/// `GET /v1/sdk/customers/{customerRef}/balance`
 ///
 /// # Safety
 ///
@@ -146,7 +144,7 @@ pub unsafe extern "C" fn sv_get_customer_balance(args_ptr: *mut u8, args_len: us
     }))
 }
 
-/// User info for a customer/product pair.
+/// `POST /v1/sdk/user-info`
 ///
 /// # Safety
 ///
@@ -162,7 +160,7 @@ pub unsafe extern "C" fn sv_get_user_info(args_ptr: *mut u8, args_len: usize) ->
     }))
 }
 
-/// Hosted checkout session.
+/// `POST /v1/sdk/checkout-sessions`
 ///
 /// # Safety
 ///
@@ -178,7 +176,7 @@ pub unsafe extern "C" fn sv_create_checkout_session(args_ptr: *mut u8, args_len:
     }))
 }
 
-/// Customer portal session.
+/// `POST /v1/sdk/customers/customer-sessions`
 ///
 /// # Safety
 ///
@@ -194,7 +192,7 @@ pub unsafe extern "C" fn sv_create_customer_session(args_ptr: *mut u8, args_len:
     }))
 }
 
-/// Merchant profile (`args_json` ignored; pass `"{}"`).
+/// `GET /v1/sdk/merchant`
 ///
 /// # Safety
 ///
@@ -207,7 +205,7 @@ pub unsafe extern "C" fn sv_get_merchant(args_ptr: *mut u8, args_len: usize) -> 
     }))
 }
 
-/// Platform config (`args_json` ignored; pass `"{}"`).
+/// `GET /v1/sdk/platform-config`
 ///
 /// # Safety
 ///
@@ -222,7 +220,7 @@ pub unsafe extern "C" fn sv_get_platform_config(args_ptr: *mut u8, args_len: usi
     }))
 }
 
-/// `POST /v1/sdk/payment-intents` (plan checkout).
+/// `POST /v1/sdk/payment-intents`
 ///
 /// # Safety
 ///
@@ -238,7 +236,7 @@ pub unsafe extern "C" fn sv_create_payment_intent(args_ptr: *mut u8, args_len: u
     }))
 }
 
-/// `POST /v1/sdk/payment-intents` (credit top-up).
+/// `POST /v1/sdk/payment-intents`
 ///
 /// # Safety
 ///
@@ -254,7 +252,7 @@ pub unsafe extern "C" fn sv_create_topup_payment_intent(args_ptr: *mut u8, args_
     }))
 }
 
-/// `POST /v1/sdk/payment-intents/{id}/process`
+/// `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
 ///
 /// # Safety
 ///
@@ -270,7 +268,7 @@ pub unsafe extern "C" fn sv_process_payment_intent(args_ptr: *mut u8, args_len: 
     }))
 }
 
-/// `POST /v1/sdk/payment-intents/{id}/business-details`
+/// `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
 ///
 /// # Safety
 ///
@@ -352,8 +350,6 @@ pub unsafe extern "C" fn sv_track_usage_bulk(args_ptr: *mut u8, args_len: usize)
 
 /// `GET /v1/sdk/products/{productRef}`
 ///
-/// Args JSON is `{ productRef }`.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -368,7 +364,7 @@ pub unsafe extern "C" fn sv_get_product(args_ptr: *mut u8, args_len: usize) -> u
     }))
 }
 
-/// `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+/// `GET /v1/sdk/products`
 ///
 /// # Safety
 ///
@@ -399,8 +395,6 @@ pub unsafe extern "C" fn sv_create_product(args_ptr: *mut u8, args_len: usize) -
 
 /// `PUT /v1/sdk/products/{productRef}`
 ///
-/// Args JSON is `{ productRef, ...params }`.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -420,8 +414,6 @@ pub unsafe extern "C" fn sv_update_product(args_ptr: *mut u8, args_len: usize) -
 
 /// `DELETE /v1/sdk/products/{productRef}`
 ///
-/// Args JSON is `{ productRef }`. Success value is `null`.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -437,8 +429,6 @@ pub unsafe extern "C" fn sv_delete_product(args_ptr: *mut u8, args_len: usize) -
 }
 
 /// `POST /v1/sdk/products/{productRef}/clone`
-///
-/// Args JSON is `{ productRef, name? }`.
 ///
 /// # Safety
 ///
@@ -475,8 +465,6 @@ pub unsafe extern "C" fn sv_bootstrap_mcp_product(args_ptr: *mut u8, args_len: u
 
 /// `PUT /v1/sdk/products/{productRef}/mcp/plans`
 ///
-/// Args JSON is `{ productRef, ...params }`.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -496,8 +484,6 @@ pub unsafe extern "C" fn sv_configure_mcp_plans(args_ptr: *mut u8, args_len: usi
 
 /// `GET /v1/sdk/products/{productRef}/plans`
 ///
-/// Args JSON is `{ productRef }`.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -512,7 +498,7 @@ pub unsafe extern "C" fn sv_list_plans(args_ptr: *mut u8, args_len: usize) -> u6
     }))
 }
 
-/// `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+/// `POST /v1/sdk/products/{productRef}/plans`
 ///
 /// # Safety
 ///
@@ -529,8 +515,6 @@ pub unsafe extern "C" fn sv_create_plan(args_ptr: *mut u8, args_len: usize) -> u
 }
 
 /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-///
-/// Args JSON is `{ productRef, planRef, ...params }`.
 ///
 /// # Safety
 ///
@@ -550,8 +534,6 @@ pub unsafe extern "C" fn sv_update_plan(args_ptr: *mut u8, args_len: usize) -> u
 }
 
 /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-///
-/// Args JSON is `{ productRef, planRef }`. Success value is `null`.
 ///
 /// # Safety
 ///
@@ -599,7 +581,7 @@ pub unsafe extern "C" fn sv_reactivate_purchase(args_ptr: *mut u8, args_len: usi
     }))
 }
 
-/// `GET /v1/sdk/payment-method`
+/// `GET /v1/sdk/payment-method?customerRef=`
 ///
 /// # Safety
 ///
@@ -615,7 +597,7 @@ pub unsafe extern "C" fn sv_get_payment_method(args_ptr: *mut u8, args_len: usiz
     }))
 }
 
-/// `GET /v1/sdk/auto-recharge`
+/// `GET /v1/sdk/auto-recharge?customerRef=`
 ///
 /// # Safety
 ///
@@ -647,7 +629,7 @@ pub unsafe extern "C" fn sv_save_auto_recharge(args_ptr: *mut u8, args_len: usiz
     }))
 }
 
-/// `DELETE /v1/sdk/auto-recharge`
+/// `DELETE /v1/sdk/auto-recharge?customerRef=`
 ///
 /// # Safety
 ///

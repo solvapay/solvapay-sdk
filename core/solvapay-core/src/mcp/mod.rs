@@ -4,20 +4,21 @@
 //! descriptor metadata. Transport/host wiring stays out of core.
 
 mod account_state;
-mod descriptors;
+mod descriptor_metadata;
 mod display_mode;
-mod envelope;
+mod handler_envelope;
 mod payable_tool_result;
 mod paywall_tool_result;
 mod plan_consequence;
 mod portal_links;
 mod tool_names;
+mod tool_schema;
 
 pub use account_state::{
     derive_default_view, merge_plan, resolve_account_state, resolve_narrator_plan_shape,
     NarratorPlanShape,
 };
-/// Append the paid-tool account hint. Implementation lives in [`descriptors`].
+/// Append the paid-tool account hint. Implementation lives in [`descriptor_metadata`].
 #[must_use]
 #[crate::solvapay_export(
     artifact = "decisions",
@@ -26,10 +27,10 @@ pub use account_state::{
     emit_order = 46
 )]
 pub fn append_paid_tool_description(description: Option<&str>) -> String {
-    descriptors::append_paid_tool_description(description)
+    descriptor_metadata::append_paid_tool_description(description)
 }
 
-pub use descriptors::{
+pub use descriptor_metadata::{
     build_prompt_descriptor_metadata, build_prompt_user_message, build_tool_descriptor_metadata,
     derive_icons, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, MerchantBranding, PromptDescriptorMetadata,
@@ -40,7 +41,7 @@ pub use display_mode::{
     resolve_display_mode, McpContainerDimensions, McpDisplayMode, McpDisplayModeState,
     McpHostedRail, McpSafeAreaInsets,
 };
-pub use envelope::{assert_response_result, make_response_result, ResponseEnvelope};
+pub use handler_envelope::{assert_response_result, make_response_result, ResponseEnvelope};
 pub use payable_tool_result::{build_payable_tool_result, McpPayableToolResult};
 pub use paywall_tool_result::{paywall_tool_result, McpContentBlock, McpPaywallToolResult};
 pub use plan_consequence::plan_consequence;
@@ -48,4 +49,8 @@ pub use portal_links::{auto_recharge_url_from, PORTAL_AUTO_RECHARGE_QUERY};
 pub use tool_names::{
     mcp_tool_names_json, mcp_view_maps, McpViewMaps, MCP_PROMPT_NAMES, MCP_TOOL_NAMES,
     TOOL_FOR_VIEW, VIEWER_TOOL_NAME, VIEW_FOR_TOOL,
+};
+pub use tool_schema::{
+    compile_string_field_input_schema, compile_string_field_input_schema_json,
+    ensure_output_schema_object_type,
 };

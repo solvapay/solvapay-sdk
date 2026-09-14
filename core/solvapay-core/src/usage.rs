@@ -49,7 +49,8 @@ pub struct UsageSnapshot {
 ///
 /// # Returns
 ///
-/// Normalized usage snapshot (empty when no active purchase).
+/// Normalized usage snapshot. A null purchase still honors `limits`
+/// (dev `deriveUsageSnapshot` contract).
 #[crate::solvapay_export(
     artifact = "decisions",
     catalog = "none",
@@ -60,26 +61,12 @@ pub fn project_usage_snapshot(
     active_purchase: Option<&Value>,
     limits: Option<&Value>,
 ) -> UsageSnapshot {
-    let Some(purchase) = active_purchase.filter(|v| !v.is_null()) else {
-        return UsageSnapshot {
-            meter_ref: None,
-            total: None,
-            used: 0.0,
-            remaining: None,
-            percent_used: None,
-            period_start: None,
-            period_end: None,
-            purchase_ref: None,
-        };
-    };
-
-    let usage = purchase.get("usage");
-
+    let purchase = active_purchase.filter(|v| !v.is_null());
+    let usage = purchase.and_then(|p| p.get("usage"));
     let caller_used = usage
         .and_then(|u| u.get("used"))
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
-
     let limits = limits.filter(|v| !v.is_null());
     let remaining_raw = limits
         .and_then(|l| l.get("remaining"))
@@ -122,7 +109,7 @@ pub fn project_usage_snapshot(
         .map(str::to_owned);
 
     let purchase_ref = purchase
-        .get("reference")
+        .and_then(|p| p.get("reference"))
         .and_then(Value::as_str)
         .map(str::to_owned);
 

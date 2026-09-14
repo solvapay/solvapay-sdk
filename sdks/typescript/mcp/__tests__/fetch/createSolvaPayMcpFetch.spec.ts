@@ -243,6 +243,63 @@ describe('createSolvaPayMcpFetch', () => {
       expect(call.status).toBe(200)
       expect(call.json.result ?? call.json.error).toBeDefined()
     })
+
+    it('reconnects after an expired bearer: 401 then success', async () => {
+      const handler = buildHandler({ requireAuth: true })
+      const valid = { authorization: `Bearer ${makeJwt('cust_1')}` }
+      const expiredBody = Buffer.from(
+        JSON.stringify({
+          sub: 'cust_1',
+          iss: publicBaseUrl,
+          aud: `${publicBaseUrl}/mcp`,
+          exp: 1,
+        }),
+      ).toString('base64url')
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
+      const sig = createHmac('sha256', fixtureHs256Secret)
+        .update(`${header}.${expiredBody}`)
+        .digest('base64url')
+      const expired = { authorization: `Bearer ${header}.${expiredBody}.${sig}` }
+
+      await initialize(handler)
+      const ok = await callRpc(
+        handler,
+        {
+          jsonrpc: '2.0',
+          id: 10,
+          method: 'tools/call',
+          params: { name: MCP_TOOL_NAMES.account, arguments: {} },
+        },
+        valid,
+      )
+      expect(ok.status).toBe(200)
+
+      const challenge = await callRpc(
+        handler,
+        {
+          jsonrpc: '2.0',
+          id: 11,
+          method: 'tools/call',
+          params: { name: MCP_TOOL_NAMES.account, arguments: {} },
+        },
+        expired,
+      )
+      expect(challenge.status).toBe(401)
+      expect(challenge.json.error?.code).toBe(-32001)
+      expect(challenge.json.error?.message).toBe('Unauthorized')
+
+      const retry = await callRpc(
+        handler,
+        {
+          jsonrpc: '2.0',
+          id: 12,
+          method: 'tools/call',
+          params: { name: MCP_TOOL_NAMES.account, arguments: {} },
+        },
+        valid,
+      )
+      expect(retry.status).toBe(200)
+    })
   })
 
   it('initialize → 200 + serverInfo with default name', async () => {

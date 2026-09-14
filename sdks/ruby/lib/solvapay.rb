@@ -47,5 +47,6 @@ SolvaPay._check_version_skew
 
 require_relative "solvapay/client"
 require_relative "solvapay/helpers.generated"
+require_relative "solvapay/drivers.generated"
 require_relative "solvapay/helpers"
 require_relative "solvapay/facade"

@@ -1,6 +1,56 @@
 {
   "entries": [
     {
+      "package": "@solvapay/auth",
+      "symbol": "getUserEmailFromRequest",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "getUserIdFromRequest",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "getUserNameFromRequest",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "MockAuthAdapter",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "MockAuthAdapterType",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "requireUserId",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "SOLVAPAY_AUTHORIZATION_HEADER",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "SOLVAPAY_USER_ID_HEADER",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "SolvapayAuthAdapter",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/auth",
+      "symbol": "SolvapayOAuthClient",
+      "reason": "section-8-exclusion"
+    },
+    {
       "package": "@solvapay/core",
       "symbol": "BUSINESS_COUNTRY_DISPLAY_NAMES",
       "reason": "type-guard-or-const"
@@ -96,6 +146,536 @@
       "reason": "type-guard-or-const"
     },
     {
+      "package": "@solvapay/mcp-core",
+      "symbol": "balanceSummary",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildAuthInfoFromBearer",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildErrorDescription",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildPayableHandler",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildSolvaPayDescriptors",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildSolvaPayPrompts",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "buildSolvaPayRequest",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "decodeJwtPayload",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "DEFAULT_OAUTH_PATHS",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "defaultGetCustomerRef",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "defaultMcpBearerExpectations",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "deriveOAuthErrorCode",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "extractBearerToken",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "getCustomerRefFromBearerAuthHeader",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "getCustomerRefFromJwtPayload",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "getOAuthAuthorizationServerResponse",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "getOAuthProtectedResourceResponse",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "hasOAuthErrorShape",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "hideToolsByAudience",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "INTENT_TOOL_ANNOTATIONS",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "INTENT_TOOL_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "isFreeMcpMethod",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "isNativeClientOrigin",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "logDcrFailureDiagnostic",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "logMcpConfigOnce",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "MCP_PROMPT_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "MCP_TOOL_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mcpAuthGate",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "McpBearerAuthError",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mcpConfigLogMessage",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mcpDescriptors",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mcpNativeCors",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mcpResourceIdentifier",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "mergeCsp",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narrateAlreadyActive",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narrateAutoRecharge",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narratedToolResult",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narrateManageAccount",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narrateTopup",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "narrateUpgrade",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "NARRATORS",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "OPEN_TOOL_FOR_VIEW",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "parseMode",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "pathAwareProtectedResourcePath",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "previewJson",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "PUBLIC_BASE_URL_ERROR",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "requiresBearerAuth",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "resetMcpConfigLogForTests",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "resolveOAuthPaths",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "runMcpEngineRequest",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_BOOTSTRAP_MIME_TYPE",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_BOOTSTRAP_URI",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_DEFAULT_CSP",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_MCP_VIEW_KINDS",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_OVERVIEW_MIME_TYPE",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "SOLVAPAY_OVERVIEW_URI",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "solvapayOverviewBody",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "solvapayTool",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "toOAuthErrorBody",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "TOOL_FOR_VIEW",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "ToolErrorEnvelopeSchema",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "toolErrorResult",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "toolResult",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "uiPlaceholder",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "verifyBearer",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "VIEW_FOR_OPEN_TOOL",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "VIEW_FOR_TOOL",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "VIEWER_TOOL_NAME",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "withLeadingSlash",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp-core",
+      "symbol": "withoutTrailingSlash",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "createSolvaPayMcpServer",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "defaultMcpAppHtml",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "registerAppResource",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "registerAppTool",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "registerPayableTool",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "RESOURCE_MIME_TYPE",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "RESOURCE_URI_META_KEY",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "activatePlan",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "attachBusinessDetails",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "cancelRenewal",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "checkPurchase",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "clearAllPurchaseCache",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "clearPurchaseCache",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createAuth0AuthMiddleware",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createAuthMiddleware",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createCheckoutSession",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createCustomerSession",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createPaymentIntent",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createSupabaseAuthMiddleware",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "createTopupPaymentIntent",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "disableAutoRecharge",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getAuthenticatedUser",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getAutoRecharge",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getCustomerBalance",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getMerchant",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getPaymentMethod",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getProduct",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "getPurchaseCacheStats",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "listPlans",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "processPaymentIntent",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "processTopupPaymentIntent",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "reactivateRenewal",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "saveAutoRecharge",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "syncCustomer",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/next",
+      "symbol": "trackUsage",
+      "reason": "section-8-exclusion"
+    },
+    {
       "package": "@solvapay/server",
       "symbol": "activatePlanCore",
       "reason": "host-orchestration-decisions-delegated"
@@ -157,6 +737,11 @@
     },
     {
       "package": "@solvapay/server",
+      "symbol": "deriveUsageSnapshot",
+      "reason": "host-orchestration-decisions-delegated"
+    },
+    {
+      "package": "@solvapay/server",
       "symbol": "disableAutoRechargeCore",
       "reason": "host-orchestration-decisions-delegated"
     },
@@ -197,11 +782,6 @@
     },
     {
       "package": "@solvapay/server",
-      "symbol": "deriveUsageSnapshot",
-      "reason": "host-orchestration-decisions-delegated"
-    },
-    {
-      "package": "@solvapay/server",
       "symbol": "getUsageCore",
       "reason": "host-orchestration-decisions-delegated"
     },
@@ -213,11 +793,6 @@
     {
       "package": "@solvapay/server",
       "symbol": "isPaywallStructuredContent",
-      "reason": "type-guard-or-const"
-    },
-    {
-      "package": "@solvapay/server",
-      "symbol": "PaywallStructuredContentSchema",
       "reason": "type-guard-or-const"
     },
     {
@@ -244,6 +819,11 @@
       "package": "@solvapay/server",
       "symbol": "PaywallError",
       "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/server",
+      "symbol": "PaywallStructuredContentSchema",
+      "reason": "type-guard-or-const"
     },
     {
       "package": "@solvapay/server",

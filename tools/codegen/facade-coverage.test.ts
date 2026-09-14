@@ -26,6 +26,21 @@ describe('facade-coverage', () => {
     expect(missingReasons(coverage)).toEqual(['createCustomer.capi'])
   })
 
+  it('requires every catalogued op to declare reachability for every facade', () => {
+    const coverage: FacadeCoverageFile = {
+      _comment: 'test',
+      facades: FACADES,
+      ops: {
+        createCustomer: Object.fromEntries(
+          FACADES.map(id => [id, { exposed: true as const }]),
+        ) as FacadeCoverageFile['ops'][string],
+      },
+    }
+    for (const facade of FACADES) {
+      expect(coverage.ops.createCustomer[facade]?.exposed).toBe(true)
+    }
+  })
+
   it('parses exported functions, consts, and class methods from a .d.ts', () => {
     const names = parseDtsExports(`
 /**

@@ -196,6 +196,16 @@ fn apply_input_flag(
         "--go-mcp-layer2-out" => outputs.go_mcp_layer2_out = Some(path),
         "--ts-mcp-native-out" => outputs.ts_mcp_native_out = Some(path),
         "--rs-mcp-layer2-out" => outputs.rs_mcp_layer2_out = Some(path),
+        "--ts-drivers-out" => outputs.ts_drivers_out = Some(path),
+        "--ts-mcp-drivers-out" => outputs.ts_mcp_drivers_out = Some(path),
+        "--py-drivers-out" => outputs.py_drivers_out = Some(path),
+        "--go-drivers-out" => outputs.go_drivers_out = Some(path),
+        "--rb-drivers-out" => outputs.rb_drivers_out = Some(path),
+        "--rs-drivers-out" => outputs.rs_drivers_out = Some(path),
+        "--sync-ops-rs-out" => outputs.sync_ops_rs_out = Some(path),
+        "--sync-ops-ts-out" => outputs.sync_ops_ts_out = Some(path),
+        "--ts-conformance-out" => outputs.ts_conformance_out = Some(path),
+        "--rs-conformance-out" => outputs.rs_conformance_out = Some(path),
         other => {
             return Err(GenError::Parse(format!(
                 "unknown dto-gen flag in repo-paths manifest: {other}"
@@ -252,6 +262,16 @@ struct OwnedOutputs {
     go_mcp_layer2_out: Option<PathBuf>,
     ts_mcp_native_out: Option<PathBuf>,
     rs_mcp_layer2_out: Option<PathBuf>,
+    ts_drivers_out: Option<PathBuf>,
+    ts_mcp_drivers_out: Option<PathBuf>,
+    py_drivers_out: Option<PathBuf>,
+    go_drivers_out: Option<PathBuf>,
+    rb_drivers_out: Option<PathBuf>,
+    rs_drivers_out: Option<PathBuf>,
+    sync_ops_rs_out: Option<PathBuf>,
+    sync_ops_ts_out: Option<PathBuf>,
+    ts_conformance_out: Option<PathBuf>,
+    rs_conformance_out: Option<PathBuf>,
 }
 
 impl OwnedOutputs {
@@ -302,6 +322,16 @@ impl OwnedOutputs {
             go_mcp_layer2_out: self.go_mcp_layer2_out.as_deref(),
             ts_mcp_native_out: self.ts_mcp_native_out.as_deref(),
             rs_mcp_layer2_out: self.rs_mcp_layer2_out.as_deref(),
+            ts_drivers_out: self.ts_drivers_out.as_deref(),
+            ts_mcp_drivers_out: self.ts_mcp_drivers_out.as_deref(),
+            py_drivers_out: self.py_drivers_out.as_deref(),
+            go_drivers_out: self.go_drivers_out.as_deref(),
+            rb_drivers_out: self.rb_drivers_out.as_deref(),
+            rs_drivers_out: self.rs_drivers_out.as_deref(),
+            sync_ops_rs_out: self.sync_ops_rs_out.as_deref(),
+            sync_ops_ts_out: self.sync_ops_ts_out.as_deref(),
+            ts_conformance_out: self.ts_conformance_out.as_deref(),
+            rs_conformance_out: self.rs_conformance_out.as_deref(),
         }
     }
 }

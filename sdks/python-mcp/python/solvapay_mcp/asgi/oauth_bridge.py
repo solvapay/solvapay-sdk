@@ -342,6 +342,7 @@ def create_mcp_oauth_starlette(
     mcp_path: str = "/mcp",
     require_auth: bool = True,
     auth_mode: McpAuthMode = "tools-call",
+    hs256_secret: str | None = None,
     oauth_client: object | None = None,
     oauth_paths: Mapping[str, str] | None = None,
 ) -> ASGIApp:
@@ -352,6 +353,7 @@ def create_mcp_oauth_starlette(
         mcp_path=mcp_path,
         require_auth=require_auth,
         auth_mode=auth_mode,
+        hs256_secret=hs256_secret,
         oauth_client=oauth_client,
         oauth_paths=oauth_paths,
     )

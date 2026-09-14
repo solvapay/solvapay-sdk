@@ -57,112 +57,41 @@ module SolvaPay
 
       def invoke_payable(solvapay:, product:, handler:, get_customer_ref:, args:, usage_type: "requests")
         customer_ref = resolve_customer_ref(args, get_customer_ref)
-        state = nil
-        event = {
-          "kind" => "start",
-          "customerRef" => customer_ref,
-          "product" => product,
-          "usageType" => usage_type.nil? || usage_type.to_s.empty? ? "requests" : usage_type.to_s,
-          "startedMs" => (Time.now.to_f * 1_000).to_i,
-        }
-        loop do
-          out = NativeDispatch.call_sync("invoke_payable_next", { "state" => state, "event" => event })
-          unless out.is_a?(Hash)
-            raise SolvaPay::SolvaPayError.new(
-              "invoke_payable_next returned unexpected value",
-              code: "invalid_invoke",
-            )
-          end
-
-          state = out["state"]
-          action = out["action"]
-          unless action.is_a?(Hash)
-            raise SolvaPay::SolvaPayError.new(
-              "invoke_payable_next returned unexpected action",
-              code: "invalid_invoke",
-            )
-          end
-
-          kind = action["kind"]
-          case kind
-          when "runGate"
-            gate_result = solvapay.gate(action["customerRef"], product: action["product"] || product)
-            case gate_result
-            when SolvaPay::PayablePaywallResult
-              gate = stringify_keys(gate_result.content)
-              message = gate["message"]
-              message = "Payment required" unless message.is_a?(String) && !message.empty?
-              return format_gate(message, gate) unless format_gate_override.nil?
-
-              event = { "kind" => "gatePaywall", "gate" => gate, "message" => message }
-            when SolvaPay::PayableAllowResult
-              limits = limits_from_decision(gate_result.decision)
-              event = {
-                "kind" => "gateAllow",
-                "customerRef" => gate_result.customer_ref,
-                "limits" => limits,
-              }
-            else
-              raise SolvaPay::SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
-            end
-          when "invokeHandler"
-            empty_limits = {} #: Hash[String, untyped]
-            limits = action["limits"].is_a?(Hash) ? stringify_keys(action["limits"]) : empty_limits
-            snapshot_args = {
-              "customerRef" => action["customerRef"],
-              "limits" => limits,
-            }
-            snapshot = NativeDispatch.call_sync("build_customer_snapshot", snapshot_args)
-            raise SolvaPay::SolvaPayError, "buildCustomerSnapshot did not return an object" unless snapshot.is_a?(Hash)
-
-            ctx = ResponseContext.new(
-              customer: snapshot,
-              product: { "reference" => product, "name" => product },
-              product_ref: product,
-              limits: limits,
-            )
-            begin
-              returned = handler.call(args, ctx)
-            rescue SolvaPay::PaywallError => e
-              gate = stringify_keys(e.structured_content)
-              return format_gate(e.message, gate) unless format_gate_override.nil?
-
-              event = { "kind" => "handlerPaywall", "gate" => gate, "message" => e.message }
-            rescue StandardError => e
-              event = {
-                "kind" => "handlerErr",
-                "message" => e.message,
-                "nowMs" => (Time.now.to_f * 1_000).to_i,
-                "randomUnit" => rand,
-              }
-            else
-              envelope = Layer2.assert_response_result(returned)
-              event = {
-                "kind" => "handlerOk",
-                "envelope" => envelope,
-                "nowMs" => (Time.now.to_f * 1_000).to_i,
-                "randomUnit" => rand,
-              }
-            end
-          when "done"
-            track = action["track"]
-            solvapay.track_usage(params: track["request"]) if track.is_a?(Hash) && track["request"].is_a?(Hash)
-            result = action["result"]
-            unless result.is_a?(Hash)
+        usage = usage_type.nil? || usage_type.to_s.empty? ? "requests" : usage_type.to_s
+        host = PayableLoopHost.new(
+          solvapay: solvapay,
+          product: product,
+          handler: handler,
+          args: args,
+          format_gate_override: format_gate_override,
+        )
+        result = SolvaPay::GeneratedPayableLoop.run(
+          payable_next: lambda { |state, event|
+            out = NativeDispatch.call_sync("invoke_payable_next", { "state" => state, "event" => event })
+            unless out.is_a?(Hash)
               raise SolvaPay::SolvaPayError.new(
-                "invoke_payable_next done missing result",
+                "invoke_payable_next returned unexpected value",
                 code: "invalid_invoke",
               )
             end
-
-            return stringify_keys(result)
-          else
-            raise SolvaPay::SolvaPayError.new(
-              "invoke_payable_next unknown action kind: #{kind}",
-              code: "invalid_invoke",
-            )
-          end
+            out
+          },
+          host: host,
+          start_event: {
+            "kind" => "start",
+            "customerRef" => customer_ref,
+            "product" => product,
+            "usageType" => usage,
+            "startedMs" => (Time.now.to_f * 1_000).to_i,
+          },
+        )
+        unless result.is_a?(Hash)
+          raise SolvaPay::SolvaPayError.new(
+            "invoke_payable_next done missing result",
+            code: "invalid_invoke",
+          )
         end
+        stringify_keys(result)
       end
 
       private
@@ -178,9 +107,12 @@ module SolvaPay
           "resolveCustomerRef",
           { "hookRef" => hook_ref, "argsCustomerRef" => raw },
         )
-        return result if result.is_a?(String) && !result.empty?
+        return result.strip if result.is_a?(String) && !result.strip.empty? && result.strip != "anonymous"
 
-        "anonymous"
+        raise SolvaPay::SolvaPayError.new(
+          "customer_ref missing from MCP auth context",
+          code: "unauthorized",
+        )
       end
 
       def format_gate(message, gate)
@@ -208,6 +140,83 @@ module SolvaPay
         else
           ::MCP::Tool::Response.new(content, structured_content: structured)
         end
+      end
+    end
+
+    class PayableLoopHost
+      def initialize(solvapay:, product:, handler:, args:, format_gate_override:)
+        @solvapay = solvapay
+        @product = product
+        @handler = handler
+        @args = args
+        @format_gate_override = format_gate_override
+      end
+
+      def now_ms
+        (Time.now.to_f * 1_000).to_i
+      end
+
+      def random_unit
+        rand
+      end
+
+      def run_gate(action)
+        gate_result = @solvapay.gate(action["customerRef"], product: action["product"] || @product)
+        case gate_result
+        when SolvaPay::PayablePaywallResult
+          gate = SolvaPay::Mcp.send(:stringify_keys, gate_result.content)
+          message = gate["message"]
+          message = "Payment required" unless message.is_a?(String) && !message.empty?
+          return { kind: :return, result: format_gate(message, gate) } unless @format_gate_override.nil?
+
+          { kind: :paywall, gate: gate, message: message }
+        when SolvaPay::PayableAllowResult
+          {
+            kind: :allow,
+            customerRef: gate_result.customer_ref,
+            limits: SolvaPay::Mcp.send(:limits_from_decision, gate_result.decision),
+          }
+        else
+          raise SolvaPay::SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
+        end
+      end
+
+      def invoke_handler(action)
+        empty_limits = {} #: Hash[String, untyped]
+        limits = action["limits"].is_a?(Hash) ? SolvaPay::Mcp.send(:stringify_keys, action["limits"]) : empty_limits
+        snapshot = NativeDispatch.call_sync(
+          "build_customer_snapshot",
+          { "customerRef" => action["customerRef"], "limits" => limits },
+        )
+        raise SolvaPay::SolvaPayError, "buildCustomerSnapshot did not return an object" unless snapshot.is_a?(Hash)
+
+        ctx = ResponseContext.new(
+          customer: snapshot,
+          product: { "reference" => @product, "name" => @product },
+          product_ref: @product,
+          limits: limits,
+        )
+        returned = @handler.call(@args, ctx)
+        { kind: :ok, envelope: Layer2.assert_response_result(returned) }
+      rescue SolvaPay::PaywallError => e
+        gate = SolvaPay::Mcp.send(:stringify_keys, e.structured_content)
+        return { kind: :return, result: format_gate(e.message, gate) } unless @format_gate_override.nil?
+
+        { kind: :paywall, gate: gate, message: e.message }
+      rescue StandardError => e
+        { kind: :err, message: e.message }
+      end
+
+      def track_usage(request)
+        @solvapay.track_usage(params: request) if request.is_a?(Hash)
+      end
+
+      private
+
+      def format_gate(message, gate)
+        return @format_gate_override.call(message, gate) unless @format_gate_override.nil?
+
+        Layer2.paywall_tool_result(message, gate)
       end
     end
   end

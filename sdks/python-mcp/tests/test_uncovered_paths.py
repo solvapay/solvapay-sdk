@@ -48,9 +48,10 @@ async def test_unresolvable_customer_ref_does_not_fall_back_to_anonymous() -> No
         input_schema={"type": "object", "properties": {}},
         get_customer_ref=None,
     )
-    result = await _invoke_payable(spec, {})
-    assert result["isError"] is True
-    assert result["structuredContent"]["status"] == 401
+    from solvapay_mcp.register import MissingCustomerRefError
+
+    with pytest.raises(MissingCustomerRefError):
+        await _invoke_payable(spec, {})
     assert backend.track_usage_calls == []
 
 

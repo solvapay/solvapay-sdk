@@ -160,12 +160,6 @@ pub fn union_payable_output_schema(merchant: &Value) -> Value {
     })
 }
 
-/// Append the paid-tool account hint. See [`solvapay_core::append_paid_tool_description`].
-#[must_use]
-pub fn append_paid_tool_description(description: Option<&str>) -> String {
-    solvapay_core::append_paid_tool_description(description)
-}
-
 fn view_schema(views: Option<&[String]>) -> Value {
     let advertised = [
         "checkout".to_owned(),

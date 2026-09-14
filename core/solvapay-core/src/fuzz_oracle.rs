@@ -10,8 +10,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use serde_json::Value;
 
-use crate::envelope::{err_envelope, parse_args_json};
 use crate::error::SdkError;
+use crate::ffi_envelope::{err_envelope, parse_args_json};
 #[cfg(feature = "webhook-verify")]
 use crate::webhook::{verify_webhook, WebhookError, WebhookErrorCode};
 

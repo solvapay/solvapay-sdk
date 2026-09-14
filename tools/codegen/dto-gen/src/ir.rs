@@ -205,7 +205,7 @@ pub enum IrCoreSerde {
 pub struct IrCoreType {
     /// Rust type name (PascalCase).
     pub name: String,
-    /// Module path relative to `solvapay-core::` (`customer_sync`, `mcp::envelope`).
+    /// Module path relative to `solvapay-core::` (`customer_sync`, `mcp::handler_envelope`).
     pub module: String,
     /// Joined `///` rustdoc body (no `///` prefix).
     pub rustdoc: String,

@@ -209,6 +209,55 @@ pub fn evaluate_claimed_limits(
     }
 }
 
+/// Overlay a 1-based in-flight `claimed` count onto a `checkLimits` object.
+///
+/// `claimed` includes the current request. When the claim is under the cap,
+/// `remaining` is reported as `evaluation.remaining + 1` — the slot count
+/// *before* consuming this request — because that is the value the host
+/// limits cache stores. Do not "simplify" the `+ 1` away.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 60
+)]
+#[must_use]
+pub fn overlay_claimed_limits(limits: &Value, claimed: f64) -> Value {
+    let mut overlaid = match limits {
+        Value::Object(map) => Value::Object(map.clone()),
+        other => other.clone(),
+    };
+    let remaining = overlaid
+        .get("remaining")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    let within_limits = overlaid
+        .get("withinLimits")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let evaluation = evaluate_claimed_limits(within_limits, remaining, claimed);
+    if let Some(obj) = overlaid.as_object_mut() {
+        if remaining == -1.0 || (within_limits && remaining == 0.0) {
+            obj.insert("withinLimits".into(), Value::Bool(evaluation.within_limits));
+            obj.insert("remaining".into(), json_num(evaluation.remaining));
+        } else if !evaluation.within_limits {
+            obj.insert("withinLimits".into(), Value::Bool(false));
+            obj.insert("remaining".into(), json_num(0.0));
+        } else {
+            obj.insert("withinLimits".into(), Value::Bool(true));
+            obj.insert("remaining".into(), json_num(evaluation.remaining + 1.0));
+        }
+    }
+    overlaid
+}
+
+/// JSON number, or `0` if the float is not a finite JSON number.
+fn json_num(value: f64) -> Value {
+    serde_json::Number::from_f64(value)
+        .map(Value::Number)
+        .unwrap_or(Value::from(0))
+}
+
 /// Produce allow vs gate at the decision point.
 ///
 /// # Arguments

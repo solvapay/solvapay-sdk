@@ -121,6 +121,8 @@ import {
   getHistoryNext,
   evaluateFreshLimits,
   evaluateClaimedLimits,
+  overlayClaimedLimits,
+  extractBearerToken,
   extractBackendCustomerRef,
   getAuthenticatedUserCore,
   isCachedCustomerRefValid,
@@ -2672,6 +2674,19 @@ export function createDefaultRegistry(): FixtureRegistry {
       }
       return evaluateFreshLimits(args.withinLimits, args.remaining)
     },
+  })
+
+  registry.register('overlayClaimedLimits', {
+    id: 'core',
+    invoke: args => overlayClaimedLimits(args.limits, args.claimed as number),
+  })
+
+  registry.register('extractBearerToken', {
+    id: 'core',
+    invoke: args =>
+      extractBearerToken(
+        typeof args.authorizationHeader === 'string' ? args.authorizationHeader : null,
+      ),
   })
 
   registry.register('evaluateClaimedLimits', {

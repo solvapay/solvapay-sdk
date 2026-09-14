@@ -1,0 +1,25 @@
+{
+  "suite": "helper-usage",
+  "case": "null-purchase-honors-limits",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": null,
+      "limits": {
+        "meterName": "mtr_requests",
+        "used": 3,
+        "remaining": 7,
+        "limit": 10
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "mtr_requests",
+      "total": 10,
+      "used": 3,
+      "remaining": 7,
+      "percentUsed": 30
+    }
+  }
+}

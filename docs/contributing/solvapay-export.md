@@ -249,14 +249,15 @@ consequences:
 `binding-residue.yaml` is merged in `derive_one`, keyed by canonical `id`.
 Precedence is **not** uniform, and that asymmetry is the trap:
 
-| Residue field                                       | Interaction with the attribute                                                                                                                               |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `args:`                                             | **Replaces the derived arg list wholesale.** The attribute's `rename`, `local`, `extract`, `typed_as`, `typed_style` and `host_injected` are never consulted |
-| `splitPathRefs:` / `dtoType:`                       | Override the attribute when non-empty (neither is used in-tree today)                                                                                        |
-| `verbatimBody:` / `verbatimBodyWasm:`               | Force `call: Verbatim`, discarding the derived serialize kind and call tokens                                                                                |
-| `omitCoreCall:`                                     | Drops `core_call`                                                                                                                                            |
-| `callArgs:`                                         | Replaces the derived call-argument tokens                                                                                                                    |
-| `tsWrapper:`, `doc:`, `docWasm:`, `clientCallArgs:` | Residue-only — there is no attribute form                                                                                                                    |
+| Residue field                         | Interaction with the attribute                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `args:`                               | **Replaces the derived arg list wholesale.** The attribute's `rename`, `local`, `extract`, `typed_as`, `typed_style` and `host_injected` are never consulted |
+| `splitPathRefs:` / `dtoType:`         | Override the attribute when non-empty (neither is used in-tree today)                                                                                        |
+| `verbatimBody:` / `verbatimBodyWasm:` | Force `call: Verbatim`, discarding the derived serialize kind and call tokens                                                                                |
+| `omitCoreCall:`                       | Drops `core_call`                                                                                                                                            |
+| `callArgs:`                           | Replaces the derived call-argument tokens                                                                                                                    |
+| `clientCallArgs:`                     | Override; empty residue derives `&refs[i]` plus the remaining Rust params (`Some(name)` when optional)                                                       |
+| `tsWrapper:`, `doc:`, `docWasm:`      | Residue-only — there is no attribute form                                                                                                                    |
 
 When a key has `args:` in residue, the residue arg's own `hostInjected`,
 `extract`, `local`, `typedAs` and `typedStyle` are the only ones that reach the
@@ -267,8 +268,9 @@ declares `host_injected = "nowMs"`, the residue arg declares
 The rule to work by: **put it in the attribute if it is a property of the
 boundary; put it in residue only if it is shim-emission detail the AST cannot
 supply.** dto-gen errors on a residue key with no matching exported symbol, so
-the file cannot rot — but per `codegen-ast-derivation.md` the residue count must
-not grow.
+the file cannot rot. `cargo test -p dto-gen --test residue_drain` rejects a key
+that does not change the derived symbol, and `pnpm residue:check` fails if the
+key count grows past the reviewed cap.
 
 ## 7. Gates and error messages
 

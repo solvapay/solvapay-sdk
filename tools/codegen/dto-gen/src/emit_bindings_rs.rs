@@ -158,7 +158,12 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
 // --- decisions.rs ------------------------------------------------------------
 
 fn emit_decisions(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> {
-    let header = chrome_str(art, &["decisions", "header"])?;
+    let header = with_merged_core_imports(
+        chrome_str(art, &["decisions", "header"])?,
+        ir,
+        IrBindingArtifact::Decisions,
+        &[],
+    );
     let trailer = chrome_str(art, &["decisions", "testsTrailer"])?;
     let symbols = symbols_for(ir, IrBindingArtifact::Decisions);
 
@@ -171,7 +176,7 @@ fn emit_decisions(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<Strin
 
     Ok(format!(
         "{}{}\n\n{}",
-        with_generated_header(header, toolchain),
+        with_generated_header(&header, toolchain),
         chunks.join("\n\n"),
         trailer
     ))
@@ -185,7 +190,17 @@ fn emit_payload_builders(
     art: &Value,
     chrome: &Value,
 ) -> GenResult<String> {
-    let header = chrome_str(art, &["payloadBuilders", "header"])?;
+    let mcp_ids = if toolchain == Toolchain::Wasm {
+        mcp_symbol_ids(chrome)?
+    } else {
+        Vec::new()
+    };
+    let header = with_merged_core_imports(
+        chrome_str(art, &["payloadBuilders", "header"])?,
+        ir,
+        IrBindingArtifact::PayloadBuilders,
+        &mcp_ids,
+    );
     let trailer = chrome_str(art, &["payloadBuilders", "testsTrailer"])?;
     let symbols = symbols_for(ir, IrBindingArtifact::PayloadBuilders);
 
@@ -200,14 +215,13 @@ fn emit_payload_builders(
             }
             Ok(format!(
                 "{}{}\n\n{}\n\n{}",
-                with_generated_header(header, toolchain),
+                with_generated_header(&header, toolchain),
                 chunks.join("\n\n"),
                 helpers,
                 trailer
             ))
         }
         Toolchain::Wasm => {
-            let mcp_ids = mcp_symbol_ids(chrome)?;
             let module_header = chrome_str(art, &["payloadBuilders", "mcpPayloadModuleHeader"])?;
             let mcp_helpers = chrome_str(art, &["payloadBuilders", "mcpPayloadHelpers"])?;
 
@@ -228,7 +242,7 @@ fn emit_payload_builders(
             let mcp_section = payload_wasm_section(MCP_SECTION);
             Ok(format!(
                 "{}{}\n\n{}\n\n{}{}\n\n{}\n}}\n\n{}",
-                with_generated_header(header, toolchain),
+                with_generated_header(&header, toolchain),
                 public_chunks.join("\n\n"),
                 mcp_section,
                 module_header,
@@ -247,7 +261,7 @@ fn emit_payload_builders(
             }
             Ok(format!(
                 "{}{}\n\n{}\n\n{}",
-                with_generated_header(header, toolchain),
+                with_generated_header(&header, toolchain),
                 chunks.join("\n\n"),
                 helpers,
                 trailer
@@ -269,13 +283,18 @@ fn ruby_header(header: &str) -> String {
 }
 
 fn emit_ruby_sync_artifact(ir: &Ir, art: &Value, key: &str) -> GenResult<String> {
-    let header = ruby_header(chrome_str(art, &[key, "header"])?);
-    let trailer = chrome_str(art, &[key, "testsTrailer"])?;
     let artifact = if key == "decisions" {
         IrBindingArtifact::Decisions
     } else {
         IrBindingArtifact::PayloadBuilders
     };
+    let header = with_merged_core_imports(
+        &ruby_header(chrome_str(art, &[key, "header"])?),
+        ir,
+        artifact,
+        &[],
+    );
+    let trailer = chrome_str(art, &[key, "testsTrailer"])?;
     let mut chunks = Vec::new();
     let mut previous = None;
     for symbol in symbols_for(ir, artifact) {
@@ -1590,9 +1609,14 @@ fn solvapay_dto_import_ident(dto: &str) -> Option<&str> {
 /// reaches them through the receiver, so only the type needs importing.
 ///
 /// Emitted one ident per line; rustfmt rewraps it when the file is written.
-fn solvapay_core_fn_import_block(ir: &Ir, artifact: IrBindingArtifact) -> String {
+fn solvapay_core_fn_names<'a>(
+    ir: &'a Ir,
+    artifact: IrBindingArtifact,
+    skip_symbol_ids: &[String],
+) -> Vec<&'a str> {
     let mut fns: Vec<&str> = symbols_for(ir, artifact)
         .iter()
+        .filter(|sym| !skip_symbol_ids.iter().any(|id| id == &sym.id))
         .filter_map(|sym| sym.core.strip_prefix("solvapay_core::"))
         .filter_map(|path| {
             let mut segments = path.rsplit("::");
@@ -1606,11 +1630,55 @@ fn solvapay_core_fn_import_block(ir: &Ir, artifact: IrBindingArtifact) -> String
         .collect();
     fns.sort_unstable();
     fns.dedup();
+    fns
+}
 
+fn solvapay_core_fn_import_block(ir: &Ir, artifact: IrBindingArtifact) -> String {
+    let fns = solvapay_core_fn_names(ir, artifact, &[]);
     if fns.is_empty() {
         return String::new();
     }
     format!("use solvapay_core::{{\n    {},\n}};\n", fns.join(",\n    "))
+}
+
+/// Keep header type imports and add every core fn the artifact's shims call.
+fn with_merged_core_imports(
+    header: &str,
+    ir: &Ir,
+    artifact: IrBindingArtifact,
+    skip_symbol_ids: &[String],
+) -> String {
+    const START: &str = "use solvapay_core::{";
+    let derived = solvapay_core_fn_names(ir, artifact, skip_symbol_ids);
+    let Some(start) = header.find(START) else {
+        if derived.is_empty() {
+            return header.to_string();
+        }
+        return format!("{}{header}", solvapay_core_fn_import_block(ir, artifact));
+    };
+    let inner_start = start + START.len();
+    let rest = &header[inner_start..];
+    let Some(close) = rest.find('}') else {
+        return header.to_string();
+    };
+    let mut idents: Vec<String> = rest[..close]
+        .split(',')
+        .map(|part| part.trim().to_string())
+        .filter(|part| !part.is_empty())
+        .collect();
+    for name in derived {
+        if !idents.iter().any(|ident| ident == name) {
+            idents.push(name.to_string());
+        }
+    }
+    idents.sort();
+    idents.dedup();
+    let new_block = format!("use solvapay_core::{{\n    {},\n}}", idents.join(",\n    "));
+    let after_close = inner_start + close + 1;
+    let after = header[after_close..]
+        .strip_prefix(';')
+        .unwrap_or(&header[after_close..]);
+    format!("{}{new_block};{after}", &header[..start])
 }
 
 /// `use solvapay_dto::{…};` covering every DTO the client symbols parse into.

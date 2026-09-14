@@ -9,6 +9,21 @@ import (
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
+// BUSINESS_COUNTRY_DISPLAY_NAMES map of supported business country codes to display names.
+func BUSINESS_COUNTRY_DISPLAY_NAMES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_business_country_display_names_binding", "{}")
+}
+
+// BUSINESS_COUNTRY_OPTIONS ordered list of business country options for seller identity forms.
+func BUSINESS_COUNTRY_OPTIONS(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_business_country_options_table_binding", "{}")
+}
+
+// COUNTRY_TO_TAX_ID_TYPE map of business country codes to default tax ID types.
+func COUNTRY_TO_TAX_ID_TYPE(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_country_to_tax_id_type_binding", "{}")
+}
+
 // POSTAL_CODE_REQUIRED_COUNTRIES countries that require a postal or ZIP code for Stripe Tax.
 // Returns Country code list.
 func POSTAL_CODE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
@@ -29,6 +44,26 @@ func SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(ctx context.Context) (any, erro
 // Returns Country code list.
 func STATE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_state_required_countries_binding", mustJSON(map[string]any{}))
+}
+
+// SUPPORTED_BUSINESS_COUNTRIES frozen list of country codes supported for seller business details.
+func SUPPORTED_BUSINESS_COUNTRIES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_supported_business_countries_binding", "{}")
+}
+
+// TAX_BEHAVIORS frozen set of supported tax behavior values.
+func TAX_BEHAVIORS(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tax_behaviors_binding", "{}")
+}
+
+// TAX_EXCLUSIVE_CURRENCIES currencies that default to tax-exclusive pricing behavior.
+func TAX_EXCLUSIVE_CURRENCIES(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tax_exclusive_currencies_binding", "{}")
+}
+
+// TAX_ID_EXAMPLE_BY_COUNTRY map of country codes to example tax ID strings.
+func TAX_ID_EXAMPLE_BY_COUNTRY(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tax_id_example_by_country_binding", "{}")
 }
 
 // TAX_ID_TYPES frozen set of supported tax ID type values.

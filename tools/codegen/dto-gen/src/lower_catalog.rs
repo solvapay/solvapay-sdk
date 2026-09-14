@@ -807,6 +807,7 @@ topLevel:
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
+            driver_loops: None,
         };
         lower_catalog(&mut ir, &manifest).unwrap();
         assert_eq!(

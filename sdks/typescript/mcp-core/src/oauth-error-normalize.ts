@@ -16,18 +16,6 @@ export type OAuthTokenErrorCode =
   | 'temporarily_unavailable'
   | 'access_denied'
 
-export const VALID_OAUTH_TOKEN_ERROR_CODES = new Set<string>([
-  'invalid_request',
-  'invalid_client',
-  'invalid_grant',
-  'unauthorized_client',
-  'unsupported_grant_type',
-  'invalid_scope',
-  'server_error',
-  'temporarily_unavailable',
-  'access_denied',
-])
-
 export interface OAuthErrorBody {
   error: OAuthTokenErrorCode | string
   error_description?: string

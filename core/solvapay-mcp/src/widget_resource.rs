@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::csp::SolvaPayMcpCsp;
-use crate::descriptors::{mcp_descriptors, BrandingIn, McpDescriptorsInput};
+use crate::descriptor_schemas::{mcp_descriptors, BrandingIn, McpDescriptorsInput};
 use crate::engine::{is_modern_era, stamp_catalog_result};
 
 /// MIME type for the vendored MCP App widget.

@@ -4,6 +4,12 @@
 # Generated portable helper forwarding.
 
 module SolvaPay
+  # Map of supported business country codes to display names.
+  BUSINESS_COUNTRY_DISPLAY_NAMES = NativeDispatch.call_sync("BUSINESS_COUNTRY_DISPLAY_NAMES", {}).freeze
+  # Ordered list of business country options for seller identity forms.
+  BUSINESS_COUNTRY_OPTIONS = NativeDispatch.call_sync("BUSINESS_COUNTRY_OPTIONS", {}).freeze
+  # Map of business country codes to default tax ID types.
+  COUNTRY_TO_TAX_ID_TYPE = NativeDispatch.call_sync("COUNTRY_TO_TAX_ID_TYPE", {}).freeze
   # Countries that require a postal or ZIP code for Stripe Tax.
   # @return Country code list.
   def self.postal_code_required_countries
@@ -22,6 +28,14 @@ module SolvaPay
     NativeDispatch.call_sync("STATE_REQUIRED_COUNTRIES", args)
   end
 
+  # Frozen list of country codes supported for seller business details.
+  SUPPORTED_BUSINESS_COUNTRIES = NativeDispatch.call_sync("SUPPORTED_BUSINESS_COUNTRIES", {}).freeze
+  # Frozen set of supported tax behavior values.
+  TAX_BEHAVIORS = NativeDispatch.call_sync("TAX_BEHAVIORS", {}).freeze
+  # Currencies that default to tax-exclusive pricing behavior.
+  TAX_EXCLUSIVE_CURRENCIES = NativeDispatch.call_sync("TAX_EXCLUSIVE_CURRENCIES", {}).freeze
+  # Map of country codes to example tax ID strings.
+  TAX_ID_EXAMPLE_BY_COUNTRY = NativeDispatch.call_sync("TAX_ID_EXAMPLE_BY_COUNTRY", {}).freeze
   # Frozen set of supported tax ID type values.
   # @return Tax ID type list.
   TAX_ID_TYPES = NativeDispatch.call_sync("TAX_ID_TYPES", {}).freeze

@@ -28,8 +28,7 @@ module SolvaPay
     # @return [PayableAllowResult, PayablePaywallResult] Paywall or allow result with usage trackers.
     def gate(customer_ref, product:, usage_type: "requests")
       started_ms = @clock.call
-      state = nil
-      event = {
+      start_event = {
         "kind" => "start",
         "customerRef" => customer_ref,
         "product" => product,
@@ -38,73 +37,15 @@ module SolvaPay
         "randomUnit" => random_unit,
         "limitsCacheTTLMs" => @limits_cache_ttl,
       }
-      action = {} #: Hash[String, untyped]
-      loop do
-        out = NativeDispatch.call_sync("gate_next", { "state" => state, "event" => event })
-        unless out.is_a?(Hash)
-          raise SolvaPay::SolvaPayError.new("gate_next returned unexpected value", code: "internal_error")
-        end
-
-        state = out["state"]
-        next_action = out["action"]
-        unless next_action.is_a?(Hash)
-          raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
-        end
-
-        action = next_action
-        case action["kind"]
-        when "ensureCustomer"
-          backend = ensure_customer(action["customerRef"])
-          event = { "kind" => "customerResolved", "backendRef" => backend, "nowMs" => @clock.call }
-        when "readLimitsCache"
-          key = action["key"]
-          now = @clock.call
-          cached = @mutex.synchronize { @limits_cache[key] }
-          event = if cached.is_a?(Hash)
-                    {
-                      "kind" => "limitsCacheEntry",
-                      "found" => true,
-                      "remaining" => cached.fetch(:remaining),
-                      "limits" => cached[:limits],
-                      "timestampMs" => cached.fetch(:timestamp),
-                      "nowMs" => now,
-                    }
-                  else
-                    {
-                      "kind" => "limitsCacheEntry",
-                      "found" => false,
-                      "nowMs" => now,
-                    }
-                  end
-        when "checkLimits"
-          if action["cacheDeleteKey"].is_a?(String)
-            @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) }
-          end
-          limits = @client.check_limits(
-            params: {
-              "customerRef" => action["customerRef"],
-              "productRef" => action["productRef"],
-              "meterName" => action["meterName"],
-              "includeCheckoutSession" => action["includeCheckoutSession"],
-            },
-          )
-          unless limits.is_a?(Hash)
-            raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
-          end
-
-          event = {
-            "kind" => "limitsResult",
-            "limits" => limits,
-            "nowMs" => @clock.call,
-          }
-        when "allow", "gate"
-          apply_gate_cache(action["cache"])
-          break
-        else
-          raise SolvaPay::SolvaPayError.new("gate_next returned unknown action kind", code: "internal_error")
-        end
-      end
-
+      stepped = GeneratedGateLoop.run(
+        gate_next: lambda { |state, event|
+          NativeDispatch.call_sync("gate_next", { "state" => state, "event" => event })
+        },
+        host: GateLoopHost.new(self),
+        start_event: start_event,
+      )
+      state = stepped["state"]
+      action = stepped["action"]
       unless action.is_a?(Hash)
         raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
       end
@@ -146,7 +87,58 @@ module SolvaPay
 
     private
 
-    def apply_gate_cache(cache)
+    class GateLoopHost
+      def initialize(facade)
+        @facade = facade
+      end
+
+      def now_ms
+        @facade.send(:now_ms)
+      end
+
+      def ensure_customer(customer_ref)
+        @facade.send(:ensure_customer, customer_ref)
+      end
+
+      def read_limits_cache(key)
+        @facade.send(:read_limits_cache, key)
+      end
+
+      def check_limits(action)
+        @facade.send(:check_limits, action)
+      end
+
+      def apply_cache(cache)
+        @facade.send(:apply_cache, cache)
+      end
+    end
+
+    def now_ms
+      @clock.call
+    end
+
+    def read_limits_cache(key)
+      @mutex.synchronize { @limits_cache[key] }
+    end
+
+    def check_limits(action)
+      @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) } if action["cacheDeleteKey"].is_a?(String)
+      limits = @client.check_limits(
+        params: {
+          "customerRef" => action["customerRef"],
+          "productRef" => action["productRef"],
+          "meterName" => action["meterName"],
+          "includeCheckoutSession" => action["includeCheckoutSession"],
+        },
+      )
+      unless limits.is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
+      end
+
+      limits
+    end
+
+    def apply_cache(cache)
       return unless cache.is_a?(Hash)
 
       key = cache["key"]

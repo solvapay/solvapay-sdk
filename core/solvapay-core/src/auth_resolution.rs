@@ -8,6 +8,10 @@ use serde_json::Value;
 
 use crate::helper_error::HelperErrorResult;
 use crate::hmac_util::{constant_time_eq, hmac_sha256};
+use crate::jwt_util::{
+    base64url_decode, base64url_decode_to_string, decode_jwt_payload_unverified,
+    extract_bearer_token_ref,
+};
 
 /// Frozen `error` field for auth failures.
 const ERR_UNAUTHORIZED: &str = "Unauthorized";
@@ -77,13 +81,13 @@ pub fn resolve_authenticated_user(
         let mut email = None;
         let mut name = None;
         if input.include_email || input.include_name {
-            if let Some(token) = extract_bearer_token(input.authorization_header.as_deref()) {
+            if let Some(token) = extract_bearer_token_ref(input.authorization_header.as_deref()) {
                 let payload = if let Some(secret) = input.jwt_secret.as_deref() {
                     verify_hs256(token, secret, input.now_unix_secs)
                 } else if input.strict_mode {
                     None
                 } else {
-                    decode_jwt_unverified(token)
+                    decode_jwt_unverified_compact(token)
                 };
                 if let Some(payload) = payload {
                     if input.include_email {
@@ -102,7 +106,7 @@ pub fn resolve_authenticated_user(
         });
     }
 
-    let Some(token) = extract_bearer_token(input.authorization_header.as_deref()) else {
+    let Some(token) = extract_bearer_token_ref(input.authorization_header.as_deref()) else {
         return Err(unauthorized(DETAILS_MIDDLEWARE));
     };
 
@@ -114,7 +118,7 @@ pub fn resolve_authenticated_user(
     } else if input.strict_mode {
         return Err(unauthorized(DETAILS_STRICT));
     } else {
-        match decode_jwt_unverified(token) {
+        match decode_jwt_unverified_compact(token) {
             Some(p) => p,
             None => return Err(unauthorized(DETAILS_MALFORMED)),
         }
@@ -144,23 +148,6 @@ fn unauthorized(details: &str) -> HelperErrorResult {
     HelperErrorResult::with_details(ERR_UNAUTHORIZED, 401, details)
 }
 
-/// Case-insensitive `bearer ` prefix; `slice(7).trim()`; empty → none.
-fn extract_bearer_token(authorization_header: Option<&str>) -> Option<&str> {
-    let header = authorization_header?;
-    if header.len() < 7 {
-        return None;
-    }
-    if !header[..7].eq_ignore_ascii_case("bearer ") {
-        return None;
-    }
-    let token = header[7..].trim();
-    if token.is_empty() {
-        None
-    } else {
-        Some(token)
-    }
-}
-
 /// Name precedence: `user_metadata.full_name` → `user_metadata.name` → `name`.
 fn pick_name(payload: &Value) -> Option<String> {
     let metadata = payload.get("user_metadata");
@@ -184,22 +171,12 @@ fn pick_email(payload: &Value) -> Option<String> {
     }
 }
 
-/// Unverified JWT payload decode. Returns `None` if the token is malformed.
-fn decode_jwt_unverified(token: &str) -> Option<Value> {
-    let mut parts = token.split('.');
-    let _header = parts.next()?;
-    let payload_b64 = parts.next()?;
-    let _sig = parts.next()?;
-    if parts.next().is_some() {
+/// Unverified compact JWT (three segments). Returns `None` if malformed.
+fn decode_jwt_unverified_compact(token: &str) -> Option<Value> {
+    if token.split('.').count() != 3 {
         return None;
     }
-    let json = base64url_decode_to_string(payload_b64)?;
-    let payload: Value = serde_json::from_str(&json).ok()?;
-    if payload.is_object() {
-        Some(payload)
-    } else {
-        None
-    }
+    decode_jwt_payload_unverified(token)
 }
 
 /// HS256 verify with jose-equivalent claim checks (`alg`, `exp`, `nbf`, tolerance 0).
@@ -256,77 +233,6 @@ fn claim_as_i64(value: &Value) -> Option<i64> {
         Value::Number(n) => n.as_i64().or_else(|| n.as_f64().map(|f| f as i64)),
         _ => None,
     }
-}
-
-/// Hand-rolled base64url decode (no new crate — step 8 frozen deps).
-fn base64url_decode(input: &str) -> Option<Vec<u8>> {
-    let mut std = String::with_capacity(input.len() + 3);
-    for ch in input.chars() {
-        match ch {
-            '-' => std.push('+'),
-            '_' => std.push('/'),
-            c if c.is_ascii_alphanumeric() || c == '+' || c == '/' => std.push(c),
-            '=' => {} // strip; we re-pad
-            _ => return None,
-        }
-    }
-    let pad = (4 - (std.len() % 4)) % 4;
-    for _ in 0..pad {
-        std.push('=');
-    }
-    decode_standard_base64(&std)
-}
-
-/// Base64url-decode into a UTF-8 string.
-fn base64url_decode_to_string(input: &str) -> Option<String> {
-    let bytes = base64url_decode(input)?;
-    String::from_utf8(bytes).ok()
-}
-
-/// Standard base64 decode (padded alphabet `+/`).
-fn decode_standard_base64(input: &str) -> Option<Vec<u8>> {
-    fn val(c: u8) -> Option<u8> {
-        match c {
-            b'A'..=b'Z' => Some(c - b'A'),
-            b'a'..=b'z' => Some(c - b'a' + 26),
-            b'0'..=b'9' => Some(c - b'0' + 52),
-            b'+' => Some(62),
-            b'/' => Some(63),
-            b'=' => None,
-            _ => None,
-        }
-    }
-
-    let bytes = input.as_bytes();
-    if !bytes.len().is_multiple_of(4) {
-        return None;
-    }
-    let mut out = Vec::with_capacity(bytes.len() / 4 * 3);
-    let mut i = 0;
-    while i < bytes.len() {
-        let b0 = bytes[i];
-        let b1 = bytes[i + 1];
-        let b2 = bytes[i + 2];
-        let b3 = bytes[i + 3];
-        let v0 = val(b0)?;
-        let v1 = val(b1)?;
-        out.push((v0 << 2) | (v1 >> 4));
-        if b2 == b'=' {
-            if b3 != b'=' {
-                return None;
-            }
-            break;
-        }
-        let v2 = val(b2)?;
-        out.push(((v1 & 0x0f) << 4) | (v2 >> 2));
-        if b3 == b'=' {
-            break;
-        }
-        let v3 = val(b3)?;
-        out.push(((v2 & 0x03) << 6) | v3);
-        i += 4;
-    }
-    Some(out)
 }
 
 #[cfg(test)]
@@ -451,7 +357,7 @@ mod tests {
 
     #[test]
     fn bearer_casing_and_empty_token() {
-        assert!(extract_bearer_token(Some("BEARER abc")).is_some());
-        assert!(extract_bearer_token(Some("Bearer    ")).is_none());
+        assert!(extract_bearer_token_ref(Some("BEARER abc")).is_some());
+        assert!(extract_bearer_token_ref(Some("Bearer    ")).is_none());
     }
 }

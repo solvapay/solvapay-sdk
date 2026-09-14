@@ -195,7 +195,10 @@ export function readRustMcpSymbols(repoRoot: string): McpSurfaceRead {
 }
 
 export function readCMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const source = readFileSync(path.join(repoRoot, 'core/solvapay-mcp/src/sync_dispatch.rs'), 'utf8')
+  const source = [
+    readFileSync(path.join(repoRoot, 'core/solvapay-mcp/src/sync_dispatch.rs'), 'utf8'),
+    readFileSync(path.join(repoRoot, 'core/solvapay-mcp/src/sync_dispatch.generated.rs'), 'utf8'),
+  ].join('\n')
   return {
     symbols: quotedStrings(source, /"([A-Za-z][A-Za-z0-9]+)"\s*=>/g),
     hasCallEnvelope: false,

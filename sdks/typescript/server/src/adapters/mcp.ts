@@ -114,15 +114,12 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
    */
   formatGate(gate: PaywallStructuredContent, _context: McpContext): PaywallToolResult {
     // Dual-binding parity with mcp-core `paywallToolResult` (Step 34 / 37R-d).
-    const native = formatGateNative?.(gate)
-    if (native !== null && native !== undefined) {
-      return native
+    if (formatGateNative === null) {
+      throw new Error(
+        'MCP formatGate binding is missing. Call installMcpAdapterNative before serving paywall results.',
+      )
     }
-    return {
-      content: [{ type: 'text', text: gate.message }],
-      isError: false,
-      structuredContent: gate,
-    }
+    return formatGateNative(gate)
   }
 
   formatError(error: Error, _context: McpContext): PaywallToolResult {

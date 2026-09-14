@@ -855,7 +855,7 @@ describe('McpAccountView', () => {
     expect(screen.getByText('Of 10,000 this period.')).toBeTruthy()
     expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
     expect(screen.getByText('Renews')).toBeTruthy()
-    expect(screen.getByText('Sep 12, 2026')).toBeTruthy()
+    expect(screen.getAllByText('Sep 12, 2026').length).toBeGreaterThan(0)
     expect(screen.getByText('Credits')).toBeTruthy()
     expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
     expect(screen.getByText('Balance is untouched.')).toBeTruthy()

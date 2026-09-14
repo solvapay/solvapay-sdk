@@ -17,12 +17,13 @@ mod cors;
 mod csp;
 mod dcr;
 mod default_gate;
-mod descriptors;
+mod descriptor_schemas;
 mod hide_tools;
 mod narrate;
 mod oauth;
 mod overview;
 mod sync_dispatch;
+mod sync_ops;
 
 #[cfg(feature = "engine")]
 mod engine;
@@ -45,9 +46,9 @@ pub use cors::{
 pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};
 pub use dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
 pub use default_gate::{mcp_default_gate, DefaultGateInput};
-pub use descriptors::{
-    append_paid_tool_description, mcp_descriptors, union_payable_output_schema, McpDescriptors,
-    McpDescriptorsInput, McpToolDescriptor,
+pub use descriptor_schemas::{
+    mcp_descriptors, union_payable_output_schema, McpDescriptors, McpDescriptorsInput,
+    McpToolDescriptor,
 };
 pub use hide_tools::{
     is_app_callable, is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput,
@@ -64,8 +65,9 @@ pub use oauth::{
     OauthPathKind, OauthPaths,
 };
 pub use overview::mcp_overview_resource;
+pub use solvapay_core::append_paid_tool_description;
 pub use solvapay_core::paywall_structured_content_schema;
-pub use sync_dispatch::{dispatch_sync, solvapay_call};
+pub use sync_dispatch::{dispatch_sync, dispatch_sync_value, solvapay_call};
 
 #[cfg(feature = "engine")]
 pub use engine::{
