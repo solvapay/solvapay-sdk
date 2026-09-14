@@ -771,6 +771,40 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/vault/capture-sessions
+    async createCaptureSession(params) {
+      const url = `${base}/v1/sdk/vault/capture-sessions`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        await throwApiError('Create capture session', res)
+      }
+
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/vault/credentials
+    async createCredential(params) {
+      const url = `${base}/v1/sdk/vault/credentials`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        await throwApiError('Create credential', res)
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/customers/customer-sessions
     async createCustomerSession(params) {
       const url = `${base}/v1/sdk/customers/customer-sessions`

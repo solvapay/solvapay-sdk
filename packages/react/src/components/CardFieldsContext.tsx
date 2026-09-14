@@ -8,6 +8,7 @@ import type {
   CaptureSession,
   CaptureState,
   CapturedCredential,
+  SavedCredential,
 } from '../vault/types'
 
 /**
@@ -35,8 +36,24 @@ export interface CardFieldsContextValue {
     element: HTMLElement | null,
     options?: CaptureFieldOptions,
   ) => void
-  /** Sends the card to the vault. Resolves with a handle, never with card data. */
+  /**
+   * Sends the card to the vault. Resolves with a handle, never with card data.
+   *
+   * The lower-level half of `save`. Use it directly only when the card should
+   * reach the vault without being recorded against the customer, which is a
+   * narrower case than it sounds: a card the vault holds and we have no
+   * reference to is a card nobody can ever charge.
+   */
   capture: () => Promise<CapturedCredential>
+  /** True while the captured card is being recorded. */
+  saving: boolean
+  /**
+   * Captures the card and records it against the customer, in that order.
+   *
+   * This is what a submit button calls. The capture grant is single use, so a
+   * fresh one is minted afterwards and the surface is ready for another card.
+   */
+  save: (options?: { setAsDefault?: boolean }) => Promise<SavedCredential>
 }
 
 export const CardFieldsContext = createContext<CardFieldsContextValue | null>(null)

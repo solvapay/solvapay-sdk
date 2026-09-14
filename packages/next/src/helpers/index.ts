@@ -23,6 +23,9 @@ export {
 // Export checkout helpers
 export { createCheckoutSession, createCustomerSession } from './checkout'
 
+// Export vault capture helpers
+export { createCaptureSession, createCredential } from './vault'
+
 // Export activation helpers
 export { activatePlan } from './activation'
 

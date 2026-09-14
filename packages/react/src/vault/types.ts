@@ -115,6 +115,18 @@ export interface CredentialDescriptors {
   issuerCountry: string | null
 }
 
+/**
+ * The outcome of saving a captured card against the customer.
+ *
+ * `existing: true` is a success, not a conflict. The vault deduplicates on its
+ * own side and hands back the card it already held, so a returning customer
+ * re-entering the same card gets the reference they already had.
+ */
+export interface SavedCredential {
+  credentialRef: string
+  existing: boolean
+}
+
 export type CaptureErrorCode =
   /** The script could not be loaded, most often a CSP or network problem. */
   | 'script_load_failed'

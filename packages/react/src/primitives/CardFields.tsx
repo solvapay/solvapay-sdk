@@ -12,11 +12,22 @@
  * has one, a `data-state`, matching the conventions of the rest of the tree.
  */
 
-import React, { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Slot } from './slot'
 import { composeRefs } from './composeRefs'
 import { CardFieldsProvider, useCardFields } from '../components/CardFieldsContext'
 import { useCaptureSession } from '../hooks/useCaptureSession'
+import { SolvaPayContext } from '../SolvaPayProvider'
+import { UnsupportedTransportMethodError } from '../transport'
 import { CaptureForm, type MountFieldOptions } from '../vault/captureForm'
 import {
   CaptureError,
@@ -25,6 +36,7 @@ import {
   type CaptureFieldOptions,
   type CaptureState,
   type CapturedCredential,
+  type SavedCredential,
 } from '../vault/types'
 import type { VaultScriptConfig } from '../vault/loadVaultScript'
 
@@ -60,11 +72,13 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
   },
   forwardedRef,
 ) {
-  const { session, error: sessionError } = useCaptureSession({ productRef, planRef })
+  const { session, error: sessionError, refresh } = useCaptureSession({ productRef, planRef })
+  const solvaPay = useContext(SolvaPayContext)
 
   const [state, setState] = useState<CaptureState>(emptyCaptureState)
   const [error, setError] = useState<CaptureError | null>(null)
   const [formReady, setFormReady] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const formRef = useRef<CaptureForm | null>(null)
   const pending = useRef(new Map<CaptureFieldName, MountFieldOptions>())
@@ -160,6 +174,56 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
     }
   }, [cardholder, raise])
 
+  const save = useCallback(
+    async (options: { setAsDefault?: boolean } = {}): Promise<SavedCredential> => {
+      // Read the grant id before the card goes anywhere. Capturing first and
+      // then discovering there is nothing to report the result against would
+      // leave a card in the vault that we hold no reference to, which is worse
+      // than not capturing at all.
+      const captureSessionId = session?.captureSessionId
+      if (!captureSessionId) {
+        const err = new CaptureError('session_expired', 'The capture session is no longer valid.')
+        raise(err)
+        throw err
+      }
+
+      const create = solvaPay?._config?.transport?.createCredential
+      if (!create) {
+        throw new UnsupportedTransportMethodError('createCredential')
+      }
+
+      const credential = await capture()
+
+      setSaving(true)
+      try {
+        const saved = await create({
+          handle: credential.handle,
+          captureSessionId,
+          descriptors: credential.descriptors,
+          ...(options.setAsDefault === undefined ? {} : { setAsDefault: options.setAsDefault }),
+        })
+        // The grant is spent now, server side. Mint the next one so the surface
+        // is usable again rather than failing on the second card with an error
+        // about a session the cardholder never knew existed.
+        void refresh()
+        return saved
+      } catch (err) {
+        const captureError =
+          err instanceof CaptureError
+            ? err
+            : new CaptureError(
+                'vault_error',
+                err instanceof Error ? err.message : 'The card was not saved.',
+              )
+        raise(captureError)
+        throw captureError
+      } finally {
+        setSaving(false)
+      }
+    },
+    [session, solvaPay, capture, raise, refresh],
+  )
+
   const value = useMemo(
     () => ({
       session,
@@ -169,8 +233,10 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
       error,
       registerField,
       capture,
+      saving,
+      save,
     }),
-    [session, state, formReady, error, registerField, capture],
+    [session, state, formReady, error, registerField, capture, saving, save],
   )
 
   const Comp = asChild ? Slot : 'section'
@@ -221,27 +287,39 @@ function createFieldSlot(name: CaptureFieldName, attribute: string) {
     const id = `solvapay-cf-${name}-${generatedId}`
     const elementRef = useRef<HTMLDivElement | null>(null)
 
-    const optionsRef = useRef<CaptureFieldOptions>({})
-    optionsRef.current = {
-      ...(placeholder ? { placeholder } : {}),
-      ...(fieldStyle ? { style: fieldStyle } : {}),
-      ...(ariaLabel ? { ariaLabel } : {}),
-      ...(autoComplete ? { autoComplete } : {}),
+    // Captured once, on the first render, and never reassigned. The vault reads
+    // these when it mounts the iframe and ignores them afterwards, so freezing
+    // them here matches what actually happens. Writing to the ref on every
+    // render would also be a render-phase side effect, which React does not
+    // promise to run exactly once.
+    const optionsRef = useRef<CaptureFieldOptions | null>(null)
+    if (optionsRef.current === null) {
+      optionsRef.current = {
+        ...(placeholder ? { placeholder } : {}),
+        ...(fieldStyle ? { style: fieldStyle } : {}),
+        ...(ariaLabel ? { ariaLabel } : {}),
+        ...(autoComplete ? { autoComplete } : {}),
+      }
     }
 
     const attach = useCallback(
       (node: HTMLDivElement | null) => {
         elementRef.current = node
-        ctx.registerField(name, node, optionsRef.current)
+        ctx.registerField(name, node, optionsRef.current ?? undefined)
       },
       [ctx],
     )
 
-    // Unmount once, on teardown. Depending on `ctx` here would remount the
-    // iframe on every state change, which loses whatever the cardholder typed.
-    const unregisterRef = useRef<() => void>(() => {})
-    unregisterRef.current = () => ctx.registerField(name, null)
-    useEffect(() => () => unregisterRef.current(), [])
+    // Unmount once, on teardown, and only then. Depending on `ctx` in the
+    // effect would tear the iframe down and rebuild it on every state change,
+    // losing whatever the cardholder had typed. So the effect depends on
+    // nothing, and reads the current context through a ref that is updated in
+    // its own effect rather than during render.
+    const ctxRef = useRef(ctx)
+    useEffect(() => {
+      ctxRef.current = ctx
+    })
+    useEffect(() => () => ctxRef.current.registerField(name, null), [])
 
     const field = ctx.state.fields[name]
     const Comp = asChild ? Slot : 'div'

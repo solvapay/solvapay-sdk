@@ -114,6 +114,8 @@ export {
   attachBusinessDetailsCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  createCaptureSessionCore,
+  createCredentialCore,
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,

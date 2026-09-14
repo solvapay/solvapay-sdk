@@ -431,6 +431,35 @@ export interface SolvaPayClient {
     params: operations['CheckoutSessionSdkController_createCheckoutSession']['requestBody']['content']['application/json'],
   ): Promise<components['schemas']['CreateCheckoutSessionResponse']>
 
+  // POST: /v1/sdk/vault/capture-sessions
+  //
+  // Hand-written rather than pulled from `components['schemas']`: the vault
+  // controller is newer than the last OpenAPI generation. Move these to the
+  // generated types the next time the spec is regenerated.
+  createCaptureSession?(params: { customerRef?: string; checkoutSessionId?: string }): Promise<{
+    token: string
+    tenantId: string
+    environment: 'sandbox' | 'live'
+    expiresAt: number
+    captureSessionId: string
+  }>
+
+  // POST: /v1/sdk/vault/credentials
+  createCredential?(params: {
+    handle: string
+    captureSessionId: string
+    customerRef?: string
+    setAsDefault?: boolean
+    descriptors?: {
+      brand?: string
+      last4?: string
+      expMonth?: number
+      expYear?: number
+      funding?: string
+      issuerCountry?: string
+    }
+  }): Promise<{ credentialRef: string; existing: boolean }>
+
   // POST: /v1/sdk/customers/customer-sessions
   createCustomerSession(
     params: components['schemas']['CreateCustomerSessionRequest'],

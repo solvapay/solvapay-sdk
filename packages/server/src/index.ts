@@ -239,6 +239,8 @@ export {
   attachBusinessDetailsCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  createCaptureSessionCore,
+  createCredentialCore,
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
@@ -268,4 +270,7 @@ export type {
   PurchaseCheckResult,
   GetUsageResult,
   UsageLimitsInput,
+  CaptureSessionResult,
+  CredentialResult,
+  CredentialDescriptorsInput,
 } from './helpers'
