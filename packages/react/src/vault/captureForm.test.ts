@@ -13,14 +13,13 @@ const vendorField = (over: Record<string, unknown> = {}) => ({
 describe('normaliseVendorState', () => {
   it('maps vendor field names onto ours and nothing else', () => {
     const next = normaliseVendorState(emptyCaptureState(), {
-      card_number: vendorField({ cardType: 'VISA', bin: '424242', last4: '4242' }),
+      card_number: vendorField({ cardType: 'VISA', last4: '4242' }),
       unrelated_field: vendorField(),
     })
 
     expect(next.fields.cardNumber.mounted).toBe(true)
     expect(next.fields.cardNumber.valid).toBe(true)
     expect(next.brand).toBe('visa')
-    expect(next.bin).toBe('424242')
     expect(next.last4).toBe('4242')
     // An unknown vendor key must not invent a field.
     expect(Object.keys(next.fields).sort()).toEqual([
@@ -91,7 +90,6 @@ describe('toCredential', () => {
         exp_month: 12,
         exp_year: 30,
         last4: '4242',
-        bin: '424242',
         card_brand: 'VISA',
         card_type: 'debit',
         card_fingerprint: 'fp_abc',
@@ -106,7 +104,6 @@ describe('toCredential', () => {
     expect(result.descriptors).toEqual({
       brand: 'visa',
       last4: '4242',
-      bin: '424242',
       expMonth: 12,
       expYear: 2030,
       funding: 'debit',
@@ -229,26 +226,29 @@ describe('toCredential: leading digits', () => {
     },
   })
 
-  it('keeps six digits when the vault reports a bin', () => {
-    expect(toCredential(vaultResponse({ bin: '424242' })).descriptors.bin).toBe('424242')
+  it('ignores the vault bin entirely', () => {
+    const credential = toCredential(vaultResponse({ bin: '424242' }))
+    expect(JSON.stringify(credential)).not.toContain('424242')
   })
 
-  it('cuts first8 down to six, so we never hold eight leading digits', () => {
-    // first8 plus last4 would be twelve of sixteen digits in our database.
-    expect(toCredential(vaultResponse({ first8: '42424242' })).descriptors.bin).toBe('424242')
+  it('ignores first8 entirely', () => {
+    const credential = toCredential(vaultResponse({ first8: '42424242' }))
+    expect(JSON.stringify(credential)).not.toContain('42424242')
   })
 
-  it('prefers bin over first8 when both are present', () => {
-    expect(toCredential(vaultResponse({ bin: '411111', first8: '42424242' })).descriptors.bin).toBe(
-      '411111',
+  it('keeps nothing of the card but the last four', () => {
+    const credential = toCredential(
+      vaultResponse({ bin: '424242', first8: '42424242', card_fingerprint: 'fp_1' }),
     )
-  })
-
-  it('returns null rather than a partial bin', () => {
-    expect(toCredential(vaultResponse({ bin: '4242' })).descriptors.bin).toBeNull()
-  })
-
-  it('never lets a full card number through as a bin', () => {
-    expect(toCredential(vaultResponse({ bin: '4242424242424242' })).descriptors.bin).toBe('424242')
+    expect(credential.descriptors.last4).toBe('4242')
+    expect(Object.keys(credential.descriptors).sort()).toEqual([
+      'brand',
+      'expMonth',
+      'expYear',
+      'fingerprint',
+      'funding',
+      'issuerCountry',
+      'last4',
+    ])
   })
 })

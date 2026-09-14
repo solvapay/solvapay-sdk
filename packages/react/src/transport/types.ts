@@ -291,7 +291,6 @@ export interface TransportCaptureSessionResult {
 export interface TransportCredentialDescriptors {
   brand: string
   last4: string
-  bin?: string | null
   expMonth: number
   expYear: number
   funding?: string | null

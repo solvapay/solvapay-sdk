@@ -88,7 +88,6 @@ export interface CaptureState {
   complete: boolean
   brand: CardBrand | null
   /** Leading digits, when the vault reports them. Never the full number. */
-  bin: string | null
   last4: string | null
 }
 
@@ -109,7 +108,6 @@ export interface CapturedCredential {
 export interface CredentialDescriptors {
   brand: CardBrand
   last4: string
-  bin: string | null
   expMonth: number
   expYear: number
   /** debit, credit, prepaid, where the vault reports it. */
@@ -196,7 +194,6 @@ export function emptyCaptureState(): CaptureState {
     ready: false,
     complete: false,
     brand: null,
-    bin: null,
     last4: null,
   }
 }

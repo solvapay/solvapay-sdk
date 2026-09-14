@@ -112,7 +112,6 @@ export function normaliseVendorState(
 ): CaptureState {
   const fields = { ...previous.fields }
   let brand = previous.brand
-  let bin = previous.bin
   let last4 = previous.last4
 
   for (const [vendorName, rawField] of Object.entries(vendorState)) {
@@ -133,7 +132,6 @@ export function normaliseVendorState(
 
     if (name === 'cardNumber') {
       brand = normaliseBrand(f.cardType ?? f.brand) ?? brand
-      bin = asString(f.bin) ?? bin
       last4 = asString(f.last4) ?? last4
     }
   }
@@ -143,7 +141,6 @@ export function normaliseVendorState(
     ready: isReady(fields),
     complete: isComplete(fields),
     brand,
-    bin,
     last4,
   }
 }
@@ -337,17 +334,11 @@ export function toCaptureError(error: unknown): CaptureError {
 }
 
 /** Pulls our credential shape out of the vault's card object. */
-/**
- * Narrows whatever leading-digit field the vault gave us to six digits.
- *
- * Returns null rather than a short value if there are fewer than six, because a
- * partial BIN identifies nothing and a field that is sometimes four digits and
- * sometimes six is a field someone will later assume is a last4.
- */
-function toBin(value: unknown): string | null {
-  const digits = asString(value)?.replace(/[^0-9]/g, '') ?? ''
-  return digits.length >= 6 ? digits.slice(0, 6) : null
-}
+// No BIN, and no leading digits of any length, anywhere in this file. The vault
+// offers `bin` and `first8` and we read neither. Stripe's card object carries no
+// such field either. The brand comes from the vault directly, and recognising a
+// returning card is the fingerprint's job, so leading digits would buy nothing
+// and would put ten or twelve digits of a sixteen digit card in our database.
 
 export function toCredential(raw: unknown): CapturedCredential {
   const root = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
@@ -371,12 +362,6 @@ export function toCredential(raw: unknown): CapturedCredential {
   const descriptors: CredentialDescriptors = {
     brand: normaliseBrand(attributes.card_brand ?? properties.brand) ?? 'unknown',
     last4: asString(attributes.last4) ?? '',
-    // Six digits, never eight. The vault also offers `first8`, and taking it
-    // would put the first eight and the last four of the card in our database:
-    // twelve of sixteen digits, which is materially closer to a card number
-    // than anything we have a reason to hold. Six identifies the issuer, which
-    // is the only thing a BIN is for here.
-    bin: toBin(attributes.bin ?? attributes.first8),
     expMonth,
     expYear,
     funding: asString(attributes.card_type ?? properties.funding),
