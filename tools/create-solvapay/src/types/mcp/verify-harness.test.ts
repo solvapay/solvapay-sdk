@@ -18,5 +18,12 @@ describe('verify.mjs transport-tool callability', () => {
       expect(src).toContain('checks.transportToolCallable')
       expect(src).toMatch(/bearerToken[\s\S]*runTransportToolCallableCheck/)
     })
+
+    it(`${path.basename(path.dirname(path.dirname(file)))} reads widget HTML when resources/list is challenged`, async () => {
+      const src = await readFile(file, 'utf8')
+      expect(src).toContain("ui://widget.html")
+      expect(src).toContain('authMode: all')
+      expect(src).toContain('readResource(base, uri, rpcOptions)')
+    })
   }
 })

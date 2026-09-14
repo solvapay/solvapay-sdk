@@ -21,6 +21,7 @@
  */
 
 import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
 import {
   rpc,
   listTools,
@@ -516,31 +517,56 @@ async function runMerchantBootstrapCheck(base, rpcOptions) {
 
 async function runWidgetResourceCheck(base, rpcOptions = {}) {
   return run(async () => {
-    const resources = await listResources(base, rpcOptions)
-    const widget = resources.find(
-      r =>
-        typeof r?.uri === 'string' &&
-        (r.uri.endsWith('/mcp-app.html') ||
-          r.uri.endsWith('mcp-app.html') ||
-          r.uri.includes('widget')),
-    )
-    assert(widget, 'resources/list must include a ui://…/mcp-app.html widget')
-    const result = await readResource(base, widget.uri, rpcOptions)
-    const content = Array.isArray(result?.contents) ? result.contents[0] : undefined
-    assert(content, `resources/read ${widget.uri} returned no contents`)
-    const html =
-      typeof content.text === 'string'
-        ? content.text
-        : typeof content.blob === 'string'
-          ? content.blob
-          : ''
-    assert(
-      html.includes('<html') || html.includes('<!DOCTYPE'),
-      `resources/read ${widget.uri} must return HTML, not a stub`,
-    )
-    const csp = content._meta?.ui?.csp ?? result?._meta?.ui?.csp
-    assert(csp && typeof csp === 'object', `resources/read ${widget.uri} must include _meta.ui.csp`)
-    return { uri: widget.uri, htmlLength: html.length }
+    // `resources/list` is gated under the default `authMode: all`. The
+    // widget `ui://` `resources/read` short-circuits before the gate, so
+    // when listing is challenged we still read the known scaffold URIs.
+    let listedUri
+    try {
+      const resources = await listResources(base, rpcOptions)
+      const widget = resources.find(
+        r =>
+          typeof r?.uri === 'string' &&
+          (r.uri.endsWith('/mcp-app.html') ||
+            r.uri.endsWith('mcp-app.html') ||
+            r.uri.includes('widget')),
+      )
+      listedUri = widget?.uri
+    } catch (err) {
+      if (!(err instanceof RpcError && err.info?.httpStatus === 401 && !rpcOptions.bearerToken)) {
+        throw err
+      }
+    }
+    const candidates = [
+      listedUri,
+      'ui://widget.html',
+      'ui://solvapay/mcp-app.html',
+      `ui://${basename(process.cwd())}/mcp-app.html`,
+    ].filter((uri, index, all) => typeof uri === 'string' && uri.length > 0 && all.indexOf(uri) === index)
+
+    let lastError
+    for (const uri of candidates) {
+      try {
+        const result = await readResource(base, uri, rpcOptions)
+        const content = Array.isArray(result?.contents) ? result.contents[0] : undefined
+        assert(content, `resources/read ${uri} returned no contents`)
+        const html =
+          typeof content.text === 'string'
+            ? content.text
+            : typeof content.blob === 'string'
+              ? content.blob
+              : ''
+        assert(
+          html.includes('<html') || html.includes('<!DOCTYPE'),
+          `resources/read ${uri} must return HTML, not a stub`,
+        )
+        const csp = content._meta?.ui?.csp ?? result?._meta?.ui?.csp
+        assert(csp && typeof csp === 'object', `resources/read ${uri} must include _meta.ui.csp`)
+        return { uri, htmlLength: html.length }
+      } catch (err) {
+        lastError = err
+      }
+    }
+    throw lastError ?? new Error('resources/read must serve a ui:// widget HTML resource before the auth gate')
   })
 }
 
