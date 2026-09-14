@@ -106,6 +106,13 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
     }
     output.push_str(
         "  end\n\n\
+         \x20 # Generated driver loops (drivers.generated.rb).\n\
+         \x20 module GeneratedGateLoop\n\
+         \x20   def self.run: (gate_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> Hash[String, untyped]\n\
+         \x20 end\n\n\
+         \x20 module GeneratedPayableLoop\n\
+         \x20   def self.run: (payable_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> untyped\n\
+         \x20 end\n\n\
          \x20 class Facade\n\
          \x20   BASE36: String\n\
          \x20   @client: Client\n\
@@ -119,7 +126,20 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result\n\
          \x20   def payable: (product: String, ?usage_type: String) -> Payable\n\
          \x20   def track_usage: (params: Hash[String, untyped]) -> untyped\n\
+         \x20   class GateLoopHost\n\
+         \x20     @facade: Facade\n\
+         \x20     def initialize: (Facade facade) -> void\n\
+         \x20     def now_ms: () -> Integer\n\
+         \x20     def ensure_customer: (String customer_ref) -> String\n\
+         \x20     def read_limits_cache: (String key) -> untyped\n\
+         \x20     def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]\n\
+         \x20     def apply_cache: (untyped cache) -> void\n\
+         \x20   end\n\
          \x20   private\n\
+         \x20   def now_ms: () -> Integer\n\
+         \x20   def read_limits_cache: (String key) -> untyped\n\
+         \x20   def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]\n\
+         \x20   def apply_cache: (untyped cache) -> void\n\
          \x20   def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]\n\
          \x20   def ensure_customer: (String customer_ref) -> String\n\
          \x20   def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]\n\

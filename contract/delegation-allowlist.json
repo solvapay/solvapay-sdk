@@ -512,6 +512,21 @@
     },
     {
       "package": "@solvapay/mcp",
+      "symbol": "INTENT_TOOL_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "MCP_PROMPT_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "MCP_TOOL_NAMES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp",
       "symbol": "registerAppResource",
       "reason": "section-8-exclusion"
     },
@@ -534,6 +549,11 @@
       "package": "@solvapay/mcp",
       "symbol": "RESOURCE_URI_META_KEY",
       "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "VIEWER_TOOL_NAME",
+      "reason": "type-guard-or-const"
     },
     {
       "package": "@solvapay/next",

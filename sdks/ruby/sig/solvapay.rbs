@@ -129,6 +129,15 @@ module SolvaPay
     def update_product: (product_ref: String, params: Hash[String, untyped]) -> untyped
   end
 
+  # Generated driver loops (drivers.generated.rb).
+  module GeneratedGateLoop
+    def self.run: (gate_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> Hash[String, untyped]
+  end
+
+  module GeneratedPayableLoop
+    def self.run: (payable_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> untyped
+  end
+
   class Facade
     BASE36: String
     @client: Client
@@ -142,7 +151,20 @@ module SolvaPay
     def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result
     def payable: (product: String, ?usage_type: String) -> Payable
     def track_usage: (params: Hash[String, untyped]) -> untyped
+    class GateLoopHost
+      @facade: Facade
+      def initialize: (Facade facade) -> void
+      def now_ms: () -> Integer
+      def ensure_customer: (String customer_ref) -> String
+      def read_limits_cache: (String key) -> untyped
+      def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]
+      def apply_cache: (untyped cache) -> void
+    end
     private
+    def now_ms: () -> Integer
+    def read_limits_cache: (String key) -> untyped
+    def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]
+    def apply_cache: (untyped cache) -> void
     def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]
     def ensure_customer: (String customer_ref) -> String
     def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]

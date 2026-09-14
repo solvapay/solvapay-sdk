@@ -2,6 +2,21 @@
 /* eslint-disable */
 
 /**
+ * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+ */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json: string): string;
+
+/**
+ * Binding for `BUSINESS_COUNTRY_OPTIONS`.
+ */
+export function BUSINESS_COUNTRY_OPTIONS(args_json: string): string;
+
+/**
+ * Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+ */
+export function COUNTRY_TO_TAX_ID_TYPE(args_json: string): string;
+
+/**
  * Binding for `MCP_TOOL_NAMES`.
  */
 export function MCP_TOOL_NAMES(args_json: string): string;
@@ -27,6 +42,26 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): 
 export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
 
 /**
+ * Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+ */
+export function SUPPORTED_BUSINESS_COUNTRIES(args_json: string): string;
+
+/**
+ * Binding for `TAX_BEHAVIORS`.
+ */
+export function TAX_BEHAVIORS(args_json: string): string;
+
+/**
+ * Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+ */
+export function TAX_EXCLUSIVE_CURRENCIES(args_json: string): string;
+
+/**
+ * Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+ */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(args_json: string): string;
+
+/**
  * Binding for `TAX_ID_TYPES`.
  */
 export function TAX_ID_TYPES(args_json: string): string;
@@ -50,11 +85,11 @@ export class WasmClient {
      */
     activatePlan(args_json: string): Promise<string>;
     /**
-     * Grant credits to a customer.
+     * `POST /v1/sdk/customers/{customerRef}/credits`
      */
     assignCredits(args_json: string): Promise<string>;
     /**
-     * `POST /v1/sdk/payment-intents/{id}/business-details`
+     * `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
      */
     attachBusinessDetails(args_json: string): Promise<string>;
     /**
@@ -71,18 +106,14 @@ export class WasmClient {
     checkLimits(args_json: string): Promise<string>;
     /**
      * `POST /v1/sdk/products/{productRef}/clone`
-     *
-     * Args JSON is `{ productRef, name? }`.
      */
     cloneProduct(args_json: string): Promise<string>;
     /**
      * `PUT /v1/sdk/products/{productRef}/mcp/plans`
-     *
-     * Args JSON is `{ productRef, ...params }`.
      */
     configureMcpPlans(args_json: string): Promise<string>;
     /**
-     * Hosted checkout session.
+     * `POST /v1/sdk/checkout-sessions`
      */
     createCheckoutSession(args_json: string): Promise<string>;
     /**
@@ -90,15 +121,15 @@ export class WasmClient {
      */
     createCustomer(args_json: string): Promise<string>;
     /**
-     * Customer portal session.
+     * `POST /v1/sdk/customers/customer-sessions`
      */
     createCustomerSession(args_json: string): Promise<string>;
     /**
-     * `POST /v1/sdk/payment-intents` (plan checkout).
+     * `POST /v1/sdk/payment-intents`
      */
     createPaymentIntent(args_json: string): Promise<string>;
     /**
-     * `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+     * `POST /v1/sdk/products/{productRef}/plans`
      */
     createPlan(args_json: string): Promise<string>;
     /**
@@ -106,23 +137,19 @@ export class WasmClient {
      */
     createProduct(args_json: string): Promise<string>;
     /**
-     * `POST /v1/sdk/payment-intents` (credit top-up).
+     * `POST /v1/sdk/payment-intents`
      */
     createTopupPaymentIntent(args_json: string): Promise<string>;
     /**
      * `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-     *
-     * Args JSON is `{ productRef, planRef }`. Success value is `null`.
      */
     deletePlan(args_json: string): Promise<string>;
     /**
      * `DELETE /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef }`. Success value is `null`.
      */
     deleteProduct(args_json: string): Promise<string>;
     /**
-     * `DELETE /v1/sdk/auto-recharge`
+     * `DELETE /v1/sdk/auto-recharge?customerRef=`
      */
     disableAutoRecharge(args_json: string): Promise<string>;
     /**
@@ -130,7 +157,7 @@ export class WasmClient {
      */
     fetchJwks(args_json: string): Promise<string>;
     /**
-     * `GET /v1/sdk/auto-recharge`
+     * `GET /v1/sdk/auto-recharge?customerRef=`
      */
     getAutoRecharge(args_json: string): Promise<string>;
     /**
@@ -138,43 +165,39 @@ export class WasmClient {
      */
     getCreditActivity(args_json: string): Promise<string>;
     /**
-     * Customer lookup by ref / externalRef / email.
+     * `GET /v1/sdk/customers…`
      */
     getCustomer(args_json: string): Promise<string>;
     /**
-     * Credit balance for a customer.
+     * `GET /v1/sdk/customers/{customerRef}/balance`
      */
     getCustomerBalance(args_json: string): Promise<string>;
     /**
-     * Merchant profile (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/merchant`
      */
     getMerchant(_args_json: string): Promise<string>;
     /**
-     * `GET /v1/sdk/payment-method`
+     * `GET /v1/sdk/payment-method?customerRef=`
      */
     getPaymentMethod(args_json: string): Promise<string>;
     /**
-     * Platform config (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/platform-config`
      */
     getPlatformConfig(_args_json: string): Promise<string>;
     /**
      * `GET /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef }`.
      */
     getProduct(args_json: string): Promise<string>;
     /**
-     * User info for a customer/product pair.
+     * `POST /v1/sdk/user-info`
      */
     getUserInfo(args_json: string): Promise<string>;
     /**
      * `GET /v1/sdk/products/{productRef}/plans`
-     *
-     * Args JSON is `{ productRef }`.
      */
     listPlans(args_json: string): Promise<string>;
     /**
-     * `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/products`
      */
     listProducts(_args_json: string): Promise<string>;
     /**
@@ -215,7 +238,7 @@ export class WasmClient {
      */
     constructor(api_key: string, api_base_url?: string | null);
     /**
-     * `POST /v1/sdk/payment-intents/{id}/process`
+     * `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
      */
     processPaymentIntent(args_json: string): Promise<string>;
     /**
@@ -236,20 +259,14 @@ export class WasmClient {
     trackUsageBulk(args_json: string): Promise<string>;
     /**
      * `PATCH /v1/sdk/customers/{customerRef}`
-     *
-     * Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
      */
     updateCustomer(args_json: string): Promise<string>;
     /**
      * `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-     *
-     * Args JSON is `{ productRef, planRef, ...params }`.
      */
     updatePlan(args_json: string): Promise<string>;
     /**
      * `PUT /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef, ...params }`.
      */
     updateProduct(args_json: string): Promise<string>;
 }
@@ -366,6 +383,11 @@ export function classifyReactivateError(args_json: string): string;
 export function coerceCustomerOptions(args_json: string): string;
 
 /**
+ * Binding for `compileStringFieldInputSchemaJson`.
+ */
+export function compileStringFieldInputSchemaJson(args_json: string): string;
+
+/**
  * Binding for `countsUsage`.
  */
 export function countsUsage(args_json: string): string;
@@ -386,9 +408,24 @@ export function creditsPerUnitFromBalance(args_json: string): string;
 export function creditsToDisplayMinorUnits(args_json: string): string;
 
 /**
+ * Binding for `customerRefFromClaims`.
+ */
+export function customerRefFromClaims(args_json: string): string;
+
+/**
  * Binding for `decidePaywallOutcome`.
  */
 export function decidePaywallOutcome(args_json: string): string;
+
+/**
+ * Binding for `decodeJwtPayloadUnverified`.
+ */
+export function decodeJwtPayloadUnverified(args_json: string): string;
+
+/**
+ * Binding for `defaultMcpBearerExpectations`.
+ */
+export function defaultMcpBearerExpectations(args_json: string): string;
 
 /**
  * Binding for `deriveActiveProducts`.
@@ -414,6 +451,11 @@ export function deriveTaxIdType(args_json: string): string;
  * Binding for `ensureCustomerNext`.
  */
 export function ensureCustomerNext(args_json: string): string;
+
+/**
+ * Binding for `ensureOutputSchemaObjectType`.
+ */
+export function ensureOutputSchemaObjectType(args_json: string): string;
 
 /**
  * Binding for `evaluateBalanceObservation`.
@@ -444,6 +486,11 @@ export function evaluateProductReadiness(args_json: string): string;
  * Binding for `extractBackendCustomerRef`.
  */
 export function extractBackendCustomerRef(args_json: string): string;
+
+/**
+ * Binding for `extractBearerToken`.
+ */
+export function extractBearerToken(args_json: string): string;
 
 /**
  * Binding for `formatCompactCredits`.
@@ -629,6 +676,11 @@ export function normalizeCancelResponse(args_json: string): string;
  * Binding for `normalizeReactivateResponse`.
  */
 export function normalizeReactivateResponse(args_json: string): string;
+
+/**
+ * Binding for `overlayClaimedLimits`.
+ */
+export function overlayClaimedLimits(args_json: string): string;
 
 /**
  * Binding for `paywallErrorToClientPayload`.
@@ -912,11 +964,18 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly BUSINESS_COUNTRY_DISPLAY_NAMES: (a: number, b: number) => [number, number];
+    readonly BUSINESS_COUNTRY_OPTIONS: (a: number, b: number) => [number, number];
+    readonly COUNTRY_TO_TAX_ID_TYPE: (a: number, b: number) => [number, number];
     readonly MCP_TOOL_NAMES: (a: number, b: number) => [number, number];
     readonly POSTAL_CODE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
     readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
     readonly STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly SUPPORTED_BUSINESS_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly TAX_BEHAVIORS: (a: number, b: number) => [number, number];
+    readonly TAX_EXCLUSIVE_CURRENCIES: (a: number, b: number) => [number, number];
+    readonly TAX_ID_EXAMPLE_BY_COUNTRY: (a: number, b: number) => [number, number];
     readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly __wbg_wasmclient_free: (a: number, b: number) => void;
@@ -942,22 +1001,28 @@ export interface InitOutput {
     readonly classifyPaywallState: (a: number, b: number) => [number, number];
     readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly coerceCustomerOptions: (a: number, b: number) => [number, number];
+    readonly compileStringFieldInputSchemaJson: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];
     readonly creditSignals: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
+    readonly customerRefFromClaims: (a: number, b: number) => [number, number];
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
+    readonly decodeJwtPayloadUnverified: (a: number, b: number) => [number, number];
+    readonly defaultMcpBearerExpectations: (a: number, b: number) => [number, number];
     readonly deriveActiveProducts: (a: number, b: number) => [number, number];
     readonly deriveDefaultView: (a: number, b: number) => [number, number];
     readonly deriveIcons: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
     readonly ensureCustomerNext: (a: number, b: number) => [number, number];
+    readonly ensureOutputSchemaObjectType: (a: number, b: number) => [number, number];
     readonly evaluateBalanceObservation: (a: number, b: number) => [number, number];
     readonly evaluateCachedLimits: (a: number, b: number) => [number, number];
     readonly evaluateClaimedLimits: (a: number, b: number) => [number, number];
     readonly evaluateFreshLimits: (a: number, b: number) => [number, number];
     readonly evaluateProductReadiness: (a: number, b: number) => [number, number];
     readonly extractBackendCustomerRef: (a: number, b: number) => [number, number];
+    readonly extractBearerToken: (a: number, b: number) => [number, number];
     readonly formatCompactCredits: (a: number, b: number) => [number, number];
     readonly formatPrice: (a: number, b: number) => [number, number];
     readonly formatSubtotalLabel: (a: number, b: number) => [number, number];
@@ -995,6 +1060,7 @@ export interface InitOutput {
     readonly nextActionFor: (a: number, b: number) => [number, number];
     readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
+    readonly overlayClaimedLimits: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
     readonly paywallStructuredContentSchema: (a: number, b: number) => [number, number];
     readonly paywallToolResult: (a: number, b: number) => [number, number];

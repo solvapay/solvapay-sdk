@@ -17,7 +17,7 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
-import { joinRel, tsPackageRel } from '../../shared/paths.js'
+import { joinRel, tsPackageRel, TS_PACKAGE_IDS } from '../../shared/paths.js'
 
 export const DELEGATION_MARKERS = [
   'dispatchClient',
@@ -290,6 +290,23 @@ export function loadAllowlist(filePath: string): DelegationAllowlist {
 }
 
 /**
+ * Resolve every `@solvapay/*` workspace specifier to its source barrel.
+ *
+ * Without this the program resolves cross-package re-exports through
+ * `node_modules` to each package's built `dist/`, so the inventory silently
+ * depends on whether the workspace happens to be built: an unbuilt package is
+ * unresolvable, every symbol it re-exports collapses onto the importing entry
+ * file, and the gate reports phantom missing markers.
+ */
+function workspaceSourcePaths(repoRoot: string): Record<string, string[]> {
+  const paths: Record<string, string[]> = {}
+  for (const id of TS_PACKAGE_IDS) {
+    paths[`@solvapay/${id}`] = [joinRel(repoRoot, tsPackageRel(id), 'src', 'index.ts')]
+  }
+  return paths
+}
+
+/**
  * Build the live export inventory from package source entry points.
  */
 export function buildExportInventory(repoRoot: string): ExportInventoryEntry[] {
@@ -323,7 +340,7 @@ export function buildExportInventory(repoRoot: string): ExportInventoryEntry[] {
 
   const program = loadProgram(
     [serverEntry, coreEntry, mcpCoreEntry, mcpEntry, nextEntry, authEntry],
-    config.options,
+    { ...config.options, baseUrl: repoRoot, paths: workspaceSourcePaths(repoRoot) },
   )
   const inventory: ExportInventoryEntry[] = []
 

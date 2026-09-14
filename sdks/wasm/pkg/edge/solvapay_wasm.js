@@ -2,6 +2,66 @@
 /* @ts-self-types="./solvapay_wasm.d.ts" */
 
 /**
+ * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.BUSINESS_COUNTRY_DISPLAY_NAMES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `BUSINESS_COUNTRY_OPTIONS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function BUSINESS_COUNTRY_OPTIONS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.BUSINESS_COUNTRY_OPTIONS(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function COUNTRY_TO_TAX_ID_TYPE(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.COUNTRY_TO_TAX_ID_TYPE(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `MCP_TOOL_NAMES`.
  * @param {string} args_json
  * @returns {string}
@@ -102,6 +162,86 @@ export function STATE_REQUIRED_COUNTRIES(args_json) {
 }
 
 /**
+ * Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function SUPPORTED_BUSINESS_COUNTRIES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.SUPPORTED_BUSINESS_COUNTRIES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_BEHAVIORS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_BEHAVIORS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_BEHAVIORS(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_EXCLUSIVE_CURRENCIES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_EXCLUSIVE_CURRENCIES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_ID_EXAMPLE_BY_COUNTRY(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `TAX_ID_TYPES`.
  * @param {string} args_json
  * @returns {string}
@@ -170,7 +310,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Grant credits to a customer.
+     * `POST /v1/sdk/customers/{customerRef}/credits`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -181,7 +321,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `POST /v1/sdk/payment-intents/{id}/business-details`
+     * `POST /v1/sdk/payment-intents/{paymentIntentId}/business-details`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -226,8 +366,6 @@ export class WasmClient {
     }
     /**
      * `POST /v1/sdk/products/{productRef}/clone`
-     *
-     * Args JSON is `{ productRef, name? }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -239,8 +377,6 @@ export class WasmClient {
     }
     /**
      * `PUT /v1/sdk/products/{productRef}/mcp/plans`
-     *
-     * Args JSON is `{ productRef, ...params }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -251,7 +387,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Hosted checkout session.
+     * `POST /v1/sdk/checkout-sessions`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -273,7 +409,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Customer portal session.
+     * `POST /v1/sdk/customers/customer-sessions`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -284,7 +420,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `POST /v1/sdk/payment-intents` (plan checkout).
+     * `POST /v1/sdk/payment-intents`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -295,7 +431,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
+     * `POST /v1/sdk/products/{productRef}/plans`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -317,7 +453,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `POST /v1/sdk/payment-intents` (credit top-up).
+     * `POST /v1/sdk/payment-intents`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -329,8 +465,6 @@ export class WasmClient {
     }
     /**
      * `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
-     *
-     * Args JSON is `{ productRef, planRef }`. Success value is `null`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -342,8 +476,6 @@ export class WasmClient {
     }
     /**
      * `DELETE /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef }`. Success value is `null`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -354,7 +486,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `DELETE /v1/sdk/auto-recharge`
+     * `DELETE /v1/sdk/auto-recharge?customerRef=`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -376,7 +508,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `GET /v1/sdk/auto-recharge`
+     * `GET /v1/sdk/auto-recharge?customerRef=`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -398,7 +530,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Customer lookup by ref / externalRef / email.
+     * `GET /v1/sdk/customers…`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -409,7 +541,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Credit balance for a customer.
+     * `GET /v1/sdk/customers/{customerRef}/balance`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -420,7 +552,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Merchant profile (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/merchant`
      * @param {string} _args_json
      * @returns {Promise<string>}
      */
@@ -431,7 +563,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `GET /v1/sdk/payment-method`
+     * `GET /v1/sdk/payment-method?customerRef=`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -442,7 +574,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * Platform config (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/platform-config`
      * @param {string} _args_json
      * @returns {Promise<string>}
      */
@@ -454,8 +586,6 @@ export class WasmClient {
     }
     /**
      * `GET /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -466,7 +596,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * User info for a customer/product pair.
+     * `POST /v1/sdk/user-info`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -478,8 +608,6 @@ export class WasmClient {
     }
     /**
      * `GET /v1/sdk/products/{productRef}/plans`
-     *
-     * Args JSON is `{ productRef }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -490,7 +618,7 @@ export class WasmClient {
         return ret;
     }
     /**
-     * `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
+     * `GET /v1/sdk/products`
      * @param {string} _args_json
      * @returns {Promise<string>}
      */
@@ -598,7 +726,7 @@ export class WasmClient {
         return this;
     }
     /**
-     * `POST /v1/sdk/payment-intents/{id}/process`
+     * `POST /v1/sdk/payment-intents/{paymentIntentId}/process`
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -654,8 +782,6 @@ export class WasmClient {
     }
     /**
      * `PATCH /v1/sdk/customers/{customerRef}`
-     *
-     * Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -667,8 +793,6 @@ export class WasmClient {
     }
     /**
      * `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
-     *
-     * Args JSON is `{ productRef, planRef, ...params }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -680,8 +804,6 @@ export class WasmClient {
     }
     /**
      * `PUT /v1/sdk/products/{productRef}`
-     *
-     * Args JSON is `{ productRef, ...params }`.
      * @param {string} args_json
      * @returns {Promise<string>}
      */
@@ -1136,6 +1258,26 @@ export function coerceCustomerOptions(args_json) {
 }
 
 /**
+ * Binding for `compileStringFieldInputSchemaJson`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function compileStringFieldInputSchemaJson(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.compileStringFieldInputSchemaJson(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `countsUsage`.
  * @param {string} args_json
  * @returns {string}
@@ -1216,6 +1358,26 @@ export function creditsToDisplayMinorUnits(args_json) {
 }
 
 /**
+ * Binding for `customerRefFromClaims`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function customerRefFromClaims(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.customerRefFromClaims(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `decidePaywallOutcome`.
  * @param {string} args_json
  * @returns {string}
@@ -1227,6 +1389,46 @@ export function decidePaywallOutcome(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.decidePaywallOutcome(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `decodeJwtPayloadUnverified`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function decodeJwtPayloadUnverified(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.decodeJwtPayloadUnverified(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `defaultMcpBearerExpectations`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function defaultMcpBearerExpectations(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.defaultMcpBearerExpectations(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -1327,6 +1529,26 @@ export function ensureCustomerNext(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.ensureCustomerNext(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `ensureOutputSchemaObjectType`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function ensureOutputSchemaObjectType(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ensureOutputSchemaObjectType(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -1447,6 +1669,26 @@ export function extractBackendCustomerRef(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.extractBackendCustomerRef(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `extractBearerToken`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function extractBearerToken(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.extractBearerToken(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -2187,6 +2429,26 @@ export function normalizeReactivateResponse(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.normalizeReactivateResponse(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `overlayClaimedLimits`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function overlayClaimedLimits(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.overlayClaimedLimits(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -3450,7 +3712,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 670, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 673, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087);
             return ret;
         },

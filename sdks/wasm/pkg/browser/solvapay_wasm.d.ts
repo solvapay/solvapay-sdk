@@ -2,6 +2,21 @@
 /* eslint-disable */
 
 /**
+ * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+ */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json: string): string;
+
+/**
+ * Binding for `BUSINESS_COUNTRY_OPTIONS`.
+ */
+export function BUSINESS_COUNTRY_OPTIONS(args_json: string): string;
+
+/**
+ * Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+ */
+export function COUNTRY_TO_TAX_ID_TYPE(args_json: string): string;
+
+/**
  * Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.
  */
 export function POSTAL_CODE_REQUIRED_COUNTRIES(args_json: string): string;
@@ -20,6 +35,26 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): 
  * Binding for `STATE_REQUIRED_COUNTRIES`.
  */
 export function STATE_REQUIRED_COUNTRIES(args_json: string): string;
+
+/**
+ * Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+ */
+export function SUPPORTED_BUSINESS_COUNTRIES(args_json: string): string;
+
+/**
+ * Binding for `TAX_BEHAVIORS`.
+ */
+export function TAX_BEHAVIORS(args_json: string): string;
+
+/**
+ * Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+ */
+export function TAX_EXCLUSIVE_CURRENCIES(args_json: string): string;
+
+/**
+ * Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+ */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(args_json: string): string;
 
 /**
  * Binding for `TAX_ID_TYPES`.
@@ -290,10 +325,17 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly BUSINESS_COUNTRY_DISPLAY_NAMES: (a: number, b: number) => [number, number];
+    readonly BUSINESS_COUNTRY_OPTIONS: (a: number, b: number) => [number, number];
+    readonly COUNTRY_TO_TAX_ID_TYPE: (a: number, b: number) => [number, number];
     readonly POSTAL_CODE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
     readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
     readonly STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly SUPPORTED_BUSINESS_COUNTRIES: (a: number, b: number) => [number, number];
+    readonly TAX_BEHAVIORS: (a: number, b: number) => [number, number];
+    readonly TAX_EXCLUSIVE_CURRENCIES: (a: number, b: number) => [number, number];
+    readonly TAX_ID_EXAMPLE_BY_COUNTRY: (a: number, b: number) => [number, number];
     readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];

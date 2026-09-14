@@ -2,6 +2,66 @@
 /* @ts-self-types="./solvapay_wasm.d.ts" */
 
 /**
+ * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.BUSINESS_COUNTRY_DISPLAY_NAMES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `BUSINESS_COUNTRY_OPTIONS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function BUSINESS_COUNTRY_OPTIONS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.BUSINESS_COUNTRY_OPTIONS(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `COUNTRY_TO_TAX_ID_TYPE`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function COUNTRY_TO_TAX_ID_TYPE(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.COUNTRY_TO_TAX_ID_TYPE(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `POSTAL_CODE_REQUIRED_COUNTRIES`.
  * @param {string} args_json
  * @returns {string}
@@ -73,6 +133,86 @@ export function STATE_REQUIRED_COUNTRIES(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.STATE_REQUIRED_COUNTRIES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `SUPPORTED_BUSINESS_COUNTRIES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function SUPPORTED_BUSINESS_COUNTRIES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.SUPPORTED_BUSINESS_COUNTRIES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_BEHAVIORS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_BEHAVIORS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_BEHAVIORS(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_EXCLUSIVE_CURRENCIES`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_EXCLUSIVE_CURRENCIES(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_EXCLUSIVE_CURRENCIES(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_ID_EXAMPLE_BY_COUNTRY`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_ID_EXAMPLE_BY_COUNTRY(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

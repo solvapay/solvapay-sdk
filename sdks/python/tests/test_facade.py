@@ -219,6 +219,29 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                 "shouldCache": True,
             }
         return {"withinLimits": False, "remaining": 0.0, "shouldCache": False}
+    if name == "overlay_claimed_limits":
+        limits = args.get("limits") if isinstance(args.get("limits"), dict) else {}
+        overlaid = dict(limits)
+        remaining = float(overlaid.get("remaining", 0) or 0)
+        within = bool(overlaid.get("withinLimits"))
+        evaluation = _fake_decision(
+            "evaluate_claimed_limits",
+            {
+                "withinLimits": within,
+                "remaining": remaining,
+                "claimed": args.get("claimed", 0),
+            },
+        )
+        if remaining == -1.0 or (within and remaining == 0.0):
+            overlaid["withinLimits"] = evaluation["withinLimits"]
+            overlaid["remaining"] = evaluation["remaining"]
+        elif not evaluation["withinLimits"]:
+            overlaid["withinLimits"] = False
+            overlaid["remaining"] = 0.0
+        else:
+            overlaid["withinLimits"] = True
+            overlaid["remaining"] = evaluation["remaining"] + 1.0
+        return overlaid
     if name == "decide_paywall_outcome":
         if args.get("withinLimits"):
             return {"outcome": "allow", "limits": args.get("limits") or {}}

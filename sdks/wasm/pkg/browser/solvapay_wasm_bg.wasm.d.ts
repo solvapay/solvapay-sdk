@@ -1,10 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const BUSINESS_COUNTRY_DISPLAY_NAMES: (a: number, b: number) => [number, number];
+export const BUSINESS_COUNTRY_OPTIONS: (a: number, b: number) => [number, number];
+export const COUNTRY_TO_TAX_ID_TYPE: (a: number, b: number) => [number, number];
 export const POSTAL_CODE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
 export const REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
 export const STATE_REQUIRED_COUNTRIES: (a: number, b: number) => [number, number];
+export const SUPPORTED_BUSINESS_COUNTRIES: (a: number, b: number) => [number, number];
+export const TAX_BEHAVIORS: (a: number, b: number) => [number, number];
+export const TAX_EXCLUSIVE_CURRENCIES: (a: number, b: number) => [number, number];
+export const TAX_ID_EXAMPLE_BY_COUNTRY: (a: number, b: number) => [number, number];
 export const TAX_ID_TYPES: (a: number, b: number) => [number, number];
 export const TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
 export const billingCycle: (a: number, b: number) => [number, number];
