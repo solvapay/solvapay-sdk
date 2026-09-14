@@ -94,7 +94,7 @@ class _MockClient:
             "publicBaseUrl": payload.get("publicBaseUrl"),
             "rpcMethod": payload.get("rpcMethod"),
             "authHeader": payload.get("authHeader"),
-            "authMode": payload.get("authMode") or "tools-call",
+            "authMode": payload.get("authMode") or "all",
             "mcpPath": payload.get("mcpPath"),
             "jsonRpcId": payload.get("jsonRpcId"),
         }

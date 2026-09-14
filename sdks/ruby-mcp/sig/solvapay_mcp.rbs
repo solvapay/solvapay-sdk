@@ -91,7 +91,8 @@ module SolvaPay
         ?hide_audiences: Array[String]?,
         ?api_base_url: String?,
         ?csp: Hash[String, untyped]?,
-        ?branding: Hash[String, untyped]?
+        ?branding: Hash[String, untyped]?,
+        ?auth_mode: String
       ) -> void
       def register_payable: (
         String name,

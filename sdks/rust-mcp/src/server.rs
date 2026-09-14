@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use serde_json::{json, Map, Value};
 use solvapay::transport::{McpDispatchParams, McpOauthConfig, McpOauthRequestParams};
 use solvapay::{Client, SdkError};
-use solvapay_mcp_core::{EngineConfig, PayableToolConfig, PayableToolSpec};
+use solvapay_mcp_core::{EngineConfig, McpAuthMode, PayableToolConfig, PayableToolSpec};
 
 use crate::http_util::{
     encode_json_body, envelope_status, http_from_oauth_envelope, json_response, jsonrpc_error,
@@ -49,6 +49,8 @@ pub struct McpHttpConfig {
     pub csp: Option<solvapay_mcp_core::SolvaPayMcpCsp>,
     /// Optional branding JSON forwarded to descriptors / widget reads.
     pub branding: Option<Value>,
+    /// Auth mode. `None` defaults to `all` in the core gate.
+    pub auth_mode: Option<McpAuthMode>,
 }
 
 struct RegisteredPayable {
@@ -77,6 +79,7 @@ pub struct McpHttpServer {
     api_base_url: Option<String>,
     csp: Option<solvapay_mcp_core::SolvaPayMcpCsp>,
     branding: Option<Value>,
+    auth_mode: Option<McpAuthMode>,
     payables: HashMap<String, RegisteredPayable>,
 }
 
@@ -110,6 +113,7 @@ impl McpHttpServer {
             api_base_url: config.api_base_url,
             csp: config.csp,
             branding: config.branding,
+            auth_mode: config.auth_mode,
             payables: HashMap::new(),
         }
     }
@@ -254,7 +258,7 @@ impl McpHttpServer {
                     resource_uri: self.resource_uri.clone(),
                     views: self.views.clone(),
                     payable_tools,
-                    auth_mode: None,
+                    auth_mode: self.auth_mode,
                     mcp_path: Some(self.mcp_path.clone()),
                     hide_audiences: self.hide_audiences.clone(),
                     user_agent: req.headers.get("user-agent").cloned(),
@@ -280,7 +284,6 @@ impl McpHttpServer {
         {
             Ok(envelope) => envelope,
             Err(err) => {
-                eprintln!("mcp_dispatch: {err:?}");
                 return jsonrpc_error(
                     rpc.get("id").cloned().unwrap_or(Value::Null),
                     -32603,
@@ -318,15 +321,12 @@ impl McpHttpServer {
                 )
                 .await
             }
-            other => {
-                eprintln!("unexpected mcpDispatch kind: {other:?}");
-                jsonrpc_error(
-                    rpc.get("id").cloned().unwrap_or(Value::Null),
-                    -32603,
-                    &format!("unexpected mcpDispatch kind: {other:?}"),
-                    200,
-                )
-            }
+            other => jsonrpc_error(
+                rpc.get("id").cloned().unwrap_or(Value::Null),
+                -32603,
+                &format!("unexpected mcpDispatch kind: {other:?}"),
+                200,
+            ),
         }
     }
 }

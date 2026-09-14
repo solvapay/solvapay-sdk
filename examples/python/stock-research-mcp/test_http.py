@@ -52,9 +52,9 @@ def _app(backend: _MockClient | None = None):
     )
 
 
-def test_mcp_auth_mode_defaults_to_tools_call(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_mcp_auth_mode_defaults_to_all(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MCP_AUTH_MODE", raising=False)
-    assert mcp_auth_mode() == "tools-call"
+    assert mcp_auth_mode() == "all"
 
 
 def test_mcp_auth_mode_rejects_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -141,8 +141,27 @@ def test_unauthenticated_tools_call_is_challenged() -> None:
     assert response.json()["error"]["code"] == -32001
 
 
-def test_initialize_returns_json_not_empty_sse() -> None:
+def test_unauthenticated_initialize_is_challenged() -> None:
     with TestClient(_app()) as client:
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        )
+    assert response.status_code == 401
+    assert "resource_metadata=" in response.headers["www-authenticate"]
+
+
+def test_initialize_returns_json_not_empty_sse() -> None:
+    with TestClient(
+        build_http_app(
+            _server(),
+            bind_host="127.0.0.1",
+            public_base_url=PUBLIC,
+            api_base_url=API,
+            product_ref=PRODUCT,
+            auth_mode="tools-call",
+        )
+    ) as client:
         response = client.post(
             "/mcp",
             headers={

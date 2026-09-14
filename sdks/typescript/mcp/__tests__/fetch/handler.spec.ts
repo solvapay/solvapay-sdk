@@ -232,6 +232,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       productRef,
       oauthClient,
       responseMode: 'json',
+      authMode: 'tools-call',
       engine: {
         mcpDispatch,
         config: {
@@ -273,6 +274,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       productRef,
       oauthClient,
       responseMode: 'json',
+      authMode: 'tools-call',
       engine: {
         mcpDispatch: async () => {
           throw new Error('/Users/dev/secret/engine.ts:1 exploded')

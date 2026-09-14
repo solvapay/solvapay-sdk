@@ -37,6 +37,7 @@ function buildServer(overrides: Partial<Parameters<typeof createSolvaPayMcpServe
     resourceUri: 'ui://test/view.html',
     htmlPath: '/tmp/fake/view.html',
     publicBaseUrl: 'https://example.com',
+    authMode: 'tools-call',
     ...overrides,
   })
 }

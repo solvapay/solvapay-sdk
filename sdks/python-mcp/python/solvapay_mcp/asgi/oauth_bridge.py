@@ -46,11 +46,13 @@ class McpOAuthBridgeOptions:
         product_ref: str,
         mcp_path: str = "/mcp",
         require_auth: bool = True,
-        auth_mode: McpAuthMode = "tools-call",
+        auth_mode: McpAuthMode = "all",
         hs256_secret: str | None = None,
         jwks_json: object | None = None,
         oauth_client: object | None = None,
         oauth_paths: Mapping[str, str] | None = None,
+        resource_uri: str = "ui://widget.html",
+        views: list[str] | None = None,
     ) -> None:
         self.public_base_url = public_base_url
         self.api_base_url = without_trailing_slash(api_base_url)
@@ -61,6 +63,8 @@ class McpOAuthBridgeOptions:
         self.hs256_secret = hs256_secret
         self.jwks_json = jwks_json
         self.oauth_client = oauth_client
+        self.resource_uri = resource_uri
+        self.views = views
         self.paths = resolve_oauth_paths(oauth_paths)
         native_call(
             "assert_valid_product_ref",
@@ -153,6 +157,23 @@ class McpAuthMiddleware:
             parsed = json.loads(body_bytes.decode("utf-8") or "null")
         except (json.JSONDecodeError, UnicodeDecodeError):
             parsed = None
+
+        if isinstance(parsed, dict):
+            from solvapay_mcp.widget import widget_html_rpc
+
+            widget = widget_html_rpc(
+                parsed,
+                resource_uri=self._options.resource_uri,
+                public_base_url=self._options.public_base_url,
+                product_ref=self._options.product_ref,
+                api_base_url=self._options.api_base_url,
+                views=self._options.views,
+            )
+            if widget is not None:
+                response = JSONResponse(widget, status_code=200)
+                apply_native_cors(request, response)
+                await send_response(response)
+                return
 
         auth_header = None
         user_agent = None
@@ -341,10 +362,12 @@ def create_mcp_oauth_starlette(
     product_ref: str,
     mcp_path: str = "/mcp",
     require_auth: bool = True,
-    auth_mode: McpAuthMode = "tools-call",
+    auth_mode: McpAuthMode = "all",
     hs256_secret: str | None = None,
     oauth_client: object | None = None,
     oauth_paths: Mapping[str, str] | None = None,
+    resource_uri: str = "ui://widget.html",
+    views: list[str] | None = None,
 ) -> ASGIApp:
     options = McpOAuthBridgeOptions(
         public_base_url=public_base_url,
@@ -356,5 +379,7 @@ def create_mcp_oauth_starlette(
         hs256_secret=hs256_secret,
         oauth_client=oauth_client,
         oauth_paths=oauth_paths,
+        resource_uri=resource_uri,
+        views=views,
     )
     return mount_mcp_oauth_bridge(mcp_app, options)

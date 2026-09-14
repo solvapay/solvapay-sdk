@@ -113,6 +113,9 @@ describe('HTTP engine fixture replay', () => {
         responseMode: 'json',
         requireAuth: true,
         readHtml: async () => '<html></html>',
+        ...(typeof config.authMode === 'string'
+          ? { authMode: config.authMode as 'tools-call' | 'all' }
+          : {}),
         ...(oauthPaths !== undefined ? { oauthPaths } : {}),
       })
       if (fn === 'mcpDispatch') {

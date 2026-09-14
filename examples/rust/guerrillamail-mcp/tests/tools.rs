@@ -251,7 +251,7 @@ async fn tools_list_advertises_five_string_tools_without_required() {
         .handle(McpHttpRequest {
             method: "POST".to_owned(),
             path: "/mcp".to_owned(),
-            headers: BTreeMap::new(),
+            headers: BTreeMap::from([("authorization".to_owned(), TEST_BEARER.to_owned())]),
             body: serde_json::to_vec(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,

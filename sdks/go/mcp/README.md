@@ -30,7 +30,7 @@ http.Handle("/", solvapaymcp.NewStreamableHandler(srv))
 `Server.RegisterPayable` is the HTTP path: `tools/call` goes through `mcpDispatch`,
 which reads the OAuth `Authorization` bearer and injects the customer into the
 paywall gate. It therefore requires an authenticated Streamable HTTP transport
-(`NewStreamableHandler`). `AuthMode` is `"tools-call"` or `"all"`; there is no
+(`NewStreamableHandler`). `AuthMode` is `"all"` (default) or `"tools-call"`; there is no
 unauthenticated payable mode on `Server`.
 
 `RegisterPayableTool` is the stdio / in-process path on a raw

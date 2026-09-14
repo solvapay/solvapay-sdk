@@ -119,7 +119,7 @@ def create_mcp_engine_starlette(
     views: list[str] | None = None,
     hide_audiences: list[str] | None = None,
     require_auth: bool = True,
-    auth_mode: McpAuthMode = "tools-call",
+    auth_mode: McpAuthMode = "all",
     oauth_paths: Mapping[str, str] | None = None,
 ) -> ASGIApp:
     bind_engine(
@@ -143,4 +143,6 @@ def create_mcp_engine_starlette(
         auth_mode=auth_mode,
         oauth_client=facade_api_client(solvapay),
         oauth_paths=oauth_paths,
+        resource_uri=resource_uri,
+        views=views,
     )

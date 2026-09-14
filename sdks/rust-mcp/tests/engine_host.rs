@@ -9,8 +9,8 @@ use std::sync::Arc;
 use serde_json::{json, Value};
 use solvapay::{Client, Config};
 use solvapay_mcp::{
-    McpHttpConfig, McpHttpRequest, McpHttpServer, PayableError, PayableFuture, PayableHandler,
-    PayableTool, ResponseContext,
+    McpAuthMode, McpHttpConfig, McpHttpRequest, McpHttpServer, PayableError, PayableFuture,
+    PayableHandler, PayableTool, ResponseContext,
 };
 
 use common::mock_transport::MockTransport;
@@ -45,6 +45,7 @@ async fn engine_loop_invoke_handler_then_resume() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
@@ -130,6 +131,7 @@ async fn widget_read_then_action_lands_in_tool_result() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
@@ -239,6 +241,7 @@ async fn tools_list_includes_registered_payable_descriptor() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let handler: PayableHandler = Arc::new(|_args, mut ctx: ResponseContext| {
@@ -332,6 +335,7 @@ async fn tools_list_default_hides_ui_audience_keeps_intent_tools() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let response = host
@@ -399,6 +403,7 @@ async fn resources_read_returns_widget_html() {
             api_base_url: Some("https://api-dev.solvapay.com".to_owned()),
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let response = host
@@ -461,6 +466,7 @@ async fn resources_read_stamps_modern_catalog_envelope() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let response = host
@@ -537,6 +543,7 @@ async fn reconnects_after_expired_bearer() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let ok = host
@@ -604,6 +611,7 @@ async fn handle_mcp_unparseable_json_is_jsonrpc_not_sdk_error() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: Some(McpAuthMode::ToolsCall),
         },
     );
     let response = host

@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use serde_json::{json, Value};
-use solvapay_mcp_core::EngineConfig;
+use solvapay_mcp_core::{EngineConfig, McpAuthMode};
 use solvapay_transport::{
     ClientShell, McpBootstrapParams, McpDispatchParams, McpOauthConfig, McpOauthRequestParams,
     McpReadResourceParams, McpToolConfig, ReqwestTransport, SharedTransport, SolvaPayClient,
@@ -126,7 +126,7 @@ async fn mcp_dispatch_errors_on_widget_resource_read() {
                 resource_uri: "ui://widget.html".to_owned(),
                 views: None,
                 payable_tools: Vec::new(),
-                auth_mode: None,
+                auth_mode: Some(McpAuthMode::ToolsCall),
                 mcp_path: None,
                 hide_audiences: None,
                 user_agent: None,

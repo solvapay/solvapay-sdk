@@ -16,6 +16,11 @@ const testBearerNoIdentity = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2
 
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
+	return newTestServerWithAuth(t, "tools-call")
+}
+
+func newTestServerWithAuth(t *testing.T, authMode string) *Server {
+	t.Helper()
 	backend := newMockBackend(map[string]any{
 		"withinLimits":  true,
 		"remaining":     42,
@@ -32,6 +37,7 @@ func newTestServer(t *testing.T) *Server {
 		ServerName:    "test-mcp",
 		ServerVersion: "v0.0.1",
 		Hs256Secret:   fixtureHs256Secret,
+		AuthMode:      authMode,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -139,6 +145,7 @@ func TestBuiltinAccountToolCall(t *testing.T) {
 		PublicBaseURL: "https://app.example.com",
 		ResourceURI:   "ui://test/view.html",
 		Hs256Secret:   fixtureHs256Secret,
+		AuthMode:      "tools-call",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -227,6 +234,7 @@ func newPayableHTTP(t *testing.T) (*mockBackend, http.Handler) {
 		ServerName:    "test-mcp",
 		ServerVersion: "v0.0.1",
 		Hs256Secret:   fixtureHs256Secret,
+		AuthMode:      "tools-call",
 	})
 	if err != nil {
 		t.Fatal(err)

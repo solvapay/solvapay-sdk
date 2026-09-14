@@ -9,7 +9,7 @@ module SolvaPay
     class Engine
       def initialize(client:, product_ref:, public_base_url:, resource_uri: "ui://widget.html", mcp_path: "/mcp",
                      views: nil, oauth_paths: nil, hs256_secret: nil, jwks_json: nil, hide_audiences: nil,
-                     api_base_url: nil, csp: nil, branding: nil)
+                     api_base_url: nil, csp: nil, branding: nil, auth_mode: "all")
         raise ArgumentError, "client is required" if client.nil?
         raise ArgumentError, "product_ref is required" if product_ref.nil? || product_ref.empty?
         raise ArgumentError, "public_base_url is required" if public_base_url.nil? || public_base_url.empty?
@@ -29,6 +29,7 @@ module SolvaPay
         @api_base_url = api_base_url
         @csp = csp
         @branding = branding
+        @auth_mode = auth_mode.nil? || auth_mode.empty? ? "all" : auth_mode
         @payables = {} #: Hash[String, untyped]
         @mutex = Mutex.new
       end
@@ -106,6 +107,7 @@ module SolvaPay
               "resourceUri" => @resource_uri,
               "payableTools" => payable_tools,
               "mcpPath" => @mcp_path,
+              "authMode" => @auth_mode,
               "views" => @views,
               "userAgent" => env["HTTP_USER_AGENT"],
               "hideAudiences" => @hide_audiences,

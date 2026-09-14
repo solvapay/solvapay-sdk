@@ -326,7 +326,7 @@ describe('createMcpOAuthBridge integration', () => {
     expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
   })
 
-  it('allows anonymous initialize through mcp auth middleware', async () => {
+  it('challenges anonymous initialize through mcp auth middleware', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,
       apiBaseUrl,
@@ -343,9 +343,14 @@ describe('createMcpOAuthBridge integration', () => {
 
     await runPipeline(middlewares, req, res, state)
 
-    // Discovery methods pass through without ending the response.
-    expect(state.ended).toBe(false)
-    expect(state.statusCode).toBe(200)
+    expect(state.statusCode).toBe(401)
+    expect(state.ended).toBe(true)
+    expect(state.headers['www-authenticate']).toContain('Bearer')
+    expect(state.body).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32001, message: 'Unauthorized' },
+    })
   })
 
   it('challenges when a bearer is present but invalid on a free method', async () => {
@@ -379,13 +384,13 @@ describe('createMcpOAuthBridge integration', () => {
     })
   })
 
-  it('challenges anonymous initialize when authMode is all', async () => {
+  it('allows anonymous initialize when authMode is tools-call', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,
       apiBaseUrl,
       productRef,
       oauthClient,
-      authMode: 'all',
+      authMode: 'tools-call',
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -397,14 +402,8 @@ describe('createMcpOAuthBridge integration', () => {
 
     await runPipeline(middlewares, req, res, state)
 
-    expect(state.statusCode).toBe(401)
-    expect(state.headers['www-authenticate']).toContain('Bearer')
-    expect(state.headers['www-authenticate']).toContain('resource_metadata=')
-    expect(state.body).toEqual({
-      jsonrpc: '2.0',
-      id: 1,
-      error: { code: -32001, message: 'Unauthorized' },
-    })
+    expect(state.ended).toBe(false)
+    expect(state.statusCode).toBe(200)
   })
 
   it('exposes WWW-Authenticate via CORS on 401 anonymous tools/call with native origin', async () => {

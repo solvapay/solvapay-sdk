@@ -38,7 +38,7 @@ def mcp_bind_host() -> str:
 
 
 def mcp_auth_mode() -> McpAuthMode:
-    raw = (os.environ.get("MCP_AUTH_MODE") or "tools-call").strip()
+    raw = (os.environ.get("MCP_AUTH_MODE") or "all").strip()
     if raw == "all":
         return "all"
     if raw == "tools-call":

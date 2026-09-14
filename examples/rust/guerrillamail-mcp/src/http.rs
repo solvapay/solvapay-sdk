@@ -104,6 +104,7 @@ pub async fn serve_http(source: SharedSource) -> Result<(), ExampleError> {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: None,
         },
     );
     register_tools(

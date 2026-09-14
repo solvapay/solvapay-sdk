@@ -22,7 +22,7 @@ pub(crate) async fn resolve(
     client: &SolvaPayClient,
     params: McpResolveAuthParams,
 ) -> Result<Value, SdkError> {
-    let mode = params.auth_mode.unwrap_or(McpAuthMode::ToolsCall);
+    let mode = params.auth_mode.unwrap_or(McpAuthMode::All);
     let gated = requires_bearer_auth(params.rpc_method.as_deref(), mode);
     let token = extract_bearer_token(params.auth_header.as_deref()).map(str::to_owned);
 

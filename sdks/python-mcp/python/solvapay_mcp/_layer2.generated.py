@@ -146,7 +146,7 @@ def mcp_auth_gate(
     @param public_base_url Public origin for the WWW-Authenticate resource.
     @param rpc_method JSON-RPC method; may be absent.
     @param auth_header Authorization header; a gated method requires a verified bearer.
-    @param auth_mode tools-call or all; defaults to tools-call.
+    @param auth_mode tools-call or all; defaults to all.
     @param mcp_path Optional MCP mount path.
     @param json_rpc_id JSON-RPC id echoed on the challenge body.
     @param jwks_json JWKS document for RS256 or ES256 verification.
@@ -465,7 +465,7 @@ def mcp_requires_bearer_auth(
 ) -> object:
     """Return whether a bearer is required for a method under the given auth mode.
     @param mcp_method JSON-RPC method name.
-    @param auth_mode tools-call or all; defaults to tools-call.
+    @param auth_mode tools-call or all; defaults to all.
     @returns True when a bearer token is required.
     """
     call_args: dict[str, object] = {}

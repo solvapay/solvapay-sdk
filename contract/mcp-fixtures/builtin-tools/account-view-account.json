@@ -12,7 +12,8 @@
       "config": {
         "productRef": "prd_demo",
         "publicBaseUrl": "https://app.example.com",
-        "resourceUri": "ui://test/view.html"
+        "resourceUri": "ui://test/view.html",
+        "authMode": "tools-call"
       },
       "customerRef": null,
       "widgetSessionId": "00000000-0000-4000-8000-000000000001"
@@ -61,7 +62,7 @@
       "status": 200,
       "body": {
         "checkoutUrl": "https://checkout.example/s",
-      "checkoutPurpose": null,
+        "checkoutPurpose": null,
         "sessionId": "cs_1"
       }
     }

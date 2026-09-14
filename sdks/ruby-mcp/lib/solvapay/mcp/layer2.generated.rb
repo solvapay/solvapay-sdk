@@ -107,7 +107,7 @@ module SolvaPay
         # @param public_base_url Public origin for the WWW-Authenticate resource.
         # @param rpc_method JSON-RPC method; may be absent.
         # @param auth_header Authorization header; a gated method requires a verified bearer.
-        # @param auth_mode tools-call or all; defaults to tools-call.
+        # @param auth_mode tools-call or all; defaults to all.
         # @param mcp_path Optional MCP mount path.
         # @param json_rpc_id JSON-RPC id echoed on the challenge body.
         # @param jwks_json JWKS document for RS256 or ES256 verification.
@@ -337,7 +337,7 @@ module SolvaPay
 
         # Return whether a bearer is required for a method under the given auth mode.
         # @param mcp_method JSON-RPC method name.
-        # @param auth_mode tools-call or all; defaults to tools-call.
+        # @param auth_mode tools-call or all; defaults to all.
         # @return True when a bearer token is required.
         def mcp_requires_bearer_auth(mcp_method = nil, auth_mode = nil)
           call_args = {} #: Hash[String, untyped]

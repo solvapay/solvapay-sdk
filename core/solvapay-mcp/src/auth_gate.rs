@@ -46,7 +46,7 @@ pub struct AuthGateInput {
     /// `Authorization` header (may be null).
     #[serde(default)]
     pub auth_header: Option<String>,
-    /// Auth mode. Defaults to `tools-call`.
+    /// Auth mode. Defaults to `all`.
     #[serde(default)]
     pub auth_mode: Option<McpAuthMode>,
     /// Public origin for `WWW-Authenticate`.
@@ -102,7 +102,7 @@ pub fn mcp_auth_gate(input: &AuthGateInput) -> AuthGateResult {
     if pre_verified(input) {
         return AuthGateResult::Allow;
     }
-    let mode = input.auth_mode.unwrap_or(McpAuthMode::ToolsCall);
+    let mode = input.auth_mode.unwrap_or(McpAuthMode::All);
     let gated = requires_bearer_auth(input.rpc_method.as_deref(), mode);
     if !gated {
         return AuthGateResult::Allow;
@@ -174,5 +174,32 @@ fn challenge(input: &AuthGateInput) -> AuthGateResult {
             "id": input.json_rpc_id.clone().unwrap_or(Value::Null),
             "error": { "code": -32001, "message": "Unauthorized" },
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn omitted_auth_mode_challenges_initialize() {
+        let result = mcp_auth_gate(&AuthGateInput {
+            rpc_method: Some("initialize".to_owned()),
+            auth_header: None,
+            auth_mode: None,
+            public_base_url: "https://mcp.example.com".to_owned(),
+            mcp_path: None,
+            json_rpc_id: Some(json!(1)),
+            jwks_json: None,
+            hs256_secret: None,
+            expected_issuer: None,
+            expected_audience: None,
+            now_unix_secs: None,
+            pre_verified_customer_ref: None,
+        });
+        assert!(matches!(
+            result,
+            AuthGateResult::Challenge { status: 401, .. }
+        ));
     }
 }

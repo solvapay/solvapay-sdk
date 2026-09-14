@@ -10,6 +10,7 @@ import {
   assertValidProductRef,
   logMcpConfigOnce,
   mcpNativeCors,
+  mcpWidgetResource,
   withoutTrailingSlash,
   type McpAuthInfoExtras,
   type McpAuthMode,
@@ -102,6 +103,14 @@ export interface McpOAuthBridgeOptions {
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
   oauthClient?: (McpOauthRequestClient & McpResolveAuthClient) | null
+  widget?: {
+    resourceUri: string
+    views?: unknown
+    csp?: unknown
+    apiBaseUrl?: unknown
+    branding?: unknown
+    readHtml: () => string | Promise<string>
+  }
 }
 
 function getRequestAuthHeader(req: RequestLike): string | null {
@@ -351,13 +360,14 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     productRef,
     mcpPath = '/mcp',
     requireAuth = true,
-    authMode = 'tools-call',
+    authMode = 'all',
     hs256Secret,
     jwksJson,
     protectedResourcePath = DEFAULT_PROTECTED_RESOURCE_PATH,
     authorizationServerPath = DEFAULT_AUTHORIZATION_SERVER_PATH,
     oauthPaths,
     oauthClient,
+    widget,
   } = options
 
   assertValidProductRef(productRef, 'createMcpOAuthBridge')
@@ -439,6 +449,32 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const authHeader = getRequestAuthHeader(req)
     const id = getRequestJsonRpcId(req.body)
     const method = getRequestJsonRpcMethod(req.body)
+
+    if (widget !== undefined && req.body !== undefined && req.body !== null) {
+      const widgetEnvelope = mcpWidgetResource(
+        req.body,
+        widget.resourceUri,
+        publicBaseUrl,
+        productRef,
+        widget.views,
+        widget.csp,
+        widget.apiBaseUrl ?? apiBaseUrl,
+        widget.branding,
+      )
+      if (widgetEnvelope !== null && widgetEnvelope !== undefined) {
+        if (!isRecord(widgetEnvelope) || !isRecord(widgetEnvelope.result)) {
+          throw new Error('mcpWidgetResource returned an invalid envelope')
+        }
+        const contents = widgetEnvelope.result.contents
+        if (!Array.isArray(contents) || !isRecord(contents[0])) {
+          throw new Error('mcpWidgetResource omitted contents[0]')
+        }
+        contents[0].text = await widget.readHtml()
+        applyCorsHeaders(req, res)
+        res.status(200).json(widgetEnvelope)
+        return
+      }
+    }
 
     if (!requireAuth) {
       next()

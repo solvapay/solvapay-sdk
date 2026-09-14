@@ -62,10 +62,10 @@ In MCPJam, connect to **`https://appmcp.<your-subdomain>.ngrok.app/mcp`** and co
 OAuth. Local-only: `pnpm mcp:stock-research` then `http://127.0.0.1:3030/mcp`
 (still requires `MCP_PUBLIC_BASE_URL` so discovery documents are correct).
 
-By default the bridge only challenges `tools/call` (`MCP_AUTH_MODE=tools-call`).
-Hosts that connect unauthenticated first (MCPJam Auto) treat that as an open
-server and never prompt. Set `MCP_AUTH_MODE=all` to 401 every JSON-RPC method,
-including `initialize`, so those hosts ask **Continue with OAuth?** at connect.
+By default the bridge challenges every JSON-RPC method (`MCP_AUTH_MODE=all`),
+including `initialize`, so MCPJam Auto asks **Continue with OAuth?** at connect.
+Set `MCP_AUTH_MODE=tools-call` to keep handshake and listing open and only
+challenge `tools/call`.
 The MCPJam server-card toggle only reuses stored credentials. Use **Reconnect**
 (or remove and re-add the server) to open a consent screen.
 

@@ -61,8 +61,8 @@ go test ./...
    `MCP_PUBLIC_BASE_URL` to your reserved HTTPS origin.
 2. Start the tunnel: `./scripts/tunnel.sh`.
 3. In MCPJam, add server URL `https://appmcp.<your-subdomain>.ngrok.app/mcp`.
-4. `tools/list` works without a bearer (`authMode` is `tools-call`).
-5. The first `get_current_weather` call triggers OAuth (DCR + authorize + token).
+4. Connect-time OAuth opens on `initialize` (`authMode` defaults to `all`).
+5. After OAuth, `get_current_weather` runs under the customer bearer.
 6. A customer without entitlement gets a `payment_required` result (`isError` is
    false) with a checkout link.
 7. After checkout, the same call returns live Open-Meteo data and debits 1 unit.

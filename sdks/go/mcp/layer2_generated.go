@@ -123,7 +123,7 @@ func MakeResponseResult(ctx context.Context, data any, options any, emittedBlock
 // The publicBaseUrl parameter is Public origin for the WWW-Authenticate resource.
 // The rpcMethod parameter is JSON-RPC method; may be absent.
 // The authHeader parameter is Authorization header; a gated method requires a verified bearer.
-// The authMode parameter is tools-call or all; defaults to tools-call.
+// The authMode parameter is tools-call or all; defaults to all.
 // The mcpPath parameter is Optional MCP mount path.
 // The jsonRpcId parameter is JSON-RPC id echoed on the challenge body.
 // The jwksJson parameter is JWKS document for RS256 or ES256 verification.
@@ -431,7 +431,7 @@ func McpOverviewResource(ctx context.Context) (json.RawMessage, error) {
 
 // McpRequiresBearerAuth return whether a bearer is required for a method under the given auth mode.
 // The mcpMethod parameter is JSON-RPC method name.
-// The authMode parameter is tools-call or all; defaults to tools-call.
+// The authMode parameter is tools-call or all; defaults to all.
 // Returns True when a bearer token is required.
 func McpRequiresBearerAuth(ctx context.Context, mcpMethod any, authMode any) (json.RawMessage, error) {
 	call_args := map[string]any{}

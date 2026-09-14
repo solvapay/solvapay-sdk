@@ -4728,7 +4728,7 @@ mcp:
         publicBaseUrl: 'Public origin for the WWW-Authenticate resource.'
         rpcMethod: 'JSON-RPC method; may be absent.'
         authHeader: 'Authorization header; a gated method requires a verified bearer.'
-        authMode: 'tools-call or all; defaults to tools-call.'
+        authMode: 'tools-call or all; defaults to all.'
         mcpPath: 'Optional MCP mount path.'
         jsonRpcId: 'JSON-RPC id echoed on the challenge body.'
         jwksJson: 'JWKS document for RS256 or ES256 verification.'
@@ -4875,7 +4875,7 @@ mcp:
       summary: 'Return whether a bearer is required for a method under the given auth mode.'
       params:
         mcpMethod: 'JSON-RPC method name.'
-        authMode: 'tools-call or all; defaults to tools-call.'
+        authMode: 'tools-call or all; defaults to all.'
       returns: 'True when a bearer token is required.'
     sync:
       ts: sync

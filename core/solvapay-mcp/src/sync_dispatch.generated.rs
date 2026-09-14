@@ -99,7 +99,7 @@ fn dispatch_op(op: &str, args: &Value) -> Result<Value, SdkError> {
                 .map(serde_json::from_value::<McpAuthMode>)
                 .transpose()
                 .map_err(|err| SdkError::transport(format!("invalid authMode: {err}"), false))?
-                .unwrap_or(McpAuthMode::ToolsCall);
+                .unwrap_or(McpAuthMode::All);
             Ok(Value::Bool(requires_bearer_auth(method, mode)))
         }
         "mcpResume" => {

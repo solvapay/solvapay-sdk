@@ -18,7 +18,8 @@
       "config": {
         "productRef": "prd_demo",
         "publicBaseUrl": "https://app.example.com",
-        "resourceUri": "ui://test/view.html"
+        "resourceUri": "ui://test/view.html",
+        "authMode": "tools-call"
       }
     }
   },

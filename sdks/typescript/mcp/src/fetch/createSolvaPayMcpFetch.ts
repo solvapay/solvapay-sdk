@@ -99,9 +99,17 @@ function buildServerForRequest(
     hideToolsByAudience?: HideToolsByAudienceConfig
     payables: Map<string, McpEnginePayable>
     hs256Secret?: string
+    authMode?: 'tools-call' | 'all'
   },
 ) {
-  const { descriptorOptions, additionalTools, hideToolsByAudience, payables, hs256Secret } = options
+  const {
+    descriptorOptions,
+    additionalTools,
+    hideToolsByAudience,
+    payables,
+    hs256Secret,
+    authMode,
+  } = options
 
   const { server, descriptors } = buildSolvaPayMcpServer(descriptorOptions)
 
@@ -133,6 +141,7 @@ function buildServerForRequest(
       ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
       ...(hideAudiences !== undefined ? { hideAudiences } : {}),
       ...(hs256Secret !== undefined ? { hs256Secret } : {}),
+      ...(authMode !== undefined ? { authMode } : {}),
     },
     payables,
     readHtml: descriptors.resource.readHtml,
@@ -210,6 +219,7 @@ export function createSolvaPayMcpFetch(
         ...(additionalTools !== undefined ? { additionalTools } : {}),
         ...(hideToolsByAudience !== undefined ? { hideToolsByAudience } : {}),
         ...(handlerRest.hs256Secret !== undefined ? { hs256Secret: handlerRest.hs256Secret } : {}),
+        ...(handlerRest.authMode !== undefined ? { authMode: handlerRest.authMode } : {}),
       }),
     publicBaseUrl,
     productRef,
@@ -217,6 +227,18 @@ export function createSolvaPayMcpFetch(
     ...handlerRest,
     ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
       ? { oauthClient: nativeOauth }
+      : {}),
+    ...(mcpDispatch === undefined
+      ? {
+          widget: {
+            resourceUri: resourceUri ?? 'ui://widget.html',
+            ...(views !== undefined ? { views: [...views] } : {}),
+            ...(csp !== undefined ? { csp } : {}),
+            ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
+            ...(branding !== undefined ? { branding } : {}),
+            readHtml: readHtml ?? defaultMcpAppHtml,
+          },
+        }
       : {}),
     ...(mcpDispatch !== undefined
       ? {

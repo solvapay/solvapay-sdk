@@ -15,7 +15,7 @@ class HttpTest < Minitest::Test
     assert_includes header(headers, "Access-Control-Expose-Headers"), "Mcp-Session-Id"
   end
 
-  def test_unauthenticated_initialize_returns_200
+  def test_unauthenticated_initialize_returns_401
     status, headers, body = call_app(
       "POST",
       "/mcp",
@@ -39,11 +39,8 @@ class HttpTest < Minitest::Test
       },
       SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1"),
     )
-    assert_equal 200, status
-    assert_equal "application/json", headers["content-type"]
-    parsed = JSON.parse(body.join)
-    refute parsed.key?("error"), parsed.inspect
-    assert parsed.dig("result", "serverInfo") || parsed.dig("result", "protocolVersion")
+    assert_equal 401, status
+    assert_includes header(headers, "WWW-Authenticate").to_s, "resource_metadata="
   end
 
   def test_get_mcp_returns_405

@@ -144,7 +144,7 @@ pub struct McpResolveAuthParams {
     /// `Authorization` header (may be null).
     #[serde(default)]
     pub auth_header: Option<String>,
-    /// Auth mode. Defaults to `tools-call`.
+    /// Auth mode. Defaults to `all`.
     #[serde(default)]
     pub auth_mode: Option<McpAuthMode>,
     /// Public origin for `WWW-Authenticate` and default `iss`.

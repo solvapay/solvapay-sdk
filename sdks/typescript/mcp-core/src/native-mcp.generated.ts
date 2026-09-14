@@ -118,7 +118,7 @@ export function makeResponseResult(data: unknown, options?: unknown, emittedBloc
  * @param publicBaseUrl Public origin for the WWW-Authenticate resource.
  * @param rpcMethod JSON-RPC method; may be absent.
  * @param authHeader Authorization header; a gated method requires a verified bearer.
- * @param authMode tools-call or all; defaults to tools-call.
+ * @param authMode tools-call or all; defaults to all.
  * @param mcpPath Optional MCP mount path.
  * @param jsonRpcId JSON-RPC id echoed on the challenge body.
  * @param jwksJson JWKS document for RS256 or ES256 verification.
@@ -380,7 +380,7 @@ export function mcpOverviewResource(): unknown {
 /**
  * Return whether a bearer is required for a method under the given auth mode.
  * @param mcpMethod JSON-RPC method name.
- * @param authMode tools-call or all; defaults to tools-call.
+ * @param authMode tools-call or all; defaults to all.
  * @returns True when a bearer token is required.
  */
 export function mcpRequiresBearerAuth(mcpMethod?: unknown, authMode?: unknown): unknown {

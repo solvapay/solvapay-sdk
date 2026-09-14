@@ -8,7 +8,7 @@ def mcp_auth_gate(
     public_base_url: str,
     rpc_method: str | None = None,
     auth_header: str | None = None,
-    auth_mode: McpAuthMode = "tools-call",
+    auth_mode: McpAuthMode = "all",
     mcp_path: str | None = None,
     json_rpc_id: object = None,
     jwks_json: object | None = None,

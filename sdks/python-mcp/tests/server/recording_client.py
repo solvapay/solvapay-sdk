@@ -24,7 +24,7 @@ class RecordingClient:
                 "publicBaseUrl": payload.get("publicBaseUrl"),
                 "rpcMethod": payload.get("rpcMethod"),
                 "authHeader": payload.get("authHeader"),
-                "authMode": payload.get("authMode") or "tools-call",
+                "authMode": payload.get("authMode") or "all",
                 "mcpPath": payload.get("mcpPath"),
                 "jsonRpcId": payload.get("jsonRpcId"),
                 # Core holds no wall clock, so mcpAuthGate rejects every bearer

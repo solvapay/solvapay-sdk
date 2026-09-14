@@ -41,6 +41,7 @@ function buildTestServer(overrides: Partial<Parameters<typeof createSolvaPayMcpS
     resourceUri: 'ui://test/view.html',
     htmlPath: '/tmp/fake/view.html',
     publicBaseUrl: 'https://example.com',
+    authMode: 'tools-call',
     ...overrides,
   })
   return { server, solvaPay }

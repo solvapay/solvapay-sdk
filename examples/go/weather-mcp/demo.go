@@ -72,7 +72,7 @@ func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
 	}
 	handler := solvapaymcp.NewStreamableHandler(server)
 
-	listedRec := postMCP(handler, "tools/list", map[string]any{}, nil)
+	listedRec := postMCP(handler, "tools/list", map[string]any{}, map[string]string{"Authorization": demoBearer})
 	listed, err := decodeJSONRPCResult(listedRec)
 	if err != nil {
 		return nil, fmt.Errorf("tools/list: %w", err)

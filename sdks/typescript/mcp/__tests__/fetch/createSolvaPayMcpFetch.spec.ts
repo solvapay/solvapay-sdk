@@ -69,6 +69,7 @@ function buildHandler(
     publicBaseUrl,
     apiBaseUrl,
     requireAuth: false,
+    authMode: 'tools-call',
     responseMode: 'json',
     hs256Secret: fixtureHs256Secret,
     ...overrides,
@@ -172,14 +173,7 @@ describe('createSolvaPayMcpFetch', () => {
       return `${header}.${body}.${sig}`
     }
 
-    it('allows anonymous initialize when requireAuth defaults to true', async () => {
-      const handler = buildHandler({ requireAuth: true })
-      const res = await initialize(handler)
-      expect(res.status).toBe(200)
-      expect(res.json.result?.serverInfo?.name).toBe('solvapay-mcp-server')
-    })
-
-    it('challenges anonymous initialize when authMode is all', async () => {
+    it('challenges anonymous initialize when requireAuth defaults to true', async () => {
       const handler = buildHandler({ requireAuth: true, authMode: 'all' })
       const res = await initialize(handler)
       expect(res.status).toBe(401)
@@ -187,21 +181,26 @@ describe('createSolvaPayMcpFetch', () => {
       expect(res.json.error?.message).toBe('Unauthorized')
     })
 
-    it('allows anonymous tools/list when requireAuth defaults to true', async () => {
-      const handler = buildHandler({ requireAuth: true })
-      await initialize(handler)
+    it('allows anonymous initialize when authMode is tools-call', async () => {
+      const handler = buildHandler({ requireAuth: true, authMode: 'tools-call' })
+      const res = await initialize(handler)
+      expect(res.status).toBe(200)
+      expect(res.json.result?.serverInfo?.name).toBe('solvapay-mcp-server')
+    })
+
+    it('challenges anonymous tools/list when requireAuth defaults to true', async () => {
+      const handler = buildHandler({ requireAuth: true, authMode: 'all' })
       const list = await callRpc<ToolsListResult>(handler, {
         jsonrpc: '2.0',
         id: 2,
         method: 'tools/list',
       })
-      expect(list.status).toBe(200)
-      expect(list.json.result?.tools?.length).toBeGreaterThan(0)
+      expect(list.status).toBe(401)
+      expect(list.json.error?.code).toBe(-32001)
     })
 
     it('challenges anonymous tools/call with 401 + Unauthorized', async () => {
       const handler = buildHandler({ requireAuth: true })
-      await initialize(handler)
       const call = await callRpc(handler, {
         jsonrpc: '2.0',
         id: 3,
@@ -261,7 +260,6 @@ describe('createSolvaPayMcpFetch', () => {
         .digest('base64url')
       const expired = { authorization: `Bearer ${header}.${expiredBody}.${sig}` }
 
-      await initialize(handler)
       const ok = await callRpc(
         handler,
         {
@@ -469,6 +467,7 @@ describe('createSolvaPayMcpFetch', () => {
       publicBaseUrl,
       apiBaseUrl,
       requireAuth: false,
+      authMode: 'tools-call',
       additionalTools: ({ registerPayable }) => {
         registerPayable('search_knowledge', {
           title: 'Search knowledge',

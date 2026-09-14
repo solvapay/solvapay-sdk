@@ -18,7 +18,8 @@
       "config": {
         "productRef": "prd_demo",
         "publicBaseUrl": "https://app.example.com",
-        "resourceUri": "ui://test/view.html"
+        "resourceUri": "ui://test/view.html",
+        "authMode": "tools-call"
       }
     }
   },
@@ -29,7 +30,10 @@
         "jsonrpc": "2.0",
         "id": 1,
         "result": {
-          "supportedVersions": ["2026-07-28", "2025-06-18"],
+          "supportedVersions": [
+            "2026-07-28",
+            "2025-06-18"
+          ],
           "capabilities": {
             "tools": {},
             "resources": {},

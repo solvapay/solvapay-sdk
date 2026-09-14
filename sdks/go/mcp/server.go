@@ -25,7 +25,7 @@ type ServerConfig struct {
 	ReadHTML      func() string
 	HideAudiences []string
 	OauthPaths    map[string]any
-	AuthMode      string // "tools-call" (default) or "all"
+	AuthMode      string // "all" (default) or "tools-call"
 	// Hs256Secret is an explicit local/stub JWT secret. Never inferred.
 	Hs256Secret string
 	// JwksJSON is a preloaded JWKS document for RS256/ES256.
@@ -78,7 +78,7 @@ func NewServer(ctx context.Context, client *solvapay.Client, cfg ServerConfig) (
 		cfg.ReadHTML = DefaultMCPAppHTML
 	}
 	if cfg.AuthMode == "" {
-		cfg.AuthMode = "tools-call"
+		cfg.AuthMode = "all"
 	}
 	if len(cfg.HideAudiences) == 0 {
 		cfg.HideAudiences = []string{"ui"}

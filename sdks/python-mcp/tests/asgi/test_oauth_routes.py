@@ -219,13 +219,34 @@ async def test_invalid_bearer_on_free_method_is_a_challenge(
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_initialize_is_allowed(client: httpx.AsyncClient) -> None:
+async def test_unauthenticated_widget_read_is_allowed(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "resources/read",
+            "params": {"uri": "ui://widget.html"},
+        },
+    )
+    assert response.status_code == 200
+    text = response.json()["result"]["contents"][0]["text"]
+    assert isinstance(text, str)
+    assert text.lstrip().startswith("<")
+
+
+async def test_unauthenticated_initialize_is_challenged(client: httpx.AsyncClient) -> None:
     response = await client.post(
         "/mcp",
         json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
     )
-    assert response.status_code == 200
-    assert response.json()["result"] == {"ok": True}
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == _MCP_CHALLENGE
+    assert response.json() == {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {"code": -32001, "message": "Unauthorized"},
+    }
 
 
 @pytest.mark.asyncio

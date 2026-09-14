@@ -50,6 +50,9 @@ func withAuthGate(s *Server, next http.Handler) http.Handler {
 		}
 		_ = r.Body.Close()
 		r.Body = io.NopCloser(bytes.NewReader(raw))
+		if widgetShortCircuit(s, w, r, raw) {
+			return
+		}
 
 		var rpc struct {
 			ID     json.RawMessage `json:"id"`
@@ -99,6 +102,52 @@ func withAuthGate(s *Server, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func widgetShortCircuit(s *Server, w http.ResponseWriter, r *http.Request, raw []byte) bool {
+	var rpc any
+	if err := json.Unmarshal(raw, &rpc); err != nil {
+		return false
+	}
+	var views any
+	if len(s.cfg.Views) > 0 {
+		views = s.cfg.Views
+	}
+	var api any
+	if s.cfg.APIBaseURL != "" {
+		api = s.cfg.APIBaseURL
+	}
+	rawEnv, err := McpWidgetResource(
+		r.Context(),
+		rpc,
+		s.cfg.ResourceURI,
+		s.cfg.PublicBaseURL,
+		s.cfg.ProductRef,
+		views,
+		s.cfg.CSP,
+		api,
+		s.cfg.Branding,
+	)
+	if err != nil || len(rawEnv) == 0 || string(rawEnv) == "null" {
+		return false
+	}
+	var envelope map[string]any
+	if err := json.Unmarshal(rawEnv, &envelope); err != nil {
+		return false
+	}
+	result := asMap(envelope["result"])
+	contents, _ := result["contents"].([]any)
+	if len(contents) == 0 {
+		return false
+	}
+	first := asMap(contents[0])
+	first["text"] = s.cfg.ReadHTML()
+	contents[0] = first
+	result["contents"] = contents
+	envelope["result"] = result
+	applyNativeCors(w, r)
+	writeJSON(w, http.StatusOK, envelope)
+	return true
 }
 
 func (s *Server) handleOAuth(w http.ResponseWriter, r *http.Request, path string) {

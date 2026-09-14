@@ -37,6 +37,7 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "auth-gate/allow-initialize.json",
     "auth-gate/allow-tools-call-with-bearer.json",
     "auth-gate/challenge-tools-call.json",
+    "auth-gate/omit-auth-mode-defaults-to-all.json",
     "bearer-verify/alg-none.json",
     "bearer-verify/expired.json",
     "bearer-verify/valid-rs256.json",
@@ -569,6 +570,9 @@ async fn replays_dispatch_and_oauth_through_http_server() {
                 api_base_url: None,
                 csp: None,
                 branding: None,
+                auth_mode: args
+                    .pointer("/config/authMode")
+                    .and_then(|value| serde_json::from_value(value.clone()).ok()),
             },
         );
         if fn_name == "mcpDispatch" {

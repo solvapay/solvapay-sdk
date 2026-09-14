@@ -116,6 +116,7 @@ pub fn build_host(
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: None,
         },
     );
     register_tools(&mut host, product, source, store, now)?;

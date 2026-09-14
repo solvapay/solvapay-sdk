@@ -105,7 +105,11 @@ func TestHandlerCacheEnvelope(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rec := postMCP(t, handler, tc.method, tc.params, nil)
+			headers := map[string]string{}
+			if tc.method != "resources/read" {
+				headers["Authorization"] = testBearerCus1
+			}
+			rec := postMCP(t, handler, tc.method, tc.params, headers)
 			result := decodeRPCResult(t, rec)
 			if result["resultType"] != "complete" {
 				t.Fatalf("resultType = %#v", result["resultType"])
@@ -182,6 +186,22 @@ func TestHandlerReconnectsAfterExpiredBearer(t *testing.T) {
 	}
 }
 
+func TestHandlerUnauthenticatedInitializeChallenges(t *testing.T) {
+	srv := newTestServerWithAuth(t, "all")
+	handler := NewStreamableHandler(srv)
+	rec := postMCP(t, handler, "initialize", map[string]any{
+		"protocolVersion": "2025-03-26",
+		"capabilities":    map[string]any{},
+		"clientInfo":      map[string]any{"name": "probe", "version": "0"},
+	}, nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), "resource_metadata=") {
+		t.Fatalf("WWW-Authenticate = %q", rec.Header().Get("WWW-Authenticate"))
+	}
+}
+
 func TestHandlerUnauthenticatedToolsCallChallenges(t *testing.T) {
 	_, handler := newTestHandler(t)
 	rec := postMCP(t, handler, "tools/call", map[string]any{
@@ -218,6 +238,7 @@ func TestHandlerNonLoopbackHostIsServed(t *testing.T) {
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("MCP-Protocol-Version", "2026-07-28")
 	req.Header.Set("Mcp-Method", "tools/list")
+	req.Header.Set("Authorization", testBearerCus1)
 	req.Host = "weather.ngrok-free.app"
 	req.RemoteAddr = "127.0.0.1:54321"
 	rec := httptest.NewRecorder()

@@ -106,7 +106,7 @@ async fn get_mcp_returns_405() {
 }
 
 #[tokio::test]
-async fn unauthenticated_initialize_returns_200() {
+async fn unauthenticated_initialize_returns_401() {
     let (addr, client) = spawn_app().await;
     let response = client
         .post(format!("http://{addr}/mcp"))
@@ -128,11 +128,15 @@ async fn unauthenticated_initialize_returns_200() {
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), 200);
-    let body: serde_json::Value = serde_json::from_str(&response.text().await.unwrap()).unwrap();
-    assert!(body.get("error").is_none(), "{body}");
+    assert_eq!(response.status(), 401);
+    let challenge = response
+        .headers()
+        .get("www-authenticate")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
     assert!(
-        body["result"]["serverInfo"].is_object() || body["result"]["protocolVersion"].is_string()
+        challenge.contains("resource_metadata="),
+        "{challenge}"
     );
 }
 

@@ -185,7 +185,7 @@ pub fn make_response_result(
 /// * `public_base_url` — Public origin for the WWW-Authenticate resource.
 /// * `rpc_method` — JSON-RPC method; may be absent.
 /// * `auth_header` — Authorization header; a gated method requires a verified bearer.
-/// * `auth_mode` — tools-call or all; defaults to tools-call.
+/// * `auth_mode` — tools-call or all; defaults to all.
 /// * `mcp_path` — Optional MCP mount path.
 /// * `json_rpc_id` — JSON-RPC id echoed on the challenge body.
 /// * `jwks_json` — JWKS document for RS256 or ES256 verification.
@@ -657,7 +657,7 @@ pub fn mcp_overview_resource() -> Result<Value, String> {
 /// # Arguments
 ///
 /// * `mcp_method` — JSON-RPC method name.
-/// * `auth_mode` — tools-call or all; defaults to tools-call.
+/// * `auth_mode` — tools-call or all; defaults to all.
 ///
 /// # Returns
 ///

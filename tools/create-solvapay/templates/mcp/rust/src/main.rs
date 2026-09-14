@@ -211,6 +211,7 @@ async fn main() {
             api_base_url: None,
             csp: None,
             branding: None,
+            auth_mode: None,
         },
     );
     let mut fields = Map::new();

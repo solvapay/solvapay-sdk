@@ -89,6 +89,11 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    * catalog entry.
    */
   hideToolsByAudience?: HideToolsByAudienceConfig
+  /**
+   * Which JSON-RPC methods require a bearer. Defaults to `all`.
+   * Use `tools-call` when listing/handshake should stay open.
+   */
+  authMode?: 'tools-call' | 'all'
 }
 
 /**
@@ -102,6 +107,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     serverName,
     serverVersion = '1.0.0',
     hideToolsByAudience,
+    authMode,
     ...descriptorOptions
   } = options
 
@@ -139,6 +145,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
         : {}),
       ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
       ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+      ...(authMode !== undefined ? { authMode } : {}),
     },
     payables,
     readHtml: descriptors.resource.readHtml,

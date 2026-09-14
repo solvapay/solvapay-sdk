@@ -13,7 +13,8 @@
       "config": {
         "productRef": "prd_demo",
         "publicBaseUrl": "https://app.example.com",
-        "resourceUri": "ui://test/view.html"
+        "resourceUri": "ui://test/view.html",
+        "authMode": "tools-call"
       }
     }
   },
@@ -41,9 +42,9 @@
               "description": "Add SolvaPay credits to the current customer."
             },
             {
-          "name": "activate_plan",
-          "title": "Activate plan",
-          "description": "Activate a specific plan by ref, or list plans to pick from."
+              "name": "activate_plan",
+              "title": "Activate plan",
+              "description": "Activate a specific plan by ref, or list plans to pick from."
             }
           ]
         }

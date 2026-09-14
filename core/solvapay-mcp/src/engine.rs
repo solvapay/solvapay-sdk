@@ -734,7 +734,7 @@ mod tests {
             resource_uri: "ui://test/view.html".to_owned(),
             views: None,
             payable_tools: Vec::new(),
-            auth_mode: None,
+            auth_mode: Some(crate::auth_gate::McpAuthMode::ToolsCall),
             mcp_path: None,
             hide_audiences: None,
             user_agent: None,
@@ -767,6 +767,7 @@ mod tests {
                 "productRef": "prd_demo",
                 "publicBaseUrl": "https://app.example.com",
                 "resourceUri": "ui://test/view.html",
+                "authMode": "tools-call",
                 "payableTools": payable_tools
             }
         }));
@@ -892,7 +893,8 @@ mod tests {
             "config": {
                 "productRef": "prd_demo",
                 "publicBaseUrl": "https://app.example.com",
-                "resourceUri": "ui://test/view.html"
+                "resourceUri": "ui://test/view.html",
+                "authMode": "tools-call"
             }
         }));
         assert_eq!(got["kind"], "rpc");
@@ -923,7 +925,8 @@ mod tests {
             "config": {
                 "productRef": "prd_demo",
                 "publicBaseUrl": "https://app.example.com",
-                "resourceUri": "ui://test/view.html"
+                "resourceUri": "ui://test/view.html",
+                "authMode": "tools-call"
             }
         }));
         assert_eq!(got["kind"], "rpc");

@@ -11,7 +11,7 @@ const publicBaseUrl = 'https://app.example.com'
 const resourceUri = 'ui://widget.html'
 const widgetHtml = '<!doctype html><html><body id="root"></body></html>'
 
-function buildHandler() {
+function buildHandler(requireAuth = false, authMode: 'tools-call' | 'all' = 'tools-call') {
   const solvaPay = createSolvaPay({ apiKey: 'sk_test_fixture', apiBaseUrl: 'http://127.0.0.1:1' })
   return createSolvaPayMcpFetch({
     solvaPay,
@@ -20,7 +20,8 @@ function buildHandler() {
     apiBaseUrl: 'http://127.0.0.1:1',
     resourceUri,
     responseMode: 'json',
-    requireAuth: false,
+    requireAuth,
+    authMode,
     readHtml: async () => widgetHtml,
   })
 }
@@ -60,6 +61,33 @@ describe('createSolvaPayMcpFetch engine-mode widget resources/read', () => {
     expect(result.resultType).toBeUndefined()
     expect(result.ttlMs).toBeUndefined()
     expect(result.cacheScope).toBeUndefined()
+  })
+
+  it('serves widget HTML before the auth gate when requireAuth defaults to all', async () => {
+    const handler = buildHandler(true, 'all')
+    const init = await handler(
+      new Request(`${publicBaseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
+      }),
+    )
+    expect(init.status).toBe(401)
+    const response = await handler(
+      new Request(`${publicBaseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'resources/read',
+          params: { uri: resourceUri },
+        }),
+      }),
+    )
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { result?: { contents?: Array<{ text?: string }> } }
+    expect(body.result?.contents?.[0]?.text).toBe(widgetHtml)
   })
 
   it('returns HTML plus resultType in the modern era', async () => {

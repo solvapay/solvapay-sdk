@@ -71,6 +71,18 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
     readHtml?: () => Promise<string>
   }
   /**
+   * Pre-gate widget HTML for the factory path (no `engine`). Same
+   * `ui://` short-circuit the engine path already runs.
+   */
+  widget?: {
+    resourceUri: string
+    views?: unknown
+    csp?: unknown
+    apiBaseUrl?: unknown
+    branding?: unknown
+    readHtml: () => Promise<string>
+  }
+  /**
    * Response shaping for modern (2026-07-28) traffic. Edge runtimes that
    * cannot hold a stream should pass `'json'` (single JSON body; mid-call
    * notifications are dropped). Defaults to `'auto'`.
@@ -164,10 +176,10 @@ async function readJsonRpcEnvelope(
  * 2. Serves every `.well-known/*` + `/oauth/*` route via
  *    {@link createOAuthFetchRouter}.
  * 3. Enforces bearer-token auth when `requireAuth` is true (default).
- *    `authMode: 'tools-call'` (default) gates only `tools/call` so
- *    handshake / listing stay open for discovery. `authMode: 'all'`
- *    challenges every JSON-RPC method so hosts that escalate on the
- *    first 401 prompt at connect. Missing auth on a gated method
+ *    `authMode: 'all'` (default) challenges every JSON-RPC method so
+ *    hosts that escalate on the first 401 prompt at connect.
+ *    `authMode: 'tools-call'` gates only `tools/call` so handshake /
+ *    listing stay open for discovery. Missing auth on a gated method
  *    returns `401 + WWW-Authenticate: Bearer resource_metadata="…"`.
  * 4. Forwards authenticated MCP requests to `createMcpHandler`'s
  *    `{ fetch }` face with `{ authInfo }` pass-through.
@@ -182,7 +194,7 @@ export function createSolvaPayMcpFetchHandler(
     productRef,
     mcpPath = '/mcp',
     requireAuth = true,
-    authMode = 'tools-call',
+    authMode = 'all',
     authInfo: _authInfo,
     hs256Secret,
     jwksJson,
@@ -191,6 +203,7 @@ export function createSolvaPayMcpFetchHandler(
     oauthPaths,
     oauthClient,
     engine,
+    widget,
     responseMode,
     legacy,
     onerror,
@@ -354,6 +367,37 @@ export function createSolvaPayMcpFetchHandler(
 
     const authHeader = req.headers.get('authorization')
     const envelope = await readJsonRpcEnvelope(req)
+    if (widget !== undefined && req.method === 'POST') {
+      let rpc: unknown
+      try {
+        rpc = await req.clone().json()
+      } catch {
+        rpc = undefined
+      }
+      if (rpc !== undefined) {
+        const widgetEnvelope = mcpWidgetResource(
+          rpc,
+          widget.resourceUri,
+          publicBaseUrl,
+          productRef,
+          widget.views,
+          widget.csp,
+          widget.apiBaseUrl ?? apiBaseUrl,
+          widget.branding,
+        )
+        if (widgetEnvelope !== null && widgetEnvelope !== undefined) {
+          if (!isWidgetRpcEnvelope(widgetEnvelope)) {
+            throw new Error('mcpWidgetResource returned an invalid envelope')
+          }
+          widgetEnvelope.result.contents[0].text = await widget.readHtml()
+          return engineHttpResponse(req, {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+            body: widgetEnvelope,
+          })
+        }
+      }
+    }
     let resolvedAuth: AuthInfo | undefined
     if (requireAuth) {
       const resolved = await mcpResolveAuth(

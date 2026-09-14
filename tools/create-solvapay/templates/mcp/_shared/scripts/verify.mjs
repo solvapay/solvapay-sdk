@@ -9,8 +9,9 @@
  *   - `/.well-known/oauth-authorization-server` returns the expected
  *     JSON shape.
  *   - `tools/list` returns the intent tools (`account`, `activate_plan`)
- *     plus the generated tools, with
- *     UI-only tools hidden.
+ *     plus the generated tools, with UI-only tools hidden. A 401
+ *     challenge is the default `authMode: all` outcome unless
+ *     `--credentials-file` is passed.
  *   - When at least one paid tool is registered: call it past the
  *     paywall and assert text-only narration in `content[0].text` (no
  *     iframe, no structured UI payload on the gate).
@@ -261,12 +262,10 @@ async function run(fn) {
 }
 
 /**
- * Contract for `tools/list`: anonymous discovery must succeed (SDK
- * `requireAuth` gates only `tools/call`). Assert intent tools present
- * and no UI-only tools leak into the text catalog.
- *
- * A 401 on `tools/list` is a failure — the worker is incorrectly
- * gating discovery (outdated SDK or a fully-private origin).
+ * Contract for `tools/list`: with a bearer (`--credentials-file`),
+ * assert intent tools present and no UI-only tools leak. Without
+ * credentials, a 401 + WWW-Authenticate challenge is the expected
+ * `authMode: all` default.
  */
 async function runToolsListCheck(base, rpcOptions = {}, expectTools) {
   try {
@@ -297,11 +296,19 @@ async function runToolsListCheck(base, rpcOptions = {}, expectTools) {
   } catch (err) {
     if (err instanceof RpcError && err.info?.httpStatus === 401) {
       const challenge = err.info.wwwAuthenticate ?? ''
+      if (rpcOptions.bearerToken) {
+        return {
+          status: 'failed',
+          error: 'authenticated tools/list was challenged; bearer was rejected',
+          info: { wwwAuthenticate: challenge || null },
+        }
+      }
       return {
-        status: 'failed',
-        error:
-          'worker gated tools/list; discovery must be anonymous under current @solvapay/mcp (only tools/call requires auth)',
-        info: { wwwAuthenticate: challenge || null },
+        status: 'passed',
+        value: {
+          challenged: true,
+          wwwAuthenticate: challenge || null,
+        },
       }
     }
     return {

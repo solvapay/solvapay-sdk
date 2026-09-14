@@ -20,6 +20,7 @@ var mcpAuthoringFixtures = []string{
 	"auth-gate/allow-initialize.json",
 	"auth-gate/allow-tools-call-with-bearer.json",
 	"auth-gate/challenge-tools-call.json",
+	"auth-gate/omit-auth-mode-defaults-to-all.json",
 	"bearer-verify/alg-none.json",
 	"bearer-verify/expired.json",
 	"bearer-verify/valid-rs256.json",

@@ -256,7 +256,7 @@ func TestHealthAndRootRoutes(t *testing.T) {
 	}
 }
 
-func TestUnauthenticatedInitializeReturns200(t *testing.T) {
+func TestUnauthenticatedInitializeReturns401(t *testing.T) {
 	body, err := json.Marshal(map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
@@ -275,24 +275,16 @@ func TestUnauthenticatedInitializeReturns200(t *testing.T) {
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	rec := httptest.NewRecorder()
 	newTestHandler(t).ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
+	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
 	}
-	var parsed map[string]any
-	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
-		t.Fatal(err)
-	}
-	if parsed["error"] != nil {
-		t.Fatalf("initialize error: %s", rec.Body.String())
-	}
-	result, _ := parsed["result"].(map[string]any)
-	if result["serverInfo"] == nil && result["protocolVersion"] == nil {
-		t.Fatalf("expected initialize result, got %s", rec.Body.String())
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), "resource_metadata=") {
+		t.Fatalf("missing challenge: %s", rec.Header().Get("WWW-Authenticate"))
 	}
 }
 
 func TestToolsListIncludesWeatherTools(t *testing.T) {
-	rec := postMCP(newTestHandler(t), "tools/list", map[string]any{}, nil)
+	rec := postMCP(newTestHandler(t), "tools/list", map[string]any{}, map[string]string{"Authorization": testBearer})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
 	}
@@ -355,7 +347,8 @@ func TestPayableGateFailureStaysJSONRPC(t *testing.T) {
 
 func TestServerDiscoverReturnsCompleteResult(t *testing.T) {
 	rec := postMCP(newTestHandler(t), "server/discover", map[string]any{}, map[string]string{
-		"Origin": "http://localhost:6274",
+		"Origin":        "http://localhost:6274",
+		"Authorization": testBearer,
 	})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
@@ -387,6 +380,7 @@ func TestNotificationInitializedReturns202(t *testing.T) {
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("MCP-Protocol-Version", "2026-07-28")
 	req.Header.Set("Mcp-Method", "notifications/initialized")
+	req.Header.Set("Authorization", testBearer)
 	rec := httptest.NewRecorder()
 	newTestHandler(t).ServeHTTP(rec, req)
 	if rec.Code != http.StatusAccepted {

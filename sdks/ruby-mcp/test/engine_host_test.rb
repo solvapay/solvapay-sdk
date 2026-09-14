@@ -65,6 +65,7 @@ class EngineHostTest < Minitest::Test
       public_base_url: "https://app.example.com",
       hs256_secret: HS256_SECRET,
       resource_uri: "ui://test/view.html",
+      auth_mode: "tools-call",
     )
     engine.register_payable(
       "echo_paid",
@@ -351,6 +352,7 @@ class EngineHostTest < Minitest::Test
       product_ref: args.dig("config", "productRef"),
       public_base_url: args.dig("config", "publicBaseUrl"),
       resource_uri: args.dig("config", "resourceUri"),
+      auth_mode: args.dig("config", "authMode"),
     )
     status, _headers, body = engine.call(
       rack_env("POST", "/mcp", JSON.generate(args["rpc"])),

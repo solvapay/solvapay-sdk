@@ -32,6 +32,7 @@ pub use register::{
 };
 pub use response_context::{CustomerView, PayableResponse, ProductView, ResponseContext};
 pub use server::{McpHttpConfig, McpHttpRequest, McpHttpResponse, McpHttpServer};
+pub use solvapay_mcp_core::McpAuthMode;
 
 #[cfg(feature = "test-seams")]
 pub use layer2::set_format_gate_override;

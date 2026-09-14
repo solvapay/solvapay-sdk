@@ -229,7 +229,7 @@ export async function replayMcpCoreFixture(
       got = mcpAuthGate({
         rpcMethod: args.rpcMethod as string | undefined,
         authHeader: args.authHeader as string | null | undefined,
-        authMode: (args.authMode as 'tools-call' | 'all') ?? 'tools-call',
+        ...(args.authMode !== undefined ? { authMode: args.authMode as 'tools-call' | 'all' } : {}),
         publicBaseUrl: String(args.publicBaseUrl),
         ...(args.mcpPath !== undefined ? { mcpPath: String(args.mcpPath) } : {}),
         jsonRpcId: (args.jsonRpcId as string | number | null | undefined) ?? null,
