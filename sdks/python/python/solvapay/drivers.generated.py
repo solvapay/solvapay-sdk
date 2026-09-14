@@ -120,24 +120,13 @@ class AsyncPayableDriverHost(Protocol):
     def random_unit(self) -> float: ...
 
 
-def _apply_payable_host_result(
-    host: PayableDriverHost | AsyncPayableDriverHost,
-    result: dict[str, Any],
-) -> dict[str, Any] | object:
+def _check_payable_host_result(result: dict[str, Any]) -> dict[str, Any]:
     kind = result.get("kind")
-    if kind == "return":
-        return result["result"]
-    if kind == "paywall":
-        return {"kind": "paywall", "gate": result["gate"], "message": result["message"]}
-    if kind == "allow":
-        return {"kind": "allow", "customerRef": result["customerRef"], "limits": result["limits"]}
-    if kind == "ok":
-        return {"kind": "ok", "envelope": result["envelope"]}
-    if kind == "err":
-        return {"kind": "err", "message": result["message"]}
     if kind == "fatal":
         raise result["error"]
-    raise RuntimeError(f"payable host returned unknown kind: {kind}")
+    if kind not in ("return", "paywall", "allow", "ok", "err"):
+        raise RuntimeError(f"payable host returned unknown kind: {kind}")
+    return result
 
 
 def run_generated_payable_loop(
@@ -153,9 +142,9 @@ def run_generated_payable_loop(
         action = out["action"]
         kind = action["kind"]
         if kind == "runGate":
-            gate = _apply_payable_host_result(host, host.run_gate(action))
-            if not isinstance(gate, dict):
-                return gate
+            gate = _check_payable_host_result(host.run_gate(action))
+            if gate["kind"] == "return":
+                return gate["result"]
             if gate["kind"] == "paywall":
                 event = {"kind": "gatePaywall", "gate": gate["gate"], "message": gate["message"]}
             else:
@@ -166,9 +155,9 @@ def run_generated_payable_loop(
                 }
             continue
         if kind == "invokeHandler":
-            invoked = _apply_payable_host_result(host, host.invoke_handler(action))
-            if not isinstance(invoked, dict):
-                return invoked
+            invoked = _check_payable_host_result(host.invoke_handler(action))
+            if invoked["kind"] == "return":
+                return invoked["result"]
             if invoked["kind"] == "paywall":
                 event = {
                     "kind": "handlerPaywall",
@@ -211,9 +200,9 @@ async def run_generated_payable_loop_async(
         action = out["action"]
         kind = action["kind"]
         if kind == "runGate":
-            gate = _apply_payable_host_result(host, await host.run_gate(action))
-            if not isinstance(gate, dict):
-                return gate
+            gate = _check_payable_host_result(await host.run_gate(action))
+            if gate["kind"] == "return":
+                return gate["result"]
             if gate["kind"] == "paywall":
                 event = {"kind": "gatePaywall", "gate": gate["gate"], "message": gate["message"]}
             else:
@@ -224,9 +213,9 @@ async def run_generated_payable_loop_async(
                 }
             continue
         if kind == "invokeHandler":
-            invoked = _apply_payable_host_result(host, await host.invoke_handler(action))
-            if not isinstance(invoked, dict):
-                return invoked
+            invoked = _check_payable_host_result(await host.invoke_handler(action))
+            if invoked["kind"] == "return":
+                return invoked["result"]
             if invoked["kind"] == "paywall":
                 event = {
                     "kind": "handlerPaywall",

@@ -12,30 +12,16 @@ import random
 import time
 from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass, field
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
 from types import ModuleType
 from typing import Protocol
 
+from solvapay.facade import (
+    run_generated_gate_loop_async,
+    run_generated_payable_loop_async,
+)
+
 Handler = Callable[[dict[str, object], "WorkersResponseContext"], Awaitable[object]]
 GetCustomerRef = Callable[[dict[str, object]], str | Awaitable[str]]
-
-
-def _load_generated_drivers() -> ModuleType:
-    import solvapay
-
-    path = Path(solvapay.__file__).resolve().parent / "drivers.generated.py"
-    spec = spec_from_file_location("solvapay._drivers_generated_workers", path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load generated drivers from {path}")
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-_generated_drivers = _load_generated_drivers()
-run_generated_gate_loop_async = _generated_drivers.run_generated_gate_loop_async
-run_generated_payable_loop_async = _generated_drivers.run_generated_payable_loop_async
 
 
 class _WorkersWasmClient(Protocol):
@@ -503,6 +489,8 @@ async def workers_gate(
 
     stepped = await run_generated_gate_loop_async(_gate_next, _Host(), start_event)
     action = stepped["action"]
+    if not isinstance(action, Mapping):
+        raise _workers().WorkersSolvaPayError("gate loop returned unexpected action")
     kind = action.get("kind")
     if kind == "gate":
         gate = action.get("gate")

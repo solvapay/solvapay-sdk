@@ -79,6 +79,14 @@ class MissingCustomerRefError(SolvaPayError):
         self.code = "unauthorized"
 
 
+def _unauthorized_payload() -> dict[str, object]:
+    return {
+        "isError": True,
+        "content": [{"type": "text", "text": "Unauthorized"}],
+        "structuredContent": {"error": "Unauthorized", "status": 401},
+    }
+
+
 @dataclass
 class _PayableTool:
     solvapay: SolvaPay
@@ -298,11 +306,7 @@ def _install_dispatch(server: Server[object]) -> None:
         )
         kind = envelope.get("kind")
         if kind == "challenge":
-            return {
-                "isError": True,
-                "content": [{"type": "text", "text": "Unauthorized"}],
-                "structuredContent": {"error": "Unauthorized", "status": 401},
-            }
+            return _unauthorized_payload()
         rpc = envelope.get("rpc") if kind == "rpc" else envelope
         if isinstance(rpc, dict):
             return rpc.get("result")
@@ -393,7 +397,12 @@ def _install_dispatch(server: Server[object]) -> None:
         spec = _REGISTRIES.get(server, {}).get(params.name)
         if spec is not None:
             arguments = params.arguments if isinstance(params.arguments, dict) else {}
-            payload = await _invoke_payable(spec, dict(arguments))
+            try:
+                payload = await _invoke_payable(spec, dict(arguments))
+            except MissingCustomerRefError:
+                # No authenticated caller: report 401 as a tool error rather than
+                # billing an `anonymous` customer.
+                return _to_call_tool_result(_unauthorized_payload())
             return _to_call_tool_result(payload)
         raw = await _result(
             "tools/call",
@@ -679,18 +688,18 @@ def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:
     )
 
 
-def _invoke_payable_next(state: object, event: Mapping[str, object]) -> dict[str, object]:
-    out = invoke_payable_next(state, dict(event))
+def _invoke_payable_next(state: object, event: object) -> dict[str, object]:
+    if not isinstance(event, Mapping):
+        raise SolvaPayError("invoke_payable_next event must be a mapping")
+    out = invoke_payable_next(state, {str(k): v for k, v in event.items()})
     if not isinstance(out, dict):
         raise SolvaPayError("invoke_payable_next returned unexpected value")
     return {str(k): v for k, v in out.items()}
 
 
 async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[str, object]:
-    try:
-        customer_ref = await _resolve_customer_ref(args, spec.get_customer_ref)
-    except MissingCustomerRefError:
-        raise
+    customer_ref = await _resolve_customer_ref(args, spec.get_customer_ref)
+
     class _Host:
         def now_ms(self) -> int:
             return _now_ms()

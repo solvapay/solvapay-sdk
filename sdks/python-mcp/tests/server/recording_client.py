@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -26,6 +27,10 @@ class RecordingClient:
                 "authMode": payload.get("authMode") or "tools-call",
                 "mcpPath": payload.get("mcpPath"),
                 "jsonRpcId": payload.get("jsonRpcId"),
+                # Core holds no wall clock, so mcpAuthGate rejects every bearer
+                # without an explicit clock. The real transport supplies it from
+                # the host shell; this double stands in for that transport.
+                "nowUnixSecs": int(time.time()),
             }
             if payload.get("hs256Secret") is not None:
                 gate_args["hs256Secret"] = payload.get("hs256Secret")

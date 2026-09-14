@@ -279,24 +279,13 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20   def track_usage(self, request: object) -> Awaitable[None]: ...\n\
          \x20   def now_ms(self) -> int: ...\n\
          \x20   def random_unit(self) -> float: ...\n\n\n\
-         def _apply_payable_host_result(\n\
-         \x20   host: PayableDriverHost | AsyncPayableDriverHost,\n\
-         \x20   result: dict[str, Any],\n\
-         ) -> dict[str, Any] | object:\n\
+         def _check_payable_host_result(result: dict[str, Any]) -> dict[str, Any]:\n\
          \x20   kind = result.get(\"kind\")\n\
-         \x20   if kind == \"return\":\n\
-         \x20       return result[\"result\"]\n\
-         \x20   if kind == \"paywall\":\n\
-         \x20       return {\"kind\": \"paywall\", \"gate\": result[\"gate\"], \"message\": result[\"message\"]}\n\
-         \x20   if kind == \"allow\":\n\
-         \x20       return {\"kind\": \"allow\", \"customerRef\": result[\"customerRef\"], \"limits\": result[\"limits\"]}\n\
-         \x20   if kind == \"ok\":\n\
-         \x20       return {\"kind\": \"ok\", \"envelope\": result[\"envelope\"]}\n\
-         \x20   if kind == \"err\":\n\
-         \x20       return {\"kind\": \"err\", \"message\": result[\"message\"]}\n\
          \x20   if kind == \"fatal\":\n\
          \x20       raise result[\"error\"]\n\
-         \x20   raise RuntimeError(f\"payable host returned unknown kind: {kind}\")\n\n\n\
+         \x20   if kind not in (\"return\", \"paywall\", \"allow\", \"ok\", \"err\"):\n\
+         \x20       raise RuntimeError(f\"payable host returned unknown kind: {kind}\")\n\
+         \x20   return result\n\n\n\
          def run_generated_payable_loop(\n\
          \x20   payable_next: Callable[[object, object], dict[str, Any]],\n\
          \x20   host: PayableDriverHost,\n\
@@ -310,9 +299,9 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20       action = out[\"action\"]\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"runGate\":\n\
-         \x20           gate = _apply_payable_host_result(host, host.run_gate(action))\n\
-         \x20           if not isinstance(gate, dict):\n\
-         \x20               return gate\n\
+         \x20           gate = _check_payable_host_result(host.run_gate(action))\n\
+         \x20           if gate[\"kind\"] == \"return\":\n\
+         \x20               return gate[\"result\"]\n\
          \x20           if gate[\"kind\"] == \"paywall\":\n\
          \x20               event = {\"kind\": \"gatePaywall\", \"gate\": gate[\"gate\"], \"message\": gate[\"message\"]}\n\
          \x20           else:\n\
@@ -323,9 +312,9 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20               }\n\
          \x20           continue\n\
          \x20       if kind == \"invokeHandler\":\n\
-         \x20           invoked = _apply_payable_host_result(host, host.invoke_handler(action))\n\
-         \x20           if not isinstance(invoked, dict):\n\
-         \x20               return invoked\n\
+         \x20           invoked = _check_payable_host_result(host.invoke_handler(action))\n\
+         \x20           if invoked[\"kind\"] == \"return\":\n\
+         \x20               return invoked[\"result\"]\n\
          \x20           if invoked[\"kind\"] == \"paywall\":\n\
          \x20               event = {\n\
          \x20                   \"kind\": \"handlerPaywall\",\n\
@@ -366,9 +355,9 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20       action = out[\"action\"]\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"runGate\":\n\
-         \x20           gate = _apply_payable_host_result(host, await host.run_gate(action))\n\
-         \x20           if not isinstance(gate, dict):\n\
-         \x20               return gate\n\
+         \x20           gate = _check_payable_host_result(await host.run_gate(action))\n\
+         \x20           if gate[\"kind\"] == \"return\":\n\
+         \x20               return gate[\"result\"]\n\
          \x20           if gate[\"kind\"] == \"paywall\":\n\
          \x20               event = {\"kind\": \"gatePaywall\", \"gate\": gate[\"gate\"], \"message\": gate[\"message\"]}\n\
          \x20           else:\n\
@@ -379,9 +368,9 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20               }\n\
          \x20           continue\n\
          \x20       if kind == \"invokeHandler\":\n\
-         \x20           invoked = _apply_payable_host_result(host, await host.invoke_handler(action))\n\
-         \x20           if not isinstance(invoked, dict):\n\
-         \x20               return invoked\n\
+         \x20           invoked = _check_payable_host_result(await host.invoke_handler(action))\n\
+         \x20           if invoked[\"kind\"] == \"return\":\n\
+         \x20               return invoked[\"result\"]\n\
          \x20           if invoked[\"kind\"] == \"paywall\":\n\
          \x20               event = {\n\
          \x20                   \"kind\": \"handlerPaywall\",\n\

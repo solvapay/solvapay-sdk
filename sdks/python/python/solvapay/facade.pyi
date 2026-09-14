@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import ParamSpec, Protocol, TypeVar
 
 from solvapay.results import PayableGateResult
@@ -76,4 +76,58 @@ def create_solvapay(
     api_client: ApiClient | None = None,
 ) -> SolvaPay:
     """Factory matching §2.4 / catalog ``create_solvapay``."""
+    ...
+
+
+# Re-exported from the generated `drivers.generated.py`, which `facade.py` loads
+# by path because its filename is not a valid module name. Mirror of the
+# protocols and signatures dto-gen emits there.
+class AsyncGateDriverHost(Protocol):
+    def ensure_customer(self, customer_ref: str) -> Awaitable[str]: ...
+    def read_limits_cache(self, key: str) -> dict[str, object] | None: ...
+    def check_limits(self, action: dict[str, object]) -> Awaitable[object]: ...
+    def apply_cache(self, cache: object) -> None: ...
+    def now_ms(self) -> int: ...
+
+
+class PayableDriverHost(Protocol):
+    def run_gate(self, action: dict[str, object]) -> dict[str, object]: ...
+    def invoke_handler(self, action: dict[str, object]) -> dict[str, object]: ...
+    def track_usage(self, request: object) -> None: ...
+    def now_ms(self) -> int: ...
+    def random_unit(self) -> float: ...
+
+
+class AsyncPayableDriverHost(Protocol):
+    def run_gate(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...
+    def invoke_handler(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...
+    def track_usage(self, request: object) -> Awaitable[None]: ...
+    def now_ms(self) -> int: ...
+    def random_unit(self) -> float: ...
+
+
+async def run_generated_gate_loop_async(
+    gate_next: Callable[[object, object], dict[str, object]],
+    host: AsyncGateDriverHost,
+    start_event: dict[str, object],
+) -> dict[str, object]:
+    """Drive the generated gate loop, delegating I/O to ``host``."""
+    ...
+
+
+def run_generated_payable_loop(
+    payable_next: Callable[[object, object], dict[str, object]],
+    host: PayableDriverHost,
+    start_event: dict[str, object],
+) -> object:
+    """Drive the generated payable loop, delegating I/O to ``host``."""
+    ...
+
+
+async def run_generated_payable_loop_async(
+    payable_next: Callable[[object, object], dict[str, object]],
+    host: AsyncPayableDriverHost,
+    start_event: dict[str, object],
+) -> object:
+    """Async twin of :func:`run_generated_payable_loop`."""
     ...
