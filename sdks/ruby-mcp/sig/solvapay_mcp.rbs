@@ -54,6 +54,29 @@ module SolvaPay
     def self.stringify_keys: (untyped value) -> untyped
     def self.to_mcp_response: (untyped payload) -> untyped
 
+    # Host callbacks driven by SolvaPay::GeneratedPayableLoop.
+    class PayableLoopHost
+      @solvapay: untyped
+      @product: String
+      @handler: ^(untyped, ResponseContext) -> untyped
+      @args: untyped
+      @format_gate_override: (^(String, Hash[String, untyped]) -> Hash[String, untyped])?
+      def initialize: (
+        solvapay: untyped,
+        product: String,
+        handler: ^(untyped, ResponseContext) -> untyped,
+        args: untyped,
+        format_gate_override: (^(String, Hash[String, untyped]) -> Hash[String, untyped])?
+      ) -> void
+      def now_ms: () -> Integer
+      def random_unit: () -> Numeric
+      def run_gate: (Hash[String, untyped] action) -> Hash[Symbol, untyped]
+      def invoke_handler: (Hash[String, untyped] action) -> Hash[Symbol, untyped]
+      def track_usage: (untyped request) -> void
+      private
+      def format_gate: (String message, Hash[String, untyped] gate) -> Hash[String, untyped]
+    end
+
     class Engine
       def initialize: (
         client: untyped,

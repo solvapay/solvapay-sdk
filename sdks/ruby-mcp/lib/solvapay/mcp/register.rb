@@ -196,15 +196,21 @@ module SolvaPay
           product_ref: @product,
           limits: limits,
         )
-        returned = @handler.call(@args, ctx)
-        { kind: :ok, envelope: Layer2.assert_response_result(returned) }
-      rescue SolvaPay::PaywallError => e
-        gate = SolvaPay::Mcp.send(:stringify_keys, e.structured_content)
-        return { kind: :return, result: format_gate(e.message, gate) } unless @format_gate_override.nil?
+        # Only the handler call is guarded: a handler raising is a runtime
+        # failure the loop reports as `err`, but a handler returning something
+        # other than `ctx.respond(...)` breaks the contract and must surface.
+        begin
+          returned = @handler.call(@args, ctx)
+        rescue SolvaPay::PaywallError => e
+          gate = SolvaPay::Mcp.send(:stringify_keys, e.structured_content)
+          return { kind: :return, result: format_gate(e.message, gate) } unless @format_gate_override.nil?
 
-        { kind: :paywall, gate: gate, message: e.message }
-      rescue StandardError => e
-        { kind: :err, message: e.message }
+          { kind: :paywall, gate: gate, message: e.message }
+        rescue StandardError => e
+          { kind: :err, message: e.message }
+        else
+          { kind: :ok, envelope: Layer2.assert_response_result(returned) }
+        end
       end
 
       def track_usage(request)
@@ -214,7 +220,8 @@ module SolvaPay
       private
 
       def format_gate(message, gate)
-        return @format_gate_override.call(message, gate) unless @format_gate_override.nil?
+        override = @format_gate_override
+        return override.call(message, gate) unless override.nil?
 
         Layer2.paywall_tool_result(message, gate)
       end
