@@ -113,11 +113,6 @@ export interface CredentialDescriptors {
   /** debit, credit, prepaid, where the vault reports it. */
   funding: string | null
   issuerCountry: string | null
-  /**
-   * Stable per-card identifier from the vault. Two captures of the same card
-   * share it, which is how a returning customer is recognised.
-   */
-  fingerprint: string | null
 }
 
 export type CaptureErrorCode =

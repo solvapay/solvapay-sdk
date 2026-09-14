@@ -108,7 +108,6 @@ describe('toCredential', () => {
       expYear: 2030,
       funding: 'debit',
       issuerCountry: 'SE',
-      fingerprint: 'fp_abc',
     })
     expect(JSON.stringify(result)).not.toContain('tok_sandbox')
   })
@@ -241,11 +240,11 @@ describe('toCredential: leading digits', () => {
       vaultResponse({ bin: '424242', first8: '42424242', card_fingerprint: 'fp_1' }),
     )
     expect(credential.descriptors.last4).toBe('4242')
+    expect(JSON.stringify(credential)).not.toContain('fp_1')
     expect(Object.keys(credential.descriptors).sort()).toEqual([
       'brand',
       'expMonth',
       'expYear',
-      'fingerprint',
       'funding',
       'issuerCountry',
       'last4',

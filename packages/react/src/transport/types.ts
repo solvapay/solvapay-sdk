@@ -295,7 +295,6 @@ export interface TransportCredentialDescriptors {
   expYear: number
   funding?: string | null
   issuerCountry?: string | null
-  fingerprint?: string | null
 }
 
 export interface TransportCredentialResult {

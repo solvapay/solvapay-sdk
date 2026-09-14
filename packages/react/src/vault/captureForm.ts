@@ -337,7 +337,7 @@ export function toCaptureError(error: unknown): CaptureError {
 // No BIN, and no leading digits of any length, anywhere in this file. The vault
 // offers `bin` and `first8` and we read neither. Stripe's card object carries no
 // such field either. The brand comes from the vault directly, and recognising a
-// returning card is the fingerprint's job, so leading digits would buy nothing
+// returning card is the vault card id's job, so leading digits would buy nothing
 // and would put ten or twelve digits of a sixteen digit card in our database.
 
 export function toCredential(raw: unknown): CapturedCredential {
@@ -366,7 +366,9 @@ export function toCredential(raw: unknown): CapturedCredential {
     expYear,
     funding: asString(attributes.card_type ?? properties.funding),
     issuerCountry: asString(properties.issuer_country ?? properties.country),
-    fingerprint: asString(attributes.card_fingerprint),
+    // No fingerprint. The vault derives it from the PAN, and we keep nothing
+    // PAN-derived. A returning card is recognised by the vault card id, which
+    // the vault repeats because it deduplicates on its own side.
   }
 
   return { handle, descriptors }
