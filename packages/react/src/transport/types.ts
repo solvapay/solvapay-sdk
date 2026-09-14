@@ -233,6 +233,12 @@ export interface SolvaPayTransport {
    * Takes the vault handle and the non-sensitive descriptors. No card data
    * crosses this boundary, by construction: the browser sent it to the vault
    * and the vault returned a handle.
+   *
+   * Note what is not here. The format-preserving aliases are never sent. An FPE
+   * alias is indistinguishable from the card number it replaces, so a field
+   * carrying one is a field that could carry a live PAN, and the server refuses
+   * to accept either. It reads the aliases from the vault itself when it needs
+   * them.
    */
   createCredential?: (params: {
     handle: string
@@ -244,9 +250,6 @@ export interface SolvaPayTransport {
     descriptors: TransportCredentialDescriptors
     customerRef?: string
     setAsDefault?: boolean
-    /** Format-preserving aliases, where the capture surface has them. */
-    panAlias?: string
-    cvcAlias?: string
   }) => Promise<TransportCredentialResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>

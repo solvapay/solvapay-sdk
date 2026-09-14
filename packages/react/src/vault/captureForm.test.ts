@@ -220,3 +220,35 @@ describe('session and field guards', () => {
     expect(isComplete(state.fields)).toBe(false)
   })
 })
+
+describe('toCredential: leading digits', () => {
+  const vaultResponse = (attributes: Record<string, unknown>) => ({
+    data: {
+      id: 'card_7f3a1c92b4d6',
+      attributes: { exp_month: 12, exp_year: 2030, last4: '4242', ...attributes },
+    },
+  })
+
+  it('keeps six digits when the vault reports a bin', () => {
+    expect(toCredential(vaultResponse({ bin: '424242' })).descriptors.bin).toBe('424242')
+  })
+
+  it('cuts first8 down to six, so we never hold eight leading digits', () => {
+    // first8 plus last4 would be twelve of sixteen digits in our database.
+    expect(toCredential(vaultResponse({ first8: '42424242' })).descriptors.bin).toBe('424242')
+  })
+
+  it('prefers bin over first8 when both are present', () => {
+    expect(toCredential(vaultResponse({ bin: '411111', first8: '42424242' })).descriptors.bin).toBe(
+      '411111',
+    )
+  })
+
+  it('returns null rather than a partial bin', () => {
+    expect(toCredential(vaultResponse({ bin: '4242' })).descriptors.bin).toBeNull()
+  })
+
+  it('never lets a full card number through as a bin', () => {
+    expect(toCredential(vaultResponse({ bin: '4242424242424242' })).descriptors.bin).toBe('424242')
+  })
+})
