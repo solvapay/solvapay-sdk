@@ -475,6 +475,7 @@ async def test_replays_http_engine(rel: str) -> None:
             resource_uri=str(config.get("resourceUri") or "ui://test/view.html"),
             mcp_path=str(config.get("mcpPath") or "/mcp"),
             oauth_paths=oauth_paths,
+            auth_mode=str(config.get("authMode") or "all"),
         )
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="https://app.example.com") as http:

@@ -27,6 +27,7 @@ class _EngineBinding:
         hide_audiences: list[str] | None,
         csp: dict[str, list[str]] | None = None,
         api_base_url: str | None = None,
+        auth_mode: str | None = None,
     ) -> None:
         self.solvapay = solvapay
         self.product_ref = product_ref
@@ -37,6 +38,7 @@ class _EngineBinding:
         self.api_base_url = api_base_url
         self.views = views
         self.hide_audiences = hide_audiences
+        self.auth_mode = auth_mode
 
 
 def bind_engine(
@@ -51,6 +53,7 @@ def bind_engine(
     hide_audiences: list[str] | None = None,
     csp: dict[str, list[str]] | None = None,
     api_base_url: str | None = None,
+    auth_mode: str | None = None,
 ) -> None:
     _ENGINE[server] = _EngineBinding(
         solvapay=solvapay,
@@ -62,6 +65,7 @@ def bind_engine(
         hide_audiences=hide_audiences,
         csp=csp,
         api_base_url=api_base_url,
+        auth_mode=auth_mode,
     )
 
 
@@ -115,6 +119,8 @@ async def dispatch_rpc(
         "payableTools": payable_tools,
         "mcpPath": binding.mcp_path,
     }
+    if binding.auth_mode is not None:
+        config["authMode"] = binding.auth_mode
     if binding.views is not None:
         config["views"] = binding.views
     if binding.hide_audiences is not None:

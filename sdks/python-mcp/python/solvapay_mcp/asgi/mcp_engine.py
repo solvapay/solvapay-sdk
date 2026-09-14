@@ -131,6 +131,7 @@ def create_mcp_engine_starlette(
         mcp_path=mcp_path,
         views=views,
         hide_audiences=hide_audiences,
+        auth_mode=auth_mode,
     )
     app = Starlette(routes=[create_mcp_engine_route(server, mcp_path=mcp_path)])
     return create_mcp_oauth_starlette(

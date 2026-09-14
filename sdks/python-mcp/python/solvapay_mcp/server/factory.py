@@ -22,6 +22,7 @@ def create_solvapay_mcp_server(
     api_base_url: str | None = None,
     server_name: str = "solvapay-mcp-server",
     hide_tools_by_audience: list[str] | None = None,
+    auth_mode: str = "tools-call",
 ) -> Server[object]:
     del read_html
     server: Server[object] = Server(server_name)
@@ -36,6 +37,7 @@ def create_solvapay_mcp_server(
         hide_audiences=hide_tools_by_audience,
         csp=csp,
         api_base_url=api_base_url,
+        auth_mode=auth_mode,
     )
     ensure_dispatch(server)
     return server

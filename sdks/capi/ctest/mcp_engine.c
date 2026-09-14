@@ -24,6 +24,7 @@ static const char *kDefaultConfig =
     "\"publicBaseUrl\":\"https://app.example.com\","
     "\"resourceUri\":\"ui://widget.html\","
     "\"mcpPath\":\"/mcp\","
+    "\"authMode\":\"tools-call\","
     "\"payableTools\":[\"echo\"]}";
 
 static int handle_oauth(SolvapayClient *client, const char *method, const char *path,
