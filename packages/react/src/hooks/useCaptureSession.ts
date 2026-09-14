@@ -69,6 +69,7 @@ export function useCaptureSession(options: UseCaptureSessionOptions = {}): UseCa
           tenantId: result.tenantId,
           environment: result.environment,
           expiresAt: result.expiresAt,
+          captureSessionId: result.captureSessionId,
         }
         if (mounted.current) setSession(next)
         return next

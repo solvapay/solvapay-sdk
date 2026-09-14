@@ -236,9 +236,17 @@ export interface SolvaPayTransport {
    */
   createCredential?: (params: {
     handle: string
+    /**
+     * The grant the card was captured under. Required: without it the server has
+     * nothing tying this report to a grant it issued.
+     */
+    captureSessionId: string
     descriptors: TransportCredentialDescriptors
     customerRef?: string
     setAsDefault?: boolean
+    /** Format-preserving aliases, where the capture surface has them. */
+    panAlias?: string
+    cvcAlias?: string
   }) => Promise<TransportCredentialResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
@@ -273,6 +281,8 @@ export interface TransportCaptureSessionResult {
   environment: 'sandbox' | 'live'
   /** Epoch milliseconds. */
   expiresAt: number
+  /** Identifier for the grant, sent back with the credential it produced. */
+  captureSessionId: string
 }
 
 export interface TransportCredentialDescriptors {

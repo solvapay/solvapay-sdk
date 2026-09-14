@@ -49,6 +49,15 @@ export interface CaptureSession {
   environment: CaptureEnvironment
   /** Epoch milliseconds. The surface refuses to submit after this. */
   expiresAt: number
+  /**
+   * Identifier for this grant, sent back with the captured credential.
+   *
+   * The vault has no notion of our checkout, so it cannot enforce "one card,
+   * this customer, this session". The server enforces that against this id, and
+   * refuses a credential reported under a grant that is expired, already spent,
+   * or was minted for someone else.
+   */
+  captureSessionId: string
 }
 
 export interface CaptureFieldState {

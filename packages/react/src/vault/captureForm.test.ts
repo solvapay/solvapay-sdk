@@ -168,17 +168,50 @@ describe('toCaptureError', () => {
 describe('session and field guards', () => {
   it('treats a session inside its window as usable', () => {
     const now = 1_000_000
-    expect(isSessionUsable({ token: 't', tenantId: 'v', environment: 'sandbox', expiresAt: now + 60_000 }, now)).toBe(true)
+    expect(
+      isSessionUsable(
+        {
+          token: 't',
+          tenantId: 'v',
+          environment: 'sandbox',
+          captureSessionId: 'cap_1',
+          expiresAt: now + 60_000,
+        },
+        now,
+      ),
+    ).toBe(true)
   })
 
   it('treats an expired session as unusable', () => {
     const now = 1_000_000
-    expect(isSessionUsable({ token: 't', tenantId: 'v', environment: 'sandbox', expiresAt: now - 1 }, now)).toBe(false)
+    expect(
+      isSessionUsable(
+        {
+          token: 't',
+          tenantId: 'v',
+          environment: 'sandbox',
+          captureSessionId: 'cap_1',
+          expiresAt: now - 1,
+        },
+        now,
+      ),
+    ).toBe(false)
   })
 
   it('refuses a session that expires within the slack window', () => {
     const now = 1_000_000
-    expect(isSessionUsable({ token: 't', tenantId: 'v', environment: 'sandbox', expiresAt: now + 500 }, now)).toBe(false)
+    expect(
+      isSessionUsable(
+        {
+          token: 't',
+          tenantId: 'v',
+          environment: 'sandbox',
+          captureSessionId: 'cap_1',
+          expiresAt: now + 500,
+        },
+        now,
+      ),
+    ).toBe(false)
   })
 
   it('agrees with the state helpers', () => {
