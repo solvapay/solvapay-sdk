@@ -2,10 +2,12 @@
  * Canonical dto-gen invocation for all six SDK surfaces.
  *
  * Modes:
- *   (default)  Regenerate Rust DTOs, TS/Python/Ruby/Go/Rust clients, binding shims.
+ *   (default)  Regenerate Rust DTOs, TS/Python/Ruby/Go/Rust clients, binding shims,
+ *              then rebuild the Ruby and Python native extensions when those
+ *              toolchains are on PATH (`--no-native-prepare` skips the rebuild).
  *   --check    Snapshot generated paths, regenerate, fail if those bytes changed.
  *              Compares working tree to itself (idempotence), not to git HEAD, so
- *              already-regenerated uncommitted files stay green.
+ *              already-regenerated uncommitted files stay green. Skips native prepare.
  *
  * This is the single source of truth for dto-gen invocation — CI and humans share it.
  * dto-gen reads `contract/manifest/repo-paths.yaml` via `--config`.
@@ -22,6 +24,7 @@ import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
 import { emitCoreSurfaceChangeset } from './core-surface-changeset.js'
 import { runFacadeCoverage } from './facade-coverage.js'
+import { planNativePrepare, runNativePrepare } from './native-prepare.js'
 import { runWasmProfiles } from './wasm-profiles.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
@@ -33,20 +36,27 @@ export const GENERATED_PATHS = generatedDriftPaths()
 
 export interface CliOptions {
   check: boolean
+  nativePrepare: boolean
 }
 
 function printUsage(): string {
   return `Usage:
   pnpm gen
+  pnpm gen --no-native-prepare
   pnpm gen:check
 `
 }
 
 export function parseArgs(argv: string[]): CliOptions {
   let check = false
+  let nativePrepare = true
   for (const arg of argv) {
     if (arg === '--check') {
       check = true
+      continue
+    }
+    if (arg === '--no-native-prepare') {
+      nativePrepare = false
       continue
     }
     if (arg === '--help' || arg === '-h') {
@@ -54,7 +64,7 @@ export function parseArgs(argv: string[]): CliOptions {
     }
     throw new Error(`Unknown argument: ${arg}`)
   }
-  return { check }
+  return { check, nativePrepare }
 }
 
 function runDtoGen(): CliResult {
@@ -248,10 +258,24 @@ export function runGen(options: CliOptions): CliResult {
   }
   emitCoreSurfaceChangeset()
   if (!options.check) {
+    let prepareStdout = ''
+    let prepareStderr = ''
+    if (options.nativePrepare) {
+      const prepared = runNativePrepare(planNativePrepare())
+      prepareStdout = prepared.stdout
+      prepareStderr = prepared.stderr
+      if (prepared.exitCode !== 0) {
+        return {
+          exitCode: prepared.exitCode,
+          stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+          stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${prepareStderr}`,
+        }
+      }
+    }
     return {
       exitCode: 0,
-      stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
-      stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}`,
+      stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+      stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${prepareStderr}`,
     }
   }
   const after = hashGeneratedTree(REPO_ROOT, GENERATED_PATHS)

@@ -33,6 +33,9 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("solvapay: %s", e.Message)
 }
 
+// SolvaPayError is the catalog name for Error, matching the other language surfaces.
+type SolvaPayError = Error
+
 // PaywallError is a structured payment-gate failure. TrackFail skips usage
 // when the cause is or wraps a PaywallError (or an [*Error] whose Code is
 // "Paywall"), matching TypeScript / Python / Ruby.
@@ -47,6 +50,15 @@ func (e *PaywallError) Error() string {
 		return "solvapay: paywall"
 	}
 	return e.Message
+}
+
+// Unwrap exposes a paywall as an [*Error] with Code "paywall" so errors.As
+// against *Error succeeds, matching SdkError::Paywall in core.
+func (e *PaywallError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return &Error{Code: "paywall", Message: e.Message}
 }
 
 // IsPaywallError reports whether err is a paywall gate failure.

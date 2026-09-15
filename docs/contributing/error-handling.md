@@ -51,15 +51,19 @@ The workspace Clippy lints (`unwrap_used`, `expect_used`, `panic`) stop _our_ pa
   templates. Do not change a message string in a way that would alter a
   consumer's observed error; add a new template/code instead.
 
-## Public TypeScript shapes (unchanged)
+## Public TypeScript shapes
 
-The public TS error surface is preserved — consumers still catch:
+The public TS error surface maps `SdkError` as:
 
-- `SolvaPayError` — base SDK error type
+- `SolvaPayError` — base SDK error type (`Api`, `Webhook`, `Transport`)
 - `PaywallError` — payment required / limit exceeded, with structured payload
 
-These are the host-mapped views of `SdkError`; their shapes are a compatibility
-guarantee.
+`PaywallError` **extends** `SolvaPayError` with `code: 'paywall'` and no
+`status`, matching `SdkError::Paywall` in core. Catch paywall first when
+branching on both (`instanceof PaywallError` before `instanceof SolvaPayError`).
+Python subclasses the same way; Go `*PaywallError` unwraps to `*Error` with
+`Code: "paywall"` so `errors.As` succeeds. Do not revert the subclassing as a
+bug — a paywall is a kind of SDK error.
 
 ## Adapter behavior
 

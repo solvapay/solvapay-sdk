@@ -1,16 +1,18 @@
 /**
  * Client-side balance reconciliation helpers.
  *
- * Kept local (not imported from `@solvapay/server`) so the React client bundle
- * never pulls the server barrel — that entry installs native/WASM bindings.
+ * Delay tables come from `@solvapay/core` (same binding as the server). Do not
+ * import `@solvapay/server` here — that barrel installs Node/WASM bindings.
  */
 
-export const BALANCE_RECONCILE_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000] as const
+import { BALANCE_RECONCILE_DELAYS_MS as balanceReconcileDelaysMs } from '@solvapay/core'
+
+export { BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/core'
 
 export async function pollBalanceUntilIncreased(
   getBalance: () => Promise<{ credits: number }>,
   baseline: number,
-  delays: readonly number[] = BALANCE_RECONCILE_DELAYS_MS,
+  delays: readonly number[] = balanceReconcileDelaysMs(),
 ): Promise<{ creditsAdded: number } | null> {
   for (const delay of delays) {
     await new Promise<void>(resolve => setTimeout(resolve, delay))

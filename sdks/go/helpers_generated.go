@@ -9,6 +9,12 @@ import (
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
+// BALANCE_RECONCILE_DELAYS_MS client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+// Returns Frozen delay table.
+func BALANCE_RECONCILE_DELAYS_MS(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_balance_reconcile_delays_ms_binding", "{}")
+}
+
 // BUSINESS_COUNTRY_DISPLAY_NAMES map of supported business country codes to display names.
 func BUSINESS_COUNTRY_DISPLAY_NAMES(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_business_country_display_names_binding", "{}")
@@ -75,6 +81,12 @@ func TAX_ID_TYPES(ctx context.Context) (any, error) {
 // TAX_NOT_COLLECTED_NOTE buyer-facing note when tax is not collected on the purchase.
 func TAX_NOT_COLLECTED_NOTE(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_tax_not_collected_note_binding", "{}")
+}
+
+// TOPUP_BALANCE_POLL_DELAYS_MS top-up payment-intent balance poll backoff, in milliseconds.
+// Returns Frozen delay table.
+func TOPUP_BALANCE_POLL_DELAYS_MS(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_topup_balance_poll_delays_ms_binding", "{}")
 }
 
 // AppendPaidToolDescription append the paid-tool account hint to a merchant tool description.

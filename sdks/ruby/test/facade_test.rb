@@ -334,6 +334,22 @@ class FacadeTest < Minitest::Test
         args["response"]["customerRef"] || args["fallback"]
       when "resolve_check_limits_params"
         { "productRef" => args["productRef"], "meterName" => args["usageType"] }
+      when "overlay_claimed_limits"
+        limits = args["limits"].is_a?(Hash) ? args["limits"].dup : {}
+        remaining = limits["remaining"].to_f
+        within = limits["withinLimits"]
+        claimed = args["claimed"].to_f
+        if remaining == -1.0 || (within && remaining == 0.0)
+          limits["withinLimits"] = true
+          limits["remaining"] = remaining
+        elsif claimed <= remaining
+          limits["withinLimits"] = true
+          limits["remaining"] = [remaining - claimed, 0.0].max + 1.0
+        else
+          limits["withinLimits"] = false
+          limits["remaining"] = 0.0
+        end
+        limits
       when "gate_next"
         FacadeTest.fake_gate_next(args)
       when "ensure_customer_next"

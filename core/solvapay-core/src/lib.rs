@@ -64,8 +64,8 @@ pub use activation::validate_activate_plan_params;
 #[cfg(feature = "client-full")]
 pub use auth_resolution::{resolve_authenticated_user, AuthResolutionInput, AuthenticatedUser};
 pub use balance_poll::{
-    evaluate_balance_observation, BalancePollPolicy, BALANCE_RECONCILE_DELAYS_MS,
-    TOPUP_BALANCE_POLL_DELAYS_MS,
+    balance_reconcile_delays_ms, evaluate_balance_observation, topup_balance_poll_delays_ms,
+    BalancePollPolicy, BALANCE_RECONCILE_DELAYS_MS, TOPUP_BALANCE_POLL_DELAYS_MS,
 };
 pub use business_details::{
     business_country_display_names, business_country_options_table, country_to_tax_id_type,

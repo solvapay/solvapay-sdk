@@ -38,6 +38,19 @@ const FORBIDDEN = [
   },
 ] as const
 
+const REQUIRED_HOST_CALLS = [
+  {
+    id: 'overlay_claimed_limits',
+    re: /overlay_claimed_limits|overlayClaimedLimits/,
+    files: [
+      'sdks/typescript/server/src/paywall.ts',
+      'sdks/python/python/solvapay/facade.py',
+      'sdks/go/gate.go',
+      'sdks/ruby/lib/solvapay/facade.rb',
+    ],
+  },
+] as const
+
 function walk(dir: string, acc: string[]): void {
   if (!statSync(dir).isDirectory()) {
     acc.push(dir)
@@ -80,6 +93,27 @@ export function checkFacadeDecisionDenylist(): string[] {
         if (rule.re.test(text)) {
           issues.push(`${rule.id}: ${path.relative(REPO_ROOT, file)}`)
         }
+      }
+    }
+  }
+  issues.push(...checkRequiredHostCalls())
+  return issues
+}
+
+export function checkRequiredHostCalls(): string[] {
+  const issues: string[] = []
+  for (const rule of REQUIRED_HOST_CALLS) {
+    for (const rel of rule.files) {
+      const file = path.join(REPO_ROOT, rel)
+      let text: string
+      try {
+        text = readFileSync(file, 'utf8')
+      } catch {
+        issues.push(`${rule.id}: missing gate host ${rel}`)
+        continue
+      }
+      if (!rule.re.test(text)) {
+        issues.push(`${rule.id}: ${rel} does not invoke the core decision`)
       }
     }
   }

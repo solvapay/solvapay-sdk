@@ -15,6 +15,8 @@ from solvapay.facade import (
     _shared_customer_dedup,
     create_solvapay,
 )
+from solvapay.results import PayableAllowResult, PayablePaywallResult
+from test_facade import _fake_decision
 
 
 def _fake_ensure_customer_next(name: str, args: dict[str, Any]) -> Any:
@@ -144,6 +146,63 @@ async def test_ensure_customer_create_is_single_flight() -> None:
     assert list(refs) == ["cus_created"] * 8
     assert client.creates == 1
     assert client.gets == 1
+
+
+class DelayedLimitsClient:
+    def __init__(self) -> None:
+        self.checks = 0
+        self._entered = asyncio.Event()
+        self._release = asyncio.Event()
+        self._lock = asyncio.Lock()
+
+    async def check_limits(self, args_json: str) -> str:
+        _ = json.loads(args_json)
+        async with self._lock:
+            self.checks += 1
+        self._entered.set()
+        await self._release.wait()
+        return json.dumps(
+            {
+                "ok": True,
+                "value": {
+                    "withinLimits": True,
+                    "remaining": 1,
+                    "checkoutUrl": "https://pay.example/checkout",
+                },
+            }
+        )
+
+    def check_limits_blocking(self, args_json: str) -> str:
+        raise AssertionError("blocking check_limits should not run")
+
+    async def track_usage(self, args_json: str) -> str:
+        _ = json.loads(args_json)
+        return json.dumps({"ok": True, "value": {}})
+
+    def track_usage_blocking(self, args_json: str) -> str:
+        return json.dumps({"ok": True, "value": {}})
+
+
+@pytest.mark.asyncio
+async def test_concurrent_gates_against_remaining_one_allow_exactly_once() -> None:
+    client = DelayedLimitsClient()
+    sp = create_solvapay(api_client=client)
+    with patch("solvapay.facade._call_sync_decision", side_effect=_fake_decision):
+        gathered = asyncio.gather(
+            *[sp.gate("cus_concurrent", product="prd_x") for _ in range(8)],
+            return_exceptions=False,
+        )
+        await asyncio.wait_for(client._entered.wait(), timeout=2)
+        await asyncio.sleep(0.05)
+        assert client.checks == 1
+        client._release.set()
+        results = await gathered
+    allows = sum(1 for item in results if isinstance(item, PayableAllowResult))
+    paywalls = sum(1 for item in results if isinstance(item, PayablePaywallResult))
+    assert allows == 1
+    assert paywalls == 7
+    assert client.checks == 1
+
 
 
 def test_customer_cache_evicts_past_max() -> None:

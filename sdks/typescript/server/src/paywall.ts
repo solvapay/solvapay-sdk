@@ -99,7 +99,7 @@ export type {
  * @see {@link PaywallDecision} for the preferred decision-based API
  * @since 1.0.0
  */
-export class PaywallError extends Error {
+export class PaywallError extends SolvaPayError {
   /**
    * Creates a new PaywallError instance.
    *
@@ -110,7 +110,7 @@ export class PaywallError extends Error {
     message: string,
     public structuredContent: PaywallStructuredContent,
   ) {
-    super(message)
+    super(message, { code: 'paywall' })
     this.name = 'PaywallError'
   }
 }

@@ -1,6 +1,42 @@
 {
   "_comment": "generated — do not edit; regenerate with dto-gen --dump-bindings",
   "bindings": {
+    "BALANCE_RECONCILE_DELAYS_MS": {
+      "core": "solvapay_core::balance_poll::balance_reconcile_delays_ms",
+      "names": {
+        "ts": "BALANCE_RECONCILE_DELAYS_MS",
+        "py": "BALANCE_RECONCILE_DELAYS_MS",
+        "rb": "BALANCE_RECONCILE_DELAYS_MS",
+        "go": "BALANCE_RECONCILE_DELAYS_MS",
+        "rust": "BALANCE_RECONCILE_DELAYS_MS",
+        "c": "BALANCE_RECONCILE_DELAYS_MS"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "BALANCE_RECONCILE_DELAYS_MS"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 146,
+      "section": "balance-poll",
+      "doc": "Binding for `BALANCE_RECONCILE_DELAYS_MS`.",
+      "docWasm": null,
+      "rustFnName": "balance_reconcile_delays_ms_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "balance_reconcile_delays_ms",
+      "clientCallArgs": []
+    },
     "BUSINESS_COUNTRY_DISPLAY_NAMES": {
       "core": "solvapay_core::business_details::business_country_display_names",
       "names": {
@@ -498,6 +534,42 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "tax_not_collected_note",
+      "clientCallArgs": []
+    },
+    "TOPUP_BALANCE_POLL_DELAYS_MS": {
+      "core": "solvapay_core::balance_poll::topup_balance_poll_delays_ms",
+      "names": {
+        "ts": "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "py": "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "rb": "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "go": "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "rust": "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "c": "TOPUP_BALANCE_POLL_DELAYS_MS"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TOPUP_BALANCE_POLL_DELAYS_MS"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 145,
+      "section": "balance-poll",
+      "doc": "Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`.",
+      "docWasm": null,
+      "rustFnName": "topup_balance_poll_delays_ms_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "topup_balance_poll_delays_ms",
       "clientCallArgs": []
     },
     "activatePlan": {

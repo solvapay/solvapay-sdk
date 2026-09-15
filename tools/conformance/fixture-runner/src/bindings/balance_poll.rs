@@ -32,40 +32,6 @@ pub(crate) fn invoke_poll_balance_until_increased(
     Ok(run_scenario(&scenario))
 }
 
-/// Binding for the `TOPUP_BALANCE_POLL_DELAYS_MS` constant fixture.
-///
-/// # Arguments
-///
-/// * `_input` - Unused; const fixtures take empty args.
-///
-/// # Returns
-///
-/// JSON array of top-up poll delays.
-///
-/// # Errors
-///
-/// Never fails.
-pub(crate) fn invoke_topup_delays(_input: &FixtureInput) -> Result<Value, BindingError> {
-    Ok(json!(TOPUP_BALANCE_POLL_DELAYS_MS.as_slice()))
-}
-
-/// Binding for the `BALANCE_RECONCILE_DELAYS_MS` constant fixture.
-///
-/// # Arguments
-///
-/// * `_input` - Unused; const fixtures take empty args.
-///
-/// # Returns
-///
-/// JSON array of reconcile poll delays.
-///
-/// # Errors
-///
-/// Never fails.
-pub(crate) fn invoke_reconcile_delays(_input: &FixtureInput) -> Result<Value, BindingError> {
-    Ok(json!(BALANCE_RECONCILE_DELAYS_MS.as_slice()))
-}
-
 /// One scripted balance observation in a poll fixture.
 #[derive(Debug, Clone)]
 enum ObservationSpec {

@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
+import { checkHandwrittenFacadeNames } from './lib/handwritten-names.js'
 import { checkHelperParity, checkMcpParity, checkParity, formatParityReport } from './lib/parity.js'
 import {
   checkGeneratedClientMethods,
@@ -82,6 +83,7 @@ function main(): number {
       },
       snapshot.bindings,
     ),
+    ...checkHandwrittenFacadeNames(manifest),
   )
   const report = formatParityReport(issues)
   if (issues.length > 0) {

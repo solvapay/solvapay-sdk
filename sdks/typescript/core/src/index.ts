@@ -86,6 +86,8 @@ export {
   resolveTaxTreatmentNote,
   formatPrice,
   toMajorUnits,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+  BALANCE_RECONCILE_DELAYS_MS,
   installNativeCoreApi,
   resetNativeCoreApiForTests,
 } from './native-core'

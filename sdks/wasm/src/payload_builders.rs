@@ -9,10 +9,10 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    business_country_display_names, business_country_options_table, country_to_tax_id_type,
-    credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
-    format_vat_summary_label, get_business_country_options, get_customer_address_field_errors,
-    get_postal_code_field_label, get_postal_code_placeholder,
+    balance_reconcile_delays_ms, business_country_display_names, business_country_options_table,
+    country_to_tax_id_type, credits_to_display_minor_units, derive_tax_id_type, format_price,
+    format_subtotal_label, format_vat_summary_label, get_business_country_options,
+    get_customer_address_field_errors, get_postal_code_field_label, get_postal_code_placeholder,
     get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
     get_tax_id_field_label, get_tax_id_helper_text, is_customer_address_complete,
     is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
@@ -21,8 +21,8 @@ use solvapay_core::{
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
     should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
-    to_major_units, validate_business_details, BusinessDetailsInput, CreditsToDisplayInput,
-    SdkError, SellerIdentityInput,
+    to_major_units, topup_balance_poll_delays_ms, validate_business_details, BusinessDetailsInput,
+    CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
@@ -546,6 +546,26 @@ pub fn tax_exclusive_currencies_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let _args = args_map(&args_json)?;
         to_value(&tax_exclusive_currencies())
+    })
+}
+
+// --- balance-poll (public-safe) ---
+
+/// Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`.
+#[wasm_bindgen(js_name = "TOPUP_BALANCE_POLL_DELAYS_MS")]
+pub fn topup_balance_poll_delays_ms_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&topup_balance_poll_delays_ms())
+    })
+}
+
+/// Binding for `BALANCE_RECONCILE_DELAYS_MS`.
+#[wasm_bindgen(js_name = "BALANCE_RECONCILE_DELAYS_MS")]
+pub fn balance_reconcile_delays_ms_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&balance_reconcile_delays_ms())
     })
 }
 

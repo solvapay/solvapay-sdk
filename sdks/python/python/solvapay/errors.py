@@ -29,7 +29,7 @@ else:
             self.status = status
 
 
-class PaywallError(Exception):
+class PaywallError(SolvaPayError):
     """Paywall gate outcome carrying structured content (§5.7 / §2.4)."""
 
     def __init__(
@@ -37,6 +37,9 @@ class PaywallError(Exception):
     ) -> None:
         super().__init__(message)
         self.name = "PaywallError"
+        # Native PyO3 SolvaPayError only takes a message; set code after
+        # so both native and fallback parents expose code "paywall".
+        self.code = "paywall"
         self.structured_content = dict(structured_content or {})
 
 

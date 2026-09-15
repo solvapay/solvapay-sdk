@@ -546,6 +546,8 @@ def validate_business_details() -> Any:
     return call_native_sync("validate_business_details", json.dumps(payload))
 
 _CONSTANT_IDS = frozenset({
+    # Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+    "BALANCE_RECONCILE_DELAYS_MS",
     # Map of supported business country codes to display names.
     "BUSINESS_COUNTRY_DISPLAY_NAMES",
     # Ordered list of business country options for seller identity forms.
@@ -568,6 +570,8 @@ _CONSTANT_IDS = frozenset({
     "TAX_ID_TYPES",
     # Buyer-facing note when tax is not collected on the purchase.
     "TAX_NOT_COLLECTED_NOTE",
+    # Top-up payment-intent balance poll backoff, in milliseconds.
+    "TOPUP_BALANCE_POLL_DELAYS_MS",
 })
 
 def __getattr__(name: str) -> Any:

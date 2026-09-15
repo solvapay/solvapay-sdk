@@ -5,28 +5,29 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, attach_business_details_validation_error, billing_cycle,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_payable_tool_result, build_paywall_gate, business_country_display_names,
-    business_country_options_table, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
-    customer_ref_from_claims, decide_paywall_outcome, decode_jwt_payload_unverified,
-    default_mcp_bearer_expectations, derive_active_products, derive_default_view,
-    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
-    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    extract_backend_customer_ref, extract_bearer_token, format_compact_credits, format_price,
-    format_subtotal_label, format_vat_summary_label, gate_next, get_business_country_options,
-    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
-    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
-    headline_charges, history_rows, included_units, invoke_payable_next,
-    is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
-    is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
-    is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, next_action_for,
-    normalize_cancel_response, normalize_reactivate_response, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    append_paid_tool_description, attach_business_details_validation_error,
+    balance_reconcile_delays_ms, billing_cycle, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
+    build_paywall_gate, business_country_display_names, business_country_options_table, charges,
+    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
+    compile_string_field_input_schema_json, country_to_tax_id_type, counts_usage, credit_signals,
+    credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
+    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
+    derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
+    evaluate_fresh_limits, extract_backend_customer_ref, extract_bearer_token,
+    format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
+    gate_next, get_business_country_options, get_customer_address_field_errors, get_history_next,
+    get_postal_code_field_label, get_postal_code_placeholder,
+    get_seller_tax_identifier_display_label, get_state_field_label, headline_charges, history_rows,
+    included_units, invoke_payable_next, is_cached_customer_ref_valid,
+    is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
+    is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
+    link_label, mcp_view_maps, meter_name, next_action_for, normalize_cancel_response,
+    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
+    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
     postal_code_required_countries, project_topup_process_outcome, resolve_account_state,
     resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
@@ -34,8 +35,8 @@ use solvapay_core::{
     select_active_plan_purchase, should_retry_usage_error, should_show_tax_row,
     state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
-    tier_bands, tier_meters, to_major_units, topup_process_next, trial_days, usage_rate,
-    validate_activate_plan_params, validate_attach_business_details_params,
+    tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
+    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -47,6 +48,11 @@ use solvapay_core::{
 use crate::extract::*;
 use crate::model::FixtureInput;
 use crate::runner::{Binding, BindingError, BindingRegistry};
+
+fn invoke_balance_reconcile_delays_ms(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&balance_reconcile_delays_ms())
+}
 
 fn invoke_business_country_display_names(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
@@ -106,6 +112,11 @@ fn invoke_tax_id_types(input: &FixtureInput) -> Result<Value, BindingError> {
 fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     Ok(Value::String(tax_not_collected_note().to_owned()))
+}
+
+fn invoke_topup_balance_poll_delays_ms(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&topup_balance_poll_delays_ms())
 }
 
 fn invoke_append_paid_tool_description(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1034,14 +1045,14 @@ pub fn create_default_registry() -> BindingRegistry {
         "TOPUP_BALANCE_POLL_DELAYS_MS",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::balance_poll::invoke_topup_delays),
+            invoke: Box::new(invoke_topup_balance_poll_delays_ms),
         },
     );
     registry.register(
         "BALANCE_RECONCILE_DELAYS_MS",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::balance_poll::invoke_reconcile_delays),
+            invoke: Box::new(invoke_balance_reconcile_delays_ms),
         },
     );
     registry.register(

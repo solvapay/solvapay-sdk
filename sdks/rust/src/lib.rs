@@ -55,7 +55,8 @@ pub use retry::{with_retry, with_retry_if};
 
 // --- Core re-exports ---
 pub use solvapay_core::{
-    verify_webhook, PaywallOutcome, RetryPolicy, SdkError, WebhookError, WebhookErrorCode,
+    verify_webhook, PaywallOutcome, RetryPolicy, SdkError, SdkError as SolvaPayError, WebhookError,
+    WebhookErrorCode,
 };
 pub use solvapay_dto::SdkMerchantResponseDto;
 

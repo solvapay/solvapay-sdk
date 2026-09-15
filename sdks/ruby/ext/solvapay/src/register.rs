@@ -97,6 +97,7 @@ use crate::decisions::validate_process_payment_intent_params_binding;
 use crate::decisions::validate_purchase_ref_binding;
 use crate::decisions::validate_topup_payment_intent_params_binding;
 use crate::payload_builders::assert_response_result_binding;
+use crate::payload_builders::balance_reconcile_delays_ms_binding;
 use crate::payload_builders::build_payable_tool_result_binding;
 use crate::payload_builders::build_prompt_descriptor_metadata_binding;
 use crate::payload_builders::build_prompt_user_message_binding;
@@ -147,6 +148,7 @@ use crate::payload_builders::tax_id_example_by_country_binding;
 use crate::payload_builders::tax_id_types_binding;
 use crate::payload_builders::tax_not_collected_note_binding;
 use crate::payload_builders::to_major_units_binding;
+use crate::payload_builders::topup_balance_poll_delays_ms_binding;
 use crate::payload_builders::validate_business_details_binding;
 use crate::payload_builders::validate_public_base_url_binding;
 
@@ -631,6 +633,14 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "invoke_payable_next",
         function!(invoke_payable_next_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "TOPUP_BALANCE_POLL_DELAYS_MS",
+        function!(topup_balance_poll_delays_ms_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "BALANCE_RECONCILE_DELAYS_MS",
+        function!(balance_reconcile_delays_ms_binding, 1),
     )?;
     client.define_method(
         "create_customer",

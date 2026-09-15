@@ -6,6 +6,7 @@
  */
 
 import { isRenewalError, SolvaPayError } from '@solvapay/core'
+import { PaywallError } from '../paywall'
 import {
   classifyCancelError,
   classifyReactivateError,
@@ -63,6 +64,9 @@ export async function cancelPurchaseCore(
 
     return normalized
   } catch (error: unknown) {
+    if (error instanceof PaywallError) {
+      return handleRouteError(error, 'Cancel purchase', 'Failed to cancel purchase')
+    }
     if (error instanceof SolvaPayError) {
       return classifyCancelError(error.message)
     }
@@ -117,6 +121,9 @@ export async function reactivatePurchaseCore(
 
     return normalized
   } catch (error: unknown) {
+    if (error instanceof PaywallError) {
+      return handleRouteError(error, 'Reactivate purchase', 'Failed to reactivate purchase')
+    }
     if (error instanceof SolvaPayError) {
       return classifyReactivateError(error.message)
     }

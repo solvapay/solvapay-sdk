@@ -270,7 +270,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
             return { credits: data.credits ?? 0 }
           },
           activeBaseline,
-          BALANCE_RECONCILE_DELAYS_MS,
+          BALANCE_RECONCILE_DELAYS_MS(),
         )
 
         const pollState = reconcilePollRef.current
@@ -340,7 +340,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       const generation = (reconcilePollRef.current?.generation ?? 0) + 1
       const pending = (reconcilePollRef.current?.pending ?? 0) + 1
       reconcilePollRef.current = { baseline: nextCredits, generation, pending }
-      scheduleGraceRefetch(BALANCE_RECONCILE_GRACE_MS)
+      scheduleGraceRefetch(BALANCE_RECONCILE_GRACE_MS())
       if (!reconcileRunningRef.current) {
         void reconcileBalanceIncreaseImpl()
       }

@@ -198,6 +198,8 @@ module SolvaPay
       default_mcp_bearer_expectations
       compile_string_field_input_schema_json
       ensure_output_schema_object_type
+      TOPUP_BALANCE_POLL_DELAYS_MS
+      BALANCE_RECONCILE_DELAYS_MS
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

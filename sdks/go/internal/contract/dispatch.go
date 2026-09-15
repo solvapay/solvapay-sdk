@@ -164,6 +164,8 @@ var SyncExports = map[string]string{
 	"defaultMcpBearerExpectations":                "sv_default_mcp_bearer_expectations_binding",
 	"compileStringFieldInputSchemaJson":           "sv_compile_string_field_input_schema_json_binding",
 	"ensureOutputSchemaObjectType":                "sv_ensure_output_schema_object_type_binding",
+	"TOPUP_BALANCE_POLL_DELAYS_MS":                "sv_topup_balance_poll_delays_ms_binding",
+	"BALANCE_RECONCILE_DELAYS_MS":                 "sv_balance_reconcile_delays_ms_binding",
 }
 
 // Replay runs one fixture and returns a normalized outcome (does not assert expect).

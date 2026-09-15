@@ -140,7 +140,11 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def read_limits_cache: (String key) -> untyped\n\
          \x20   def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]\n\
          \x20   def apply_cache: (untyped cache) -> void\n\
-         \x20   def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]\n\
+         \x20   def shared_check_limits: (String key, Hash[String, untyped] action) -> untyped\n\
+         \x20   def acquire_limits_lookup: (String key) -> [Hash[Symbol, untyped], bool]\n\
+         \x20   def await_limits_lookup: (Hash[Symbol, untyped] state) -> untyped\n\
+         \x20   def publish_limits_lookup: (String key, Hash[Symbol, untyped] state, ?result: untyped, ?error: Exception?) -> void\n\
+         \x20   def next_limits_claim: (String key) -> Integer\n\
          \x20   def ensure_customer: (String customer_ref) -> String\n\
          \x20   def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]\n\
          \x20   def await_customer_lookup: (Hash[Symbol, untyped] state) -> String\n\
@@ -149,7 +153,6 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void\n\
          \x20   def paywall_short_message: (untyped content) -> String\n\
          \x20   def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult\n\
-         \x20   def apply_gate_cache: (untyped cache) -> void\n\
          \x20   def random_unit: () -> Numeric\n\
          \x20   def post_usage_request: (Hash[String, untyped] request) -> untyped\n\
          \x20   def emit_handler_usage: (untyped state, Hash[String, untyped] event) -> void\n\

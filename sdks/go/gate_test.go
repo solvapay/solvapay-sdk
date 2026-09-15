@@ -345,6 +345,80 @@ func TestGateCustomerDedupCoalescesInflight(t *testing.T) {
 	}
 }
 
+func TestGateConcurrentRemainingOneAllowsOnce(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var limits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits":
+			limits.Add(1)
+			started <- struct{}{}
+			<-release
+			_, _ = w.Write([]byte(`{"withinLimits":true,"remaining":1,"checkoutUrl":"https://pay.example/x"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/usages":
+			_, _ = w.Write([]byte(`{"reference":"usg"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	ctx := context.Background()
+	client, err := solvapay.NewClient(ctx, "sk_test", solvapay.WithBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	t.Cleanup(func() { _ = client.Close(ctx) })
+
+	const n = 8
+	var wg sync.WaitGroup
+	wg.Add(n)
+	outcomes := make(chan solvapay.GateOutcome, n)
+	errs := make(chan error, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			out, err := client.Gate(ctx, "cus_concurrent", solvapay.GateOpts{Product: "prd_demo"})
+			errs <- err
+			outcomes <- out
+		}()
+	}
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for first checkLimits")
+	}
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	wg.Wait()
+	close(errs)
+	close(outcomes)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Gate: %v", err)
+		}
+	}
+	allows := 0
+	paywalls := 0
+	for out := range outcomes {
+		switch out.(type) {
+		case *solvapay.Allow:
+			allows++
+		case *solvapay.Paywall:
+			paywalls++
+		default:
+			t.Fatalf("unexpected outcome %T", out)
+		}
+	}
+	if got := limits.Load(); got != 1 {
+		t.Fatalf("checkLimits calls = %d, want 1", got)
+	}
+	if allows != 1 || paywalls != n-1 {
+		t.Fatalf("allows=%d paywalls=%d, want 1 and %d", allows, paywalls, n-1)
+	}
+}
+
 func TestPayableDelegatesToGate(t *testing.T) {
 	mock := &gateMock{limits: map[string]any{"withinLimits": true, "remaining": 2}}
 	client := newGateClient(t, mock)

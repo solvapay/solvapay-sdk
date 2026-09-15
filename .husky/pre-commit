@@ -14,8 +14,8 @@ if [ -z "$changed" ]; then
   exit 0
 fi
 
-echo "contract changed — running pnpm gen…"
-pnpm gen || exit 1
+echo "contract changed — running pnpm gen --no-native-prepare…"
+pnpm gen --no-native-prepare || exit 1
 
 # Re-stage generated artifacts that gen may have rewritten.
 git add -- $(pnpm -s exec tsx tools/repo/list-generated-paths.ts)

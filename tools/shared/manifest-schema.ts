@@ -553,7 +553,7 @@ export const SHIM_JS_NAMES = [
   'validateProcessPaymentIntentParams',
   'validatePurchaseRef',
   'validateTopupPaymentIntentParams',
-  // Payload builders (39)
+  // Payload builders (41)
   'assertResponseResult',
   'buildPromptDescriptorMetadata',
   'buildPromptUserMessage',
@@ -604,6 +604,8 @@ export const SHIM_JS_NAMES = [
   'shouldShowTaxRow',
   'TAX_NOT_COLLECTED_NOTE',
   'toMajorUnits',
+  'TOPUP_BALANCE_POLL_DELAYS_MS',
+  'BALANCE_RECONCILE_DELAYS_MS',
   'validateBusinessDetails',
   'validatePublicBaseUrl',
   'appendPaidToolDescription',

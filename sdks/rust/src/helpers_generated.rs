@@ -11,6 +11,13 @@ pub use solvapay_core::{
     ValidateBusinessDetailsResult,
 };
 
+/// Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+///
+/// # Returns
+///
+/// Frozen delay table.
+pub use solvapay_core::balance_poll::balance_reconcile_delays_ms as BALANCE_RECONCILE_DELAYS_MS;
+
 /// Map of supported business country codes to display names.
 pub use solvapay_core::business_details::business_country_display_names as BUSINESS_COUNTRY_DISPLAY_NAMES;
 
@@ -61,6 +68,13 @@ pub use solvapay_core::business_details::tax_id_types as TAX_ID_TYPES;
 
 /// Buyer-facing note when tax is not collected on the purchase.
 pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_NOTE;
+
+/// Top-up payment-intent balance poll backoff, in milliseconds.
+///
+/// # Returns
+///
+/// Frozen delay table.
+pub use solvapay_core::balance_poll::topup_balance_poll_delays_ms as TOPUP_BALANCE_POLL_DELAYS_MS;
 
 /// Append the paid-tool account hint to a merchant tool description.
 ///

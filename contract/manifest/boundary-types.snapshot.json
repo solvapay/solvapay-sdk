@@ -8171,6 +8171,22 @@
         }
       }
     },
+    "solvapay_core::balance_poll::balance_reconcile_delays_ms": {
+      "name": "balance_reconcile_delays_ms",
+      "module": "balance_poll",
+      "implTy": null,
+      "rustdoc": "Client-side balance reconciliation backoff after async credit top-ups (ms).\n\n# Returns\n\nThe frozen millisecond delay table.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "u64"
+          }
+        }
+      }
+    },
     "solvapay_core::balance_poll::evaluate_balance_observation": {
       "name": "evaluate_balance_observation",
       "module": "balance_poll",
@@ -8198,6 +8214,22 @@
         "optional": true,
         "ty": {
           "kind": "f64"
+        }
+      }
+    },
+    "solvapay_core::balance_poll::topup_balance_poll_delays_ms": {
+      "name": "topup_balance_poll_delays_ms",
+      "module": "balance_poll",
+      "implTy": null,
+      "rustdoc": "Top-up payment-intent balance poll backoff (ms).\n\n# Returns\n\nThe frozen millisecond delay table.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "u64"
+          }
         }
       }
     },

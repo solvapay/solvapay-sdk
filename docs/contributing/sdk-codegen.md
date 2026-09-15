@@ -53,29 +53,29 @@ Binary blobs in `externalGenerated` are hashed in [`contract/manifest/generated-
 
 Run from the repo root (`solvapay-sdk/`).
 
-| Command                                                    | What it does                                                                                                                            |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                    |
-| `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                  |
-| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                  |
-| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert an `operations:` stub from OpenAPI DTOs                                                                                          |
-| `pnpm gen:bindings`                                        | Suggest `#[solvapay_export]` targets for orphan catalog operations                                                                      |
-| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`)                                                       |
-| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                     |
-| `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.              |
-| `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                      |
-| `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                       |
-| `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                           |
-| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                       |
-| `pnpm parity:check`                                        | Cross-language signature parity                                                                                                         |
-| `pnpm preflight`                                           | Toolchain report: which work tiers are ready (TS-only / codegen / full multi-language parity)                                           |
-| `pnpm gates`                                               | Local contract gate set (`gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, plus snapshot/docs/delegation/required-checks) |
-| `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                       |
-| `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                             |
-| `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                          |
-| `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                            |
-| `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                         |
-| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                    |
+| Command                                                    | What it does                                                                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                         |
+| `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                       |
+| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                       |
+| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert an `operations:` stub from OpenAPI DTOs                                                                                               |
+| `pnpm gen:bindings`                                        | Suggest `#[solvapay_export]` targets for orphan catalog operations                                                                           |
+| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs, then rebuild Ruby/Python native bindings when those toolchains are present (`--no-native-prepare` skips) |
+| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                          |
+| `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.                   |
+| `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                           |
+| `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                            |
+| `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                                |
+| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                            |
+| `pnpm parity:check`                                        | Cross-language signature parity                                                                                                              |
+| `pnpm preflight`                                           | Toolchain report: which work tiers are ready (TS-only / codegen / full multi-language parity)                                                |
+| `pnpm gates`                                               | Local contract gate set (`gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, plus snapshot/docs/delegation/required-checks)      |
+| `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                            |
+| `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                                  |
+| `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                               |
+| `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                                 |
+| `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                              |
+| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                         |
 
 There is **no** need to copy a long `cargo run -p dto-gen -- …` line. CI and
 humans both call `pnpm gen` / `pnpm gen:check`, which invoke
@@ -85,6 +85,9 @@ humans both call `pnpm gen` / `pnpm gen:check`, which invoke
 
 - **Node / pnpm** — for the TS scripts above
 - **Rust toolchain** — `pnpm gen` runs `cargo run -p dto-gen` from the repo root
+- **Ruby (`bundle`) and Python (`uv`)** — optional. They only gate the native
+  extension rebuild at the end of `pnpm gen`. Missing either prints a one-line
+  skip; generation still succeeds. `pnpm gen --no-native-prepare` skips both.
 - **Live backend** (optional) — only for refreshing the OpenAPI snapshot. Each
   platform service serves its own spec; `pnpm snapshot:openapi --from-stack`
   fetches provider `:3002`, payment `:3003`, billing `:3004`, commerce `:3005`,
@@ -94,10 +97,10 @@ humans both call `pnpm gen` / `pnpm gen:check`, which invoke
 
 Activate git hooks after clone/install (`pnpm install` runs `prepare` → husky):
 
-| Hook         | Behavior                                                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------- |
-| `pre-commit` | If `sdk-contract.yaml` or the OpenAPI snapshot is staged → `pnpm gen` and re-stage generated paths |
-| `pre-push`   | `pnpm gates`                                                                                       |
+| Hook         | Behavior                                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | If `sdk-contract.yaml` or the OpenAPI snapshot is staged → `pnpm gen --no-native-prepare` and re-stage generated paths |
+| `pre-push`   | `pnpm gates`                                                                                                           |
 
 CI’s `pnpm gen:check` remains the authoritative drift gate; hooks are local DX.
 

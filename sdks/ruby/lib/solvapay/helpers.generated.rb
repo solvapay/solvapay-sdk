@@ -4,6 +4,9 @@
 # Generated portable helper forwarding.
 
 module SolvaPay
+  # Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+  # @return Frozen delay table.
+  BALANCE_RECONCILE_DELAYS_MS = NativeDispatch.call_sync("BALANCE_RECONCILE_DELAYS_MS", {}).freeze
   # Map of supported business country codes to display names.
   BUSINESS_COUNTRY_DISPLAY_NAMES = NativeDispatch.call_sync("BUSINESS_COUNTRY_DISPLAY_NAMES", {}).freeze
   # Ordered list of business country options for seller identity forms.
@@ -41,6 +44,9 @@ module SolvaPay
   TAX_ID_TYPES = NativeDispatch.call_sync("TAX_ID_TYPES", {}).freeze
   # Buyer-facing note when tax is not collected on the purchase.
   TAX_NOT_COLLECTED_NOTE = NativeDispatch.call_sync("TAX_NOT_COLLECTED_NOTE", {}).freeze
+  # Top-up payment-intent balance poll backoff, in milliseconds.
+  # @return Frozen delay table.
+  TOPUP_BALANCE_POLL_DELAYS_MS = NativeDispatch.call_sync("TOPUP_BALANCE_POLL_DELAYS_MS", {}).freeze
   # Append the paid-tool account hint to a merchant tool description.
   # @param description Optional merchant-authored description; trailing whitespace is stripped.
   # @return Description plus hint, or the hint alone when no description is present.

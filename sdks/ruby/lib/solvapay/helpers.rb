@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
 module SolvaPay
-  TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1_000, 2_000, 4_000].freeze
-  BALANCE_RECONCILE_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000, 16_000].freeze
-
   module_function
 
   # Verify a SolvaPay webhook signature and parse the event payload.

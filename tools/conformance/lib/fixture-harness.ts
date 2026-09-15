@@ -863,8 +863,8 @@ function resolveBalancePollDelays(
   delays: BalancePollScenario['delays'],
 ): readonly number[] | undefined {
   if (delays === undefined) return undefined
-  if (delays === 'topup') return TOPUP_BALANCE_POLL_DELAYS_MS
-  if (delays === 'reconcile') return BALANCE_RECONCILE_DELAYS_MS
+  if (delays === 'topup') return TOPUP_BALANCE_POLL_DELAYS_MS()
+  if (delays === 'reconcile') return BALANCE_RECONCILE_DELAYS_MS()
   return delays
 }
 
@@ -1491,12 +1491,12 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   registry.register('TOPUP_BALANCE_POLL_DELAYS_MS', {
     id: 'server',
-    invoke: () => [...TOPUP_BALANCE_POLL_DELAYS_MS],
+    invoke: () => [...TOPUP_BALANCE_POLL_DELAYS_MS()],
   })
 
   registry.register('BALANCE_RECONCILE_DELAYS_MS', {
     id: 'server',
-    invoke: () => [...BALANCE_RECONCILE_DELAYS_MS],
+    invoke: () => [...BALANCE_RECONCILE_DELAYS_MS()],
   })
 
   registry.register('driveGate', {

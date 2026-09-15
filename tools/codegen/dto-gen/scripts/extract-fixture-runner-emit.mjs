@@ -22,8 +22,6 @@ const OUT_PATH = join(
 const EXTRAS = [
   'withRetry',
   'pollBalanceUntilIncreased',
-  'TOPUP_BALANCE_POLL_DELAYS_MS',
-  'BALANCE_RECONCILE_DELAYS_MS',
   'constructSdkError',
   'resolveAuthenticatedUser',
 ];

@@ -14,8 +14,9 @@ import { generatedEntry, REPO_PATHS_MANIFEST_REL } from '../shared/repo-paths.js
 
 describe('gen CLI', () => {
   it('parses --check', () => {
-    expect(parseArgs(['--check'])).toEqual({ check: true })
-    expect(parseArgs([])).toEqual({ check: false })
+    expect(parseArgs(['--check'])).toEqual({ check: true, nativePrepare: true })
+    expect(parseArgs([])).toEqual({ check: false, nativePrepare: true })
+    expect(parseArgs(['--no-native-prepare'])).toEqual({ check: false, nativePrepare: false })
   })
 
   it('keeps a non-empty canonical flag set and drift path list', () => {

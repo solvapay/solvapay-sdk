@@ -504,3 +504,11 @@ async def test_payable_activation_required_uses_short_message() -> None:
     with pytest.raises(PaywallError) as exc_info:
         await create_task({"auth": {"customer_ref": "cus_abc"}})
     assert str(exc_info.value) == "Activation required"
+
+
+def test_paywall_error_is_solvapay_error() -> None:
+    err = PaywallError("Payment required", {"kind": "payment_required"})
+    assert isinstance(err, SolvaPayError)
+    assert err.name == "PaywallError"
+    assert err.code == "paywall"
+    assert getattr(err, "status", None) is None

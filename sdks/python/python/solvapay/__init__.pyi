@@ -568,6 +568,10 @@ def _verify_webhook_at(
     body: str, signature: str, secret: str, now_unix_secs: int
 ) -> str: ...
 
+BALANCE_RECONCILE_DELAYS_MS: list[int]
+"""Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+@returns Frozen delay table.
+"""
 BUSINESS_COUNTRY_DISPLAY_NAMES: object
 """Map of supported business country codes to display names."""
 BUSINESS_COUNTRY_OPTIONS: list[object]
@@ -602,6 +606,10 @@ TAX_ID_TYPES: list[str]
 """
 TAX_NOT_COLLECTED_NOTE: str
 """Buyer-facing note when tax is not collected on the purchase."""
+TOPUP_BALANCE_POLL_DELAYS_MS: list[int]
+"""Top-up payment-intent balance poll backoff, in milliseconds.
+@returns Frozen delay table.
+"""
 def append_paid_tool_description(description: str | None = None) -> str:
     """Append the paid-tool account hint to a merchant tool description.
     @param description Optional merchant-authored description; trailing whitespace is stripped.

@@ -258,7 +258,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
     expect(result.current.balance.credits).toBe(400)
 
     await act(async () => {
-      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS()) {
         await vi.advanceTimersByTimeAsync(delay)
       }
     })
@@ -324,10 +324,10 @@ describe('SolvaPayProvider - balance (credits)', () => {
     expect(result.current.balance.credits).toBe(8800)
 
     await act(async () => {
-      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS()) {
         await vi.advanceTimersByTimeAsync(delay)
       }
-      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS()) {
         await vi.advanceTimersByTimeAsync(delay)
       }
     })
@@ -495,7 +495,7 @@ describe('SolvaPayProvider - balance (credits)', () => {
     })
 
     await act(async () => {
-      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS()) {
         await vi.advanceTimersByTimeAsync(delay)
       }
     })

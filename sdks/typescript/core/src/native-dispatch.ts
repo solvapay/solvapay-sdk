@@ -55,6 +55,8 @@ export type NativeCoreSyncMethod =
   | 'TAX_NOT_COLLECTED_NOTE'
   | 'formatPrice'
   | 'toMajorUnits'
+  | 'TOPUP_BALANCE_POLL_DELAYS_MS'
+  | 'BALANCE_RECONCILE_DELAYS_MS'
   // Helpers (Phase 4/5 → Step 52)
   | 'classifyCustomerRef'
   | 'coerceCustomerOptions'

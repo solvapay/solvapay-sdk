@@ -20,7 +20,6 @@ const UNIT_EXCLUDE = [
   'src/helpers/payment-method.test.ts',
   'src/helpers/plans.test.ts',
   'src/helpers/purchase.test.ts',
-  'src/helpers/renewal.test.ts',
 ]
 
 // Load environment variables from .env file

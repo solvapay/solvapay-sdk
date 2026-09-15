@@ -15,7 +15,7 @@ class SolvaPayError(Exception):
         status: int | None = None,
     ) -> None: ...
 
-class PaywallError(Exception):
+class PaywallError(SolvaPayError):
     name: str
     structured_content: dict[str, object]
     def __init__(

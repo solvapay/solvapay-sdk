@@ -19,6 +19,8 @@ module SolvaPay
       @customer_cache = {} #: Hash[String, untyped]
       @customer_inflight = {} #: Hash[String, untyped]
       @limits_cache = {} #: Hash[String, untyped]
+      @limits_inflight = {} #: Hash[String, untyped]
+      @limits_claims = {} #: Hash[String, Integer]
     end
 
     # Evaluate the paywall gate for a customer against a product.
@@ -123,19 +125,85 @@ module SolvaPay
 
     def check_limits(action)
       @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) } if action["cacheDeleteKey"].is_a?(String)
-      limits = @client.check_limits(
-        params: {
-          "customerRef" => action["customerRef"],
-          "productRef" => action["productRef"],
-          "meterName" => action["meterName"],
-          "includeCheckoutSession" => action["includeCheckoutSession"],
-        },
-      )
+      key = "#{action["customerRef"]}:#{action["productRef"]}:#{action["meterName"]}"
+      limits = shared_check_limits(key, action)
       unless limits.is_a?(Hash)
         raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
       end
 
-      limits
+      claimed = next_limits_claim(key)
+      overlaid = NativeDispatch.call_sync(
+        "overlay_claimed_limits",
+        { "limits" => limits, "claimed" => claimed.to_f },
+      )
+      unless overlaid.is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new(
+          "overlay_claimed_limits returned a non-object body",
+          code: "invalid_limits",
+        )
+      end
+
+      overlaid
+    end
+
+    def shared_check_limits(key, action)
+      state, leader = acquire_limits_lookup(key)
+      return await_limits_lookup(state) unless leader
+
+      begin
+        result = @client.check_limits(
+          params: {
+            "customerRef" => action["customerRef"],
+            "productRef" => action["productRef"],
+            "meterName" => action["meterName"],
+            "includeCheckoutSession" => action["includeCheckoutSession"],
+          },
+        )
+        publish_limits_lookup(key, state, result: result)
+        result
+      rescue StandardError => e
+        publish_limits_lookup(key, state, error: e)
+        raise
+      end
+    end
+
+    def acquire_limits_lookup(key)
+      @mutex.synchronize do
+        inflight = @limits_inflight[key]
+        return [inflight, false] if inflight
+
+        state = { condition: ConditionVariable.new, done: false, result: nil, error: nil }
+        @limits_inflight[key] = state
+        @limits_claims[key] = 0
+        [state, true]
+      end
+    end
+
+    def await_limits_lookup(state)
+      @mutex.synchronize do
+        state.fetch(:condition).wait(@mutex) until state.fetch(:done)
+        raise state[:error] if state[:error]
+
+        state.fetch(:result)
+      end
+    end
+
+    def publish_limits_lookup(key, state, result: nil, error: nil)
+      @mutex.synchronize do
+        state[:result] = result
+        state[:error] = error
+        state[:done] = true
+        @limits_inflight.delete(key)
+        state.fetch(:condition).broadcast
+      end
+    end
+
+    def next_limits_claim(key)
+      @mutex.synchronize do
+        claimed = (@limits_claims[key] || 0) + 1
+        @limits_claims[key] = claimed
+        claimed
+      end
     end
 
     def apply_cache(cache)

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { SolvaPayError } from '@solvapay/core'
+import { PaywallError } from '../paywall'
 
 vi.mock('../factory', () => ({
   createSolvaPay: vi.fn(),
@@ -188,6 +189,27 @@ describe('cancelPurchaseCore', () => {
     })
   })
 
+  it('routes PaywallError through handleRouteError before SolvaPayError', async () => {
+    mockCancelPurchase.mockRejectedValue(
+      new PaywallError('Payment required', {
+        kind: 'payment_required',
+        product: 'prd_x',
+        checkoutUrl: 'https://pay.example/x',
+        message: 'Payment required',
+        shortMessage: 'Payment required',
+      }),
+    )
+    const result = await cancelPurchaseCore(
+      new Request('http://localhost'),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: { apiClient: { cancelPurchase: mockCancelPurchase } } as never },
+    )
+    expect(result).toEqual({
+      error: 'Failed to cancel purchase',
+      status: 500,
+    })
+  })
+
   it('wraps non-SolvaPayError throws with handleRouteError', async () => {
     mockCancelPurchase.mockRejectedValue(new Error('network'))
     const result = await cancelPurchaseCore(
@@ -367,6 +389,27 @@ describe('reactivatePurchaseCore', () => {
       error: 'Purchase cannot be reactivated',
       status: 400,
       details: 'Purchase already ended',
+    })
+  })
+
+  it('routes PaywallError through handleRouteError before SolvaPayError', async () => {
+    mockReactivatePurchase.mockRejectedValue(
+      new PaywallError('Payment required', {
+        kind: 'payment_required',
+        product: 'prd_x',
+        checkoutUrl: 'https://pay.example/x',
+        message: 'Payment required',
+        shortMessage: 'Payment required',
+      }),
+    )
+    const result = await reactivatePurchaseCore(
+      new Request('http://localhost'),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: { apiClient: { reactivatePurchase: mockReactivatePurchase } } as never },
+    )
+    expect(result).toEqual({
+      error: 'Failed to reactivate purchase',
+      status: 500,
     })
   })
 

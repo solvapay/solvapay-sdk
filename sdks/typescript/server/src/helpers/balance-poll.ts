@@ -1,14 +1,12 @@
 import { evaluateBalanceObservation } from '../native-decisions'
+import { BALANCE_RECONCILE_DELAYS_MS as balanceReconcileDelaysMs } from '@solvapay/core'
 
-export const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
-
-/** Backoff for client-side balance reconciliation after async credit top-ups (e.g. auto-recharge). */
-export const BALANCE_RECONCILE_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000] as const
+export { BALANCE_RECONCILE_DELAYS_MS, TOPUP_BALANCE_POLL_DELAYS_MS } from '@solvapay/core'
 
 export async function pollBalanceUntilIncreased(
   getBalance: () => Promise<{ credits: number }>,
   baseline: number,
-  delays: readonly number[] = BALANCE_RECONCILE_DELAYS_MS,
+  delays: readonly number[] = balanceReconcileDelaysMs(),
 ): Promise<{ creditsAdded: number } | null> {
   for (const delay of delays) {
     await new Promise<void>(resolve => setTimeout(resolve, delay))

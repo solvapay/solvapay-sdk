@@ -204,6 +204,8 @@ export type WasmSyncMethod =
   | 'TAX_ID_EXAMPLE_BY_COUNTRY'
   | 'TAX_BEHAVIORS'
   | 'TAX_EXCLUSIVE_CURRENCIES'
+  | 'TOPUP_BALANCE_POLL_DELAYS_MS'
+  | 'BALANCE_RECONCILE_DELAYS_MS'
   // @solvapay/mcp-core builders (+ formatGate shares paywallToolResult)
   | 'paywallToolResult'
   | 'makeResponseResult'

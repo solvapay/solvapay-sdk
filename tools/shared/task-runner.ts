@@ -77,7 +77,9 @@ function localNodeBin(cwd: string, bin: string): string {
   return path.join(cwd, 'node_modules', '.bin', fileName)
 }
 
-function isBinAvailable(
+export { defaultWhich as whichBin }
+
+export function isBinAvailable(
   bin: string,
   cwd: string | undefined,
   which: (name: string) => boolean,

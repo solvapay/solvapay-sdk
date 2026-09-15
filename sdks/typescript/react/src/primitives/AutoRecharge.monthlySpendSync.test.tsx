@@ -113,7 +113,7 @@ describe('AutoRecharge MonthlySpend sync', () => {
     })
 
     await act(async () => {
-      for (const delay of BALANCE_RECONCILE_DELAYS_MS) {
+      for (const delay of BALANCE_RECONCILE_DELAYS_MS()) {
         await vi.advanceTimersByTimeAsync(delay)
       }
     })

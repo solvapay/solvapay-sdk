@@ -46,7 +46,9 @@
         "REVERSE_CHARGE_NOTE",
         "TAX_NOT_COLLECTED_NOTE",
         "formatPrice",
-        "toMajorUnits"
+        "toMajorUnits",
+        "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "BALANCE_RECONCILE_DELAYS_MS"
       ],
       "helpersMembers": [
         "classifyCustomerRef",
@@ -178,14 +180,17 @@
         "REVERSE_CHARGE_NOTE",
         "TAX_NOT_COLLECTED_NOTE",
         "formatPrice",
-        "toMajorUnits"
+        "toMajorUnits",
+        "TOPUP_BALANCE_POLL_DELAYS_MS",
+        "BALANCE_RECONCILE_DELAYS_MS"
       ],
       "sectionBefore": {
         "validateBusinessDetails": "// --- business-details ---",
         "minorUnitsPerMajor": "// --- credit-display ---",
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": "// --- seller-identity ---",
         "shouldShowTaxRow": "// --- tax-summary ---",
-        "formatPrice": "// --- money-format ---"
+        "formatPrice": "// --- money-format ---",
+        "TOPUP_BALANCE_POLL_DELAYS_MS": "// --- balance-poll ---"
       }
     },
     "nativeHelpers": {

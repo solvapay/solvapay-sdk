@@ -122,8 +122,6 @@
   "extras": {
     "withRetry": "crate::bindings::retry::invoke_with_retry",
     "pollBalanceUntilIncreased": "crate::bindings::balance_poll::invoke_poll_balance_until_increased",
-    "TOPUP_BALANCE_POLL_DELAYS_MS": "crate::bindings::balance_poll::invoke_topup_delays",
-    "BALANCE_RECONCILE_DELAYS_MS": "crate::bindings::balance_poll::invoke_reconcile_delays",
     "constructSdkError": "crate::bindings::error_model::invoke_construct_sdk_error",
     "resolveAuthenticatedUser": "crate::bindings::helpers::invoke_resolve_authenticated_user"
   },

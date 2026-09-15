@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
+import { SolvaPayError } from '@solvapay/core'
 import { createSolvaPay, PaywallError } from '../src'
 import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
@@ -968,6 +969,39 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(checkLimitsSpy).toHaveBeenCalledTimes(2)
     })
 
+    it('coalesces concurrent checkLimits with remaining 1 to a single allow', async () => {
+      let resolveLimits!: (value: {
+        withinLimits: boolean
+        remaining: number
+        plan: string
+      }) => void
+      const pending = new Promise<{
+        withinLimits: boolean
+        remaining: number
+        plan: string
+      }>(resolve => {
+        resolveLimits = resolve
+      })
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits').mockReturnValue(pending)
+
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'cache-concurrent-one' })
+      const protectedHandler = await payable.function(handler)
+
+      const args = { auth: { customer_ref: 'cus_concurrent_one' } }
+      const first = protectedHandler(args)
+      const second = protectedHandler(args)
+      const third = protectedHandler(args)
+
+      resolveLimits({ withinLimits: true, remaining: 1, plan: 'free' })
+
+      await expect(first).resolves.toEqual({ success: true })
+      await expect(second).rejects.toBeInstanceOf(PaywallError)
+      await expect(third).rejects.toBeInstanceOf(PaywallError)
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+      expect(handler).toHaveBeenCalledTimes(1)
+    })
+
     it('coalesces concurrent checkLimits and consumes one unit per caller', async () => {
       let resolveLimits!: (value: {
         withinLimits: boolean
@@ -1037,8 +1071,11 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         shortMessage: 'Payment required',
       })
 
+      expect(error).toBeInstanceOf(SolvaPayError)
       expect(error.name).toBe('PaywallError')
       expect(error.message).toBe('Payment required')
+      expect(error.code).toBe('paywall')
+      expect(error.status).toBeUndefined()
       expect(error.structuredContent).toEqual({
         kind: 'payment_required',
         product: 'test-product',

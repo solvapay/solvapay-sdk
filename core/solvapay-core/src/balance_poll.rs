@@ -76,6 +76,40 @@ impl BalancePollPolicy {
     }
 }
 
+/// Top-up payment-intent balance poll backoff (ms).
+///
+/// # Returns
+///
+/// The frozen millisecond delay table.
+#[must_use]
+#[crate::solvapay_export(
+    id = "TOPUP_BALANCE_POLL_DELAYS_MS",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "balance-poll",
+    emit_order = 145
+)]
+pub fn topup_balance_poll_delays_ms() -> &'static [u64] {
+    &TOPUP_BALANCE_POLL_DELAYS_MS
+}
+
+/// Client-side balance reconciliation backoff after async credit top-ups (ms).
+///
+/// # Returns
+///
+/// The frozen millisecond delay table.
+#[must_use]
+#[crate::solvapay_export(
+    id = "BALANCE_RECONCILE_DELAYS_MS",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "balance-poll",
+    emit_order = 146
+)]
+pub fn balance_reconcile_delays_ms() -> &'static [u64] {
+    &BALANCE_RECONCILE_DELAYS_MS
+}
+
 /// Decide whether observed credits constitute an increase over `baseline`.
 ///
 /// Uses strict greater-than (equal credits are not an increase), matching the

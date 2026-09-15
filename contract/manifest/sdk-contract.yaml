@@ -3194,8 +3194,8 @@ topLevel:
         handWritten: true
         reason: 'Error type is host-defined, not a generated helper forwarder.'
       rust:
-        handWritten: true
-        reason: 'Error type is host-defined, not a generated helper re-export.'
+        omitted: true
+        reason: 'Rust uses SdkError::Paywall; there is no separate PaywallError type.'
       c:
         omitted: true
         reason: 'No generated C exception class.'
@@ -4313,14 +4313,50 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+  TOPUP_BALANCE_POLL_DELAYS_MS:
+    names:
+      ts: TOPUP_BALANCE_POLL_DELAYS_MS
+      py: TOPUP_BALANCE_POLL_DELAYS_MS
+      rb: TOPUP_BALANCE_POLL_DELAYS_MS
+      go: TOPUP_BALANCE_POLL_DELAYS_MS
+      rust: TOPUP_BALANCE_POLL_DELAYS_MS
+      c: TOPUP_BALANCE_POLL_DELAYS_MS
+    docs:
+      summary: 'Top-up payment-intent balance poll backoff, in milliseconds.'
+      returns: 'Frozen delay table.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  BALANCE_RECONCILE_DELAYS_MS:
+    names:
+      ts: BALANCE_RECONCILE_DELAYS_MS
+      py: BALANCE_RECONCILE_DELAYS_MS
+      rb: BALANCE_RECONCILE_DELAYS_MS
+      go: BALANCE_RECONCILE_DELAYS_MS
+      rust: BALANCE_RECONCILE_DELAYS_MS
+      c: BALANCE_RECONCILE_DELAYS_MS
+    docs:
+      summary: 'Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.'
+      returns: 'Frozen delay table.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
 
 facade:
   createSolvaPay:
     names:
       ts: createSolvaPay
-      py: create_solva_pay
+      py: create_solvapay
       rb: SolvaPay.create
-      go: solvapay.New
+      go: solvapay.NewClient
       rust: 'Client::new'
       c: solvapay_client_new
     params:
@@ -4363,6 +4399,22 @@ facade:
       go: sync
       rust: sync
       c: sync
+    availability:
+      py:
+        omitted: true
+        reason: 'Portable client is SolvaPayClient from the native module; create_solvapay is the facade factory.'
+      rb:
+        omitted: true
+        reason: 'Portable client is SolvaPay::Client; SolvaPay.create is the facade factory.'
+      go:
+        omitted: true
+        reason: 'Portable client is constructed by NewClient; there is no CreateSolvaPayClient helper.'
+      rust:
+        omitted: true
+        reason: 'Portable client is Client::new / SolvaPayClient; there is no create_solva_pay_client helper.'
+      c:
+        omitted: true
+        reason: 'Portable client is solvapay_client_new; there is no separate createSolvaPayClient symbol.'
   payable:
     names:
       ts: payable
@@ -4387,6 +4439,10 @@ facade:
       go: sync
       rust: sync
       c: sync
+    availability:
+      c:
+        omitted: true
+        reason: 'C ABI exposes HTTP operations only; there is no payable facade.'
   protect:
     names:
       ts: protect
@@ -4411,6 +4467,19 @@ facade:
       go: sync
       rust: sync
       c: sync
+    availability:
+      py:
+        omitted: true
+        reason: 'Python gates via the payable() decorator; there is no separate protect().'
+      go:
+        omitted: true
+        reason: 'Go gates via Payable.Gate; there is no Protect method.'
+      rust:
+        omitted: true
+        reason: 'Rust gates via Payable::gate; there is no protect method.'
+      c:
+        omitted: true
+        reason: 'C ABI exposes HTTP operations only; there is no protect facade.'
   gate:
     names:
       ts: payable.gate
@@ -4435,6 +4504,10 @@ facade:
       go: blocking
       rust: [async, blocking]
       c: blocking
+    availability:
+      c:
+        omitted: true
+        reason: 'C ABI exposes HTTP operations only; there is no gate facade.'
 
 mcp:
   mcpDescriptors:
@@ -5611,8 +5684,9 @@ driverLoops:
 
 nameOverrides:
   createSolvaPay:
+    py: create_solvapay
     rb: SolvaPay.create
-    go: solvapay.New
+    go: solvapay.NewClient
     rust: 'Client::new'
     c: solvapay_client_new
   gate:
@@ -5621,7 +5695,6 @@ nameOverrides:
     rb: sp.gate
     go: sp.Gate
     rust: sp.gate
-    c: gate
   SolvaPayError:
     ts: SolvaPayError
     py: SolvaPayError
@@ -5720,6 +5793,20 @@ nameOverrides:
     go: TAX_NOT_COLLECTED_NOTE
     rust: TAX_NOT_COLLECTED_NOTE
     c: TAX_NOT_COLLECTED_NOTE
+  TOPUP_BALANCE_POLL_DELAYS_MS:
+    ts: TOPUP_BALANCE_POLL_DELAYS_MS
+    py: TOPUP_BALANCE_POLL_DELAYS_MS
+    rb: TOPUP_BALANCE_POLL_DELAYS_MS
+    go: TOPUP_BALANCE_POLL_DELAYS_MS
+    rust: TOPUP_BALANCE_POLL_DELAYS_MS
+    c: TOPUP_BALANCE_POLL_DELAYS_MS
+  BALANCE_RECONCILE_DELAYS_MS:
+    ts: BALANCE_RECONCILE_DELAYS_MS
+    py: BALANCE_RECONCILE_DELAYS_MS
+    rb: BALANCE_RECONCILE_DELAYS_MS
+    go: BALANCE_RECONCILE_DELAYS_MS
+    rust: BALANCE_RECONCILE_DELAYS_MS
+    c: BALANCE_RECONCILE_DELAYS_MS
 
 reservedWords:
   ts: []

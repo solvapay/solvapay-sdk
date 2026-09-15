@@ -32,6 +32,7 @@ const DOMAIN_SECTIONS: &[&str] = &[
     "seller-identity",
     "tax-summary",
     "money-format",
+    "balance-poll",
 ];
 
 /// Which wrapper file to emit.

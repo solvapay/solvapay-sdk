@@ -165,9 +165,10 @@ for `#[solvapay_export]` suggestions (it prints targets; it never writes YAML).
     sdks/node-native/server-native.wasi-browser.js sdks/node-native/server-native.wasi.cjs
   ```
 
-- `pnpm gen` regenerates Ruby sources but not the Magnus extension. After a gen that
-  adds a helper: `cd sdks/ruby && bundle install && bundle exec rake compile` — else
-  you get `undefined method … for module SolvaPay::Native` from a stale `.bundle`.
+- `pnpm gen` regenerates Ruby and Python binding sources and, when `bundle` /
+  `uv` are on PATH, rebuilds those native extensions. `--no-native-prepare`
+  skips the rebuild (pre-commit and `gen:verify` use that). Restore WASI
+  artifacts before pushing if a native build ran (see the checkout block above).
 - `wasm-opt not found` on the Go WASI build is an intentional fallback. Do not commit
   a locally shrunk blob; the canonical bytes come from linux/amd64.
 - `pnpm test:live` is opt-in and needs `SOLVAPAY_LIVE_BASE_URL` +

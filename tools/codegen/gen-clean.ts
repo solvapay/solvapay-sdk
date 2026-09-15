@@ -289,7 +289,7 @@ export function runCli(argv: string[], deps: CleanCliDeps = {}): CliResult {
     return { exitCode: 0, stdout, stderr: '' }
   }
 
-  const gen = deps.gen ?? (() => runGen({ check: false }))
+  const gen = deps.gen ?? (() => runGen({ check: false, nativePrepare: false }))
   const generated = gen()
   if (generated.exitCode !== 0) {
     return {

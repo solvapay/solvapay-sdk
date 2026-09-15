@@ -356,3 +356,21 @@ export function formatPrice(
 export function toMajorUnits(amountMinor: number, currency: string): number {
   return dispatchSync('toMajorUnits', { amountMinor, currency })
 }
+
+// --- balance-poll ---
+
+/**
+ * Top-up payment-intent balance poll backoff, in milliseconds.
+ * @returns Frozen delay table.
+ */
+export function TOPUP_BALANCE_POLL_DELAYS_MS(): number[] {
+  return dispatchSync('TOPUP_BALANCE_POLL_DELAYS_MS', {})
+}
+
+/**
+ * Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
+ * @returns Frozen delay table.
+ */
+export function BALANCE_RECONCILE_DELAYS_MS(): number[] {
+  return dispatchSync('BALANCE_RECONCILE_DELAYS_MS', {})
+}
