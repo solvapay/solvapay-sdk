@@ -145,7 +145,7 @@ export declare function buildGateMessage(argsJson: string): string
 /** Binding for `buildNudgeMessage`. */
 export declare function buildNudgeMessage(argsJson: string): string
 
-/** Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope). */
+/** Binding for `buildPayableToolResult`. */
 export declare function buildPayableToolResult(argsJson: string): string
 
 /** Binding for `buildPaywallGate`. */
@@ -377,18 +377,10 @@ export declare function nativeBuildInfo(): string
 /** Binding for `nextActionFor`. */
 export declare function nextActionFor(argsJson: string): string
 
-/**
- * Binding for `normalizeCancelResponse`.
- *
- * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
- */
+/** Binding for `normalizeCancelResponse`. */
 export declare function normalizeCancelResponse(argsJson: string): string
 
-/**
- * Binding for `normalizeReactivateResponse`.
- *
- * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
- */
+/** Binding for `normalizeReactivateResponse`. */
 export declare function normalizeReactivateResponse(argsJson: string): string
 
 /** Binding for `overlayClaimedLimits`. */

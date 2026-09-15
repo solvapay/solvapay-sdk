@@ -7,7 +7,7 @@
  * runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
-import { installNativeCoreApi } from '@solvapay/core'
+import { installNativeCoreApi, validateBusinessDetails } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
 import { installNativeDecisionApi } from './native-decisions'
@@ -32,6 +32,8 @@ installMcpAdapterNative({
 publishWasmSyncApi()
 // Warm the module so sync surfaces can synchronously init on first use.
 warmWasm()
+
+export { validateBusinessDetails }
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'

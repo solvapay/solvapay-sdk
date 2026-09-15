@@ -21,8 +21,8 @@ import {
   paywallErrorToClientPayload,
   createSolvaPayClient,
   PaywallError,
+  validateBusinessDetails,
 } from '../../../typescript/server/dist/edge.js'
-import { validateBusinessDetails } from '../../../typescript/core/dist/index.js'
 
 const FIXTURE_BODY = JSON.stringify({
   type: 'purchase.created',
