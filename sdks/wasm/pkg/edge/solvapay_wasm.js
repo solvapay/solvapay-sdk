@@ -1038,7 +1038,7 @@ export function buildNudgeMessage(args_json) {
 }
 
 /**
- * Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+ * Binding for `buildPayableToolResult`.
  * @param {string} args_json
  * @returns {string}
  */
@@ -2538,7 +2538,7 @@ export function paywallStructuredContentSchema(args_json) {
 }
 
 /**
- * Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+ * Binding for `paywallToolResult`.
  * @param {string} args_json
  * @returns {string}
  */

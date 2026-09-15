@@ -13,6 +13,7 @@ COPY Cargo.toml rust-toolchain.toml Cargo.lock ./
 COPY core ./core
 COPY sdks ./sdks
 COPY tools ./tools
+COPY internal ./internal
 WORKDIR /src/sdks/ruby
 RUN bundle install && bundle exec rake compile
 WORKDIR /src/sdks/ruby-mcp

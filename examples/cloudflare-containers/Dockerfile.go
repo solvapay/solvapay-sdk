@@ -7,6 +7,7 @@ COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 COPY core ./core
 COPY sdks ./sdks
 COPY tools ./tools
+COPY internal ./internal
 RUN cargo build -p solvapay-go-wasm --target wasm32-wasip1 --profile wasm-release \
   && cp target/wasm32-wasip1/wasm-release/solvapay_go_wasm.wasm /solvapay_core.wasm
 
