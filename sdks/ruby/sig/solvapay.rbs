@@ -141,6 +141,10 @@ module SolvaPay
   class InflightTable
     def initialize: (Thread::Mutex mutex) -> void
     def run: [T] (untyped key) { () -> T } -> T
+    private
+    def acquire: (untyped key) -> [untyped, bool]
+    def await: (untyped state) -> untyped
+    def publish: (untyped key, untyped state, ?result: untyped, ?error: Exception?) -> void
   end
 
   class Facade

@@ -116,6 +116,10 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20 class InflightTable\n\
          \x20   def initialize: (Thread::Mutex mutex) -> void\n\
          \x20   def run: [T] (untyped key) { () -> T } -> T\n\
+         \x20   private\n\
+         \x20   def acquire: (untyped key) -> [untyped, bool]\n\
+         \x20   def await: (untyped state) -> untyped\n\
+         \x20   def publish: (untyped key, untyped state, ?result: untyped, ?error: Exception?) -> void\n\
          \x20 end\n\n\
          \x20 class Facade\n\
          \x20   BASE36: String\n\

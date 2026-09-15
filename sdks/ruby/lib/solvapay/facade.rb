@@ -125,7 +125,7 @@ module SolvaPay
 
     def check_limits(action)
       @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) } if action["cacheDeleteKey"].is_a?(String)
-      key = "#{action["customerRef"]}:#{action["productRef"]}:#{action["meterName"]}"
+      key = "#{action['customerRef']}:#{action['productRef']}:#{action['meterName']}"
       limits = shared_check_limits(key, action)
       unless limits.is_a?(Hash)
         raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
