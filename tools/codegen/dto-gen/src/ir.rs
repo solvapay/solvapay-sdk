@@ -93,6 +93,10 @@ pub struct IrExportAttr {
     pub dto_type: Option<String>,
     /// Ordered path-ref split keys (client symbols).
     pub split_path_refs: Vec<String>,
+    /// TypeScript parameter type overrides (`name:Type`).
+    pub ts_param_types: BTreeMap<String, String>,
+    /// TypeScript optional-param style overrides (`name:optionalNull`).
+    pub ts_param_style: BTreeMap<String, String>,
 }
 
 /// A scanned `solvapay-core` function signature.

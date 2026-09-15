@@ -68,7 +68,10 @@ fn present(value: Option<&Value>) -> Option<&Value> {
     catalog = "topLevel",
     section = "paywall state / gate / payload",
     emit_order = 40,
-    rust_fn_name = "paywall_error_to_client_payload_binding"
+    rust_fn_name = "paywall_error_to_client_payload_binding",
+    extract = "message:requireString,structuredContent:requireTyped",
+    typed_as = "structuredContent:PaywallGate",
+    local = "message:_message,structuredContent:gate"
 )]
 pub fn paywall_client_payload(gate: &PaywallGate) -> PaywallClientPayload {
     let (error, is_activation) = match gate.kind {

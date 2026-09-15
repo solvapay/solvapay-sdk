@@ -173,6 +173,9 @@ jobs:
       - name: cargo build (native)
         run: cargo build --workspace --exclude solvapay-wasm
 
+      - name: boundary-asserts compile-time backstop
+        run: cargo check -p boundary-asserts --all-features
+
       - name: cargo test
         run: cargo test --workspace --exclude solvapay-wasm
 

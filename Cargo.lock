@@ -164,6 +164,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "boundary-asserts"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2153,7 +2164,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "fixture-runner",
  "js-sys",
@@ -2172,7 +2183,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-c"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "cbindgen",
  "fixture-runner",
@@ -2189,7 +2200,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-core"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "hmac 0.13.0",
  "repo-paths",
@@ -2203,7 +2214,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-dto"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "fixture-runner",
  "repo-paths",
@@ -2214,11 +2225,11 @@ dependencies = [
 
 [[package]]
 name = "solvapay-export"
-version = "3.0.0"
+version = "2.6.0"
 
 [[package]]
 name = "solvapay-go-wasm"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "pollster",
  "serde",
@@ -2252,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-mcp-core"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac 0.13.0",
@@ -2272,7 +2283,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-node"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "napi",
  "napi-build",
@@ -2287,7 +2298,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-python"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "pyo3",
  "pyo3-async-runtimes",
@@ -2302,7 +2313,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-ruby"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "magnus",
  "rb-sys",
@@ -2317,7 +2328,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-transport"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "fixture-runner",
  "js-sys",
@@ -2339,7 +2350,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-wasm"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "js-sys",
  "serde",

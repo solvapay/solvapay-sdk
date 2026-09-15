@@ -309,7 +309,7 @@ pub fn minor_units_per_major_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let currency = require_string(&args, "currency")?;
-        Ok(Value::from(minor_units_per_major(&currency)))
+        to_value(&minor_units_per_major(&currency))
     })
 }
 
@@ -411,13 +411,13 @@ pub fn is_unlimited_remaining_binding(args_json: String) -> String {
 
 // --- MCP payload / descriptors ---
 
-/// Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+/// Binding for `paywallToolResult`.
 pub fn paywall_tool_result_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
-        let message = require_string(&args, "message")?;
+        let narration = require_string(&args, "message")?;
         let gate: PaywallGate = require_typed(&args, "structuredContent")?;
-        to_value(&paywall_tool_result(&message, &gate))
+        to_value(&paywall_tool_result(&narration, &gate))
     })
 }
 
@@ -698,7 +698,7 @@ pub fn tax_behaviors_binding(args_json: String) -> String {
 
 // --- MCP payload / descriptors ---
 
-/// Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+/// Binding for `buildPayableToolResult`.
 pub fn build_payable_tool_result_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;

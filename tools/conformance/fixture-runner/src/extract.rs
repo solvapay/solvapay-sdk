@@ -8,6 +8,84 @@ use solvapay_core::HelperErrorResult;
 use crate::model::FixtureInput;
 use crate::runner::BindingError;
 
+/// Maps `SdkError::transport` in verbatim residue bodies onto [`BindingError`].
+pub fn verbatim_sdk_transport(message: String, retryable: bool) -> BindingError {
+    BindingError::from(solvapay_core::SdkError::transport(message, retryable))
+}
+
+/// Serializes fixture args to the JSON string verbatim residue bodies expect.
+pub fn fixture_args_json(input: &FixtureInput) -> Result<String, BindingError> {
+    serde_json::to_string(&Value::Object(args_map(input)))
+        .map_err(|err| BindingError::Harness(format!("serialize fixture args: {err}")))
+}
+
+/// Parses a JSON object string the same way napi `args_map` does.
+pub fn args_map_json(args_json: &str) -> Result<Map<String, Value>, BindingError> {
+    let value: Value = serde_json::from_str(args_json)
+        .map_err(|err| BindingError::Harness(format!("args JSON: {err}")))?;
+    match value {
+        Value::Object(map) => Ok(map),
+        Value::Null => Ok(Map::new()),
+        other => Err(BindingError::Harness(format!(
+            "argsJson must be an object, got {other}"
+        ))),
+    }
+}
+
+/// Optional `args.views` string array (verbatim MCP descriptor bodies).
+pub fn optional_views(args: &Map<String, Value>) -> Result<Option<Vec<String>>, BindingError> {
+    match args.get("views") {
+        None => Ok(None),
+        Some(Value::Array(items)) => {
+            let mut views = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(s) => views.push(s.to_owned()),
+                    None => {
+                        return Err(BindingError::Harness(
+                            "args.views must be an array of strings".to_owned(),
+                        ));
+                    }
+                }
+            }
+            Ok(Some(views))
+        }
+        Some(_) => Err(BindingError::Harness(
+            "args.views must be an array when present".to_owned(),
+        )),
+    }
+}
+
+/// Optional `args.branding` object (verbatim MCP descriptor bodies).
+pub fn optional_branding(
+    args: &Map<String, Value>,
+) -> Result<Option<solvapay_core::MerchantBranding>, BindingError> {
+    match args.get("branding") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Object(map)) => Ok(Some(solvapay_core::MerchantBranding {
+            brand_name: optional_object_string(map, "brandName")?,
+            icon_url: optional_object_string(map, "iconUrl")?,
+            logo_url: optional_object_string(map, "logoUrl")?,
+        })),
+        Some(_) => Err(BindingError::Harness(
+            "args.branding must be an object when present".to_owned(),
+        )),
+    }
+}
+
+fn optional_object_string(
+    map: &Map<String, Value>,
+    key: &str,
+) -> Result<Option<String>, BindingError> {
+    match map.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s.clone())),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.branding.{key} must be a string when present"
+        ))),
+    }
+}
+
 /// Copies fixture `input.args` into a serde_json object map.
 pub fn args_map(input: &FixtureInput) -> Map<String, Value> {
     input

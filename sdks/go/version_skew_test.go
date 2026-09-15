@@ -21,7 +21,7 @@ func TestBuildInfoStamp(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &info); err != nil {
 		t.Fatalf("BuildInfo JSON: %v", err)
 	}
-	if info.Version != "3.0.0" {
+	if info.Version != "2.6.0" {
 		t.Fatalf("version = %q, want 3.0.0", info.Version)
 	}
 	if info.CoreSha == "" {

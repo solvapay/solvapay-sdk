@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server-wasm",
-  "version": "3.0.0",
+  "version": "2.6.0",
   "description": "SolvaPay wasm-bindgen edge/browser binding (Step 38)",
   "type": "module",
   "sideEffects": [

@@ -40,6 +40,11 @@ export const RELEASE_TRAIN_RUBY_VERSIONS = [
   lookupRel('rubyMcpVersion'),
 ] as const
 
+export const RELEASE_TRAIN_GO_VERSION_TESTS = [
+  'sdks/go/version_test.go',
+  'sdks/go/version_skew_test.go',
+] as const
+
 const PACKAGE_VERSION_RE = /^version\s*=\s*"([^"]+)"/m
 const RUBY_VERSION_RE = /VERSION\s*=\s*"([^"]+)"/
 
@@ -90,6 +95,22 @@ export function stampTomlPackageVersion(text: string, version: string): string {
   return next
 }
 
+export function stampGoVersionTest(text: string, version: string): string {
+  const next = text.replace(/"\d+\.\d+\.\d+"/g, `"${version}"`)
+  if (readGoPinnedVersion(next) !== version) {
+    throw new Error('release-train: cannot stamp Go version test')
+  }
+  return next
+}
+
+export function readGoPinnedVersion(text: string): string {
+  const found = [...text.matchAll(/"(\d+\.\d+\.\d+)"/g)].map(match => match[1])
+  if (found.length === 0 || found.some(value => value !== found[0])) {
+    throw new Error('release-train: Go version test must pin exactly one x.y.z literal')
+  }
+  return found[0] ?? ''
+}
+
 export function stampRubyVersion(text: string, version: string): string {
   if (!RUBY_VERSION_RE.test(text)) {
     throw new Error('release-train: cannot stamp missing VERSION')
@@ -122,6 +143,10 @@ export function collectReleaseTrainDrift(
   }
   for (const rel of RELEASE_TRAIN_RUBY_VERSIONS) {
     const actual = readRubyVersion(readFileSync(joinRel(repoRoot, rel), 'utf8'))
+    if (actual !== expected) drift.push({ path: rel, expected, actual })
+  }
+  for (const rel of RELEASE_TRAIN_GO_VERSION_TESTS) {
+    const actual = readGoPinnedVersion(readFileSync(joinRel(repoRoot, rel), 'utf8'))
     if (actual !== expected) drift.push({ path: rel, expected, actual })
   }
   return drift

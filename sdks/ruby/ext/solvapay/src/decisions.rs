@@ -385,8 +385,6 @@ pub fn select_active_plan_purchase_binding(args_json: String) -> String {
 // --- renewal ---
 
 /// Binding for `normalizeCancelResponse`.
-///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
 pub fn normalize_cancel_response_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
@@ -396,8 +394,6 @@ pub fn normalize_cancel_response_binding(args_json: String) -> String {
 }
 
 /// Binding for `normalizeReactivateResponse`.
-///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
 pub fn normalize_reactivate_response_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;

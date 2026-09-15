@@ -48,6 +48,13 @@ impl From<String> for BindingError {
     }
 }
 
+impl From<solvapay_core::SdkError> for BindingError {
+    /// Maps a core [`solvapay_core::SdkError`] onto [`BindingError::Sdk`].
+    fn from(error: solvapay_core::SdkError) -> Self {
+        Self::Sdk(crate::sdk_error::sdk_error_to_observation(error))
+    }
+}
+
 impl From<&str> for BindingError {
     /// Wraps a harness/setup error string slice as [`BindingError::Harness`].
     ///

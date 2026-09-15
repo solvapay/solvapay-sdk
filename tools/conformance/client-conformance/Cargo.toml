@@ -8,6 +8,7 @@ description = "Native SolvaPayClient fixture replay over ReqwestTransport"
 publish = false
 
 [dependencies]
+fixture-runner = { path = "../fixture-runner" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 solvapay-core = { path = "../../../core/solvapay-core" }
@@ -15,7 +16,6 @@ solvapay-dto = { path = "../../../core/solvapay-dto" }
 solvapay-transport = { path = "../../../core/solvapay-transport" }
 
 [dev-dependencies]
-fixture-runner = { path = "../fixture-runner" }
 repo-paths = { path = "../../shared/repo-paths" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 walkdir = { workspace = true }

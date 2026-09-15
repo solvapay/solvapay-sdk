@@ -601,8 +601,6 @@ pub unsafe extern "C" fn sv_select_active_plan_purchase_binding(
 
 /// Binding for `normalizeCancelResponse`.
 ///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
-///
 /// # Safety
 ///
 /// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
@@ -620,8 +618,6 @@ pub unsafe extern "C" fn sv_normalize_cancel_response_binding(
 }
 
 /// Binding for `normalizeReactivateResponse`.
-///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
 ///
 /// # Safety
 ///

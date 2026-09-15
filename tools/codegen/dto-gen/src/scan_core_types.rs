@@ -658,6 +658,12 @@ fn apply_export_name_value(out: &mut IrExportAttr, nv: &syn::MetaNameValue) -> G
         "split_path_refs" => {
             out.split_path_refs = split_csv(&export_lit_str(&nv.value, &key)?);
         }
+        "ts_param_types" => {
+            out.ts_param_types = parse_colon_map(&export_lit_str(&nv.value, &key)?, &key)?;
+        }
+        "ts_param_style" => {
+            out.ts_param_style = parse_colon_map(&export_lit_str(&nv.value, &key)?, &key)?;
+        }
         other => {
             return Err(GenError::Parse(format!(
                 "#[solvapay_export]: unknown key {other}"

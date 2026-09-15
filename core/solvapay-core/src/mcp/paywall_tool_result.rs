@@ -50,7 +50,11 @@ pub struct McpPaywallToolResult {
     catalog = "none",
     section = "MCP payload / descriptors",
     emit_order = 13,
-    typed_style = "structuredContent:annotation"
+    rename = "narration:message,gate:structuredContent",
+    extract = "message:requireString,structuredContent:requireTyped",
+    typed_as = "structuredContent:PaywallGate",
+    typed_style = "structuredContent:annotation",
+    local = "structuredContent:gate"
 )]
 pub fn paywall_tool_result(narration: &str, gate: &PaywallGate) -> McpPaywallToolResult {
     McpPaywallToolResult {

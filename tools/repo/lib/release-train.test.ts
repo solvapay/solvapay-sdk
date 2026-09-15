@@ -7,6 +7,7 @@ import {
   prTouchesReleaseTrainSources,
   readReleaseTrainVersion,
   stampPyprojectDependency,
+  stampGoVersionTest,
   stampRubyVersion,
   stampTomlPackageVersion,
 } from './release-train.js'
@@ -40,6 +41,9 @@ solvapay-mcp-core = { path = "../solvapay-mcp", version = "0.1.0", default-featu
     expect(
       stampPyprojectDependency('dependencies = [\n  "solvapay==0.1.0",\n]\n', '0.2.0'),
     ).toContain('"solvapay==0.2.0"')
+    expect(
+      stampGoVersionTest('if version != "3.0.0" {\n\t\tt.Fatalf("Version = %q, want %q", version, "3.0.0")\n}', '2.6.0'),
+    ).toContain('"2.6.0"')
   })
 })
 

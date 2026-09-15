@@ -7,6 +7,7 @@ pub mod doc_parity;
 pub mod doc_render;
 pub mod emit;
 pub mod emit_bindings_rs;
+pub mod emit_boundary_asserts_rs;
 pub mod emit_bindings_ts;
 pub mod emit_client_go;
 pub mod emit_client_rb;
@@ -56,6 +57,7 @@ pub use doc_coverage::check_doc_coverage;
 pub use doc_parity::{check_doc_parity, EmittedSurface};
 pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
+pub use emit_boundary_asserts_rs::emit_boundary_asserts;
 pub use emit_bindings_ts::emit_native_ts;
 pub use emit_client_go::emit_client_go;
 pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
@@ -225,6 +227,8 @@ pub struct GenOutputs<'a> {
     pub c_parity_out: Option<&'a Path>,
     /// `--fixture-runner-out`
     pub fixture_runner_out: Option<&'a Path>,
+    /// `--boundary-asserts-rs-out`
+    pub boundary_asserts_rs_out: Option<&'a Path>,
     /// `--rb-mcp-layer2-out`
     pub rb_mcp_layer2_out: Option<&'a Path>,
     /// `--py-mcp-layer2-out`
@@ -383,6 +387,12 @@ pub fn generate_from_snapshot(
                 "--fixture-runner-out",
                 outputs.fixture_runner_out,
                 emit_fixture_runner,
+                true,
+            ),
+            (
+                "--boundary-asserts-rs-out",
+                outputs.boundary_asserts_rs_out,
+                emit_boundary_asserts,
                 true,
             ),
             (

@@ -23,15 +23,7 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
     let wrap: Vec<&IrBindingSymbol> = ir
         .binding_symbols
         .values()
-        .filter(|sym| {
-            if skip.iter().any(|s| s == &sym.id) || webhook_keep.iter().any(|s| s == &sym.id) {
-                return false;
-            }
-            if sym.artifact == IrBindingArtifact::Client {
-                return false;
-            }
-            matches!(sym.call, IrBindingCall::Wrap { .. })
-        })
+        .filter(|sym| emittable_symbol(sym, &skip, &webhook_keep))
         .collect();
 
     let mut core_imports: Vec<String> = wrap
@@ -61,7 +53,7 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
     let mut invoke_fns: Vec<String> = Vec::new();
     for sym in &wrap {
         wrap_by_id.insert(sym.id.as_str(), *sym);
-        invoke_fns.push(emit_wrap_invoke(sym)?);
+        invoke_fns.push(emit_invoke(sym)?);
     }
 
     let routing = chrome
@@ -154,6 +146,62 @@ fn invoke_fn_name(sym: &IrBindingSymbol) -> String {
         .strip_suffix("_binding")
         .unwrap_or(&sym.rust_fn_name);
     format!("invoke_{stem}")
+}
+
+fn emittable_symbol(sym: &IrBindingSymbol, skip: &[String], webhook_keep: &[String]) -> bool {
+    if skip.iter().any(|s| s == &sym.id)
+        || webhook_keep.iter().any(|s| s == &sym.id)
+        || sym.id == "validatePublicBaseUrl"
+        || sym.id == "assertResponseResult"
+    {
+        return false;
+    }
+    if sym.artifact == IrBindingArtifact::Client {
+        return false;
+    }
+    match &sym.call {
+        IrBindingCall::Wrap { .. } => true,
+        IrBindingCall::Verbatim => sym.verbatim_body.is_some(),
+    }
+}
+
+fn emit_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
+    match &sym.call {
+        IrBindingCall::Wrap { .. } => emit_wrap_invoke(sym),
+        IrBindingCall::Verbatim => emit_verbatim_invoke(sym),
+    }
+}
+
+fn emit_verbatim_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
+    let body = sym.verbatim_body.as_deref().ok_or_else(|| {
+        GenError::Parse(format!("{} is verbatim without a body", sym.id))
+    })?;
+    let name = invoke_fn_name(sym);
+    let adapted = adapt_verbatim_body(body);
+    Ok(format!(
+        "fn {name}(input: &FixtureInput) -> Result<Value, BindingError> {{\n    let args_json = fixture_args_json(input)?;\n    {adapted}\n}}"
+    ))
+}
+
+fn adapt_verbatim_body(body: &str) -> String {
+    let rewritten = body
+        .replace("args_map(&args_json)", "args_map_json(&args_json)")
+        .replace("SdkError::transport", "verbatim_sdk_transport");
+    let trimmed = rewritten.trim();
+    if trimmed.contains('\n') {
+        let lines: Vec<&str> = trimmed.lines().collect();
+        let rest = lines[1..]
+            .iter()
+            .map(|line| {
+                let stripped = line.strip_prefix("            ").unwrap_or(line);
+                format!("    {stripped}")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("{}\n{rest}", lines[0])
+    } else {
+        trimmed.to_owned()
+    }
 }
 
 fn emit_wrap_invoke(sym: &IrBindingSymbol) -> GenResult<String> {

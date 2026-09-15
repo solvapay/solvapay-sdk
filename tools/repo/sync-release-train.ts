@@ -12,7 +12,9 @@ import {
   readReleaseTrainVersion,
   RELEASE_TRAIN_CARGO_TOMLS,
   RELEASE_TRAIN_PYPROJECTS,
+  RELEASE_TRAIN_GO_VERSION_TESTS,
   RELEASE_TRAIN_RUBY_VERSIONS,
+  stampGoVersionTest,
   stampPyprojectDependency,
   stampRubyVersion,
   stampTomlPackageVersion,
@@ -39,6 +41,10 @@ function stamp(repoRoot: string, version: string): void {
   for (const rel of RELEASE_TRAIN_RUBY_VERSIONS) {
     const abs = joinRel(repoRoot, rel)
     writeIfChanged(abs, stampRubyVersion(readFileSync(abs, 'utf8'), version))
+  }
+  for (const rel of RELEASE_TRAIN_GO_VERSION_TESTS) {
+    const abs = joinRel(repoRoot, rel)
+    writeIfChanged(abs, stampGoVersionTest(readFileSync(abs, 'utf8'), version))
   }
 }
 

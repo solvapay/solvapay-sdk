@@ -64,7 +64,9 @@ fn resolve_nudge_text(nudge: &Value, limits: Option<&Value>) -> String {
     artifact = "payloadBuilders",
     catalog = "none",
     section = "MCP payload / descriptors",
-    emit_order = 23
+    emit_order = 23,
+    typed_as = "envelope:ResponseEnvelope",
+    typed_style = "envelope:annotation"
 )]
 pub fn build_payable_tool_result(envelope: &ResponseEnvelope) -> McpPayableToolResult {
     let options = envelope.options.as_ref().and_then(Value::as_object);

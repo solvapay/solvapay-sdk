@@ -480,7 +480,7 @@ pub unsafe extern "C" fn sv_minor_units_per_major_binding(
     pack(run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let currency = require_string(&args, "currency")?;
-        Ok(Value::from(minor_units_per_major(&currency)))
+        to_value(&minor_units_per_major(&currency))
     }))
 }
 
@@ -651,7 +651,7 @@ pub unsafe extern "C" fn sv_is_unlimited_remaining_binding(
 
 // --- MCP payload / descriptors ---
 
-/// Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+/// Binding for `paywallToolResult`.
 ///
 /// # Safety
 ///
@@ -661,9 +661,9 @@ pub unsafe extern "C" fn sv_paywall_tool_result_binding(args_ptr: *mut u8, args_
     let args_json = read_string(args_ptr, args_len);
     pack(run_envelope_sync(|| {
         let args = args_map(&args_json)?;
-        let message = require_string(&args, "message")?;
+        let narration = require_string(&args, "message")?;
         let gate: PaywallGate = require_typed(&args, "structuredContent")?;
-        to_value(&paywall_tool_result(&message, &gate))
+        to_value(&paywall_tool_result(&narration, &gate))
     }))
 }
 
@@ -1106,7 +1106,7 @@ pub unsafe extern "C" fn sv_tax_behaviors_binding(args_ptr: *mut u8, args_len: u
 
 // --- MCP payload / descriptors ---
 
-/// Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+/// Binding for `buildPayableToolResult`.
 ///
 /// # Safety
 ///

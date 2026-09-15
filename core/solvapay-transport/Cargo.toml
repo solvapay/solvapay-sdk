@@ -1,6 +1,6 @@
 [package]
 name = "solvapay-transport"
-version = "3.0.0"
+version = "2.6.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -13,9 +13,9 @@ readme = "README.md"
 publish = true
 
 [dependencies]
-solvapay-core = { path = "../solvapay-core", version = "3.0.0" }
-solvapay-dto = { path = "../solvapay-dto", version = "3.0.0" }
-solvapay-mcp-core = { path = "../solvapay-mcp", version = "3.0.0", default-features = false, features = ["server", "engine"] }
+solvapay-core = { path = "../solvapay-core", version = "2.6.0" }
+solvapay-dto = { path = "../solvapay-dto", version = "2.6.0" }
+solvapay-mcp-core = { path = "../solvapay-mcp", version = "2.6.0", default-features = false, features = ["server", "engine"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

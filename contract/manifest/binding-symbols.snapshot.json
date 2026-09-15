@@ -1265,7 +1265,7 @@
       "artifact": "payloadBuilders",
       "emitOrder": 23,
       "section": "MCP payload / descriptors",
-      "doc": "Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).",
+      "doc": "Binding for `buildPayableToolResult`.",
       "docWasm": null,
       "rustFnName": "build_payable_tool_result_binding",
       "call": {
@@ -6142,12 +6142,16 @@
       "docWasm": null,
       "rustFnName": "minor_units_per_major_binding",
       "call": {
-        "kind": "verbatim"
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&currency"
+        ]
       },
-      "verbatimBody": "let args = args_map(&args_json)?;\n        let currency = require_string(&args, \"currency\")?;\n        Ok(Value::from(minor_units_per_major(&currency)))",
+      "verbatimBody": null,
       "verbatimBodyWasm": null,
       "dtoType": null,
-      "coreCall": null,
+      "coreCall": "minor_units_per_major",
       "clientCallArgs": []
     },
     "nextActionFor": {
@@ -6231,8 +6235,8 @@
       "artifact": "decisions",
       "emitOrder": 22,
       "section": "renewal",
-      "doc": "Binding for `normalizeCancelResponse`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
-      "docWasm": "Binding for `normalizeCancelResponse`.",
+      "doc": "Binding for `normalizeCancelResponse`.",
+      "docWasm": null,
       "rustFnName": "normalize_cancel_response_binding",
       "call": {
         "kind": "wrap",
@@ -6279,8 +6283,8 @@
       "artifact": "decisions",
       "emitOrder": 23,
       "section": "renewal",
-      "doc": "Binding for `normalizeReactivateResponse`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
-      "docWasm": "Binding for `normalizeReactivateResponse`.",
+      "doc": "Binding for `normalizeReactivateResponse`.",
+      "docWasm": null,
       "rustFnName": "normalize_reactivate_response_binding",
       "call": {
         "kind": "wrap",
@@ -6471,7 +6475,7 @@
           "extract": "requireString",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": null
+          "local": "narration"
         },
         {
           "name": "structuredContent",
@@ -6491,14 +6495,14 @@
       "artifact": "payloadBuilders",
       "emitOrder": 13,
       "section": "MCP payload / descriptors",
-      "doc": "Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).",
+      "doc": "Binding for `paywallToolResult`.",
       "docWasm": null,
       "rustFnName": "paywall_tool_result_binding",
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
         "args": [
-          "&message",
+          "&narration",
           "&gate"
         ]
       },
@@ -9436,7 +9440,7 @@
           "extract": "requireI64",
           "typedAs": null,
           "typedStyle": "turbofish",
-          "local": null
+          "local": "now_unix_secs"
         }
       ],
       "splitPathRefs": [],

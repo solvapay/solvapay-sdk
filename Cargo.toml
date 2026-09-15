@@ -19,6 +19,7 @@ members = [
   "tools/conformance/client-conformance",
   "tools/conformance/live-contract",
   "tools/shared/repo-paths",
+  "internal/boundary-asserts",
 ]
 exclude = [
   "examples/rust/guerrillamail-mcp",

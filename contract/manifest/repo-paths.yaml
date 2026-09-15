@@ -271,6 +271,9 @@ generated:
   - id: fixtureRunner
     path: tools/conformance/fixture-runner/src/registry.rs
     flag: --fixture-runner-out
+  - id: boundaryAsserts
+    path: internal/boundary-asserts/src/asserts.generated.rs
+    flag: --boundary-asserts-rs-out
   - id: rbMcpLayer2
     path: sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb
     flag: --rb-mcp-layer2-out
@@ -375,6 +378,7 @@ drift:
   - cConformance
   - cParity
   - fixtureRunner
+  - boundaryAsserts
   - rbMcpLayer2
   - pyMcpLayer2
   - goMcpLayer2

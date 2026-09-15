@@ -5,18 +5,19 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, attach_business_details_validation_error,
-    balance_reconcile_delays_ms, billing_cycle, build_create_customer_params,
-    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
-    build_paywall_gate, business_country_display_names, business_country_options_table, charges,
-    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
-    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
-    compile_string_field_input_schema_json, country_to_tax_id_type, counts_usage, credit_signals,
-    credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
-    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
-    derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
-    evaluate_fresh_limits, extract_backend_customer_ref, extract_bearer_token,
+    append_paid_tool_description, assert_valid_product_ref,
+    attach_business_details_validation_error, balance_reconcile_delays_ms, billing_cycle,
+    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
+    build_payable_tool_result, build_paywall_gate, business_country_display_names,
+    business_country_options_table, charges, classify_cancel_error, classify_create_error,
+    classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
+    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
+    customer_ref_from_claims, decide_paywall_outcome, decode_jwt_payload_unverified,
+    default_mcp_bearer_expectations, derive_active_products, derive_default_view,
+    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
     format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
     gate_next, get_business_country_options, get_customer_address_field_errors, get_history_next,
     get_postal_code_field_label, get_postal_code_placeholder,
@@ -24,25 +25,29 @@ use solvapay_core::{
     included_units, invoke_payable_next, is_cached_customer_ref_valid,
     is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
     is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
-    link_label, mcp_view_maps, meter_name, next_action_for, normalize_cancel_response,
-    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
-    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
-    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
-    postal_code_required_countries, project_topup_process_outcome, resolve_account_state,
-    resolve_buyer_country, resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_tax_treatment_note, reverse_charge_note,
-    select_active_plan_purchase, should_retry_usage_error, should_show_tax_row,
-    state_required_countries, supported_business_countries, tax_behaviors,
-    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
-    tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
-    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
+    link_label, mcp_view_maps, meter_name, minor_units_per_major, next_action_for,
+    normalize_cancel_response, normalize_reactivate_response, overlay_claimed_limits,
+    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    postal_code_required_countries, project_topup_process_outcome, require_product_ref,
+    resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
+    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
+    resolve_narrator_plan_shape, resolve_product_ref, resolve_purchase_customer_ref,
+    resolve_tax_treatment_note, reverse_charge_note, select_active_plan_purchase,
+    should_retry_usage_error, should_show_tax_row, state_required_countries,
+    supported_business_countries, tax_behaviors, tax_exclusive_currencies,
+    tax_id_example_by_country, tax_id_types, tax_not_collected_note, tier_bands, tier_meters,
+    to_major_units, topup_balance_poll_delays_ms, topup_process_next, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, BusinessDetailsInput, GateContent, PaywallGate,
     PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
 };
+
+#[allow(unused_imports)]
+use solvapay_core::*;
 
 #[allow(unused_imports)]
 use crate::extract::*;
@@ -69,6 +74,12 @@ fn invoke_country_to_tax_id_type(input: &FixtureInput) -> Result<Value, BindingE
     to_value(&country_to_tax_id_type())
 }
 
+fn invoke_mcp_tool_names(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let _args = args_map_json(&args_json)?;
+    Ok(mcp_tool_names_json())
+}
+
 fn invoke_postal_code_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&postal_code_required_countries())
@@ -77,6 +88,18 @@ fn invoke_postal_code_required_countries(input: &FixtureInput) -> Result<Value, 
 fn invoke_reverse_charge_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     Ok(Value::String(reverse_charge_note().to_owned()))
+}
+
+fn invoke_seller_tax_identifier_display_label_by_type(
+    input: &FixtureInput,
+) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let _args = args_map_json(&args_json)?;
+    let mut map = Map::new();
+    for (key, label) in seller_tax_identifier_display_label_by_type() {
+        map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+    }
+    Ok(Value::Object(map))
 }
 
 fn invoke_state_required_countries(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -125,6 +148,15 @@ fn invoke_append_paid_tool_description(input: &FixtureInput) -> Result<Value, Bi
     Ok(Value::String(
         append_paid_tool_description(description.as_deref()).to_owned(),
     ))
+}
+
+fn invoke_assert_valid_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let product_ref = require_string(&args, "productRef")?;
+    let context = require_string(&args, "context")?;
+    assert_valid_product_ref(&product_ref, &context)?;
+    Ok(Value::Null)
 }
 
 fn invoke_attach_business_details_validation_error(
@@ -193,6 +225,50 @@ fn invoke_build_paywall_gate(input: &FixtureInput) -> Result<Value, BindingError
     let product_ref = require_string(&args, "productRef")?;
     let limits = require_typed::<PaywallGateLimits>(&args, "limits")?;
     to_value(&build_paywall_gate(&product_ref, &limits))
+}
+
+fn invoke_build_prompt_descriptor_metadata(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let views = optional_views(&args)?;
+    let options = BuildPromptDescriptorMetadataOptions { views };
+    to_value(&build_prompt_descriptor_metadata(&options))
+}
+
+fn invoke_build_prompt_user_message(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let prompt_name = require_string(&args, "promptName")?;
+    let nested_args = match args.get("args") {
+        Some(Value::Object(_)) => args["args"].clone(),
+        Some(_) => {
+            return Err(verbatim_sdk_transport(
+                "args.args must be an object".to_owned(),
+                false,
+            ));
+        }
+        None => {
+            return Err(verbatim_sdk_transport(
+                "args.args is required".to_owned(),
+                false,
+            ));
+        }
+    };
+    to_value(&build_prompt_user_message(&prompt_name, &nested_args))
+}
+
+fn invoke_build_tool_descriptor_metadata(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let resource_uri = require_string(&args, "resourceUri")?;
+    let views = optional_views(&args)?;
+    let branding = optional_branding(&args)?;
+    let options = BuildToolDescriptorMetadataOptions {
+        resource_uri,
+        views,
+        branding,
+    };
+    to_value(&build_tool_descriptor_metadata(&options))
 }
 
 fn invoke_charges(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -276,6 +352,21 @@ fn invoke_credits_per_unit_from_balance(input: &FixtureInput) -> Result<Value, B
     ))
 }
 
+fn invoke_credits_to_display_minor_units(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let input = CreditsToDisplayInput {
+        credits: require_f64(&args, "credits")?,
+        credits_per_minor_unit: require_f64(&args, "creditsPerMinorUnit")?,
+        display_exchange_rate: require_f64(&args, "displayExchangeRate")?,
+        display_currency: require_string(&args, "displayCurrency")?,
+    };
+    match credits_to_display_minor_units(&input) {
+        Some(n) => Ok(Value::from(n)),
+        None => Ok(Value::Null),
+    }
+}
+
 fn invoke_customer_ref_from_claims(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let claims = optional_value(&args, "claims");
@@ -334,6 +425,29 @@ fn invoke_derive_default_view(input: &FixtureInput) -> Result<Value, BindingErro
     result_as_value(derive_default_view(input.as_ref()))
 }
 
+fn invoke_derive_icons(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let branding = optional_branding(&args)?;
+    match derive_icons(branding.as_ref()) {
+        None => Ok(Value::Null),
+        Some(icons) => to_value(&icons),
+    }
+}
+
+fn invoke_derive_tax_id_type(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let country = require_string(&args, "country")?;
+    match derive_tax_id_type(&country) {
+        Some(tax_type) => to_value(&tax_type),
+        None => Err(verbatim_sdk_transport(
+            format!("unsupported country: {country}"),
+            false,
+        )),
+    }
+}
+
 fn invoke_ensure_customer_next(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let state = optional_value(&args, "state");
@@ -375,6 +489,14 @@ fn invoke_evaluate_fresh_limits(input: &FixtureInput) -> Result<Value, BindingEr
     let within_limits = require_bool(&args, "withinLimits")?;
     let remaining = require_f64(&args, "remaining")?;
     to_value(&evaluate_fresh_limits(within_limits, remaining))
+}
+
+fn invoke_evaluate_product_readiness(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let input: ProductReadinessInput = serde_json::from_str(&args_json).map_err(|err| {
+        verbatim_sdk_transport(format!("invalid ProductReadinessInput: {err}"), false)
+    })?;
+    to_value(&evaluate_product_readiness(&input))
 }
 
 fn invoke_extract_backend_customer_ref(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -493,6 +615,45 @@ fn invoke_get_state_field_label(input: &FixtureInput) -> Result<Value, BindingEr
     Ok(Value::String(get_state_field_label(&country).to_owned()))
 }
 
+fn invoke_get_tax_id_example(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let country = require_string(&args, "country")?;
+    match get_tax_id_example(&country) {
+        Some(example) => Ok(Value::String(example.to_owned())),
+        None => Err(verbatim_sdk_transport(
+            format!("unsupported country: {country}"),
+            false,
+        )),
+    }
+}
+
+fn invoke_get_tax_id_field_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let country = require_string(&args, "country")?;
+    match get_tax_id_field_label(&country) {
+        Some(label) => Ok(Value::String(label.to_owned())),
+        None => Err(verbatim_sdk_transport(
+            format!("unsupported country: {country}"),
+            false,
+        )),
+    }
+}
+
+fn invoke_get_tax_id_helper_text(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let country = require_string(&args, "country")?;
+    match get_tax_id_helper_text(&country) {
+        Some(text) => Ok(Value::String(text)),
+        None => Err(verbatim_sdk_transport(
+            format!("unsupported country: {country}"),
+            false,
+        )),
+    }
+}
+
 fn invoke_headline_charges(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
@@ -585,6 +746,77 @@ fn invoke_link_label(input: &FixtureInput) -> Result<Value, BindingError> {
     Ok(Value::String(link_label(&name).to_owned()))
 }
 
+fn invoke_make_response_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let data = args
+        .get("data")
+        .cloned()
+        .ok_or_else(|| verbatim_sdk_transport("args.data is required".to_owned(), false))?;
+
+    let options = match args.get("options") {
+        None => None,
+        Some(Value::Null) => {
+            return Err(verbatim_sdk_transport(
+                "args.options must be an object when present".to_owned(),
+                false,
+            ));
+        }
+        Some(value) if value.is_object() => Some(value.clone()),
+        Some(_) => {
+            return Err(verbatim_sdk_transport(
+                "args.options must be an object when present".to_owned(),
+                false,
+            ));
+        }
+    };
+
+    let emitted_blocks = match args.get("emittedBlocks") {
+        None => Vec::new(),
+        Some(Value::Array(items)) => items.clone(),
+        Some(_) => {
+            return Err(verbatim_sdk_transport(
+                "args.emittedBlocks must be an array when present".to_owned(),
+                false,
+            ));
+        }
+    };
+
+    let limits = args.get("limits").cloned();
+
+    to_value(&make_response_result(data, options, emitted_blocks, limits))
+}
+
+fn invoke_map_route_error(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let kind = match require_string(&args, "kind")?.as_str() {
+        "solvapay" => RouteErrorKind::SolvaPay,
+        "paywall" => RouteErrorKind::Paywall,
+        "error" => RouteErrorKind::Error,
+        "unknown" => RouteErrorKind::Unknown,
+        other => {
+            return Err(verbatim_sdk_transport(
+                format!(
+                    "args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown', got {other:?}"
+                ),
+                false,
+            ));
+        }
+    };
+    let message = optional_string(&args, "message")?;
+    let default_message = optional_string(&args, "defaultMessage")?;
+    let operation_name = require_string(&args, "operationName")?;
+    let status = optional_u16(&args, "status")?;
+    to_value(&map_route_error(&RouteErrorInput {
+        kind,
+        message,
+        status,
+        operation_name,
+        default_message,
+    }))
+}
+
 fn invoke_mcp_view_maps(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&mcp_view_maps())
@@ -594,6 +826,12 @@ fn invoke_meter_name(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     to_value(&meter_name(priced.as_ref()))
+}
+
+fn invoke_minor_units_per_major(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let currency = require_string(&args, "currency")?;
+    to_value(&minor_units_per_major(&currency))
 }
 
 fn invoke_next_action_for(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -638,9 +876,9 @@ fn invoke_paywall_structured_content_schema(input: &FixtureInput) -> Result<Valu
 
 fn invoke_paywall_tool_result(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
-    let message = require_string(&args, "message")?;
+    let narration = require_string(&args, "message")?;
     let gate: PaywallGate = require_typed(&args, "structuredContent")?;
-    to_value(&paywall_tool_result(&message, &gate))
+    to_value(&paywall_tool_result(&narration, &gate))
 }
 
 fn invoke_pegged_credits_per_unit(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -688,6 +926,25 @@ fn invoke_plan_pricing_shape(input: &FixtureInput) -> Result<Value, BindingError
     to_value(&plan_pricing_shape(priced.as_ref()))
 }
 
+fn invoke_project_payment_intent_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let processor_payment_id = require_string(&args, "processorPaymentId")?;
+    let client_secret = require_string(&args, "clientSecret")?;
+    let publishable_key = require_string(&args, "publishableKey")?;
+    let customer_ref = require_string(&args, "customerRef")?;
+    let account_id = optional_string(&args, "accountId")?;
+    to_value(&project_payment_intent_result(
+        &PaymentIntentSource {
+            processor_payment_id,
+            client_secret,
+            publishable_key,
+            account_id,
+        },
+        &customer_ref,
+    ))
+}
+
 fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let status = optional_string(&args, "status")?;
@@ -696,6 +953,31 @@ fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, B
         status.as_deref(),
         message.as_deref(),
     ))
+}
+
+fn invoke_project_usage_snapshot(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let purchase = match args.get("activePurchase") {
+        None | Some(Value::Null) => None,
+        Some(v) => Some(v),
+    };
+    let limits = match args.get("limits") {
+        None | Some(Value::Null) => None,
+        Some(v) => Some(v),
+    };
+    to_value(&project_usage_snapshot(purchase, limits))
+}
+
+fn invoke_require_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let metadata_product = optional_string(&args, "metadataProduct")?;
+    let env_product = optional_string(&args, "envProduct")?;
+    Ok(Value::String(require_product_ref(
+        metadata_product.as_deref(),
+        env_product.as_deref(),
+    )?))
 }
 
 fn invoke_resolve_account_state(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -784,6 +1066,59 @@ fn invoke_resolve_purchase_customer_ref(input: &FixtureInput) -> Result<Value, B
     ))
 }
 
+fn invoke_resolve_return_url(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let body_return_url = optional_string(&args, "bodyReturnUrl")?;
+    let options_return_url = optional_string(&args, "optionsReturnUrl")?;
+    let origin = optional_string(&args, "origin")?;
+    let body_return_url_null = match args.get("bodyReturnUrlNull") {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(flag)) => Some(*flag),
+        Some(_) => {
+            return Err(verbatim_sdk_transport(
+                "args.bodyReturnUrlNull must be a boolean when present".to_owned(),
+                false,
+            ));
+        }
+    };
+    match resolve_return_url(
+        body_return_url.as_deref(),
+        options_return_url.as_deref(),
+        origin.as_deref(),
+        body_return_url_null,
+    ) {
+        None => Ok(Value::Null),
+        Some(url) => Ok(Value::String(url)),
+    }
+}
+
+fn invoke_resolve_seller_identity_display(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let input = SellerIdentityInput {
+        country: optional_string(&args, "country")?,
+        vat_number: optional_string(&args, "vatNumber")?,
+        tax_id: optional_string(&args, "taxId")?,
+        company_number: optional_string(&args, "companyNumber")?,
+    };
+    to_value(&resolve_seller_identity_display(&input))
+}
+
+fn invoke_resolve_tax_behavior(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let behavior = require_string(&args, "behavior")?;
+    let currency = require_string(&args, "currency")?;
+    match resolve_tax_behavior(&behavior, &currency) {
+        Some(resolved) => Ok(Value::String(resolved.to_owned())),
+        None => Err(verbatim_sdk_transport(
+            format!("unsupported tax behavior: {behavior}"),
+            false,
+        )),
+    }
+}
+
 fn invoke_resolve_tax_treatment_note(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
@@ -798,6 +1133,13 @@ fn invoke_select_active_plan_purchase(input: &FixtureInput) -> Result<Value, Bin
         purchases.as_ref(),
         product_ref.as_deref(),
     ))
+}
+
+fn invoke_select_active_purchases(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let args = args_map_json(&args_json)?;
+    let purchases = require_array(&args, "purchases")?;
+    Ok(Value::Array(select_active_purchases(purchases)))
 }
 
 fn invoke_should_retry_usage_error(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -872,6 +1214,14 @@ fn invoke_validate_attach_business_details_params(
     ))
 }
 
+fn invoke_validate_business_details(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args_json = fixture_args_json(input)?;
+    let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {
+        verbatim_sdk_transport(format!("invalid BusinessDetailsInput: {err}"), false)
+    })?;
+    to_value(&validate_business_details(&input))
+}
+
 fn invoke_validate_checkout_session_params(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let product_ref = optional_string(&args, "productRef")?;
@@ -940,50 +1290,42 @@ pub fn create_default_registry() -> BindingRegistry {
         "validateBusinessDetails",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_validate_business_details(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_validate_business_details(&fixture.input)),
         },
     );
     registry.register(
         "deriveTaxIdType",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| crate::bindings::invoke_derive_tax_id_type(&fixture.input)),
+            invoke: Box::new(|fixture| invoke_derive_tax_id_type(&fixture.input)),
         },
     );
     registry.register(
         "resolveTaxBehavior",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_resolve_tax_behavior(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_resolve_tax_behavior(&fixture.input)),
         },
     );
     registry.register(
         "getTaxIdExample",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| crate::bindings::invoke_get_tax_id_example(&fixture.input)),
+            invoke: Box::new(|fixture| invoke_get_tax_id_example(&fixture.input)),
         },
     );
     registry.register(
         "getTaxIdFieldLabel",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_get_tax_id_field_label(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_get_tax_id_field_label(&fixture.input)),
         },
     );
     registry.register(
         "getTaxIdHelperText",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_get_tax_id_helper_text(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_get_tax_id_helper_text(&fixture.input)),
         },
     );
     registry.register(
@@ -997,9 +1339,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "minorUnitsPerMajor",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_minor_units_per_major(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_minor_units_per_major(&fixture.input)),
         },
     );
     registry.register(
@@ -1013,9 +1353,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "creditsToDisplayMinorUnits",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_credits_to_display_minor_units(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_credits_to_display_minor_units(&fixture.input)),
         },
     );
     registry.register(
@@ -1023,7 +1361,7 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(|fixture| {
-                crate::bindings::invoke_seller_tax_identifier_display_label_by_type(&fixture.input)
+                invoke_seller_tax_identifier_display_label_by_type(&fixture.input)
             }),
         },
     );
@@ -1040,9 +1378,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "resolveSellerIdentityDisplay",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::invoke_resolve_seller_identity_display(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_resolve_seller_identity_display(&fixture.input)),
         },
     );
     registry.register(
@@ -1139,9 +1475,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "makeResponseResult",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_payload::invoke_make_response_result(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_make_response_result(&fixture.input)),
         },
     );
     registry.register(
@@ -1157,9 +1491,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "MCP_TOOL_NAMES",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_descriptors::invoke_mcp_tool_names(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_mcp_tool_names(&fixture.input)),
         },
     );
     registry.register(
@@ -1173,40 +1505,28 @@ pub fn create_default_registry() -> BindingRegistry {
         "deriveIcons",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_descriptors::invoke_derive_icons(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_derive_icons(&fixture.input)),
         },
     );
     registry.register(
         "buildToolDescriptorMetadata",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_descriptors::invoke_build_tool_descriptor_metadata(
-                    &fixture.input,
-                )
-            }),
+            invoke: Box::new(|fixture| invoke_build_tool_descriptor_metadata(&fixture.input)),
         },
     );
     registry.register(
         "buildPromptDescriptorMetadata",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_descriptors::invoke_build_prompt_descriptor_metadata(
-                    &fixture.input,
-                )
-            }),
+            invoke: Box::new(|fixture| invoke_build_prompt_descriptor_metadata(&fixture.input)),
         },
     );
     registry.register(
         "buildPromptUserMessage",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::mcp_descriptors::invoke_build_prompt_user_message(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_build_prompt_user_message(&fixture.input)),
         },
     );
     registry.register(
@@ -1330,9 +1650,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "projectPaymentIntentResult",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_project_payment_intent_result(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_project_payment_intent_result(&fixture.input)),
         },
     );
     registry.register(
@@ -1353,18 +1671,14 @@ pub fn create_default_registry() -> BindingRegistry {
         "resolveReturnUrl",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_resolve_return_url(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_resolve_return_url(&fixture.input)),
         },
     );
     registry.register(
         "selectActivePurchases",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_select_active_purchases(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_select_active_purchases(&fixture.input)),
         },
     );
     registry.register(
@@ -1427,9 +1741,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "projectUsageSnapshot",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_project_usage_snapshot(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_project_usage_snapshot(&fixture.input)),
         },
     );
     registry.register(
@@ -1541,9 +1853,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "mapRouteError",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_map_route_error(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_map_route_error(&fixture.input)),
         },
     );
     registry.register(
@@ -1571,27 +1881,21 @@ pub fn create_default_registry() -> BindingRegistry {
         "requireProductRef",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_require_product_ref(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_require_product_ref(&fixture.input)),
         },
     );
     registry.register(
         "evaluateProductReadiness",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_evaluate_product_readiness(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_evaluate_product_readiness(&fixture.input)),
         },
     );
     registry.register(
         "assertValidProductRef",
         Binding {
             id: "core",
-            invoke: Box::new(|fixture| {
-                crate::bindings::helpers::invoke_assert_valid_product_ref(&fixture.input)
-            }),
+            invoke: Box::new(|fixture| invoke_assert_valid_product_ref(&fixture.input)),
         },
     );
     registry.register(

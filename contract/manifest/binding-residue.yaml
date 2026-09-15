@@ -491,44 +491,6 @@ mapRouteError:
       type: f64?
       required: false
   omitCoreCall: true
-minorUnitsPerMajor:
-  verbatimBody: |-
-    let args = args_map(&args_json)?;
-            let currency = require_string(&args, "currency")?;
-            Ok(Value::from(minor_units_per_major(&currency)))
-  args:
-    - name: currency
-      type: string
-      required: true
-  omitCoreCall: true
-normalizeCancelResponse:
-  doc: |-
-    Binding for `normalizeCancelResponse`.
-
-    Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
-  docWasm: Binding for `normalizeCancelResponse`.
-  args:
-    - name: response
-      type: value
-      required: true
-      extract: rawValueOrNull
-      local: response
-  callArgs:
-    - "&response"
-normalizeReactivateResponse:
-  doc: |-
-    Binding for `normalizeReactivateResponse`.
-
-    Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
-  docWasm: Binding for `normalizeReactivateResponse`.
-  args:
-    - name: response
-      type: value
-      required: true
-      extract: rawValueOrNull
-      local: response
-  callArgs:
-    - "&response"
 paywallErrorToClientPayload:
   doc: |-
     Binding for `paywallErrorToClientPayload`.
@@ -549,36 +511,6 @@ paywallErrorToClientPayload:
       typedAs: PaywallGate
       local: gate
   callArgs:
-    - "&gate"
-buildPayableToolResult:
-  doc: Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
-  args:
-    - name: envelope
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: ResponseEnvelope
-      local: envelope
-      typedStyle: annotation
-  callArgs:
-    - "&envelope"
-paywallToolResult:
-  doc: Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
-  args:
-    - name: message
-      type: string
-      required: true
-      extract: requireString
-      local: message
-    - name: structuredContent
-      type: value
-      required: true
-      extract: requireTyped
-      typedAs: PaywallGate
-      local: gate
-      typedStyle: annotation
-  callArgs:
-    - "&message"
     - "&gate"
 projectPaymentIntentResult:
   tsWrapper:
@@ -665,58 +597,6 @@ projectUsageSnapshot:
       type: value
       required: false
   omitCoreCall: true
-charges:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-headlineCharges:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-perUnitCharge:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-    paramStyle:
-      meter: optionalNull
-tierBands:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-    paramStyle:
-      meter: optionalNull
-tierMeters:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-usageRate:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-    paramStyle:
-      meter: optionalNull
-billingCycle:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-trialDays:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-includedUnits:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-    paramStyle:
-      meter: optionalNull
-meterName:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-countsUsage:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
 peggedCreditsPerUnit:
   tsWrapper:
     paramStyle:
@@ -725,13 +605,6 @@ peggedCreditsPerUnit:
     - charge_minor
     - credits_per_minor_unit
     - usd_to_charge_rate
-creditsPerUnitFromBalance:
-  tsWrapper:
-    paramTypes:
-      priced: PricedLike | null | undefined
-      balance: BalancePegLike | null | undefined
-    paramStyle:
-      meter: optionalNull
 resolveCheckLimitsParams:
   tsWrapper:
     paramStyle:
@@ -1046,19 +919,3 @@ validatePublicBaseUrl:
       type: string
       required: true
   omitCoreCall: true
-verifyWebhook:
-  args:
-    - name: body
-      type: string
-      required: true
-    - name: signature
-      type: string
-      required: true
-    - name: secret
-      type: string
-      required: true
-    - name: nowUnixSecs
-      type: i64
-      required: true
-      hostInjected: true
-

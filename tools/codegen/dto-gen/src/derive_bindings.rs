@@ -6,7 +6,8 @@ use crate::error::{GenError, GenResult};
 use crate::ir::{
     Ir, IrBindingArg, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink, IrBindingSymbol,
     IrBoundaryType, IrCoreFieldTy, IrCoreFn, IrCoreParam, IrCoreParamTy, IrEnvelopeMode,
-    IrExportAttr, IrExtractKind, IrLangNames, IrSerializeKind, IrSyncKind, IrTypedStyle,
+    IrExportAttr, IrExtractKind, IrLangNames, IrSerializeKind, IrSyncKind, IrTsWrapper,
+    IrTypedStyle,
 };
 use crate::lower_bindings::{
     default_extract, lower_arg, lower_artifact, lower_envelope, lower_sync, lower_ts_wrapper,
@@ -135,7 +136,7 @@ fn derive_one(
         res.split_path_refs.clone()
     };
     let dto_type = res.dto_type.clone().or_else(|| attr.dto_type.clone());
-    let call = derive_call(func, &res, artifact, &split_path_refs)?;
+    let call = derive_call(func, attr, &res, artifact, &split_path_refs)?;
     let core_call = match &call {
         IrBindingCall::Wrap { .. } if artifact == IrBindingArtifact::Webhook => None,
         _ if res.omit_core_call => None,
@@ -172,7 +173,7 @@ fn derive_one(
         dto_type,
         core_call,
         client_call_args,
-        ts_wrapper: res.ts_wrapper.as_ref().map(lower_ts_wrapper),
+        ts_wrapper: merge_ts_wrapper(attr, &res),
     })
 }
 
@@ -245,6 +246,26 @@ pub fn lang_names(id: &str) -> IrLangNames {
         go: rust_type_name(id),
         rust: snake,
         c: id.to_owned(),
+    }
+}
+
+fn merge_ts_wrapper(
+    attr: &IrExportAttr,
+    res: &crate::manifest::BindingResidueDef,
+) -> Option<IrTsWrapper> {
+    let mut wrap = res.ts_wrapper.as_ref().map(lower_ts_wrapper).unwrap_or_default();
+    for (name, ty) in &attr.ts_param_types {
+        wrap.param_types.entry(name.clone()).or_insert_with(|| ty.clone());
+    }
+    for (name, style) in &attr.ts_param_style {
+        wrap.param_style
+            .entry(name.clone())
+            .or_insert_with(|| style.clone());
+    }
+    if wrap == IrTsWrapper::default() {
+        None
+    } else {
+        Some(wrap)
     }
 }
 
@@ -381,6 +402,7 @@ fn route_doc_from_rustdoc(rustdoc: &str) -> Option<String> {
 
 fn derive_call(
     func: &IrCoreFn,
+    attr: &IrExportAttr,
     res: &BindingResidueDef,
     artifact: IrBindingArtifact,
     split_path_refs: &[String],
@@ -408,10 +430,12 @@ fn derive_call(
         });
     }
     let serialize = serialize_from_return(&func.return_ty);
-    let call_args = res
-        .call_args
-        .clone()
-        .unwrap_or_else(|| func.params.iter().map(call_arg_token).collect());
+    let call_args = res.call_args.clone().unwrap_or_else(|| {
+        func.params
+            .iter()
+            .map(|param| call_arg_token(param, attr))
+            .collect()
+    });
     Ok(IrBindingCall::Wrap {
         serialize,
         args: call_args,
@@ -433,7 +457,20 @@ fn serialize_from_return(ret: &IrCoreParamTy) -> IrSerializeKind {
     }
 }
 
-fn call_arg_token(param: &IrCoreParam) -> String {
+fn call_arg_token(param: &IrCoreParam, attr: &IrExportAttr) -> String {
+    let name = attr
+        .rename
+        .get(&param.rust_name)
+        .cloned()
+        .unwrap_or_else(|| to_camel_case(&param.rust_name));
+    if attr.extract.get(&name).map(String::as_str) == Some("rawValueOrNull") {
+        let local = attr
+            .local
+            .get(&name)
+            .cloned()
+            .unwrap_or_else(|| param.rust_name.clone());
+        return format!("&{local}");
+    }
     let local = &param.rust_name;
     if param.ty.optional {
         return match &param.ty.ty {

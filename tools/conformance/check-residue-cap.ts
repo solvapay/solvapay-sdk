@@ -8,7 +8,7 @@ import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
 
 /** Last reviewed residue key count. Shrink this number as entries drain. */
-export const RESIDUE_KEY_CAP = 57
+export const RESIDUE_KEY_CAP = 39
 
 export function countResidueKeys(yaml: string): number {
   return yaml.split('\n').filter(line => /^[A-Za-z_]/.test(line)).length

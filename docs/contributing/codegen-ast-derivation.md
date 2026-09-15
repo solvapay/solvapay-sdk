@@ -42,7 +42,7 @@ harnesses) is still open and is what Phase 5 addresses.
 | Binding descriptors           | `bindings:` in `contract/manifest/sdk-contract.yaml` (lines 2899–6473)                                                                                                                             | **3,574 of 6,595 lines (54%)**                                                        |
 | Boundary types                | `sdks/typescript/core/src/*.ts` (`customer-sync.ts`, `paywall-decision.ts`, `product-readiness.ts`, `business-details-public.ts`, `renewal.ts`, `usage.ts`, `payment.ts`, `seller-identity.ts`, …) | ~300 lines of TS mirroring Rust structs/enums. **None carry `@generated`.**           |
 | Dispatch wrappers             | `sdks/typescript/server/src/native-decisions.ts` (454), `sdks/typescript/core/src/native-helpers.ts` (365), `native-core.ts` (109), `native-dispatch.ts` (92)                                      | ~1,020 lines                                                                          |
-| Fixture-runner registry       | `tools/conformance/fixture-runner/src/registry.rs` (`@generated`) + hand-written residue in `bindings.rs` / `bindings/*.rs`                                                                        | Generated 73-entry table + 41 wrap bodies; 32 verbatim/extra bodies stay hand-written |
+| Fixture-runner registry       | `tools/conformance/fixture-runner/src/registry.rs` (`@generated`) + host-simulation residue in `bindings.rs` / `bindings/*.rs`                                                                      | Generated wrap + verbatim bodies; irreducible host sims stay hand-written (`withRetry`, `pollBalanceUntilIncreased`, `constructSdkError`, `resolveAuthenticatedUser`) |
 | Per-language replay harnesses | See table below                                                                                                                                                                                    | **4,171 lines**                                                                       |
 
 The last two together are **4,926 lines of hand-written replay plumbing** for one
@@ -289,12 +289,12 @@ What each surface actually replays today:
 
 | Surface     | Fixtures replayed      | Signature-parity suite                                                                                                                                                                                                                                                                                                                                                      | Notable gap                                                                                                            |
 | ----------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Python      | 550 (full)             | `emit_parity_suite_py.rs` — exact method census + `(self, args_json)` signature + awaitable vs blocking-str matrix + `__init__.pyi` AST cross-check. Per-op param names do not exist at the JSON envelope, so argument order cannot be asserted at runtime.                                                                                                                 | —                                                                                                                      |
-| Ruby        | 550 (full)             | `emit_parity_suite_rb.rs` — presence + exact `Method#parameters` keyword arity (ceiling)                                                                                                                                                                                                                                                                                    | —                                                                                                                      |
-| TypeScript  | 550 via the JS harness | `emit_parity_suite_ts.rs` — `expectTypeOf` full method types (ceiling); runtime defaults compared to `withRetry` / `retryNextDelayMs` / paywall TTL                                                                                                                                                                                                                         | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke)                                  |
-| Go          | **550** (full)         | `emit_parity_suite_go.rs` — reflect arity + per-slot `In(i)`/`Out(i)` types + exact exported-method census (`Close` allow-listed). Reflect never yields param names.                                                                                                                                                                                                        | Client wire asserts method/path only (`ClientConfig` has no `clockMs`/`rngSeed`)                                       |
-| Rust facade | 104 (`client/`)        | `emit_parity_suite_rs.rs` — compile-time typed call assertions (`_assert_typed_surface` / blocking twin) using the same `rust_params` / `rust_ok_type` as the client emitter                                                                                                                                                                                                | Non-client suites go through `fixture-runner`, not the facade                                                          |
-| C ABI       | **550** (full)         | `emit_parity_suite_c.rs` — link-time ABI refs + per-op dispatch presence + sequential probe of every `split_path_refs` key. The envelope reports only the first missing key, so the suite fills prior keys and asserts the next name; it does not change the production error path. C has no signatures, so argument order is observable only as that missing-key sequence. | Client wire asserts method/path/query/body, not headers (`ClientConfig` has no `clockMs`/`rngSeed`, same caveat as Go) |
+| Python      | census `executed`      | `emit_parity_suite_py.rs` — exact method census + `(self, args_json)` signature + awaitable vs blocking-str matrix + `__init__.pyi` AST cross-check. Per-op param names do not exist at the JSON envelope, so argument order cannot be asserted at runtime.                                                                                                                 | —                                                                                                                      |
+| Ruby        | census `executed`      | `emit_parity_suite_rb.rs` — presence + exact `Method#parameters` keyword arity (ceiling)                                                                                                                                                                                                                                                                                    | —                                                                                                                      |
+| TypeScript  | census via the JS harness | `emit_parity_suite_ts.rs` — `expectTypeOf` full method types (ceiling); runtime defaults compared to `withRetry` / `retryNextDelayMs` / paywall TTL                                                                                                                                                                                                                         | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke)                                  |
+| Go          | census `executed`      | `emit_parity_suite_go.rs` — reflect arity + per-slot `In(i)`/`Out(i)` types + exact exported-method census (`Close` allow-listed). Reflect never yields param names.                                                                                                                                                                                                        | Client wire asserts method/path only (`ClientConfig` has no `clockMs`/`rngSeed`)                                       |
+| Rust facade | client suite (census)  | `emit_parity_suite_rs.rs` — compile-time typed call assertions (`_assert_typed_surface` / blocking twin) using the same `rust_params` / `rust_ok_type` as the client emitter                                                                                                                                                                                                | Non-client suites go through `fixture-runner`, not the facade                                                          |
+| C ABI       | census `executed`      | `emit_parity_suite_c.rs` — link-time ABI refs + per-op dispatch presence + sequential probe of every `split_path_refs` key. The envelope reports only the first missing key, so the suite fills prior keys and asserts the next name; it does not change the production error path. C has no signatures, so argument order is observable only as that missing-key sequence. | Client wire asserts method/path/query/body, not headers (`ClientConfig` has no `clockMs`/`rngSeed`, same caveat as Go) |
 
 Two conclusions. First, “add native-language facade tests” is mostly
 **gap-closing**, not greenfield — Python and Ruby already do the thing. Second,
@@ -313,7 +313,7 @@ The six components each harness hand-rolls map onto emitter output:
 Order so each step is independently shippable:
 
 1. **Python first.** Generate the harness for a surface that already has full
-   coverage, and require all 550 fixtures to stay green. Validates the emitter
+   coverage, and require the generated census `executed` count to stay green. Validates the emitter
    against a known-good baseline before it is used to _add_ coverage.
    **Landed:** `emit_conformance_py.rs` + `assets/conformance-py-emit.snapshot.json`
    (`--py-conformance-out`); header-only ratchet vs the hand-written
@@ -331,7 +331,7 @@ Order so each step is independently shippable:
    **Landed:** `emit_conformance_go.rs` + `assets/conformance-go-emit.snapshot.json`
    (`--go-conformance-out`); `Toolchain::Go` now emits `decisions.rs` /
    `payload_builders.rs` (`sv_*` helpers) plus `internal/nativecall.CallSync`.
-   `contract_fixtures_test.go` asserts a 550/550 census. Go client wire
+   `contract_fixtures_test.go` asserts the generated census. Go client wire
    assertions stay method/path-only until `clockMs`/`rngSeed` land on
    `ClientConfig`.
 4. **C.** Pair with a new `emit_parity_suite_c.rs` (the only surface with no
@@ -339,9 +339,9 @@ Order so each step is independently shippable:
    **Landed:** `emit_conformance_c.rs` + `assets/conformance-c-emit.snapshot.json`
    (`--c-conformance-out`) plus `emit_parity_suite_c.rs` (`--c-parity-out`).
    A test-only `--features fixture-host` ABI in `sdks/capi` reuses
-   `fixture-runner` for the 446 helper fixtures; the 104 client fixtures go
+   `fixture-runner` for helper fixtures; client fixtures go
    through `solvapay_client_call` against a single-shot TCP stub.
-   `ctest/contract.sh` asserts a 550/550 census. C client wire assertions cover
+   `ctest/contract.sh` asserts the generated census. C client wire assertions cover
    method/path/query/body, not `clockMs`/`rngSeed`-derived idempotency headers.
 5. **Normalize parity assertions.** **Landed:** each emitter generates the
    strongest check the boundary can express (see table above). Permanent proof is
@@ -357,7 +357,7 @@ have: dual node/edge `verifyWebhook` bindings, `process.env` patching for
 dispatch table out from the host-specific remainder. Do not imply wholesale
 generation.
 
-**Done when:** Python/Ruby/Go replay 550 fixtures from generated harnesses; C
+**Done when:** Python/Ruby/Go replay the census corpus from generated harnesses; C
 replays the full reachable surface (client + helpers once dispatch exists);
 parity suites assert the strongest check each language can express; adding a
 core helper extends every surface’s conformance suite without a hand-edit.
@@ -435,15 +435,9 @@ survives as the language-neutral interchange every other runner consumes.
    that can silently discard captured behavior, which is why byte-identical
    reproduction is a **gate**, not a sanity check.
 
-2. **`fixture-runner` cannot execute the client suite.** It registers 73
-   `solvapay-core` pure helpers and **zero client methods**, so all 104
-   `contract/fixtures/client/` fixtures return `skipped_unbound`. Rust still
-   replays them — via wiremock suites (`client_group_{a,b,c}_fixtures.rs`,
-   `solvapay/tests/fixture_conformance.rs`) — just not through the runner.
-   Emitting a client wire fixture from a Rust test means emitting from those
-   wiremock suites. Closing the runner gap needs a stub transport in the runner
-   itself; Phase 1’s registry emitter and Phase 5’s generated stub backend both
-   bear on that.
+2. **`fixture-runner` now replays the client suite** through
+   `client_replay.rs` (`FixtureTransport` + `block_on_ready`). Driver loops
+   stay delegated. The generated census is the locked count.
 
 Migration is a per-suite ratchet, not a big bang: annotate the Rust tests for
 one suite, emit, and require the output to reproduce the committed fixtures
@@ -471,31 +465,25 @@ The technique that made step 39G-b trustworthy: regenerate, then require
 green. Behavioral proof is the existing both-flag / fixture / unit suites,
 unchanged.
 
-Use the same ratchet for Phase 5 harnesses (Python 550 green before expanding
+Use the same ratchet for Phase 5 harnesses (Python census-green before expanding
 Go/C) and for post-Phase-5 fixture emission (webhook suite first).
 
 ## Risks and open questions
 
-- **`syn` blindness — the backstop is not built yet.** Aliases, generics, and
-  re-exports are invisible to a scanner. Phases 2–4 shipped extraction (option
-  A) but **not** the `assert_boundary::<T>()` half of the hybrid: no emitter
-  writes one, so nothing in the repo defines it. Until it exists, a mis-read
-  type is caught only by the generated shims failing to compile or by a
-  reviewed `boundary-types.snapshot.json` diff — weaker than the design claims.
-  Closing this is the highest-value follow-up before Phase 5 widens the blast
-  radius to six conformance harnesses.
-- **Verbatim residue.** 28 verbatim bodies took the "explicit overlay
-  exception" branch: they live in `contract/manifest/binding-residue.yaml`, not
-  in `sdk-contract.yaml`. That keeps the contract clean and makes the residue
-  countable in review, but it is still Rust-inside-YAML. Structured `wrap`
-  calls remain the goal; the count must not grow.
-- **Client unbound in the runner.** Phase 1 generating `registry.rs` does not
-  by itself register client methods. Treat stub-transport-in-the-runner as a
-  follow-on, not a Phase 1 scope creep.
-- **Parity:check is green.** Locked baseline before Phase 1: fixture-runner
-  `parsed=550 executed=446 passed=446 failed=0 skipped-unbound=104`. Do not
-  start later phases until that summary (or its documented successor) is
-  re-locked, or the regen ratchet will encode extras.
+- **`syn` blindness — the backstop is built.** `internal/boundary-asserts`
+  emits fn-pointer coercions for sync exports and per-DTO `assert_boundary`
+  for async client methods. A mis-read type fails `cargo check -p boundary-asserts`.
+- **Verbatim residue.** Remaining verbatim bodies live in
+  `contract/manifest/binding-residue.yaml` or as host-simulation runners, not
+  in `sdk-contract.yaml`. Structured `wrap` calls remain the goal; the residue
+  key cap must not grow.
+- **Client replay is in the runner.** Remaining residue categories I/E/N/G/A/F
+  still need Rust signature work; `RESIDUE_KEY_CAP` is ratcheted so the count
+  cannot grow.
+- **Parity:check is green.** Locked baseline is
+  `contract/fixtures/census.generated.json`. Do not start later phases until
+  that summary (or its documented successor) is re-locked, or the regen
+  ratchet will encode extras.
 - **Ruby contract suite on every CI leg.** Measured on `arm64-darwin` after
   `rake compile`: `bundle exec ruby -Itest -Ilib test/contract_fixtures_test.rb`
   is 551 runs / 0.14s (0.73s including interpreter startup). The gap was CI

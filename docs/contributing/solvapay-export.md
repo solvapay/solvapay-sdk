@@ -62,7 +62,7 @@ the file path.
 
 ## 3. Key reference
 
-Sixteen keys, in four groups. Every value is a **string literal** except
+Eighteen keys, in four groups. Every value is a **string literal** except
 `emit_order`, which is an **integer literal**.
 
 ### Identity
@@ -111,6 +111,8 @@ for any of them: a residue `args:` block makes the whole group inert.
 | `extract`       | `argName:extractKind`           | boundary arg name       | Overrides the extractor derived from `(type, required)`     |
 | `typed_as`      | `argName:Type`                  | boundary arg name       | Type for a `requireTyped` / `optionalTyped` extract         |
 | `typed_style`   | `argName:turbofish\|annotation` | boundary arg name       | How that type is written at the call site                   |
+| `ts_param_types` | `name:Type`                    | boundary arg name       | TypeScript wrapper parameter type override                  |
+| `ts_param_style` | `name:optionalNull`            | boundary arg name       | TypeScript optional-param style override                    |
 
 `rename` is the odd one out: it is looked up by the **Rust** parameter name,
 because it is what produces the boundary arg name. Every other key is looked up
@@ -257,7 +259,8 @@ Precedence is **not** uniform, and that asymmetry is the trap:
 | `omitCoreCall:`                       | Drops `core_call`                                                                                                                                            |
 | `callArgs:`                           | Replaces the derived call-argument tokens                                                                                                                    |
 | `clientCallArgs:`                     | Override; empty residue derives `&refs[i]` plus the remaining Rust params (`Some(name)` when optional)                                                       |
-| `tsWrapper:`, `doc:`, `docWasm:`      | Residue-only — there is no attribute form                                                                                                                    |
+| `tsWrapper:` (except `paramTypes` / `paramStyle`) | Residue-only chrome; `paramTypes` / `paramStyle` now have attribute forms `ts_param_types` / `ts_param_style` |
+| `doc:`, `docWasm:`                    | Residue-only — there is no attribute form                                                                                                                    |
 
 When a key has `args:` in residue, the residue arg's own `hostInjected`,
 `extract`, `local`, `typedAs` and `typedStyle` are the only ones that reach the

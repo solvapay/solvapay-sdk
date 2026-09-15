@@ -216,7 +216,8 @@ fn as_tier(option: &Value) -> Option<Tier> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 43
+    emit_order = 43,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn charges(priced: Option<&Value>) -> Vec<Charge> {
     options_of(priced)
@@ -232,7 +233,8 @@ pub fn charges(priced: Option<&Value>) -> Vec<Charge> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 44
+    emit_order = 44,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn headline_charges(priced: Option<&Value>) -> Vec<Charge> {
     let flat: Vec<Charge> = charges(priced)
@@ -257,7 +259,9 @@ pub fn headline_charges(priced: Option<&Value>) -> Vec<Charge> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 45
+    emit_order = 45,
+    ts_param_types = "priced:PricedLike | null | undefined",
+    ts_param_style = "meter:optionalNull"
 )]
 pub fn per_unit_charge(priced: Option<&Value>, meter: Option<&str>) -> Option<Charge> {
     let unit: Vec<Charge> = charges(priced)
@@ -281,7 +285,9 @@ pub fn per_unit_charge(priced: Option<&Value>, meter: Option<&str>) -> Option<Ch
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 53
+    emit_order = 53,
+    ts_param_types = "priced:PricedLike | null | undefined",
+    ts_param_style = "meter:optionalNull"
 )]
 pub fn tier_bands(priced: Option<&Value>, meter: Option<&str>) -> Vec<Tier> {
     let all: Vec<Tier> = options_of(priced).into_iter().filter_map(as_tier).collect();
@@ -312,7 +318,8 @@ pub fn tier_bands(priced: Option<&Value>, meter: Option<&str>) -> Vec<Tier> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 54
+    emit_order = 54,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn tier_meters(priced: Option<&Value>) -> Vec<String> {
     let mut seen = Vec::new();
@@ -339,7 +346,9 @@ pub fn tier_meters(priced: Option<&Value>) -> Vec<String> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 55
+    emit_order = 55,
+    ts_param_types = "priced:PricedLike | null | undefined",
+    ts_param_style = "meter:optionalNull"
 )]
 pub fn usage_rate(priced: Option<&Value>, meter: Option<&str>) -> Option<UsageRate> {
     let charge = per_unit_charge(priced, meter);
@@ -368,7 +377,8 @@ pub fn usage_rate(priced: Option<&Value>, meter: Option<&str>) -> Option<UsageRa
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 46
+    emit_order = 46,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn billing_cycle(priced: Option<&Value>) -> Option<BillingCycle> {
     for option in options_of(priced) {
@@ -394,7 +404,8 @@ pub fn billing_cycle(priced: Option<&Value>) -> Option<BillingCycle> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 47
+    emit_order = 47,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 #[allow(clippy::cast_possible_truncation)]
 pub fn trial_days(priced: Option<&Value>) -> Option<i64> {
@@ -420,7 +431,9 @@ pub fn trial_days(priced: Option<&Value>) -> Option<i64> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 48
+    emit_order = 48,
+    ts_param_types = "priced:PricedLike | null | undefined",
+    ts_param_style = "meter:optionalNull"
 )]
 pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64> {
     first_limit(priced, meter).map(|limit| limit.cap)
@@ -431,7 +444,8 @@ pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 51
+    emit_order = 51,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn meter_name(priced: Option<&Value>) -> Option<String> {
     if let Some(meter) = per_unit_charge(priced, None)
@@ -451,7 +465,8 @@ pub fn meter_name(priced: Option<&Value>) -> Option<String> {
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 52
+    emit_order = 52,
+    ts_param_types = "priced:PricedLike | null | undefined"
 )]
 pub fn counts_usage(priced: Option<&Value>) -> bool {
     if per_unit_charge(priced, None).is_some() {
@@ -489,7 +504,9 @@ pub fn pegged_credits_per_unit(
     artifact = "decisions",
     catalog = "coreHelper",
     section = "plans",
-    emit_order = 50
+    emit_order = 50,
+    ts_param_types = "priced:PricedLike | null | undefined,balance:BalancePegLike | null | undefined",
+    ts_param_style = "meter:optionalNull"
 )]
 pub fn credits_per_unit_from_balance(
     priced: Option<&Value>,
