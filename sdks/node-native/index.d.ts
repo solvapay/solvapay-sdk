@@ -405,7 +405,7 @@ export declare function paywallErrorToClientPayload(argsJson: string): string
 /** Binding for `paywallStructuredContentSchema`. */
 export declare function paywallStructuredContentSchema(argsJson: string): string
 
-/** Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`). */
+/** Binding for `paywallToolResult`. */
 export declare function paywallToolResult(argsJson: string): string
 
 /** Binding for `peggedCreditsPerUnit`. */

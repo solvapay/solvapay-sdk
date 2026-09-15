@@ -24,7 +24,7 @@ use crate::error::{envelope_from_panic_payload, err_envelope, ok_envelope};
 use fixture_runner::extract::require_clock_ms;
 use fixture_runner::{
     assert_expect, create_default_registry, discover_fixtures, BindingError, BindingRegistry,
-    DiscoveredFixture, ErrorObservation, FixtureInput,
+    DiscoveredFixture, ErrorObservation, Fixture, FixtureExpect, FixtureInput,
 };
 
 /// Last fixture index observed by an indexed host export (clock/rng sidecar).
@@ -134,13 +134,19 @@ fn invoke_sync(fn_name: &str, args_json: &str) -> String {
         Err(message) => return err_envelope(&SdkError::transport(message, false)),
     };
     let (clock, rng_seed) = selected_clock_rng(fn_name);
-    let input = FixtureInput {
-        fn_name: fn_name.to_owned(),
-        args,
-        clock,
-        rng_seed,
+    let fixture = Fixture {
+        suite: "capi".to_owned(),
+        case: "call-sync".to_owned(),
+        input: FixtureInput {
+            fn_name: fn_name.to_owned(),
+            args,
+            clock,
+            rng_seed,
+        },
+        wire: None,
+        expect: FixtureExpect::Result(Value::Null),
     };
-    match (binding.invoke)(&input) {
+    match (binding.invoke)(&fixture) {
         Ok(value) => ok_envelope(&value),
         Err(BindingError::Sdk(obs)) => observation_envelope(&obs),
         Err(BindingError::Harness(message)) => err_envelope(&SdkError::transport(message, false)),
