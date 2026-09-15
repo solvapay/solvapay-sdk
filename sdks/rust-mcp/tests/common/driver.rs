@@ -4,7 +4,7 @@ use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Implementation, ListToolsResult, ServerCapabilities,
-    ServerInfo, Tool,
+    ServerConfig, Tool,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::{ErrorData, ServerHandler, ServiceExt};
@@ -23,8 +23,8 @@ struct FixtureServer {
 }
 
 impl ServerHandler for FixtureServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new("mcp-authoring-fixtures", "0.0.1"))
     }
 
