@@ -40,18 +40,22 @@ use crate::sdk_error::sdk_error_to_observation;
 const FIXTURE_API_KEY: &str = "sk_test_fixture";
 const VALIDATION_BASE_URL: &str = "http://127.0.0.1:1";
 
-/// Polls `fut` once with [`Waker::noop`]. Panics if the future is pending.
-pub fn block_on_ready<F: Future>(fut: F) -> F::Output {
+/// Polls `fut` once with [`Waker::noop`].
+///
+/// # Errors
+///
+/// Returns [`BindingError::Harness`] when the future is pending. The fixture
+/// transport must resolve immediately.
+pub fn block_on_ready<F: Future>(fut: F) -> Result<F::Output, BindingError> {
     let waker = Waker::noop();
-    let mut cx = Context::from_waker(&waker);
+    let mut cx = Context::from_waker(waker);
     let mut fut = std::pin::pin!(fut);
     match fut.as_mut().poll(&mut cx) {
-        Poll::Ready(value) => value,
-        Poll::Pending => {
-            panic!(
-                "client replay future returned Pending; FixtureTransport must resolve immediately"
-            )
-        }
+        Poll::Ready(value) => Ok(value),
+        Poll::Pending => Err(BindingError::Harness(
+            "client replay future returned Pending; FixtureTransport must resolve immediately"
+                .to_owned(),
+        )),
     }
 }
 
@@ -160,9 +164,8 @@ fn assert_wire_request(actual: &HttpRequest, expected: &WireRequest) -> Result<(
         let actual_body = match &actual.body {
             None => Value::Null,
             Some(bytes) if bytes.is_empty() => Value::Null,
-            Some(bytes) => serde_json::from_slice(bytes).unwrap_or_else(|_| {
-                Value::String(String::from_utf8_lossy(bytes).into_owned())
-            }),
+            Some(bytes) => serde_json::from_slice(bytes)
+                .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(bytes).into_owned())),
         };
         if &actual_body != expected_body {
             return Err(format!(
@@ -242,9 +245,8 @@ pub fn invoke(fixture: &Fixture) -> Result<Value, BindingError> {
             .unwrap_or(VALIDATION_BASE_URL),
     );
     if let Some(clock) = &fixture.input.clock {
-        let secs = parse_iso8601_utc_to_unix_secs(clock).ok_or_else(|| {
-            BindingError::Harness(format!("unsupported fixture clock: {clock}"))
-        })?;
+        let secs = parse_iso8601_utc_to_unix_secs(clock)
+            .ok_or_else(|| BindingError::Harness(format!("unsupported fixture clock: {clock}")))?;
         let ms = u64::try_from(secs)
             .ok()
             .and_then(|s| s.checked_mul(1000))
@@ -265,7 +267,7 @@ pub fn invoke(fixture: &Fixture) -> Result<Value, BindingError> {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect(),
     );
-    let outcome = block_on_ready(dispatch(&client, &fixture.input.fn_name, &args));
+    let outcome = block_on_ready(dispatch(&client, &fixture.input.fn_name, &args))?;
     match outcome {
         Ok(value) => Ok(value),
         Err(err) => Err(BindingError::Sdk(sdk_error_to_observation(err))),

@@ -103,16 +103,16 @@ These are comma-separated maps of `name:Value`, except `host_injected` which is
 a plain comma-separated list. Read [§6](#6-the-residue-boundary) before reaching
 for any of them: a residue `args:` block makes the whole group inert.
 
-| Key             | Form                            | Keyed by                | Effect                                                      |
-| --------------- | ------------------------------- | ----------------------- | ----------------------------------------------------------- |
-| `host_injected` | `name,name`                     | boundary arg name       | Marks args the host adapter supplies (a clock, usually)     |
-| `rename`        | `rustParam:jsonKey`             | **Rust parameter name** | Sets the JSON arg key when camelCasing is not what you want |
-| `local`         | `argName:localIdent`            | boundary arg name       | Local binding name inside the shim                          |
-| `extract`       | `argName:extractKind`           | boundary arg name       | Overrides the extractor derived from `(type, required)`     |
-| `typed_as`      | `argName:Type`                  | boundary arg name       | Type for a `requireTyped` / `optionalTyped` extract         |
-| `typed_style`   | `argName:turbofish\|annotation` | boundary arg name       | How that type is written at the call site                   |
-| `ts_param_types` | `name:Type`                    | boundary arg name       | TypeScript wrapper parameter type override                  |
-| `ts_param_style` | `name:optionalNull`            | boundary arg name       | TypeScript optional-param style override                    |
+| Key              | Form                            | Keyed by                | Effect                                                      |
+| ---------------- | ------------------------------- | ----------------------- | ----------------------------------------------------------- |
+| `host_injected`  | `name,name`                     | boundary arg name       | Marks args the host adapter supplies (a clock, usually)     |
+| `rename`         | `rustParam:jsonKey`             | **Rust parameter name** | Sets the JSON arg key when camelCasing is not what you want |
+| `local`          | `argName:localIdent`            | boundary arg name       | Local binding name inside the shim                          |
+| `extract`        | `argName:extractKind`           | boundary arg name       | Overrides the extractor derived from `(type, required)`     |
+| `typed_as`       | `argName:Type`                  | boundary arg name       | Type for a `requireTyped` / `optionalTyped` extract         |
+| `typed_style`    | `argName:turbofish\|annotation` | boundary arg name       | How that type is written at the call site                   |
+| `ts_param_types` | `name:Type`                     | boundary arg name       | TypeScript wrapper parameter type override                  |
+| `ts_param_style` | `name:optionalNull`             | boundary arg name       | TypeScript optional-param style override                    |
 
 `rename` is the odd one out: it is looked up by the **Rust** parameter name,
 because it is what produces the boundary arg name. Every other key is looked up
@@ -251,16 +251,16 @@ consequences:
 `binding-residue.yaml` is merged in `derive_one`, keyed by canonical `id`.
 Precedence is **not** uniform, and that asymmetry is the trap:
 
-| Residue field                         | Interaction with the attribute                                                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `args:`                               | **Replaces the derived arg list wholesale.** The attribute's `rename`, `local`, `extract`, `typed_as`, `typed_style` and `host_injected` are never consulted |
-| `splitPathRefs:` / `dtoType:`         | Override the attribute when non-empty (neither is used in-tree today)                                                                                        |
-| `verbatimBody:` / `verbatimBodyWasm:` | Force `call: Verbatim`, discarding the derived serialize kind and call tokens                                                                                |
-| `omitCoreCall:`                       | Drops `core_call`                                                                                                                                            |
-| `callArgs:`                           | Replaces the derived call-argument tokens                                                                                                                    |
-| `clientCallArgs:`                     | Override; empty residue derives `&refs[i]` plus the remaining Rust params (`Some(name)` when optional)                                                       |
-| `tsWrapper:` (except `paramTypes` / `paramStyle`) | Residue-only chrome; `paramTypes` / `paramStyle` now have attribute forms `ts_param_types` / `ts_param_style` |
-| `doc:`, `docWasm:`                    | Residue-only — there is no attribute form                                                                                                                    |
+| Residue field                                     | Interaction with the attribute                                                                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `args:`                                           | **Replaces the derived arg list wholesale.** The attribute's `rename`, `local`, `extract`, `typed_as`, `typed_style` and `host_injected` are never consulted |
+| `splitPathRefs:` / `dtoType:`                     | Override the attribute when non-empty (neither is used in-tree today)                                                                                        |
+| `verbatimBody:` / `verbatimBodyWasm:`             | Force `call: Verbatim`, discarding the derived serialize kind and call tokens                                                                                |
+| `omitCoreCall:`                                   | Drops `core_call`                                                                                                                                            |
+| `callArgs:`                                       | Replaces the derived call-argument tokens                                                                                                                    |
+| `clientCallArgs:`                                 | Override; empty residue derives `&refs[i]` plus the remaining Rust params (`Some(name)` when optional)                                                       |
+| `tsWrapper:` (except `paramTypes` / `paramStyle`) | Residue-only chrome; `paramTypes` / `paramStyle` now have attribute forms `ts_param_types` / `ts_param_style`                                                |
+| `doc:`, `docWasm:`                                | Residue-only — there is no attribute form                                                                                                                    |
 
 When a key has `args:` in residue, the residue arg's own `hostInjected`,
 `extract`, `local`, `typedAs` and `typedStyle` are the only ones that reach the

@@ -52,6 +52,7 @@ pub fn invoke_resolve_authenticated_user(input: &FixtureInput) -> Result<Value, 
     }
 }
 
+/// Reads an optional string from `input.args`.
 fn optional_string_arg(input: &FixtureInput, key: &str) -> Result<Option<String>, BindingError> {
     match input.args.get(key) {
         None | Some(Value::Null) => Ok(None),
@@ -62,6 +63,7 @@ fn optional_string_arg(input: &FixtureInput, key: &str) -> Result<Option<String>
     }
 }
 
+/// Reads a required boolean from `input.args`.
 fn require_bool_arg(input: &FixtureInput, key: &str) -> Result<bool, BindingError> {
     match input.args.get(key) {
         Some(Value::Bool(b)) => Ok(*b),

@@ -7,9 +7,9 @@ require "solvapay"
 class VersionSkewTest < Minitest::Test
   def test_native_version_matches_gem
     assert_equal SolvaPay::VERSION, SolvaPay.version
-    assert_equal "3.0.0", SolvaPay.version
+    assert_equal "2.6.0", SolvaPay.version
     info = SolvaPay.native_build_info
-    assert_includes info, '"version":"3.0.0"'
+    assert_includes info, '"version":"2.6.0"'
   end
 
   def test_skew_raises

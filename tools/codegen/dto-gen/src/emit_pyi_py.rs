@@ -273,7 +273,7 @@ fn py_from_core_ty(ty: &IrCoreParamTy) -> String {
 
 fn py_from_field_ty(ty: &IrCoreFieldTy) -> String {
     match ty {
-        IrCoreFieldTy::String => "str".into(),
+        IrCoreFieldTy::String | IrCoreFieldTy::StaticStr => "str".into(),
         IrCoreFieldTy::Bool => "bool".into(),
         IrCoreFieldTy::U16 | IrCoreFieldTy::U32 | IrCoreFieldTy::U64 | IrCoreFieldTy::I64 => {
             "int".into()

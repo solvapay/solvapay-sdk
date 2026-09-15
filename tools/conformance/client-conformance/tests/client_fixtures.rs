@@ -126,10 +126,7 @@ async fn replay_one(fixture: &Fixture) -> Result<(), String> {
         Ok(value) => assert_expect(&fixture.expect, Ok(value)),
         Err(err) => {
             let observation = sdk_error_to_observation(err);
-            assert_expect(
-                &fixture.expect,
-                Err(BindingError::Sdk(fixture_error_observation(observation))),
-            )
+            assert_expect(&fixture.expect, Err(BindingError::Sdk(observation)))
         }
     };
 
@@ -149,18 +146,6 @@ async fn replay_one(fixture: &Fixture) -> Result<(), String> {
 
     drop(server);
     Ok(())
-}
-
-fn fixture_error_observation(
-    observation: client_conformance::ErrorObservation,
-) -> fixture_runner::ErrorObservation {
-    fixture_runner::ErrorObservation {
-        name: observation.name,
-        message: observation.message,
-        kind: observation.kind,
-        code: observation.code,
-        status: observation.status,
-    }
 }
 
 async fn mount_wire(server: &MockServer, wire: &Wire) -> Result<(), String> {

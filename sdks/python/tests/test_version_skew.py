@@ -13,10 +13,10 @@ import solvapay
 
 def test_installed_version_matches_native() -> None:
     assert solvapay.version is not None
-    assert solvapay.version() == "3.0.0"
+    assert solvapay.version() == "2.6.0"
     info = solvapay.native_build_info()
     assert info is not None
-    assert '"version":"3.0.0"' in info
+    assert '"version":"2.6.0"' in info
     assert '"coreSha":' in info
 
 
@@ -48,6 +48,6 @@ def test_reimport_does_not_skew_under_matching_versions() -> None:
             del sys.modules[name]
         importlib.invalidate_caches()
         reloaded = importlib.import_module("solvapay")
-        assert reloaded.version() == "3.0.0"
+        assert reloaded.version() == "2.6.0"
     finally:
         sys.modules.update(saved)

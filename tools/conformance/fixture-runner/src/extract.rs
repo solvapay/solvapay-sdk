@@ -73,6 +73,7 @@ pub fn optional_branding(
     }
 }
 
+/// Reads an optional string field from a JSON object.
 fn optional_object_string(
     map: &Map<String, Value>,
     key: &str,

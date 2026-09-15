@@ -16,7 +16,11 @@ function discoverFixtureFiles(dir: string): string[] {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       files.push(...discoverFixtureFiles(full))
-    } else if (entry.isFile() && entry.name.endsWith('.json')) {
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith('.json') &&
+      entry.name !== 'census.generated.json'
+    ) {
       files.push(full)
     }
   }

@@ -305,7 +305,7 @@ wheels = [
 
 [[package]]
 name = "solvapay"
-version = "3.0.0"
+version = "2.6.0"
 source = { editable = "." }
 
 [package.optional-dependencies]

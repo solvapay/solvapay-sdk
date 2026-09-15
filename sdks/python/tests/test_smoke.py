@@ -32,7 +32,7 @@ def _sign(body: str, secret: str, now: int) -> str:
 
 
 def test_version_matches_crate() -> None:
-    assert version() == "3.0.0"
+    assert version() == "2.6.0"
 
 
 def test_verify_webhook_accepts_fresh_signature() -> None:

@@ -252,7 +252,7 @@ fn field_ts(field: &IrCoreField, overlay: &IrCoreTypesTs) -> (&'static str, Stri
 
 fn map_ty(ty: &IrCoreFieldTy, overlay: &IrCoreTypesTs) -> String {
     match ty {
-        IrCoreFieldTy::String => "string".into(),
+        IrCoreFieldTy::String | IrCoreFieldTy::StaticStr => "string".into(),
         IrCoreFieldTy::Bool => "boolean".into(),
         IrCoreFieldTy::U16
         | IrCoreFieldTy::U32

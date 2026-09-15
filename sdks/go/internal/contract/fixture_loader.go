@@ -104,6 +104,9 @@ func DiscoverFixtureFiles(fixturesRoot string) ([]string, error) {
 		if d.IsDir() || !strings.HasSuffix(path, ".json") {
 			return nil
 		}
+		if d.Name() == "census.generated.json" {
+			return nil
+		}
 		files = append(files, path)
 		return nil
 	})

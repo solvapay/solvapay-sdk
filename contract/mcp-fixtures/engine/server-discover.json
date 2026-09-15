@@ -45,7 +45,7 @@
           "_meta": {
             "io.modelcontextprotocol/serverInfo": {
               "name": "solvapay-mcp",
-              "version": "3.0.0"
+              "version": "2.6.0"
             }
           }
         }

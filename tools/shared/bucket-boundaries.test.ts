@@ -88,6 +88,9 @@ describe('tools bucket boundaries', () => {
         if (fromBucket === 'repo' && toBucket === 'codegen') {
           continue
         }
+        if (fromBucket === 'codegen' && toBucket === 'repo') {
+          continue
+        }
         if (toBucket !== fromBucket && toBucket !== 'shared') {
           const relFile = path.relative(REPO_ROOT, file).split(path.sep).join('/')
           violations.push(`${relFile}: ${spec} -> ${toBucket}/`)

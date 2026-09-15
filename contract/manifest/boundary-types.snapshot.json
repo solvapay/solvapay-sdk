@@ -8678,7 +8678,7 @@
         "ty": {
           "kind": "vec",
           "item": {
-            "kind": "string"
+            "kind": "staticStr"
           }
         }
       }
@@ -10541,7 +10541,7 @@
             "kind": "value"
           },
           "err": {
-            "kind": "string"
+            "kind": "staticStr"
           }
         }
       }

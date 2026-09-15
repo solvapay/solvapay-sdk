@@ -253,9 +253,15 @@ fn merge_ts_wrapper(
     attr: &IrExportAttr,
     res: &crate::manifest::BindingResidueDef,
 ) -> Option<IrTsWrapper> {
-    let mut wrap = res.ts_wrapper.as_ref().map(lower_ts_wrapper).unwrap_or_default();
+    let mut wrap = res
+        .ts_wrapper
+        .as_ref()
+        .map(lower_ts_wrapper)
+        .unwrap_or_default();
     for (name, ty) in &attr.ts_param_types {
-        wrap.param_types.entry(name.clone()).or_insert_with(|| ty.clone());
+        wrap.param_types
+            .entry(name.clone())
+            .or_insert_with(|| ty.clone());
     }
     for (name, style) in &attr.ts_param_style {
         wrap.param_style
@@ -451,7 +457,7 @@ fn serialize_from_return(ret: &IrCoreParamTy) -> IrSerializeKind {
     }
     match &ret.ty {
         IrCoreFieldTy::Bool => IrSerializeKind::ValueBool,
-        IrCoreFieldTy::String => IrSerializeKind::ValueString,
+        IrCoreFieldTy::String | IrCoreFieldTy::StaticStr => IrSerializeKind::ValueString,
         IrCoreFieldTy::Result { .. } => IrSerializeKind::ResultAsValue,
         _ => IrSerializeKind::ToValue,
     }
@@ -522,11 +528,13 @@ mod tests {
                 by_ref: true,
                 ty: IrCoreParamTy {
                     optional: false,
+                    by_ref: true,
                     ty: IrCoreFieldTy::String,
                 },
             }],
             return_ty: IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Named("CustomerRefKind".into()),
             },
             exported: Some(IrExportAttr {
@@ -572,6 +580,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Named("CustomerRefKind".into()),
             }),
             IrSerializeKind::ToValue
@@ -579,6 +588,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Bool,
             }),
             IrSerializeKind::ValueBool
@@ -586,6 +596,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::String,
             }),
             IrSerializeKind::ValueString
@@ -593,6 +604,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: true,
+                by_ref: false,
                 ty: IrCoreFieldTy::String,
             }),
             IrSerializeKind::ToValue
@@ -600,6 +612,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: true,
+                by_ref: false,
                 ty: IrCoreFieldTy::Named("HelperErrorResult".into()),
             }),
             IrSerializeKind::OptionHelperErr
@@ -607,6 +620,7 @@ mod tests {
         assert_eq!(
             serialize_from_return(&IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Result {
                     ok: Box::new(IrCoreFieldTy::Named("CheckLimitsParams".into())),
                     err: Box::new(IrCoreFieldTy::Named("HelperErrorResult".into())),
@@ -618,43 +632,48 @@ mod tests {
 
     #[test]
     fn call_args_ref_and_as_deref() {
+        let attr = IrExportAttr::default();
         let owned = IrCoreParam {
             rust_name: "now_ms".into(),
             by_ref: false,
             ty: IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::I64,
             },
         };
-        assert_eq!(call_arg_token(&owned), "now_ms");
+        assert_eq!(call_arg_token(&owned, &attr), "now_ms");
         let borrowed = IrCoreParam {
             rust_name: "customer_ref".into(),
             by_ref: true,
             ty: IrCoreParamTy {
                 optional: false,
+                by_ref: true,
                 ty: IrCoreFieldTy::String,
             },
         };
-        assert_eq!(call_arg_token(&borrowed), "&customer_ref");
+        assert_eq!(call_arg_token(&borrowed, &attr), "&customer_ref");
         let opt = IrCoreParam {
             rust_name: "email".into(),
             by_ref: true,
             ty: IrCoreParamTy {
                 optional: true,
+                by_ref: true,
                 ty: IrCoreFieldTy::String,
             },
         };
-        assert_eq!(call_arg_token(&opt), "email.as_deref()");
+        assert_eq!(call_arg_token(&opt, &attr), "email.as_deref()");
         let required_value = IrCoreParam {
             rust_name: "limits".into(),
             by_ref: true,
             ty: IrCoreParamTy {
                 optional: false,
+                by_ref: true,
                 ty: IrCoreFieldTy::Value,
             },
         };
         assert_eq!(
-            call_arg_token(&required_value),
+            call_arg_token(&required_value, &attr),
             "limits.as_ref().unwrap_or(&Value::Null)"
         );
     }
@@ -745,11 +764,13 @@ mod tests {
                 by_ref: false,
                 ty: IrCoreParamTy {
                     optional: false,
+                    by_ref: false,
                     ty: IrCoreFieldTy::Named("ActivatePlanDto".into()),
                 },
             }],
             return_ty: IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Result {
                     ok: Box::new(IrCoreFieldTy::Value),
                     err: Box::new(IrCoreFieldTy::Named("HelperErrorResult".into())),
@@ -833,6 +854,7 @@ mod tests {
                     by_ref: true,
                     ty: IrCoreParamTy {
                         optional: false,
+                        by_ref: true,
                         ty: IrCoreFieldTy::String,
                     },
                 },
@@ -841,12 +863,14 @@ mod tests {
                     by_ref: false,
                     ty: IrCoreParamTy {
                         optional: true,
+                        by_ref: false,
                         ty: IrCoreFieldTy::Named("CloneProductOverrides".into()),
                     },
                 },
             ],
             return_ty: IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Result {
                     ok: Box::new(IrCoreFieldTy::Value),
                     err: Box::new(IrCoreFieldTy::Named("SdkError".into())),

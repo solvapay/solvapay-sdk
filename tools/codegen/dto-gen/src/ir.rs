@@ -186,6 +186,8 @@ pub struct IrCoreParam {
 pub struct IrCoreParamTy {
     /// True when the Rust type is `Option<T>` (unwrapped into [`Self::ty`]).
     pub optional: bool,
+    /// True when the Rust type is a reference (`&T`, `&str`, `&[T]`).
+    pub by_ref: bool,
     /// Unwrapped type.
     pub ty: IrCoreFieldTy,
 }
@@ -299,6 +301,8 @@ pub struct IrCoreVariant {
 pub enum IrCoreFieldTy {
     /// `String`.
     String,
+    /// `&'static str` (typically a `Result` error type).
+    StaticStr,
     /// `bool`.
     Bool,
     /// Unsigned 16-bit integer.

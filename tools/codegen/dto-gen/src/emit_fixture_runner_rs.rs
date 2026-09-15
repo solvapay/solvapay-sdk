@@ -173,9 +173,10 @@ fn emit_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
 }
 
 fn emit_verbatim_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
-    let body = sym.verbatim_body.as_deref().ok_or_else(|| {
-        GenError::Parse(format!("{} is verbatim without a body", sym.id))
-    })?;
+    let body = sym
+        .verbatim_body
+        .as_deref()
+        .ok_or_else(|| GenError::Parse(format!("{} is verbatim without a body", sym.id)))?;
     let name = invoke_fn_name(sym);
     let adapted = adapt_verbatim_body(body);
     Ok(format!(

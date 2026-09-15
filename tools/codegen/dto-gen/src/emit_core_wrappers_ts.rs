@@ -667,7 +667,7 @@ fn map_param_ty_inner(
 
 fn map_field_ty(ir: &Ir, ty: &IrCoreFieldTy) -> String {
     match ty {
-        IrCoreFieldTy::String => "string".into(),
+        IrCoreFieldTy::String | IrCoreFieldTy::StaticStr => "string".into(),
         IrCoreFieldTy::Bool => "boolean".into(),
         IrCoreFieldTy::U16
         | IrCoreFieldTy::U32

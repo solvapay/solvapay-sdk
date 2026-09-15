@@ -66,11 +66,15 @@ fn emit_lib(ir: &Ir) -> String {
     // Overlay names that also exist as OpenAPI schemas must not be glob-reexported
     // from both modules (ambiguous_glob_reexports). Overlay wins at the crate root;
     // the wire type remains available as `schemas::Name`.
+    // Identity aliases (`aliasOf` matching the schema name) emit nothing in
+    // overlays.rs, so they must not shadow the schema re-export.
     let shadowed: BTreeSet<&str> = ir
         .overlays
-        .keys()
-        .filter(|name| ir.types.contains_key(name.as_str()))
-        .map(String::as_str)
+        .iter()
+        .filter(|(name, overlay)| {
+            ir.types.contains_key(name.as_str()) && overlay_emits_crate_root_type(overlay)
+        })
+        .map(|(name, _)| name.as_str())
         .collect();
 
     if shadowed.is_empty() {
@@ -97,6 +101,14 @@ fn emit_lib(ir: &Ir) -> String {
         out.push_str("};\n");
     }
     out
+}
+
+fn overlay_emits_crate_root_type(overlay: &IrOverlay) -> bool {
+    match overlay {
+        IrOverlay::Marker { .. } => false,
+        IrOverlay::Alias { name, target, .. } if name == target => false,
+        _ => true,
+    }
 }
 
 /// Escapes a string as a Rust `&str` literal body (no surrounding quotes).
@@ -853,5 +865,43 @@ mod tests {
         assert!(!lib.contains("pub use schemas::*;"));
         assert!(!lib.contains("schemas::{OneTimePurchaseInfo"));
         assert!(!lib.contains("OtherWire, OneTimePurchaseInfo"));
+    }
+
+    #[test]
+    fn lib_rs_reexports_schema_identity_alias_overlays() {
+        let mut types = BTreeMap::new();
+        types.insert(
+            "ProcessPaymentResult".into(),
+            IrType::Struct(IrStruct {
+                name: "ProcessPaymentResult".into(),
+                doc: "wire".into(),
+                fields: vec![],
+            }),
+        );
+        let mut overlays = BTreeMap::new();
+        overlays.insert(
+            "ProcessPaymentResult".into(),
+            IrOverlay::Alias {
+                name: "ProcessPaymentResult".into(),
+                target: "ProcessPaymentResult".into(),
+                doc: "alias".into(),
+            },
+        );
+        let ir = Ir {
+            types,
+            overlay_helpers: BTreeMap::new(),
+            overlays,
+            routes: vec![],
+            error_templates: crate::ir::IrErrorTemplates::default(),
+            entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
+        };
+        let lib = emit_lib(&ir);
+        assert!(lib.contains("pub use schemas::*;"));
+        assert!(!lib.contains("crate root → overlays"));
     }
 }

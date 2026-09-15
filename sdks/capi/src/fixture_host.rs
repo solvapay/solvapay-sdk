@@ -801,9 +801,7 @@ mod tests {
             .expect("fixtureCensus");
         let census_raw = std::fs::read_to_string(&census_path).expect("census.generated.json");
         let census: Value = serde_json::from_str(&census_raw).expect("census json");
-        let parsed = census["parsed"]
-            .as_u64()
-            .expect("census.parsed") as usize;
+        let parsed = census["parsed"].as_u64().expect("census.parsed") as usize;
         assert_eq!(count, parsed, "parsed fixture census");
 
         let mut classify_index = None;

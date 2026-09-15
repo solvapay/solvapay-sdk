@@ -352,6 +352,7 @@ fn scan_sig(
     let return_ty = match &sig.output {
         ReturnType::Default => IrCoreParamTy {
             optional: false,
+            by_ref: false,
             ty: IrCoreFieldTy::Unit,
         },
         ReturnType::Type(_, ty) => map_return(ty, &sig.ident.to_string())?,
@@ -377,6 +378,7 @@ fn map_param(ty: &Type, name: &str) -> GenResult<IrCoreParam> {
         by_ref,
         ty: IrCoreParamTy {
             optional,
+            by_ref: type_is_ref(inner),
             ty: map_type(inner, name)?,
         },
     })
@@ -386,6 +388,7 @@ fn map_return(ty: &Type, name: &str) -> GenResult<IrCoreParamTy> {
     let (optional, inner) = unwrap_option(ty);
     Ok(IrCoreParamTy {
         optional,
+        by_ref: type_is_ref(inner),
         ty: map_type(inner, name)?,
     })
 }
@@ -451,7 +454,7 @@ fn map_path_type(path: &syn::Path, field: &str) -> GenResult<IrCoreFieldTy> {
     match ident.as_str() {
         "Vec" => {
             let inner = first_generic(args, field, "Vec")?;
-            Ok(IrCoreFieldTy::Vec(Box::new(map_type(inner, field)?)))
+            Ok(IrCoreFieldTy::Vec(Box::new(map_vec_item(inner, field)?)))
         }
         "Map" | "BTreeMap" => {
             let (key, value) = map_generics(args, field, &ident)?;
@@ -480,11 +483,32 @@ fn map_path_type(path: &syn::Path, field: &str) -> GenResult<IrCoreFieldTy> {
             let (ok, err) = map_generics(args, field, "Result")?;
             Ok(IrCoreFieldTy::Result {
                 ok: Box::new(map_type(ok, field)?),
-                err: Box::new(map_type(err, field)?),
+                err: Box::new(map_result_err(err, field)?),
             })
         }
         other => Ok(IrCoreFieldTy::Named(other.to_owned())),
     }
+}
+
+fn map_result_err(ty: &Type, field: &str) -> GenResult<IrCoreFieldTy> {
+    if type_is_static_str(ty) {
+        return Ok(IrCoreFieldTy::StaticStr);
+    }
+    map_type(ty, field)
+}
+
+fn map_vec_item(ty: &Type, field: &str) -> GenResult<IrCoreFieldTy> {
+    if type_is_static_str(ty) {
+        return Ok(IrCoreFieldTy::StaticStr);
+    }
+    map_type(ty, field)
+}
+
+fn type_is_static_str(ty: &Type) -> bool {
+    let Type::Reference(inner) = ty else {
+        return false;
+    };
+    matches!(map_type(&inner.elem, "").ok(), Some(IrCoreFieldTy::String))
 }
 
 fn last_ident(path: &syn::Path) -> GenResult<String> {
@@ -1005,6 +1029,7 @@ fn collect_named(ty: &IrCoreFieldTy, names: &mut Vec<String>) {
         }
         IrCoreFieldTy::Unit
         | IrCoreFieldTy::String
+        | IrCoreFieldTy::StaticStr
         | IrCoreFieldTy::Bool
         | IrCoreFieldTy::U16
         | IrCoreFieldTy::U32
@@ -1501,6 +1526,56 @@ pub fn classify_customer_ref(customer_ref: &str) -> CustomerRefKind {
         assert!(
             msg.contains("unknown key mystery"),
             "unexpected error: {msg}"
+        );
+    }
+
+    #[test]
+    fn static_str_result_err_is_preserved() {
+        let func = first_fn(
+            r#"
+#[solvapay_export]
+pub fn assert_response_result(value: &Value) -> Result<Value, &'static str> {
+    unimplemented!()
+}
+"#,
+        );
+        assert_eq!(
+            func.return_ty.ty,
+            IrCoreFieldTy::Result {
+                ok: Box::new(IrCoreFieldTy::Value),
+                err: Box::new(IrCoreFieldTy::StaticStr),
+            }
+        );
+    }
+
+    #[test]
+    fn static_str_return_sets_by_ref() {
+        let func = first_fn(
+            r#"
+#[solvapay_export]
+pub fn get_state_field_label(country: &str) -> &'static str {
+    unimplemented!()
+}
+"#,
+        );
+        assert!(func.return_ty.by_ref);
+        assert_eq!(func.return_ty.ty, IrCoreFieldTy::String);
+    }
+
+    #[test]
+    fn static_slice_return_sets_by_ref() {
+        let func = first_fn(
+            r#"
+#[solvapay_export]
+pub fn tax_id_types() -> &'static [&'static str] {
+    unimplemented!()
+}
+"#,
+        );
+        assert!(func.return_ty.by_ref);
+        assert_eq!(
+            func.return_ty.ty,
+            IrCoreFieldTy::Vec(Box::new(IrCoreFieldTy::String))
         );
     }
 }

@@ -7,24 +7,24 @@ export type LanguageDep = {
 
 export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDep[]> = {
   ts: [
-    { name: '@solvapay/mcp', fallback: '3.0.0' },
-    { name: '@solvapay/server', fallback: '3.0.0' },
-    { name: '@solvapay/react', fallback: '3.0.0' },
-    { name: '@solvapay/core', fallback: '3.0.0' },
-    { name: '@solvapay/server-wasm', fallback: '3.0.0' },
+    { name: '@solvapay/mcp', fallback: '2.6.0' },
+    { name: '@solvapay/server', fallback: '2.6.0' },
+    { name: '@solvapay/react', fallback: '2.6.0' },
+    { name: '@solvapay/core', fallback: '2.6.0' },
+    { name: '@solvapay/server-wasm', fallback: '2.6.0' },
   ],
   python: [
-    { name: 'solvapay', fallback: '3.0.0' },
-    { name: 'solvapay-mcp', fallback: '3.0.0' },
+    { name: 'solvapay', fallback: '2.6.0' },
+    { name: 'solvapay-mcp', fallback: '2.6.0' },
   ],
   ruby: [
-    { name: 'solvapay', fallback: '3.0.0' },
-    { name: 'solvapay-mcp', fallback: '3.0.0' },
+    { name: 'solvapay', fallback: '2.6.0' },
+    { name: 'solvapay-mcp', fallback: '2.6.0' },
   ],
-  go: [{ name: 'github.com/solvapay/solvapay-sdk/sdks/go', fallback: 'v3.0.0' }],
+  go: [{ name: 'github.com/solvapay/solvapay-sdk/sdks/go', fallback: 'v2.6.0' }],
   rust: [
-    { name: 'solvapay', fallback: '3.0.0' },
-    { name: 'solvapay-mcp', fallback: '3.0.0' },
+    { name: 'solvapay', fallback: '2.6.0' },
+    { name: 'solvapay-mcp', fallback: '2.6.0' },
   ],
 }
 

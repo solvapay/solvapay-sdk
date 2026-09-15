@@ -22,7 +22,7 @@ func TestBuildInfoStamp(t *testing.T) {
 		t.Fatalf("BuildInfo JSON: %v", err)
 	}
 	if info.Version != "2.6.0" {
-		t.Fatalf("version = %q, want 3.0.0", info.Version)
+		t.Fatalf("version = %q, want 2.6.0", info.Version)
 	}
 	if info.CoreSha == "" {
 		t.Fatal("coreSha must be non-empty")

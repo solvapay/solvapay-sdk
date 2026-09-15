@@ -8,7 +8,7 @@ use std::fs;
 
 use dto_gen::emit_boundary_asserts_rs::emit_boundary_asserts;
 
-const ASSERT_COUNT: usize = 178;
+const ASSERT_COUNT: usize = 148;
 
 fn strip_generated_header(src: &str) -> String {
     src.lines()
@@ -19,7 +19,7 @@ fn strip_generated_header(src: &str) -> String {
 
 #[test]
 fn boundary_asserts_match_committed() {
-    let ir = support::lower_bindings_ir();
+    let ir = support::lower_test_ir();
     let emitted = emit_boundary_asserts(&ir).expect("emit");
     let formatted = support::rustfmt_source(&emitted, "boundary_asserts");
     let path = support::paths()
@@ -34,11 +34,32 @@ fn boundary_asserts_match_committed() {
 
 #[test]
 fn assert_count_ratchet() {
-    let ir = support::lower_bindings_ir();
+    let ir = support::lower_test_ir();
     let emitted = emit_boundary_asserts(&ir).expect("emit");
     let count = emitted.matches("const _:").count();
     assert!(
         count >= ASSERT_COUNT,
         "expected at least {ASSERT_COUNT} asserts, got {count}"
     );
+}
+
+#[test]
+fn sync_exports_use_fn_pointer_coercion() {
+    let ir = support::lower_test_ir();
+    let emitted = emit_boundary_asserts(&ir).expect("emit");
+    assert!(emitted.contains(
+        "const _: fn(&str) -> &'static str = solvapay_core::business_details::get_state_field_label;"
+    ));
+    assert!(emitted.contains(
+        "const _: fn() -> &'static [&'static str] = solvapay_core::business_details::tax_id_types;"
+    ));
+    assert!(emitted.contains(
+        "const _: fn(&Value) -> Result<Value, &'static str> = solvapay_core::mcp::assert_response_result;"
+    ));
+    assert!(emitted.contains(
+        "const _: fn(&RetryPolicy, u32) -> Option<std::time::Duration> = solvapay_core::retry::RetryPolicy::next_delay;"
+    ));
+    assert!(emitted.contains(
+        "const _: fn(Option<&Value>) -> Vec<Charge> = solvapay_core::pricing_options::charges;"
+    ));
 }

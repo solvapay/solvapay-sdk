@@ -71,7 +71,8 @@ impl From<&str> for BindingError {
 }
 
 /// Invokes a bound SDK function for one fixture input.
-pub type BindingFn = Box<dyn Fn(&crate::model::Fixture) -> Result<Value, BindingError> + Send + Sync>;
+pub type BindingFn =
+    Box<dyn Fn(&crate::model::Fixture) -> Result<Value, BindingError> + Send + Sync>;
 
 /// One registered implementation for an `input.fn` name.
 pub struct Binding {
@@ -191,6 +192,11 @@ pub fn run_suite(
     execute(&discovered, registry)
 }
 
+/// Whether `input.fn` is intentionally unbound and counted as `delegated`.
+fn is_delegated(fn_name: &str) -> bool {
+    matches!(fn_name, "driveGate" | "drivePayable")
+}
+
 /// Invokes every bound function for each discovered fixture and tallies outcomes.
 ///
 /// Fixtures whose `input.fn` has no registered binding increment `skipped_unbound` and are not executed.
@@ -203,10 +209,6 @@ pub fn run_suite(
 /// # Returns
 ///
 /// A [`SuiteSummary`] and collected [`FixtureFailure`] entries for mismatches and binding errors.
-fn is_delegated(fn_name: &str) -> bool {
-    matches!(fn_name, "driveGate" | "drivePayable")
-}
-
 fn execute(
     discovered: &[DiscoveredFixture],
     registry: &BindingRegistry,

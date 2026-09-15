@@ -498,6 +498,7 @@ fn variant_json(variant: &crate::ir::IrCoreVariant) -> serde_json::Value {
 fn field_ty_json(ty: &IrCoreFieldTy) -> serde_json::Value {
     match ty {
         IrCoreFieldTy::String => serde_json::json!({ "kind": "string" }),
+        IrCoreFieldTy::StaticStr => serde_json::json!({ "kind": "staticStr" }),
         IrCoreFieldTy::Bool => serde_json::json!({ "kind": "bool" }),
         IrCoreFieldTy::U16 => serde_json::json!({ "kind": "u16" }),
         IrCoreFieldTy::U32 => serde_json::json!({ "kind": "u32" }),
@@ -678,6 +679,7 @@ pub fn ignore_me(_u: UnusedRoot) {}
             params: vec![],
             return_ty: IrCoreParamTy {
                 optional: false,
+                by_ref: false,
                 ty: IrCoreFieldTy::Bool,
             },
             exported: None,
