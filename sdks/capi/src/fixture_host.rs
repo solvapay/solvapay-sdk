@@ -795,7 +795,16 @@ mod tests {
     #[test]
     fn corpus_count_round_trip_and_assert() {
         let count = solvapay_fh_fixture_count();
-        assert_eq!(count, 769, "parsed fixture census");
+        let census_path = repo_paths::load()
+            .expect("repo paths")
+            .generated_path("fixtureCensus")
+            .expect("fixtureCensus");
+        let census_raw = std::fs::read_to_string(&census_path).expect("census.generated.json");
+        let census: Value = serde_json::from_str(&census_raw).expect("census json");
+        let parsed = census["parsed"]
+            .as_u64()
+            .expect("census.parsed") as usize;
+        assert_eq!(count, parsed, "parsed fixture census");
 
         let mut classify_index = None;
         for i in 0..count {

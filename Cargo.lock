@@ -576,6 +576,8 @@ dependencies = [
  "serde",
  "serde_json",
  "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
  "thiserror",
  "walkdir",
 ]

@@ -12,6 +12,7 @@ export const GATE_SCRIPTS = [
   'manifest:check',
   'parity:check',
   'test:fixtures',
+  'census:check',
   'snapshot:openapi:check',
   'docs:coverage',
   'docs:parity',

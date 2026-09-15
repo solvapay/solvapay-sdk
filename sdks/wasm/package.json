@@ -66,9 +66,11 @@
     "test": "node --test __test__/*.mjs",
     "symbols:check": "node scripts/check-browser-symbols.mjs",
     "measure": "node scripts/measure-wasm.mjs --check",
-    "measure:record": "node scripts/measure-wasm.mjs --record"
+    "measure:record": "node scripts/measure-wasm.mjs --record",
+    "test:workerd-edge-smoke": "node scripts/workerd-edge-smoke/run-smoke.mjs"
   },
   "devDependencies": {
-    "binaryen": "131.0.0"
+    "binaryen": "131.0.0",
+    "wrangler": "4.98.0"
   }
 }

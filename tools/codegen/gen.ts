@@ -23,6 +23,7 @@ import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
 import { emitCoreSurfaceChangeset } from './core-surface-changeset.js'
+import { runCensus } from '../repo/census.js'
 import { runFacadeCoverage } from './facade-coverage.js'
 import { planNativePrepare, runNativePrepare } from './native-prepare.js'
 import { runWasmProfiles } from './wasm-profiles.js'
@@ -256,6 +257,14 @@ export function runGen(options: CliOptions): CliResult {
       stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}`,
     }
   }
+  const census = runCensus({ check: false })
+  if (census.exitCode !== 0) {
+    return {
+      exitCode: census.exitCode,
+      stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${census.stdout}`,
+      stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${census.stderr}`,
+    }
+  }
   emitCoreSurfaceChangeset()
   if (!options.check) {
     let prepareStdout = ''
@@ -267,23 +276,23 @@ export function runGen(options: CliOptions): CliResult {
       if (prepared.exitCode !== 0) {
         return {
           exitCode: prepared.exitCode,
-          stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
-          stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${prepareStderr}`,
+          stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${census.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+          stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${census.stderr}${prepareStderr}`,
         }
       }
     }
     return {
       exitCode: 0,
-      stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
-      stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${prepareStderr}`,
+      stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${census.stdout}${prepareStdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+      stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${census.stderr}${prepareStderr}`,
     }
   }
   const after = hashGeneratedTree(REPO_ROOT, GENERATED_PATHS)
   const drift = formatIdempotenceResult(diffGeneratedHashes(before ?? new Map(), after))
   return {
     exitCode: drift.exitCode,
-    stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${drift.stdout}`,
-    stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${drift.stderr}`,
+    stdout: `${gen.stdout}${types.stdout}${profiles.stdout}${coverage.stdout}${census.stdout}${drift.stdout}`,
+    stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}${census.stderr}${drift.stderr}`,
   }
 }
 

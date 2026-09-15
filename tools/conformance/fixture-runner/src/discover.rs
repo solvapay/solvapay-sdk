@@ -47,7 +47,11 @@ pub fn discover_fixtures(root: &Path) -> RunnerResult<Vec<DiscoveredFixture>> {
         }
         let path = entry.path();
         match path.extension().and_then(|ext| ext.to_str()) {
-            Some("json") => paths.push(path.to_path_buf()),
+            Some("json")
+                if path.file_name().and_then(|n| n.to_str()) != Some("census.generated.json") =>
+            {
+                paths.push(path.to_path_buf())
+            }
             _ => continue,
         }
     }

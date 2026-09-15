@@ -1,5 +1,7 @@
 /*
- * C ABI golden-fixture census. parsed=769; C skips driveGate/drivePayable (no facade).
+ * C ABI golden-fixture census. Constants must match
+ * contract/fixtures/census.generated.json parsed / (parsed - delegated);
+ * sdks/capi/src/fixture_host.rs asserts that file.
  */
 
 #include "contract/harness.h"

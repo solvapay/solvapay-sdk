@@ -940,1047 +940,1430 @@ pub fn create_default_registry() -> BindingRegistry {
         "validateBusinessDetails",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_validate_business_details),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_validate_business_details(&fixture.input)
+            }),
         },
     );
     registry.register(
         "deriveTaxIdType",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_derive_tax_id_type),
+            invoke: Box::new(|fixture| crate::bindings::invoke_derive_tax_id_type(&fixture.input)),
         },
     );
     registry.register(
         "resolveTaxBehavior",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_resolve_tax_behavior),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_resolve_tax_behavior(&fixture.input)
+            }),
         },
     );
     registry.register(
         "getTaxIdExample",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_get_tax_id_example),
+            invoke: Box::new(|fixture| crate::bindings::invoke_get_tax_id_example(&fixture.input)),
         },
     );
     registry.register(
         "getTaxIdFieldLabel",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_get_tax_id_field_label),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_get_tax_id_field_label(&fixture.input)
+            }),
         },
     );
     registry.register(
         "getTaxIdHelperText",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_get_tax_id_helper_text),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_get_tax_id_helper_text(&fixture.input)
+            }),
         },
     );
     registry.register(
         "getBusinessCountryOptions",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_business_country_options),
+            invoke: Box::new(|fixture| invoke_get_business_country_options(&fixture.input)),
         },
     );
     registry.register(
         "minorUnitsPerMajor",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_minor_units_per_major),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_minor_units_per_major(&fixture.input)
+            }),
         },
     );
     registry.register(
         "isZeroDecimalCurrency",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_zero_decimal_currency),
+            invoke: Box::new(|fixture| invoke_is_zero_decimal_currency(&fixture.input)),
         },
     );
     registry.register(
         "creditsToDisplayMinorUnits",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_credits_to_display_minor_units),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_credits_to_display_minor_units(&fixture.input)
+            }),
         },
     );
     registry.register(
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_seller_tax_identifier_display_label_by_type),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_seller_tax_identifier_display_label_by_type(&fixture.input)
+            }),
         },
     );
     registry.register(
         "getSellerTaxIdentifierDisplayLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_seller_tax_identifier_display_label),
+            invoke: Box::new(|fixture| {
+                invoke_get_seller_tax_identifier_display_label(&fixture.input)
+            }),
         },
     );
     registry.register(
         "resolveSellerIdentityDisplay",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::invoke_resolve_seller_identity_display),
+            invoke: Box::new(|fixture| {
+                crate::bindings::invoke_resolve_seller_identity_display(&fixture.input)
+            }),
         },
     );
     registry.register(
         "withRetry",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::retry::invoke_with_retry),
+            invoke: Box::new(|fixture| crate::bindings::retry::invoke_with_retry(&fixture.input)),
         },
     );
     registry.register(
         "pollBalanceUntilIncreased",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::balance_poll::invoke_poll_balance_until_increased),
+            invoke: Box::new(|fixture| {
+                crate::bindings::balance_poll::invoke_poll_balance_until_increased(&fixture.input)
+            }),
         },
     );
     registry.register(
         "TOPUP_BALANCE_POLL_DELAYS_MS",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_topup_balance_poll_delays_ms),
+            invoke: Box::new(|fixture| invoke_topup_balance_poll_delays_ms(&fixture.input)),
         },
     );
     registry.register(
         "BALANCE_RECONCILE_DELAYS_MS",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_balance_reconcile_delays_ms),
+            invoke: Box::new(|fixture| invoke_balance_reconcile_delays_ms(&fixture.input)),
         },
     );
     registry.register(
         "verifyWebhook",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::webhook::invoke_verify_webhook),
+            invoke: Box::new(|fixture| {
+                crate::bindings::webhook::invoke_verify_webhook(&fixture.input)
+            }),
         },
     );
     registry.register(
         "constructSdkError",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::error_model::invoke_construct_sdk_error),
+            invoke: Box::new(|fixture| {
+                crate::bindings::error_model::invoke_construct_sdk_error(&fixture.input)
+            }),
         },
     );
     registry.register(
         "classifyPaywallState",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_paywall_state),
+            invoke: Box::new(|fixture| invoke_classify_paywall_state(&fixture.input)),
         },
     );
     registry.register(
         "buildGateMessage",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_gate_message),
+            invoke: Box::new(|fixture| invoke_build_gate_message(&fixture.input)),
         },
     );
     registry.register(
         "buildNudgeMessage",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_nudge_message),
+            invoke: Box::new(|fixture| invoke_build_nudge_message(&fixture.input)),
         },
     );
     registry.register(
         "buildPaywallGate",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_paywall_gate),
+            invoke: Box::new(|fixture| invoke_build_paywall_gate(&fixture.input)),
         },
     );
     registry.register(
         "paywallErrorToClientPayload",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_paywall_error_to_client_payload),
+            invoke: Box::new(|fixture| invoke_paywall_error_to_client_payload(&fixture.input)),
         },
     );
     registry.register(
         "paywallToolResult",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_paywall_tool_result),
+            invoke: Box::new(|fixture| invoke_paywall_tool_result(&fixture.input)),
         },
     );
     registry.register(
         "makeResponseResult",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_payload::invoke_make_response_result),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_payload::invoke_make_response_result(&fixture.input)
+            }),
         },
     );
     registry.register(
         "assertResponseResult",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_payload::invoke_assert_response_result),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_payload::invoke_assert_response_result(&fixture.input)
+            }),
         },
     );
     registry.register(
         "MCP_TOOL_NAMES",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_descriptors::invoke_mcp_tool_names),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_mcp_tool_names(&fixture.input)
+            }),
         },
     );
     registry.register(
         "mcpViewMaps",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_mcp_view_maps),
+            invoke: Box::new(|fixture| invoke_mcp_view_maps(&fixture.input)),
         },
     );
     registry.register(
         "deriveIcons",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_descriptors::invoke_derive_icons),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_derive_icons(&fixture.input)
+            }),
         },
     );
     registry.register(
         "buildToolDescriptorMetadata",
         Binding {
             id: "core",
-            invoke: Box::new(
-                crate::bindings::mcp_descriptors::invoke_build_tool_descriptor_metadata,
-            ),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_build_tool_descriptor_metadata(
+                    &fixture.input,
+                )
+            }),
         },
     );
     registry.register(
         "buildPromptDescriptorMetadata",
         Binding {
             id: "core",
-            invoke: Box::new(
-                crate::bindings::mcp_descriptors::invoke_build_prompt_descriptor_metadata,
-            ),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_build_prompt_descriptor_metadata(
+                    &fixture.input,
+                )
+            }),
         },
     );
     registry.register(
         "buildPromptUserMessage",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_descriptors::invoke_build_prompt_user_message),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_build_prompt_user_message(&fixture.input)
+            }),
         },
     );
     registry.register(
         "validatePublicBaseUrl",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::mcp_descriptors::invoke_validate_public_base_url),
+            invoke: Box::new(|fixture| {
+                crate::bindings::mcp_descriptors::invoke_validate_public_base_url(&fixture.input)
+            }),
         },
     );
     registry.register(
         "resolveAuthenticatedUser",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_resolve_authenticated_user),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_resolve_authenticated_user(&fixture.input)
+            }),
         },
     );
     registry.register(
         "classifyCustomerRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_customer_ref),
+            invoke: Box::new(|fixture| invoke_classify_customer_ref(&fixture.input)),
         },
     );
     registry.register(
         "coerceCustomerOptions",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_coerce_customer_options),
+            invoke: Box::new(|fixture| invoke_coerce_customer_options(&fixture.input)),
         },
     );
     registry.register(
         "buildCreateCustomerParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_create_customer_params),
+            invoke: Box::new(|fixture| invoke_build_create_customer_params(&fixture.input)),
         },
     );
     registry.register(
         "extractBackendCustomerRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_extract_backend_customer_ref),
+            invoke: Box::new(|fixture| invoke_extract_backend_customer_ref(&fixture.input)),
         },
     );
     registry.register(
         "classifyLookupError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_lookup_error),
+            invoke: Box::new(|fixture| invoke_classify_lookup_error(&fixture.input)),
         },
     );
     registry.register(
         "classifyCreateError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_create_error),
+            invoke: Box::new(|fixture| invoke_classify_create_error(&fixture.input)),
         },
     );
     registry.register(
         "isEmailConflict",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_email_conflict),
+            invoke: Box::new(|fixture| invoke_is_email_conflict(&fixture.input)),
         },
     );
     registry.register(
         "validateActivatePlanParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_activate_plan_params),
+            invoke: Box::new(|fixture| invoke_validate_activate_plan_params(&fixture.input)),
         },
     );
     registry.register(
         "validateCreatePaymentIntentParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_create_payment_intent_params),
+            invoke: Box::new(|fixture| {
+                invoke_validate_create_payment_intent_params(&fixture.input)
+            }),
         },
     );
     registry.register(
         "validateTopupPaymentIntentParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_topup_payment_intent_params),
+            invoke: Box::new(|fixture| invoke_validate_topup_payment_intent_params(&fixture.input)),
         },
     );
     registry.register(
         "validateProcessPaymentIntentParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_process_payment_intent_params),
+            invoke: Box::new(|fixture| {
+                invoke_validate_process_payment_intent_params(&fixture.input)
+            }),
         },
     );
     registry.register(
         "validateAttachBusinessDetailsParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_attach_business_details_params),
+            invoke: Box::new(|fixture| {
+                invoke_validate_attach_business_details_params(&fixture.input)
+            }),
         },
     );
     registry.register(
         "attachBusinessDetailsValidationError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_attach_business_details_validation_error),
+            invoke: Box::new(|fixture| {
+                invoke_attach_business_details_validation_error(&fixture.input)
+            }),
         },
     );
     registry.register(
         "projectPaymentIntentResult",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_project_payment_intent_result),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_project_payment_intent_result(&fixture.input)
+            }),
         },
     );
     registry.register(
         "projectTopupProcessOutcome",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_project_topup_process_outcome),
+            invoke: Box::new(|fixture| invoke_project_topup_process_outcome(&fixture.input)),
         },
     );
     registry.register(
         "validateCheckoutSessionParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_checkout_session_params),
+            invoke: Box::new(|fixture| invoke_validate_checkout_session_params(&fixture.input)),
         },
     );
     registry.register(
         "resolveReturnUrl",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_resolve_return_url),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_resolve_return_url(&fixture.input)
+            }),
         },
     );
     registry.register(
         "selectActivePurchases",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_select_active_purchases),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_select_active_purchases(&fixture.input)
+            }),
         },
     );
     registry.register(
         "isCachedCustomerRefValid",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_cached_customer_ref_valid),
+            invoke: Box::new(|fixture| invoke_is_cached_customer_ref_valid(&fixture.input)),
         },
     );
     registry.register(
         "resolveCustomerRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_customer_ref),
+            invoke: Box::new(|fixture| invoke_resolve_customer_ref(&fixture.input)),
         },
     );
     registry.register(
         "resolvePurchaseCustomerRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_purchase_customer_ref),
+            invoke: Box::new(|fixture| invoke_resolve_purchase_customer_ref(&fixture.input)),
         },
     );
     registry.register(
         "validatePurchaseRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_purchase_ref),
+            invoke: Box::new(|fixture| invoke_validate_purchase_ref(&fixture.input)),
         },
     );
     registry.register(
         "normalizeCancelResponse",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_normalize_cancel_response),
+            invoke: Box::new(|fixture| invoke_normalize_cancel_response(&fixture.input)),
         },
     );
     registry.register(
         "normalizeReactivateResponse",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_normalize_reactivate_response),
+            invoke: Box::new(|fixture| invoke_normalize_reactivate_response(&fixture.input)),
         },
     );
     registry.register(
         "classifyCancelError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_cancel_error),
+            invoke: Box::new(|fixture| invoke_classify_cancel_error(&fixture.input)),
         },
     );
     registry.register(
         "classifyReactivateError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_classify_reactivate_error),
+            invoke: Box::new(|fixture| invoke_classify_reactivate_error(&fixture.input)),
         },
     );
     registry.register(
         "projectUsageSnapshot",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_project_usage_snapshot),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_project_usage_snapshot(&fixture.input)
+            }),
         },
     );
     registry.register(
         "resolveCheckLimitsParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_check_limits_params),
+            invoke: Box::new(|fixture| invoke_resolve_check_limits_params(&fixture.input)),
         },
     );
     registry.register(
         "validateListPlansParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_list_plans_params),
+            invoke: Box::new(|fixture| invoke_validate_list_plans_params(&fixture.input)),
         },
     );
     registry.register(
         "charges",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_charges),
+            invoke: Box::new(|fixture| invoke_charges(&fixture.input)),
         },
     );
     registry.register(
         "headlineCharges",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_headline_charges),
+            invoke: Box::new(|fixture| invoke_headline_charges(&fixture.input)),
         },
     );
     registry.register(
         "perUnitCharge",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_per_unit_charge),
+            invoke: Box::new(|fixture| invoke_per_unit_charge(&fixture.input)),
         },
     );
     registry.register(
         "tierBands",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tier_bands),
+            invoke: Box::new(|fixture| invoke_tier_bands(&fixture.input)),
         },
     );
     registry.register(
         "tierMeters",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tier_meters),
+            invoke: Box::new(|fixture| invoke_tier_meters(&fixture.input)),
         },
     );
     registry.register(
         "usageRate",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_usage_rate),
+            invoke: Box::new(|fixture| invoke_usage_rate(&fixture.input)),
         },
     );
     registry.register(
         "billingCycle",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_billing_cycle),
+            invoke: Box::new(|fixture| invoke_billing_cycle(&fixture.input)),
         },
     );
     registry.register(
         "trialDays",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_trial_days),
+            invoke: Box::new(|fixture| invoke_trial_days(&fixture.input)),
         },
     );
     registry.register(
         "includedUnits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_included_units),
+            invoke: Box::new(|fixture| invoke_included_units(&fixture.input)),
         },
     );
     registry.register(
         "meterName",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_meter_name),
+            invoke: Box::new(|fixture| invoke_meter_name(&fixture.input)),
         },
     );
     registry.register(
         "countsUsage",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_counts_usage),
+            invoke: Box::new(|fixture| invoke_counts_usage(&fixture.input)),
         },
     );
     registry.register(
         "peggedCreditsPerUnit",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_pegged_credits_per_unit),
+            invoke: Box::new(|fixture| invoke_pegged_credits_per_unit(&fixture.input)),
         },
     );
     registry.register(
         "creditsPerUnitFromBalance",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_credits_per_unit_from_balance),
+            invoke: Box::new(|fixture| invoke_credits_per_unit_from_balance(&fixture.input)),
         },
     );
     registry.register(
         "mapRouteError",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_map_route_error),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_map_route_error(&fixture.input)
+            }),
         },
     );
     registry.register(
         "isErrorResult",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_error_result),
+            invoke: Box::new(|fixture| invoke_is_error_result(&fixture.input)),
         },
     );
     registry.register(
         "validateGetProductParams",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_validate_get_product_params),
+            invoke: Box::new(|fixture| invoke_validate_get_product_params(&fixture.input)),
         },
     );
     registry.register(
         "resolveProductRef",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_product_ref),
+            invoke: Box::new(|fixture| invoke_resolve_product_ref(&fixture.input)),
         },
     );
     registry.register(
         "requireProductRef",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_require_product_ref),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_require_product_ref(&fixture.input)
+            }),
         },
     );
     registry.register(
         "evaluateProductReadiness",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_evaluate_product_readiness),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_evaluate_product_readiness(&fixture.input)
+            }),
         },
     );
     registry.register(
         "assertValidProductRef",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_assert_valid_product_ref),
+            invoke: Box::new(|fixture| {
+                crate::bindings::helpers::invoke_assert_valid_product_ref(&fixture.input)
+            }),
         },
     );
     registry.register(
         "evaluateCachedLimits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_evaluate_cached_limits),
+            invoke: Box::new(|fixture| invoke_evaluate_cached_limits(&fixture.input)),
         },
     );
     registry.register(
         "evaluateFreshLimits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_evaluate_fresh_limits),
+            invoke: Box::new(|fixture| invoke_evaluate_fresh_limits(&fixture.input)),
         },
     );
     registry.register(
         "decidePaywallOutcome",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_decide_paywall_outcome),
+            invoke: Box::new(|fixture| invoke_decide_paywall_outcome(&fixture.input)),
         },
     );
     registry.register(
         "BUSINESS_COUNTRY_DISPLAY_NAMES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_business_country_display_names),
+            invoke: Box::new(|fixture| invoke_business_country_display_names(&fixture.input)),
         },
     );
     registry.register(
         "BUSINESS_COUNTRY_OPTIONS",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_business_country_options_table),
+            invoke: Box::new(|fixture| invoke_business_country_options_table(&fixture.input)),
         },
     );
     registry.register(
         "COUNTRY_TO_TAX_ID_TYPE",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_country_to_tax_id_type),
+            invoke: Box::new(|fixture| invoke_country_to_tax_id_type(&fixture.input)),
         },
     );
     registry.register(
         "POSTAL_CODE_REQUIRED_COUNTRIES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_postal_code_required_countries),
+            invoke: Box::new(|fixture| invoke_postal_code_required_countries(&fixture.input)),
         },
     );
     registry.register(
         "REVERSE_CHARGE_NOTE",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_reverse_charge_note),
+            invoke: Box::new(|fixture| invoke_reverse_charge_note(&fixture.input)),
         },
     );
     registry.register(
         "STATE_REQUIRED_COUNTRIES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_state_required_countries),
+            invoke: Box::new(|fixture| invoke_state_required_countries(&fixture.input)),
         },
     );
     registry.register(
         "SUPPORTED_BUSINESS_COUNTRIES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_supported_business_countries),
+            invoke: Box::new(|fixture| invoke_supported_business_countries(&fixture.input)),
         },
     );
     registry.register(
         "TAX_BEHAVIORS",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tax_behaviors),
+            invoke: Box::new(|fixture| invoke_tax_behaviors(&fixture.input)),
         },
     );
     registry.register(
         "TAX_EXCLUSIVE_CURRENCIES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tax_exclusive_currencies),
+            invoke: Box::new(|fixture| invoke_tax_exclusive_currencies(&fixture.input)),
         },
     );
     registry.register(
         "TAX_ID_EXAMPLE_BY_COUNTRY",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tax_id_example_by_country),
+            invoke: Box::new(|fixture| invoke_tax_id_example_by_country(&fixture.input)),
         },
     );
     registry.register(
         "TAX_ID_TYPES",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tax_id_types),
+            invoke: Box::new(|fixture| invoke_tax_id_types(&fixture.input)),
         },
     );
     registry.register(
         "TAX_NOT_COLLECTED_NOTE",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_tax_not_collected_note),
+            invoke: Box::new(|fixture| invoke_tax_not_collected_note(&fixture.input)),
         },
     );
     registry.register(
         "appendPaidToolDescription",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_append_paid_tool_description),
+            invoke: Box::new(|fixture| invoke_append_paid_tool_description(&fixture.input)),
         },
     );
     registry.register(
         "buildCustomerSnapshot",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_customer_snapshot),
+            invoke: Box::new(|fixture| invoke_build_customer_snapshot(&fixture.input)),
         },
     );
     registry.register(
         "buildPayableToolResult",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_build_payable_tool_result),
+            invoke: Box::new(|fixture| invoke_build_payable_tool_result(&fixture.input)),
         },
     );
     registry.register(
         "compileStringFieldInputSchemaJson",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_compile_string_field_input_schema_json),
+            invoke: Box::new(|fixture| {
+                invoke_compile_string_field_input_schema_json(&fixture.input)
+            }),
         },
     );
     registry.register(
         "creditSignals",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_credit_signals),
+            invoke: Box::new(|fixture| invoke_credit_signals(&fixture.input)),
         },
     );
     registry.register(
         "customerRefFromClaims",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_customer_ref_from_claims),
+            invoke: Box::new(|fixture| invoke_customer_ref_from_claims(&fixture.input)),
         },
     );
     registry.register(
         "decodeJwtPayloadUnverified",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_decode_jwt_payload_unverified),
+            invoke: Box::new(|fixture| invoke_decode_jwt_payload_unverified(&fixture.input)),
         },
     );
     registry.register(
         "defaultMcpBearerExpectations",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_default_mcp_bearer_expectations),
+            invoke: Box::new(|fixture| invoke_default_mcp_bearer_expectations(&fixture.input)),
         },
     );
     registry.register(
         "deriveActiveProducts",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_derive_active_products),
+            invoke: Box::new(|fixture| invoke_derive_active_products(&fixture.input)),
         },
     );
     registry.register(
         "deriveDefaultView",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_derive_default_view),
+            invoke: Box::new(|fixture| invoke_derive_default_view(&fixture.input)),
         },
     );
     registry.register(
         "ensureCustomerNext",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_ensure_customer_next),
+            invoke: Box::new(|fixture| invoke_ensure_customer_next(&fixture.input)),
         },
     );
     registry.register(
         "ensureOutputSchemaObjectType",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_ensure_output_schema_object_type),
+            invoke: Box::new(|fixture| invoke_ensure_output_schema_object_type(&fixture.input)),
         },
     );
     registry.register(
         "evaluateBalanceObservation",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_evaluate_balance_observation),
+            invoke: Box::new(|fixture| invoke_evaluate_balance_observation(&fixture.input)),
         },
     );
     registry.register(
         "evaluateClaimedLimits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_evaluate_claimed_limits),
+            invoke: Box::new(|fixture| invoke_evaluate_claimed_limits(&fixture.input)),
         },
     );
     registry.register(
         "extractBearerToken",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_extract_bearer_token),
+            invoke: Box::new(|fixture| invoke_extract_bearer_token(&fixture.input)),
         },
     );
     registry.register(
         "formatCompactCredits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_format_compact_credits),
+            invoke: Box::new(|fixture| invoke_format_compact_credits(&fixture.input)),
         },
     );
     registry.register(
         "formatPrice",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_format_price),
+            invoke: Box::new(|fixture| invoke_format_price(&fixture.input)),
         },
     );
     registry.register(
         "formatSubtotalLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_format_subtotal_label),
+            invoke: Box::new(|fixture| invoke_format_subtotal_label(&fixture.input)),
         },
     );
     registry.register(
         "formatVatSummaryLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_format_vat_summary_label),
+            invoke: Box::new(|fixture| invoke_format_vat_summary_label(&fixture.input)),
         },
     );
     registry.register(
         "gateNext",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_gate_next),
+            invoke: Box::new(|fixture| invoke_gate_next(&fixture.input)),
         },
     );
     registry.register(
         "getCustomerAddressFieldErrors",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_customer_address_field_errors),
+            invoke: Box::new(|fixture| invoke_get_customer_address_field_errors(&fixture.input)),
         },
     );
     registry.register(
         "getHistoryNext",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_history_next),
+            invoke: Box::new(|fixture| invoke_get_history_next(&fixture.input)),
         },
     );
     registry.register(
         "getPostalCodeFieldLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_postal_code_field_label),
+            invoke: Box::new(|fixture| invoke_get_postal_code_field_label(&fixture.input)),
         },
     );
     registry.register(
         "getPostalCodePlaceholder",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_postal_code_placeholder),
+            invoke: Box::new(|fixture| invoke_get_postal_code_placeholder(&fixture.input)),
         },
     );
     registry.register(
         "getStateFieldLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_get_state_field_label),
+            invoke: Box::new(|fixture| invoke_get_state_field_label(&fixture.input)),
         },
     );
     registry.register(
         "historyRows",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_history_rows),
+            invoke: Box::new(|fixture| invoke_history_rows(&fixture.input)),
         },
     );
     registry.register(
         "invokePayableNext",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_invoke_payable_next),
+            invoke: Box::new(|fixture| invoke_invoke_payable_next(&fixture.input)),
         },
     );
     registry.register(
         "isCustomerAddressComplete",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_customer_address_complete),
+            invoke: Box::new(|fixture| invoke_is_customer_address_complete(&fixture.input)),
         },
     );
     registry.register(
         "isPostalCodeRequired",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_postal_code_required),
+            invoke: Box::new(|fixture| invoke_is_postal_code_required(&fixture.input)),
         },
     );
     registry.register(
         "isStateRequired",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_state_required),
+            invoke: Box::new(|fixture| invoke_is_state_required(&fixture.input)),
         },
     );
     registry.register(
         "isTaxIdType",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_tax_id_type),
+            invoke: Box::new(|fixture| invoke_is_tax_id_type(&fixture.input)),
         },
     );
     registry.register(
         "isUnlimitedRemaining",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_is_unlimited_remaining),
+            invoke: Box::new(|fixture| invoke_is_unlimited_remaining(&fixture.input)),
         },
     );
     registry.register(
         "linkLabel",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_link_label),
+            invoke: Box::new(|fixture| invoke_link_label(&fixture.input)),
         },
     );
     registry.register(
         "nextActionFor",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_next_action_for),
+            invoke: Box::new(|fixture| invoke_next_action_for(&fixture.input)),
         },
     );
     registry.register(
         "overlayClaimedLimits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_overlay_claimed_limits),
+            invoke: Box::new(|fixture| invoke_overlay_claimed_limits(&fixture.input)),
         },
     );
     registry.register(
         "paywallStructuredContentSchema",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_paywall_structured_content_schema),
+            invoke: Box::new(|fixture| invoke_paywall_structured_content_schema(&fixture.input)),
         },
     );
     registry.register(
         "planConsequence",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_plan_consequence),
+            invoke: Box::new(|fixture| invoke_plan_consequence(&fixture.input)),
         },
     );
     registry.register(
         "planLadder",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_plan_ladder),
+            invoke: Box::new(|fixture| invoke_plan_ladder(&fixture.input)),
         },
     );
     registry.register(
         "planPricingShape",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_plan_pricing_shape),
+            invoke: Box::new(|fixture| invoke_plan_pricing_shape(&fixture.input)),
         },
     );
     registry.register(
         "resolveAccountState",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_account_state),
+            invoke: Box::new(|fixture| invoke_resolve_account_state(&fixture.input)),
         },
     );
     registry.register(
         "resolveBuyerCountry",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_buyer_country),
+            invoke: Box::new(|fixture| invoke_resolve_buyer_country(&fixture.input)),
         },
     );
     registry.register(
         "resolveDisplayMode",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_display_mode),
+            invoke: Box::new(|fixture| invoke_resolve_display_mode(&fixture.input)),
         },
     );
     registry.register(
         "resolveFallbackGateLimits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_fallback_gate_limits),
+            invoke: Box::new(|fixture| invoke_resolve_fallback_gate_limits(&fixture.input)),
         },
     );
     registry.register(
         "resolvePlanShape",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_plan_shape),
+            invoke: Box::new(|fixture| invoke_resolve_plan_shape(&fixture.input)),
         },
     );
     registry.register(
         "resolveTaxTreatmentNote",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_tax_treatment_note),
+            invoke: Box::new(|fixture| invoke_resolve_tax_treatment_note(&fixture.input)),
         },
     );
     registry.register(
         "selectActivePlanPurchase",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_select_active_plan_purchase),
+            invoke: Box::new(|fixture| invoke_select_active_plan_purchase(&fixture.input)),
         },
     );
     registry.register(
         "shouldRetryUsageError",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_should_retry_usage_error),
+            invoke: Box::new(|fixture| invoke_should_retry_usage_error(&fixture.input)),
         },
     );
     registry.register(
         "shouldShowTaxRow",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_should_show_tax_row),
+            invoke: Box::new(|fixture| invoke_should_show_tax_row(&fixture.input)),
         },
     );
     registry.register(
         "toMajorUnits",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_to_major_units),
+            invoke: Box::new(|fixture| invoke_to_major_units(&fixture.input)),
         },
     );
     registry.register(
         "topupProcessNext",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_topup_process_next),
+            invoke: Box::new(|fixture| invoke_topup_process_next(&fixture.input)),
+        },
+    );
+    registry.register(
+        "activatePlan",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "assignCredits",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "attachBusinessDetails",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "bootstrapMcpProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "cancelPurchase",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "checkLimits",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "cloneProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "configureMcpPlans",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createCheckoutSession",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createCustomer",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createCustomerSession",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createPaymentIntent",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createPlan",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "createTopupPaymentIntent",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "deletePlan",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "deleteProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "disableAutoRecharge",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "fetchJwks",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getAutoRecharge",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getCreditActivity",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getCustomer",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getCustomerBalance",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getMerchant",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getPaymentMethod",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getPlatformConfig",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "getUserInfo",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "listPlans",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "listProducts",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "listPurchases",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpBootstrap",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpCallBuiltinTool",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpDispatch",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpOauthRequest",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpReadResource",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "mcpResolveAuth",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "processPaymentIntent",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "reactivatePurchase",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "saveAutoRecharge",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "trackUsage",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "trackUsageBulk",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "updateCustomer",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "updatePlan",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "updateProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
         },
     );
 

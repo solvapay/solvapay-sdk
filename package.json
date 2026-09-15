@@ -72,6 +72,8 @@
     "test:native": "tsx tools/repo/test-all.ts --native-only",
     "test:live": "tsx tools/conformance/live-all.ts",
     "test:fixtures": "cargo run -q -p fixture-runner -- contract/fixtures",
+    "census:record": "tsx tools/repo/census.ts",
+    "census:check": "tsx tools/repo/census.ts --check",
     "docs:coverage": "cargo test -q -p dto-gen --lib doc_coverage -- --nocapture",
     "docs:parity": "cargo test -q -p dto-gen --test doc_parity -- --nocapture",
     "gates": "tsx tools/repo/gates.ts",

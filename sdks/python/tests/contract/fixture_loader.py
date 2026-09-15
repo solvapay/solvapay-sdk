@@ -78,7 +78,7 @@ def find_repo_root(start: Path | None = None) -> Path:
 
 def discover_fixture_files(fixtures_root: Path) -> list[Path]:
     files = sorted(fixtures_root.rglob("*.json"))
-    return [path for path in files if path.is_file()]
+    return [path for path in files if path.is_file() and path.name != "census.generated.json"]
 
 
 def parse_fixture(raw: object, *, path: Path | None = None) -> Fixture:

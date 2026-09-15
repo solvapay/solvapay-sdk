@@ -1,6 +1,7 @@
 //! Rust fixture runner for the Phase 0 §5.3 golden-fixture corpus.
 
 pub mod bindings;
+pub mod client_replay;
 pub mod discover;
 pub mod error;
 pub mod extract;

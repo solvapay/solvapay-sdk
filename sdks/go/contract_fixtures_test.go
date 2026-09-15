@@ -2,14 +2,35 @@ package solvapay_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/contract"
 )
 
-const wantParsed, wantReplayed = 769, 764
+type fixtureCensus struct {
+	Parsed    int `json:"parsed"`
+	Delegated int `json:"delegated"`
+}
+
+func loadFixtureCensus(t *testing.T, root string) (wantParsed, wantReplayed int) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, "contract", "fixtures", "census.generated.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var census fixtureCensus
+	if err := json.Unmarshal(raw, &census); err != nil {
+		t.Fatal(err)
+	}
+	if census.Parsed <= 0 {
+		t.Fatal("census.parsed must be positive")
+	}
+	return census.Parsed, census.Parsed - census.Delegated
+}
 
 var unsupportedFns = map[string]struct{}{}
 
@@ -19,6 +40,7 @@ func TestContractFixtureCensus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	wantParsed, wantReplayed := loadFixtureCensus(t, root)
 	files, err := contract.DiscoverFixtureFiles(filepath.Join(root, "contract", "fixtures"))
 	if err != nil {
 		t.Fatal(err)

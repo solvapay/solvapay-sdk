@@ -64,13 +64,13 @@ impl From<&str> for BindingError {
 }
 
 /// Invokes a bound SDK function for one fixture input.
-pub type BindingFn = Box<dyn Fn(&FixtureInput) -> Result<Value, BindingError> + Send + Sync>;
+pub type BindingFn = Box<dyn Fn(&crate::model::Fixture) -> Result<Value, BindingError> + Send + Sync>;
 
 /// One registered implementation for an `input.fn` name.
 pub struct Binding {
     /// Binding label printed in failure output (e.g. `"core"`).
     pub id: &'static str,
-    /// Callable that maps fixture input to a JSON result or [`BindingError`].
+    /// Callable that maps a fixture to a JSON result or [`BindingError`].
     pub invoke: BindingFn,
 }
 
@@ -149,6 +149,8 @@ pub struct SuiteSummary {
     pub failed: usize,
     /// Fixtures whose `input.fn` had no registered binding.
     pub skipped_unbound: usize,
+    /// Driver-loop host simulations skipped by design (`driveGate` / `drivePayable`).
+    pub delegated: usize,
 }
 
 /// One failed binding invocation with path and diagnostic message.
@@ -194,6 +196,10 @@ pub fn run_suite(
 /// # Returns
 ///
 /// A [`SuiteSummary`] and collected [`FixtureFailure`] entries for mismatches and binding errors.
+fn is_delegated(fn_name: &str) -> bool {
+    matches!(fn_name, "driveGate" | "drivePayable")
+}
+
 fn execute(
     discovered: &[DiscoveredFixture],
     registry: &BindingRegistry,
@@ -202,17 +208,22 @@ fn execute(
     let mut passed = 0usize;
     let mut failed = 0usize;
     let mut skipped_unbound = 0usize;
+    let mut delegated = 0usize;
     let mut failures = Vec::new();
 
     for item in discovered {
         let Some(bindings) = registry.get(&item.fixture.input.fn_name) else {
-            skipped_unbound = skipped_unbound.saturating_add(1);
+            if is_delegated(&item.fixture.input.fn_name) {
+                delegated = delegated.saturating_add(1);
+            } else {
+                skipped_unbound = skipped_unbound.saturating_add(1);
+            }
             continue;
         };
 
         for binding in bindings {
             executed = executed.saturating_add(1);
-            match run_one(&item.fixture.expect, &item.fixture.input, binding) {
+            match run_one(&item.fixture, binding) {
                 Ok(()) => {
                     passed = passed.saturating_add(1);
                 }
@@ -235,6 +246,7 @@ fn execute(
             passed,
             failed,
             skipped_unbound,
+            delegated,
         },
         failures,
     ))
@@ -274,12 +286,8 @@ pub fn assert_expect(
 ///
 /// `Ok(())` when the binding outcome matches `expect`; `Err(message)` on harness
 /// failure, unexpected success/error, or field mismatch.
-pub(crate) fn run_one(
-    expect: &FixtureExpect,
-    input: &FixtureInput,
-    binding: &Binding,
-) -> Result<(), String> {
-    compare_outcome(binding.id, expect, (binding.invoke)(input))
+pub(crate) fn run_one(fixture: &crate::model::Fixture, binding: &Binding) -> Result<(), String> {
+    compare_outcome(binding.id, &fixture.expect, (binding.invoke)(fixture))
 }
 
 /// Shared comparison used by [`assert_expect`] and [`run_one`].
@@ -505,8 +513,13 @@ fn compact_json(value: &Value) -> String {
 /// A space-separated status line (`parsed=… executed=… passed=… failed=… skipped-unbound=…`).
 pub fn format_summary(summary: &SuiteSummary) -> String {
     format!(
-        "parsed={} executed={} passed={} failed={} skipped-unbound={}",
-        summary.parsed, summary.executed, summary.passed, summary.failed, summary.skipped_unbound
+        "parsed={} executed={} passed={} failed={} delegated={} unbound={}",
+        summary.parsed,
+        summary.executed,
+        summary.passed,
+        summary.failed,
+        summary.delegated,
+        summary.skipped_unbound
     )
 }
 

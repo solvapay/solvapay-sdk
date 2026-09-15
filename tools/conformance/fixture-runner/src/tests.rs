@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 
 use crate::create_default_registry;
 use crate::discover::discover_fixtures;
-use crate::model::{parse_fixture, FixtureErrorExpect, FixtureExpect, FixtureInput};
+use crate::model::{parse_fixture, Fixture, FixtureErrorExpect, FixtureExpect, FixtureInput};
 use crate::runner::{
     assert_expect, format_summary, run_one, run_suite, Binding, BindingError, BindingRegistry,
     ErrorObservation,
@@ -253,13 +253,15 @@ fn empty_registry_skips_all() {
     assert_eq!(summary.executed, 0);
     assert_eq!(summary.passed, 0);
     assert_eq!(summary.failed, 0);
-    assert_eq!(summary.skipped_unbound, summary.parsed);
+    assert_eq!(summary.delegated, 5);
+    assert_eq!(summary.skipped_unbound, summary.parsed.saturating_sub(5));
     assert!(failures.is_empty());
     assert_eq!(
         format_summary(&summary),
         format!(
-            "parsed={} executed=0 passed=0 failed=0 skipped-unbound={}",
-            summary.parsed, summary.parsed
+            "parsed={} executed=0 passed=0 failed=0 delegated=5 unbound={}",
+            summary.parsed,
+            summary.parsed.saturating_sub(5)
         )
     );
 }
@@ -279,16 +281,24 @@ fn default_registry_executes_bound_core_fixtures() {
     assert_eq!(summary.executed, bound_count);
     assert_eq!(summary.passed, bound_count);
     assert_eq!(summary.failed, 0);
-    assert_eq!(
-        summary.skipped_unbound,
-        summary.parsed.saturating_sub(bound_count)
-    );
+    assert_eq!(summary.delegated, 5);
+    assert_eq!(summary.skipped_unbound, 0);
     assert!(failures.is_empty(), "unexpected failures: {failures:?}");
     assert!(
         format_summary(&summary).contains(&format!("passed={bound_count}")),
         "summary={}",
         format_summary(&summary)
     );
+}
+
+fn fixture_for(expect: FixtureExpect) -> Fixture {
+    Fixture {
+        suite: "test".to_owned(),
+        case: "case".to_owned(),
+        input: empty_input(),
+        wire: None,
+        expect,
+    }
 }
 
 fn empty_input() -> FixtureInput {
@@ -333,7 +343,7 @@ fn error_expect_matches_structured_sdk_error() {
         }),
     };
     let expect = FixtureExpect::Error(webhook_error_expect());
-    run_one(&expect, &empty_input(), &binding).expect("structured error should match");
+    run_one(&fixture_for(expect), &binding).expect("structured error should match");
 }
 
 #[test]
@@ -349,7 +359,7 @@ fn error_expect_fails_on_message_mismatch() {
         }),
     };
     let expect = FixtureExpect::Error(webhook_error_expect());
-    let err = run_one(&expect, &empty_input(), &binding).expect_err("message mismatch");
+    let err = run_one(&fixture_for(expect), &binding).expect_err("message mismatch");
     assert!(
         err.contains("message:") && err.contains("wrong message"),
         "unexpected error: {err}"
@@ -369,7 +379,7 @@ fn error_expect_fails_on_kind_or_code_mismatch() {
         }),
     };
     let expect = FixtureExpect::Error(webhook_error_expect());
-    let err = run_one(&expect, &empty_input(), &binding).expect_err("kind/code mismatch");
+    let err = run_one(&fixture_for(expect), &binding).expect_err("kind/code mismatch");
     assert!(
         err.contains("kind:") && err.contains("code:"),
         "unexpected error: {err}"
@@ -398,7 +408,7 @@ fn error_expect_fails_on_unexpected_success() {
         invoke: Box::new(|_| Ok(Value::Bool(true))),
     };
     let expect = FixtureExpect::Error(webhook_error_expect());
-    let err = run_one(&expect, &empty_input(), &binding).expect_err("unexpected success");
+    let err = run_one(&fixture_for(expect), &binding).expect_err("unexpected success");
     assert!(
         err.contains("produced a result but fixture expects an error"),
         "unexpected error: {err}"
@@ -418,7 +428,7 @@ fn result_expect_fails_on_unexpected_sdk_error() {
         }),
     };
     let expect = FixtureExpect::Result(Value::Bool(true));
-    let err = run_one(&expect, &empty_input(), &binding).expect_err("unexpected error");
+    let err = run_one(&fixture_for(expect), &binding).expect_err("unexpected error");
     assert!(
         err.contains("returned error but fixture expects a result"),
         "unexpected error: {err}"

@@ -669,7 +669,8 @@ jobs:
           RB_SYS_CARGO_FEATURES=panic-probe bundle exec rake compile
           bundle exec ruby -Itest -Ilib test/panic_probe_test.rb
 
-      # Every leg replays the 550-fixture corpus; the full leg already covers it
+      # Every leg replays the fixture corpus (see contract/fixtures/census.generated.json);
+      # the full leg already covers it
       # via `rake test`, so skip the duplicate there.
       - name: Ruby contract fixture suite
         if: matrix.contract && !matrix.full
@@ -1292,6 +1293,9 @@ jobs:
           deno run --sloppy-imports --allow-env --allow-read=. \
             sdks/typescript/mcp-core/scripts/deno-edge-smoke.mjs
 
+      - name: Workerd edge smoke (initSync)
+        run: pnpm --filter @solvapay/server-wasm test:workerd-edge-smoke
+
       - name: Fetch-runtime validation
         run: pnpm validate:fetch-runtime
 
@@ -1449,7 +1453,7 @@ jobs:
       - name: Panic-probe containment
         run: ./sdks/capi/ctest/panic-probe.sh
 
-      - name: C fixture conformance (550)
+      - name: C fixture conformance
         run: ./sdks/capi/ctest/contract.sh
 
       - name: C MCP fixture replay

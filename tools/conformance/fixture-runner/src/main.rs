@@ -52,7 +52,7 @@ fn run() -> Result<ExitCode, RunnerError> {
 
     println!("{}", format_summary(&summary));
 
-    if summary.failed > 0 {
+    if summary.failed > 0 || summary.skipped_unbound > 0 {
         Ok(ExitCode::FAILURE)
     } else {
         Ok(ExitCode::SUCCESS)

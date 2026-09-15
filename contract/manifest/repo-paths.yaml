@@ -96,6 +96,8 @@ generated:
     flag: --dump-bindings
   - id: facadeCoverage
     path: contract/manifest/facade-coverage.json
+  - id: fixtureCensus
+    path: contract/fixtures/census.generated.json
   - id: wasmBrowserSymbols
     path: sdks/wasm/browser-symbols.generated.json
     driftPaths:
@@ -336,6 +338,7 @@ drift:
   - wasmTs
   - bindingSymbols
   - facadeCoverage
+  - fixtureCensus
   - wasmBrowserSymbols
   - boundaryTypes
   - coreTypesTs

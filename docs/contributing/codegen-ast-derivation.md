@@ -11,8 +11,15 @@ sequence; numbered migration steps stay in
 > signature-parity suites now emit each language’s assertion ceiling).
 > Sequences **after** step 55. Steps 1–54 are Done; step 55 is in progress
 > (55-a/b/c in-repo done; maintainer branch-protection apply remain).
-> `parity:check` is green. Fixture-runner `parsed=550 executed=446 passed=446
-failed=0 skipped-unbound=104`.
+> `parity:check` is green. Fixture-runner census is generated at
+> [`contract/fixtures/census.generated.json`](../../contract/fixtures/census.generated.json)
+> (`pnpm census:record` / `pnpm census:check`). Do not restate the counts here.
+>
+> **Owner's call (2026-09-15):** the locked AST-derivation baseline moved from
+> `550/446/104` to the generated census (`parsed` / `executed` /
+> `delegated`+`unbound`) because the corpus grew. The derivation's correctness
+> argument is re-anchored on that census plus the byte-identical
+> `binding-symbols.snapshot.json`. The move was reviewed rather than drifted.
 
 Companion docs:
 
@@ -39,7 +46,7 @@ harnesses) is still open and is what Phase 5 addresses.
 | Per-language replay harnesses | See table below                                                                                                                                                                                    | **4,171 lines**                                                                       |
 
 The last two together are **4,926 lines of hand-written replay plumbing** for one
-550-file corpus.
+fixture corpus (live counts: `contract/fixtures/census.generated.json`).
 
 | Surface     | Files                                                  | Lines |
 | ----------- | ------------------------------------------------------ | ----- |
@@ -187,8 +194,8 @@ Two emitters, no scanner.
 
 **Done when:** C dispatch is generated for the full client surface; fixture-runner
 `registry.rs` is `@generated` and drift-gated; `pnpm gen:check` is green; C smoke
-still passes; fixture-runner still reports `executed=446 skipped-unbound=104`
-(client unbound is unchanged — see caveat 2 below). **Landed:** `Toolchain::C`
+still passes; fixture-runner still reports the census `executed` / `unbound`
+counts (client unbound is unchanged — see caveat 2 below). **Landed:** `Toolchain::C`
 via `--c-bindings-out`; fixture-runner via `--fixture-runner-out`; chrome
 snapshots `assets/c-emit.snapshot.json` and
 `assets/fixture-runner-emit.snapshot.json`.
@@ -277,7 +284,8 @@ Emit the per-language replay harness from the same IR. Retire the 4,171
 hand-written lines in the harness table. Full-corpus coverage becomes the
 default for every surface.
 
-The corpus is 550 fixtures. What each surface actually replays today:
+The corpus size is the generated census, not a number restated in this doc.
+What each surface actually replays today:
 
 | Surface     | Fixtures replayed      | Signature-parity suite                                                                                                                                                                                                                                                                                                                                                      | Notable gap                                                                                                            |
 | ----------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |

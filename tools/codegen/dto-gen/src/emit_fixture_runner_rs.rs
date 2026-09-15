@@ -109,6 +109,25 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
         registers.push(register_stmt(&sym.id, &invoke_fn_name(sym)));
     }
 
+    let mut client_ids: Vec<&str> = ir
+        .binding_symbols
+        .values()
+        .filter(|sym| {
+            sym.artifact == IrBindingArtifact::Client
+                && skip.iter().all(|s| s != &sym.id)
+                && webhook_keep.iter().all(|s| s != &sym.id)
+        })
+        .map(|sym| sym.id.as_str())
+        .collect();
+    client_ids.sort_unstable();
+    for id in client_ids {
+        if seen.contains(id) {
+            continue;
+        }
+        seen.insert(id);
+        registers.push(register_client_stmt(id));
+    }
+
     Ok(format!(
         "{}{header}\n{core_use}{preamble}\n{}\n\n/// Builds the default [`BindingRegistry`] from generated wrap bodies plus chrome-routed hand-written helpers.\npub fn create_default_registry() -> BindingRegistry {{\n    let mut registry = BindingRegistry::new();\n\n{}\n\n    registry\n}}\n",
         generated_header(CommentStyle::ModuleDoc, "fixture-runner-out"),
@@ -119,7 +138,13 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
 
 fn register_stmt(id: &str, target: &str) -> String {
     format!(
-        "    registry.register(\n        \"{id}\",\n        Binding {{\n            id: \"core\",\n            invoke: Box::new({target}),\n        }},\n    );"
+        "    registry.register(\n        \"{id}\",\n        Binding {{\n            id: \"core\",\n            invoke: Box::new(|fixture| {target}(&fixture.input)),\n        }},\n    );"
+    )
+}
+
+fn register_client_stmt(id: &str) -> String {
+    format!(
+        "    registry.register(\n        \"{id}\",\n        Binding {{\n            id: \"client\",\n            invoke: Box::new(crate::client_replay::invoke),\n        }},\n    );"
     )
 }
 

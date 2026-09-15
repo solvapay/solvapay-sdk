@@ -21,7 +21,7 @@ module Contract
     end
 
     def discover(root)
-      Dir[root.join("**", "*.json").to_s].sort
+      Dir[root.join("**", "*.json").to_s].sort.reject { |p| File.basename(p) == "census.generated.json" }
     end
 
     def load(path)
