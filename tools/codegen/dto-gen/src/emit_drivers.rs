@@ -180,23 +180,23 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
         "\n\"\"\"Generated gate driver loop. Host supplies I/O only.\"\"\"\n\n\
          from __future__ import annotations\n\n\
          from collections.abc import Awaitable, Callable\n\
-         from typing import Any, Protocol\n\n\n\
+         from typing import Protocol\n\n\n\
          class GateDriverHost(Protocol):\n\
          \x20   def ensure_customer(self, customer_ref: str) -> str: ...\n\
-         \x20   def read_limits_cache(self, key: str) -> dict[str, Any] | None: ...\n\
-         \x20   def check_limits(self, action: dict[str, Any]) -> object: ...\n\
+         \x20   def read_limits_cache(self, key: str) -> dict[str, object] | None: ...\n\
+         \x20   def check_limits(self, action: dict[str, object]) -> object: ...\n\
          \x20   def apply_cache(self, cache: object) -> None: ...\n\
          \x20   def now_ms(self) -> int: ...\n\n\n\
          class AsyncGateDriverHost(Protocol):\n\
          \x20   def ensure_customer(self, customer_ref: str) -> Awaitable[str]: ...\n\
-         \x20   def read_limits_cache(self, key: str) -> dict[str, Any] | None: ...\n\
-         \x20   def check_limits(self, action: dict[str, Any]) -> Awaitable[object]: ...\n\
+         \x20   def read_limits_cache(self, key: str) -> dict[str, object] | None: ...\n\
+         \x20   def check_limits(self, action: dict[str, object]) -> Awaitable[object]: ...\n\
          \x20   def apply_cache(self, cache: object) -> None: ...\n\
          \x20   def now_ms(self) -> int: ...\n\n\n\
          def _cache_event(\n\
          \x20   host: GateDriverHost | AsyncGateDriverHost,\n\
-         \x20   action: dict[str, Any],\n\
-         ) -> dict[str, Any]:\n\
+         \x20   action: dict[str, object],\n\
+         ) -> dict[str, object]:\n\
          \x20   cached = host.read_limits_cache(str(action[\"key\"]))\n\
          \x20   now = host.now_ms()\n\
          \x20   if cached is None:\n\
@@ -210,12 +210,12 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20       \"nowMs\": now,\n\
          \x20   }\n\n\n\
          def run_generated_gate_loop(\n\
-         \x20   gate_next: Callable[[object, object], dict[str, Any]],\n\
+         \x20   gate_next: Callable[[object, object], dict[str, object]],\n\
          \x20   host: GateDriverHost,\n\
-         \x20   start_event: dict[str, Any],\n\
-         ) -> dict[str, Any]:\n\
+         \x20   start_event: dict[str, object],\n\
+         ) -> dict[str, object]:\n\
          \x20   state: object = None\n\
-         \x20   event: dict[str, Any] = start_event\n\
+         \x20   event: dict[str, object] = start_event\n\
          \x20   while True:\n\
          \x20       out = gate_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
@@ -239,12 +239,12 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20           raise RuntimeError(f\"gate_next returned {kind} during decide\")\n\
          \x20       raise RuntimeError(f\"gate_next returned unknown action: {kind}\")\n\n\n\
          async def run_generated_gate_loop_async(\n\
-         \x20   gate_next: Callable[[object, object], dict[str, Any]],\n\
+         \x20   gate_next: Callable[[object, object], dict[str, object]],\n\
          \x20   host: AsyncGateDriverHost,\n\
-         \x20   start_event: dict[str, Any],\n\
-         ) -> dict[str, Any]:\n\
+         \x20   start_event: dict[str, object],\n\
+         ) -> dict[str, object]:\n\
          \x20   state: object = None\n\
-         \x20   event: dict[str, Any] = start_event\n\
+         \x20   event: dict[str, object] = start_event\n\
          \x20   while True:\n\
          \x20       out = gate_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
@@ -268,18 +268,18 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20           raise RuntimeError(f\"gate_next returned {kind} during decide\")\n\
          \x20       raise RuntimeError(f\"gate_next returned unknown action: {kind}\")\n\n\n\
          class PayableDriverHost(Protocol):\n\
-         \x20   def run_gate(self, action: dict[str, Any]) -> dict[str, Any]: ...\n\
-         \x20   def invoke_handler(self, action: dict[str, Any]) -> dict[str, Any]: ...\n\
+         \x20   def run_gate(self, action: dict[str, object]) -> dict[str, object]: ...\n\
+         \x20   def invoke_handler(self, action: dict[str, object]) -> dict[str, object]: ...\n\
          \x20   def track_usage(self, request: object) -> None: ...\n\
          \x20   def now_ms(self) -> int: ...\n\
          \x20   def random_unit(self) -> float: ...\n\n\n\
          class AsyncPayableDriverHost(Protocol):\n\
-         \x20   def run_gate(self, action: dict[str, Any]) -> Awaitable[dict[str, Any]]: ...\n\
-         \x20   def invoke_handler(self, action: dict[str, Any]) -> Awaitable[dict[str, Any]]: ...\n\
+         \x20   def run_gate(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...\n\
+         \x20   def invoke_handler(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...\n\
          \x20   def track_usage(self, request: object) -> Awaitable[None]: ...\n\
          \x20   def now_ms(self) -> int: ...\n\
          \x20   def random_unit(self) -> float: ...\n\n\n\
-         def _check_payable_host_result(result: dict[str, Any]) -> dict[str, Any]:\n\
+         def _check_payable_host_result(result: dict[str, object]) -> dict[str, object]:\n\
          \x20   kind = result.get(\"kind\")\n\
          \x20   if kind == \"fatal\":\n\
          \x20       raise result[\"error\"]\n\
@@ -287,12 +287,12 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20       raise RuntimeError(f\"payable host returned unknown kind: {kind}\")\n\
          \x20   return result\n\n\n\
          def run_generated_payable_loop(\n\
-         \x20   payable_next: Callable[[object, object], dict[str, Any]],\n\
+         \x20   payable_next: Callable[[object, object], dict[str, object]],\n\
          \x20   host: PayableDriverHost,\n\
-         \x20   start_event: dict[str, Any],\n\
+         \x20   start_event: dict[str, object],\n\
          ) -> object:\n\
          \x20   state: object = None\n\
-         \x20   event: dict[str, Any] = start_event\n\
+         \x20   event: dict[str, object] = start_event\n\
          \x20   while True:\n\
          \x20       out = payable_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
@@ -343,12 +343,12 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20           return action.get(\"result\")\n\
          \x20       raise RuntimeError(f\"invoke_payable_next unknown action kind: {kind}\")\n\n\n\
          async def run_generated_payable_loop_async(\n\
-         \x20   payable_next: Callable[[object, object], dict[str, Any]],\n\
+         \x20   payable_next: Callable[[object, object], dict[str, object]],\n\
          \x20   host: AsyncPayableDriverHost,\n\
-         \x20   start_event: dict[str, Any],\n\
+         \x20   start_event: dict[str, object],\n\
          ) -> object:\n\
          \x20   state: object = None\n\
-         \x20   event: dict[str, Any] = start_event\n\
+         \x20   event: dict[str, object] = start_event\n\
          \x20   while True:\n\
          \x20       out = payable_next(state, event)\n\
          \x20       state = out[\"state\"]\n\

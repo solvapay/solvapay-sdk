@@ -8,29 +8,29 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Protocol
+from typing import Protocol
 
 
 class GateDriverHost(Protocol):
     def ensure_customer(self, customer_ref: str) -> str: ...
-    def read_limits_cache(self, key: str) -> dict[str, Any] | None: ...
-    def check_limits(self, action: dict[str, Any]) -> object: ...
+    def read_limits_cache(self, key: str) -> dict[str, object] | None: ...
+    def check_limits(self, action: dict[str, object]) -> object: ...
     def apply_cache(self, cache: object) -> None: ...
     def now_ms(self) -> int: ...
 
 
 class AsyncGateDriverHost(Protocol):
     def ensure_customer(self, customer_ref: str) -> Awaitable[str]: ...
-    def read_limits_cache(self, key: str) -> dict[str, Any] | None: ...
-    def check_limits(self, action: dict[str, Any]) -> Awaitable[object]: ...
+    def read_limits_cache(self, key: str) -> dict[str, object] | None: ...
+    def check_limits(self, action: dict[str, object]) -> Awaitable[object]: ...
     def apply_cache(self, cache: object) -> None: ...
     def now_ms(self) -> int: ...
 
 
 def _cache_event(
     host: GateDriverHost | AsyncGateDriverHost,
-    action: dict[str, Any],
-) -> dict[str, Any]:
+    action: dict[str, object],
+) -> dict[str, object]:
     cached = host.read_limits_cache(str(action["key"]))
     now = host.now_ms()
     if cached is None:
@@ -46,12 +46,12 @@ def _cache_event(
 
 
 def run_generated_gate_loop(
-    gate_next: Callable[[object, object], dict[str, Any]],
+    gate_next: Callable[[object, object], dict[str, object]],
     host: GateDriverHost,
-    start_event: dict[str, Any],
-) -> dict[str, Any]:
+    start_event: dict[str, object],
+) -> dict[str, object]:
     state: object = None
-    event: dict[str, Any] = start_event
+    event: dict[str, object] = start_event
     while True:
         out = gate_next(state, event)
         state = out["state"]
@@ -77,12 +77,12 @@ def run_generated_gate_loop(
 
 
 async def run_generated_gate_loop_async(
-    gate_next: Callable[[object, object], dict[str, Any]],
+    gate_next: Callable[[object, object], dict[str, object]],
     host: AsyncGateDriverHost,
-    start_event: dict[str, Any],
-) -> dict[str, Any]:
+    start_event: dict[str, object],
+) -> dict[str, object]:
     state: object = None
-    event: dict[str, Any] = start_event
+    event: dict[str, object] = start_event
     while True:
         out = gate_next(state, event)
         state = out["state"]
@@ -108,22 +108,22 @@ async def run_generated_gate_loop_async(
 
 
 class PayableDriverHost(Protocol):
-    def run_gate(self, action: dict[str, Any]) -> dict[str, Any]: ...
-    def invoke_handler(self, action: dict[str, Any]) -> dict[str, Any]: ...
+    def run_gate(self, action: dict[str, object]) -> dict[str, object]: ...
+    def invoke_handler(self, action: dict[str, object]) -> dict[str, object]: ...
     def track_usage(self, request: object) -> None: ...
     def now_ms(self) -> int: ...
     def random_unit(self) -> float: ...
 
 
 class AsyncPayableDriverHost(Protocol):
-    def run_gate(self, action: dict[str, Any]) -> Awaitable[dict[str, Any]]: ...
-    def invoke_handler(self, action: dict[str, Any]) -> Awaitable[dict[str, Any]]: ...
+    def run_gate(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...
+    def invoke_handler(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...
     def track_usage(self, request: object) -> Awaitable[None]: ...
     def now_ms(self) -> int: ...
     def random_unit(self) -> float: ...
 
 
-def _check_payable_host_result(result: dict[str, Any]) -> dict[str, Any]:
+def _check_payable_host_result(result: dict[str, object]) -> dict[str, object]:
     kind = result.get("kind")
     if kind == "fatal":
         raise result["error"]
@@ -133,12 +133,12 @@ def _check_payable_host_result(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_generated_payable_loop(
-    payable_next: Callable[[object, object], dict[str, Any]],
+    payable_next: Callable[[object, object], dict[str, object]],
     host: PayableDriverHost,
-    start_event: dict[str, Any],
+    start_event: dict[str, object],
 ) -> object:
     state: object = None
-    event: dict[str, Any] = start_event
+    event: dict[str, object] = start_event
     while True:
         out = payable_next(state, event)
         state = out["state"]
@@ -191,12 +191,12 @@ def run_generated_payable_loop(
 
 
 async def run_generated_payable_loop_async(
-    payable_next: Callable[[object, object], dict[str, Any]],
+    payable_next: Callable[[object, object], dict[str, object]],
     host: AsyncPayableDriverHost,
-    start_event: dict[str, Any],
+    start_event: dict[str, object],
 ) -> object:
     state: object = None
-    event: dict[str, Any] = start_event
+    event: dict[str, object] = start_event
     while True:
         out = payable_next(state, event)
         state = out["state"]

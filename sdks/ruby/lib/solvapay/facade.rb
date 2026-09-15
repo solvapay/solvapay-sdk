@@ -17,9 +17,9 @@ module SolvaPay
       @clock = clock || -> { (Time.now.to_f * 1_000).to_i }
       @mutex = Mutex.new
       @customer_cache = {} #: Hash[String, untyped]
-      @customer_inflight = {} #: Hash[String, untyped]
+      @customer_inflight = InflightTable.new(@mutex)
       @limits_cache = {} #: Hash[String, untyped]
-      @limits_inflight = {} #: Hash[String, untyped]
+      @limits_inflight = InflightTable.new(@mutex)
       @limits_claims = {} #: Hash[String, Integer]
     end
 
@@ -147,11 +147,9 @@ module SolvaPay
     end
 
     def shared_check_limits(key, action)
-      state, leader = acquire_limits_lookup(key)
-      return await_limits_lookup(state) unless leader
-
-      begin
-        result = @client.check_limits(
+      @limits_inflight.run(key) do
+        @mutex.synchronize { @limits_claims[key] = 0 }
+        @client.check_limits(
           params: {
             "customerRef" => action["customerRef"],
             "productRef" => action["productRef"],
@@ -159,42 +157,6 @@ module SolvaPay
             "includeCheckoutSession" => action["includeCheckoutSession"],
           },
         )
-        publish_limits_lookup(key, state, result: result)
-        result
-      rescue StandardError => e
-        publish_limits_lookup(key, state, error: e)
-        raise
-      end
-    end
-
-    def acquire_limits_lookup(key)
-      @mutex.synchronize do
-        inflight = @limits_inflight[key]
-        return [inflight, false] if inflight
-
-        state = { condition: ConditionVariable.new, done: false, result: nil, error: nil }
-        @limits_inflight[key] = state
-        @limits_claims[key] = 0
-        [state, true]
-      end
-    end
-
-    def await_limits_lookup(state)
-      @mutex.synchronize do
-        state.fetch(:condition).wait(@mutex) until state.fetch(:done)
-        raise state[:error] if state[:error]
-
-        state.fetch(:result)
-      end
-    end
-
-    def publish_limits_lookup(key, state, result: nil, error: nil)
-      @mutex.synchronize do
-        state[:result] = result
-        state[:error] = error
-        state[:done] = true
-        @limits_inflight.delete(key)
-        state.fetch(:condition).broadcast
       end
     end
 
@@ -236,47 +198,7 @@ module SolvaPay
     end
 
     def ensure_customer(customer_ref)
-      state, leader = acquire_customer_lookup(customer_ref)
-      return await_customer_lookup(state) unless leader
-
-      begin
-        result = run_ensure_customer(customer_ref)
-        publish_customer_lookup(customer_ref, state, result: result)
-        result
-      rescue StandardError => e
-        publish_customer_lookup(customer_ref, state, error: e)
-        raise
-      end
-    end
-
-    def acquire_customer_lookup(customer_ref)
-      @mutex.synchronize do
-        inflight = @customer_inflight[customer_ref]
-        return [inflight, false] if inflight
-
-        state = { condition: ConditionVariable.new, done: false, result: nil, error: nil }
-        @customer_inflight[customer_ref] = state
-        [state, true]
-      end
-    end
-
-    def await_customer_lookup(state)
-      @mutex.synchronize do
-        state.fetch(:condition).wait(@mutex) until state.fetch(:done)
-        raise state[:error] if state[:error]
-
-        state.fetch(:result)
-      end
-    end
-
-    def publish_customer_lookup(customer_ref, state, result: nil, error: nil)
-      @mutex.synchronize do
-        state[:result] = result
-        state[:error] = error
-        state[:done] = true
-        @customer_inflight.delete(customer_ref)
-        state.fetch(:condition).broadcast
-      end
+      @customer_inflight.run(customer_ref) { run_ensure_customer(customer_ref) }
     end
 
     def run_ensure_customer(customer_ref)

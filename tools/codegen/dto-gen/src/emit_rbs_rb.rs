@@ -113,6 +113,10 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20 module GeneratedPayableLoop\n\
          \x20   def self.run: (payable_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> untyped\n\
          \x20 end\n\n\
+         \x20 class InflightTable\n\
+         \x20   def initialize: (Thread::Mutex mutex) -> void\n\
+         \x20   def run: [T] (untyped key) { () -> T } -> T\n\
+         \x20 end\n\n\
          \x20 class Facade\n\
          \x20   BASE36: String\n\
          \x20   @client: Client\n\
@@ -120,8 +124,10 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   @clock: ^() -> Integer\n\
          \x20   @mutex: Thread::Mutex\n\
          \x20   @customer_cache: Hash[String, untyped]\n\
-         \x20   @customer_inflight: Hash[String, untyped]\n\
+         \x20   @customer_inflight: InflightTable\n\
          \x20   @limits_cache: Hash[String, untyped]\n\
+         \x20   @limits_inflight: InflightTable\n\
+         \x20   @limits_claims: Hash[String, Integer]\n\
          \x20   def initialize: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> void\n\
          \x20   def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result\n\
          \x20   def payable: (product: String, ?usage_type: String) -> Payable\n\
@@ -141,14 +147,8 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]\n\
          \x20   def apply_cache: (untyped cache) -> void\n\
          \x20   def shared_check_limits: (String key, Hash[String, untyped] action) -> untyped\n\
-         \x20   def acquire_limits_lookup: (String key) -> [Hash[Symbol, untyped], bool]\n\
-         \x20   def await_limits_lookup: (Hash[Symbol, untyped] state) -> untyped\n\
-         \x20   def publish_limits_lookup: (String key, Hash[Symbol, untyped] state, ?result: untyped, ?error: Exception?) -> void\n\
          \x20   def next_limits_claim: (String key) -> Integer\n\
          \x20   def ensure_customer: (String customer_ref) -> String\n\
-         \x20   def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]\n\
-         \x20   def await_customer_lookup: (Hash[Symbol, untyped] state) -> String\n\
-         \x20   def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void\n\
          \x20   def run_ensure_customer: (String customer_ref) -> String\n\
          \x20   def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void\n\
          \x20   def paywall_short_message: (untyped content) -> String\n\
@@ -186,6 +186,12 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
         .collect();
     constants.sort_by(|left, right| left.ruby_target.name.cmp(&right.ruby_target.name));
     for entry in constants {
+        if matches!(
+            entry.ruby_target.name.as_str(),
+            "TOPUP_BALANCE_POLL_DELAYS_MS" | "BALANCE_RECONCILE_DELAYS_MS"
+        ) {
+            continue;
+        }
         let _ = writeln!(output, "  {}: untyped", entry.ruby_target.name);
     }
 

@@ -127,6 +127,9 @@ export declare function assertValidProductRef(argsJson: string): string
 /** Binding for `attachBusinessDetailsValidationError`. */
 export declare function attachBusinessDetailsValidationError(argsJson: string): string
 
+/** Binding for `BALANCE_RECONCILE_DELAYS_MS`. */
+export declare function BALANCE_RECONCILE_DELAYS_MS(argsJson: string): string
+
 /** Binding for `billingCycle`. */
 export declare function billingCycle(argsJson: string): string
 
@@ -539,6 +542,9 @@ export declare function tierMeters(argsJson: string): string
 
 /** Binding for `toMajorUnits`. */
 export declare function toMajorUnits(argsJson: string): string
+
+/** Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`. */
+export declare function TOPUP_BALANCE_POLL_DELAYS_MS(argsJson: string): string
 
 /** Binding for `topupProcessNext`. */
 export declare function topupProcessNext(argsJson: string): string

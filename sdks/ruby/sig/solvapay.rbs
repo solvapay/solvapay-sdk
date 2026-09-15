@@ -138,6 +138,11 @@ module SolvaPay
     def self.run: (payable_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> untyped
   end
 
+  class InflightTable
+    def initialize: (Thread::Mutex mutex) -> void
+    def run: [T] (untyped key) { () -> T } -> T
+  end
+
   class Facade
     BASE36: String
     @client: Client
@@ -145,8 +150,10 @@ module SolvaPay
     @clock: ^() -> Integer
     @mutex: Thread::Mutex
     @customer_cache: Hash[String, untyped]
-    @customer_inflight: Hash[String, untyped]
+    @customer_inflight: InflightTable
     @limits_cache: Hash[String, untyped]
+    @limits_inflight: InflightTable
+    @limits_claims: Hash[String, Integer]
     def initialize: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> void
     def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result
     def payable: (product: String, ?usage_type: String) -> Payable
@@ -166,14 +173,8 @@ module SolvaPay
     def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]
     def apply_cache: (untyped cache) -> void
     def shared_check_limits: (String key, Hash[String, untyped] action) -> untyped
-    def acquire_limits_lookup: (String key) -> [Hash[Symbol, untyped], bool]
-    def await_limits_lookup: (Hash[Symbol, untyped] state) -> untyped
-    def publish_limits_lookup: (String key, Hash[Symbol, untyped] state, ?result: untyped, ?error: Exception?) -> void
     def next_limits_claim: (String key) -> Integer
     def ensure_customer: (String customer_ref) -> String
-    def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]
-    def await_customer_lookup: (Hash[Symbol, untyped] state) -> String
-    def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void
     def run_ensure_customer: (String customer_ref) -> String
     def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void
     def paywall_short_message: (untyped content) -> String
@@ -203,7 +204,6 @@ module SolvaPay
   def self._check_version_skew: () -> void
   def _check_version_skew: () -> void
   def self._verify_webhook_at: (String, String, String, Integer) -> String
-  BALANCE_RECONCILE_DELAYS_MS: untyped
   BUSINESS_COUNTRY_DISPLAY_NAMES: untyped
   BUSINESS_COUNTRY_OPTIONS: untyped
   COUNTRY_TO_TAX_ID_TYPE: untyped
@@ -215,7 +215,6 @@ module SolvaPay
   TAX_ID_EXAMPLE_BY_COUNTRY: untyped
   TAX_ID_TYPES: untyped
   TAX_NOT_COLLECTED_NOTE: untyped
-  TOPUP_BALANCE_POLL_DELAYS_MS: untyped
   def self.append_paid_tool_description: (?description: String) -> untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped

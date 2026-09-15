@@ -67,10 +67,13 @@ export function collectTemplatePinDrift(
   const gomod = readFileSync(joinRel(repoRoot, TEMPLATE_PIN_RELS[4]), 'utf8')
   const goMatch = gomod.match(/github.com\/solvapay\/solvapay-sdk\/sdks\/go v([^\s]+)/)
   const goActual = goMatch?.[1] ?? ''
-  if (goActual !== version) {
+  // Go module paths without /vN cannot require v2+. Keep the template on v0.0.0
+  // (replace-pinned in --dev) instead of the unified 3.x train.
+  const goExpected = '0.0.0'
+  if (goActual !== goExpected) {
     drift.push({
       path: `${TEMPLATE_PIN_RELS[4]}:github.com/solvapay/solvapay-sdk/sdks/go`,
-      expected: version,
+      expected: goExpected,
       actual: goActual,
     })
   }
