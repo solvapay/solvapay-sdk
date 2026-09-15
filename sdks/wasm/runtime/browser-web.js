@@ -77,6 +77,8 @@ import init, {
   resolveTaxTreatmentNote,
   shouldShowTaxRow,
   toMajorUnits,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+  BALANCE_RECONCILE_DELAYS_MS,
   REVERSE_CHARGE_NOTE,
   TAX_NOT_COLLECTED_NOTE,
 } from '../pkg/browser/solvapay_wasm.js'
@@ -144,6 +146,8 @@ export {
   resolveTaxTreatmentNote,
   shouldShowTaxRow,
   toMajorUnits,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+  BALANCE_RECONCILE_DELAYS_MS,
   REVERSE_CHARGE_NOTE,
   TAX_NOT_COLLECTED_NOTE,
 }

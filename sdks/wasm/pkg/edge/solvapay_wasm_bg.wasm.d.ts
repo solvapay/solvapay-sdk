@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const BALANCE_RECONCILE_DELAYS_MS: (a: number, b: number) => [number, number];
 export const BUSINESS_COUNTRY_DISPLAY_NAMES: (a: number, b: number) => [number, number];
 export const BUSINESS_COUNTRY_OPTIONS: (a: number, b: number) => [number, number];
 export const COUNTRY_TO_TAX_ID_TYPE: (a: number, b: number) => [number, number];
@@ -15,6 +16,7 @@ export const TAX_EXCLUSIVE_CURRENCIES: (a: number, b: number) => [number, number
 export const TAX_ID_EXAMPLE_BY_COUNTRY: (a: number, b: number) => [number, number];
 export const TAX_ID_TYPES: (a: number, b: number) => [number, number];
 export const TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
+export const TOPUP_BALANCE_POLL_DELAYS_MS: (a: number, b: number) => [number, number];
 export const __wbg_wasmclient_free: (a: number, b: number) => void;
 export const appendPaidToolDescription: (a: number, b: number) => [number, number];
 export const assertResponseResult: (a: number, b: number) => [number, number];

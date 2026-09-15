@@ -75,6 +75,7 @@ Layout/LeadingCommentSpace:
     - 'lib/solvapay/client.rb'
     - 'lib/solvapay/helpers.generated.rb'
     - 'lib/solvapay/facade.rb'
+    - 'lib/solvapay/inflight.rb'
     - 'lib/solvapay/helpers.rb'
     - 'lib/solvapay/_native.rb'
 

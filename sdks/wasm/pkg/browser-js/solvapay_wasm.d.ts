@@ -2,6 +2,11 @@
 /* eslint-disable */
 
 /**
+ * Binding for `BALANCE_RECONCILE_DELAYS_MS`.
+ */
+export function BALANCE_RECONCILE_DELAYS_MS(args_json: string): string;
+
+/**
  * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
  */
 export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json: string): string;
@@ -65,6 +70,11 @@ export function TAX_ID_TYPES(args_json: string): string;
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
  */
 export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
+
+/**
+ * Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`.
+ */
+export function TOPUP_BALANCE_POLL_DELAYS_MS(args_json: string): string;
 
 /**
  * Binding for `billingCycle`.

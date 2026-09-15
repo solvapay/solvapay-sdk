@@ -2,6 +2,26 @@
 /* @ts-self-types="./solvapay_wasm.d.ts" */
 
 /**
+ * Binding for `BALANCE_RECONCILE_DELAYS_MS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function BALANCE_RECONCILE_DELAYS_MS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.BALANCE_RECONCILE_DELAYS_MS(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
  * @param {string} args_json
  * @returns {string}
@@ -253,6 +273,26 @@ export function TAX_NOT_COLLECTED_NOTE(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.TAX_NOT_COLLECTED_NOTE(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TOPUP_BALANCE_POLL_DELAYS_MS(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TOPUP_BALANCE_POLL_DELAYS_MS(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

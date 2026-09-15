@@ -364,6 +364,8 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `BALANCE_RECONCILE_DELAYS_MS` on facade `ruby`
 - exposed `BALANCE_RECONCILE_DELAYS_MS` on facade `rust`
 - exposed `BALANCE_RECONCILE_DELAYS_MS` on facade `typescript`
+- exposed `BALANCE_RECONCILE_DELAYS_MS` on facade `wasm-browser`
+- exposed `BALANCE_RECONCILE_DELAYS_MS` on facade `wasm-edge`
 - exposed `BUSINESS_COUNTRY_DISPLAY_NAMES` on facade `go`
 - exposed `BUSINESS_COUNTRY_DISPLAY_NAMES` on facade `node-native`
 - exposed `BUSINESS_COUNTRY_DISPLAY_NAMES` on facade `python`
@@ -481,6 +483,8 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `TOPUP_BALANCE_POLL_DELAYS_MS` on facade `ruby`
 - exposed `TOPUP_BALANCE_POLL_DELAYS_MS` on facade `rust`
 - exposed `TOPUP_BALANCE_POLL_DELAYS_MS` on facade `typescript`
+- exposed `TOPUP_BALANCE_POLL_DELAYS_MS` on facade `wasm-browser`
+- exposed `TOPUP_BALANCE_POLL_DELAYS_MS` on facade `wasm-edge`
 - exposed `activatePlan` on facade `capi`
 - exposed `activatePlan` on facade `go`
 - exposed `activatePlan` on facade `node-native`

@@ -2,6 +2,11 @@
 /* eslint-disable */
 
 /**
+ * Binding for `BALANCE_RECONCILE_DELAYS_MS`.
+ */
+export function BALANCE_RECONCILE_DELAYS_MS(args_json: string): string;
+
+/**
  * Binding for `BUSINESS_COUNTRY_DISPLAY_NAMES`.
  */
 export function BUSINESS_COUNTRY_DISPLAY_NAMES(args_json: string): string;
@@ -65,6 +70,11 @@ export function TAX_ID_TYPES(args_json: string): string;
  * Binding for `TAX_NOT_COLLECTED_NOTE`.
  */
 export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
+
+/**
+ * Binding for `TOPUP_BALANCE_POLL_DELAYS_MS`.
+ */
+export function TOPUP_BALANCE_POLL_DELAYS_MS(args_json: string): string;
 
 /**
  * Binding for `billingCycle`.
@@ -325,6 +335,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly BALANCE_RECONCILE_DELAYS_MS: (a: number, b: number) => [number, number];
     readonly BUSINESS_COUNTRY_DISPLAY_NAMES: (a: number, b: number) => [number, number];
     readonly BUSINESS_COUNTRY_OPTIONS: (a: number, b: number) => [number, number];
     readonly COUNTRY_TO_TAX_ID_TYPE: (a: number, b: number) => [number, number];
@@ -338,6 +349,7 @@ export interface InitOutput {
     readonly TAX_ID_EXAMPLE_BY_COUNTRY: (a: number, b: number) => [number, number];
     readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
+    readonly TOPUP_BALANCE_POLL_DELAYS_MS: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly charges: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];

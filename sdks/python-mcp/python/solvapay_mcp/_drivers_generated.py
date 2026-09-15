@@ -11,6 +11,18 @@ from collections.abc import Awaitable, Callable
 from typing import Protocol
 
 
+def _as_map(value: object) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise RuntimeError(f"expected map, got {type(value).__name__}")
+    return {str(key): item for key, item in value.items()}
+
+
+def _raise_host_error(error: object) -> None:
+    if isinstance(error, BaseException):
+        raise error
+    raise RuntimeError(error)
+
+
 class GateDriverHost(Protocol):
     def ensure_customer(self, customer_ref: str) -> str: ...
     def read_limits_cache(self, key: str) -> dict[str, object] | None: ...
@@ -55,7 +67,7 @@ def run_generated_gate_loop(
     while True:
         out = gate_next(state, event)
         state = out["state"]
-        action = out["action"]
+        action = _as_map(out["action"])
         kind = action["kind"]
         if kind == "ensureCustomer":
             backend_ref = host.ensure_customer(str(action["customerRef"]))
@@ -86,7 +98,7 @@ async def run_generated_gate_loop_async(
     while True:
         out = gate_next(state, event)
         state = out["state"]
-        action = out["action"]
+        action = _as_map(out["action"])
         kind = action["kind"]
         if kind == "ensureCustomer":
             backend_ref = await host.ensure_customer(str(action["customerRef"]))
@@ -126,7 +138,7 @@ class AsyncPayableDriverHost(Protocol):
 def _check_payable_host_result(result: dict[str, object]) -> dict[str, object]:
     kind = result.get("kind")
     if kind == "fatal":
-        raise result["error"]
+        _raise_host_error(result["error"])
     if kind not in ("return", "paywall", "allow", "ok", "err"):
         raise RuntimeError(f"payable host returned unknown kind: {kind}")
     return result
@@ -142,7 +154,7 @@ def run_generated_payable_loop(
     while True:
         out = payable_next(state, event)
         state = out["state"]
-        action = out["action"]
+        action = _as_map(out["action"])
         kind = action["kind"]
         if kind == "runGate":
             gate = _check_payable_host_result(host.run_gate(action))
@@ -200,7 +212,7 @@ async def run_generated_payable_loop_async(
     while True:
         out = payable_next(state, event)
         state = out["state"]
-        action = out["action"]
+        action = _as_map(out["action"])
         kind = action["kind"]
         if kind == "runGate":
             gate = _check_payable_host_result(await host.run_gate(action))

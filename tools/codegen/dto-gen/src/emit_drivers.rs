@@ -181,6 +181,14 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          from __future__ import annotations\n\n\
          from collections.abc import Awaitable, Callable\n\
          from typing import Protocol\n\n\n\
+         def _as_map(value: object) -> dict[str, object]:\n\
+         \x20   if not isinstance(value, dict):\n\
+         \x20       raise RuntimeError(f\"expected map, got {type(value).__name__}\")\n\
+         \x20   return {str(key): item for key, item in value.items()}\n\n\n\
+         def _raise_host_error(error: object) -> None:\n\
+         \x20   if isinstance(error, BaseException):\n\
+         \x20       raise error\n\
+         \x20   raise RuntimeError(error)\n\n\n\
          class GateDriverHost(Protocol):\n\
          \x20   def ensure_customer(self, customer_ref: str) -> str: ...\n\
          \x20   def read_limits_cache(self, key: str) -> dict[str, object] | None: ...\n\
@@ -219,7 +227,7 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20   while True:\n\
          \x20       out = gate_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
-         \x20       action = out[\"action\"]\n\
+         \x20       action = _as_map(out[\"action\"])\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"ensureCustomer\":\n\
          \x20           backend_ref = host.ensure_customer(str(action[\"customerRef\"]))\n\
@@ -248,7 +256,7 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20   while True:\n\
          \x20       out = gate_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
-         \x20       action = out[\"action\"]\n\
+         \x20       action = _as_map(out[\"action\"])\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"ensureCustomer\":\n\
          \x20           backend_ref = await host.ensure_customer(str(action[\"customerRef\"]))\n\
@@ -282,7 +290,7 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          def _check_payable_host_result(result: dict[str, object]) -> dict[str, object]:\n\
          \x20   kind = result.get(\"kind\")\n\
          \x20   if kind == \"fatal\":\n\
-         \x20       raise result[\"error\"]\n\
+         \x20       _raise_host_error(result[\"error\"])\n\
          \x20   if kind not in (\"return\", \"paywall\", \"allow\", \"ok\", \"err\"):\n\
          \x20       raise RuntimeError(f\"payable host returned unknown kind: {kind}\")\n\
          \x20   return result\n\n\n\
@@ -296,7 +304,7 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20   while True:\n\
          \x20       out = payable_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
-         \x20       action = out[\"action\"]\n\
+         \x20       action = _as_map(out[\"action\"])\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"runGate\":\n\
          \x20           gate = _check_payable_host_result(host.run_gate(action))\n\
@@ -352,7 +360,7 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20   while True:\n\
          \x20       out = payable_next(state, event)\n\
          \x20       state = out[\"state\"]\n\
-         \x20       action = out[\"action\"]\n\
+         \x20       action = _as_map(out[\"action\"])\n\
          \x20       kind = action[\"kind\"]\n\
          \x20       if kind == \"runGate\":\n\
          \x20           gate = _check_payable_host_result(await host.run_gate(action))\n\
