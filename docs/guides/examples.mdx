@@ -1,26 +1,27 @@
 ---
-title: "Examples"
-description: "Choose the right SolvaPay SDK example project and run it locally."
+title: 'Examples'
+description: 'Choose the right SolvaPay SDK example project and run it locally.'
 ---
 
 ## Quick comparison
 
-| Example | Framework | Checkout type | Auth | Best for |
-| --- | --- | --- | --- | --- |
-| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-basic) | Express.js | Paywall only | Header-based | First integration and API protection |
-| [express-provider-linkage](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-provider-linkage) | Express.js | Paywall only | Provider-owned (`ensureCustomer`) | BYO CLI/IdP linkage from your backend |
-| [nextjs-auth0](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0) | Next.js | Embedded | Auth0 | Auth0 web reference for `externalRef` linkage |
-| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/checkout-demo) | Next.js | Embedded | Supabase | Full custom checkout flow |
-| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/hosted-checkout-demo) | Next.js | Hosted | Supabase | Fast checkout integration |
-| [shadcn-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/shadcn-checkout) | Vite + shadcn/ui | Embedded | Supabase | Paste-in Lovable / shadcn projects |
-| [tailwind-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/tailwind-checkout) | Vite + Tailwind | Embedded | Supabase | Plain Tailwind checkout |
-| [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) | Supabase Edge Functions | Embedded + webhooks | Supabase | Fetch-native backend with `@solvapay/server/fetch` |
-| [mcp-time-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-time-app) | MCP App | Paywall only | OAuth + Bearer | Smallest UI-enabled MCP app |
-| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge) | MCP Server | Paywall only | OAuth + Bearer | Non-hosted MCP OAuth bridge |
-| [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app) | MCP App + Node server | Hybrid (embedded + hosted fallback) | OAuth + Bearer | Complete self-serve MCP product |
-| [cloudflare-workers-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/cloudflare-workers-mcp) | Cloudflare Workers | Paywall + UI widget | OAuth + Bearer | Edge-deployed MCP server |
-| [supabase-edge-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge-mcp) | Supabase Edge Functions | Paywall + UI widget | OAuth + Bearer | MCP server at the network edge |
-| [supabase-edge-mcp-proxy](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge-mcp-proxy) | Cloudflare Worker proxy | Routing only | n/a | Custom domain in front of Supabase Edge MCP |
+| Example                                                                                                                     | Framework                 | Checkout type                       | Auth                              | Best for                                           |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------- | --------------------------------- | -------------------------------------------------- |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic)                       | Express.js                | Paywall only                        | Header-based                      | First integration and API protection               |
+| [express-provider-linkage](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-provider-linkage) | Express.js                | Paywall only                        | Provider-owned (`ensureCustomer`) | BYO CLI/IdP linkage from your backend              |
+| [nextjs-auth0](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/nextjs-auth0)                         | Next.js                   | Embedded                            | Auth0                             | Auth0 web reference for `externalRef` linkage      |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/checkout-demo)                       | Next.js                   | Embedded                            | Supabase                          | Full custom checkout flow                          |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/hosted-checkout-demo)         | Next.js                   | Hosted                              | Supabase                          | Fast checkout integration                          |
+| [shadcn-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/shadcn-checkout)                   | Next.js + shadcn/ui       | Embedded                            | Stub adapter                      | Paste-in Lovable / shadcn projects                 |
+| [tailwind-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/tailwind-checkout)               | Next.js + Tailwind        | Embedded                            | Stub adapter                      | Plain Tailwind checkout                            |
+| [chat-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/chat-checkout-demo)             | Vite + Cloudflare Workers | Embedded                            | Anonymous customer ref            | Streaming chat gated with `payable.gate()`         |
+| [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge)                       | Supabase Edge Functions   | Embedded + webhooks                 | Supabase                          | Fetch-native backend with `@solvapay/server/fetch` |
+| [mcp-time-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-time-app)                         | MCP App                   | Paywall only                        | OAuth + Bearer                    | Smallest UI-enabled MCP app                        |
+| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-oauth-bridge)                 | MCP Server                | Paywall only                        | OAuth + Bearer                    | Non-hosted MCP OAuth bridge                        |
+| [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app)                 | MCP App + Node server     | Hybrid (embedded + hosted fallback) | OAuth + Bearer                    | Complete self-serve MCP product                    |
+| [cloudflare-workers-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/cloudflare-workers-mcp)     | Cloudflare Workers        | Paywall + UI widget                 | OAuth + Bearer                    | Edge-deployed MCP server                           |
+| [supabase-edge-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge-mcp)               | Supabase Edge Functions   | Paywall + UI widget                 | OAuth + Bearer                    | MCP server at the network edge                     |
+| [supabase-edge-mcp-proxy](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge-mcp-proxy)   | Cloudflare Worker proxy   | Routing only                        | n/a                               | Custom domain in front of Supabase Edge MCP        |
 
 ## Prerequisites
 
@@ -39,88 +40,113 @@ pnpm build:packages
 ## Run any example
 
 ```bash
-cd examples/<example-name>
-cp env.example .env.local
+cd examples/typescript/<example-name>
+cp .env.example .env
 pnpm dev
 ```
 
-Use `.env` instead of `.env.local` when the example README says so.
+Two examples ship the template as `env.example` (no leading dot): `checkout-demo` and
+`hosted-checkout-demo`. Each example's README names the target filename it loads —
+some read `.env`, others `.env.local`. `express-basic`, `supabase-edge`, and
+`supabase-edge-mcp-proxy` need no env file at all.
 
 ## Example notes
 
 ### express-basic
 
 - Good first project for `payable.http()`
-- Uses stub mode and header-based customer identity
-- README: [examples/express-basic/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-basic/README.md)
+- Runs keyless: injects an explicit stub `apiClient` from `examples/typescript/shared`, so no secret key or backend is needed
+- Header-based customer identity via `x-customer-ref`
+- README: [examples/typescript/express-basic/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic/README.md)
 
 ### express-provider-linkage
 
 - Provider-owned client + IdP: backend calls `ensureCustomer(externalRef)` before metering
 - Simulates post-CLI-login requests with `x-provider-user-id`
-- README: [examples/express-provider-linkage/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-provider-linkage/README.md)
+- README: [examples/typescript/express-provider-linkage/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-provider-linkage/README.md)
 
 ### nextjs-auth0
 
 - Auth0 Regular Web App + embedded Pay As You Go checkout
 - Canonical web reference for Auth0 `sub` → SolvaPay customer linkage
-- README: [examples/nextjs-auth0/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0/README.md)
+- README: [examples/typescript/nextjs-auth0/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/nextjs-auth0/README.md)
 
 ### checkout-demo
 
 - Embedded checkout with React components
 - Uses Supabase auth and purchase gating
-- README: [examples/checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/checkout-demo/README.md)
+- README: [examples/typescript/checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/checkout-demo/README.md)
 
 ### hosted-checkout-demo
 
 - Hosted checkout and hosted customer portal
 - Lower PCI complexity than embedded checkout
-- README: [examples/hosted-checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/hosted-checkout-demo/README.md)
+- README: [examples/typescript/hosted-checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/hosted-checkout-demo/README.md)
+
+### shadcn-checkout
+
+- Next.js App Router on port 3012, checkout composed from `@solvapay/react/primitives` (`PlanSelector`, `PaymentForm`, `AmountPicker`, `TopupForm`)
+- Every primitive is mapped onto a shadcn/ui component with `asChild`, so SolvaPay owns behavior and shadcn owns the visual surface
+- Four canonical files to copy into your own project: `app/providers.tsx`, `lib/solvapay.ts`, `app/api/solvapay/[...solvapay]/route.ts`, `app/checkout/page.tsx`
+- Runs keyless — `lib/solvapay.ts` falls back to `createStubSolvaPay()` unless `SOLVAPAY_SECRET_KEY` is set
+- README: [examples/typescript/shadcn-checkout/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/shadcn-checkout/README.md)
+
+### tailwind-checkout
+
+- Same four-file structure as `shadcn-checkout` on port 3011, styled with plain Tailwind v4 utilities and `data-[state=…]` variants
+- No `@solvapay/react/styles.css` import — every pixel is styled in userspace
+- README: [examples/typescript/tailwind-checkout/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/tailwind-checkout/README.md)
+
+### chat-checkout-demo
+
+- Gemini-powered chat gated with `payable.gate(req, { ctx })` — the decision-shaped paywall primitive for streaming responses
+- Subscription, one-time, and top-up flows in one chrome; anonymous customers via `getOrCreateAnonymousCustomerRef`
+- One source tree, two runtimes: Vite middleware for `pnpm dev`, a Cloudflare Worker for deploy
+- README: [examples/typescript/chat-checkout-demo/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/chat-checkout-demo/README.md)
 
 ### supabase-edge
 
 - Fetch-native backend for Supabase Edge Functions using `@solvapay/server/fetch`
 - One two-line file per handler; `solvapayWebhook` factory for webhooks
-- README: [examples/supabase-edge/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge/README.md)
+- README: [examples/typescript/supabase-edge/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge/README.md)
 
 ### mcp-time-app
 
 - MCP app UI resource + protected tools
 - Demonstrates `createSolvaPayMcpServer` and `registerPayable` with OAuth context
-- README: [examples/mcp-time-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-time-app/README.md)
+- README: [examples/typescript/mcp-time-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-time-app/README.md)
 
 ### mcp-oauth-bridge
 
 - Local discovery metadata for non-hosted MCP origin
 - OAuth + dynamic client registration bridge pattern
-- README: [examples/mcp-oauth-bridge/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge/README.md)
+- README: [examples/typescript/mcp-oauth-bridge/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-oauth-bridge/README.md)
 
 ### mcp-checkout-app
 
 - Full 5-intent MCP App (plans, checkout, top-up, usage, paywall)
 - Hybrid checkout: embedded Stripe Elements via `<PaymentForm>` on compliant hosts (`basic-host`, ChatGPT); auto-falls back to hosted SolvaPay checkout on hosts that ignore `_meta.ui.csp` (Claude)
 - Ships with `createMcpAppAdapter` wired to `SolvaPayProvider` and a paywalled demo toolbox
-- README: [examples/mcp-checkout-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app/README.md)
+- README: [examples/typescript/mcp-checkout-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app/README.md)
 
 ### cloudflare-workers-mcp
 
 - Single `fetch` handler built with `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch` — OAuth discovery, bridge routes, tool calls, and the widget iframe in one worker
 - Ships a seeded stock-predictor demo toolbox (`predict_price_chart`, `predict_direction`) to exercise the paywall end-to-end
-- README: [examples/cloudflare-workers-mcp/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/cloudflare-workers-mcp/README.md)
+- README: [examples/typescript/cloudflare-workers-mcp/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/cloudflare-workers-mcp/README.md)
 
 ### supabase-edge-mcp
 
 - Same toolbox as `cloudflare-workers-mcp`, deployed as a single Supabase Edge Function
 - Uses `Deno.serve(createSolvaPayMcpFetch(…))` from `@solvapay/mcp/fetch`
 - Pair with `supabase-edge-mcp-proxy` if you need a custom domain in front of Supabase's `/functions/v1/…` URL shape (required for RFC 9728 `.well-known/oauth-protected-resource` discovery)
-- README: [examples/supabase-edge-mcp/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge-mcp/README.md)
+- README: [examples/typescript/supabase-edge-mcp/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge-mcp/README.md)
 
 ### supabase-edge-mcp-proxy
 
 - Cloudflare Worker that remaps `https://your-subdomain/*` → `https://<proj>.supabase.co/functions/v1/mcp/*`
 - Fixes OAuth Protected Resource Metadata discovery for MCP Inspector and ChatGPT connectors
-- README: [examples/supabase-edge-mcp-proxy/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge-mcp-proxy/README.md)
+- README: [examples/typescript/supabase-edge-mcp-proxy/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge-mcp-proxy/README.md)
 
 ## Next steps
 

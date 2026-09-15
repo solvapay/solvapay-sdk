@@ -1,0 +1,19 @@
+{
+  "suite": "narrate",
+  "case": "already-active",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "already_active",
+      "payload": {
+        "status": "already_active",
+        "planRef": "pln_pro"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "This plan is already active."
+    }
+  }
+}

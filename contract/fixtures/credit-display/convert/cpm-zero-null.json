@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-cpm-zero-null",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 1000,
+      "creditsPerMinorUnit": 0,
+      "displayExchangeRate": 1,
+      "displayCurrency": "USD"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

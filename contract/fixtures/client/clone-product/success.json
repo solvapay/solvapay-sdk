@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "cloneProduct",
+    "args": {
+      "productRef": "prd_fixture",
+      "name": "Clone"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "clone-product-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/prd_fixture/clone",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Clone"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "prd_clone",
+        "name": "Clone"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "prd_clone",
+      "name": "Clone"
+    }
+  }
+}

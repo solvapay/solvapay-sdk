@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-zero-credits",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 0,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 9.46,
+      "displayCurrency": "SEK"
+    }
+  },
+  "expect": {
+    "result": 0
+  }
+}

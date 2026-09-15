@@ -1,0 +1,147 @@
+name: Publish Go (solvapay-go)
+
+# Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
+# Rebuilds and staleness-checks the embedded wasm, then publishes the nested
+# module by pushing `sdks/go/vX.Y.Z` on this repo. Rehearsal uses the same
+# path with a `-rehearsal.<run>` prerelease. Do not trigger this workflow on
+# `sdks/go/v*` — that would recurse.
+#
+# Default path is dry-run: rebuild + staleness-check wasm, `go build`/`go vet`
+# the monorepo module, then print the module tag it would push. Real tag push
+# is gated behind `workflow_dispatch` input `publish_to_go=true` (or a
+# `solvapay-go-v*` / `rehearsal/solvapay-go-v*` monorepo tag).
+#
+# Maintainer prerequisite: `vars.RELEASE_PROD_GO` for the production train.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Module tag version without leading v (e.g. 0.1.0)'
+        required: true
+        type: string
+        default: '0.1.0'
+      publish_to_go:
+        description: 'Push sdks/go/vX.Y.Z on this repo (default: dry-run only)'
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'solvapay-go-v*'
+      - 'rehearsal/solvapay-go-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Rust toolchain + WASI target
+        run: rustup show && rustup target add wasm32-wasip1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Resolve version + module tag
+        id: meta
+        shell: bash
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            pnpm exec tsx tools/repo/resolve-release-channel.ts \
+              --ref "${GITHUB_REF}" \
+              --run "${GITHUB_RUN_NUMBER}" \
+              --version "${{ inputs.version }}" \
+              --ecosystem go
+          else
+            pnpm exec tsx tools/repo/resolve-release-channel.ts \
+              --ref "${GITHUB_REF}" \
+              --run "${GITHUB_RUN_NUMBER}" \
+              --ecosystem go
+          fi
+          echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild embedded WASI guest
+        # Do not stamp SOLVAPAY_CORE_SHA here: the guest is a committed blob and
+        # this job's staleness check requires a byte-identical rebuild. Stamp
+        # the env when regenerating `solvapay_core.wasm` for commit.
+        run: ./sdks/go/scripts/build-wasm.sh
+
+      - name: WASM staleness check (committed artifact matches source)
+        run: |
+          if ! git diff --exit-code -- sdks/go/solvapay_core.wasm; then
+            echo "sdks/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
+            echo "  ./sdks/go/scripts/build-wasm.sh" >&2
+            exit 1
+          fi
+          echo "OK: embedded solvapay_core.wasm is up to date"
+
+      - name: go build + vet (monorepo module)
+        working-directory: sdks/go
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Dry-run summary
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_go != true }}
+        shell: bash
+        run: |
+          cat <<EOF
+          DRY-RUN: would push ${{ steps.meta.outputs.go_module_tag }}
+            on github.com/solvapay/solvapay-sdk
+            version ${{ steps.meta.outputs.version }}
+            core_sha ${{ steps.meta.outputs.core_sha }}
+          Real publish requires publish_to_go=true (or a solvapay-go-v* tag).
+          EOF
+
+      - name: Push nested module tag
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_go == true) || startsWith(github.ref, 'refs/tags/solvapay-go-v') || startsWith(github.ref, 'refs/tags/rehearsal/solvapay-go-v') }}
+        shell: bash
+        env:
+          MODULE_TAG: ${{ steps.meta.outputs.go_module_tag }}
+        run: |
+          set -euo pipefail
+          git tag "${MODULE_TAG}"
+          git push origin "refs/tags/${MODULE_TAG}"
+          echo "Published ${MODULE_TAG}"
+
+      - name: Public-proxy install smoke
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_go == true) || startsWith(github.ref, 'refs/tags/solvapay-go-v') || startsWith(github.ref, 'refs/tags/rehearsal/solvapay-go-v') }}
+        shell: bash
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          MODULE=github.com/solvapay/solvapay-sdk/sdks/go
+          export GOMODCACHE="$(mktemp -d)"
+          WORK="$(mktemp -d)"
+          mkdir -p "$WORK/smoke"
+          cat > "$WORK/smoke/go.mod" <<EOF
+          module smoke
+          go 1.25
+          EOF
+          GOPROXY=proxy.golang.org go list -m "${MODULE}@v${VERSION}"
+          (cd "$WORK/smoke" && go get "${MODULE}@v${VERSION}" && go build "${MODULE}")

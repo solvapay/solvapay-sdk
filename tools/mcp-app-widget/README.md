@@ -1,0 +1,20 @@
+# Shared MCP App widget artifact
+
+Canonical `mcp-app.html` vendored into every language SDK so non-Node
+runtimes do not need a Vite toolchain. Copy destinations live in
+`contract/manifest/repo-paths.yaml` (`mcpAppWidget*` lookups).
+
+Rebuild the single-file bundle from this package, then vendor:
+
+```bash
+pnpm --filter @solvapay/mcp-app-widget build
+pnpm exec tsx tools/mcp-app-widget/vendor.ts
+```
+
+`check.ts` fails CI when any SDK copy drifts from the canonical file,
+when the artifact is a stub (no bundled script / bootstrap URI / too
+small), or when the inlined browser WebAssembly core is missing. A
+headless boot test in `__tests__/widget-boot.test.ts` loads the
+canonical HTML and fails if the bundle throws or leaves `#root` empty.
+The bundle inlines the public-safe WASM as a base64 string — never a
+`data:` URL.

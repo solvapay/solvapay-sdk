@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "composite": false,
+    "skipLibCheck": true,
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@solvapay/core": ["../../../sdks/typescript/core/dist/index.d.ts"],
+      "@solvapay/mcp": ["../../../sdks/typescript/mcp/dist/index.d.ts"],
+      "@solvapay/mcp/express": ["../../../sdks/typescript/mcp/dist/express/index.d.ts"],
+      "@solvapay/mcp/fetch": ["../../../sdks/typescript/mcp/dist/fetch/index.d.ts"],
+      "@solvapay/mcp-core": ["../../../sdks/typescript/mcp-core/dist/index.d.ts"],
+      "@solvapay/server": ["../../../sdks/typescript/server/dist/index.d.ts"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  }
+}

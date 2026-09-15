@@ -1,0 +1,26 @@
+{
+  "suite": "mcp",
+  "case": "message-activate-plan-with-arg",
+  "input": {
+    "fn": "buildPromptUserMessage",
+    "args": {
+      "promptName": "activate_plan",
+      "args": {
+        "planRef": "pln_free"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "messages": [
+        {
+          "role": "user",
+          "content": {
+            "type": "text",
+            "text": "Call the `activate_plan` tool with planRef pln_free."
+          }
+        }
+      ]
+    }
+  }
+}

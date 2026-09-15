@@ -1,0 +1,43 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getPaymentMethod",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-payment-method-success",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/payment-method",
+      "query": {
+        "customerRef": "cus_fixture"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "kind": "card",
+        "brand": "visa",
+        "last4": "4242",
+        "expMonth": 12,
+        "expYear": 2030
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "card",
+      "brand": "visa",
+      "last4": "4242",
+      "expMonth": 12,
+      "expYear": 2030
+    }
+  }
+}

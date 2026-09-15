@@ -1,0 +1,28 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "deleteProduct",
+    "args": {
+      "productRef": "foo/../purchases"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "delete-product-encoded-path",
+  "wire": {
+    "request": {
+      "method": "DELETE",
+      "path": "/v1/sdk/products/foo%2F..%2Fpurchases",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": null
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

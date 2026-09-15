@@ -1,0 +1,40 @@
+{
+  "suite": "hide-tools",
+  "case": "keeps-private-without-audiences",
+  "input": {
+    "fn": "mcpHideToolsByAudience",
+    "args": {
+      "tools": [
+        {
+          "name": "account",
+          "_meta": {}
+        },
+        {
+          "name": "create_payment_intent",
+          "_meta": {
+            "audience": "ui",
+            "openai/visibility": "private"
+          }
+        }
+      ],
+      "audiences": []
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "account",
+          "_meta": {}
+        },
+        {
+          "name": "create_payment_intent",
+          "_meta": {
+            "audience": "ui",
+            "openai/visibility": "private"
+          }
+        }
+      ]
+    }
+  }
+}

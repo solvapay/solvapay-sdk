@@ -1,0 +1,18 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-next-missing-pi",
+  "input": {
+    "fn": "topupProcessNext",
+    "args": {
+      "event": {
+        "kind": "start"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "paymentIntentId is required",
+      "status": 400
+    }
+  }
+}

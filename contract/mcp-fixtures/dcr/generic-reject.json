@@ -1,0 +1,18 @@
+{
+  "suite": "dcr",
+  "case": "generic-reject",
+  "input": {
+    "fn": "mcpDcrDiagnostics",
+    "args": {
+      "productRef": "prd_demo",
+      "apiBaseUrl": "https://api.solvapay.com",
+      "status": 400,
+      "bodyText": "malformed body"
+    }
+  },
+  "expect": {
+    "result": {
+      "message": "[solvapay] OAuth DCR failed (400) productRef=prd_demo apiBaseUrl=https://api.solvapay.com. Upstream DCR rejected the registration. Check SOLVAPAY_PRODUCT_REF and SOLVAPAY_API_BASE_URL (or run `npx solvapay doctor`)."
+    }
+  }
+}

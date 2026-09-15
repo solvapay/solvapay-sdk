@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-error-cannot-be-cancelled",
+  "input": {
+    "fn": "classifyCancelError",
+    "args": { "message": "Purchase cannot be cancelled" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be cancelled or does not belong to provider",
+      "status": 400,
+      "details": "Purchase cannot be cancelled"
+    }
+  }
+}

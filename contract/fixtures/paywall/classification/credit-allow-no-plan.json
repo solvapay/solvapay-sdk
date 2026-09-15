@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "credit-allow-no-plan",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "withinLimits": true,
+        "remaining": 15132,
+        "creditBalance": 3026427,
+        "creditsPerUnit": 200,
+        "balance": {
+          "creditBalance": 3026427,
+          "creditsPerUnit": 200,
+          "remainingUnits": 15132,
+          "currency": "USD"
+        }
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

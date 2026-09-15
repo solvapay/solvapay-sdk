@@ -1,0 +1,49 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "trackUsageBulk",
+    "args": {
+      "events": [
+        {
+          "customerRef": "cus_fixture",
+          "actionType": "api_call",
+          "units": 1
+        }
+      ]
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "track-usage-bulk-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/usages/bulk",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "events": [
+          {
+            "customerRef": "cus_fixture",
+            "actionType": "api_call",
+            "units": 1
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "accepted": 1,
+        "rejected": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "accepted": 1,
+      "rejected": 0
+    }
+  }
+}

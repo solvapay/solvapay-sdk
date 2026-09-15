@@ -1,0 +1,30 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-no-create-capability-fails",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": false,
+        "canUpdateCustomer": false,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "lookupInitial"
+      },
+      "event": {
+        "kind": "customerLookupResult",
+        "found": false,
+        "errorMessage": "404",
+        "nowMs": 1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Transport",
+      "status": 400,
+      "details": "ensure_customer_next createCustomer is not available for user-1"
+    }
+  }
+}

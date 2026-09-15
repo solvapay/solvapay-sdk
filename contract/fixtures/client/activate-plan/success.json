@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "activatePlan",
+    "args": {
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture",
+      "planRef": "plan_basic"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "activate-plan-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/activate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "productRef": "prd_fixture",
+        "planRef": "plan_basic"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "activated"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "activated"
+    }
+  }
+}

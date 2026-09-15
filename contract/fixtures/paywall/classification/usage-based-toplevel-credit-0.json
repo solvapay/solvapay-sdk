@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "usage-based-toplevel-credit-0",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 5,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "creditBalance": 0
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

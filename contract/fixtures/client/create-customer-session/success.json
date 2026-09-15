@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createCustomerSession",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-customer-session-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers/customer-sessions",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "sessionId": "cusess_fixture",
+        "customerUrl": "https://pay.test/portal"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "sessionId": "cusess_fixture",
+      "customerUrl": "https://pay.test/portal"
+    }
+  }
+}

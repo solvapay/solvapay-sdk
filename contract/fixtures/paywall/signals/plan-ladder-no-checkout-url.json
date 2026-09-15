@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "plan-ladder-no-checkout-url",
+  "input": {
+    "fn": "planLadder",
+    "args": {
+      "gate": {
+        "plans": [
+          { "reference": "pln_a", "name": "A", "price": 100 },
+          { "reference": "pln_b", "name": "B", "price": 200, "checkoutUrl": "" }
+        ]
+      }
+    }
+  },
+  "expect": { "result": null }
+}

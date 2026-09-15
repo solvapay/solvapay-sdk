@@ -1,0 +1,4 @@
+.env
+vendor/bundle
+.bundle
+*.gem

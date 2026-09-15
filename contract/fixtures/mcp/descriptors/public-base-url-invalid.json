@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "public-base-url-invalid",
+  "input": {
+    "fn": "validatePublicBaseUrl",
+    "args": {
+      "publicBaseUrl": "ui://nope"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "Error",
+      "message": "buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`)."
+    }
+  }
+}

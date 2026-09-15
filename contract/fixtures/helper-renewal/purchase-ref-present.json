@@ -1,0 +1,9 @@
+{
+  "suite": "helper-renewal",
+  "case": "purchase-ref-present",
+  "input": {
+    "fn": "validatePurchaseRef",
+    "args": { "purchaseRef": "pur_1" }
+  },
+  "expect": { "result": null }
+}

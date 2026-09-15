@@ -1,0 +1,20 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-ca-tax-id-only",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "CA",
+      "taxId": "123456789RT0001"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "Tax ID",
+        "value": "123456789RT0001"
+      },
+      "companyNumber": null
+    }
+  }
+}

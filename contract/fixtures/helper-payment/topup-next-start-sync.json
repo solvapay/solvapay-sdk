@@ -1,0 +1,26 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-next-start-sync",
+  "input": {
+    "fn": "topupProcessNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "paymentIntentId": "pi_1"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "canGetBalance": false,
+        "pollAttempt": 0,
+        "pending": "syncCustomer"
+      },
+      "action": {
+        "kind": "syncCustomer"
+      }
+    }
+  }
+}

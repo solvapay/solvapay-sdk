@@ -1,0 +1,41 @@
+{
+  "suite": "resolve-auth",
+  "case": "free-invalid-bearer",
+  "input": {
+    "fn": "mcpResolveAuth",
+    "args": {
+      "rpcMethod": "server/discover",
+      "authHeader": "Bearer not-a-jwt",
+      "authMode": "tools-call",
+      "publicBaseUrl": "http://127.0.0.1:1",
+      "jsonRpcId": 1
+    }
+  },
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/customer/auth/userinfo",
+      "status": 401,
+      "body": { "error": "invalid_token" }
+    }
+  ],
+  "expect": {
+    "result": {
+      "kind": "challenge",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer resource_metadata=\"http://127.0.0.1:1/.well-known/oauth-protected-resource\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32001,
+          "message": "Unauthorized"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "paywall",
+  "case": "resolve-env-fallback",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {
+      "envProduct": "prd_env"
+    }
+  },
+  "expect": {
+    "result": "prd_env"
+  }
+}

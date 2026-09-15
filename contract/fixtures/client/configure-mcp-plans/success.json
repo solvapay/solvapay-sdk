@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "configureMcpPlans",
+    "args": {
+      "productRef": "prd_fixture",
+      "plans": []
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "configure-mcp-plans-success",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/prd_fixture/mcp/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "plans": []
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "planMap": {}
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "planMap": {}
+    }
+  }
+}

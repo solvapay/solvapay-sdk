@@ -1,0 +1,13 @@
+{
+  "suite": "seller-identity",
+  "case": "label-ca-tax-id",
+  "input": {
+    "fn": "getSellerTaxIdentifierDisplayLabel",
+    "args": {
+      "country": "CA"
+    }
+  },
+  "expect": {
+    "result": "Tax ID"
+  }
+}

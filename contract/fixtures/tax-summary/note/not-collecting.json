@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "note-not-collecting",
+  "input": {
+    "fn": "resolveTaxTreatmentNote",
+    "args": {
+      "treatment": "not_collecting"
+    }
+  },
+  "expect": {
+    "result": "Tax is not collected on this purchase."
+  }
+}

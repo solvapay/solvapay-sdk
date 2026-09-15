@@ -1,0 +1,53 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-no-update-capability-skips-backfill",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "externalRef": "ext-1",
+        "email": "ada@example.com",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": false,
+        "dedupTTLMs": 60000,
+        "cacheKey": "ext-1",
+        "pending": "lookupConflictEmail",
+        "lastError": "409 identifier email already exists",
+        "createAttempted": true
+      },
+      "event": {
+        "kind": "customerLookupResult",
+        "found": true,
+        "customer": {
+          "customerRef": "cus_old"
+        },
+        "nowMs": 1700000000000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "user-1",
+        "externalRef": "ext-1",
+        "email": "ada@example.com",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": false,
+        "dedupTTLMs": 60000,
+        "cacheKey": "ext-1",
+        "pending": "none",
+        "createAttempted": true
+      },
+      "action": {
+        "kind": "resolved",
+        "backendRef": "cus_old",
+        "cache": {
+          "key": "ext-1",
+          "backendRef": "cus_old",
+          "timestampMs": 1700000000000
+        }
+      }
+    }
+  }
+}

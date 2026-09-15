@@ -1,0 +1,21 @@
+{
+  "suite": "business-details",
+  "case": "non-business-ignores-business-fields",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "businessName": "",
+      "country": "DE",
+      "taxId": "invalid"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": false
+      }
+    }
+  }
+}

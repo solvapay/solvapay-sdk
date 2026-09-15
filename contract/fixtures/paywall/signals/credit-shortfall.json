@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "credit-shortfall",
+  "input": {
+    "fn": "creditSignals",
+    "args": {
+      "limits": {
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "creditBalance": 91000,
+      "creditsPerCall": 100000,
+      "shortfallCredits": 9000,
+      "remainingCalls": 0,
+      "isCreditBased": true
+    }
+  }
+}

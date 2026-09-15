@@ -1,0 +1,13 @@
+{
+  "suite": "helper-plans",
+  "case": "product-ref-present",
+  "input": {
+    "fn": "validateListPlansParams",
+    "args": {
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

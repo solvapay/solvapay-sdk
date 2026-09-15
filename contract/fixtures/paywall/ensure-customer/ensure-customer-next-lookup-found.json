@@ -1,0 +1,46 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-lookup-found",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "lookupInitial"
+      },
+      "event": {
+        "kind": "customerLookupResult",
+        "found": true,
+        "customer": {
+          "customerRef": "cus_1"
+        },
+        "nowMs": 2000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "backendRef": "cus_1",
+        "cache": {
+          "key": "user-1",
+          "backendRef": "cus_1",
+          "timestampMs": 2000
+        }
+      }
+    }
+  }
+}

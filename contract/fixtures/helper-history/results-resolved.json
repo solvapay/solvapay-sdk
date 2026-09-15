@@ -1,0 +1,51 @@
+{
+  "suite": "helper-history",
+  "case": "results-resolved",
+  "input": {
+    "fn": "getHistoryNext",
+    "args": {
+      "state": {
+        "productRef": "prd_widget",
+        "customerRef": "cus_123",
+        "limit": 20,
+        "pending": "fetch"
+      },
+      "event": {
+        "kind": "results",
+        "purchases": [
+          {
+            "reference": "pur_1",
+            "productRef": "prd_widget"
+          }
+        ],
+        "creditActivity": {
+          "entries": [],
+          "hasMore": false
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "productRef": "prd_widget",
+        "customerRef": "cus_123",
+        "limit": 20,
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "charges": [
+          {
+            "reference": "pur_1",
+            "productRef": "prd_widget"
+          }
+        ],
+        "creditActivity": {
+          "entries": [],
+          "hasMore": false
+        }
+      }
+    }
+  }
+}

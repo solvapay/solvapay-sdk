@@ -1,0 +1,17 @@
+{
+  "suite": "helper-limits",
+  "case": "both-present",
+  "input": {
+    "fn": "resolveCheckLimitsParams",
+    "args": {
+      "productRef": "prd_1",
+      "meterName": "api_calls"
+    }
+  },
+  "expect": {
+    "result": {
+      "productRef": "prd_1",
+      "meterName": "api_calls"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "suite": "plan-pricing",
+  "case": "tier-bands-grouped",
+  "input": {
+    "fn": "tierBands",
+    "args": {
+      "priced": {
+        "type": "usage-based",
+        "price": 0,
+        "currency": "USD",
+        "options": [
+          {
+            "kind": "tier",
+            "from": 1000,
+            "to": null,
+            "mode": "graduated",
+            "charge": { "per": "unit", "amountMinor": 1, "currency": "USD", "meter": "requests" }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 500,
+            "mode": "volume",
+            "charge": { "per": "unit", "amountMinor": 9, "currency": "USD", "meter": "tokens" }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 1000,
+            "mode": "graduated",
+            "charge": { "per": "unit", "amountMinor": 2, "currency": "USD", "meter": "requests" }
+          },
+          {
+            "kind": "tier",
+            "from": 500,
+            "to": null,
+            "mode": "volume",
+            "charge": { "per": "unit", "amountMinor": 7, "currency": "USD", "meter": "tokens" }
+          }
+        ]
+      },
+      "meter": "requests"
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "from": 0,
+        "to": 1000,
+        "mode": "graduated",
+        "charge": { "per": "unit", "amountMinor": 2, "currency": "USD", "meter": "requests" }
+      },
+      {
+        "from": 1000,
+        "to": null,
+        "mode": "graduated",
+        "charge": { "per": "unit", "amountMinor": 1, "currency": "USD", "meter": "requests" }
+      }
+    ]
+  }
+}

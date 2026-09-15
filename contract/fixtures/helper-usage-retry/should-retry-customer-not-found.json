@@ -1,0 +1,13 @@
+{
+  "suite": "helper-usage-retry",
+  "case": "should-retry-customer-not-found",
+  "input": {
+    "fn": "shouldRetryUsageError",
+    "args": {
+      "message": "404 - Customer not found"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

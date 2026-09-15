@@ -1,0 +1,14 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "extract-fallback",
+  "input": {
+    "fn": "extractBackendCustomerRef",
+    "args": {
+      "response": {},
+      "fallback": "fallback"
+    }
+  },
+  "expect": {
+    "result": "fallback"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "helper-text-gr",
+  "input": {
+    "fn": "getTaxIdHelperText",
+    "args": {
+      "country": "GR"
+    }
+  },
+  "expect": {
+    "result": "Enter your full VAT ID including the country code, e.g. EL123456789"
+  }
+}

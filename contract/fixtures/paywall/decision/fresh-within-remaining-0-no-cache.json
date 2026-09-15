@@ -1,0 +1,18 @@
+{
+  "suite": "paywall",
+  "case": "fresh-within-remaining-0-no-cache",
+  "input": {
+    "fn": "evaluateFreshLimits",
+    "args": {
+      "withinLimits": true,
+      "remaining": 0
+    }
+  },
+  "expect": {
+    "result": {
+      "withinLimits": true,
+      "remaining": 0,
+      "shouldCache": false
+    }
+  }
+}

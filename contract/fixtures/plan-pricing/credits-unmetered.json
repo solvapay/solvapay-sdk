@@ -1,0 +1,37 @@
+{
+  "suite": "plan-pricing",
+  "case": "credits-unmetered",
+  "input": {
+    "fn": "creditsPerUnitFromBalance",
+    "args": {
+      "priced": {
+        "type": "recurring",
+        "reference": "pln_5Y886LGR",
+        "name": "Pro",
+        "requiresPayment": true,
+        "price": 3000,
+        "currency": "USD",
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 3000,
+            "currency": "usd"
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

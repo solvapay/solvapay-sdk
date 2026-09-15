@@ -1,0 +1,11 @@
+{
+  "suite": "customer-ref",
+  "case": "anonymous-default",
+  "input": {
+    "fn": "resolveCustomerRef",
+    "args": {}
+  },
+  "expect": {
+    "result": "anonymous"
+  }
+}

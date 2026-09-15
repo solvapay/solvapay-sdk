@@ -1,0 +1,20 @@
+{
+  "suite": "helper-error",
+  "case": "plain-error-custom-default",
+  "input": {
+    "fn": "mapRouteError",
+    "args": {
+      "kind": "error",
+      "message": "Backend exploded",
+      "operationName": "Get product",
+      "defaultMessage": "Failed to fetch product"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Failed to fetch product",
+      "status": 500,
+      "details": "Backend exploded"
+    }
+  }
+}

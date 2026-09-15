@@ -1,0 +1,13 @@
+{
+  "suite": "helper-checkout",
+  "case": "return-url-origin-fallback",
+  "input": {
+    "fn": "resolveReturnUrl",
+    "args": {
+      "origin": "https://origin"
+    }
+  },
+  "expect": {
+    "result": "https://origin"
+  }
+}

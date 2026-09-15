@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "row-6-zero-balance-credit-fields",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "remaining": 5,
+        "creditBalance": 0,
+        "creditsPerUnit": 100
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

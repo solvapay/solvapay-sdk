@@ -1,0 +1,15 @@
+{
+  "suite": "plan-pricing",
+  "case": "pegged-fx-sek",
+  "input": {
+    "fn": "peggedCreditsPerUnit",
+    "args": {
+      "chargeMinor": 100,
+      "creditsPerMinorUnit": 100,
+      "usdToChargeRate": 9.46
+    }
+  },
+  "expect": {
+    "result": 1057
+  }
+}

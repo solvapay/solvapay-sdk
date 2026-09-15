@@ -1,0 +1,14 @@
+{
+  "suite": "tax-summary",
+  "case": "vat-label-reverse-charge",
+  "input": {
+    "fn": "formatVatSummaryLabel",
+    "args": {
+      "treatment": "reverse_charge",
+      "taxRate": 0.25
+    }
+  },
+  "expect": {
+    "result": "VAT (reverse charge)"
+  }
+}

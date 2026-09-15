@@ -1,0 +1,20 @@
+{
+  "suite": "business-details",
+  "case": "non-business-with-customer-name",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerName": "Jane Doe"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": false,
+        "customerName": "Jane Doe"
+      }
+    }
+  }
+}

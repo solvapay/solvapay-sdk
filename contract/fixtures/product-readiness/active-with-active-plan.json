@@ -1,0 +1,19 @@
+{
+  "suite": "product-readiness",
+  "case": "active-with-active-plan",
+  "input": {
+    "fn": "evaluateProductReadiness",
+    "args": {
+      "status": "active",
+      "plans": [{ "isActive": true }, { "isActive": false }]
+    }
+  },
+  "expect": {
+    "result": {
+      "ready": true,
+      "issues": [],
+      "activePlans": 1,
+      "totalPlans": 2
+    }
+  }
+}

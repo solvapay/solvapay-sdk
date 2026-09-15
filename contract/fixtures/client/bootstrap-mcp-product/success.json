@@ -1,0 +1,51 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "bootstrapMcpProduct",
+    "args": {
+      "originUrl": "https://mcp.example.com",
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "bootstrap-mcp-product-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/mcp/bootstrap",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "originUrl": "https://mcp.example.com",
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "product": {
+          "reference": "prd_mcp",
+          "name": "MCP"
+        },
+        "mcpServer": {
+          "url": "https://mcp.example.com"
+        },
+        "planMap": {}
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "product": {
+        "reference": "prd_mcp",
+        "name": "MCP"
+      },
+      "mcpServer": {
+        "url": "https://mcp.example.com"
+      },
+      "planMap": {}
+    }
+  }
+}

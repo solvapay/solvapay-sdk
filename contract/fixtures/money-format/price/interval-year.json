@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-interval-year",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 9900,
+      "currency": "usd",
+      "interval": "year"
+    }
+  },
+  "expect": {
+    "result": "$99 / year"
+  }
+}

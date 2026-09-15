@@ -1,0 +1,13 @@
+{
+  "suite": "helper-usage-retry",
+  "case": "should-retry-other",
+  "input": {
+    "fn": "shouldRetryUsageError",
+    "args": {
+      "message": "timeout"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

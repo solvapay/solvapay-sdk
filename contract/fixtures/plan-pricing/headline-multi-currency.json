@@ -1,0 +1,43 @@
+{
+  "suite": "plan-pricing",
+  "case": "headline-multi-currency",
+  "input": {
+    "fn": "headlineCharges",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 1000,
+            "currency": "usd"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 900,
+            "currency": "eur"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "per": "flat",
+        "amountMinor": 1000,
+        "currency": "usd"
+      },
+      {
+        "per": "flat",
+        "amountMinor": 900,
+        "currency": "eur"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@solvapay/example-deploy",
+  "private": true,
+  "type": "module",
+  "description": "Shared preflight + wrangler deploy harness for SolvaPay Cloudflare example Workers.",
+  "bin": {
+    "example-deploy": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./parse-dotenv": "./src/parse-dotenv.mjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.2"
+  }
+}

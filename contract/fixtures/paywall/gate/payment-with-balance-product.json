@@ -1,0 +1,52 @@
+{
+  "suite": "paywall",
+  "case": "payment-with-balance-product",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        },
+        "product": {
+          "name": "Demo",
+          "reference": "prd_demo"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.test/x) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
+      "shortMessage": "Payment required",
+      "balance": {
+        "creditBalance": 0,
+        "creditsPerUnit": 1,
+        "currency": "usd"
+      },
+      "productDetails": {
+        "name": "Demo",
+        "reference": "prd_demo"
+      },
+      "planRef": "pl_basic",
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 1,
+      "shortfallCredits": 1,
+      "remainingCalls": 0,
+      "links": {
+        "topup": "https://pay.test/x"
+      }
+    }
+  }
+}

@@ -1,0 +1,243 @@
+//! TypeScript signature-parity suite renderer.
+
+use std::fmt::Write as _;
+
+use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
+use crate::ir::IrSyncKind;
+
+use super::descriptor::ParitySuiteDescriptor;
+
+/// Renders `signature-parity.generated.test.ts` from the shared descriptor.
+pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
+    let mut out = String::new();
+    out.push_str(&generated_header(CommentStyle::Block, "ts-parity-out"));
+    out.push_str(
+        "/** Signature-parity suite (§2.8) — presence, arity, sync matrix, defaults, errors. */\n\n",
+    );
+    out.push_str("import { describe, expect, expectTypeOf, it, vi } from 'vitest'\n");
+    out.push_str("import { SolvaPayError } from '@solvapay/core'\n");
+    out.push_str(
+        "import {\n\
+         \x20 ANONYMOUS_CUSTOMER_REF,\n\
+         \x20 CUSTOMER_DEDUP_MAX_CACHE_SIZE,\n\
+         \x20 CUSTOMER_DEDUP_TTL_MS,\n\
+         \x20 PaywallError,\n\
+         \x20 REQUEST_ID_FORMAT,\n\
+         \x20 USAGE_ACTION_TYPE,\n\
+         } from '../paywall'\n",
+    );
+    out.push_str("import type { SolvaPayClient } from '../types/client'\n");
+    out.push_str("import type { SolvaPayClientGenerated } from '../types/client.generated'\n");
+    out.push_str("import * as nativeDecisions from '../native-decisions'\n");
+    out.push_str("import { withRetry } from '../utils'\n\n");
+
+    out.push_str("describe('signature-parity (generated)', () => {\n");
+
+    let defaults = &desc.catalog_defaults;
+    let _ = writeln!(
+        out,
+        "  const expectedMaxRetries = {}\n\
+         \x20 const expectedInitialDelayMs = {}\n\
+         \x20 const expectedLimitsCacheTTLMs = {}\n\
+         \x20 const expectedCustomerDedupTTLMs = {}\n\
+         \x20 const expectedCustomerDedupMaxCacheSize = {}\n\
+         \x20 const expectedAnonymousCustomerRef = '{}'\n\
+         \x20 const expectedRequestIdFormat = '{}'\n\
+         \x20 const expectedUsageActionType = '{}'\n",
+        defaults.max_retries,
+        defaults.initial_delay_ms,
+        defaults.limits_cache_ttl_ms,
+        defaults.customer_dedup_ttl_ms,
+        defaults.customer_dedup_max_cache_size,
+        defaults.anonymous_customer_ref,
+        defaults.request_id_format,
+        defaults.usage_action_type
+    );
+
+    out.push_str(
+        "  describe('defaults', () => {\n\
+            it('withRetry uses frozen retry defaults', async () => {\n\
+                const seen: { maxRetries: number; initialDelay: number }[] = []\n\
+                const spy = vi.spyOn(nativeDecisions, 'retryNextDelayMs').mockImplementation((opts) => {\n\
+                  seen.push({ maxRetries: opts.maxRetries, initialDelay: opts.initialDelay })\n\
+                  return null\n\
+                })\n\
+                await expect(withRetry(async () => {\n\
+                  throw new Error('retry-once')\n\
+                })).rejects.toThrow('retry-once')\n\
+                spy.mockRestore()\n\
+                expect(seen[0]?.maxRetries).toBe(expectedMaxRetries)\n\
+                expect(seen[0]?.initialDelay).toBe(expectedInitialDelayMs)\n\
+             })\n\
+             it('retryNextDelayMs saturates at the frozen maxRetries', () => {\n\
+                expect(\n\
+                  nativeDecisions.retryNextDelayMs({\n\
+                    maxRetries: expectedMaxRetries,\n\
+                    initialDelay: expectedInitialDelayMs,\n\
+                    backoffStrategy: 'fixed',\n\
+                    attempt: 0,\n\
+                  }),\n\
+                ).toBe(expectedInitialDelayMs)\n\
+                expect(\n\
+                  nativeDecisions.retryNextDelayMs({\n\
+                    maxRetries: expectedMaxRetries,\n\
+                    initialDelay: expectedInitialDelayMs,\n\
+                    backoffStrategy: 'fixed',\n\
+                    attempt: expectedMaxRetries,\n\
+                  }),\n\
+                ).toBeNull()\n\
+             })\n\
+             it('paywall cache TTL default matches the frozen limitsCacheTTLMs', async () => {\n\
+                const { SolvaPayPaywall } = await import('../paywall')\n\
+                const paywall = new SolvaPayPaywall({} as never)\n\
+                expect(Reflect.get(paywall, 'limitsCacheTTL')).toBe(expectedLimitsCacheTTLMs)\n\
+             })\n\
+             it('customer-dedup and usage defaults match the contract', () => {\n\
+                expect(CUSTOMER_DEDUP_TTL_MS).toBe(expectedCustomerDedupTTLMs)\n\
+                expect(CUSTOMER_DEDUP_MAX_CACHE_SIZE).toBe(expectedCustomerDedupMaxCacheSize)\n\
+                expect(ANONYMOUS_CUSTOMER_REF).toBe(expectedAnonymousCustomerRef)\n\
+                expect(REQUEST_ID_FORMAT).toBe(expectedRequestIdFormat)\n\
+                expect(USAGE_ACTION_TYPE).toBe(expectedUsageActionType)\n\
+             })\n\
+           })\n\n",
+    );
+
+    out.push_str(
+        "  describe('error mapping', () => {\n\
+            it('SolvaPayError preserves status/code', () => {\n\
+                const err = new SolvaPayError('boom', { status: 400, code: 'bad_request' })\n\
+                expect(err.status).toBe(400)\n\
+                expect(err.code).toBe('bad_request')\n\
+             })\n\
+             it('PaywallError carries structuredContent', () => {\n\
+                const err = new PaywallError('Payment required', {\n\
+                 kind: 'payment_required',\n\
+                 product: 'prd_x',\n\
+                 checkoutUrl: 'https://example.com/checkout',\n\
+                 message: 'Payment required',\n\
+                 shortMessage: 'Payment required',\n\
+               })\n\
+                expect(err.name).toBe('PaywallError')\n\
+                expect(err.structuredContent.kind).toBe('payment_required')\n\
+             })\n\
+           })\n\n",
+    );
+
+    out.push_str("  describe('client methods', () => {\n");
+    for ep in &desc.operations {
+        let name = &ep.names.ts;
+        let arity = ep.params.len();
+        let required = ep.params.iter().filter(|p| p.required).count();
+        let _ = writeln!(
+            out,
+            "    it('{name} presence / arity / sync', () => {{\n\
+                    expectTypeOf<SolvaPayClient['{name}']>().toEqualTypeOf<\n\
+                 SolvaPayClientGenerated['{name}']\n\
+               >()\n\
+                    type P = Parameters<NonNullable<SolvaPayClient['{name}']>>\n\
+                    // IR param count (incl. optional). TS Parameters['length'] is a\n\
+                    // union when trailing params are optional — require IR arity ∈ that union.\n\
+                    type ExpectedArity = {arity}\n\
+                    type AssertArity = ExpectedArity extends P['length'] ? true : false\n\
+                    expectTypeOf<AssertArity>().toEqualTypeOf<true>()\n\
+                    // required param count (IR): {required}"
+        );
+        if ep.sync_ts == IrSyncKind::Async {
+            let _ = writeln!(
+                out,
+                "      type R = ReturnType<NonNullable<SolvaPayClient['{name}']>>\n\
+                    expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()\n\
+                 }})"
+            );
+        } else {
+            let _ = writeln!(
+                out,
+                "      type R = ReturnType<NonNullable<SolvaPayClient['{name}']>>\n\
+                    expectTypeOf<R>().not.toMatchTypeOf<Promise<unknown>>()\n\
+                 }})"
+            );
+        }
+    }
+    out.push_str("  })\n");
+
+    out.push_str("})\n");
+    Ok(out)
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use crate::emit_parity_suite_ts;
+    use crate::ir::{
+        Ir, IrAvailability, IrDefaults, IrEmissionMatrix, IrEntryPoint, IrEntrySection,
+        IrErrorKind, IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
+    };
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn emits_one_method_block() {
+        let mut ir = Ir {
+            types: BTreeMap::new(),
+            overlay_helpers: BTreeMap::new(),
+            overlays: BTreeMap::new(),
+            routes: vec![],
+            error_templates: crate::ir::IrErrorTemplates::default(),
+            entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
+        };
+        ir.entry_points.insert(
+            "checkLimits".into(),
+            IrEntryPoint {
+                id: "checkLimits".into(),
+                section: IrEntrySection::Operation,
+                names: IrLangNames {
+                    ts: "checkLimits".into(),
+                    py: "check_limits".into(),
+                    rb: "check_limits".into(),
+                    go: "CheckLimits".into(),
+                    rust: "check_limits".into(),
+                    c: "checkLimits".into(),
+                },
+                optional_on_client: false,
+                params: vec![],
+                type_params: vec![],
+                request: None,
+                response: Some("LimitResponseWithPlan".into()),
+                availability: IrAvailability {
+                    ts: vec![IrSyncKind::Async],
+                    py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                    rb: vec![IrSyncKind::Sync],
+                    go: vec![IrSyncKind::Sync],
+                    rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                },
+                sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
+                ruby_target: IrRubyTarget {
+                    owner: "SolvaPay::Client".into(),
+                    name: "check_limits".into(),
+                    receiver: IrRubyReceiver::ClientInstance,
+                    takes_block: false,
+                },
+                defaults: IrDefaults::default(),
+                errors: vec![IrErrorKind::Api],
+                docs: crate::ir::IrDocModel::default(),
+            },
+        );
+        let out = emit_parity_suite_ts(&ir).unwrap();
+        assert!(out.contains("@generated"));
+        assert!(out.contains("checkLimits presence / arity / sync"));
+        assert!(out.contains("SolvaPayClient['checkLimits']"));
+        assert!(out.contains("type ExpectedArity = 0"));
+        assert!(out.contains("Promise<unknown>"));
+        assert!(out.contains("withRetry uses frozen retry defaults"));
+        assert!(!out.contains("expect(2).toBe(2)"));
+        assert!(!out.contains("expect(true).toBe(true)"));
+    }
+}

@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "fr-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "FR",
+      "taxId": "FRI123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["taxId"],
+            "message": "Enter a valid tax ID for FR"
+          }
+        ]
+      }
+    }
+  }
+}

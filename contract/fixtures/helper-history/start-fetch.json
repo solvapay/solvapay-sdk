@@ -1,0 +1,37 @@
+{
+  "suite": "helper-history",
+  "case": "start-fetch",
+  "input": {
+    "fn": "getHistoryNext",
+    "args": {
+      "state": null,
+      "event": {
+        "kind": "start",
+        "customerRef": "cus_123",
+        "productRef": "prd_widget",
+        "limit": 20
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "productRef": "prd_widget",
+        "customerRef": "cus_123",
+        "limit": 20,
+        "pending": "fetch"
+      },
+      "action": {
+        "kind": "fetch",
+        "listPurchases": {
+          "customerRef": "cus_123",
+          "productRef": "prd_widget"
+        },
+        "getCreditActivity": {
+          "customerRef": "cus_123",
+          "limit": 20
+        }
+      }
+    }
+  }
+}

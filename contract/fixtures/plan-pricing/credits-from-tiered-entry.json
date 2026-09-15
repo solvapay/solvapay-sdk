@@ -1,0 +1,38 @@
+{
+  "suite": "plan-pricing",
+  "case": "credits-from-tiered-entry",
+  "input": {
+    "fn": "creditsPerUnitFromBalance",
+    "args": {
+      "priced": {
+        "type": "usage-based",
+        "price": 0,
+        "currency": "USD",
+        "options": [
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 1000,
+            "mode": "graduated",
+            "charge": { "per": "unit", "amountMinor": 2, "currency": "USD", "meter": "requests" }
+          },
+          {
+            "kind": "tier",
+            "from": 1000,
+            "to": null,
+            "mode": "graduated",
+            "charge": { "per": "unit", "amountMinor": 1, "currency": "USD", "meter": "requests" }
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": 200
+  }
+}

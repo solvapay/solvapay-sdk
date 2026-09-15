@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "auto-usd-exclusive",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "auto",
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": "exclusive"
+  }
+}

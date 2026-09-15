@@ -1,0 +1,332 @@
+//! Python signature-parity suite renderer.
+
+use std::fmt::Write as _;
+
+use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
+
+use super::descriptor::ParitySuiteDescriptor;
+
+/// Hand-written `SolvaPayClient` attrs that are not catalog operations.
+const EXTRA_CLIENT_ATTRS: &[&str] = &["_for_fixtures"];
+
+/// Renders `signature_parity_generated_test.py` from the shared descriptor.
+pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
+    let mut ops: Vec<_> = desc.operations.iter().collect();
+    ops.sort_by(|left, right| left.names.py.cmp(&right.names.py));
+
+    let mut out = String::new();
+    out.push_str(&generated_header(CommentStyle::Hash, "py-parity-out"));
+    out.push_str(
+        "# Signature-parity suite (§2.8) — census, signature, sync matrix, stub cross-check, defaults, errors.\n\n",
+    );
+    out.push_str("from __future__ import annotations\n\n");
+    out.push_str("import ast\n");
+    out.push_str("import inspect\n");
+    out.push_str("from pathlib import Path\n\n");
+    out.push_str("import pytest\n\n");
+    out.push_str("from solvapay.errors import PaywallError, SolvaPayError\n");
+    out.push_str(
+        "from solvapay.defaults import (\n\
+    _ANONYMOUS_CUSTOMER_REF,\n\
+    _CUSTOMER_DEDUP_MAX_CACHE_SIZE,\n\
+    _CUSTOMER_DEDUP_TTL_MS,\n\
+    _REQUEST_ID_FORMAT,\n\
+    _USAGE_ACTION_TYPE,\n\
+)\n",
+    );
+    out.push_str("from solvapay.facade import create_solvapay\n\n");
+
+    out.push_str("OPERATION_NAMES = (\n");
+    for ep in &ops {
+        let _ = writeln!(out, "    '{}',", ep.names.py);
+    }
+    out.push_str(")\n\n");
+
+    out.push_str("CLIENT_EXTRA_ATTRS = frozenset({\n");
+    for name in EXTRA_CLIENT_ATTRS {
+        let _ = writeln!(out, "    '{name}',");
+    }
+    out.push_str("})\n\n");
+
+    out.push_str("def test_frozen_defaults() -> None:\n");
+    let defaults = &desc.catalog_defaults;
+    let _ = writeln!(
+        out,
+        "    default = inspect.signature(create_solvapay).parameters['limits_cache_ttl'].default"
+    );
+    let _ = writeln!(
+        out,
+        "    assert default == {}  # limitsCacheTTLMs",
+        defaults.limits_cache_ttl_ms
+    );
+    let _ = writeln!(
+        out,
+        "    assert _CUSTOMER_DEDUP_TTL_MS == {}  # customerDedupTTLMs",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        out,
+        "    assert _CUSTOMER_DEDUP_MAX_CACHE_SIZE == {}  # customerDedupMaxCacheSize",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        out,
+        "    assert _ANONYMOUS_CUSTOMER_REF == '{}'  # anonymousCustomerRef",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        out,
+        "    assert _REQUEST_ID_FORMAT == '{}'  # requestIdFormat",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        out,
+        "    assert _USAGE_ACTION_TYPE == '{}'  # usageActionType",
+        defaults.usage_action_type
+    );
+    out.push('\n');
+
+    out.push_str("def test_error_mapping() -> None:\n");
+    out.push_str("    err = SolvaPayError('boom')\n");
+    out.push_str("    setattr(err, 'status', 400)\n");
+    out.push_str("    setattr(err, 'code', 'bad_request')\n");
+    out.push_str("    assert getattr(err, 'status') == 400\n");
+    out.push_str("    assert getattr(err, 'code') == 'bad_request'\n");
+    out.push_str("    paywall = PaywallError(\n");
+    out.push_str("        'Payment required',\n");
+    out.push_str("        {\n");
+    out.push_str("            'kind': 'payment_required',\n");
+    out.push_str("            'product': 'prd_x',\n");
+    out.push_str("            'checkoutUrl': 'https://example.com/checkout',\n");
+    out.push_str("            'message': 'Payment required',\n");
+    out.push_str("        },\n");
+    out.push_str("    )\n");
+    out.push_str("    assert paywall.name == 'PaywallError'\n");
+    out.push_str("    assert paywall.structured_content['kind'] == 'payment_required'\n\n");
+
+    out.push_str("def test_client_method_census() -> None:\n");
+    out.push_str("    pytest.importorskip('solvapay._solvapay')\n");
+    out.push_str("    from solvapay._solvapay import SolvaPayClient\n\n");
+    out.push_str("    want = {name for name in OPERATION_NAMES}\n");
+    out.push_str("    want.update(f'{name}_blocking' for name in OPERATION_NAMES)\n");
+    out.push_str("    want.update(CLIENT_EXTRA_ATTRS)\n");
+    out.push_str("    got = {\n");
+    out.push_str("        name\n");
+    out.push_str("        for name in dir(SolvaPayClient)\n");
+    out.push_str("        if not name.startswith('__')\n");
+    out.push_str("    }\n");
+    out.push_str("    assert got == want\n\n");
+
+    out.push_str("@pytest.mark.parametrize('name', OPERATION_NAMES)\n");
+    out.push_str("def test_client_method_signature(name: str) -> None:\n");
+    out.push_str("    pytest.importorskip('solvapay._solvapay')\n");
+    out.push_str("    from solvapay._solvapay import SolvaPayClient\n\n");
+    out.push_str(
+        "    async_params = list(inspect.signature(getattr(SolvaPayClient, name)).parameters)\n",
+    );
+    out.push_str("    blocking_params = list(\n");
+    out.push_str(
+        "        inspect.signature(getattr(SolvaPayClient, f'{name}_blocking')).parameters\n",
+    );
+    out.push_str("    )\n");
+    out.push_str("    assert async_params == ['self', 'args_json']\n");
+    out.push_str("    assert blocking_params == ['self', 'args_json']\n\n");
+
+    out.push_str("@pytest.mark.parametrize('name', OPERATION_NAMES)\n");
+    out.push_str("async def test_client_sync_matrix(name: str) -> None:\n");
+    out.push_str("    pytest.importorskip('solvapay._solvapay')\n");
+    out.push_str("    from solvapay._solvapay import SolvaPayClient\n\n");
+    out.push_str("    client = SolvaPayClient('sk_parity', 'http://127.0.0.1:1')\n");
+    out.push_str("    result = getattr(client, name)('{}')\n");
+    out.push_str("    assert inspect.isawaitable(result), name\n");
+    out.push_str("    if hasattr(result, 'cancel'):\n");
+    out.push_str("        result.cancel()\n");
+    out.push_str("    blocking = getattr(client, f'{name}_blocking')('{}')\n");
+    out.push_str("    assert isinstance(blocking, str), name\n");
+    out.push_str("    assert not inspect.isawaitable(blocking), name\n\n");
+
+    out.push_str("def test_stub_cross_check() -> None:\n");
+    out.push_str("    pytest.importorskip('solvapay._solvapay')\n");
+    out.push_str("    import solvapay\n\n");
+    out.push_str("    stub_path = Path(solvapay.__file__).with_name('__init__.pyi')\n");
+    out.push_str("    assert stub_path.is_file(), f'missing stub {stub_path}'\n");
+    out.push_str("    module = ast.parse(stub_path.read_text())\n");
+    out.push_str("    client = next(\n");
+    out.push_str("        node\n");
+    out.push_str("        for node in module.body\n");
+    out.push_str("        if isinstance(node, ast.ClassDef) and node.name == 'SolvaPayClient'\n");
+    out.push_str("    )\n");
+    out.push_str("    defs = {\n");
+    out.push_str("        node.name: node\n");
+    out.push_str("        for node in client.body\n");
+    out.push_str("        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))\n");
+    out.push_str("    }\n");
+    out.push_str("    for name in OPERATION_NAMES:\n");
+    out.push_str("        async_fn = defs[name]\n");
+    out.push_str("        blocking_fn = defs[f'{name}_blocking']\n");
+    out.push_str("        assert isinstance(async_fn, ast.AsyncFunctionDef), name\n");
+    out.push_str("        assert isinstance(blocking_fn, ast.FunctionDef), name\n");
+    out.push_str("        assert _stub_sig(async_fn) == ('self', 'args_json', 'str', 'str')\n");
+    out.push_str(
+        "        assert _stub_sig(blocking_fn) == ('self', 'args_json', 'str', 'str')\n\n",
+    );
+
+    out.push_str(
+        "def _stub_sig(fn: ast.AsyncFunctionDef | ast.FunctionDef) -> tuple[str, str, str, str]:\n",
+    );
+    out.push_str("    args = fn.args.args\n");
+    out.push_str("    assert len(args) == 2, fn.name\n");
+    out.push_str("    arg_ann = args[1].annotation\n");
+    out.push_str("    ret_ann = fn.returns\n");
+    out.push_str(
+        "    assert isinstance(arg_ann, ast.Name) and isinstance(ret_ann, ast.Name), fn.name\n",
+    );
+    out.push_str("    return args[0].arg, args[1].arg, arg_ann.id, ret_ann.id\n");
+
+    Ok(out)
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use crate::emit_parity_suite_py;
+    use crate::ir::{
+        Ir, IrAvailability, IrDefaults, IrEmissionMatrix, IrEntryPoint, IrEntrySection,
+        IrErrorKind, IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
+    };
+    use std::collections::BTreeMap;
+
+    fn empty_ir() -> Ir {
+        Ir {
+            types: BTreeMap::new(),
+            overlay_helpers: BTreeMap::new(),
+            overlays: BTreeMap::new(),
+            routes: vec![],
+            error_templates: crate::ir::IrErrorTemplates::default(),
+            entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
+        }
+    }
+
+    #[test]
+    fn emits_defaults_and_one_method() {
+        let mut ir = empty_ir();
+        ir.entry_points.insert(
+            "checkLimits".into(),
+            IrEntryPoint {
+                id: "checkLimits".into(),
+                section: IrEntrySection::Operation,
+                names: IrLangNames {
+                    ts: "checkLimits".into(),
+                    py: "check_limits".into(),
+                    rb: "check_limits".into(),
+                    go: "CheckLimits".into(),
+                    rust: "check_limits".into(),
+                    c: "checkLimits".into(),
+                },
+                optional_on_client: false,
+                params: vec![],
+                type_params: vec![],
+                request: None,
+                response: Some("LimitResponseWithPlan".into()),
+                availability: IrAvailability {
+                    ts: vec![IrSyncKind::Async],
+                    py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                    rb: vec![IrSyncKind::Sync],
+                    go: vec![IrSyncKind::Sync],
+                    rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                },
+                sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
+                ruby_target: IrRubyTarget {
+                    owner: "SolvaPay::Client".into(),
+                    name: "check_limits".into(),
+                    receiver: IrRubyReceiver::ClientInstance,
+                    takes_block: false,
+                },
+                defaults: IrDefaults::default(),
+                errors: vec![IrErrorKind::Api],
+                docs: crate::ir::IrDocModel::default(),
+            },
+        );
+        let out = emit_parity_suite_py(&ir).unwrap();
+        assert!(out.contains("@generated by dto-gen"));
+        assert!(out.contains("10000"));
+        assert!(!out.contains("or True"));
+        assert!(!out.contains("2 == 2"));
+        assert!(out.contains("assert async_params == ['self', 'args_json']"));
+        assert!(out.contains("inspect.isawaitable(result)"));
+        assert!(out.contains("'check_limits'"));
+        assert!(out.contains("test_client_method_census"));
+        assert!(out.contains("test_client_method_signature"));
+        assert!(out.contains("test_client_sync_matrix"));
+        assert!(out.contains("test_stub_cross_check"));
+        assert!(!out.contains("test_client_method_presence"));
+    }
+
+    #[test]
+    fn renamed_op_changes_emitted_census() {
+        let mut left = empty_ir();
+        left.entry_points.insert(
+            "checkLimits".into(),
+            check_ep("checkLimits", "check_limits"),
+        );
+        let mut right = empty_ir();
+        right
+            .entry_points
+            .insert("checkLimits".into(), check_ep("checkLimits", "check_usage"));
+        let left_out = emit_parity_suite_py(&left).unwrap();
+        let right_out = emit_parity_suite_py(&right).unwrap();
+        assert_ne!(left_out, right_out);
+        assert!(left_out.contains("'check_limits'"));
+        assert!(right_out.contains("'check_usage'"));
+        assert!(!right_out.contains("'check_limits'"));
+    }
+
+    fn check_ep(id: &str, py: &str) -> IrEntryPoint {
+        IrEntryPoint {
+            id: id.into(),
+            section: IrEntrySection::Operation,
+            names: IrLangNames {
+                ts: py.into(),
+                py: py.into(),
+                rb: py.into(),
+                go: py.into(),
+                rust: py.into(),
+                c: py.into(),
+            },
+            optional_on_client: false,
+            params: vec![],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: IrAvailability {
+                ts: vec![IrSyncKind::Async],
+                py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                rb: vec![IrSyncKind::Sync],
+                go: vec![IrSyncKind::Sync],
+                rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+            },
+            sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: py.into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: crate::ir::IrDocModel::default(),
+        }
+    }
+}

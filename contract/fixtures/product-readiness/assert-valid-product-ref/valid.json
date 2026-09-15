@@ -1,0 +1,14 @@
+{
+  "suite": "product-readiness",
+  "case": "assert-valid-ok",
+  "input": {
+    "fn": "assertValidProductRef",
+    "args": {
+      "productRef": "prd_ABC123",
+      "context": "test"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

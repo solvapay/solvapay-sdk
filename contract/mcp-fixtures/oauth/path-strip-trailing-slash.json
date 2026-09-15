@@ -1,0 +1,14 @@
+{
+  "suite": "oauth",
+  "case": "path-strip-trailing-slash",
+  "input": {
+    "fn": "mcpOauthPath",
+    "args": {
+      "kind": "strip-trailing-slash",
+      "value": "https://mcp.example.com/"
+    }
+  },
+  "expect": {
+    "result": "https://mcp.example.com"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-backend-ref-short-circuits",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "cus_abc",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "cus_abc",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "cus_abc",
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "backendRef": "cus_abc"
+      }
+    }
+  }
+}

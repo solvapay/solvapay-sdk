@@ -1,0 +1,11 @@
+{
+  "suite": "tax-summary",
+  "case": "tax-not-collected-note",
+  "input": {
+    "fn": "TAX_NOT_COLLECTED_NOTE",
+    "args": {}
+  },
+  "expect": {
+    "result": "Tax is not collected on this purchase."
+  }
+}

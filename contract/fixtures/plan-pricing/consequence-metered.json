@@ -1,0 +1,25 @@
+{
+  "suite": "plan-pricing",
+  "case": "consequence-metered",
+  "input": {
+    "fn": "planConsequence",
+    "args": {
+      "plan": {
+        "reference": "pln_starter",
+        "name": "Starter",
+        "requiresPayment": true,
+        "options": [
+          { "kind": "billingCycle", "interval": "month" },
+          { "kind": "charge", "per": "flat", "amountMinor": 3000, "currency": "usd" },
+          { "kind": "limit", "cap": 10000, "meter": "requests" }
+        ]
+      },
+      "locale": "en-US",
+      "balance": null,
+      "merchantName": "Test"
+    }
+  },
+  "expect": {
+    "result": "10,000 calls per month. No credits used. Cancel any time."
+  }
+}

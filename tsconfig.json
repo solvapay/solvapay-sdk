@@ -3,13 +3,15 @@
   "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
-    { "path": "packages/core" },
-    { "path": "packages/auth" },
-    { "path": "packages/mcp-core" },
-    { "path": "packages/mcp" },
-    { "path": "packages/server" },
-    { "path": "packages/react" },
-    { "path": "packages/demo-services" },
-    { "path": "packages/test-utils" }
+    { "path": "sdks/typescript/core" },
+    { "path": "sdks/typescript/auth" },
+    { "path": "sdks/typescript/mcp-core" },
+    { "path": "sdks/typescript/mcp" },
+    { "path": "sdks/typescript/server" },
+    { "path": "sdks/typescript/react" },
+    { "path": "sdks/typescript/next" },
+    { "path": "sdks/typescript/react-supabase" },
+    { "path": "internal/demo-services" },
+    { "path": "internal/test-utils" }
   ]
 }

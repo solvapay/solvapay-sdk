@@ -363,7 +363,7 @@ app.listen(3006, () => {
 ### Stateless and text-only deployments
 
 - **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., responseMode: 'json' })` from `@solvapay/mcp/fetch` so each request returns a single JSON body (required on Workers / Supabase Edge).
-- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
+- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe.
 
 ## Low-level Adapter (escape hatch)
 

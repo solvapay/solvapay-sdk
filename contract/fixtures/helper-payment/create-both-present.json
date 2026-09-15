@@ -1,0 +1,14 @@
+{
+  "suite": "helper-payment",
+  "case": "create-both-present",
+  "input": {
+    "fn": "validateCreatePaymentIntentParams",
+    "args": {
+      "planRef": "pln_1",
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

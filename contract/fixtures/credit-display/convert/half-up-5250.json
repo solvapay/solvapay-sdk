@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-half-up-5250",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 5250,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 1,
+      "displayCurrency": "USD"
+    }
+  },
+  "expect": {
+    "result": 53
+  }
+}

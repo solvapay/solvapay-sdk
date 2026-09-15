@@ -1,0 +1,34 @@
+{
+  "suite": "retry-schedule",
+  "case": "exponential-delays",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [
+        { "throw": "boom" },
+        { "throw": "boom" },
+        { "throw": "boom" },
+        { "throw": "boom" },
+        { "throw": "boom" }
+      ],
+      "options": { "maxRetries": 4, "backoffStrategy": "exponential" }
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500, 1000, 2000, 4000],
+      "events": [
+        "call:0",
+        "sleep:500",
+        "call:1",
+        "sleep:1000",
+        "call:2",
+        "sleep:2000",
+        "call:3",
+        "sleep:4000",
+        "call:4"
+      ],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

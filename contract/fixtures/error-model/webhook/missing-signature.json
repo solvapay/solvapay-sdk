@@ -1,0 +1,19 @@
+{
+  "suite": "error-model",
+  "case": "webhook-missing-signature",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Webhook",
+      "code": "missing_signature"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Missing webhook signature",
+      "kind": "Webhook",
+      "code": "missing_signature"
+    }
+  }
+}

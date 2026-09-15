@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "reactivatePurchase",
+    "args": {
+      "purchaseRef": "foo/../purchases"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "reactivate-purchase-encoded-path",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/foo%2F..%2Fpurchases/reactivate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "purchase": {
+          "reference": "foo/../purchases",
+          "status": "active"
+        },
+        "message": "ok"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "foo/../purchases",
+      "status": "active"
+    }
+  }
+}

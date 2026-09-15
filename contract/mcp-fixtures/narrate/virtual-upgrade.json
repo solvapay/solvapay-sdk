@@ -1,0 +1,18 @@
+{
+  "suite": "narrate",
+  "case": "virtual-upgrade",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "virtual_upgrade",
+      "payload": {
+        "checkoutUrl": "https://pay.example.test/checkout"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "## Upgrade Your Subscription\n\n**[Click here to view pricing options and upgrade →](https://pay.example.test/checkout)**\n\nYou'll be able to compare options and select the one that's right for you."
+    }
+  }
+}

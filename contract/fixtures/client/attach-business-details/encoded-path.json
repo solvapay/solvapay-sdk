@@ -1,0 +1,48 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "attachBusinessDetails",
+    "args": {
+      "paymentIntentId": "foo/../purchases",
+      "isBusiness": true,
+      "businessName": "Acme",
+      "country": "US"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "attach-business-details-encoded-path",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents/foo%2F..%2Fpurchases/business-details",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "isBusiness": true,
+        "businessName": "Acme",
+        "country": "US"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "taxBreakdown": {
+          "taxAmount": 0,
+          "taxRate": 0,
+          "currency": "usd"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "taxBreakdown": {
+        "taxAmount": 0,
+        "taxRate": 0,
+        "currency": "usd"
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getAutoRecharge",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-auto-recharge-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/auto-recharge",
+      "query": {
+        "customerRef": "cus_fixture"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Get auto-recharge failed (400): bad",
+      "status": 400
+    }
+  }
+}

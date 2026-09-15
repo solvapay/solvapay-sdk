@@ -1,0 +1,46 @@
+/**
+ * MCP checkout app client entrypoint.
+ *
+ * Everything view-related (bootstrap, provider setup, surface router,
+ * the `<Mcp*View>` primitives, the shell, BackLink primitive, and
+ * default styles) lives in `@solvapay/react/mcp`. This file only wires
+ * up the host-context helpers from `@modelcontextprotocol/ext-apps`,
+ * constructs the `App`, and renders `<McpApp>`.
+ *
+ * All of these components (shell, views, plan-actions helpers,
+ * narrator) live in the SDK so the Managed MCP surface can mount
+ * the same surface on an HTTP page instead of inside the iframe.
+ */
+
+import { installSolvaPayWidgetCore } from './install-widget-core'
+import { createRoot } from 'react-dom/client'
+import {
+  App,
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from '@modelcontextprotocol/ext-apps'
+import { McpApp, SOLVAPAY_MCP_APP_CAPABILITIES } from '@solvapay/react/mcp'
+import '@solvapay/react/styles.css'
+import '@solvapay/react/mcp/styles.css'
+
+function applyContext(ctx: McpUiHostContext | undefined) {
+  if (!ctx) return
+  if (ctx.theme) applyDocumentTheme(ctx.theme)
+  if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables)
+  if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts)
+}
+
+const app = new App(
+  { name: 'SolvaPay checkout', version: '1.0.0' },
+  { availableDisplayModes: [...SOLVAPAY_MCP_APP_CAPABILITIES.availableDisplayModes] },
+)
+
+const rootEl = document.getElementById('root')
+if (!rootEl) {
+  throw new Error('#root element missing from mcp-app.html')
+}
+
+installSolvaPayWidgetCore()
+createRoot(rootEl).render(<McpApp app={app} applyContext={applyContext} />)

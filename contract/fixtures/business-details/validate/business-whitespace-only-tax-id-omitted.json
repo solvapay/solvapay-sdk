@@ -1,0 +1,22 @@
+{
+  "suite": "business-details",
+  "case": "business-whitespace-only-tax-id-omitted",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "US",
+      "taxId": "   "
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "US",
+        "customerCountry": "US"
+      }
+    }
+  }
+}

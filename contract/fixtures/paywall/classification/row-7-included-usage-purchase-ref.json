@@ -1,0 +1,26 @@
+{
+  "suite": "paywall",
+  "case": "row-7-included-usage-purchase-ref",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pln_usage",
+        "planRef": "pln_usage",
+        "purchaseRef": "pur_1",
+        "remaining": 0,
+        "plans": [
+          {
+            "reference": "pln_usage",
+            "name": "Usage",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "limit_reached" } }
+}
