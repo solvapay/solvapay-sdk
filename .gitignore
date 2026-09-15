@@ -53,6 +53,9 @@ tmp-designs/
 # Live-contract report output
 contract/live/output/
 
+# Python packaging leftovers from local editable installs
+**/*.egg-info/
+
 # Rust / Cargo build artifacts
 target/
 **/*.rs.bk
