@@ -26,11 +26,15 @@ export function enabledProductionLanguages(
   return RELEASE_TRAIN_LANGUAGES.filter(language => envFlagOn(env[ENV_KEYS[language]]))
 }
 
+export function unifiedProductionTag(version: string): string {
+  return `v${parseSemver(version)}`
+}
+
 export function productionTagsToPush(
   version: string,
   languages: readonly ReleaseTrainLanguage[],
 ): string[] {
   parseSemver(version)
   const tags = trainTags(version, 'production')
-  return languages.map(language => tags[language])
+  return [unifiedProductionTag(version), ...languages.map(language => tags[language])]
 }

@@ -21,7 +21,7 @@ describe('verify.mjs transport-tool callability', () => {
 
     it(`${path.basename(path.dirname(path.dirname(file)))} reads widget HTML when resources/list is challenged`, async () => {
       const src = await readFile(file, 'utf8')
-      expect(src).toContain("ui://widget.html")
+      expect(src).toContain('ui://widget.html')
       expect(src).toContain('authMode: all')
       expect(src).toContain('readResource(base, uri, rpcOptions)')
     })

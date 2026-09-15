@@ -5,10 +5,13 @@ description: 'How SolvaPay SDK packages reach npm, PyPI, RubyGems, crates.io and
 
 ## Overview
 
-npm packages in this monorepo publish on **independent per-package semver** via
-[Changesets](https://github.com/changesets/changesets). Rust, Python, Ruby, and
-Go share a lockstep version owned by the private sentinel
-[`@solvapay/release-train`](../internal/release-train/package.json).
+The core SDK surface (`@solvapay/core`, `@solvapay/server`, `@solvapay/mcp`,
+`@solvapay/mcp-core`, `@solvapay/server-native`, `@solvapay/server-wasm`, plus
+Rust, Python, Ruby, and Go) shares one version owned by the private sentinel
+[`@solvapay/release-train`](../internal/release-train/package.json). Changesets
+still drives the bump; `pnpm gen` writes the floor changeset from the core
+contract snapshots. Independent packages (`react`, `next`, `auth`, the CLI)
+keep their own versions.
 
 - **Preview** — dispatch [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) with `dry_run=false`. One dispatch previews all five ecosystems. Pushing to `dev` does not publish.
 - **Production** — merge work into `main`, then merge the "Version Packages" PR that [`.github/workflows/publish.yml`](../.github/workflows/publish.yml) opens.
@@ -32,7 +35,8 @@ Changeset authoring rules (bump levels, `workspace:^` peers,
 | Field                        | Value                           | Meaning                                          |
 | ---------------------------- | ------------------------------- | ------------------------------------------------ |
 | `baseBranch`                 | `main`                          | Stable publish branch                            |
-| `linked`                     | `[]`                            | npm packages stay independently versioned        |
+| `fixed`                      | core SDK surface                | One version for the grouped packages + sentinel  |
+| `linked`                     | `[]`                            | Independent packages stay on their own tracks    |
 | `privatePackages`            | `{ version: true, tag: false }` | Sentinel is versioned, never published or tagged |
 | `access`                     | `public`                        | npm public packages                              |
 | `updateInternalDependencies` | `patch`                         | Workspace dep bumps are patches                  |

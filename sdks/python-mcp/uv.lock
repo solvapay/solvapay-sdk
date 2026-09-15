@@ -1124,7 +1124,7 @@ wheels = [
 
 [[package]]
 name = "solvapay"
-version = "0.1.0"
+version = "3.0.0"
 source = { directory = "../python" }
 
 [package.metadata]
@@ -1140,7 +1140,7 @@ provides-extras = ["dev", "typecheck"]
 
 [[package]]
 name = "solvapay-mcp"
-version = "0.1.0"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

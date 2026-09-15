@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../../shared/paths.js'
 import {
+  changesetTouchesFixedGroupMember,
   changesetTouchesReleaseTrain,
   collectReleaseTrainDrift,
   prTouchesReleaseTrainSources,
@@ -43,22 +44,35 @@ solvapay-mcp-core = { path = "../solvapay-mcp", version = "0.1.0", default-featu
 })
 
 describe('release-train changeset gate', () => {
-  it('requires a sentinel changeset when core or non-TypeScript SDK files change', () => {
+  it('requires a sentinel changeset when core or group SDK files change', () => {
     expect(prTouchesReleaseTrainSources(['core/solvapay-core/src/lib.rs'])).toBe(true)
     expect(prTouchesReleaseTrainSources(['sdks/python/src/client.rs'])).toBe(true)
     expect(prTouchesReleaseTrainSources(['sdks/ruby-mcp/lib/solvapay/mcp/engine.rb'])).toBe(true)
-    expect(prTouchesReleaseTrainSources(['sdks/typescript/server/src/index.ts'])).toBe(false)
-    expect(prTouchesReleaseTrainSources(['sdks/node-native/src/lib.rs'])).toBe(false)
+    expect(prTouchesReleaseTrainSources(['sdks/typescript/server/src/index.ts'])).toBe(true)
+    expect(prTouchesReleaseTrainSources(['sdks/node-native/src/lib.rs'])).toBe(true)
+    expect(prTouchesReleaseTrainSources(['sdks/wasm/src/lib.rs'])).toBe(true)
+    expect(prTouchesReleaseTrainSources(['sdks/typescript/react/src/index.ts'])).toBe(false)
+    expect(prTouchesReleaseTrainSources(['sdks/typescript/next/src/index.ts'])).toBe(false)
+    expect(prTouchesReleaseTrainSources(['sdks/typescript/auth/src/index.ts'])).toBe(false)
+    expect(prTouchesReleaseTrainSources(['sdks/typescript/react-supabase/src/index.ts'])).toBe(
+      false,
+    )
     expect(prTouchesReleaseTrainSources(['docs/publishing.mdx'])).toBe(false)
   })
 
-  it('detects a @solvapay/release-train changeset', () => {
+  it('detects a @solvapay/release-train changeset and rejects direct group targets', () => {
     expect(changesetTouchesReleaseTrain(['---\n"@solvapay/core": patch\n---\n'])).toBe(false)
     expect(changesetTouchesReleaseTrain(['---\n"@solvapay/release-train": patch\n---\n'])).toBe(
       true,
     )
     expect(changesetTouchesReleaseTrain(["---\n'@solvapay/release-train': patch\n---\n"])).toBe(
       true,
+    )
+    expect(changesetTouchesFixedGroupMember(['---\n"@solvapay/core": patch\n---\n'])).toBe(true)
+    expect(changesetTouchesFixedGroupMember(["---\n'@solvapay/server': minor\n---\n"])).toBe(true)
+    expect(changesetTouchesFixedGroupMember(['---\n"@solvapay/react": patch\n---\n'])).toBe(false)
+    expect(changesetTouchesFixedGroupMember(["---\n'@solvapay/release-train': patch\n---\n"])).toBe(
+      false,
     )
   })
 })

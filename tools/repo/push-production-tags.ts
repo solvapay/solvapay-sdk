@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
- * After a real @solvapay/release-train bump on main, push
- * solvapay-<lang>-v<sentinel> for languages enabled by RELEASE_PROD_*.
+ * After a real @solvapay/release-train bump on main, push v<sentinel>
+ * plus solvapay-<lang>-v<sentinel> for languages enabled by RELEASE_PROD_*.
  * Never uses --replace.
  */
 
@@ -39,13 +39,12 @@ if (!sentinelMoved(version, previous)) {
 }
 
 const languages = enabledProductionLanguages(process.env)
+const tags = productionTagsToPush(version, languages)
 if (languages.length === 0) {
   console.log(
-    `push-production-tags: sentinel moved ${previous} -> ${version}; no RELEASE_PROD_* language enabled`,
+    `push-production-tags: sentinel moved ${previous} -> ${version}; pushing unified tag only`,
   )
-  process.exit(0)
 }
 
-const tags = productionTagsToPush(version, languages)
 assertTagsAvailable(tags, listRemoteTagNames())
 pushTagsAtHead(tags)

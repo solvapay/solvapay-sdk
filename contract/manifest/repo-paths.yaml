@@ -320,6 +320,9 @@ generated:
     path: sdks/typescript/core/src/barrel.generated.ts
   - id: opSurfaces
     path: contract/manifest/op-surfaces.generated.md
+  - id: coreSurfaceChangeset
+    path: .changeset/core-surface.md
+    optional: true
 
 # GENERATED_PATHS order (not the same as dto-gen flag order).
 drift:
@@ -387,6 +390,7 @@ drift:
   - syncDispatchRs
   - tsCoreBarrel
   - opSurfaces
+  - coreSurfaceChangeset
 
 # SHA256 registry for binary artifacts in `externalGenerated` (`shasum -a 256` format).
 sha256Registry: contract/manifest/generated-binaries.sha256
@@ -500,6 +504,14 @@ markerExemptions:
     reason: gate tooling that names the marker
   - pattern: tools/codegen/check-generated-headers.test.ts
     reason: gate tooling that names the marker
+  - pattern: tools/codegen/core-surface-changeset.ts
+    reason: emits the generated-file marker into .changeset/core-surface.md
+  - pattern: tools/codegen/core-surface-changeset.test.ts
+    reason: asserts the generated-file marker in the changeset body
+  - pattern: sdks/python-mcp/python/solvapay_mcp/_drivers_generated.py
+    reason: workers-safe copy of pyDrivers; kept in lockstep by python-mcp tests
+  - pattern: examples/python/cloudflare-workers-mcp/src/solvapay_mcp/_drivers_generated.py
+    reason: workers-safe copy of pyDrivers for the Python Workers example
   - pattern: tools/codegen/external-generated.test.ts
     reason: gate tooling that names the marker
   - pattern: tools/codegen/lib/generated-marker.ts
@@ -579,6 +591,12 @@ lookups:
   cargoMcpCore: core/solvapay-mcp/Cargo.toml
   cargoTransport: core/solvapay-transport/Cargo.toml
   cargoRustFacade: sdks/rust/Cargo.toml
+  cargoCapi: sdks/capi/Cargo.toml
+  cargoPythonBinding: sdks/python/Cargo.toml
+  cargoNodeNative: sdks/node-native/Cargo.toml
+  cargoWasm: sdks/wasm/Cargo.toml
+  cargoGoWasm: sdks/go/wasm/Cargo.toml
+  cargoRubyBinding: sdks/ruby/ext/solvapay/Cargo.toml
   pythonPyproject: sdks/python/pyproject.toml
   pythonMcpPyproject: sdks/python-mcp/pyproject.toml
   rubyVersion: sdks/ruby/lib/solvapay/version.rb
@@ -589,3 +607,8 @@ lookups:
   coreNativeDispatch: sdks/typescript/core/src/native-dispatch.ts
   wasmBrowserRuntime: sdks/wasm/runtime/browser-web.js
   coreBrowserWasmInstall: sdks/typescript/core/src/browser-wasm-install.ts
+  templateMcpTsPackage: tools/create-solvapay/templates/mcp/ts/_base/package.json
+  templateMcpPythonPyproject: tools/create-solvapay/templates/mcp/python/pyproject.toml
+  templateMcpRubyGemfile: tools/create-solvapay/templates/mcp/ruby/Gemfile
+  templateMcpRustCargo: tools/create-solvapay/templates/mcp/rust/Cargo.toml
+  templateMcpGoMod: tools/create-solvapay/templates/mcp/go/go.mod

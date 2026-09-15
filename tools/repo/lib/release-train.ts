@@ -5,6 +5,16 @@ import { internalPackageRel, joinRel, lookupRel, REPO_PATHS } from '../../shared
 export const RELEASE_TRAIN_PACKAGE = '@solvapay/release-train'
 export const RELEASE_TRAIN_PACKAGE_REL = `${internalPackageRel('release-train')}/package.json`
 
+export const RELEASE_TRAIN_FIXED_GROUP = [
+  '@solvapay/core',
+  '@solvapay/server',
+  '@solvapay/mcp',
+  '@solvapay/mcp-core',
+  '@solvapay/server-native',
+  '@solvapay/server-wasm',
+  RELEASE_TRAIN_PACKAGE,
+] as const
+
 export const RELEASE_TRAIN_CARGO_TOMLS = [
   lookupRel('cargoExport'),
   lookupRel('cargoDto'),
@@ -12,6 +22,12 @@ export const RELEASE_TRAIN_CARGO_TOMLS = [
   lookupRel('cargoMcpCore'),
   lookupRel('cargoTransport'),
   lookupRel('cargoRustFacade'),
+  lookupRel('cargoCapi'),
+  lookupRel('cargoPythonBinding'),
+  lookupRel('cargoNodeNative'),
+  lookupRel('cargoWasm'),
+  lookupRel('cargoGoWasm'),
+  lookupRel('cargoRubyBinding'),
 ] as const
 
 export const RELEASE_TRAIN_PYPROJECTS = [
@@ -127,13 +143,24 @@ export function changesetTouchesReleaseTrain(contents: readonly string[]): boole
   )
 }
 
+const GROUP_MEMBER_RE = new RegExp(
+  `['"](?:${RELEASE_TRAIN_FIXED_GROUP.filter(name => name !== RELEASE_TRAIN_PACKAGE)
+    .map(name => name.replace('/', '\\/'))
+    .join('|')})['"]`,
+)
+
+export function changesetTouchesFixedGroupMember(contents: readonly string[]): boolean {
+  return contents.some(text => GROUP_MEMBER_RE.test(text))
+}
+
 export function prTouchesReleaseTrainSources(changedFiles: readonly string[]): boolean {
   const corePrefix = `${REPO_PATHS.dirs.core}/`
   const sdksPrefix = 'sdks/'
   const skipPrefixes = [
-    `${REPO_PATHS.sdks.typescript}/`,
-    `${REPO_PATHS.sdks['node-native']}/`,
-    `${REPO_PATHS.sdks.wasm}/`,
+    `${REPO_PATHS.tsPackages.react}/`,
+    `${REPO_PATHS.tsPackages.next}/`,
+    `${REPO_PATHS.tsPackages.auth}/`,
+    `${REPO_PATHS.tsPackages['react-supabase']}/`,
   ]
   return changedFiles.some(file => {
     const posix = file.split(path.sep).join('/')

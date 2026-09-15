@@ -1,7 +1,5 @@
 ---
-'@solvapay/core': major
-'@solvapay/mcp': minor
-'@solvapay/mcp-core': minor
+'@solvapay/release-train': major
 '@solvapay/react': minor
 ---
 

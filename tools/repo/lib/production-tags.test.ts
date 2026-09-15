@@ -53,6 +53,7 @@ describe('enabledProductionLanguages', () => {
 describe('productionTagsToPush', () => {
   it('maps enabled languages to production train tags', () => {
     expect(productionTagsToPush('0.2.0', ['python', 'go'])).toEqual([
+      'v0.2.0',
       'solvapay-python-v0.2.0',
       'solvapay-go-v0.2.0',
     ])

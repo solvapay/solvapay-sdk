@@ -32,6 +32,7 @@ sdks/typescript/core/src/native-dispatch.ts
 sdks/typescript/server/src/native-decisions.ts
 **/next-env.d.ts
 sdks/wasm/pkg/
+examples/python/cloudflare-workers-mcp/src/vendor/server-wasm/
 sdks/node-native/index.d.ts
 sdks/node-native/index.js
 tools/codegen/dto-gen/assets/

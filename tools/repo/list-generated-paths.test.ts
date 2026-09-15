@@ -1,16 +1,17 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { REPO_ROOT } from '../shared/paths.js'
+import { joinRoot, REPO_ROOT } from '../shared/paths.js'
 import { generatedDriftPaths } from '../shared/repo-paths.js'
 import { runCli } from './list-generated-paths.js'
 
 describe('list-generated-paths', () => {
-  it('prints generatedDriftPaths one per line', () => {
+  it('prints existing generatedDriftPaths one per line', () => {
     const result = runCli()
     expect(result.exitCode).toBe(0)
     expect(result.stderr).toBe('')
-    expect(result.stdout).toBe(`${generatedDriftPaths().join('\n')}\n`)
+    const existing = generatedDriftPaths().filter(rel => existsSync(joinRoot(rel)))
+    expect(result.stdout).toBe(`${existing.join('\n')}\n`)
   })
 })
 

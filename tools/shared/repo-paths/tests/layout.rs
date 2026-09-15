@@ -188,6 +188,7 @@ fn generated_ids_match_enumerated_expectation() {
         "syncDispatchRs",
         "tsCoreBarrel",
         "opSurfaces",
+        "coreSurfaceChangeset",
     ];
     assert_eq!(ids, expected);
 }

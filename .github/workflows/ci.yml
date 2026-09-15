@@ -102,6 +102,9 @@ jobs:
       - name: Release-train changeset gate
         run: pnpm checks:release-train-changeset
 
+      - name: Scaffolder template pins
+        run: pnpm checks:template-pins
+
       - name: Check OpenAPI snapshot (offline)
         run: pnpm snapshot:openapi:check
 
@@ -143,6 +146,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Install Rust toolchain
         # rust-toolchain.toml pins channel, clippy, rustfmt, wasm32-unknown-unknown

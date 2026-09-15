@@ -271,7 +271,7 @@ pnpm build
 pnpm test
 ```
 
-The monorepo uses [Changesets](https://github.com/changesets/changesets) for per-package npm versioning; the non-TypeScript surfaces share a lockstep version. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`docs/publishing.mdx`](./docs/publishing.mdx) for branching, preview publishes, and release workflow.
+The monorepo uses [Changesets](https://github.com/changesets/changesets). The core SDK surface shares one version via `@solvapay/release-train`; independent packages (`react`, `next`, `auth`, the CLI) keep their own tracks. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`docs/publishing.mdx`](./docs/publishing.mdx).
 
 ## Security
 

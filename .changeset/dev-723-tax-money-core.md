@@ -1,5 +1,5 @@
 ---
-'@solvapay/core': minor
+'@solvapay/release-train': minor
 '@solvapay/react': minor
 ---
 

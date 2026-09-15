@@ -4,13 +4,16 @@
  *   pnpm -s exec tsx tools/repo/list-generated-paths.ts
  */
 
+import { existsSync } from 'node:fs'
 import { isDirectRun, runScriptMain, type CliResult } from '../codegen/lib/cli.js'
+import { joinRoot } from '../shared/paths.js'
 import { generatedDriftPaths } from '../shared/repo-paths.js'
 
 export function runCli(_argv: string[] = []): CliResult {
+  const rels = generatedDriftPaths().filter(rel => existsSync(joinRoot(rel)))
   return {
     exitCode: 0,
-    stdout: `${generatedDriftPaths().join('\n')}\n`,
+    stdout: `${rels.join('\n')}\n`,
     stderr: '',
   }
 }

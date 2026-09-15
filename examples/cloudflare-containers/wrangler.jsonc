@@ -71,7 +71,8 @@
           "class_name": "BitcoinMcp",
           "image": "./Dockerfile.ruby",
           "image_build_context": "../..",
-          "max_instances": 2
+          "instance_type": "basic",
+          "max_instances": 1
         }
       ],
       "durable_objects": {

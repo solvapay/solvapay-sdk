@@ -1,7 +1,5 @@
 ---
-'@solvapay/mcp-core': patch
 '@solvapay/react': patch
-'@solvapay/server': patch
 '@solvapay/release-train': patch
 ---
 

@@ -3,6 +3,17 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "linked": [],
+  "fixed": [
+    [
+      "@solvapay/core",
+      "@solvapay/server",
+      "@solvapay/mcp",
+      "@solvapay/mcp-core",
+      "@solvapay/server-native",
+      "@solvapay/server-wasm",
+      "@solvapay/release-train"
+    ]
+  ],
   "access": "public",
   "baseBranch": "main",
   "privatePackages": {

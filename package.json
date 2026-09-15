@@ -83,6 +83,7 @@
     "checks:release-dryrun": "tsx tools/repo/check-release-dryrun.ts",
     "checks:release-train": "tsx tools/repo/sync-release-train.ts --check",
     "checks:release-train-changeset": "tsx tools/repo/check-release-train-changeset.ts",
+    "checks:template-pins": "tsx tools/repo/check-template-pins.ts",
     "release:dryrun": "tsx tools/repo/release-dryrun.ts",
     "dryrun": "pnpm release:dryrun && pnpm preview --dry-run --accept-partial",
     "preview": "tsx tools/repo/language-preview.ts",

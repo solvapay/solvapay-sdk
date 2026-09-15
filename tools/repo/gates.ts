@@ -20,6 +20,7 @@ export const GATE_SCRIPTS = [
   'touch-set:check',
   'facade-coverage:check',
   'checks:required',
+  'checks:template-pins',
   'generated:external',
 ] as const
 

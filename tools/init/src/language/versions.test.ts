@@ -59,14 +59,14 @@ describe('resolveLatestVersions', () => {
     const map = await resolveLatestVersions('ruby', LANGUAGE_RUNTIME_DEPS.ruby, {
       onResolve: () => {},
     })
-    expect(map.get('solvapay')).toBe('0.1.0')
-    expect(map.get('solvapay-mcp')).toBe('0.1.0')
+    expect(map.get('solvapay')).toBe('3.0.0')
+    expect(map.get('solvapay-mcp')).toBe('3.0.0')
   })
 
   it('falls back on non-2xx', async () => {
     globalThis.fetch = vi.fn(async () => new Response('gone', { status: 404 })) as typeof fetch
     const map = await resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} })
-    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe('v0.1.0')
+    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe('v3.0.0')
   })
 
   it('throws on a 404 when failOnNotPublished is set, naming the package', async () => {

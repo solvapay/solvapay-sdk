@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/server-native",
-  "version": "0.1.0",
+  "version": "3.0.0",
   "description": "SolvaPay napi-rs Node binding (step 36 scaffold)",
   "main": "index.js",
   "types": "index.d.ts",

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "solvapay"
-version = "0.1.0"
+version = "3.0.0"
 description = "SolvaPay Python SDK (PyO3 binding)"
 requires-python = ">=3.9"
 classifiers = [

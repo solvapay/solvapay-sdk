@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from types import ModuleType
 from typing import Protocol
 
-from solvapay.facade import (
+from solvapay_mcp._drivers_generated import (
     run_generated_gate_loop_async,
     run_generated_payable_loop_async,
 )

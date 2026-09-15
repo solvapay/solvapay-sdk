@@ -120,6 +120,7 @@ const LEGACY_GENERATED_PATHS = [
   'core/solvapay-mcp/src/sync_dispatch.generated.rs',
   'sdks/typescript/core/src/barrel.generated.ts',
   'contract/manifest/op-surfaces.generated.md',
+  '.changeset/core-surface.md',
 ] as const
 
 /** Frozen copy of `DTO_GEN_ARGS` in tools/codegen/gen.ts before this tier. */
@@ -348,6 +349,7 @@ describe('repo-paths manifest', () => {
       expect(existsSync(path.join(REPO_ROOT, input.path)), input.path).toBe(true)
     }
     for (const item of manifest.generated) {
+      if (item.optional) continue
       expect(existsSync(path.join(REPO_ROOT, item.path)), item.path).toBe(true)
     }
   })

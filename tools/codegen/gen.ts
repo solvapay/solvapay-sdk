@@ -20,6 +20,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
+import { emitCoreSurfaceChangeset } from './core-surface-changeset.js'
 import { runFacadeCoverage } from './facade-coverage.js'
 import { runWasmProfiles } from './wasm-profiles.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
@@ -245,6 +246,7 @@ export function runGen(options: CliOptions): CliResult {
       stderr: `${gen.stderr}${types.stderr}${profiles.stderr}${coverage.stderr}`,
     }
   }
+  emitCoreSurfaceChangeset()
   if (!options.check) {
     return {
       exitCode: 0,

@@ -74,6 +74,23 @@ def test_unwrap_ok_and_error() -> None:
     assert caught.value.status == 402
 
 
+def test_workers_payable_does_not_import_native_solvapay() -> None:
+    source = (REPO / "sdks/python-mcp/python/solvapay_mcp/workers_payable.py").read_text()
+    assert "from solvapay." not in source
+    assert "from solvapay_mcp._drivers_generated import" in source
+
+
+def test_workers_driver_loops_match_python_sdk() -> None:
+    sdk = (REPO / "sdks/python/python/solvapay/drivers.generated.py").read_text()
+    workers = (REPO / "sdks/python-mcp/python/solvapay_mcp/_drivers_generated.py").read_text()
+    def body(text: str) -> str:
+        lines = text.splitlines()
+        start = next(i for i, line in enumerate(lines) if line.startswith('"""'))
+        return "\n".join(lines[start:])
+
+    assert body(sdk) == body(workers)
+
+
 def test_module_documents_interim_and_follow_up() -> None:
     import solvapay_mcp.workers as workers_mod
 

@@ -7,9 +7,10 @@ registries, credentials, enablement order — is
 Merging the Version Packages PR to `main` re-runs
 [`publish.yml`](../../.github/workflows/publish.yml). `changesets/action` takes
 the publish branch, ships npm `@latest` in-process, and then
-`push-production-tags.ts` pushes `solvapay-<lang>-v<sentinel>` for each language
-whose `vars.RELEASE_PROD_*` is on. TypeScript never gets a
-`solvapay-typescript-v*` tag; it publishes inside that same job.
+`push-production-tags.ts` pushes `v<sentinel>` plus
+`solvapay-<lang>-v<sentinel>` for each language whose `vars.RELEASE_PROD_*` is
+on. The unified tag is the baseline for `.changeset/core-surface.md`. TypeScript
+never gets a `solvapay-typescript-v*` tag; it publishes inside that same job.
 
 ## Sentinel-moved rule
 

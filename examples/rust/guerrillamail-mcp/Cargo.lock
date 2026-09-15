@@ -1602,7 +1602,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "js-sys",
  "serde_json",
@@ -1616,7 +1616,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-core"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "hmac 0.13.0",
  "serde",
@@ -1629,7 +1629,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-dto"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1652,7 +1652,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-export"
-version = "0.1.0"
+version = "3.0.0"
 
 [[package]]
 name = "solvapay-mcp"
@@ -1674,7 +1674,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-mcp-core"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac 0.13.0",
@@ -1691,7 +1691,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-transport"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "js-sys",
  "reqwest",

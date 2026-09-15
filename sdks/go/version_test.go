@@ -16,7 +16,7 @@ func TestVersionRoundTrip(t *testing.T) {
 		t.Fatal("Version returned empty string")
 	}
 	// Pinned to the guest crate version (sdks/go/wasm/Cargo.toml).
-	if version != "0.1.0" {
-		t.Fatalf("Version = %q, want %q", version, "0.1.0")
+	if version != "3.0.0" {
+		t.Fatalf("Version = %q, want %q", version, "3.0.0")
 	}
 }

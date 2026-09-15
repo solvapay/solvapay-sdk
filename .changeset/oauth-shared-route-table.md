@@ -1,5 +1,5 @@
 ---
-'@solvapay/mcp': patch
+'@solvapay/release-train': patch
 ---
 
 Share one OAuth route table between the Express and Fetch adapters.

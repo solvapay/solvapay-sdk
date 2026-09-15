@@ -44,15 +44,8 @@ For a `0.x` peer, `workspace:^` publishes as `^0.3.1`, which only satisfies `0.3
 A future `0.4.0` (minor) of that peer will cascade a major onto every dependent — this
 is correct semver, and pnpm's `workspace:` protocol cannot express a wider range.
 
-While a peer is intentionally pre-1.0 (e.g. `@solvapay/mcp-core`, currently on the
-`0.3.x` line and consumed by `@solvapay/react` and `@solvapay/mcp`), keep `workspace:^`
-and ship that peer's changes as **patch** so they stay inside the dependents' caret
-range and do not cascade. Pre-1.0 has no minor/patch compatibility contract, so an
-additive change is fine as a patch here.
-
-`@solvapay/react` currently spans the last such crossing explicitly
-(`"@solvapay/mcp-core": "^0.2.8 || ^0.3.0"`) — see the narrow exception below for when
-that is the right call.
+`@solvapay/mcp-core` is on the unified 3.x surface, so `workspace:^` publishes
+`^3.0.0` and future minors stay in range. `@solvapay/react` peers it at `^3.0.0`.
 
 Only take a `minor`/`major` on such a peer as a **deliberate** act — most notably a 1.0
 stabilization, after which `workspace:^` publishes `^1.0.0` and future minors stay in
@@ -101,15 +94,21 @@ After editing any `.changeset/*.md` or internal `package.json` dependency range,
 pnpm changeset status --verbose
 ```
 
-Confirm the output ends with **"would release NO packages as a major"** — unless a
-package genuinely ships a breaking change backed by its own `major` changeset. If a
-major bump appears that you cannot trace to an intentional `major` changeset, **stop**
-and find the peer-range cascade rather than forcing versions.
+A `major` on the fixed core-surface group is expected when
+`.changeset/core-surface.md` (or a hand-written `@solvapay/release-train`
+changeset) is `major`. A major on an independent package still needs its own
+intentional `major` changeset. If an unexpected major appears on `react` /
+`next` / `auth` / the CLI, **stop** and find the peer-range cascade.
 
 ## Never hand-edit `version` fields
 
-Let Changesets compute versions from `.changeset/*.md`. Do not edit the `version` field
-in any `package.json` by hand.
+Let Changesets compute versions from `.changeset/*.md`. Do not edit the `version`
+field in any `package.json` by hand, except the documented flag-day reset of the
+fixed group onto one shared number.
+
+Target `@solvapay/release-train` for core-surface changes. Do not name
+`@solvapay/core`, `@solvapay/server`, `@solvapay/mcp`, `@solvapay/mcp-core`,
+`@solvapay/server-native`, or `@solvapay/server-wasm` in a changeset.
 
 ## Changeset bump levels
 

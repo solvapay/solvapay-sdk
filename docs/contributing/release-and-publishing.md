@@ -46,28 +46,38 @@ reach a production host. Go is the documented exception: both channels tag the
 same repository, and the channel is carried by the `-rehearsal.<run>`
 prerelease suffix instead of a different host.
 
-## Two version systems
+## One version system
 
-**npm — independent per-package semver, owned by Changesets.** Each
-`@solvapay/*` package bumps on its own from the `.changeset/*.md` files merged
-alongside the code. [`.changeset/config.json`](../../.changeset/config.json) is
-the source of truth: `linked: []`, `access: public`,
-`updateInternalDependencies: patch`, examples and demo apps in `ignore`.
+The core SDK surface is one version, fanned out to five registries. Changesets
+still owns the bump. The authored target is the private sentinel
+[`@solvapay/release-train`](../../internal/release-train/package.json). A
+`fixed` group in [`.changeset/config.json`](../../.changeset/config.json) keeps
+`@solvapay/core`, `@solvapay/server`, `@solvapay/mcp`, `@solvapay/mcp-core`,
+`@solvapay/server-native`, `@solvapay/server-wasm`, and the sentinel on the same
+number. `pnpm changeset:version` then runs `tools/repo/sync-release-train.ts`,
+which stamps that number into Cargo, Python, and Ruby manifests.
 
-**Rust, Python, Ruby and Go — one lockstep version.** The single version is
-owned by the private sentinel package
-[`@solvapay/release-train`](../../internal/release-train/package.json)
-(currently `0.1.0`). `pnpm changeset:version` runs
-`tools/repo/sync-release-train.ts`, which stamps that version into
-`Cargo.toml`, `pyproject.toml` and `version.rb`. A PR touching `core/**` or a
-non-TypeScript `sdks/**` surface must include a `@solvapay/release-train`
-changeset; `pnpm checks:release-train-changeset` gates it, and
-`pnpm checks:release-train` verifies the stamped manifests still match.
+`pnpm gen` diffs the core-contract snapshots
+(`binding-symbols.snapshot.json`, `boundary-types.snapshot.json`,
+`sdk-contract.yaml`, `facade-coverage.json`) against the last `vX.Y.Z` tag and
+writes `.changeset/core-surface.md` targeting the sentinel. That file is a
+floor: a hand-written changeset against the sentinel can raise the bump.
+Independent packages (`@solvapay/react`, `@solvapay/next`, `@solvapay/auth`,
+`@solvapay/react-supabase`, `solvapay`, `create-solvapay`, `@solvapay/init`)
+stay on their own tracks. Do not name a fixed-group package in a changeset —
+`pnpm checks:release-train-changeset` rejects that.
+
+A PR that touches `core/**` or a grouped `sdks/**` surface must include a
+`@solvapay/release-train` changeset. `pnpm checks:release-train` verifies the
+stamped manifests. `pnpm checks:template-pins` keeps scaffolder pins on the
+unified version.
 
 The sentinel is `private` with `privatePackages: { version: true, tag: false }`,
-so it is versioned but never published or tagged. Changesets will never list it
-in `publishedPackages` — which is why the production tag push compares the
-sentinel at `HEAD` against `HEAD^` rather than reading the publish output. See
+so it is versioned but never published to npm. Changesets will never list it in
+`publishedPackages` — which is why the production tag push compares the
+sentinel at `HEAD` against `HEAD^`. After a sentinel move,
+`push-production-tags.ts` pushes `v<sentinel>` plus the enabled
+`solvapay-<lang>-v<sentinel>` tags. See
 [production-release.md](./production-release.md#sentinel-moved-rule).
 
 ## Channel matrix
@@ -78,7 +88,7 @@ from `ecosystemVersion`, both in
 
 | Ecosystem                    | Production registry                       | Production version                  | Preview registry                                       | Preview version                     |
 | ---------------------------- | ----------------------------------------- | ----------------------------------- | ------------------------------------------------------ | ----------------------------------- |
-| npm                          | registry.npmjs.org, `@latest`             | per-package semver                  | registry.npmjs.org, `@preview`                         | `0.0.0-preview-<shortsha>`          |
+| npm (core surface)           | registry.npmjs.org, `@latest`             | `<sentinel>`                        | registry.npmjs.org, `@preview`                         | `0.0.0-preview-<shortsha>`          |
 | Python                       | PyPI (`solvapay`, `solvapay-mcp`)         | `<sentinel>`                        | TestPyPI                                               | `<sentinel>.dev<run>`               |
 | Ruby                         | RubyGems.org (`solvapay`, `solvapay-mcp`) | `<sentinel>`                        | GitHub Packages `rubygems.pkg.github.com/solvapay`     | `<sentinel>.pre.<run>`              |
 | Rust                         | crates.io, 6 crates in graph order        | `<sentinel>`                        | in-job `cargo-http-registry` on `127.0.0.1:8000`       | `<sentinel>-rehearsal.<run>`        |
@@ -461,6 +471,7 @@ pnpm changeset                  # author a changeset
 pnpm changeset status --verbose # what would publish, at what bump
 pnpm checks:release-dryrun      # offline graph + prerelease + dry-run-default gates
 pnpm checks:release-train       # language manifests match the sentinel
+pnpm checks:template-pins       # scaffolder pins match the unified version
 pnpm release:dryrun             # graph gate, build, test, pnpm -r publish --dry-run
 pnpm dryrun                     # release:dryrun, then preview --dry-run --accept-partial
 pnpm preview --dry-run          # language build + gates, no publish

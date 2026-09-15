@@ -1,5 +1,5 @@
 ---
-'@solvapay/mcp': patch
+'@solvapay/release-train': patch
 ---
 
 Fix the MCP App widget bundle so it boots in hosts instead of throwing `TypeError: Wu is not a constructor` before React mounts.

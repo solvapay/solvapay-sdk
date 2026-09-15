@@ -27,6 +27,8 @@ const GeneratedEntry = z.object({
   driftPath: RelPath.optional(),
   /** Drift-check these files instead of `path` (binding dirs expand to files). */
   driftPaths: z.array(RelPath).min(1).optional(),
+  /** Absent on disk when the generator has nothing to emit (empty core-surface diff). */
+  optional: z.boolean().optional(),
 })
 
 const ForbidPattern = z.object({

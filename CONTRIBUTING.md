@@ -158,7 +158,7 @@ Before submitting a pull request, ensure:
 
 ## Releasing
 
-The monorepo is driven by [**Changesets**](https://github.com/changesets/changesets). npm packages move on independent semver tracks. Rust, Python, Ruby, and Go share the private `@solvapay/release-train` sentinel — add a changeset for that package when you change `core/**` or a non-TypeScript SDK surface. `pnpm changeset:version` stamps the sentinel into those manifests. See [`docs/publishing.mdx`](./docs/publishing.mdx), [`docs/contributing/language-previews.md`](./docs/contributing/language-previews.md), and [`docs/contributing/production-release.md`](./docs/contributing/production-release.md) for the lockstep train, rehearsal, and merge-to-main production tags.
+The monorepo is driven by [**Changesets**](https://github.com/changesets/changesets). The core SDK surface shares one version via the private `@solvapay/release-train` sentinel — add a changeset for that package (never for `@solvapay/core` / `server` / `mcp` directly) when you change `core/**` or a grouped SDK surface. `pnpm gen` writes `.changeset/core-surface.md` from the contract snapshots; a hand-written sentinel changeset can raise the bump. `pnpm changeset:version` stamps the sentinel into language manifests. See [`docs/publishing.mdx`](./docs/publishing.mdx) and [`docs/contributing/release-and-publishing.md`](./docs/contributing/release-and-publishing.md).
 
 ### Writing a changeset
 
@@ -177,7 +177,7 @@ Pick the right bump level per affected package:
 
 The changeset body is a short markdown description that ends up verbatim in each affected package's `CHANGELOG.md`. Lead with **what changed for consumers**, not implementation detail.
 
-After editing changesets, always run `pnpm changeset status --verbose` and confirm the plan ends with **"would release NO packages as a major"** — unless a package genuinely ships a breaking change backed by its own `major` changeset.
+After editing changesets, run `pnpm changeset status --verbose`. A `major` on the fixed group is expected when the core surface (or a hand-written sentinel changeset) says so — that bump is shared by construction. A major on an _independent_ package (`react`, `next`, `auth`, the CLI) still needs its own intentional `major` changeset.
 
 ### Internal peer dependencies — avoid major-version cascades
 
@@ -199,15 +199,16 @@ When you change an internal peer range, add a **patch** changeset for each edite
 
 ### Branches & dist-tags
 
-- **`dev`** — primary development branch. Every merge auto-publishes a
-  preview snapshot to the `@preview` npm dist-tag
-  (`@solvapay/core@0.0.0-preview-<shortsha>`).
+- **`dev`** — primary development branch. Nothing publishes on a push
+  to `dev`. Preview snapshots (`@preview`) are
+  `workflow_dispatch` only via `publish-preview.yml`.
 - **`main`** — stable release branch. Every merge either (a) opens
   the **"Version Packages"** PR via
   [`changesets/action@v1`](https://github.com/changesets/action),
   which enumerates accumulated changesets and the versions they'll
   produce, or — when that PR merges — (b) publishes bumped packages
-  to `@latest` and creates matching git tags.
+  to `@latest` and creates matching git tags (`v<version>` plus the
+  per-language production tags).
 
 See [`.github/workflows/README.md`](./.github/workflows/README.md) for the full workflow details.
 
