@@ -82,6 +82,17 @@ export interface McpAdapterOptions {
 }
 
 /**
+ * Per-customer cap declared in code on a `registerFree` tool. Not a
+ * registered `Meter` — the name must match `/^free-[a-z0-9-]+$/`.
+ */
+export interface FreeLimit {
+  meter: string
+  cap: number
+  scope: 'rolling_window' | 'lifetime'
+  windowDays?: number
+}
+
+/**
  * Options for configuring payable protection
  */
 export interface PayableOptions {
@@ -94,6 +105,12 @@ export interface PayableOptions {
    * Product reference (alias for product, preferred for consistency with backend API)
    */
   productRef?: string
+
+  /**
+   * SDK-only free-tool allowance. When set, this meter's name wins over
+   * `meterName` / `usageType`, and `checkLimits` sends a `freeAllowance` block.
+   */
+  freeLimit?: FreeLimit
 
   /**
    * Meter to charge against (defaults to `requests`).

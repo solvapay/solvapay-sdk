@@ -316,11 +316,18 @@ retry — without hand-rolling a gated tool.
 | `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart. |
 | `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Same seeded model as `predict_price_chart`. Declares an `outputSchema`. |
 
-All five are gated behind the `DEMO_TOOLS` env var. Set `DEMO_TOOLS=false`
-when you copy this example to your own repo — the demo tools and their
-slash-command prompts (`/search_knowledge`, `/get_market_quote`,
-`/query_sales_trends`, `/predict_price_chart`, `/predict_direction`)
-disappear and your copy becomes a clean template.
+All five paid tools plus two free preview tools
+(`preview_market_quote`, `preview_company_profile`) are gated behind
+the `DEMO_TOOLS` env var. The previews share one 5-call / 30-day
+`free-previews` allowance — calling either one decrements the same
+counter. Exhaustion returns the same text-only gate as a paid tool
+(`paywallReason: 'limit_reached'`) with a plan ladder. Set
+`DEMO_TOOLS=false` when you copy this example to your own repo — the
+demo tools and their slash-command prompts (`/search_knowledge`,
+`/get_market_quote`, `/query_sales_trends`, `/predict_price_chart`,
+`/predict_direction`, `/preview_market_quote`,
+`/preview_company_profile`) disappear and your copy becomes a clean
+template.
 
 ### Dual-lane responses — neither field is enough alone
 

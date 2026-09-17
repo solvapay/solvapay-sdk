@@ -6,6 +6,7 @@
 
 import type { components } from './generated'
 import type { LimitResponseWithPlan } from './client'
+import type { FreeLimit } from './options'
 
 export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
 export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
@@ -63,6 +64,11 @@ export interface PaywallMetadata {
    * attributable. Set by `registerPayable` / `buildPayableHandler`.
    */
   toolName?: string
+  /**
+   * SDK-only free-tool allowance. When set, `decide()` sends this as
+   * `freeAllowance` and the free meter wins over `meterName`.
+   */
+  freeLimit?: FreeLimit
 }
 
 /**
@@ -100,9 +106,9 @@ export type PaywallGateRecoveryFields = {
   creditBalance?: number
   /**
    * `PaywallState.kind` — same vocabulary as the classifier, not a third enum.
-   * `upgrade_required` / `limit_reached` / `reactivation_required` are
-   * SDK-only; the backend's `paywallReason` is a smaller set
-   * (`activation_required` / `topup_required` / `payment_required`).
+   * `upgrade_required` / `reactivation_required` are SDK-only. The
+   * backend's `paywallReason` covers `activation_required` /
+   * `topup_required` / `payment_required` / `limit_reached`.
    */
   reason?: PaywallReason
   /** Single primary recovery the agent should take. */

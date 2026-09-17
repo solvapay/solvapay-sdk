@@ -13,6 +13,7 @@ import type {
   LimitResponseWithPlan,
   PaywallStructuredContent,
   SolvaPay,
+  FreeLimit,
 } from '@solvapay/server'
 import { PaywallError, creditSignals } from '@solvapay/server'
 import { makeResponseResult } from './response-envelope'
@@ -51,6 +52,11 @@ export interface BuildResponseContextParams {
   bootstrapPlan?: BootstrapPlan | null
   /** SolvaPay instance used for `ctx.customer.fresh()` round-trips. */
   solvaPay: SolvaPay
+  /**
+   * When the tool is a `registerFree` allowance, `fresh()` must re-ask
+   * the same free-allowance question instead of the plan meter.
+   */
+  freeLimit?: FreeLimit
 }
 
 /**
@@ -109,7 +115,7 @@ export interface BuildResponseContextResult {
 export function buildResponseContext(
   params: BuildResponseContextParams,
 ): BuildResponseContextResult {
-  const { customerRef, limits, product, bootstrapProduct, solvaPay } = params
+  const { customerRef, limits, product, bootstrapProduct, solvaPay, freeLimit } = params
 
   // Resolve `bootstrapPlan`: caller-provided projection wins; otherwise
   // synthesize a minimal plan stub from `limits.plan` (the plan ref
@@ -130,7 +136,8 @@ export function buildResponseContext(
     const freshLimits = await solvaPay.checkLimits({
       customerRef,
       productRef: product,
-      meterName: 'requests',
+      meterName: freeLimit?.meter ?? 'requests',
+      ...(freeLimit ? { freeAllowance: freeLimit } : {}),
     })
     return snapshotFromLimits({
       customerRef,

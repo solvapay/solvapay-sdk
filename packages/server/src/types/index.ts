@@ -62,6 +62,7 @@ export { isPaywallStructuredContent, PAYWALL_NEXT_ACTIONS, PAYWALL_REASONS } fro
 export type {
   RetryOptions,
   PayableOptions,
+  FreeLimit,
   HttpAdapterOptions,
   NextAdapterOptions,
   McpAdapterOptions,

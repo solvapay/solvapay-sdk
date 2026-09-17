@@ -32,6 +32,20 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'activation_required' })
   })
 
+  it('returns limit_reached from paywallReason even with no purchase or plan', () => {
+    const state = classifyPaywallState(
+      limits({
+        paywallReason: 'limit_reached',
+        meterName: 'free-requests',
+        used: 100,
+        limit: 100,
+        remaining: 0,
+        plan: '',
+      }),
+    )
+    expect(state).toEqual({ kind: 'limit_reached' })
+  })
+
   it('prefers activation_required over zero-balance signal', () => {
     const state = classifyPaywallState(
       limits({
@@ -332,6 +346,31 @@ describe('buildGateMessage', () => {
     expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).not.toMatch(/don't have an active plan/)
     expect(msg).not.toMatch(/shown in the panel/)
+  })
+
+  it('limit_reached on a free- meter names the allowance without the word included', () => {
+    const msg = buildGateMessage(
+      { kind: 'limit_reached' } satisfies PaywallState,
+      gate({
+        checkoutUrl,
+        meterName: 'free-requests',
+        included: { total: 100, used: 100, remaining: 0 },
+        plans: [
+          {
+            reference: 'pln_pro',
+            name: 'Pro',
+            type: 'recurring',
+            price: 1800,
+            currency: 'USD',
+            requiresPayment: true,
+            checkoutUrl,
+          },
+        ],
+      }),
+    )
+    expect(msg).toMatch(/You've used all 100 free requests for this period/)
+    expect(msg).toMatch(/Pick a plan to keep going/)
+    expect(msg).not.toMatch(/included/)
   })
 
   it('reactivation_required names account and checkout views', () => {

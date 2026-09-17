@@ -49,6 +49,9 @@ export type {
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
 
+export { registerFreeTool, FREE_METER_NAME_PATTERN } from './registerFreeTool'
+export type { RegisterFreeToolOptions, FreeLimit } from './registerFreeTool'
+
 // ---- MCP Apps server helpers ----
 // `@modelcontextprotocol/ext-apps` has no SDK v2 build, so the three server-side
 // symbols it provided are vendored here. Import them from `@solvapay/mcp`

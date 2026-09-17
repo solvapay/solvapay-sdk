@@ -534,6 +534,13 @@ export interface SolvaPay {
     meterName?: string
     /** @deprecated Use `meterName`. */
     usageType?: string
+    includeCheckoutSession?: boolean
+    freeAllowance?: {
+      meter: string
+      cap: number
+      scope: 'rolling_window' | 'lifetime'
+      windowDays?: number
+    }
   }): Promise<LimitResponseWithPlan>
 
   /**
@@ -1029,12 +1036,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     payable(options: PayableOptions = {}): PayableFunction {
       const product = resolveProductRef(options.productRef || options.product)
 
-      const usageType = options.meterName || options.usageType || 'requests'
+      const usageType =
+        options.freeLimit?.meter || options.meterName || options.usageType || 'requests'
       const metadata = {
         product,
         meterName: usageType,
         usageType,
         ...(options.toolName ? { toolName: options.toolName } : {}),
+        ...(options.freeLimit ? { freeLimit: options.freeLimit } : {}),
       }
 
       return {
@@ -1164,6 +1173,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
                     error: opts.error instanceof Error ? opts.error.message : String(opts.error),
                   }
                 : {}
+            const isFree = Boolean(decideMetadata.freeLimit)
+            const usageClass =
+              !isFree && outcome === 'success'
+                ? decision.consequence === 'overage'
+                  ? 'overage'
+                  : 'included'
+                : undefined
             const trackPromise = apiClient.trackUsage({
               customerRef,
               productRef,
@@ -1176,6 +1192,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
                 action: meterName,
                 requestId,
                 ...(decideMetadata.toolName ? { toolName: decideMetadata.toolName } : {}),
+                ...(isFree && decideMetadata.freeLimit
+                  ? { meterName: decideMetadata.freeLimit.meter }
+                  : {}),
+                ...(usageClass ? { usageClass } : {}),
                 ...errMeta,
                 ...(opts?.metadata ?? {}),
               },
