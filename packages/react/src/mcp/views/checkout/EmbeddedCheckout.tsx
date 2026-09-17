@@ -311,12 +311,15 @@ function McpCheckoutBody({
       return <p>Loading checkout…</p>
     }
     if (stripeProbe === 'blocked') {
+      const hostedBackLabel = flow.branch === 'payg' ? 'Change amount' : 'Change plan'
       return (
         <HostedCheckout
           productRef={productRef}
           planRef={flow.selectedPlanRef ?? undefined}
           planName={selectedPlanShape?.name ?? undefined}
           onPurchaseSuccess={onPurchaseSuccess}
+          onBack={() => flow.back()}
+          backLabel={hostedBackLabel}
           cx={cx}
         />
       )
