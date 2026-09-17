@@ -1167,7 +1167,28 @@ describe('<McpCheckoutView> — blocked probe still shows plans', () => {
     await waitFor(() => {
       expect(screen.getByText('Complete your Pro purchase')).toBeTruthy()
     })
+    expect(screen.getByText(/doesn't allow embedded payments/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Change plan/i })).toBeTruthy()
     expect(screen.queryByTestId('payment-form-stub')).toBeNull()
+  })
+
+  it('hosted PAYG handoff shows Change amount and returns to the amount step', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => screen.getByText(/doesn't allow embedded payments/))
+    expect(screen.getByRole('button', { name: /Change amount/i })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
+    await waitFor(() => screen.getByText(/How many credits/))
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
   })
 })
 
