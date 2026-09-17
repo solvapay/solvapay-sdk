@@ -5,8 +5,7 @@
  */
 
 import type { components } from './generated'
-import type { LimitResponseWithPlan } from './client'
-import type { FreeLimit } from './options'
+import type { FreeLimit, LimitResponseWithPlan } from './client'
 
 export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
 export type LimitActivationBalance = components['schemas']['LimitBalanceDto']

@@ -1148,21 +1148,13 @@ export interface components {
     }
     CheckLimitRequest: {
       customerRef: string
-      /**
-       * SDK-only free-tool allowance. Authenticated by the provider secret
-       * key, so `cap` is the provider's own declaration, not customer input.
-       */
+      /** @description SDK-only free-tool allowance. Authenticated by the provider secret key, so `cap` is the provider's own declaration, not customer input. */
       freeAllowance?: {
-        /** Format: int */
-        cap: number
-        /**
-         * Free meter name. Must match `/^free-[a-z0-9-]+$/`.
-         * @example free-previews
-         */
-        meter: string
+        cap?: number
+        /** @description Free meter name. Must match `/^free-[a-z0-9-]+$/`. */
+        meter?: string
         /** @enum {string} */
-        scope: 'rolling_window' | 'lifetime'
-        /** Format: int */
+        scope?: 'rolling_window' | 'lifetime'
         windowDays?: number
       }
       includeCheckoutSession?: boolean

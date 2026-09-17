@@ -5,6 +5,8 @@
  * payable protection, and framework adapters.
  */
 
+import type { FreeLimit } from './client'
+
 /**
  * Retry configuration options
  */
@@ -79,17 +81,6 @@ export interface McpAdapterOptions {
   getCustomerRef?: (args: any, extra?: McpToolExtra) => string | Promise<string>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResponse?: (result: any) => any
-}
-
-/**
- * Per-customer cap declared in code on a `registerFree` tool. Not a
- * registered `Meter` — the name must match `/^free-[a-z0-9-]+$/`.
- */
-export interface FreeLimit {
-  meter: string
-  cap: number
-  scope: 'rolling_window' | 'lifetime'
-  windowDays?: number
 }
 
 /**

@@ -28,6 +28,7 @@ import type {
   AssignCreditsResponse,
   AttachBusinessDetailsParams,
   AttachBusinessDetailsResult,
+  CheckLimitsRequest,
 } from './types'
 import type { components } from './types/generated'
 import { createSolvaPayClient } from './client'
@@ -527,21 +528,7 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: {
-    customerRef: string
-    productRef: string
-    planRef?: string
-    meterName?: string
-    /** @deprecated Use `meterName`. */
-    usageType?: string
-    includeCheckoutSession?: boolean
-    freeAllowance?: {
-      meter: string
-      cap: number
-      scope: 'rolling_window' | 'lifetime'
-      windowDays?: number
-    }
-  }): Promise<LimitResponseWithPlan>
+  checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   /**
    * Track usage for a customer action.
