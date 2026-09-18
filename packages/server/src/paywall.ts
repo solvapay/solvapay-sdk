@@ -19,6 +19,7 @@ import type {
 import { buildPaywallGate } from './paywall-gate'
 import { requireProductRef } from './resolve-product-ref'
 import { withRetry, createRequestDeduplicator } from './utils'
+import { SolvaPayError } from '@solvapay/core'
 
 // Re-export types for convenience
 export type {
@@ -211,6 +212,20 @@ export interface ProtectHandlerContext {
  */
 const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
 
+function trackUsageExtra(
+  metadata: PaywallMetadata,
+  outcome: 'success' | 'paywall' | 'fail',
+  consequence?: 'throttled' | 'overage',
+): { meterName?: string; usageClass?: 'included' | 'overage' } | undefined {
+  if (metadata.freeLimit) {
+    return { meterName: metadata.freeLimit.meter }
+  }
+  if (outcome === 'success') {
+    return { usageClass: consequence === 'overage' ? 'overage' : 'included' }
+  }
+  return undefined
+}
+
 /**
  * Universal SolvaPay Protection - One API for everything
  */
@@ -287,13 +302,24 @@ export class SolvaPayPaywall {
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<PaywallDecision<TArgs>> {
     const product = this.resolveProduct(metadata)
-    const usageType = metadata.meterName || metadata.usageType || 'requests'
+    const usageType =
+      metadata.freeLimit?.meter || metadata.meterName || metadata.usageType || 'requests'
     const requestId = this.generateRequestId()
     const startTime = Date.now()
 
     const inputCustomerRef = getCustomerRef
       ? getCustomerRef(args)
       : args.auth?.customer_ref || 'anonymous'
+
+    if (metadata.freeLimit) {
+      const resolved = typeof inputCustomerRef === 'string' ? inputCustomerRef.trim() : ''
+      if (!resolved || resolved === 'anonymous') {
+        throw new SolvaPayError('identity required', {
+          status: 401,
+          code: 'identity_required',
+        })
+      }
+    }
 
     let backendCustomerRef: string
     if (inputCustomerRef.startsWith('cus_')) {
@@ -355,6 +381,7 @@ export class SolvaPayPaywall {
             // leave this unset and the backend skips the session-creation
             // side effect.
             includeCheckoutSession: true,
+            ...(metadata.freeLimit ? { freeAllowance: metadata.freeLimit } : {}),
           })
         },
       )
@@ -415,6 +442,7 @@ export class SolvaPayPaywall {
         requestId,
         latencyMs,
         metadata.toolName,
+        metadata.freeLimit ? { meterName: metadata.freeLimit.meter } : undefined,
       ).catch(() => undefined)
 
       // Delegate gate construction to `buildPaywallGate` so adapter
@@ -482,7 +510,8 @@ export class SolvaPayPaywall {
     args: TArgs,
   ): Promise<TResult> {
     const product = this.resolveProduct(metadata)
-    const usageType = metadata.meterName || metadata.usageType || 'requests'
+    const usageType =
+      metadata.freeLimit?.meter || metadata.meterName || metadata.usageType || 'requests'
     const requestId = decision.requestId
     const startTime = Date.now()
 
@@ -508,6 +537,7 @@ export class SolvaPayPaywall {
         requestId,
         latencyMs,
         metadata.toolName,
+        trackUsageExtra(metadata, 'success', decision.consequence),
       ).catch(() => undefined)
       return result
     } catch (error) {
@@ -527,6 +557,7 @@ export class SolvaPayPaywall {
           requestId,
           latencyMs,
           metadata.toolName,
+          trackUsageExtra(metadata, 'fail'),
         ).catch(() => undefined)
       }
       throw error
@@ -828,6 +859,7 @@ export class SolvaPayPaywall {
     requestId: string,
     actionDuration: number,
     toolName?: string,
+    extra?: { meterName?: string; usageClass?: 'included' | 'overage' },
   ): Promise<void> {
     await withRetry(
       () =>
@@ -843,6 +875,8 @@ export class SolvaPayPaywall {
             action: action || 'api_requests',
             requestId,
             ...(toolName ? { toolName } : {}),
+            ...(extra?.meterName ? { meterName: extra.meterName } : {}),
+            ...(extra?.usageClass ? { usageClass: extra.usageClass } : {}),
           },
           timestamp: new Date().toISOString(),
         }),

@@ -11,8 +11,7 @@ import {
   normaliseHideToolsByAudience,
   type HideToolsByAudienceConfig,
 } from '../internal/buildMcpServer'
-import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
-import type { AdditionalToolsContext } from '../server'
+import { bindAdditionalTools, type AdditionalToolsContext } from '../server'
 import {
   createSolvaPayMcpFetchHandler,
   type CreateSolvaPayMcpFetchHandlerOptions,
@@ -53,15 +52,16 @@ function buildServerForRequest(
 
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
-    const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
-      registerPayableTool(server, name, {
+    bindAdditionalTools(
+      server,
+      {
         solvaPay,
-        ...opts,
-        product: opts.product ?? productRef,
-        buildBootstrap: opts.buildBootstrap ?? descriptors.buildBootstrapPayload,
-      } as RegisterPayableToolOptions)
-    }
-    additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
+        productRef,
+        resourceUri,
+        buildBootstrap: descriptors.buildBootstrapPayload,
+      },
+      additionalTools,
+    )
   }
 
   const { audiences, options: filterOptions } = normaliseHideToolsByAudience(hideToolsByAudience)

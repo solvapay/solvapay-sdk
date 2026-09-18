@@ -15,6 +15,7 @@ export type {
   CustomerResponseMapped,
   UsageMeterType,
   CheckLimitsRequest,
+  FreeLimit,
   AttachBusinessDetailsParams,
   AttachBusinessDetailsResult,
   ActivatePlanResult,

@@ -20,6 +20,20 @@ export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
+ * Per-customer cap declared in code on a `registerFree` tool. Not a
+ * registered `Meter` — the name must match `/^free-[a-z0-9-]+$/`.
+ *
+ * Derived from `CheckLimitRequest.freeAllowance`. nestjs-zod omits
+ * nested `required`, so OpenAPI marks every property optional; the
+ * object schema only treats `windowDays` as optional.
+ */
+type GeneratedFreeAllowance = NonNullable<CheckLimitsRequest['freeAllowance']>
+export type FreeLimit = Required<Omit<GeneratedFreeAllowance, 'windowDays'>> &
+  Pick<GeneratedFreeAllowance, 'windowDays'>
+
+true satisfies FreeLimit extends GeneratedFreeAllowance ? true : never
+
+/**
  * `LimitResponse` plus a deprecated SDK-only `plan` alias.
  *
  * The backend `LimitResponse` now natively carries the `onExceed` outcome flags

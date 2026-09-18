@@ -53,8 +53,9 @@ export function demoToolsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
 }
 
 /**
- * Registers two paywalled demo tools + their slash-command prompts on the
- * server provided by `createSolvaPayMcpServer`'s `additionalTools` hook.
+ * Registers five paywalled demo tools, two free preview tools that share
+ * one allowance, and their slash-command prompts on the server provided
+ * by `createSolvaPayMcpServer`'s `additionalTools` hook.
  *
  * Tool shape mirrors
  * `examples/checkout-demo/app/components/UsageSimulator.tsx`: each call
@@ -63,7 +64,65 @@ export function demoToolsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
  * `solvaPay.payable().mcp()` inside `registerPayable`).
  */
 export function registerDemoTools(ctx: AdditionalToolsContext): void {
-  const { registerPayable, server } = ctx
+  const { registerPayable, registerFree, server } = ctx
+
+  // One free allowance shared by both preview tools. Naming the same
+  // `limit.meter` is the whole mechanism — five calls total across
+  // `preview_market_quote` and `preview_company_profile`, not five each.
+  //
+  // Cap is deliberately tiny so a live demo trips the gate in under a
+  // minute. A real preview allowance would sit nearer 100/month.
+  const PREVIEW_ALLOWANCE = {
+    meter: 'free-previews',
+    cap: 5,
+    scope: 'rolling_window' as const,
+    windowDays: 30,
+  }
+
+  const previewNudge = {
+    kind: 'upgrade' as const,
+    message:
+      `Last free preview for this period — it is shared across both preview tools. ` +
+      `\`get_market_quote\` has the full quote; call \`${VIEWER_TOOL_NAME}\` with ` +
+      `view: "checkout" to pick a plan.`,
+  }
+
+  registerFree('preview_market_quote', {
+    title: 'Preview market quote (free demo)',
+    description:
+      `Free preview of \`get_market_quote\` — price only, no spread or volume. ` +
+      `Shares a ${PREVIEW_ALLOWANCE.cap}-call / 30-day free allowance with ` +
+      `\`preview_company_profile\`; after that the gate points at the paid plans.`,
+    schema: { symbol: z.string().min(1).max(8) },
+    limit: PREVIEW_ALLOWANCE,
+    annotations: { readOnlyHint: true, idempotentHint: true },
+    handler: async ({ symbol }, ctx) => {
+      const upper = symbol.toUpperCase()
+      const quote = { symbol: upper, price: 123.45, currency: 'USD', asOf: ORACLE_AS_OF }
+
+      return ctx.customer.remaining === 1
+        ? ctx.respond(quote, { nudge: previewNudge })
+        : ctx.respond(quote)
+    },
+  })
+
+  registerFree('preview_company_profile', {
+    title: 'Preview company profile (free demo)',
+    description:
+      `Free preview of a company profile — name and sector only. Draws on the same ` +
+      `${PREVIEW_ALLOWANCE.cap}-call / 30-day allowance as \`preview_market_quote\`, so ` +
+      `calls to either one count against the shared total.`,
+    schema: { symbol: z.string().min(1).max(8) },
+    limit: PREVIEW_ALLOWANCE,
+    annotations: { readOnlyHint: true, idempotentHint: true },
+    handler: async ({ symbol }, ctx) => {
+      const profile = { symbol: symbol.toUpperCase(), name: 'Demo Corp', sector: 'Technology' }
+
+      return ctx.customer.remaining === 1
+        ? ctx.respond(profile, { nudge: previewNudge })
+        : ctx.respond(profile)
+    },
+  })
 
   registerPayable('search_knowledge', {
     title: 'Search knowledge base (demo)',
@@ -483,6 +542,52 @@ function registerDemoPrompts(server: McpServer): void {
             text: symbol
               ? `Get the current market quote for ${symbol.toUpperCase()}.`
               : 'Get the current market quote for a ticker symbol.',
+          },
+        },
+      ],
+    }),
+  )
+
+  promptHost.registerPrompt(
+    'preview_market_quote',
+    {
+      title: 'Preview market quote (free demo)',
+      description:
+        'Call the free `preview_market_quote` tool. Shares a 5-call / 30-day allowance with `preview_company_profile`.',
+      argsSchema: { symbol: z.string().optional() },
+    },
+    async ({ symbol }: { symbol?: string }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: symbol
+              ? `Preview the market quote for ${symbol.toUpperCase()}.`
+              : 'Preview the market quote for a ticker symbol.',
+          },
+        },
+      ],
+    }),
+  )
+
+  promptHost.registerPrompt(
+    'preview_company_profile',
+    {
+      title: 'Preview company profile (free demo)',
+      description:
+        'Call the free `preview_company_profile` tool. Draws on the same 5-call / 30-day allowance as `preview_market_quote`.',
+      argsSchema: { symbol: z.string().optional() },
+    },
+    async ({ symbol }: { symbol?: string }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: symbol
+              ? `Preview the company profile for ${symbol.toUpperCase()}.`
+              : 'Preview a company profile for a ticker symbol.',
           },
         },
       ],

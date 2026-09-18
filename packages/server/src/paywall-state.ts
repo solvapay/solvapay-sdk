@@ -91,7 +91,9 @@ function activePlanRefOf(limits: LimitResponseWithPlan): string | undefined {
  *
  * Precedence:
  *  1. `activationRequired` / `paywallReason === 'activation_required'`.
- *  2. `paywallReason === 'topup_required'` — backend stays authoritative
+ *  2. `paywallReason === 'limit_reached'` — free-allowance exhaustion
+ *     (no purchaseRef / planRef) must not fall through to upgrade_required.
+ *  3. `paywallReason === 'topup_required'` — backend stays authoritative
  *     for credit-based denials (same rule as Managed MCP).
  *  3. Authoritative `needsTopUp` / `needsUpgrade` flags from `decideLimit`.
  *  4. Credit-field presence + a real shortfall (`balance < cost`).
@@ -108,6 +110,10 @@ export function classifyPaywallState(limits: LimitResponseWithPlan | null): Payw
 
   if (limits.activationRequired === true || limits.paywallReason === 'activation_required') {
     return { kind: 'activation_required' }
+  }
+
+  if (limits.paywallReason === 'limit_reached') {
+    return { kind: 'limit_reached' }
   }
 
   if (limits.paywallReason === 'topup_required') {
@@ -192,9 +198,13 @@ function formatCreditsWithMoney(
   return `${amount} credits`
 }
 
+function isFreeMeter(name: string | undefined): boolean {
+  return typeof name === 'string' && name.startsWith('free-')
+}
+
 function meterLabel(gate: PaywallStructuredContent): string {
   if (!gate.meterName) return 'units'
-  return gate.meterName.replace(/_/g, ' ')
+  return gate.meterName.replace(/[_-]/g, ' ')
 }
 
 function namedCheckoutMarkdown(url: string, label = 'Open checkout'): string {
@@ -266,6 +276,17 @@ export function buildGateMessage(state: PaywallState, gate: PaywallStructuredCon
   switch (state.kind) {
     case 'limit_reached': {
       const included = gate.included
+      if (isFreeMeter(gate.meterName)) {
+        const total = included?.total
+        const usedLine =
+          total !== undefined
+            ? `You've used all ${total} ${meterLabel(gate)} for this period.`
+            : `You've used all ${meterLabel(gate)} for this period.`
+        const switchLine = ladder
+          ? ` Pick a plan to keep going: ${ladder}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
+          : recoverClause(url, 'keep going', 'checkout')
+        return `${usedLine}${switchLine}`
+      }
       const price =
         gate.unitPriceMinor != null && gate.currency
           ? formatMinor(gate.unitPriceMinor, gate.currency)

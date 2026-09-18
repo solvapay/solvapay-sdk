@@ -1,6 +1,7 @@
 # `mcp-checkout-app` — tools cheat-sheet
 
-The server registers **8 SolvaPay tools** + (optionally) 3 demo data tools.
+The server registers **8 SolvaPay tools** + (optionally) 5 paywalled demo
+tools and 2 free preview tools.
 Grouped by audience below: what the model sees in `tools/list` is in the
 first two tables; the UI-only tools are tagged `_meta.audience: 'ui'` so
 hosts that honour the field can hide them from the agent.
@@ -82,10 +83,25 @@ Enabled when `DEMO_TOOLS !== 'false'` — see [`src/demo-tools.ts`](src/demo-too
 | `search_knowledge` | Deterministic stub snippets — exercises the paywall |
 | `get_market_quote` | Deterministic fake quote — second paywall demo |
 | `query_sales_trends` | Sales rows + optional low-balance **nudge** |
+| `predict_price_chart` | History + forecast arrays (oracle demo) |
+| `predict_direction` | Up/down verdict + confidence (oracle demo) |
 
 When credits hit zero the tool returns a **text-only gate** naming
 `` `account` `` with the appropriate `view` (or `` `activate_plan` `` when
 activation is the recovery path).
+
+## Free tools with a shared allowance
+
+| Tool | Purpose |
+| --- | --- |
+| `preview_market_quote` | Price-only preview of `get_market_quote` |
+| `preview_company_profile` | Name + sector preview of a company profile |
+
+Both name the same `limit.meter` (`free-previews`), so five calls total
+across both tools — not five each. Exhaustion emits the same gate shape
+as a paid tool (`paywallReason: 'limit_reached'` plus a plan ladder).
+The allowance is per customer, not per server. Managed MCP public tools
+stay unlimited; this path is SDK-only.
 
 ## UI-only state-change tools (tagged `_meta.audience: 'ui'`)
 
@@ -110,7 +126,9 @@ steer agents toward `` `account` `` / `` `activate_plan` `` instead.
 | `/topup` | `account` with `view: "topup"` |
 | `/activate_plan` | `activate_plan` when `planRef` known; else `account` + checkout |
 
-Demo prompts (`/search_knowledge`, etc.) are unchanged — see source.
+Demo prompts (`/search_knowledge`, `/get_market_quote`,
+`/preview_market_quote`, `/preview_company_profile`, and the rest) map
+1:1 onto the demo tools — see source.
 
 ## Docs resource
 

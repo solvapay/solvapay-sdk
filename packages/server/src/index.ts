@@ -165,6 +165,7 @@ export type {
   LimitResponseWithPlan,
   SolvaPayClient,
   PayableOptions,
+  FreeLimit,
   HttpAdapterOptions,
   NextAdapterOptions,
   PaywallArgs,

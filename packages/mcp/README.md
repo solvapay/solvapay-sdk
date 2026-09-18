@@ -13,7 +13,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp
 
 Manual `createSolvaPayMcpServer` wiring is the **advanced path** for existing servers or custom frameworks.
 
-Guides: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) · [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app)
+Guides: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) · [Free allowance](https://docs.solvapay.com/sdks/typescript/guides/free-allowance) · [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app)
 
 ## Install
 
@@ -37,7 +37,13 @@ const server = createSolvaPayMcpServer({
   resourceUri: 'ui://my-app/mcp-app.html',
   htmlPath: './dist/mcp-app.html',
   publicBaseUrl: 'https://my-app.example.com',
-  additionalTools: ({ registerPayable }) => {
+  additionalTools: ({ registerPayable, registerFree }) => {
+    registerFree('preview_video', {
+      schema: { prompt: z.string() },
+      description: 'Preview a video prompt. Free up to 5 calls / 30 days.',
+      limit: { meter: 'free-previews', cap: 5, scope: 'rolling_window', windowDays: 30 },
+      handler: async ({ prompt }, ctx) => ctx.respond({ preview: prompt }),
+    })
     registerPayable('create_video', {
       schema: { prompt: z.string() },
       description: 'Generate a short video from a text prompt.',
@@ -47,13 +53,13 @@ const server = createSolvaPayMcpServer({
 })
 ```
 
-One call wires transport tools, UI resource (Stripe CSP baseline), and your payable tools.
+One call wires transport tools, UI resource (Stripe CSP baseline), payable tools, and optional capped free tools (`registerFree`).
 
 ## Subpath exports
 
 | Import | Use when |
 | --- | --- |
-| `@solvapay/mcp` | `createSolvaPayMcpServer`, `registerPayableTool` |
+| `@solvapay/mcp` | `createSolvaPayMcpServer`, `registerPayableTool`, `registerFreeTool` |
 | `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware |
 | `@solvapay/mcp/fetch` | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
 
