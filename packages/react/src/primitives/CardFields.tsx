@@ -82,16 +82,30 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
 
   const formRef = useRef<CaptureForm | null>(null)
   const pending = useRef(new Map<CaptureFieldName, MountFieldOptions>())
-  const onEnterRef = useRef(onEnter)
-  onEnterRef.current = onEnter
 
-  const raise = useCallback(
-    (err: CaptureError) => {
-      setError(err)
-      onError?.(err)
-    },
-    [onError],
-  )
+  // Callbacks live in refs so nothing below depends on their identity. A host
+  // writes `onStateChange={s => ...}` inline, which is a new function every
+  // render; if the form-creation effect depended on it, the form would be torn
+  // down and rebuilt on every render.
+  const onEnterRef = useRef(onEnter)
+  const onStateChangeRef = useRef(onStateChange)
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onEnterRef.current = onEnter
+    onStateChangeRef.current = onStateChange
+    onErrorRef.current = onError
+  })
+
+  const raise = useCallback((err: CaptureError) => {
+    setError(err)
+    onErrorRef.current?.(err)
+  }, [])
+
+  // The script config by value, not by object identity. `script={{ version }}`
+  // written inline is the obvious way to use this component and produces a new
+  // object every render, so depending on the object is depending on the caller
+  // never doing the obvious thing.
+  const { version: scriptVersion, integrity: scriptIntegrity, host: scriptHost } = script
 
   useEffect(() => {
     if (sessionError) raise(sessionError)
@@ -104,11 +118,15 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
 
     CaptureForm.create({
       session,
-      script,
+      script: {
+        version: scriptVersion,
+        ...(scriptIntegrity ? { integrity: scriptIntegrity } : {}),
+        ...(scriptHost ? { host: scriptHost } : {}),
+      },
       onStateChange: next => {
         if (cancelled) return
         setState(next)
-        onStateChange?.(next)
+        onStateChangeRef.current?.(next)
       },
       onEnter: () => onEnterRef.current?.(),
     })
@@ -140,8 +158,9 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
       formRef.current?.destroy()
       formRef.current = null
     }
-    // `script` is a config object; consumers should pass a stable reference.
-  }, [session, script, onStateChange, raise])
+    // Deps are values, never objects or functions. One form per session, and a
+    // render on its own is not a reason to build a new one.
+  }, [session, scriptVersion, scriptIntegrity, scriptHost, raise])
 
   const registerField = useCallback(
     (name: CaptureFieldName, element: HTMLElement | null, options?: CaptureFieldOptions) => {
@@ -327,12 +346,20 @@ function createFieldSlot(name: CaptureFieldName, attribute: string) {
     // Unmount once, on teardown, and only then.
     useEffect(() => () => ctxRef.current.registerField(name, null), [])
 
+    // The ref React actually receives is the COMPOSED one, so composing inline
+    // undoes the stability of `attach`: `composeRefs` returns a fresh closure
+    // on every call, React sees a new ref callback, and detaches then
+    // reattaches. Each detach unmounts the vault field, which publishes state,
+    // which renders, which composes a new ref. Memoising is what actually
+    // stops it.
+    const composedRef = useMemo(() => composeRefs(forwardedRef, attach), [forwardedRef, attach])
+
     const field = ctx.state.fields[name]
     const Comp = asChild ? Slot : 'div'
     return (
       <Comp
         id={id}
-        ref={composeRefs(forwardedRef, attach)}
+        ref={composedRef}
         data-state={
           field.mounted ? (field.valid ? 'valid' : field.touched ? 'invalid' : 'idle') : 'loading'
         }
@@ -363,8 +390,11 @@ const FieldError = forwardRef<HTMLParagraphElement, FieldErrorProps>(function Ca
   forwardedRef,
 ) {
   const ctx = useCardFields()
+  // Optional, not asserted. A misspelled or unmounted field name must render
+  // nothing, not throw: an exception here unmounts the whole payment form, and
+  // the one job of this component is to report a problem.
   const state = ctx.state.fields[field]
-  if (!state.touched || state.valid || !state.message) return null
+  if (!state?.touched || state.valid || !state.message) return null
 
   const Comp = asChild ? Slot : 'p'
   return (

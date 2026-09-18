@@ -1,38 +1,3 @@
-/**
- * PARKED, NOT YET RUNNING. See the skip below.
- *
- * These are the tests the vault capture surface needs: that `save()` captures
- * and records, that it never captures when it has nowhere to report the
- * result, that a rejected card records nothing, that the grant is re-minted
- * because it is spent, and that the tokenization stays pinned to what the
- * outbound route expects.
- *
- * They do not run yet. The suite exhausts the heap before the first test body
- * executes — vitest reports `tests 0ms` and a render counter placed inside the
- * tree never fires even once, so whatever spins does so during mount, not
- * during the assertions.
- *
- * Diagnosing it turned up two real defects, both fixed and committed
- * separately, and neither of them was the cause:
- *
- *   1. `useCaptureSession` re-minted on any unusable session, so an expired
- *      grant produced an unbounded mint loop against the endpoint that hands
- *      out write credentials.
- *   2. The field slot's ref callback depended on the context object, which is
- *      new on every state publish. React therefore detached and reattached the
- *      ref on each keystroke, remounting the vault iframe and losing what had
- *      been typed into it.
- *
- * The remaining suspect is the harness rather than the component: every other
- * `SolvaPayProvider` test in this package installs a `fetch` spy before
- * rendering, and this one does not, so the provider's own fetches may be
- * retrying without bound. That is a hypothesis, not a finding.
- *
- * Next step: add the `fetch` spy the sibling provider tests use, then remove
- * the skip. Do not remove the skip before the suite is green — an
- * out-of-memory crash in CI is worse than a missing test.
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import React from 'react'
@@ -124,7 +89,7 @@ async function waitForReady(ctx: () => CardFieldsContextValue) {
   await waitFor(() => expect(ctx().ready).toBe(true))
 }
 
-describe.skip('CardFields', () => {
+describe('CardFields', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetVaultScriptLoaderForTests()
@@ -372,7 +337,7 @@ describe.skip('CardFields', () => {
         children: (
           <>
             <CardFields.Cvc />
-            <CardFields.FieldError name="cvc" />
+            <CardFields.FieldError field="cvc" />
           </>
         ),
       })
