@@ -37,7 +37,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi
 ## What the scaffold includes
 
 - **Worker transport** — fetch-first MCP endpoint via `@solvapay/mcp/fetch`
-- **Paywall** — `registerPayable` tools wired to your SolvaPay product
+- **Paywall** — `registerPayable` tools wired to your SolvaPay product; `registerFree` for a per-customer free allowance
 - **Widget UI** — `@solvapay/react/mcp` checkout, account, and topup views
 - **OAuth bridge** — discovery metadata and bearer-token customer identity
 - **Deploy scripts** — `npm run deploy` with wrangler + secret upload

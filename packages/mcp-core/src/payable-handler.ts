@@ -32,6 +32,7 @@ import type {
   LimitResponseWithPlan,
   ProtectHandlerContext,
   SolvaPay,
+  FreeLimit,
 } from '@solvapay/server'
 import { buildNudgeMessage, creditSignals, isPaywallStructuredContent } from '@solvapay/server'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
@@ -75,6 +76,11 @@ export interface BuildPayableHandlerContext {
    * events are attributable to a tool.
    */
   toolName?: string
+  /**
+   * SDK-only free-tool allowance. When set, the paywall kernel counts
+   * against this free meter instead of the plan meter.
+   */
+  freeLimit?: FreeLimit
 }
 
 /**
@@ -112,7 +118,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
   ctx: BuildPayableHandlerContext,
   handler: MerchantHandler<TArgs, TResult>,
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
-  const { product, getCustomerRef, toolName } = ctx
+  const { product, getCustomerRef, toolName, freeLimit } = ctx
 
   // The business logic passed to `.mcp(...)` is called by
   // `paywall.protect` with `(args, handlerContext)`. We close over
@@ -130,6 +136,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
       limits,
       product,
       solvaPay,
+      ...(freeLimit ? { freeLimit } : {}),
     })
 
     return handler(args as TArgs, responseCtx)
@@ -137,7 +144,12 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const protectedHandler = solvaPay
-    .payable({ product, getCustomerRef, ...(toolName ? { toolName } : {}) })
+    .payable({
+      product,
+      getCustomerRef,
+      ...(toolName ? { toolName } : {}),
+      ...(freeLimit ? { freeLimit } : {}),
+    })
     .mcp(wrappedBusinessLogic as any)
 
   return async (

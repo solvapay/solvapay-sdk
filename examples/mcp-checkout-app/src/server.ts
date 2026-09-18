@@ -105,9 +105,10 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
  * paywall-protected tools drop into `additionalTools` — everything else
  * stays declarative.
  *
- * When `DEMO_TOOLS` is unset (or not `"false"`), two paywalled demo
- * tools (`search_knowledge`, `get_market_quote`) + their slash-command
- * prompts land on the server so the paywall flow can be exercised from
+ * When `DEMO_TOOLS` is unset (or not `"false"`), five paywalled demo
+ * tools plus two free preview tools (`preview_market_quote`,
+ * `preview_company_profile`) + their slash-command prompts land on the
+ * server so the paywall and free-allowance flows can be exercised from
  * `basic-host` without hand-rolling a gated tool. See
  * `examples/mcp-checkout-app/src/demo-tools.ts`.
  */

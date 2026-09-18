@@ -148,10 +148,14 @@ describe('prose names only live catalogue tools', () => {
     for (const file of files) {
       const source = readFileSync(file, 'utf8')
       for (const name of invokedToolNames(source)) {
-        if (name === 'search_knowledge' || name === 'get_market_quote' || name === 'query_sales_trends') {
+        if (
+          name === 'search_knowledge' ||
+          name === 'get_market_quote' ||
+          name === 'query_sales_trends'
+        ) {
           continue
         }
-        if (name.startsWith('predict_')) continue
+        if (name.startsWith('predict_') || name.startsWith('preview_')) continue
         expect(LIVE_CATALOGUE.has(name), `\`${name}\` in ${file}`).toBe(true)
       }
     }

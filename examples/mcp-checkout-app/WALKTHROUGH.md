@@ -96,11 +96,14 @@ What that line hides (from `@solvapay/react/mcp`):
 
 ## `src/demo-tools.ts`
 
-Two example-local paywalled data tools (`search_knowledge`,
-`get_market_quote`) plus matching slash-command prompts. Registered
-via `additionalTools({ registerPayable, server })` — consumes the
-public `@solvapay/mcp` API the way a third-party integrator would.
-Gated behind `DEMO_TOOLS` env var.
+Five example-local paywalled data tools plus two free preview tools
+(`preview_market_quote`, `preview_company_profile`) that share one
+`free-previews` allowance, plus matching slash-command prompts.
+Registered via `additionalTools({ registerPayable, registerFree, server })`
+— consumes the public `@solvapay/mcp` API the way a third-party
+integrator would. Gated behind `DEMO_TOOLS` env var. The free-tier
+path is first-class: exhaustion emits the same text-only gate as a
+paid tool (`paywallReason: 'limit_reached'`).
 
 ## `probe.mjs`
 
