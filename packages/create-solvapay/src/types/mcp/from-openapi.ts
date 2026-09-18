@@ -75,7 +75,16 @@ type Selections = {
         kind: 'apiKey-multi'
         headers: Array<{ name: string; value: string }>
       }
-  operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
+  operations: Array<{
+    operationId: string
+    tier: 'free' | 'free-capped' | 'paid' | 'skip'
+    freeLimit?: {
+      meter?: string
+      cap: number
+      scope: 'rolling_window' | 'lifetime'
+      windowDays?: number
+    }
+  }>
 }
 
 export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {

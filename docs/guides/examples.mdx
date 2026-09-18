@@ -100,7 +100,7 @@ Use `.env` instead of `.env.local` when the example README says so.
 
 - Full 5-intent MCP App (plans, checkout, top-up, usage, paywall)
 - Hybrid checkout: embedded Stripe Elements via `<PaymentForm>` on compliant hosts (`basic-host`, ChatGPT); auto-falls back to hosted SolvaPay checkout on hosts that ignore `_meta.ui.csp` (Claude)
-- Ships with `createMcpAppAdapter` wired to `SolvaPayProvider` and a paywalled demo toolbox
+- Ships with `createMcpAppAdapter` wired to `SolvaPayProvider`, a paywalled demo toolbox, and two free preview tools that share one `free-previews` allowance
 - README: [examples/mcp-checkout-app/README.md](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app/README.md)
 
 ### cloudflare-workers-mcp
