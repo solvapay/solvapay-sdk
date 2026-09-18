@@ -1,5 +1,5 @@
 ---
-'@solvapay/mcp': minor
+'@solvapay/mcp': patch
 '@solvapay/server': minor
 '@solvapay/mcp-core': patch
 'create-solvapay': minor
