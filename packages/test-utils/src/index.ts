@@ -40,3 +40,15 @@ export { describeAuthAdapterContract } from './describeAuthAdapterContract'
 export { describeClientAuthAdapterContract } from './describeClientAuthAdapterContract'
 
 export const TEST_UTILS_VERSION = '0.0.0'
+
+// Vault capture mock (jsdom). Cross-origin iframes do not exist there, so the
+// card fields cannot be rendered or typed into without a stand-in.
+export { installMockVault, mockCaptureSession, MOCK_VAULT_FIELD_NAMES } from './mock-vault'
+export type {
+  MockVault,
+  MockVaultOptions,
+  MockVaultCard,
+  MockVaultFailure,
+  MockVaultFieldCall,
+  MockVaultCreateCardCall,
+} from './mock-vault'

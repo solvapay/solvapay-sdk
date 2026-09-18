@@ -4,7 +4,10 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import { UnsupportedTransportMethodError } from '../transport'
-import { CaptureError, isSessionUsable, type CaptureSession } from '../vault/types'
+import { CaptureError, type CaptureSession } from '../vault/types'
+
+/** How far ahead of expiry a fresh grant is minted. */
+const RENEW_LEAD_MS = 30_000
 
 export interface UseCaptureSessionOptions {
   productRef?: string
@@ -93,10 +96,30 @@ export function useCaptureSession(options: UseCaptureSessionOptions = {}): UseCa
     return run
   }, [ctx, productRef, planRef])
 
+  // Mint once, when there is nothing to use.
+  //
+  // This deliberately does NOT re-mint whenever the current session is
+  // unusable. That version spun: an expired grant fails `isSessionUsable`, so
+  // the effect mints, the new grant is stored, the effect runs again, and if
+  // that grant is also unusable — clock skew, or a server TTL below our own
+  // slack — it mints again, forever, hammering the endpoint that hands out
+  // write credentials. Renewal is a timer below, not a reaction to state.
   useEffect(() => {
     if (!enabled) return
-    if (session && isSessionUsable(session)) return
+    if (session) return
     void refresh()
+  }, [enabled, session, refresh])
+
+  // Re-mint shortly before expiry, so a capture never starts on a grant that
+  // dies mid-submit. A session that is already inside the lead window is left
+  // alone: `save` then fails loudly with `session_expired`, which is the right
+  // outcome and cannot loop.
+  useEffect(() => {
+    if (!enabled || !session) return
+    const delay = session.expiresAt - Date.now() - RENEW_LEAD_MS
+    if (delay <= 0) return
+    const timer = setTimeout(() => void refresh(), delay)
+    return () => clearTimeout(timer)
   }, [enabled, session, refresh])
 
   return { session, loading, error, refresh }

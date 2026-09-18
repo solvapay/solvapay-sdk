@@ -302,23 +302,29 @@ function createFieldSlot(name: CaptureFieldName, attribute: string) {
       }
     }
 
-    const attach = useCallback(
-      (node: HTMLDivElement | null) => {
-        elementRef.current = node
-        ctx.registerField(name, node, optionsRef.current ?? undefined)
-      },
-      [ctx],
-    )
-
-    // Unmount once, on teardown, and only then. Depending on `ctx` in the
-    // effect would tear the iframe down and rebuild it on every state change,
-    // losing whatever the cardholder had typed. So the effect depends on
-    // nothing, and reads the current context through a ref that is updated in
-    // its own effect rather than during render.
+    // The context is read through a ref so that nothing below depends on its
+    // identity. `ctx` is a fresh object on every state publish, and every
+    // publish happens while the cardholder is typing.
     const ctxRef = useRef(ctx)
     useEffect(() => {
       ctxRef.current = ctx
     })
+
+    // This ref callback MUST be stable.
+    //
+    // React calls a ref callback again whenever its identity changes: the old
+    // one with null, the new one with the node. With `[ctx]` as the dependency
+    // that happened on every state publish, so each keystroke unmounted and
+    // remounted the vault iframe — losing what had been typed into it, and, via
+    // the state change each unmount publishes, spinning: publish, new ctx, new
+    // callback, unmount, publish. It runs to an out-of-memory crash under test
+    // and would have been a dead payment form in a browser.
+    const attach = useCallback((node: HTMLDivElement | null) => {
+      elementRef.current = node
+      ctxRef.current.registerField(name, node, optionsRef.current ?? undefined)
+    }, [])
+
+    // Unmount once, on teardown, and only then.
     useEffect(() => () => ctxRef.current.registerField(name, null), [])
 
     const field = ctx.state.fields[name]
