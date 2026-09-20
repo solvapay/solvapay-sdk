@@ -267,7 +267,7 @@ async function resolveUpstreamBaseUrl(
   }
 }
 
-function isAbsoluteHttpUrl(value: string): boolean {
+export function isAbsoluteHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value)
     return parsed.protocol === 'https:' || parsed.protocol === 'http:'
