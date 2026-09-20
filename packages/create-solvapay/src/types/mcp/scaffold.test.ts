@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -10,6 +11,7 @@ import {
   deriveServerName,
   patchSolvapayVersions,
   PLACEHOLDERS,
+  printConnectionSnippets,
   resolveLatestSolvapayVersions,
   SOLVAPAY_RUNTIME_DEPS,
   substitute,
@@ -58,6 +60,49 @@ describe('templates/_base/scripts/dev.mjs', () => {
     const dev = await readFile(path.join(BASE_TEMPLATE_DIR, 'scripts', 'dev.mjs'), 'utf8')
     expect(dev).toContain("'wrangler'")
     expect(dev).toContain('vite')
+  })
+})
+
+function captureStdout(fn: () => void): string {
+  const chunks: string[] = []
+  const original = process.stdout.write
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    chunks.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8'))
+    return true
+  }) as typeof process.stdout.write
+  try {
+    fn()
+  } finally {
+    process.stdout.write = original
+  }
+  return chunks.join('')
+}
+
+describe('MCP connection snippets', () => {
+  it('printConnectionSnippets points every client at /mcp', () => {
+    const text = captureStdout(() => printConnectionSnippets({ projectName: 'demo-mcp' }))
+    expect(text).toContain('"url": "http://localhost:8787/mcp"')
+    expect(text).toContain('["mcp-remote", "http://localhost:8787/mcp"]')
+    expect(text).toContain('URL: http://localhost:8787/mcp')
+    expect(text).toContain('set the server URL to http://localhost:8787/mcp')
+    expect(text).not.toMatch(/http:\/\/localhost:8787\/"/)
+    expect(text).not.toMatch(/http:\/\/localhost:8787\/\)/)
+  })
+
+  it('template README, dev banner, and deploy snippets advertise /mcp', async () => {
+    const readme = await readFile(path.join(BASE_TEMPLATE_DIR, 'README.md'), 'utf8')
+    expect(readme).toContain('| Worker MCP endpoint | `http://localhost:8787/mcp` |')
+    expect(readme).toContain('point it at `http://localhost:8787/mcp`')
+    expect(readme).toContain('at `http://localhost:8787/mcp`')
+    expect(readme).not.toContain('| Worker MCP endpoint | `http://localhost:8787/` |')
+
+    const dev = await readFile(path.join(BASE_TEMPLATE_DIR, 'scripts', 'dev.mjs'), 'utf8')
+    expect(dev).toContain('${WORKER_URL}/mcp')
+    expect(dev).not.toContain('Worker MCP endpoint  ${WORKER_URL}/`')
+
+    const deploy = await readFile(path.join(BASE_TEMPLATE_DIR, 'scripts', 'deploy.mjs'), 'utf8')
+    expect(deploy).toContain('${url}/mcp')
+    expect(deploy).not.toMatch(/"url": "\$\{url\}\/"/)
   })
 })
 
@@ -231,9 +276,14 @@ describe('mcp-app.html color-scheme meta', () => {
 })
 
 describe('SOLVAPAY_RUNTIME_DEPS', () => {
-  it('covers the three @solvapay/* runtime packages with non-empty fallbacks', () => {
+  it('covers the four @solvapay/* runtime packages with non-empty fallbacks', () => {
     const names = SOLVAPAY_RUNTIME_DEPS.map(d => d.name).sort()
-    expect(names).toEqual(['@solvapay/mcp', '@solvapay/react', '@solvapay/server'])
+    expect(names).toEqual([
+      '@solvapay/mcp',
+      '@solvapay/mcp-core',
+      '@solvapay/react',
+      '@solvapay/server',
+    ])
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {
       expect(dep.fallback).toMatch(/^\d+\.\d+\.\d+/)
     }
@@ -262,6 +312,7 @@ describe('resolveLatestSolvapayVersions', () => {
   it('returns registry-reported versions when fetch succeeds', async () => {
     const versions: Record<string, string> = {
       '@solvapay/mcp': '0.9.9',
+      '@solvapay/mcp-core': '0.8.1',
       '@solvapay/server': '2.0.0',
       '@solvapay/react': '3.1.4',
     }
@@ -278,6 +329,7 @@ describe('resolveLatestSolvapayVersions', () => {
     const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
 
     expect(map.get('@solvapay/mcp')).toBe('0.9.9')
+    expect(map.get('@solvapay/mcp-core')).toBe('0.8.1')
     expect(map.get('@solvapay/server')).toBe('2.0.0')
     expect(map.get('@solvapay/react')).toBe('3.1.4')
     expect(onResolve).toHaveBeenCalledTimes(SOLVAPAY_RUNTIME_DEPS.length)
@@ -426,6 +478,7 @@ describe('patchSolvapayVersions', () => {
       target,
       new Map([
         ['@solvapay/mcp', '0.3.1'],
+        ['@solvapay/mcp-core', '0.4.4'],
         ['@solvapay/react', '1.3.0'],
         ['@solvapay/server', '1.2.0'],
       ]),
@@ -435,10 +488,96 @@ describe('patchSolvapayVersions', () => {
       dependencies: Record<string, string>
     }
     expect(pkg.dependencies['@solvapay/mcp']).toBe('0.3.1')
+    expect(pkg.dependencies['@solvapay/mcp-core']).toBe('0.4.4')
     expect(pkg.dependencies['@solvapay/react']).toBe('1.3.0')
     expect(pkg.dependencies['@solvapay/server']).toBe('1.2.0')
     // Unrelated deps stay on their caret ranges (resolved at npm install time).
     expect(pkg.dependencies['@modelcontextprotocol/server']).toMatch(/^\^/)
     expect(pkg.dependencies['zod']).toMatch(/^\^/)
+  })
+})
+
+function runCommand(
+  command: string,
+  args: string[],
+  cwd: string,
+): Promise<{ exitCode: number; output: string }> {
+  return new Promise(resolve => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    })
+    const chunks: string[] = []
+    child.stdout.on('data', chunk => {
+      chunks.push(chunk.toString('utf8'))
+    })
+    child.stderr.on('data', chunk => {
+      chunks.push(chunk.toString('utf8'))
+    })
+    child.once('error', error => {
+      resolve({ exitCode: 1, output: error.message })
+    })
+    child.once('close', code => {
+      resolve({ exitCode: code ?? 1, output: chunks.join('') })
+    })
+  })
+}
+
+async function writeResolvableTemplateCopy(target: string): Promise<void> {
+  const raw = await readFile(path.join(BASE_TEMPLATE_DIR, 'package.json'), 'utf8')
+  const pkg = JSON.parse(raw) as { name: string }
+  pkg.name = 'create-solvapay-template-resolve-check'
+  await writeFile(path.join(target, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`, 'utf8')
+}
+
+describe('committed template package.json resolves', () => {
+  it('npm can resolve the checked-in pins without ERESOLVE', async () => {
+    const target = await makeTempDir()
+    try {
+      await writeResolvableTemplateCopy(target)
+      const result = await runCommand(
+        'npm',
+        [
+          'install',
+          '--package-lock-only',
+          '--ignore-scripts',
+          '--no-audit',
+          '--no-fund',
+          '--dry-run',
+        ],
+        target,
+      )
+      expect(result.exitCode, result.output).toBe(0)
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  }, 90_000)
+
+  it('pnpm can resolve the checked-in pins without ERESOLVE', async () => {
+    const target = await makeTempDir()
+    try {
+      await writeResolvableTemplateCopy(target)
+      const result = await runCommand(
+        'pnpm',
+        ['install', '--lockfile-only', '--ignore-scripts'],
+        target,
+      )
+      expect(result.exitCode, result.output).toBe(0)
+    } finally {
+      await rm(target, { recursive: true, force: true })
+    }
+  }, 90_000)
+})
+
+describe('from-scratch placeholder copy', () => {
+  it('names account as the recovery tool, not retired upgrade/topup tools', async () => {
+    const placeholder = await readFile(
+      path.join(BASE_TEMPLATE_DIR, '..', 'from-scratch', 'src', 'tools', '_placeholder.ts'),
+      'utf8',
+    )
+    expect(placeholder).toContain('`account`')
+    expect(placeholder).not.toMatch(/`upgrade`|`topup`|`manage_account`/)
+    expect(placeholder).toContain('registerFree')
   })
 })
