@@ -13,6 +13,7 @@
  */
 
 import { spawn } from 'node:child_process'
+import { createServer } from 'node:http'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -100,6 +101,33 @@ async function runCommand(
     })
   })
 }
+
+describe('describe.mjs spec location', () => {
+  it('loads a spec from an http URL', async () => {
+    await withSpecServer(async origin => {
+      const out = (await spawnScriptJson('describe.mjs', [
+        `${origin}/swagger.json`,
+        '--no-probe',
+      ])) as DescribeOutput
+      expect(out.openapiVersion).toBe('2.0')
+      expect(out.operations).toHaveLength(20)
+    })
+  })
+
+  it('rejects an HTML docs page with a raw-document hint', async () => {
+    await withSpecServer(async origin => {
+      const result = await spawnScript('describe.mjs', [`${origin}/`, '--no-probe'])
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('raw JSON/YAML document')
+    })
+  })
+
+  it('rejects a missing local file with Spec file not found', async () => {
+    const result = await spawnScript('describe.mjs', ['./does-not-exist.json', '--no-probe'])
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('Spec file not found')
+  })
+})
 
 describe('describe.mjs against cached fixtures', () => {
   it('petstore v2: 20 operations + surfaced securityDefinitions', async () => {
@@ -339,3 +367,37 @@ describe.skipIf(!LIVE_MODE)('describe.mjs live-mode probe (SOLVAPAY_SMOKE_LIVE=1
     }, 15000)
   }
 })
+
+async function withSpecServer(run: (origin: string) => Promise<void>): Promise<void> {
+  const spec = await readFile(FIXTURE_PATHS.petstoreV2)
+  const server = createServer((req, res) => {
+    if (req.url === '/swagger.json') {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(spec)
+      return
+    }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+    res.end('<html><body>Swagger UI</body></html>')
+  })
+
+  await new Promise<void>(resolve => {
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  const address = server.address()
+  if (!address || typeof address === 'string') {
+    await closeServer(server)
+    throw new Error('expected a TCP listen address')
+  }
+
+  try {
+    await run(`http://127.0.0.1:${address.port}`)
+  } finally {
+    await closeServer(server)
+  }
+}
+
+function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close(err => (err ? reject(err) : resolve()))
+  })
+}

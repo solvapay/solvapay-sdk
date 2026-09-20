@@ -3,10 +3,11 @@
  * Shared OpenAPI utilities for `create-solvapay/types/mcp/from-openapi`.
  *
  * Used by `describe.mjs`, `scaffold.mjs`, and `test.mjs`. Every script
- * re-parses the spec from disk; no cached state across modules.
+ * re-parses the spec from the given path or URL; no cached state across
+ * modules.
  *
  * Public surface:
- *   - loadSpec(specPath) -> { spec, format }
+ *   - loadSpec(specPath) -> { spec }
  *   - listOperations(spec) -> Operation[]
  *   - resolveSecuritySchemes(spec) -> ResolvedScheme[]
  *   - suggestTier(operation) -> 'free' | 'paid' | 'skip'
@@ -18,7 +19,7 @@
  * pulled on demand via `npx --package @apidevtools/swagger-parser`.
  */
 
-import { readFile } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const SUPPORTED_AUTH_KINDS = new Set([
@@ -31,19 +32,39 @@ const SUPPORTED_AUTH_KINDS = new Set([
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /**
- * Load + parse an OpenAPI document from disk and run `$ref` resolution
- * through swagger-parser's `dereference`. Accepts JSON or YAML.
+ * Load + parse an OpenAPI document and run `$ref` resolution through
+ * swagger-parser's `dereference`. Accepts a local JSON/YAML path or an
+ * http(s) URL to the raw document (not a Swagger UI / docs page).
  *
  * Returns the fully-dereferenced spec so downstream callers never have
  * to think about `$ref` lookup.
  */
 export async function loadSpec(specPath) {
-  const absolute = resolve(specPath)
   const SwaggerParser = await loadSwaggerParser()
-  const raw = await readFile(absolute, 'utf8')
-  const format = absolute.endsWith('.yaml') || absolute.endsWith('.yml') ? 'yaml' : 'json'
+  if (/^https?:\/\//i.test(specPath)) {
+    try {
+      const spec = await SwaggerParser.dereference(specPath)
+      return { spec }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `Could not load OpenAPI spec from ${specPath}: ${message}. ` +
+          'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+      )
+    }
+  }
+
+  const absolute = resolve(specPath)
+  try {
+    await access(absolute)
+  } catch (err) {
+    if (err && typeof err === 'object' && err.code === 'ENOENT') {
+      throw new Error(`Spec file not found: ${absolute}`)
+    }
+    throw err
+  }
   const spec = await SwaggerParser.dereference(absolute)
-  return { spec, format, raw }
+  return { spec }
 }
 
 /**
