@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.7.2
+
+### Patch Changes
+
+- c068fb5: The next-auth0 starter now finds its template from the published package. `--openapi` accepts http(s) URLs and relative local paths, and non-spec URLs fail with a clear error instead of a filesystem ENOENT.
+
 ## 0.7.1
 
 ### Patch Changes
