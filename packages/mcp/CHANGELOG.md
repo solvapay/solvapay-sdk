@@ -1,5 +1,11 @@
 # @solvapay/mcp changelog
 
+## 0.4.4
+
+### Patch Changes
+
+- 87ddb16: Narrow the `@solvapay/server` peer to `^2.0.0`. The previous `^1.4.0 || ^2.0.0` branch matched nothing publishable — stable server 1.x stops at 1.3.0, and mcp-core imports `creditSignals` / `FreeLimit` that do not exist there.
+
 ## 0.4.3
 
 ### Patch Changes
