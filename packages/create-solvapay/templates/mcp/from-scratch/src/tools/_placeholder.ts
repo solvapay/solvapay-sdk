@@ -26,7 +26,7 @@ export function register__TOOL_NAME_PASCAL__(ctx: AdditionalToolsContext): void 
   ctx.registerPayable('__TOOL_NAME__', {
     title: '__TOOL_NAME__',
     description:
-      'Placeholder paid tool — echoes the input message back so you can verify the paywall is wired before writing real logic. 1 credit per call; returns a text-only purchase-required narration naming the `upgrade` or `topup` recovery tool when the customer is out of balance. Replace this description (and the handler) with your tool semantics before going live.',
+      'Placeholder paid tool — echoes the input message back so you can verify the paywall is wired before writing real logic. 1 credit per call; returns a text-only purchase-required narration naming the `account` recovery tool when the customer is out of balance. Replace this description (and the handler) with your tool semantics before going live.',
     schema: {
       message: z.string().describe('What the caller wants').optional(),
     },
@@ -41,6 +41,20 @@ export function register__TOOL_NAME_PASCAL__(ctx: AdditionalToolsContext): void 
       })
     },
   })
+
+  // Free-allowance sibling — swap `registerPayable` for this when the
+  // tool should be free up to a per-customer cap:
+  //
+  // ctx.registerFree('__TOOL_NAME__', {
+  //   title: '__TOOL_NAME__',
+  //   description: 'Free up to 5 calls / 30 days, then a plan is required.',
+  //   schema: { message: z.string().optional() },
+  //   annotations: { readOnlyHint: true, openWorldHint: true },
+  //   limit: { meter: 'free-previews', cap: 5, scope: 'rolling_window', windowDays: 30 },
+  //   handler: async (input, c) => {
+  //     return c.respond({ ok: true, echoed: input.message ?? 'hello' })
+  //   },
+  // })
 
   ctx.server.registerPrompt(
     '__TOOL_NAME__',

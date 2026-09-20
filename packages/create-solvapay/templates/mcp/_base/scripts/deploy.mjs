@@ -633,16 +633,16 @@ function printDeployedConnectionSnippets(publicUrl, workerName) {
   out('Connect an MCP client to the deployed worker:')
   out('')
   out('  Cursor (~/.cursor/mcp.json):')
-  out(`    { "mcpServers": { "${name}": { "url": "${url}/" } } }`)
+  out(`    { "mcpServers": { "${name}": { "url": "${url}/mcp" } } }`)
   out('')
   out('  Claude Desktop (claude_desktop_config.json):')
   out(
-    `    { "mcpServers": { "${name}": { "command": "npx", "args": ["mcp-remote", "${url}/"] } } }`,
+    `    { "mcpServers": { "${name}": { "command": "npx", "args": ["mcp-remote", "${url}/mcp"] } } }`,
   )
   out('')
-  out(`  ChatGPT Custom MCP Connector URL:  ${url}/`)
+  out(`  ChatGPT Custom MCP Connector URL:  ${url}/mcp`)
   out('')
-  out(`  MCP Inspector:  npx @modelcontextprotocol/inspector  (set URL to ${url}/)`)
+  out(`  MCP Inspector:  npx @modelcontextprotocol/inspector  (set URL to ${url}/mcp)`)
   out('')
 }
 

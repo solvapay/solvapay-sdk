@@ -113,7 +113,7 @@ async function main() {
       : await runIntentToolsTextCheck(base, rpcOptions)
 
   // `merchantBootstrap` exercises the SolvaPay bootstrap path by
-  // calling `manage_account` (an intent tool, always registered) and
+  // calling `account` (an intent tool, always registered) and
   // asserting the response is not an error envelope. Without a bearer
   // token, the call would gate at the HTTP layer — so it skips. With
   // a bearer token, a 500 or text containing `"bootstrap"` is a real

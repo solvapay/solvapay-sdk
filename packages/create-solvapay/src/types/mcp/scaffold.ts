@@ -352,7 +352,7 @@ type ConnectionSnippetsOptions = {
 /**
  * Print copy-paste connection snippets for the four common MCP clients
  * after a scaffold finishes. Native-scheme hosts (Cursor, Claude Desktop)
- * can point at `http://localhost:8787/` directly; remote / browser
+ * can point at `http://localhost:8787/mcp` directly; remote / browser
  * hosts (ChatGPT, Inspector web UI) need a reachable URL — we call that
  * out rather than pretending localhost works everywhere.
  */
@@ -368,7 +368,7 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out(`   Cursor — add to \`~/.cursor/mcp.json\` (or the workspace's \`.cursor/mcp.json\`):`)
   out('     {')
   out('       "mcpServers": {')
-  out(`         "${projectName}": { "url": "${workerUrl}/" }`)
+  out(`         "${projectName}": { "url": "${workerUrl}/mcp" }`)
   out('       }')
   out('     }')
   out('')
@@ -377,20 +377,20 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out('       "mcpServers": {')
   out(`         "${projectName}": {`)
   out('           "command": "npx",')
-  out(`           "args": ["mcp-remote", "${workerUrl}/"]`)
+  out(`           "args": ["mcp-remote", "${workerUrl}/mcp"]`)
   out('         }')
   out('       }')
   out('     }')
   out('')
   out('   ChatGPT (Custom Connectors) — add a Custom MCP Connector with:')
-  out(`     URL: ${workerUrl}/`)
+  out(`     URL: ${workerUrl}/mcp`)
   out('     Note: ChatGPT needs a reachable (deployed or tunneled) URL —')
   out('     localhost only works for native-scheme hosts. Use `npm run deploy`')
   out('     and point ChatGPT at the *.workers.dev URL once available.')
   out('')
   out('   MCP Inspector — explore tools locally:')
   out('     npx @modelcontextprotocol/inspector')
-  out(`     (set the server URL to ${workerUrl}/)`)
+  out(`     (set the server URL to ${workerUrl}/mcp)`)
   out('')
 }
 
@@ -405,9 +405,10 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
  */
 export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
   Object.freeze([
-    { name: '@solvapay/mcp', fallback: '0.3.0' },
-    { name: '@solvapay/server', fallback: '1.1.0' },
-    { name: '@solvapay/react', fallback: '1.2.0' },
+    { name: '@solvapay/mcp', fallback: '0.4.3' },
+    { name: '@solvapay/mcp-core', fallback: '0.4.4' },
+    { name: '@solvapay/server', fallback: '2.8.0' },
+    { name: '@solvapay/react', fallback: '2.3.1' },
   ])
 
 export type ResolveLatestVersionsOptions = {

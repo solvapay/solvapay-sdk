@@ -6,14 +6,14 @@
 
 TypeScript SDK for monetizing APIs, AI agents, and MCP servers — paywall protection, checkout UI, and purchase management.
 
-**Configure** with `npx solvapay init` or `npm create solvapay -- --type mcp` · **Integrate** with Express, Next.js, Supabase Edge, or MCP · **Monetize** with paywalls, checkout, and usage metering.
+**Configure** with `npx solvapay@latest init` or `npm create solvapay@latest -- --type mcp` · **Integrate** with Express, Next.js, Supabase Edge, or MCP · **Monetize** with paywalls, checkout, and usage metering.
 
 ## Quickstart
 
 ### Existing project — auth + env
 
 ```bash
-npx solvapay init
+npx solvapay@latest init
 ```
 
 ### New paid MCP app (recommended)
@@ -44,13 +44,13 @@ cd examples/express-basic && pnpm dev   # stub mode — no API key needed
 
 | Path | Entry | Packages | Example | Docs |
 | --- | --- | --- | --- | --- |
-| Express API | `npx solvapay init` | `@solvapay/server` | [express-basic](./examples/express-basic) | [Express](https://docs.solvapay.com/sdks/typescript/guides/express) |
-| Next.js checkout | `npx solvapay init` | `@solvapay/next` + `@solvapay/react` | [checkout-demo](./examples/checkout-demo) | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
-| Hosted checkout | `npx solvapay init` | `@solvapay/next` | [hosted-checkout-demo](./examples/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management) |
-| Supabase Edge | `npx solvapay init` | `@solvapay/server/fetch` + `@solvapay/react` | [supabase-edge](./examples/supabase-edge) | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) |
+| Express API | `npx solvapay@latest init` | `@solvapay/server` | [express-basic](./examples/express-basic) | [Express](https://docs.solvapay.com/sdks/typescript/guides/express) |
+| Next.js checkout | `npx solvapay@latest init` | `@solvapay/next` + `@solvapay/react` | [checkout-demo](./examples/checkout-demo) | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
+| Hosted checkout | `npx solvapay@latest init` | `@solvapay/next` | [hosted-checkout-demo](./examples/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management) |
+| Supabase Edge | `npx solvapay@latest init` | `@solvapay/server/fetch` + `@solvapay/react` | [supabase-edge](./examples/supabase-edge) | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) |
 | MCP app (server + UI) | **`npm create solvapay@latest <name> -- --type mcp`** | `@solvapay/mcp` + `@solvapay/react/mcp` + `@solvapay/server` | scaffold template | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp), [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
 | MCP App UI (advanced) | manual on existing server | `@solvapay/mcp` + `@solvapay/react/mcp` | [mcp-checkout-app](./examples/mcp-checkout-app) | [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
-| Existing MCP server | `npx solvapay init` | `@solvapay/server` + `@solvapay/mcp-core` | [mcp-oauth-bridge](./examples/mcp-oauth-bridge) | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) |
+| Existing MCP server | `npx solvapay@latest init` | `@solvapay/server` + `@solvapay/mcp-core` | [mcp-oauth-bridge](./examples/mcp-oauth-bridge) | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) |
 
 ## Packages
 
@@ -58,7 +58,7 @@ The SDK ships **10 published npm packages**:
 
 | Package | Purpose |
 | --- | --- |
-| [`solvapay`](./packages/cli) | CLI — `npx solvapay init` for existing repos |
+| [`solvapay`](./packages/cli) | CLI — `npx solvapay@latest init` for existing repos |
 | [`create-solvapay`](./packages/create-solvapay) | Scaffold new MCP apps |
 | [`@solvapay/server`](./packages/server) | Paywall, API client, webhooks (Node + Edge) |
 | [`@solvapay/react`](./packages/react) | Headless checkout UI and hooks |
