@@ -1,6 +1,4 @@
 import { detectPackageManager, runInitInDirectory } from '@solvapay/init'
-import { fileURLToPath } from 'node:url'
-import { join } from 'node:path'
 import type { ProjectType } from '../registry'
 import type { ParsedTypeArgs, RunOptions } from '../../args'
 import { toInitOptions } from '../../args'
@@ -9,9 +7,8 @@ import {
   copyDir,
   gitInit,
   installProjectDependencies,
+  NEXT_AUTH0_TEMPLATE_DIR,
 } from '../mcp/scaffold'
-
-const NEXT_AUTH0_TEMPLATE_DIR = join(fileURLToPath(new URL('../../../templates/next-auth0', import.meta.url)))
 
 const parseNextAuth0Args = (): ParsedTypeArgs => ({
   noOpenapi: false,
