@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.7.1
+
+### Patch Changes
+
+- 87ddb16: Fix the MCP scaffold so generated projects advertise `/mcp`, install `@solvapay/mcp-core`, and resolve offline fallbacks against current npm latest. Exact `@solvapay/*` pins stay exact — the failure that prompted this started when a caret floated onto a peer-widening patch.
+
 ## 0.7.0
 
 ### Minor Changes
