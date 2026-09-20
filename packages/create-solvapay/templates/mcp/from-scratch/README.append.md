@@ -10,4 +10,5 @@ To add more paid tools later, create a new file under `src/tools/` that
 exports a `register<ToolName>` function and call it from
 `src/tools/index.ts`. Each `ctx.registerPayable(...)` call earns the
 configured paywall amount per invocation against
-`SOLVAPAY_PRODUCT_REF`.
+`SOLVAPAY_PRODUCT_REF`. Use `ctx.registerFree(...)` with a `limit` for
+a per-customer free allowance instead of a per-call charge.

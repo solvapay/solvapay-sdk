@@ -50,7 +50,7 @@
     "@solvapay/core": "workspace:*"
   },
   "peerDependencies": {
-    "@solvapay/server": "^1.4.0 || ^2.0.0",
+    "@solvapay/server": "^2.0.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {

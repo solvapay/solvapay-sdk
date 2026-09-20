@@ -71,11 +71,11 @@ Useful URLs printed at startup:
 
 | What | URL |
 | --- | --- |
-| Worker MCP endpoint | `http://localhost:8787/` |
+| Worker MCP endpoint | `http://localhost:8787/mcp` |
 | OAuth discovery | `http://localhost:8787/.well-known/oauth-protected-resource` |
 | OAuth metadata | `http://localhost:8787/.well-known/oauth-authorization-server` |
 
-Inspect tools with: `npx @modelcontextprotocol/inspector` and point it at `http://localhost:8787/`.
+Inspect tools with: `npx @modelcontextprotocol/inspector` and point it at `http://localhost:8787/mcp`.
 
 Other scripts:
 
@@ -110,7 +110,7 @@ actual header names from the OpenAPI security schemes, for example:
 UPSTREAM_API_HEADERS={"x-api-client-id":"client-id","x-api-client-secret":"client-secret"}
 ```
 
-Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Connectors) at `http://localhost:8787/`.
+Point an MCP client (MCP Inspector, MCPJam, Claude Desktop, ChatGPT Custom Connectors) at `http://localhost:8787/mcp`.
 
 ## Deploy
 
@@ -173,6 +173,24 @@ export function registerMyTool(ctx: AdditionalToolsContext, env: Env) {
 ```
 
 Then add an import + `registerMyTool(ctx, env)` line to `src/tools/index.ts`. Re-deploy.
+
+For a per-customer free allowance instead of a per-call charge, use `registerFree` with a `limit` (same handler shape):
+
+```ts
+export function registerPreview(ctx: AdditionalToolsContext) {
+  ctx.registerFree('preview', {
+    title: 'Preview',
+    description: 'Free preview — 5 calls / 30 days, then a plan is required.',
+    schema: { input: z.string() },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    limit: { meter: 'free-previews', cap: 5, scope: 'rolling_window', windowDays: 30 },
+    handler: async ({ input }, c) => {
+      const data = await doSomething(input)
+      return c.respond(data, { text: `Preview for ${input}: …` })
+    },
+  })
+}
+```
 
 ## Reference
 
