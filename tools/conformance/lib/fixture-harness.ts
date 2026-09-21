@@ -2464,7 +2464,7 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   registry.register('freeLimitsAgree', {
     id: 'core',
-    invoke: args => freeLimitsAgree(args.a as never, args.b as never),
+    invoke: args => freeLimitsAgree(args.left as never, args.right as never),
   })
 
   registry.register('freeToolDescriptionSuffix', {

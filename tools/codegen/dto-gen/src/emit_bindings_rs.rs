@@ -1633,9 +1633,14 @@ fn solvapay_core_fn_names<'a>(
     fns
 }
 
-fn solvapay_core_typed_names(ir: &Ir, artifact: IrBindingArtifact) -> Vec<String> {
+fn solvapay_core_typed_names(
+    ir: &Ir,
+    artifact: IrBindingArtifact,
+    skip_symbol_ids: &[String],
+) -> Vec<String> {
     let mut names: Vec<String> = symbols_for(ir, artifact)
         .iter()
+        .filter(|sym| !skip_symbol_ids.iter().any(|id| id == &sym.id))
         .flat_map(|sym| sym.args.iter().filter_map(|arg| arg.typed_as.clone()))
         .filter(|name| name.chars().next().is_some_and(|c| c.is_ascii_uppercase()))
         .collect();
@@ -1682,7 +1687,7 @@ fn with_merged_core_imports(
             idents.push(name.to_string());
         }
     }
-    for name in solvapay_core_typed_names(ir, artifact) {
+    for name in solvapay_core_typed_names(ir, artifact, skip_symbol_ids) {
         if !idents.iter().any(|ident| ident == &name) {
             idents.push(name);
         }

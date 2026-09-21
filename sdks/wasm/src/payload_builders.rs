@@ -22,7 +22,7 @@ use solvapay_core::{
     should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     to_major_units, topup_balance_poll_delays_ms, validate_business_details, BusinessDetailsInput,
-    CreditsToDisplayInput, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
+    CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
