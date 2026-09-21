@@ -9,8 +9,9 @@
  * but dependency-free so it can ship inside `<PaymentForm>` / `<TopupForm>`
  * default trees and the MCP shell footer.
  *
- * Merchant terms/privacy URLs are *not* rendered here — those continue
- * to be woven into the mandate sentence by `<MandateText>`.
+ * Merchant terms/privacy URLs are *not* rendered here — those appear
+ * in the `<MandateText>` consent tail when the merchant has set them.
+ * This strip is always SolvaPay's own Terms · Privacy.
  */
 
 import React, { forwardRef } from 'react'

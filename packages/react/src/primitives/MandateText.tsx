@@ -10,14 +10,12 @@
  * resolve through the localized copy bundle so integrators can override
  * text without forking the component.
  *
- * The copy templates embed the merchant's terms / privacy URLs verbatim
- * (e.g. "... See https://acme.com/terms and https://acme.com/privacy.").
- * `MandateText` post-processes the rendered string and swaps any
- * occurrence of `merchant.termsUrl` / `merchant.privacyUrl` for an
- * `<a target="_blank">` whose visible label comes from
- * `copy.legalFooter.{terms, privacy}` ("Terms" / "Privacy"). Keeps the
- * i18n template signature untouched while lifting the legal commitment
- * to the point of charge.
+ * The copy templates embed legal URLs verbatim (merchant terms/privacy
+ * when set, plus SolvaPay's own). `MandateText` post-processes the
+ * rendered string and swaps those URLs for `<a target="_blank">` whose
+ * visible label comes from `copy.legal.{termsOfService, privacyPolicy}`.
+ * Keeps the i18n template signature untouched while lifting the legal
+ * commitment to the point of charge.
  *
  * `savesPaymentMethod` marks a confirm that also stores the card for
  * later off-session charges (auto-recharge). The MCP payment surfaces
@@ -25,12 +23,10 @@
  * place that discloses the storage — the topup template appends a
  * saved-card sentence when the flag is set.
  *
- * When the merchant record omits `termsUrl` / `privacyUrl`, we fall back
- * to SolvaPay's hosted legal pages so the mandate sentence always carries
- * working links. SolvaPay is the underlying processor on every charge, so
- * its terms always apply — using them as the universal fallback keeps the
- * SCA disclosure complete even for merchants who haven't published their
- * own pages yet.
+ * SolvaPay's Terms of Service and Privacy Policy are always named and
+ * linked. The merchant's own pair is added only when the merchant
+ * record publishes `termsUrl` / `privacyUrl` — they are never used as
+ * a substitute for SolvaPay's.
  */
 
 import React, { forwardRef, useContext, useMemo } from 'react'
@@ -109,8 +105,12 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
           legalName: merchant?.legalName ?? merchant?.displayName ?? '',
           displayName: merchant?.displayName,
           supportEmail: merchant?.supportEmail,
-          termsUrl: merchant?.termsUrl ?? SOLVAPAY_TERMS_URL,
-          privacyUrl: merchant?.privacyUrl ?? SOLVAPAY_PRIVACY_URL,
+          termsUrl: merchant?.termsUrl,
+          privacyUrl: merchant?.privacyUrl,
+        },
+        solvapay: {
+          termsUrl: SOLVAPAY_TERMS_URL,
+          privacyUrl: SOLVAPAY_PRIVACY_URL,
         },
         plan: plan
           ? {
@@ -142,30 +142,38 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
         data-variant={resolvedVariant}
         {...rest}
       >
-        {children ?? linkifyMandateText(text, ctx.merchant, copy, handleExternalClick)}
+        {children ?? linkifyMandateText(text, ctx, copy, handleExternalClick)}
       </Comp>
     )
   },
 )
 
 /**
- * Replace `merchant.termsUrl` / `merchant.privacyUrl` substrings in the
- * rendered mandate text with `<a>` elements whose label comes from
- * `copy.legalFooter.{terms, privacy}`. Falls back to the URL itself if
- * the localized label is missing. URLs that don't match either field
- * are left as plain text — the template owner is expected to embed only
- * the merchant URLs the renderer knows how to label.
+ * Replace merchant and SolvaPay legal URLs in the rendered mandate text
+ * with `<a>` elements labelled from `copy.legal.{termsOfService,
+ * privacyPolicy}`. Falls back to the URL itself if the localized label
+ * is missing. Unrecognised URLs stay as plain text.
  */
 function linkifyMandateText(
   text: string,
-  merchant: MandateContext['merchant'],
+  ctx: MandateContext,
   copy: SolvaPayCopy,
   onLinkClick: (event: React.MouseEvent<HTMLAnchorElement>) => void,
 ): React.ReactNode[] {
-  const entries = [
-    { url: merchant.termsUrl, label: copy.legalFooter.terms },
-    { url: merchant.privacyUrl, label: copy.legalFooter.privacy },
-  ].filter((entry): entry is { url: string; label: string } => Boolean(entry.url))
+  const termsLabel = copy.legal.termsOfService
+  const privacyLabel = copy.legal.privacyPolicy
+  const seen = new Set<string>()
+  const entries: Array<{ url: string; label: string }> = []
+  for (const entry of [
+    { url: ctx.merchant.termsUrl, label: termsLabel },
+    { url: ctx.merchant.privacyUrl, label: privacyLabel },
+    { url: ctx.solvapay.termsUrl, label: termsLabel },
+    { url: ctx.solvapay.privacyUrl, label: privacyLabel },
+  ]) {
+    if (!entry.url || seen.has(entry.url)) continue
+    seen.add(entry.url)
+    entries.push({ url: entry.url, label: entry.label })
+  }
 
   if (entries.length === 0) return [text]
 
