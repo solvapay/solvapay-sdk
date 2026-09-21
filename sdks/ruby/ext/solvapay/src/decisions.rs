@@ -131,9 +131,9 @@ pub fn extract_backend_customer_ref_binding(args_json: String) -> String {
 pub fn free_limits_agree_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
-        let a = require_typed::<FreeLimit>(&args, "a")?;
-        let b = require_typed::<FreeLimit>(&args, "b")?;
-        Ok(Value::Bool(free_limits_agree(&a, &b)))
+        let left = require_typed::<FreeLimit>(&args, "left")?;
+        let right = require_typed::<FreeLimit>(&args, "right")?;
+        Ok(Value::Bool(free_limits_agree(&left, &right)))
     })
 }
 

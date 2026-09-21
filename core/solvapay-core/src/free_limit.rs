@@ -119,8 +119,8 @@ pub fn normalize_free_limit(limit: &FreeLimitInput) -> Result<FreeLimit, HelperE
 ///
 /// # Arguments
 ///
-/// * `a` - First limit.
-/// * `b` - Second limit.
+/// * `left` - First limit.
+/// * `right` - Second limit.
 ///
 /// # Returns
 ///
@@ -132,8 +132,11 @@ pub fn normalize_free_limit(limit: &FreeLimitInput) -> Result<FreeLimit, HelperE
     section = "free-limit",
     emit_order = 3
 )]
-pub fn free_limits_agree(a: &FreeLimit, b: &FreeLimit) -> bool {
-    a.meter == b.meter && a.cap == b.cap && a.scope == b.scope && a.window_days == b.window_days
+pub fn free_limits_agree(left: &FreeLimit, right: &FreeLimit) -> bool {
+    left.meter == right.meter
+        && left.cap == right.cap
+        && left.scope == right.scope
+        && left.window_days == right.window_days
 }
 
 /// Description suffix appended to a free-capped MCP tool.

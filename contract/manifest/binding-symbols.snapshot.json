@@ -3967,7 +3967,7 @@
       },
       "args": [
         {
-          "name": "a",
+          "name": "left",
           "type": "value",
           "required": true,
           "hostInjected": false,
@@ -3977,7 +3977,7 @@
           "local": null
         },
         {
-          "name": "b",
+          "name": "right",
           "type": "value",
           "required": true,
           "hostInjected": false,
@@ -4001,8 +4001,8 @@
         "kind": "wrap",
         "serialize": "valueBool",
         "args": [
-          "&a",
-          "&b"
+          "&left",
+          "&right"
         ]
       },
       "verbatimBody": null,

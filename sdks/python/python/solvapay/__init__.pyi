@@ -718,7 +718,7 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> str:
     @returns VAT label string.
     """
     ...
-def free_limits_agree(a: object, b: object) -> bool:
+def free_limits_agree(left: object, right: object) -> bool:
     """Return whether two normalized free limits share the same cap.
     @returns True when meter, cap, scope, and window days all match.
     """

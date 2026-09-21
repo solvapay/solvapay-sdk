@@ -789,10 +789,7 @@ fn is_free_meter(meter_name: Option<&str>) -> bool {
 
 /// Human meter name, or `"units"` when the backend omitted one.
 fn meter_label(meter_name: Option<&str>) -> String {
-    meter_name.map_or_else(
-        || "units".to_owned(),
-        |name| name.replace(['_', '-'], " "),
-    )
+    meter_name.map_or_else(|| "units".to_owned(), |name| name.replace(['_', '-'], " "))
 }
 
 /// Formatted per-unit price from gate recovery fields.

@@ -206,10 +206,10 @@ module SolvaPay
 
   # Return whether two normalized free limits share the same cap.
   # @return True when meter, cap, scope, and window days all match.
-  def self.free_limits_agree(a:, b:)
+  def self.free_limits_agree(left:, right:)
     args = {} #: Hash[String, untyped]
-    args["a"] = a
-    args["b"] = b
+    args["left"] = left
+    args["right"] = right
     NativeDispatch.call_sync("free_limits_agree", args)
   end
 

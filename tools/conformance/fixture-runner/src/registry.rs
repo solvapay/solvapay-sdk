@@ -561,9 +561,9 @@ fn invoke_format_vat_summary_label(input: &FixtureInput) -> Result<Value, Bindin
 
 fn invoke_free_limits_agree(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
-    let a = require_typed::<FreeLimit>(&args, "a")?;
-    let b = require_typed::<FreeLimit>(&args, "b")?;
-    Ok(Value::Bool(free_limits_agree(&a, &b)))
+    let left = require_typed::<FreeLimit>(&args, "left")?;
+    let right = require_typed::<FreeLimit>(&args, "right")?;
+    Ok(Value::Bool(free_limits_agree(&left, &right)))
 }
 
 fn invoke_free_meter_name_pattern(input: &FixtureInput) -> Result<Value, BindingError> {

@@ -4,12 +4,12 @@
   "input": {
     "fn": "freeLimitsAgree",
     "args": {
-      "a": {
+      "left": {
         "meter": "free-requests",
         "cap": 5,
         "scope": "lifetime"
       },
-      "b": {
+      "right": {
         "meter": "free-requests",
         "cap": 10,
         "scope": "lifetime"

@@ -3278,8 +3278,8 @@ coreHelpers:
     docs:
       summary: 'Return whether two normalized free limits share the same cap.'
       params:
-        a: 'First normalized free limit.'
-        b: 'Second normalized free limit.'
+        left: 'First normalized free limit.'
+        right: 'Second normalized free limit.'
       returns: 'True when meter, cap, scope, and window days all match.'
     sync:
       ts: sync

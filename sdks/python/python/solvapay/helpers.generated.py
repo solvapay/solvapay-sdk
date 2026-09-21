@@ -218,13 +218,13 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
     payload["taxRate"] = tax_rate
     return call_native_sync("format_vat_summary_label", json.dumps(payload))
 
-def free_limits_agree(a: Any, b: Any) -> Any:
+def free_limits_agree(left: Any, right: Any) -> Any:
     """Return whether two normalized free limits share the same cap.
     @returns True when meter, cap, scope, and window days all match.
     """
     payload: dict[str, Any] = {}
-    payload["a"] = a
-    payload["b"] = b
+    payload["left"] = left
+    payload["right"] = right
     return call_native_sync("free_limits_agree", json.dumps(payload))
 
 def free_meter_name_pattern() -> Any:

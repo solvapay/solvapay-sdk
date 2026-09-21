@@ -191,9 +191,9 @@ pub unsafe extern "C" fn sv_free_limits_agree_binding(args_ptr: *mut u8, args_le
     let args_json = read_string(args_ptr, args_len);
     pack(run_envelope_sync(|| {
         let args = args_map(&args_json)?;
-        let a = require_typed::<FreeLimit>(&args, "a")?;
-        let b = require_typed::<FreeLimit>(&args, "b")?;
-        Ok(Value::Bool(free_limits_agree(&a, &b)))
+        let left = require_typed::<FreeLimit>(&args, "left")?;
+        let right = require_typed::<FreeLimit>(&args, "right")?;
+        Ok(Value::Bool(free_limits_agree(&left, &right)))
     }))
 }
 

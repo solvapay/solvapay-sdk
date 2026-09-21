@@ -237,7 +237,7 @@ module SolvaPay
   def self.format_price: (amount_minor: Float, currency: String, ?interval: String, ?interval_count: Float, ?free: String, ?currency_display: String) -> untyped
   def self.format_subtotal_label: (?treatment: String) -> untyped
   def self.format_vat_summary_label: (treatment: String?, tax_rate: Float) -> untyped
-  def self.free_limits_agree: (a: untyped, b: untyped) -> untyped
+  def self.free_limits_agree: (left: untyped, right: untyped) -> untyped
   def self.free_meter_name_pattern: () -> untyped
   def self.free_tool_description_suffix: (limit: untyped, ?shared_with: untyped) -> untyped
   def self.get_postal_code_field_label: (country: String) -> untyped

@@ -251,10 +251,10 @@ func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any
 
 // FreeLimitsAgree return whether two normalized free limits share the same cap.
 // Returns True when meter, cap, scope, and window days all match.
-func FreeLimitsAgree(ctx context.Context, a any, b any) (any, error) {
+func FreeLimitsAgree(ctx context.Context, left any, right any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_free_limits_agree_binding", mustJSON(map[string]any{
-		"a": a,
-		"b": b,
+		"left":  left,
+		"right": right,
 	}))
 }
 

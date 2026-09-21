@@ -9776,10 +9776,10 @@
       "name": "free_limits_agree",
       "module": "free_limit",
       "implTy": null,
-      "rustdoc": "True when two normalized free limits name the same cap.\n\n# Arguments\n\n* `a` - First limit.\n* `b` - Second limit.\n\n# Returns\n\n`true` when meter, cap, scope, and window days all match.",
+      "rustdoc": "True when two normalized free limits name the same cap.\n\n# Arguments\n\n* `left` - First limit.\n* `right` - Second limit.\n\n# Returns\n\n`true` when meter, cap, scope, and window days all match.",
       "params": [
         {
-          "rustName": "a",
+          "rustName": "left",
           "byRef": true,
           "optional": false,
           "ty": {
@@ -9788,7 +9788,7 @@
           }
         },
         {
-          "rustName": "b",
+          "rustName": "right",
           "byRef": true,
           "optional": false,
           "ty": {

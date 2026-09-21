@@ -796,8 +796,8 @@ export function freeToolDescriptionSuffix(
  * Return whether two normalized free limits share the same cap.
  * @returns True when meter, cap, scope, and window days all match.
  */
-export function freeLimitsAgree(a: FreeLimit, b: FreeLimit): boolean {
-  return dispatchSync('freeLimitsAgree', { a, b })
+export function freeLimitsAgree(left: FreeLimit, right: FreeLimit): boolean {
+  return dispatchSync('freeLimitsAgree', { left, right })
 }
 
 /**
