@@ -18,6 +18,10 @@ import type {
  */
 type McpContext = Record<string, unknown>
 
+function isStructuredRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 /**
  * MCP Adapter implementation
  */
@@ -65,7 +69,18 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       ? this.options.transformResponse(result)
       : result
 
-    const response: PaywallToolResult = {
+    // Object payloads ride on `structuredContent`. Putting the same
+    // JSON in `content[0].text` doubles tokens on hosts that feed both
+    // fields to the model (Cursor, Grok Bot). Arrays and primitives
+    // cannot use `structuredContent`, so they stay serialized in text.
+    if (isStructuredRecord(transformed)) {
+      return {
+        content: [{ type: 'text', text: 'Success' }],
+        structuredContent: transformed,
+      }
+    }
+
+    return {
       content: [
         {
           type: 'text',
@@ -73,12 +88,6 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
         },
       ],
     }
-
-    if (transformed && typeof transformed === 'object' && !Array.isArray(transformed)) {
-      response.structuredContent = transformed as Record<string, unknown>
-    }
-
-    return response
   }
 
   /**

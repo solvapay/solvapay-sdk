@@ -258,9 +258,9 @@ registerPayable('query_sales_trends', {
 
 `options` carries:
 
-- `text` — override `content[0].text` (use this to give the host a render instruction or a one-line summary instead of the SDK's `JSON.stringify(data)` default).
+- `text` — override `content[0].text`. The default is a short `"Success"` narration; merchant data rides on `structuredContent`.
 - `nudge` — the inline upsell suffix shown above.
-- `dataInText` — append the serialized payload as a trailing text block. Defaults to `true`. Set `false` only when the payload is large enough that duplicating it is not worth the tokens.
+- `dataInText` — append the serialized payload as a trailing text block. Silent `ctx.respond(data)` does **not** dump the same object into `content[0].text` (hosts that feed both fields to the model would see duplicate JSON). When you pass `text` or `nudge`, a trailing JSON block is still appended unless this is `false`. Set `true` to opt in even without narration.
 - `units` — reserved for V1.1 variable billing. V1 accepts the field for forward-compatible code but bills a fixed one unit per call.
 
 The handler `ctx` also exposes `ctx.customer` (`balance`, `remaining`, `withinLimits`, `plan`, and `.fresh()` for a non-cached round-trip) and `ctx.product` so you can make your own nudge decisions without building any UI.

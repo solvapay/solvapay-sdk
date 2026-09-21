@@ -536,19 +536,23 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         auth: { customer_ref: testCustomerRef },
       })
 
-      // MCP adapter wraps response in MCP format
+      // MCP adapter wraps response in MCP format. Success payloads ride
+      // on `structuredContent`; `content[0].text` is a short narration.
       expect(result).toHaveProperty('content')
       expect(result.content[0].type).toBe('text')
-      const parsedResult = JSON.parse(result.content[0].text)
 
       if (hasFreeTier) {
-        expect(parsedResult).toHaveProperty('success', true)
-        expect(parsedResult).toHaveProperty('tasks')
-        expect(Array.isArray(parsedResult.tasks)).toBe(true)
+        expect(result.content[0].text).toBe('Success')
+        expect(result.structuredContent).toHaveProperty('success', true)
+        expect(result.structuredContent).toHaveProperty('tasks')
+        expect(Array.isArray(result.structuredContent.tasks)).toBe(true)
         console.log(`✅ MCP handler succeeded (${freeUnitsCount} free units)`)
       } else {
-        expect(parsedResult).toHaveProperty('success', false)
-        expect(parsedResult).toHaveProperty('error')
+        expect(['payment_required', 'activation_required']).toContain(
+          result.structuredContent?.kind,
+        )
+        expect(typeof result.content[0].text).toBe('string')
+        expect(result.content[0].text.length).toBeGreaterThan(0)
         console.log(`✅ MCP handler blocked (no free units)`)
       }
     })
@@ -577,8 +581,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           limit: 10,
           auth: { customer_ref: testCustomer },
         })
-        const parsedResult = JSON.parse(result.content[0].text)
-        expect(parsedResult.success).toBe(true)
+        expect(result.content[0].text).toBe('Success')
+        expect(result.structuredContent.success).toBe(true)
       }
 
       // 11th call should be paywalled.

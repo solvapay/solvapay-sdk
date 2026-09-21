@@ -219,10 +219,13 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
  * `structuredContent` switch, no widget route — merchant data stays
  * on `structuredContent` unchanged. The fallback nudge copy from
  * `buildNudgeMessage` is used when `options.nudge.message` is absent.
- * A trailing JSON text block is appended only when a narration exists
- * (`options.text` or a nudge mixed into the primary text) and
- * `dataInText` is not `false`. Pure `ctx.respond(data)` stays a single
- * text block.
+ * A trailing JSON text block is appended when the merchant supplies
+ * `options.text` or a nudge (and `dataInText` is not `false`), or when
+ * they opt in with `dataInText: true`. Silent `ctx.respond(data)` uses a
+ * short success narration instead of dumping the same object into both
+ * `content[0].text` and `structuredContent` — hosts that feed both
+ * fields to the model (Cursor, Grok Bot) would otherwise see duplicate
+ * JSON.
  */
 async function unwrapResponseEnvelope(
   adapterResult: SolvaPayCallToolResult,
@@ -233,17 +236,16 @@ async function unwrapResponseEnvelope(
   const textOverride = options?.text
   const nudge = options?.nudge
 
-  // `content[0].text` — narrator override via `options.text`, otherwise
-  // the existing JSON-serialised merchant data. V1.1 may introduce a
-  // merchant-data narrator; V1 keeps the current behaviour.
-  const baseText =
-    typeof textOverride === 'string' ? textOverride : JSON.stringify(data)
+  // `content[0].text` — merchant `options.text` when provided, otherwise
+  // a short stable narration. Merchant data rides on `structuredContent`.
+  const hasTextOverride = typeof textOverride === 'string'
+  const baseText = hasTextOverride ? textOverride : 'Success'
 
   // Append the nudge copy as a text suffix. Prefer the merchant-
   // supplied `nudge.message`; fall back to `buildNudgeMessage` for an
   // opinionated default that names a recovery tool. Separator is a
   // double newline so terminal hosts render cleanly against the
-  // merchant data above.
+  // success narration (or merchant `options.text`) above.
   let primaryText = baseText
   let nudgeText: string | undefined
   if (nudge) {
@@ -257,11 +259,15 @@ async function unwrapResponseEnvelope(
     primaryText = baseText.length > 0 ? `${baseText}\n\n${nudgeText}` : nudgeText
   }
 
+  const hasMerchantNarration = hasTextOverride || nudgeText !== undefined
+  const appendSerializedData =
+    options?.dataInText === true ||
+    (hasMerchantNarration && options?.dataInText !== false)
+
   const content: SolvaPayCallToolResult['content'] = [
     ...((emittedBlocks ?? []) as SolvaPayCallToolResult['content']),
     { type: 'text', text: primaryText },
-    ...((typeof textOverride === 'string' || nudgeText !== undefined) &&
-    options?.dataInText !== false
+    ...(appendSerializedData
       ? [{ type: 'text' as const, text: JSON.stringify(data) }]
       : []),
     ...(nudgeText !== undefined
