@@ -35,6 +35,8 @@ const ALLOWLIST = new Set([
   'repo/lib/release-train.test.ts',
   'repo/census.ts',
   'repo/census.test.ts',
+  'repo/check-dev-sync.ts',
+  'repo/check-dev-sync.test.ts',
   'repo/lib/release-channel.test.ts',
   'repo/prettierignore.test.ts',
   'repo/doc-script-references.test.ts',
