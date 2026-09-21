@@ -9,13 +9,15 @@
  * but dependency-free so it can ship inside `<PaymentForm>` / `<TopupForm>`
  * default trees and the MCP shell footer.
  *
- * Merchant terms/privacy URLs are *not* rendered here — those continue
- * to be woven into the mandate sentence by `<MandateText>`.
+ * Merchant terms/privacy URLs are *not* rendered here — those appear
+ * in the `<MandateText>` consent tail when the merchant has set them.
+ * This strip is always SolvaPay's own Terms · Privacy.
  */
 
 import React, { forwardRef } from 'react'
 import { Slot } from './slot'
 import { useCopy } from '../hooks/useCopy'
+import { useExternalLinkClick } from '../hooks/useExternalLink'
 import { SOLVAPAY_PRIVACY_URL, SOLVAPAY_TERMS_URL, SOLVAPAY_WEBSITE_URL } from '../constants/legal'
 
 export type LegalFooterProps = {
@@ -45,6 +47,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function
   forwardedRef,
 ) {
   const copy = useCopy()
+  const handleExternalClick = useExternalLinkClick()
   const attributionLabel =
     attribution === 'provided'
       ? copy.legalFooter.providedBy
@@ -63,6 +66,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function
               href={termsUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleExternalClick}
             >
               {copy.legalFooter.terms}
             </a>
@@ -72,6 +76,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function
               href={privacyUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleExternalClick}
             >
               {copy.legalFooter.privacy}
             </a>
@@ -82,6 +87,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function
               href={SOLVAPAY_WEBSITE_URL}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleExternalClick}
             >
               {attributionLabel}
             </a>
