@@ -1,11 +1,124 @@
 //! Generated host driver loops (gate + payable action dispatch).
 
-use crate::error::GenResult;
+use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
-use crate::ir::Ir;
+use crate::ir::{Ir, IrDriverLoop};
+
+/// Loops the emitters already render. A manifest loop outside this set fails the build.
+type LoopIo = (&'static str, &'static str);
+type EmittedLoop = (
+    &'static str,
+    &'static [LoopIo],
+    &'static [&'static str],
+    &'static [&'static str],
+);
+const EMITTED_LOOPS: &[EmittedLoop] = &[
+    (
+        "gate",
+        &[
+            ("ensureCustomer", "customerResolved"),
+            ("readLimitsCache", "limitsCacheEntry"),
+            ("checkLimits", "limitsResult"),
+        ],
+        &["allow", "gate"],
+        &["emitUsage", "skipUsage"],
+    ),
+    (
+        "invokePayable",
+        &[("runGate", "gateAllow"), ("invokeHandler", "handlerOk")],
+        &["done"],
+        &[],
+    ),
+    (
+        "ensureCustomer",
+        &[
+            ("readCustomerCache", "customerCacheEntry"),
+            ("getCustomer", "customerLookupResult"),
+            ("createCustomer", "customerCreateResult"),
+            ("updateCustomer", "customerUpdateResult"),
+        ],
+        &["resolved"],
+        &[],
+    ),
+    (
+        "withRetry",
+        &[("invoke", "attemptResult"), ("sleep", "slept")],
+        &["return"],
+        &[],
+    ),
+];
+
+/// Fails unless `driverLoops` matches the loops these emitters hardcode.
+///
+/// # Errors
+///
+/// Returns [`GenError::Parse`] when a required loop is missing, its io/terminal/usage
+/// lists differ from the emitter, or the manifest names a loop with no emitter.
+pub fn require_emitted_loops(ir: &Ir) -> GenResult<()> {
+    for (name, io, terminal, usage) in EMITTED_LOOPS {
+        let loop_def = ir
+            .driver_loops
+            .loops
+            .get(*name)
+            .ok_or_else(|| GenError::Parse(format!("driverLoops.{name} is required")))?;
+        expect_loop(name, loop_def, io, terminal, usage)?;
+    }
+    let mut extra: Vec<&str> = ir
+        .driver_loops
+        .loops
+        .keys()
+        .filter(|name| !EMITTED_LOOPS.iter().any(|(known, _, _, _)| known == name))
+        .map(String::as_str)
+        .collect();
+    extra.sort_unstable();
+    if !extra.is_empty() {
+        return Err(GenError::Parse(format!(
+            "driverLoops has no emitter: {}",
+            extra.join(", ")
+        )));
+    }
+    Ok(())
+}
+
+fn expect_loop(
+    name: &str,
+    loop_def: &IrDriverLoop,
+    io: &[(&str, &str)],
+    terminal: &[&str],
+    usage: &[&str],
+) -> GenResult<()> {
+    let actual_io: Vec<(&str, &str)> = loop_def
+        .io
+        .iter()
+        .map(|pair| (pair.action.as_str(), pair.event.as_str()))
+        .collect();
+    if actual_io != io {
+        return Err(GenError::Parse(format!(
+            "driverLoops.{name}.io does not match the emitter"
+        )));
+    }
+    let actual_terminal: Vec<&str> = loop_def.terminal.iter().map(String::as_str).collect();
+    if actual_terminal != terminal {
+        return Err(GenError::Parse(format!(
+            "driverLoops.{name}.terminal does not match the emitter"
+        )));
+    }
+    let actual_usage: Vec<&str> = loop_def.usage.iter().map(String::as_str).collect();
+    if actual_usage != usage {
+        return Err(GenError::Parse(format!(
+            "driverLoops.{name}.usage does not match the emitter"
+        )));
+    }
+    Ok(())
+}
 
 /// `sdks/typescript/server/src/drivers.generated.ts`
-pub fn emit_drivers_ts(_ir: &Ir) -> GenResult<String> {
+///
+/// # Errors
+///
+/// Returns [`GenError::Parse`] when `driverLoops` does not match the emitted loops.
+pub fn emit_drivers_ts(ir: &Ir) -> GenResult<String> {
+    require_emitted_loops(ir)?;
     let mut out = generated_header(CommentStyle::Block, "ts-drivers-out");
     out.push('\n');
     out.push_str(
@@ -172,11 +285,18 @@ pub fn emit_drivers_ts(_ir: &Ir) -> GenResult<String> {
          \x20 }\n\
          }\n",
     );
+    out.push_str(crate::emit_ensure_loop::TYPESCRIPT);
+    out.push_str(crate::emit_retry_loop::TYPESCRIPT);
     Ok(out)
 }
 
 /// `sdks/python/python/solvapay/drivers.generated.py`
-pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
+///
+/// # Errors
+///
+/// Returns [`GenError::Parse`] when `driverLoops` does not match the emitted loops.
+pub fn emit_drivers_py(ir: &Ir) -> GenResult<String> {
+    require_emitted_loops(ir)?;
     let mut out = generated_header(CommentStyle::Hash, "py-drivers-out");
     out.push_str(
         "\n\"\"\"Generated gate driver loop. Host supplies I/O only.\"\"\"\n\n\
@@ -409,11 +529,14 @@ pub fn emit_drivers_py(_ir: &Ir) -> GenResult<String> {
          \x20           return action.get(\"result\")\n\
          \x20       raise RuntimeError(f\"invoke_payable_next unknown action kind: {kind}\")\n",
     );
+    out.push_str(crate::emit_ensure_loop::PYTHON);
+    out.push_str(crate::emit_retry_loop::PYTHON);
     Ok(out)
 }
 
 /// `sdks/go/drivers_generated.go`
-pub fn emit_drivers_go(_ir: &Ir) -> GenResult<String> {
+pub fn emit_drivers_go(ir: &Ir) -> GenResult<String> {
+    require_emitted_loops(ir)?;
     let mut out = generated_header(CommentStyle::Go, "go-drivers-out");
     out.push_str(
         "\npackage solvapay\n\n\
@@ -576,11 +699,14 @@ pub fn emit_drivers_go(_ir: &Ir) -> GenResult<String> {
          \t}\n\
          }\n",
     );
+    out.push_str(crate::emit_ensure_loop::GO);
+    out.push_str(crate::emit_retry_loop::GO);
     Ok(out)
 }
 
 /// `sdks/ruby/lib/solvapay/drivers.generated.rb`
-pub fn emit_drivers_rb(_ir: &Ir) -> GenResult<String> {
+pub fn emit_drivers_rb(ir: &Ir) -> GenResult<String> {
+    require_emitted_loops(ir)?;
     let mut out = generated_header(CommentStyle::Hash, "rb-drivers-out");
     out.push_str(
         "\n# frozen_string_literal: true\n\n\
@@ -721,11 +847,14 @@ pub fn emit_drivers_rb(_ir: &Ir) -> GenResult<String> {
          \x20 end\n\
          end\n",
     );
+    out.push_str(crate::emit_ensure_loop::RUBY);
+    out.push_str(crate::emit_retry_loop::RUBY);
     Ok(out)
 }
 
 /// `sdks/rust/src/drivers.generated.rs`
-pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
+pub fn emit_drivers_rs(ir: &Ir) -> GenResult<String> {
+    require_emitted_loops(ir)?;
     let mut out = generated_header(CommentStyle::LineSlash, "rs-drivers-out");
     out.push_str(
         "\n//! Generated host driver loops.\n\n\
@@ -737,9 +866,10 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          \x20   clippy::manual_async_fn,\n\
          )]\n\n\
          use std::future::Future;\n\n\
-         use serde_json::Value;\n\
+         use serde_json::{Map, Value};\n\
          use solvapay_core::{\n\
-         \x20   gate_next, FreeLimit, GateAction, GateCacheOp, HelperErrorResult, SdkError,\n\
+         \x20   gate_next, CreateCustomerParams, FreeLimit, GateAction, GateCacheOp, HelperErrorResult,\n\
+         \x20   SdkError,\n\
          };\n\n\
          pub trait GateDriverHost {\n\
          \x20   fn now_ms(&self) -> i64;\n\
@@ -948,5 +1078,85 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          \x20   }\n\
          }\n",
     );
+    out.push_str(crate::emit_ensure_loop::RUST);
+    out.push_str(crate::emit_retry_loop::RUST);
     Ok(out)
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::ir::{IrDriverIo, IrDriverLoop, IrDriverLoops};
+    use std::collections::BTreeMap;
+
+    fn pair(action: &str, event: &str) -> IrDriverIo {
+        IrDriverIo {
+            action: action.into(),
+            event: event.into(),
+        }
+    }
+
+    fn contract_ir() -> Ir {
+        let mut loops = BTreeMap::new();
+        loops.insert(
+            "gate".into(),
+            IrDriverLoop {
+                io: vec![
+                    pair("ensureCustomer", "customerResolved"),
+                    pair("readLimitsCache", "limitsCacheEntry"),
+                    pair("checkLimits", "limitsResult"),
+                ],
+                terminal: vec!["allow".into(), "gate".into()],
+                usage: vec!["emitUsage".into(), "skipUsage".into()],
+            },
+        );
+        loops.insert(
+            "invokePayable".into(),
+            IrDriverLoop {
+                io: vec![
+                    pair("runGate", "gateAllow"),
+                    pair("invokeHandler", "handlerOk"),
+                ],
+                terminal: vec!["done".into()],
+                usage: vec![],
+            },
+        );
+        loops.insert(
+            "ensureCustomer".into(),
+            IrDriverLoop {
+                io: vec![
+                    pair("readCustomerCache", "customerCacheEntry"),
+                    pair("getCustomer", "customerLookupResult"),
+                    pair("createCustomer", "customerCreateResult"),
+                    pair("updateCustomer", "customerUpdateResult"),
+                ],
+                terminal: vec!["resolved".into()],
+                usage: vec![],
+            },
+        );
+        loops.insert(
+            "withRetry".into(),
+            IrDriverLoop {
+                io: vec![pair("invoke", "attemptResult"), pair("sleep", "slept")],
+                terminal: vec!["return".into()],
+                usage: vec![],
+            },
+        );
+        Ir {
+            driver_loops: IrDriverLoops { loops },
+            ..Ir::default()
+        }
+    }
+
+    #[test]
+    fn empty_driver_loops_fail() {
+        let err = require_emitted_loops(&Ir::default()).unwrap_err();
+        assert!(err.to_string().contains("driverLoops.gate"), "{err}");
+    }
+
+    #[test]
+    fn declared_loops_match_the_emitter() {
+        assert!(emit_drivers_ts(&contract_ir()).is_ok());
+    }
 }

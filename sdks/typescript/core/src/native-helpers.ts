@@ -314,6 +314,8 @@ export function freeToolDescriptionSuffix(
 
 /**
  * Return whether two normalized free limits share the same cap.
+ * @param left First normalized free limit.
+ * @param right Second normalized free limit.
  * @returns True when meter, cap, scope, and window days all match.
  */
 export function freeLimitsAgree(left: FreeLimit, right: FreeLimit): boolean {
@@ -378,6 +380,10 @@ export function projectUsageSnapshot(
     activePurchase: activePurchase ?? null,
     limits: limits ?? null,
   })
+}
+
+export function purchaseUsageIsMetered(purchase: unknown | null | undefined): boolean {
+  return dispatchSync('purchaseUsageIsMetered', { purchase: purchase ?? null })
 }
 
 export function shouldRetryUsageError(message: string): boolean {

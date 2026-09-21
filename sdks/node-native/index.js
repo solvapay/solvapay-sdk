@@ -693,6 +693,7 @@ module.exports.POSTAL_CODE_REQUIRED_COUNTRIES = nativeBinding.POSTAL_CODE_REQUIR
 module.exports.projectPaymentIntentResult = nativeBinding.projectPaymentIntentResult
 module.exports.projectTopupProcessOutcome = nativeBinding.projectTopupProcessOutcome
 module.exports.projectUsageSnapshot = nativeBinding.projectUsageSnapshot
+module.exports.purchaseUsageIsMetered = nativeBinding.purchaseUsageIsMetered
 module.exports.requireProductRef = nativeBinding.requireProductRef
 module.exports.resolveAccountState = nativeBinding.resolveAccountState
 module.exports.resolveAuthenticatedUser = nativeBinding.resolveAuthenticatedUser

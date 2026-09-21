@@ -255,15 +255,15 @@ describe('checkParity', () => {
 
   it('flags a catalogued mcp sync op missing from a language surface', () => {
     const issues = checkMcpParity(stubManifest(), {
-      py: { symbols: new Set(), hasCallEnvelope: false },
+      py: { symbols: new Set() },
     })
     expect(issues.some(i => i.kind === 'missing' && /mcpNarrate/.test(i.message))).toBe(true)
   })
 
   it('accepts snake_case python and ruby names for a camelCase mcp id', () => {
     const issues = checkMcpParity(stubManifest(), {
-      py: { symbols: new Set(['mcp_narrate']), hasCallEnvelope: false },
-      rb: { symbols: new Set(['mcp_narrate']), hasCallEnvelope: false },
+      py: { symbols: new Set(['mcp_narrate']) },
+      rb: { symbols: new Set(['mcp_narrate']) },
     })
     expect(issues.filter(i => / py | rb /.test(i.message))).toEqual([])
   })
@@ -282,7 +282,7 @@ describe('checkParity', () => {
       },
     }
     const issues = checkMcpParity(manifest, {
-      c: { symbols: new Set(), hasCallEnvelope: false },
+      c: { symbols: new Set() },
     })
     expect(issues.some(i => /paywallToolResult/.test(i.message) && /c /.test(i.message))).toBe(
       false,
@@ -303,7 +303,7 @@ describe('checkParity', () => {
       },
     }
     const issues = checkMcpParity(manifest, {
-      ts: { symbols: new Set(), hasCallEnvelope: false },
+      ts: { symbols: new Set() },
     })
     expect(issues.some(i => /paywallToolResult/.test(i.message) && /ts /.test(i.message))).toBe(
       false,
@@ -321,7 +321,7 @@ describe('checkParity', () => {
       },
     }
     const issues = checkMcpParity(manifest, {
-      c: { symbols: new Set(), hasCallEnvelope: false },
+      c: { symbols: new Set() },
     })
     expect(issues.some(i => /omitted without a reason/.test(i.message))).toBe(true)
   })

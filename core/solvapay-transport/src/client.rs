@@ -412,7 +412,7 @@ impl SolvaPayClient {
         vars.insert("planRef", params.plan_ref.clone());
         let idempotency = caller_key_or_auto(
             params.idempotency_key.as_deref(),
-            "payment-{planRef}-{epochMs}-{random9}",
+            crate::contract_defaults::PAYMENT_IDEMPOTENCY_KEY_FORMAT,
             vars,
         );
         self.execute_json(
@@ -461,7 +461,7 @@ impl SolvaPayClient {
         };
         let idempotency = caller_key_or_auto(
             params.idempotency_key.as_deref(),
-            "topup-{epochMs}-{random9}",
+            crate::contract_defaults::TOPUP_IDEMPOTENCY_KEY_FORMAT,
             BTreeMap::new(),
         );
         self.execute_json(

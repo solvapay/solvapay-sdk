@@ -170,3 +170,178 @@ export async function runGeneratedPayableLoop(
     throw new Error(`invokePayableNext unknown action kind: ${String(action.kind)}`)
   }
 }
+
+export type EnsureCustomerCacheHit =
+  | { found: true; backendRef: string; timestampMs: number }
+  | { found: false }
+
+export type EnsureCustomerLookup = {
+  found: boolean
+  customer?: unknown
+  errorMessage?: string
+}
+
+export type EnsureCustomerCreate = {
+  ok: boolean
+  customer?: unknown
+  errorMessage?: string
+}
+
+export type EnsureCustomerUpdate = {
+  ok: boolean
+  errorMessage?: string
+}
+
+export type EnsureCustomerHost = {
+  readCustomerCache(key: string): Promise<EnsureCustomerCacheHit>
+  getCustomer(args: { byExternalRef?: string; byEmail?: string }): Promise<EnsureCustomerLookup>
+  createCustomer(params: unknown): Promise<EnsureCustomerCreate>
+  updateCustomer(args: { customerRef: string; patch: unknown }): Promise<EnsureCustomerUpdate>
+  writeCustomerCache(entry: { key: string; backendRef: string; timestampMs: number }): Promise<void> | void
+  nowMs(): number
+}
+
+export async function runGeneratedEnsureCustomerLoop(
+  ensureCustomerNext: (
+    state: unknown,
+    event: unknown,
+  ) => { state: unknown; action: { kind: string; [key: string]: unknown } },
+  host: EnsureCustomerHost,
+  startEvent: Record<string, unknown>,
+): Promise<string> {
+  let state: unknown = null
+  let event: Record<string, unknown> = startEvent
+  for (;;) {
+    const out = ensureCustomerNext(state, event)
+    state = out.state
+    const action = out.action
+    if (action.kind === 'readCustomerCache') {
+      const cached = await host.readCustomerCache(String(action.key))
+      const nowMs = host.nowMs()
+      event = cached.found
+        ? {
+            kind: 'customerCacheEntry',
+            found: true,
+            backendRef: cached.backendRef,
+            timestampMs: cached.timestampMs,
+            nowMs,
+          }
+        : { kind: 'customerCacheEntry', found: false, nowMs }
+      continue
+    }
+    if (action.kind === 'getCustomer') {
+      const lookup = await host.getCustomer({
+        ...(typeof action.byExternalRef === 'string' ? { byExternalRef: action.byExternalRef } : {}),
+        ...(typeof action.byEmail === 'string' ? { byEmail: action.byEmail } : {}),
+      })
+      const nowMs = host.nowMs()
+      event = lookup.found
+        ? {
+            kind: 'customerLookupResult',
+            found: true,
+            customer: lookup.customer,
+            nowMs,
+          }
+        : {
+            kind: 'customerLookupResult',
+            found: false,
+            nowMs,
+            ...(lookup.errorMessage ? { errorMessage: lookup.errorMessage } : {}),
+          }
+      continue
+    }
+    if (action.kind === 'createCustomer') {
+      const created = await host.createCustomer(action.params)
+      const nowMs = host.nowMs()
+      event = created.ok
+        ? { kind: 'customerCreateResult', ok: true, customer: created.customer, nowMs }
+        : {
+            kind: 'customerCreateResult',
+            ok: false,
+            errorMessage: created.errorMessage ?? '',
+            nowMs,
+          }
+      continue
+    }
+    if (action.kind === 'updateCustomer') {
+      const updated = await host.updateCustomer({
+        customerRef: String(action.customerRef),
+        patch: action.patch ?? {},
+      })
+      const nowMs = host.nowMs()
+      event = updated.ok
+        ? { kind: 'customerUpdateResult', ok: true, nowMs }
+        : {
+            kind: 'customerUpdateResult',
+            ok: false,
+            errorMessage: updated.errorMessage ?? '',
+            nowMs,
+          }
+      continue
+    }
+    if (action.kind === 'resolved') {
+      const cache = action.cache as
+        | { key?: unknown; backendRef?: unknown; timestampMs?: unknown }
+        | null
+        | undefined
+      if (cache && typeof cache.key === 'string') {
+        await host.writeCustomerCache({
+          key: cache.key,
+          backendRef: String(cache.backendRef ?? action.backendRef),
+          timestampMs: Number(cache.timestampMs),
+        })
+      }
+      if (typeof action.backendRef !== 'string' || action.backendRef.length === 0) {
+        throw new Error('ensure_customer_next resolved without backendRef')
+      }
+      return action.backendRef
+    }
+    throw new Error(`ensure_customer_next unknown action: ${String(action.kind)}`)
+  }
+}
+
+export type RetryDelayArgs = {
+  attempt: number
+  maxRetries: number
+  initialDelay: number
+  backoffStrategy: string
+}
+
+export type RetryLoopHost<T> = {
+  maxRetries: number
+  initialDelay: number
+  backoffStrategy: string
+  invoke(): Promise<T>
+  sleep(delayMs: number): Promise<void>
+  nextDelayMs(args: RetryDelayArgs): number | null
+  shouldRetry?(error: Error, attempt: number): boolean
+  onRetry?(error: Error, attempt: number, delayMs: number): void
+}
+
+export async function runGeneratedWithRetryLoop<T>(host: RetryLoopHost<T>): Promise<T> {
+  let attempt = 0
+  for (;;) {
+    try {
+      return await host.invoke()
+    } catch (error) {
+      const lastError = error instanceof Error ? error : new Error(String(error))
+      const delay = host.nextDelayMs({
+        attempt,
+        maxRetries: host.maxRetries,
+        initialDelay: host.initialDelay,
+        backoffStrategy: host.backoffStrategy,
+      })
+      if (delay === null) {
+        throw lastError
+      }
+      if (host.shouldRetry && !host.shouldRetry(lastError, attempt)) {
+        throw lastError
+      }
+      if (host.onRetry) {
+        host.onRetry(lastError, attempt, delay)
+      }
+      await host.sleep(delay)
+      attempt += 1
+    }
+  }
+}

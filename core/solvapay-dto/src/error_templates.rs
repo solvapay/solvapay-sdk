@@ -119,6 +119,10 @@ pub mod operations {
             "Invalid response structure from cancel purchase endpoint",
             "Invalid purchase data in cancel purchase response",
         ];
+        /// HTTP status for each [`CASES`] entry (`None` when unset).
+        pub const CASE_STATUS: &[Option<u16>] = &[Some(404), Some(400), None, None, None];
+        /// Stable code for each [`CASES`] entry (`None` when unset).
+        pub const CASE_CODE: &[Option<&str>] = &[None, None, None, None, None];
     }
     /// Templates for `checkLimits`.
     pub mod check_limits {
@@ -209,6 +213,10 @@ pub mod operations {
             "One of customerRef, externalRef, or email must be provided",
             "No customer found with externalRef: {externalRef}",
         ];
+        /// HTTP status for each [`CASES`] entry (`None` when unset).
+        pub const CASE_STATUS: &[Option<u16>] = &[None, None];
+        /// Stable code for each [`CASES`] entry (`None` when unset).
+        pub const CASE_CODE: &[Option<&str>] = &[None, None];
     }
     /// Templates for `getCustomerBalance`.
     pub mod get_customer_balance {
@@ -302,6 +310,10 @@ pub mod operations {
             "Invalid response structure from reactivate purchase endpoint",
             "Invalid purchase data in reactivate purchase response",
         ];
+        /// HTTP status for each [`CASES`] entry (`None` when unset).
+        pub const CASE_STATUS: &[Option<u16>] = &[Some(404), Some(400), None, None, None];
+        /// Stable code for each [`CASES`] entry (`None` when unset).
+        pub const CASE_CODE: &[Option<&str>] = &[None, None, None, None, None];
     }
     /// Templates for `saveAutoRecharge`.
     pub mod save_auto_recharge {

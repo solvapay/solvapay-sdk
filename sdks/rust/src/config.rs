@@ -2,18 +2,17 @@
 
 use solvapay_core::{RetryPolicy, SdkError};
 
-/// Default limits-cache TTL (10 seconds), matching TS / Ruby / Python facades.
-pub const DEFAULT_LIMITS_CACHE_TTL_MS: u64 = 10_000;
-/// Frozen customer-dedup TTL (`defaults.customerDedupTTLMs`).
-pub const CUSTOMER_DEDUP_TTL_MS: u64 = 60_000;
-/// Frozen customer-dedup max cache size (`defaults.customerDedupMaxCacheSize`).
-pub const CUSTOMER_DEDUP_MAX_CACHE_SIZE: usize = 1000;
-/// Frozen anonymous customer ref (`defaults.anonymousCustomerRef`).
-pub const ANONYMOUS_CUSTOMER_REF: &str = "anonymous";
-/// Frozen `trackUsage` request-id template (`defaults.requestIdFormat`).
-pub const REQUEST_ID_FORMAT: &str = "solvapay_{epochMs}_{random9}";
-/// Frozen `trackUsage.actionType` (`defaults.usageActionType`).
-pub const USAGE_ACTION_TYPE: &str = "api_call";
+#[allow(dead_code)]
+#[path = "defaults_generated.rs"]
+mod defaults_generated;
+
+#[allow(unused_imports)]
+pub use defaults_generated::{
+    ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS,
+    DEFAULT_INITIAL_DELAY_MS, DEFAULT_LIMITS_CACHE_TTL_MS, DEFAULT_MAX_RETRIES,
+    GO_CONTEXT_FIRST_PARAM, PAYMENT_IDEMPOTENCY_KEY_FORMAT, REQUEST_ID_FORMAT, RETRY_BACKOFF,
+    TOPUP_IDEMPOTENCY_KEY_FORMAT, USAGE_ACTION_TYPE, WEBHOOK_TOLERANCE_SEC,
+};
 
 /// SolvaPay client configuration.
 #[derive(Debug, Clone)]

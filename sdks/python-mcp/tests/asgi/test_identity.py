@@ -72,8 +72,9 @@ async def test_missing_customer_ref_does_not_fall_back_to_anonymous() -> None:
     )
     async with Client(server) as client:
         result = await client.call_tool("echo", {})
-    assert result.is_error is True
+    assert result.is_error is not True
     assert result.structured_content is not None
-    assert result.structured_content["status"] == 401
+    assert result.structured_content.get("kind") == "payment_required"
+    assert "customer_ref missing" in str(result.structured_content.get("message"))
     assert backend.limit_calls == []
     assert all(call.get("customerRef") != "anonymous" for call in backend.limit_calls)

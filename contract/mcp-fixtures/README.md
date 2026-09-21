@@ -1,91 +1,70 @@
-# MCP-authoring fixtures
+# MCP fixtures
 
-Language-neutral conformance corpus for layer-3 payable-MCP adapters
-(`registerPayable` / `ctx.respond`). Replayed by the TypeScript reference
-harness in `tools/conformance/mcp-authoring/` against `@solvapay/mcp` on a
-real `McpServer`. MA-Py / MA-Rb / MA-Go / MA-Rs write a dispatcher only.
+Language-neutral conformance corpus for MCP protocol handling and payable
+authoring. This tree is **not** part of `contract/fixtures/`. Layer-2 runners
+hard-fail on an unknown `input.fn` from that other tree.
 
-Normative behavior: [`docs/contributing/mcp-authoring-adapter-contract.md`](../../docs/contributing/mcp-authoring-adapter-contract.md).
-
-This tree is **not** part of `contract/fixtures/`. Layer-2 runners hard-fail
-on unknown `input.fn`.
-
-## Format (§5.3)
-
-Same envelope as `contract/fixtures/` (`parseFixture`). `input.fn` is always
-`registerPayable`. `input.args` is a declarative scenario; `expect.result` is
-a composite observation.
-
-| Field            | Role                                                    |
-| ---------------- | ------------------------------------------------------- |
-| `suite` / `case` | Identity; directory layout mirrors suite names          |
-| `input.fn`       | Always `registerPayable`                                |
-| `input.args`     | Scenario (tool, product, customer ref, limits, handler) |
-| `expect.result`  | `{ toolResult, usage }`                                 |
-
-## Scenario spec (`input.args`)
-
-| Field               | Shape                                                                                                                                                                        |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tool`              | `{ name, title?, description?, inputSchema?, args }` — MCP `tools/call` name, optional JSON Schema-ish field map (`{ "customer_ref": { "type": "string" } }`), and arguments |
-| `product`           | Product ref passed to the adapter                                                                                                                                            |
-| `usageType`         | Optional meter name forwarded to `trackUsage.metadata.action` (omit to default `requests`)                                                                                   |
-| `customerRef`       | Identity string                                                                                                                                                              |
-| `customerRefSource` | `"hook"` (`getCustomerRef`) or `"toolArgs"` (`args.customer_ref`)                                                                                                            |
-| `limits`            | Exact `checkLimits` payload the mock backend returns (no defaults)                                                                                                           |
-| `handler`           | `{ kind: "respond", data, options?, emit? }`, `{ kind: "gate", reason? }`, or `{ kind: "throw", message }`                                                                   |
-
-## Observation (`expect.result`)
-
-```json
-{
-  "toolResult": {
-    "content": [{ "type": "text", "text": "..." }],
-    "structuredContent": {}
-  },
-  "usage": [
-    {
-      "outcome": "success",
-      "actionType": "api_call",
-      "units": 1,
-      "productRef": "prd_demo",
-      "customerRef": "cus_from_args",
-      "metadata": { "action": "requests" }
-    }
-  ]
-}
-```
-
-`usage` is the ordered projection of `trackUsage`. Harnesses must assert that
-raw calls also carry `duration`, `timestamp`, and `metadata.requestId`
-without pinning their values.
-
-Gate `content[0].text` and `structuredContent` are layer-2 output
-(`buildPaywallGate` / `paywallToolResult`), not adapter-authored copy.
+Normative payable-adapter behavior:
+[`docs/contributing/mcp-authoring-adapter-contract.md`](../../docs/contributing/mcp-authoring-adapter-contract.md).
 
 ## Corpus
 
-| Path                                | Axis                                    |
-| ----------------------------------- | --------------------------------------- |
-| `allow/custom-usage-type.json`      | custom `usageType` reaches `metadata.action` |
-| `allow/customer-outcome-flags.json` | `ctx.customer` carries `throttled` / `overage` |
-| `allow/respond-minimal.json`        | `ctx.respond(data)` plus trailing JSON  |
-| `allow/respond-text-option.json`    | `options.text` plus trailing JSON       |
-| `allow/respond-nudge.json`          | nudge suffix, trailing JSON, resource   |
-| `allow/respond-data-in-text-false.json` | omit trailing JSON when `dataInText: false` |
-| `allow/respond-emitted-blocks.json` | `ctx.emit` blocks precede text          |
-| `allow/respond-key-order.json`      | compact JSON text preserves key order   |
-| `gate/payment-required.json`        | pre-check `payment_required`            |
-| `gate/activation-required.json`     | pre-check `activation_required`         |
-| `gate/handler-invoked.json`         | allow then `ctx.gate`; no `fail` usage  |
-| `error/handler-throws.json`         | `isError: true`; usage `fail`           |
-| `customer-ref/from-tool-args.json`  | `args.customer_ref`                     |
-| `customer-ref/from-hook.json`       | `getCustomerRef` hook                   |
+22 suites, 140 JSON files. Counts below are the files on disk.
+
+The frozen replay lists are the authority for which of those files each
+language runner must include. They live in the sources named by
+`MCP_REPLAY_LIST_FILES` in
+[`tools/conformance/lib/mcp-fixture-coverage.ts`](../../tools/conformance/lib/mcp-fixture-coverage.ts):
+
+- `tools/conformance/mcp-authoring/mcp-authoring-fixtures.test.ts`
+- `sdks/python-mcp/tests/mcp_authoring/test_mcp_authoring_fixtures.py`
+- `sdks/go/mcp/fixtures_test.go`
+- `sdks/ruby-mcp/test/mcp_authoring_fixtures_test.rb`
+- `sdks/rust-mcp/tests/mcp_authoring_fixtures.rs`
+
+`replayListDrift` fails when a list and the on-disk corpus disagree.
+HTTP engine runners (`HTTP_ENGINE_FILES` in the same module) skip
+`engine/invoke-handler.json`.
+
+| Suite | Files | `input.fn` |
+| --- | ---: | --- |
+| `allow` | 8 | `registerPayable` |
+| `auth-gate` | 4 | `mcpAuthGate` |
+| `bearer-verify` | 6 | `mcpVerifyBearer` |
+| `bootstrap` | 2 | `mcpBootstrap` |
+| `builtin-tools` | 25 | `mcpCallBuiltinTool` |
+| `config-log` | 1 | `mcpConfigLog` |
+| `csp` | 2 | `mcpMergeCsp` |
+| `customer-ref` | 2 | `registerPayable` |
+| `dcr` | 2 | `mcpDcrDiagnostics` |
+| `default-gate` | 2 | `mcpDefaultGate` |
+| `descriptors` | 2 | `mcpDescriptors` |
+| `dispatch` | 3 | `mcpDispatch` |
+| `engine` | 18 | `mcpHandleRequest`, `mcpResume`, `mcpWidgetResource` |
+| `error` | 1 | `registerPayable` |
+| `gate` | 3 | `registerPayable` |
+| `hide-tools` | 6 | `mcpHandleRequest`, `mcpHideToolsByAudience` |
+| `narrate` | 19 | `mcpNarrate` |
+| `native-cors` | 5 | `mcpNativeCors` |
+| `oauth` | 14 | `mcpNormalizeOauthError`, `mcpOauthDiscovery`, `mcpOauthErrorInspect`, `mcpOauthPath`, `mcpOauthRequest` |
+| `oauth-proxy` | 8 | `mcpOauthRequest` |
+| `overview` | 1 | `mcpOverviewResource` |
+| `resolve-auth` | 6 | `mcpResolveAuth` |
+
+`registerPayable` cases (`allow`, `customer-ref`, `error`, `gate`) are the
+layer-3 authoring scenarios: `input.args` describes the tool, product,
+customer ref, limits, and handler, and `expect.result` is
+`{ toolResult, usage }`. Every other suite is an op-specific JSON case for
+the `input.fn` in the table. Do not treat the payable scenario fields as the
+shape of the whole corpus.
+
+Gate `content[0].text` and `structuredContent` on payable cases are layer-2
+output (`paywallToolResult`), not adapter-authored copy. Narration markdown
+comes from the Rust `mcpNarrate` op.
 
 ## Run
 
 ```bash
-pnpm build:packages
 pnpm test:mcp-contract
 cd sdks/python-mcp && uv sync --extra dev && uv run --extra dev pytest -q
 cd sdks/ruby-mcp && RUBYLIB=$(pwd)/../ruby/lib bundle exec rake test
@@ -93,15 +72,14 @@ cd sdks/go && go test ./mcp/...
 cargo test -p solvapay-mcp
 ```
 
-The suite is included in `pnpm test:contract`.
+`pnpm test:mcp-contract` is included in `pnpm test:contract`.
 
-## How to add a language runner
+## How to add a case
 
-1. Discover `*.json` recursively under this directory (via `lookups.mcpFixtures`).
-2. Parse with the §5.3 schema. Reject unknown fields and missing required
-   scenario keys — do not default them.
-3. Compile `handler` into the language's `ctx.respond` / `ctx.gate` / `ctx.emit`.
-4. Register on a **real** host MCP server; drive `initialize` →
-   `notifications/initialized` → `tools/call`.
-5. Install native layer-2 `paywallToolResult` so gate copy is Rust-sourced.
-6. Assert `toolResult` byte-for-byte and the usage projection.
+1. Add `suite/case.json` under this directory. `suite` matches the directory.
+   Reject unknown fields. Do not default missing scenario keys.
+2. Add the same relative path to every frozen replay list above. A list that
+   drifts from the directory fails `replayListDrift`.
+3. For a new `input.fn`, register it in the language runners. Payable cases
+   compile `handler` into `ctx.respond` / `ctx.gate` / `ctx.emit` and drive a
+   real host MCP server. Engine and sync-op cases call the named Rust op.

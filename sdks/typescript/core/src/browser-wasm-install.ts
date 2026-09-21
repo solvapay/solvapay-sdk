@@ -6,6 +6,7 @@
  * `browser-wasm.ts` for non-sandboxed browsers.
  */
 
+import { unwrapEnvelope } from './envelope'
 import {
   installNativeCoreApi,
   resetNativeCoreApiForTests,
@@ -27,30 +28,6 @@ export type BrowserJsBinding = Partial<
   SOLVAPAY_BROWSER_JS_CORE?: string
 }
 
-type EnvelopeOk = { ok: true; value: unknown }
-type EnvelopeErr = { ok: false; error: { kind: string; message: string } }
-type Envelope = EnvelopeOk | EnvelopeErr
-
-function isEnvelope(value: unknown): value is Envelope {
-  if (typeof value !== 'object' || value === null || !('ok' in value)) return false
-  const ok = (value as { ok: unknown }).ok
-  return ok === true || ok === false
-}
-
-function unwrapEnvelope(envelopeJson: string): unknown {
-  let envelope: unknown
-  try {
-    envelope = JSON.parse(envelopeJson) as unknown
-  } catch {
-    throw new SolvaPayError('SolvaPay browser WASM returned invalid JSON envelope')
-  }
-  if (!isEnvelope(envelope)) {
-    throw new SolvaPayError('SolvaPay browser WASM returned malformed envelope')
-  }
-  if (envelope.ok) return envelope.value
-  throw new SolvaPayError(envelope.error.message)
-}
-
 function callBrowserSync(
   binding: BrowserBinding | BrowserJsBinding,
   fn: NativeCoreSyncMethod,
@@ -60,7 +37,7 @@ function callBrowserSync(
   if (typeof method !== 'function') {
     throw new SolvaPayError(`SolvaPay browser WASM missing sync method: ${fn}`)
   }
-  return unwrapEnvelope(method(argsJson))
+  return unwrapEnvelope(method(argsJson), 'browser WASM')
 }
 
 export function installFromBinding(binding: BrowserBinding | BrowserJsBinding): void {

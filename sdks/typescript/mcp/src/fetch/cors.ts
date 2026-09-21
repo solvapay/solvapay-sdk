@@ -6,7 +6,12 @@
  * `mcpAuthGate` ops. Facades only merge headers onto `Response`.
  */
 
-import { mcpAuthGate, mcpNativeCors, isNativeClientOrigin } from '@solvapay/mcp-core'
+import {
+  extractBearerToken,
+  isNativeClientOrigin,
+  mcpAuthGate,
+  mcpNativeCors,
+} from '@solvapay/mcp-core'
 
 export { isNativeClientOrigin }
 
@@ -79,8 +84,5 @@ export function authChallenge(
 
 /** Extract the raw bearer token from an `Authorization: Bearer <token>` header, or `null`. */
 export function resolveBearer(req: Request): string | null {
-  const header = req.headers.get('authorization')
-  if (!header) return null
-  const match = /^\s*Bearer\s+(.+?)\s*$/i.exec(header)
-  return match ? match[1] : null
+  return extractBearerToken(req.headers.get('authorization'))
 }

@@ -96,6 +96,7 @@ SyncMethod = Literal[
     "project_usage_snapshot",
     "resolve_check_limits_params",
     "should_retry_usage_error",
+    "purchase_usage_is_metered",
     "resolve_usage_extra",
     "validate_list_plans_params",
     "is_error_result",
@@ -266,13 +267,12 @@ def reconstruct_envelope_error(error: dict[str, Any]) -> Exception:
     err = SolvaPayError(message)
     if isinstance(kind, str):
         setattr(err, "kind", kind)
-    if kind == "Api":
-        if isinstance(error.get("status"), int):
-            setattr(err, "status", error["status"])
-        if isinstance(error.get("code"), str):
-            setattr(err, "code", error["code"])
-    elif isinstance(error.get("code"), str):
+    if isinstance(error.get("status"), int):
+        setattr(err, "status", error["status"])
+    if isinstance(error.get("code"), str):
         setattr(err, "code", error["code"])
+    if isinstance(error.get("retryable"), bool):
+        setattr(err, "retryable", error["retryable"])
     return err
 
 

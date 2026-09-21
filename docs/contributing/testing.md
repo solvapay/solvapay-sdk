@@ -12,10 +12,11 @@ signature parity.
 ### Golden fixtures — the single behavioral truth
 
 `contract/fixtures/` holds behavioral golden fixtures (webhook signatures, retry
-schedules, paywall classification/gate/payload, all 45 client request/response
-shapes, and every helper decision core). Each fixture is a language-neutral
-input → expected-output record. These are the source of truth for behavior; every
-surface must reproduce them byte-for-byte.
+schedules, paywall classification/gate/payload, client request/response cases,
+and every helper decision core). Counts live in
+`contract/fixtures/census.generated.json`: parsed 787, executed 782, delegated 5.
+Each fixture is a language-neutral input → expected-output record. These are the
+source of truth for behavior; every surface must reproduce them byte-for-byte.
 
 - **TypeScript side:** the fixture harness (`tools/conformance/lib/fixture-harness.ts`)
   replays fixtures against the TS facades. Run via `pnpm test:contract`.
@@ -30,7 +31,8 @@ A behavior change is a fixture diff, reviewed like code.
 `@solvapay/core` and `@solvapay/server` always dispatch to Rust (napi on Node,
 WASM on edge/browser). Contract fixtures (`pnpm test:contract`) exercise that
 path directly — there is no `SOLVAPAY_IMPL` selection flag. `@solvapay/mcp-core`
-keeps a TypeScript fallback when the binding is not installed (edge/standalone).
+dispatches through `native-mcp-dispatch`. `callMcpSyncOp` throws when no native
+or WASM API is installed. There is no TypeScript fallback.
 
 ### Native client fixture replay
 

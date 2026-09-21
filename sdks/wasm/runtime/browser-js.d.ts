@@ -1,7 +1,7 @@
 /**
  * wasm2js browser profile of `@solvapay/server-wasm` — public-safe pure logic.
  *
- * No webhook / transport-client / MCP / secret-adjacent exports (§7.8).
+ * No webhook, transport client, or MCP engine exports (§7.8).
  * Importing this module installs the converted core synchronously.
  */
 
@@ -66,4 +66,24 @@ export {
   BALANCE_RECONCILE_DELAYS_MS,
   REVERSE_CHARGE_NOTE,
   TAX_NOT_COLLECTED_NOTE,
+  assertValidProductRef,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyCreateError,
+  classifyLookupError,
+  classifyReactivateError,
+  freeMeterNamePattern,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  requireProductRef,
+  resolveProductRef,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
 } from '../pkg/browser-js/solvapay_wasm'

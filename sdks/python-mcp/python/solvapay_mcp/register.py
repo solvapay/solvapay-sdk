@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from weakref import WeakKeyDictionary, WeakSet
 
 from mcp.server.lowlevel.server import Server
+from mcp.shared.exceptions import MCPError
 from mcp.types import (
     CallToolRequestParams,
     CallToolResult,
@@ -22,7 +23,11 @@ from mcp.types import (
     Tool,
 )
 from pydantic import TypeAdapter
-from solvapay import build_customer_snapshot
+from solvapay import (
+    append_paid_tool_description,
+    build_customer_snapshot,
+    paywall_structured_content_schema,
+)
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import SolvaPay, run_generated_payable_loop_async
 from solvapay.results import PayableAllowResult, PayablePaywallResult
@@ -33,6 +38,7 @@ from solvapay_mcp._layer2 import (
     paywall_tool_result,
 )
 from solvapay_mcp.core import call
+from solvapay_mcp.gate_copy import gate_message
 from solvapay_mcp.response_context import ResponseContext
 
 Handler = Callable[[dict[str, object], ResponseContext], Awaitable[object]]
@@ -79,12 +85,33 @@ class MissingCustomerRefError(SolvaPayError):
         self.code = "unauthorized"
 
 
-def _unauthorized_payload() -> dict[str, object]:
-    return {
-        "isError": True,
-        "content": [{"type": "text", "text": "Unauthorized"}],
-        "structuredContent": {"error": "Unauthorized", "status": 401},
-    }
+class DispatchChallengeError(MCPError):
+    """401 reconnect envelope from ``mcpDispatch``. Not a tool result."""
+
+    def __init__(self, envelope: Mapping[str, object]) -> None:
+        body = envelope.get("body")
+        message = "Unauthorized"
+        jsonrpc_code = -32001
+        if isinstance(body, Mapping):
+            error = body.get("error")
+            if isinstance(error, Mapping):
+                error_message = error.get("message")
+                if isinstance(error_message, str) and error_message != "":
+                    message = error_message
+                error_code = error.get("code")
+                if isinstance(error_code, int):
+                    jsonrpc_code = error_code
+        super().__init__(jsonrpc_code, message)
+        status = envelope.get("status")
+        self.status = status if isinstance(status, int) else 401
+        headers = envelope.get("headers")
+        self.headers = (
+            {str(key): str(value) for key, value in headers.items()}
+            if isinstance(headers, Mapping)
+            else {}
+        )
+        self.body = body
+        self.jsonrpc_code = jsonrpc_code
 
 
 @dataclass
@@ -98,6 +125,8 @@ class _PayableTool:
     get_customer_ref: GetCustomerRef | None
     output_schema: dict[str, object] | None = None
     usage_type: str = "requests"
+    listed_description: str | None = None
+    listed_output_schema: dict[str, object] | None = None
 
 
 @dataclass
@@ -306,7 +335,7 @@ def _install_dispatch(server: Server[object]) -> None:
         )
         kind = envelope.get("kind")
         if kind == "challenge":
-            return _unauthorized_payload()
+            raise DispatchChallengeError(envelope)
         rpc = envelope.get("rpc") if kind == "rpc" else envelope
         if isinstance(rpc, dict):
             return rpc.get("result")
@@ -317,12 +346,7 @@ def _install_dispatch(server: Server[object]) -> None:
         if binding is None:
             tools: list[Tool] = []
             for name, payable_spec in dict(_REGISTRIES.get(server) or {}).items():
-                tool = Tool(name=name, input_schema=payable_spec.input_schema)
-                if payable_spec.title is not None:
-                    tool.title = payable_spec.title
-                if payable_spec.description is not None:
-                    tool.description = payable_spec.description
-                tools.append(tool)
+                tools.append(_tool_from_payable(name, payable_spec))
             return ListToolsResult(tools=tools)
         raw = await _result("tools/list", {}, _ctx)
         listed_tools: list[Tool] = []
@@ -362,8 +386,6 @@ def _install_dispatch(server: Server[object]) -> None:
                                 extra: dict[str, object] = {}
                                 if "ui/resourceUri" not in meta:
                                     extra["ui/resourceUri"] = uri
-                                if "openai/outputTemplate" not in meta:
-                                    extra["openai/outputTemplate"] = uri
                                 if extra:
                                     meta = {**meta, **extra}
                             item = {
@@ -382,12 +404,7 @@ def _install_dispatch(server: Server[object]) -> None:
         for name, payable_spec in payable_tools.items():
             if name in listed:
                 continue
-            tool = Tool(name=name, input_schema=payable_spec.input_schema)
-            if payable_spec.title is not None:
-                tool.title = payable_spec.title
-            if payable_spec.description is not None:
-                tool.description = payable_spec.description
-            listed_tools.append(tool)
+            listed_tools.append(_tool_from_payable(name, payable_spec))
         return ListToolsResult(tools=listed_tools)
 
     async def on_call_tool(_ctx: object, params: CallToolRequestParams) -> CallToolResult:
@@ -399,16 +416,21 @@ def _install_dispatch(server: Server[object]) -> None:
             arguments = params.arguments if isinstance(params.arguments, dict) else {}
             try:
                 payload = await _invoke_payable(spec, dict(arguments))
-            except MissingCustomerRefError:
-                # No authenticated caller: report 401 as a tool error rather than
-                # billing an `anonymous` customer.
-                return _to_call_tool_result(_unauthorized_payload())
+            except MissingCustomerRefError as err:
+                gate = call("mcpDefaultGate", {"product": spec.product, "reason": str(err)})
+                if not isinstance(gate, dict):
+                    raise TypeError("mcpDefaultGate did not return an object") from err
+                message = gate.get("message")
+                text = message if isinstance(message, str) and message else str(err)
+                return _to_call_tool_result(
+                    paywall_tool_result(text, {str(key): value for key, value in gate.items()})
+                )
             return _to_call_tool_result(payload)
         raw = await _result(
             "tools/call",
             {
                 "name": params.name,
-                "arguments": _intent_tool_arguments(params.name, params.arguments),
+                "arguments": dict(params.arguments) if isinstance(params.arguments, dict) else {},
             },
             _ctx,
         )
@@ -551,16 +573,13 @@ def register_payable_tool(
     usage_type: str | None = None,
 ) -> None:
     registry = _tools(server)
-    schema: dict[str, object] = (
-        input_schema if input_schema is not None else {"type": "object", "properties": {}}
-    )
     registry[name] = _PayableTool(
         solvapay=solvapay,
         product=product,
         handler=handler,
         title=title,
         description=description,
-        input_schema=schema,
+        input_schema=_compile_registered_input_schema(input_schema),
         output_schema=output_schema,
         get_customer_ref=get_customer_ref,
         usage_type=(
@@ -568,6 +587,8 @@ def register_payable_tool(
             if isinstance(usage_type, str) and usage_type.strip()
             else "requests"
         ),
+        listed_description=_append_paid_description(description),
+        listed_output_schema=_union_output_schema(output_schema),
     )
 
 
@@ -614,6 +635,9 @@ async def _resolve_customer_ref(
         "resolveCustomerRef",
         {
             "hookRef": hook_ref,
+            "verifiedJwtSub": None,
+            "headerUserId": None,
+            "headerCustomerRef": None,
             "mcpExtraCustomerRef": request_ref,
             "argsAuthCustomerRef": auth_ref,
             "argsCustomerRef": raw if isinstance(raw, str) else None,
@@ -630,15 +654,71 @@ def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:
     return paywall_tool_result(message, gate)
 
 
-_INTENT_UI_TOOLS = frozenset({"upgrade", "manage_account", "topup", "activate_plan"})
 _CONTENT_BLOCK: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
+_FINISHED_SCHEMA_KEYS = frozenset(
+    {
+        "type",
+        "properties",
+        "required",
+        "oneOf",
+        "anyOf",
+        "allOf",
+        "$schema",
+        "items",
+        "additionalProperties",
+    }
+)
 
 
-def _intent_tool_arguments(name: str, arguments: object) -> dict[str, object]:
-    args = dict(arguments) if isinstance(arguments, dict) else {}
-    if name in _INTENT_UI_TOOLS and args.get("mode") != "text":
-        args["mode"] = "ui"
-    return args
+def _finished_json_schema(schema: Mapping[str, object]) -> bool:
+    return any(key in schema for key in _FINISHED_SCHEMA_KEYS)
+
+
+def _compile_registered_input_schema(
+    input_schema: dict[str, object] | None,
+) -> dict[str, object]:
+    if isinstance(input_schema, dict) and _finished_json_schema(input_schema):
+        return input_schema
+    from solvapay import _native as native
+
+    compiled = native.call_native_sync(
+        "compile_string_field_input_schema_json",
+        json.dumps({"fields": input_schema}),
+    )
+    if not isinstance(compiled, dict):
+        raise SolvaPayError("compile_string_field_input_schema_json did not return an object")
+    return {str(key): value for key, value in compiled.items()}
+
+
+def _append_paid_description(description: str | None) -> str:
+    paid = append_paid_tool_description(description)
+    if not isinstance(paid, str):
+        raise SolvaPayError("append_paid_tool_description did not return a string")
+    return paid
+
+
+def _union_output_schema(schema: dict[str, object] | None) -> dict[str, object] | None:
+    if schema is None:
+        return None
+    union = {"type": "object", "oneOf": [schema, paywall_structured_content_schema()]}
+    stamped = ensure_output_schema_type(union)
+    if not isinstance(stamped, dict):
+        raise SolvaPayError("ensure_output_schema_object_type did not return an object")
+    return {str(key): value for key, value in stamped.items()}
+
+
+def _tool_from_payable(name: str, spec: _PayableTool) -> Tool:
+    tool = Tool(name=name, input_schema=spec.input_schema)
+    if spec.title is not None:
+        tool.title = spec.title
+    description = (
+        spec.listed_description if spec.listed_description is not None else spec.description
+    )
+    if description is not None:
+        tool.description = description
+    if spec.listed_output_schema is not None:
+        tool.output_schema = spec.listed_output_schema
+    return tool
 
 
 def _stamp_widget_result_meta(
@@ -661,8 +741,6 @@ def _stamp_widget_result_meta(
     meta["ui"] = ui
     if "ui/resourceUri" not in meta:
         meta["ui/resourceUri"] = resource_uri
-    if "openai/outputTemplate" not in meta:
-        meta["openai/outputTemplate"] = resource_uri
     out["_meta"] = meta
     return out
 
@@ -714,7 +792,7 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
             )
             if isinstance(gate_result, PayablePaywallResult):
                 gate = dict(gate_result.content)
-                message = str(gate.get("message") or "Payment required")
+                message = gate_message(gate)
                 if _format_gate_override is not None:
                     return {"kind": "return", "result": _format_gate(message, gate)}
                 return {"kind": "paywall", "gate": gate, "message": message}

@@ -626,12 +626,15 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "getAutoRecharge"
         | "saveAutoRecharge"
         | "disableAutoRecharge"
+        | "listPurchases"
         | "mcpBootstrap"
+        | "getCreditActivity"
         | "mcpCallBuiltinTool"
         | "mcpReadResource"
+        | "mcpResolveAuth"
         | "mcpOauthRequest"
         | "mcpDispatch"
-        | "mcpResolveAuth" => None,
+        | "fetchJwks" => None,
         other => Some(internal_error_envelope(format!(
             "unknown NativeClient fn: {other}"
         ))),

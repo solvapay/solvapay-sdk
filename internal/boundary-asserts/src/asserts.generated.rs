@@ -245,6 +245,7 @@ const _: fn(Option<&Value>, Option<&Value>) -> Result<TopupProcessNextOutput, He
     solvapay_core::topup_process::topup_process_next;
 const _: fn(Option<&Value>, Option<&Value>) -> UsageSnapshot =
     solvapay_core::usage::project_usage_snapshot;
+const _: fn(Option<&Value>) -> bool = solvapay_core::usage::purchase_usage_is_metered;
 const _: fn(&str) -> bool = solvapay_core::usage::should_retry_usage_error;
 const _: fn(Option<&FreeLimit>, &str, Option<&str>) -> UsageExtra =
     solvapay_core::usage_request::resolve_usage_extra;

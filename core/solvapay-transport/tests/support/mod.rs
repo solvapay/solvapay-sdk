@@ -15,6 +15,7 @@ use fixture_runner::{Fixture, FixtureExpect};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use solvapay_core::SdkError;
+pub use solvapay_dto::fixture_groups::{GROUP_A_FNS, GROUP_B_FNS, GROUP_C_FNS};
 use solvapay_dto::{
     ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
     CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
@@ -28,64 +29,14 @@ use solvapay_dto::{
 };
 use solvapay_transport::SolvaPayClient;
 
-/// Group A `input.fn` names covered by step 22.
-pub const GROUP_A_FNS: &[&str] = &[
-    "createCustomer",
-    "updateCustomer",
-    "getCustomer",
-    "assignCredits",
-    "getCustomerBalance",
-    "getCreditActivity",
-    "listPurchases",
-    "getUserInfo",
-    "createCheckoutSession",
-    "createCustomerSession",
-    "getMerchant",
-    "getPlatformConfig",
-];
-
-/// Expected inventory: 36 wire fixtures + `get-customer-missing-params`.
-pub const GROUP_A_FIXTURE_COUNT: usize = 37;
-
-/// Group B `input.fn` names covered by step 23.
-pub const GROUP_B_FNS: &[&str] = &[
-    "createPaymentIntent",
-    "createTopupPaymentIntent",
-    "processPaymentIntent",
-    "attachBusinessDetails",
-    "activatePlan",
-];
+/// Expected inventory: 32 wire fixtures + `get-customer-missing-params`.
+pub const GROUP_A_FIXTURE_COUNT: usize = 33;
 
 /// Expected inventory: 21 wire fixtures (all Group B fixtures have wire).
 pub const GROUP_B_FIXTURE_COUNT: usize = 21;
 
-/// Group C `input.fn` names covered by step 24.
-pub const GROUP_C_FNS: &[&str] = &[
-    "checkLimits",
-    "trackUsage",
-    "trackUsageBulk",
-    "getProduct",
-    "listProducts",
-    "createProduct",
-    "updateProduct",
-    "deleteProduct",
-    "cloneProduct",
-    "bootstrapMcpProduct",
-    "configureMcpPlans",
-    "listPlans",
-    "createPlan",
-    "updatePlan",
-    "deletePlan",
-    "cancelPurchase",
-    "reactivatePurchase",
-    "getPaymentMethod",
-    "getAutoRecharge",
-    "saveAutoRecharge",
-    "disableAutoRecharge",
-];
-
-/// Expected inventory: 67 wire fixtures (all Group C fixtures have wire).
-pub const GROUP_C_FIXTURE_COUNT: usize = 67;
+/// Expected inventory: 71 wire fixtures (all Group C fixtures have wire).
+pub const GROUP_C_FIXTURE_COUNT: usize = 71;
 
 pub fn is_group_a_fixture(fixture: &Fixture) -> bool {
     GROUP_A_FNS.contains(&fixture.input.fn_name.as_str())
@@ -146,14 +97,6 @@ pub async fn dispatch_group_a(
         "createCustomerSession" => {
             let params: CreateCustomerSessionRequest = parse_args(args)?;
             serialize_result(client.create_customer_session(params).await?)
-        }
-        "listPurchases" => {
-            let params: ListPurchasesParams = parse_args(args)?;
-            serialize_result(client.list_purchases(params).await?)
-        }
-        "getCreditActivity" => {
-            let params: GetCreditActivityParams = parse_args(args)?;
-            serialize_result(client.get_credit_activity(params).await?)
         }
         "getMerchant" => serialize_result(client.get_merchant().await?),
         "getPlatformConfig" => serialize_result(client.get_platform_config().await?),
@@ -302,6 +245,14 @@ pub async fn dispatch_group_c(
         "disableAutoRecharge" => {
             let params: DisableAutoRechargeParams = parse_args(args)?;
             client.disable_auto_recharge(params).await
+        }
+        "listPurchases" => {
+            let params: ListPurchasesParams = parse_args(args)?;
+            serialize_result(client.list_purchases(params).await?)
+        }
+        "getCreditActivity" => {
+            let params: GetCreditActivityParams = parse_args(args)?;
+            serialize_result(client.get_credit_activity(params).await?)
         }
         other => Err(SdkError::transport(
             format!("unsupported Group C fixture fn: {other}"),

@@ -64,6 +64,7 @@
     "gen:clean": "tsx tools/codegen/gen-clean.ts",
     "gen:verify": "tsx tools/codegen/gen-clean.ts --verify",
     "generated:external": "tsx tools/codegen/external-generated.ts",
+    "generated:headers": "tsx tools/codegen/check-generated-headers.ts",
     "gen:scaffold": "tsx tools/codegen/gen-scaffold.ts",
     "gen:bindings": "tsx tools/codegen/gen-bindings.ts",
     "build:all": "tsx tools/repo/build-all.ts",

@@ -1,8 +1,10 @@
 /**
  * Ops-by-facade coverage matrix (ICU4X missing_apis.txt generalised).
  *
- * Reads binding-symbols.snapshot.json and scans the 12 `sdks/` facades for
- * each op's language name. Gaps require a reason. `pnpm gen` writes the
+ * Reads binding-symbols.snapshot.json and scans each facade for declarations
+ * of the op's language name. A gap with an empty reason fails the build.
+ * MCP packages are scored only on MCP-section bindings; other ops are `na`.
+ * `pnpm gen` writes the
  * committed matrix; drift is a red build.
  *
  *   pnpm facade-coverage
@@ -25,6 +27,7 @@ function absRel(rel: string): string {
 export const FACADES = [
   'capi',
   'go',
+  'go-mcp',
   'node-native',
   'python',
   'python-mcp',
@@ -33,52 +36,65 @@ export const FACADES = [
   'rust',
   'rust-mcp',
   'typescript',
+  'typescript-mcp',
   'wasm-edge',
   'wasm-browser',
 ] as const
 
 export type FacadeId = (typeof FACADES)[number]
 type NameKey = 'ts' | 'py' | 'rb' | 'go' | 'rust' | 'c'
-type ScanMode = 'text' | 'dts-exports'
+type ScanMode = 'declarations' | 'dts-exports'
 
-const FACADE_SCAN: Record<FacadeId, { nameKey: NameKey; roots: string[]; mode?: ScanMode }> = {
+const FACADE_SCAN: Record<
+  FacadeId,
+  { nameKey: NameKey; roots: string[]; mode?: ScanMode; skipDir?: readonly string[] }
+> = {
   capi: {
     nameKey: 'c',
     roots: [
       path.join(sdkPath('capi'), 'src', 'dispatch.rs'),
+      path.join(sdkPath('capi'), 'src', 'sync_dispatch.rs'),
       path.join(sdkPath('capi'), 'src', 'lib.rs'),
     ],
   },
   go: {
     nameKey: 'go',
-    roots: [
-      path.join(sdkPath('go'), 'client_generated.go'),
-      path.join(sdkPath('go'), 'helpers_generated.go'),
-      path.join(sdkPath('go'), 'internal', 'dispatch'),
-      path.join(sdkPath('go'), 'internal', 'contract'),
-      path.join(sdkPath('go'), 'wasm', 'src'),
-    ],
+    roots: [sdkPath('go')],
+    skipDir: [['internal', 'contract'].join('/'), 'wasm', 'mcp'],
   },
-  'node-native': { nameKey: 'ts', roots: [path.join(sdkPath('node-native'), 'src')] },
+  'go-mcp': { nameKey: 'go', roots: [path.join(sdkPath('go'), 'mcp')] },
+  'node-native': {
+    nameKey: 'ts',
+    mode: 'dts-exports',
+    roots: [path.join(sdkPath('node-native'), 'index.d.ts')],
+  },
   python: {
     nameKey: 'py',
-    roots: [
-      path.join(sdkPath('python'), 'src'),
-      path.join(sdkPath('python'), 'python', 'solvapay'),
-    ],
+    roots: [path.join(sdkPath('python'), 'python', 'solvapay')],
   },
   'python-mcp': { nameKey: 'py', roots: [path.join(sdkPath('pythonMcp'), 'python')] },
-  ruby: {
-    nameKey: 'rb',
-    roots: [
-      path.join(sdkPath('ruby'), 'ext', 'solvapay', 'src'),
-      path.join(sdkPath('ruby'), 'lib'),
-    ],
-  },
+  ruby: { nameKey: 'rb', roots: [path.join(sdkPath('ruby'), 'lib')] },
   'ruby-mcp': { nameKey: 'rb', roots: [path.join(sdkPath('rubyMcp'), 'lib')] },
   rust: { nameKey: 'rust', roots: [path.join(sdkPath('rust'), 'src')] },
   'rust-mcp': { nameKey: 'rust', roots: [path.join(sdkPath('rustMcp'), 'src')] },
-  typescript: { nameKey: 'ts', roots: [sdkPath('typescript')] },
+  typescript: {
+    nameKey: 'ts',
+    roots: [
+      path.join(sdkPath('typescript'), 'auth', 'src'),
+      path.join(sdkPath('typescript'), 'core', 'src'),
+      path.join(sdkPath('typescript'), 'next', 'src'),
+      path.join(sdkPath('typescript'), 'react', 'src'),
+      path.join(sdkPath('typescript'), 'react-supabase', 'src'),
+      path.join(sdkPath('typescript'), 'server', 'src'),
+    ],
+  },
+  'typescript-mcp': {
+    nameKey: 'ts',
+    roots: [
+      path.join(sdkPath('typescript'), 'mcp', 'src'),
+      path.join(sdkPath('typescript'), 'mcp-core', 'src'),
+    ],
+  },
   'wasm-edge': {
     nameKey: 'ts',
     mode: 'dts-exports',
@@ -91,29 +107,20 @@ const FACADE_SCAN: Record<FacadeId, { nameKey: NameKey; roots: string[]; mode?: 
   },
 }
 
-const MCP_ONLY_REASON =
-  'mcp-only facade; this op is exposed on the language SDK, not the MCP package'
+const BROWSER_CAPABILITY_REASON =
+  'needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)'
 
-const CAPI_SYNC_GAP =
-  'C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table'
+const BROWSER_BUDGET_REASON =
+  'pure-compute symbol omitted from the browser profile under the §7.8 size budget'
 
-const RUST_FACADE_GAP =
-  'not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK'
-
-const GO_FACADE_GAP =
-  'not on the Go public facade; the WASI guest or contract harness may still bind it internally'
-
-const WASM_BROWSER_GAP =
-  'capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`'
-
-const WASM_EDGE_GAP = 'not on the edge wasm-bindgen surface'
+const CAPABILITY_NAMES = new Set(['verifyWebhook', 'resolveAuthenticatedUser'])
 
 const BINDGEN_RUNTIME = new Set(['initSync', 'init', '__wbg_init'])
 
 export function parseDtsExports(source: string): Set<string> {
   const names = new Set<string>()
   for (const raw of source.split('\n')) {
-    const fn = raw.match(/^export function (\w+)/)
+    const fn = raw.match(/^export (?:declare )?(?:async )?function (\w+)/)
     if (fn) {
       names.add(fn[1])
       continue
@@ -123,7 +130,7 @@ export function parseDtsExports(source: string): Set<string> {
       names.add(cnst[1])
       continue
     }
-    const method = raw.match(/^ {4}([A-Za-z_][A-Za-z0-9_]*)\(/)
+    const method = raw.match(/^ {2,8}([A-Za-z_][A-Za-z0-9_]*)\(/)
     if (method && method[1] !== 'free') {
       names.add(method[1])
     }
@@ -134,7 +141,10 @@ export function parseDtsExports(source: string): Set<string> {
   return names
 }
 
-export type FacadeCell = { exposed: true } | { exposed: false; reason: string }
+export type FacadeCell =
+  | { exposed: true }
+  | { exposed: false; na: true }
+  | { exposed: false; reason: string }
 
 export type FacadeCoverageFile = {
   _comment: string
@@ -157,8 +167,23 @@ type BindingSnapshot = {
   >
 }
 
-function collectFiles(abs: string, acc: string[]): void {
+function isTestFile(name: string): boolean {
+  return (
+    name.endsWith('_test.go') ||
+    name.endsWith('_test.rs') ||
+    name.endsWith('.test.ts') ||
+    name.endsWith('.test.tsx') ||
+    name.startsWith('test_') ||
+    name.endsWith('_spec.rb')
+  )
+}
+
+function collectFiles(abs: string, acc: string[], skipDir: readonly string[]): void {
   if (!existsSync(abs)) {
+    return
+  }
+  const rel = path.relative(REPO_ROOT, abs)
+  if (skipDir.some(dir => rel === dir || rel.startsWith(`${dir}/`) || rel.includes(`/${dir}/`))) {
     return
   }
   const st = statSync(abs)
@@ -175,107 +200,191 @@ function collectFiles(abs: string, acc: string[]): void {
       ) {
         continue
       }
-      collectFiles(path.join(abs, name), acc)
+      collectFiles(path.join(abs, name), acc, skipDir)
     }
     return
   }
-  if (/\.(rs|go|py|rb|ts|tsx|c|h)$/.test(abs)) {
+  if (isTestFile(path.basename(abs))) {
+    return
+  }
+  if (/\.(rs|go|py|pyi|rb|rbs|ts|tsx|c|h)$/.test(abs) || abs.endsWith('.d.ts')) {
     acc.push(abs)
   }
 }
 
-type FacadeCorpus = { mode: 'text'; text: string } | { mode: 'dts-exports'; names: Set<string> }
+const TS_KEYWORDS = new Set([
+  'if',
+  'for',
+  'while',
+  'switch',
+  'catch',
+  'function',
+  'return',
+  'new',
+  'typeof',
+  'await',
+])
 
-function loadCorpus(facade: FacadeId): FacadeCorpus {
-  const spec = FACADE_SCAN[facade]
-  const files: string[] = []
-  for (const root of spec.roots) {
-    collectFiles(root, files)
-  }
-  if (spec.mode === 'dts-exports') {
-    const names = new Set<string>()
-    for (const file of files) {
-      for (const name of parseDtsExports(readFileSync(file, 'utf8'))) {
+export function parseDeclarations(source: string, nameKey: NameKey): Set<string> {
+  const names = new Set<string>()
+  const take = (pattern: RegExp): void => {
+    for (const match of source.matchAll(pattern)) {
+      const name = match[1]
+      if (name !== undefined && name.length > 0 && !TS_KEYWORDS.has(name)) {
         names.add(name)
       }
     }
-    return { mode: 'dts-exports', names }
   }
-  return { mode: 'text', text: files.map(file => readFileSync(file, 'utf8')).join('\n') }
+  switch (nameKey) {
+    case 'ts':
+      take(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)
+      take(/^export const ([A-Za-z0-9_]+)/gm)
+      take(/^export class ([A-Za-z0-9_]+)/gm)
+      take(/^ {2,8}(?:public )?(?:async )?([A-Za-z][A-Za-z0-9_]*)\(/gm)
+      for (const match of source.matchAll(/^export \{([^}]+)\}/gm)) {
+        const block = match[1] ?? ''
+        for (const part of block.split(',')) {
+          const alias = part
+            .trim()
+            .split(/\s+as\s+/)
+            .pop()
+            ?.trim()
+          if (alias && /^[A-Za-z0-9_]+$/.test(alias)) names.add(alias)
+        }
+      }
+      break
+    case 'py':
+      take(/^\s*(?:async )?def ([A-Za-z][A-Za-z0-9_]*)\(/gm)
+      take(/^([A-Z][A-Z0-9_]+)(?::| =)/gm)
+      break
+    case 'rb':
+      take(/^\s*def (?:self\.)?([A-Za-z][A-Za-z0-9_]*)/gm)
+      take(/^\s*([A-Z][A-Z0-9_]+) = /gm)
+      break
+    case 'go':
+      take(/^func(?: \([^)]+\))? ([A-Z][A-Za-z0-9_]*)\(/gm)
+      break
+    case 'rust':
+      take(/pub (?:async )?fn ([A-Za-z0-9_]+)\(/g)
+      take(/pub const ([A-Z0-9_]+)/g)
+      take(/pub use [^\n]* as ([A-Za-z0-9_]+);/g)
+      take(/pub use self::[A-Za-z0-9_]+ as ([A-Za-z0-9_]+);/g)
+      // `pub use path::ident;` declares `ident`. The `as` form is handled above.
+      take(/pub use [^{;\n]+::([A-Za-z0-9_]+);/g)
+      for (const match of source.matchAll(/pub use [^{;]+\{([^}]+)\}/g)) {
+        for (const part of (match[1] ?? '').split(',')) {
+          const alias = part
+            .trim()
+            .split(/\s+as\s+/)
+            .pop()
+            ?.trim()
+          if (alias !== undefined && /^[A-Za-z0-9_]+$/.test(alias)) names.add(alias)
+        }
+      }
+      break
+    case 'c':
+      take(/"([A-Za-z][A-Za-z0-9_]*)"\s*=>/g)
+      take(/pub (?:unsafe )?extern "C" fn ([A-Za-z0-9_]+)/g)
+      break
+  }
+  return names
 }
 
-function nameExposed(corpus: FacadeCorpus, name: string | undefined): boolean {
-  if (!name) {
-    return false
+function isMcpBinding(entry: BindingSnapshot['bindings'][string]): boolean {
+  return entry.section?.startsWith('MCP') === true
+}
+
+function declared(names: Set<string>, candidate: string): boolean {
+  if (names.has(candidate)) return true
+  // Emitters lowercase screaming-snake catalog names into function idents.
+  if (/^[A-Z0-9_]+$/.test(candidate) && names.has(candidate.toLowerCase())) return true
+  return false
+}
+
+function browserGapReason(name: string, clientMethods: Set<string>): string {
+  if (CAPABILITY_NAMES.has(name) || clientMethods.has(name)) {
+    return BROWSER_CAPABILITY_REASON
   }
-  if (corpus.mode === 'dts-exports') {
-    return corpus.names.has(name)
+  return BROWSER_BUDGET_REASON
+}
+
+function loadNames(facade: FacadeId): Set<string> {
+  const spec = FACADE_SCAN[facade]
+  const files: string[] = []
+  for (const root of spec.roots) {
+    collectFiles(root, files, spec.skipDir ?? [])
   }
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(?:^|[^A-Za-z0-9_])${escaped}(?:$|[^A-Za-z0-9_])`).test(corpus.text)
+  const names = new Set<string>()
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8')
+    const found =
+      spec.mode === 'dts-exports'
+        ? parseDtsExports(source)
+        : parseDeclarations(source, spec.nameKey)
+    for (const name of found) names.add(name)
+  }
+  return names
 }
 
 function isMcpFacade(facade: FacadeId): boolean {
   return facade.endsWith('-mcp')
 }
 
+const RETIRED_REASONS = new Set([
+  'mcp-only facade; this op is exposed on the language SDK, not the MCP package',
+  'C ABI client dispatch (`solvapay_client_call`) covers HTTP ops; this helper is not in the C table',
+  'not re-exported from the `solvapay` rust facade crate; call `solvapay-core` or another language SDK',
+  'not on the Go public facade; the WASI guest or contract harness may still bind it internally',
+  'capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`',
+  'not on the edge wasm-bindgen surface',
+])
+
+function cellReason(cell: FacadeCell | undefined): string | undefined {
+  if (cell === undefined || cell.exposed || 'na' in cell) return undefined
+  const reason = cell.reason.trim()
+  if (reason === '' || RETIRED_REASONS.has(reason)) return undefined
+  return reason
+}
+
 export function buildFacadeCoverage(
   snapshot: BindingSnapshot,
   previous: FacadeCoverageFile | null,
 ): FacadeCoverageFile {
-  const corpora = Object.fromEntries(FACADES.map(id => [id, loadCorpus(id)])) as Record<
+  const names = Object.fromEntries(FACADES.map(id => [id, loadNames(id)])) as Record<
     FacadeId,
-    FacadeCorpus
+    Set<string>
   >
+  const edgeClientMethods = parseDtsExports(
+    existsSync(FACADE_SCAN['wasm-edge'].roots[0] ?? '')
+      ? readFileSync(FACADE_SCAN['wasm-edge'].roots[0] ?? '', 'utf8')
+      : '',
+  )
   const ops: FacadeCoverageFile['ops'] = {}
   for (const [opId, entry] of Object.entries(snapshot.bindings).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
     const row = {} as Record<FacadeId, FacadeCell>
+    const candidates = [opId, entry.rustFnName, ...Object.values(entry.names)].filter(
+      (name): name is string => typeof name === 'string' && name.length > 0,
+    )
     for (const facade of FACADES) {
-      const candidates = [opId, entry.rustFnName, ...Object.values(entry.names)].filter(
-        (name): name is string => typeof name === 'string' && name.length > 0,
-      )
-      const exposed = candidates.some(name => nameExposed(corpora[facade], name))
+      if (isMcpFacade(facade) && !isMcpBinding(entry)) {
+        row[facade] = { exposed: false, na: true }
+        continue
+      }
+      const exposed = candidates.some(name => declared(names[facade], name))
       if (exposed) {
         row[facade] = { exposed: true }
         continue
       }
-      const prior = previous?.ops[opId]?.[facade]
-      if (prior && prior.exposed === false && prior.reason.trim() !== '') {
-        row[facade] = prior
-        continue
-      }
-      if (isMcpFacade(facade)) {
-        row[facade] = { exposed: false, reason: MCP_ONLY_REASON }
-        continue
-      }
-      if (facade === 'capi') {
-        row[facade] = { exposed: false, reason: CAPI_SYNC_GAP }
-        continue
-      }
-      if (facade === 'rust') {
-        row[facade] = { exposed: false, reason: RUST_FACADE_GAP }
-        continue
-      }
-      if (facade === 'go') {
-        row[facade] = { exposed: false, reason: GO_FACADE_GAP }
-        continue
-      }
       if (facade === 'wasm-browser') {
-        row[facade] = { exposed: false, reason: WASM_BROWSER_GAP }
+        const label = entry.names.ts ?? opId
+        row[facade] = { exposed: false, reason: browserGapReason(label, edgeClientMethods) }
         continue
       }
-      if (facade === 'wasm-edge') {
-        row[facade] = { exposed: false, reason: WASM_EDGE_GAP }
-        continue
-      }
-      row[facade] = {
-        exposed: false,
-        reason: `not found under ${FACADE_SCAN[facade].roots
-          .map(root => path.relative(REPO_ROOT, root))
-          .join(', ')}`,
-      }
+      const prior = cellReason(previous?.ops[opId]?.[facade])
+      row[facade] =
+        prior === undefined ? { exposed: false, reason: '' } : { exposed: false, reason: prior }
     }
     ops[opId] = row
   }
@@ -292,7 +401,7 @@ export function missingReasons(coverage: FacadeCoverageFile): string[] {
   for (const [opId, row] of Object.entries(coverage.ops)) {
     for (const facade of FACADES) {
       const cell = row[facade]
-      if (cell.exposed === false && cell.reason.trim() === '') {
+      if (cell.exposed === false && !('na' in cell) && cell.reason.trim() === '') {
         missing.push(`${opId}.${facade}`)
       }
     }

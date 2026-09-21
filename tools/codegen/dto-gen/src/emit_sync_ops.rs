@@ -5,7 +5,9 @@ use std::fmt::Write as _;
 use crate::emit_mcp::mcp_entries;
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
-use crate::ir::{Ir, IrEntrySection, IrMcpSurface};
+use crate::ir::{
+    Ir, IrBindingCall, IrBindingSymbol, IrEntrySection, IrMcpSurface, IrSerializeKind,
+};
 
 fn sync_op_ids(ir: &Ir) -> Vec<String> {
     mcp_entries(ir)
@@ -204,33 +206,68 @@ fn dispatch_arm(id: &str) -> Option<&'static str> {
     })
 }
 
-/// Extra dispatch arms that are not catalogued `syncOp`s (core helpers reached via `solvapay_call`).
-const EXTRA_DISPATCH_ARMS: &[(&str, &str)] = &[
-    (
-        "validateBusinessDetails",
-        r#"let input: BusinessDetailsInput = parse_value(args)?;
-            serde_json::to_value(validate_business_details(&input))
-                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))"#,
-    ),
-    (
-        "resolveCustomerRef",
-        r#"let pick = |key: &str| -> Option<String> {
-                args.get(key)
-                    .and_then(Value::as_str)
-                    .map(str::to_owned)
-                    .filter(|s| !s.is_empty())
-            };
-            Ok(Value::String(solvapay_core::resolve_customer_ref(
-                pick("hookRef").as_deref(),
-                pick("verifiedJwtSub").as_deref(),
-                pick("headerUserId").as_deref(),
-                pick("headerCustomerRef").as_deref(),
-                pick("mcpExtraCustomerRef").as_deref(),
-                pick("argsAuthCustomerRef").as_deref(),
-                pick("argsCustomerRef").as_deref(),
-            )))"#,
-    ),
-];
+/// Helpers the Go guest reaches only through `solvapay_call` (no dedicated export
+/// on that path). Bodies are generated from the binding symbol; the C ABI
+/// dispatch covers every other decision and payload symbol itself.
+const SHARED_SOLVAPAY_CALL_HELPERS: &[&str] = &["resolveCustomerRef", "validateBusinessDetails"];
+
+fn shared_helper_arm(ir: &Ir, id: &str) -> GenResult<String> {
+    let sym = ir.binding_symbols.get(id).ok_or_else(|| {
+        GenError::Parse(format!(
+            "shared solvapay_call helper {id} has no binding symbol"
+        ))
+    })?;
+    match &sym.call {
+        IrBindingCall::Verbatim => verbatim_value_arm(sym),
+        IrBindingCall::Wrap { serialize, .. } => wrap_value_arm(sym, *serialize),
+    }
+}
+
+fn verbatim_value_arm(sym: &IrBindingSymbol) -> GenResult<String> {
+    let body = sym
+        .verbatim_body
+        .as_deref()
+        .ok_or_else(|| GenError::Parse(format!("{} verbatim body is empty", sym.id)))?;
+    let type_name = body
+        .split("let input: ")
+        .nth(1)
+        .and_then(|rest| rest.split(" =").next())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .ok_or_else(|| {
+            GenError::Parse(format!("{} verbatim body has no `let input: Type`", sym.id))
+        })?;
+    let fn_name = sym
+        .core
+        .rsplit("::")
+        .next()
+        .ok_or_else(|| GenError::Parse(format!("{} core path is empty", sym.id)))?;
+    Ok(format!(
+        "let input: {type_name} = parse_value(args)?;\n            serde_json::to_value({fn_name}(&input)).map_err(|err| SdkError::transport(format!(\"serialize: {{err}}\"), false))"
+    ))
+}
+
+fn wrap_value_arm(sym: &IrBindingSymbol, serialize: IrSerializeKind) -> GenResult<String> {
+    if serialize != IrSerializeKind::ValueString {
+        return Err(GenError::Parse(format!(
+            "{} shared helper arm only supports valueString, got {serialize:?}",
+            sym.id
+        )));
+    }
+    let fn_name = sym
+        .core_call
+        .as_deref()
+        .ok_or_else(|| GenError::Parse(format!("{} wrap helper is missing coreCall", sym.id)))?;
+    let picks = sym
+        .args
+        .iter()
+        .map(|arg| format!("pick(\"{}\").as_deref()", arg.name))
+        .collect::<Vec<_>>()
+        .join(",\n                ");
+    Ok(format!(
+        "let pick = |key: &str| -> Option<String> {{\n                args.get(key)\n                    .and_then(Value::as_str)\n                    .map(str::to_owned)\n                    .filter(|s| !s.is_empty())\n            }};\n            Ok(Value::String(solvapay_core::{fn_name}(\n                {picks},\n            )))"
+    ))
+}
 
 /// `core/solvapay-mcp/src/sync_dispatch.generated.rs`
 pub fn emit_sync_dispatch_rs(ir: &Ir) -> GenResult<String> {
@@ -254,7 +291,8 @@ pub fn emit_sync_dispatch_rs(ir: &Ir) -> GenResult<String> {
         };
         let _ = writeln!(out, "        \"{id}\" => {{\n            {arm}\n        }}");
     }
-    for (id, arm) in EXTRA_DISPATCH_ARMS {
+    for id in SHARED_SOLVAPAY_CALL_HELPERS {
+        let arm = shared_helper_arm(ir, id)?;
         let _ = writeln!(out, "        \"{id}\" => {{\n            {arm}\n        }}");
     }
     out.push_str(

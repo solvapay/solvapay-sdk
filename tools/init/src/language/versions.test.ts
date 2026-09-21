@@ -1,5 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { RELEASE_TRAIN_VERSION } from './release-train-version.generated'
 import { LANGUAGE_RUNTIME_DEPS, resolveLatestVersions } from './versions'
+
+describe('LANGUAGE_RUNTIME_DEPS', () => {
+  it('pins offline fallbacks to the stamped release-train version', () => {
+    expect(RELEASE_TRAIN_VERSION.length).toBeGreaterThan(0)
+    for (const language of ['ts', 'python', 'ruby', 'rust'] as const) {
+      for (const dep of LANGUAGE_RUNTIME_DEPS[language]) {
+        expect(dep.fallback).toBe(RELEASE_TRAIN_VERSION)
+      }
+    }
+    expect(LANGUAGE_RUNTIME_DEPS.go[0]?.fallback).toBe(`v${RELEASE_TRAIN_VERSION}`)
+  })
+})
 
 describe('resolveLatestVersions', () => {
   const originalFetch = globalThis.fetch
@@ -59,14 +72,14 @@ describe('resolveLatestVersions', () => {
     const map = await resolveLatestVersions('ruby', LANGUAGE_RUNTIME_DEPS.ruby, {
       onResolve: () => {},
     })
-    expect(map.get('solvapay')).toBe('2.6.0')
-    expect(map.get('solvapay-mcp')).toBe('2.6.0')
+    expect(map.get('solvapay')).toBe(RELEASE_TRAIN_VERSION)
+    expect(map.get('solvapay-mcp')).toBe(RELEASE_TRAIN_VERSION)
   })
 
   it('falls back on non-2xx', async () => {
     globalThis.fetch = vi.fn(async () => new Response('gone', { status: 404 })) as typeof fetch
     const map = await resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} })
-    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe('v2.6.0')
+    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe(`v${RELEASE_TRAIN_VERSION}`)
   })
 
   it('throws on a 404 when failOnNotPublished is set, naming the package', async () => {

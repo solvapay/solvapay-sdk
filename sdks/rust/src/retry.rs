@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use solvapay_core::RetryPolicy;
 
+use crate::drivers_generated::run_generated_with_retry_loop;
+
 /// Retry `operation` using [`RetryPolicy::next_delay`] and `tokio::time::sleep`.
 pub async fn with_retry<T, E, F, Fut>(operation: F, policy: RetryPolicy) -> Result<T, E>
 where
@@ -26,22 +28,25 @@ where
     Fut: Future<Output = Result<T, E>>,
     S: Fn(&E, u32) -> bool,
 {
-    let mut attempt = 0_u32;
-    loop {
-        match operation().await {
-            Ok(value) => return Ok(value),
-            Err(err) => {
-                let Some(delay) = policy.next_delay(attempt) else {
-                    return Err(err);
-                };
-                if !should_retry(&err, attempt) {
-                    return Err(err);
-                }
-                host_sleep(delay).await;
-                attempt = attempt.saturating_add(1);
+    run_generated_with_retry_loop(
+        operation,
+        policy.max_retries,
+        policy.initial_delay_ms,
+        policy.backoff,
+        move |attempt, max_retries, initial_delay_ms, backoff| {
+            RetryPolicy {
+                max_retries,
+                initial_delay_ms,
+                backoff,
             }
-        }
-    }
+            .next_delay(attempt)
+            .map(|delay| u64::try_from(delay.as_millis()).unwrap_or(u64::MAX))
+        },
+        should_retry,
+        |_err, _attempt, _delay_ms| {},
+        host_sleep,
+    )
+    .await
 }
 
 /// Tokio timer on native hosts.

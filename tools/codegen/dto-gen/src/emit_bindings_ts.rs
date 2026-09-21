@@ -60,7 +60,18 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
     let bridge = chrome_str(file, &["clientToSyncBridge"], "native-ts")?;
     let core_comment = chrome_str(file, &["syncGroupComments", "core"], "native-ts")?;
     let mcp_comment = chrome_str(file, &["syncGroupComments", "mcp"], "native-ts")?;
-    let postamble = chrome_str(file, &["postamble"], "native-ts")?;
+    let source_label = match toolchain {
+        Toolchain::Wasm => "WASM binding",
+        _ => "native binding",
+    };
+    let (postamble, shared_envelope) =
+        detach_envelope(chrome_str(file, &["postamble"], "native-ts")?, source_label);
+    let envelope_import = if shared_envelope {
+        "import { reconstructEnvelopeError, unwrapEnvelope } from './envelope.generated'\n\
+         export { reconstructEnvelopeError }\n\n"
+    } else {
+        ""
+    };
 
     let client_symbols: Vec<&IrBindingSymbol> = symbols_for(ir, IrBindingArtifact::Client);
     let client_union = render_union_members(client_symbols);
@@ -71,9 +82,77 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
 
     // Blank line after each union (prettier / committed style).
     let header = format!("{}\n", generated_header(CommentStyle::Block, flag));
-    Ok(format!(
-        "{header}{preamble}{client_union}\n\n{bridge}{sync_union}\n\n{postamble}"
-    ))
+    let mut src = format!(
+        "{header}{envelope_import}{preamble}{client_union}\n\n{bridge}{sync_union}\n\n{postamble}"
+    );
+    if shared_envelope {
+        src = strip_envelope_types(&src);
+    }
+    Ok(src)
+}
+
+/// Shared `reconstructEnvelopeError` / `unwrapEnvelope` module for native.ts and wasm.ts.
+///
+/// Parsing lives in `@solvapay/core`. This file only adds the Paywall branch.
+pub fn emit_envelope_ts(_ir: &Ir) -> GenResult<String> {
+    let mut out = generated_header(CommentStyle::Block, "ts-envelope-out");
+    out.push_str(
+        "\nimport {\n\
+         \x20 reconstructSolvaPayEnvelopeError,\n\
+         \x20 unwrapEnvelope as unwrapCoreEnvelope,\n\
+         \x20 type EnvelopeError,\n\
+         } from '@solvapay/core'\n\
+         import { PaywallError } from './paywall'\n\
+         import type { PaywallStructuredContent } from './types/paywall'\n\
+         \n\
+         export type { EnvelopeError }\n\
+         \n\
+         /** Maps a JSON envelope error to the frozen TypeScript error classes. */\n\
+         export function reconstructEnvelopeError(error: EnvelopeError): Error {\n\
+         \x20 if (error.kind === 'Paywall') {\n\
+         \x20   return new PaywallError(error.message, error.gate as PaywallStructuredContent)\n\
+         \x20 }\n\
+         \x20 return reconstructSolvaPayEnvelopeError(error)\n\
+         }\n\
+         \n\
+         /** Parses a JSON envelope string and returns `value` or throws reconstructed errors. */\n\
+         export function unwrapEnvelope(envelopeJson: string, source: string): unknown {\n\
+         \x20 return unwrapCoreEnvelope(envelopeJson, source, reconstructEnvelopeError)\n\
+         }\n",
+    );
+    Ok(out)
+}
+
+fn strip_envelope_types(src: &str) -> String {
+    let Some(start) = src.find("type EnvelopeOk =") else {
+        return src.to_string();
+    };
+    let marker = "type Envelope = EnvelopeOk | EnvelopeErr\n";
+    let Some(rel) = src[start..].find(marker) else {
+        return src.to_string();
+    };
+    let mut end = start + rel + marker.len();
+    while src[end..].starts_with('\n') {
+        end += 1;
+    }
+    format!("{}{}", &src[..start], &src[end..])
+}
+
+fn detach_envelope(postamble: &str, source: &str) -> (String, bool) {
+    let Some(start) = postamble.find("function isEnvelope(") else {
+        return (postamble.to_string(), false);
+    };
+    let Some(rel) = postamble[start..].find("/**\n * Calls a") else {
+        return (postamble.to_string(), false);
+    };
+    let mut kept = String::new();
+    kept.push_str(&postamble[..start]);
+    kept.push_str(&postamble[start + rel..]);
+    let kept = kept.replace(
+        "unwrapEnvelope(envelopeJson)",
+        &format!("unwrapEnvelope(envelopeJson, '{source}')"),
+    );
+    (kept, true)
 }
 
 fn render_sync_union(ir: &Ir, core_comment: &str, mcp_comment: &str) -> String {
@@ -137,6 +216,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         }
     }
 

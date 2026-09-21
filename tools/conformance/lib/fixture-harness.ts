@@ -174,6 +174,7 @@ import {
 } from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { Fixture, FixtureErrorExpect, FixtureWire } from './fixture-schema.js'
+import { FIXTURE_SYNC_FNS } from './host-fns.generated.js'
 import { wireExchanges } from './fixture-schema.js'
 
 // Server index installs core + formatGate; mcp-core needs an explicit install
@@ -188,6 +189,10 @@ export class FixtureRegistry {
     const list = this.bindings.get(fn) ?? []
     list.push(binding)
     this.bindings.set(fn, list)
+  }
+
+  has(fn: string): boolean {
+    return (this.bindings.get(fn)?.length ?? 0) > 0
   }
 
   get(fn: string): FixtureBinding[] {
@@ -2828,7 +2833,27 @@ export function createDefaultRegistry(): FixtureRegistry {
     invoke: args => invokePayableNext(args.state, args.event),
   })
 
+  registerGeneratedSyncHelpers(registry)
+
   return registry
+}
+
+/**
+ * Registers every sync decision / payload-builder the manifest emits that the
+ * hand adapters above do not already cover. Invoke goes through the same JSON
+ * envelope as the Rust fixture-runner, so a new core helper does not need a
+ * hand-written `registry.register` to be replayed.
+ */
+function registerGeneratedSyncHelpers(registry: FixtureRegistry): void {
+  for (const fn of FIXTURE_SYNC_FNS) {
+    if (registry.has(fn)) continue
+    registry.register(fn, {
+      id: 'generated',
+      // Generated ids are the native sync method names.
+      invoke: args =>
+        callNativeSync(fn as Parameters<typeof callNativeSync>[0], JSON.stringify(args)),
+    })
+  }
 }
 
 function isNullableString(value: unknown): value is string | null | undefined {

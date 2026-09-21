@@ -69,17 +69,33 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
+      - name: Format check
+        run: pnpm format:check
+
       - name: Build packages
         run: pnpm build:packages
 
       - name: Install Chromium for MCP App widget boot test
         run: pnpm --filter @solvapay/mcp-app-widget exec playwright-core install --with-deps chromium
 
-      - name: Check vendored MCP App widget
-        run: pnpm generated:external --rebuild --id mcpAppWidget
+      - name: Check committed MCP App widget
+        # Validate the vendored HTML that ships. Do not vendor first.
+        run: pnpm exec tsx tools/mcp-app-widget/check.ts
 
       - name: Run tests
         run: pnpm test
+
+      - name: MCP App widget generator drift
+        # Rebuild after the tests above have exercised the committed copies.
+        # The widget bundle is deterministic, so a diff is a hard failure.
+        run: |
+          pnpm generated:external --rebuild --id mcpAppWidget
+          git diff --exit-code -- \
+            sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html \
+            sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html \
+            sdks/go/mcp/mcp-app.html \
+            sdks/rust-mcp/mcp-app.html \
+            sdks/typescript/mcp/mcp-app.html
 
       - name: Build examples
         run: pnpm build:examples
@@ -872,6 +888,8 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Native generated-file drift
+        # Smoke tests above already ran against the committed index.js.
+        # This rebuild hard-fails when the generated glue drifts.
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
         working-directory: .
         run: |
@@ -1170,6 +1188,18 @@ jobs:
       - name: Delegation inventory gate
         run: pnpm delegation:check
 
+      - name: Residue cap
+        run: pnpm residue:check
+
+      - name: Touch-set gate
+        run: pnpm touch-set:check
+
+      - name: Fixture census
+        run: pnpm census:check
+
+      - name: Facade coverage
+        run: pnpm facade-coverage:check
+
       - name: MCP layer-3 adapter line budget
         run: pnpm mcp-layer3-budget:check
 
@@ -1225,10 +1255,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Rebuild wasm artifacts + drift check
-        working-directory: .
-        run: pnpm generated:external --rebuild --id wasmPkg
 
       - name: Cargo feature / exclusivity checks
         run: |
@@ -1302,8 +1328,15 @@ jobs:
       - name: Fetch-runtime validation
         run: pnpm validate:fetch-runtime
 
-  # Step 49 — wazero (Go) binding: rebuild the embedded WASI guest, prove it is
-  # not stale vs. the committed artifact, then run the Go suite under -race.
+      - name: Wasm package byte drift (warning only)
+        # wasm-bindgen output is not bit-stable across hosts. The steps above
+        # already exercised the committed pkg/; this rebuild must not run first.
+        working-directory: .
+        run: pnpm generated:external --rebuild --id wasmPkg
+
+  # Step 49 — wazero (Go) binding. Tests run against the committed
+  # solvapay_core.wasm (//go:embed). A host rebuild is not bit-stable, so it
+  # runs only after those tests, as a warning.
   go-binding:
     name: go-binding (wazero WASI guest)
     runs-on: ubuntu-latest
@@ -1334,11 +1367,6 @@ jobs:
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
 
-      - name: Rebuild embedded WASI guest
-        # wasm32-wasip1 is not bit-stable across hosts; goCoreWasm is
-        # nonDeterministic so a hash/gitDiff mismatch warns instead of failing.
-        run: pnpm generated:external --rebuild --id goCoreWasm
-
       - name: gofmt
         working-directory: sdks/go
         run: |
@@ -1360,10 +1388,12 @@ jobs:
 
       - name: Panic-probe guest (debug feature, not published)
         run: |
+          cp sdks/go/solvapay_core.wasm /tmp/solvapay_core.shipped.wasm
           cargo build -p solvapay-go-wasm --target wasm32-wasip1 --profile wasm-release --features panic-probe
           TARGET_DIR="$(cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
           cp "${TARGET_DIR}/wasm32-wasip1/wasm-release/solvapay_go_wasm.wasm" sdks/go/solvapay_core.wasm
           (cd sdks/go && SOLVAPAY_REQUIRE_PANIC_PROBE=1 go test -run TestPanicProbeSurfacesAsError -count=1)
+          cp /tmp/solvapay_core.shipped.wasm sdks/go/solvapay_core.wasm
 
       - name: MCP-authoring conformance
         working-directory: sdks/go
@@ -1410,6 +1440,11 @@ jobs:
           (cd "$WORK" && go mod tidy && go build -o /tmp/solvapay-go-smoke .)
           echo "OK: fresh module builds against local replace"
 
+      - name: WASI guest byte drift (warning only)
+        # wasm32-wasip1 is not bit-stable across hosts. The Go tests above
+        # already ran against the committed blob. This rebuild must not run first.
+        run: pnpm generated:external --rebuild --id goCoreWasm
+
   # Step 54 — optional native C ABI scaffold (cdylib + cbindgen header + C smoke).
   c-binding:
     name: c-binding (native C ABI)
@@ -1447,9 +1482,6 @@ jobs:
       - name: cargo clippy -p solvapay-c
         run: cargo clippy -p solvapay-c --all-targets --features fixture-host -- -D warnings
 
-      - name: cbindgen header drift check
-        run: pnpm generated:external --rebuild --id capiHeader,capiFixtureHostHeader
-
       - name: C smoke (create/call/free + handle misuse)
         run: ./sdks/capi/ctest/run.sh
 
@@ -1475,6 +1507,11 @@ jobs:
             -lpthread -ldl -lm \
             -o /tmp/solvapay-c-parity
           LD_LIBRARY_PATH="$LIB_DIR" /tmp/solvapay-c-parity
+
+      - name: cbindgen header drift check
+        # Hard-fails when the regenerated header differs from the commit.
+        # The C tests above compiled against the committed header.
+        run: pnpm generated:external --rebuild --id capiHeader,capiFixtureHostHeader
 
   # Step 51 — pure-Go + embedded wasm cross-compiles without cgo across the
   # supported GOOS/GOARCH matrix (build + vet only; no off-host runtime).

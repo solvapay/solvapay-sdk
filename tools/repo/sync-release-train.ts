@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Stamp `@solvapay/release-train` into Cargo / Python / Ruby manifests.
+ * Stamp `@solvapay/release-train` into Cargo / Python / Ruby / init manifests.
  * `--check` fails when any stamped file has drifted.
  */
 
@@ -13,8 +13,10 @@ import {
   RELEASE_TRAIN_CARGO_TOMLS,
   RELEASE_TRAIN_PYPROJECTS,
   RELEASE_TRAIN_GO_VERSION_TESTS,
+  RELEASE_TRAIN_INIT_SCAFFOLD_VERSION,
   RELEASE_TRAIN_RUBY_VERSIONS,
   stampGoVersionTest,
+  stampInitScaffoldVersion,
   stampPyprojectDependency,
   stampRubyVersion,
   stampTomlPackageVersion,
@@ -46,6 +48,11 @@ function stamp(repoRoot: string, version: string): void {
     const abs = joinRel(repoRoot, rel)
     writeIfChanged(abs, stampGoVersionTest(readFileSync(abs, 'utf8'), version))
   }
+  const initScaffold = joinRel(repoRoot, RELEASE_TRAIN_INIT_SCAFFOLD_VERSION)
+  writeIfChanged(
+    initScaffold,
+    stampInitScaffoldVersion(readFileSync(initScaffold, 'utf8'), version),
+  )
 }
 
 const check = process.argv.includes('--check')

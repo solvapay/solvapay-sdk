@@ -8,6 +8,7 @@ import {
   readReleaseTrainVersion,
   stampPyprojectDependency,
   stampGoVersionTest,
+  stampInitScaffoldVersion,
   stampRubyVersion,
   stampTomlPackageVersion,
 } from './release-train.js'
@@ -47,6 +48,12 @@ solvapay-mcp-core = { path = "../solvapay-mcp", version = "0.1.0", default-featu
         '2.6.0',
       ),
     ).toContain('"2.6.0"')
+    expect(
+      stampInitScaffoldVersion('export const RELEASE_TRAIN_VERSION = "0.1.0"\n', '0.2.0'),
+    ).toContain("export const RELEASE_TRAIN_VERSION = '0.2.0'")
+    expect(() => stampInitScaffoldVersion('export const OTHER = "0.1.0"\n', '0.2.0')).toThrow(
+      /cannot stamp missing init scaffold version/,
+    )
   })
 })
 

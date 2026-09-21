@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { SolvaPayError } from './solvapay-error'
 export { SolvaPayError }
+export { reconstructSolvaPayEnvelopeError, unwrapEnvelope, type EnvelopeError } from './envelope'
 
 export const Env = z.object({
   SOLVAPAY_SECRET_KEY: z.string().min(1),
@@ -46,6 +47,7 @@ export function getSolvaPayConfig(): SolvaPayConfig {
   if (!solvapaySecretKey) {
     throw new SolvaPayError(
       'Server configuration error: SolvaPay secret key not configured. Missing SOLVAPAY_SECRET_KEY environment variable.',
+      { code: 'missing_api_key' },
     )
   }
 
@@ -75,8 +77,6 @@ export {
   getStateFieldLabel,
   getPostalCodeFieldLabel,
   getPostalCodePlaceholder,
-  POSTAL_CODE_REQUIRED_COUNTRIES,
-  STATE_REQUIRED_COUNTRIES,
   getSellerTaxIdentifierDisplayLabel,
   getSellerTaxIdentifierDisplayLabelByType,
   resolveSellerIdentityDisplay,
@@ -130,6 +130,8 @@ export {
   BUSINESS_COUNTRY_DISPLAY_NAMES,
   BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
   SUPPORTED_BUSINESS_COUNTRIES,
   TAX_BEHAVIORS,
   TAX_EXCLUSIVE_CURRENCIES,

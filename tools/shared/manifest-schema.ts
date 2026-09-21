@@ -502,6 +502,7 @@ export const SHIM_JS_NAMES = [
   'projectTopupProcessOutcome',
   'topupProcessNext',
   'projectUsageSnapshot',
+  'purchaseUsageIsMetered',
   'resolveCheckLimitsParams',
   'resolveUsageExtra',
   'normalizeFreeLimit',
@@ -790,6 +791,33 @@ export const SdkContractManifestSchema = z.object({
         ),
         terminal: z.array(z.string().min(1)).nonempty(),
         usage: z.array(z.string().min(1)).nonempty(),
+      }),
+      invokePayable: z.object({
+        io: z.array(
+          z.object({
+            action: z.string().min(1),
+            event: z.string().min(1),
+          }),
+        ),
+        terminal: z.array(z.string().min(1)).nonempty(),
+      }),
+      ensureCustomer: z.object({
+        io: z.array(
+          z.object({
+            action: z.string().min(1),
+            event: z.string().min(1),
+          }),
+        ),
+        terminal: z.array(z.string().min(1)).nonempty(),
+      }),
+      withRetry: z.object({
+        io: z.array(
+          z.object({
+            action: z.string().min(1),
+            event: z.string().min(1),
+          }),
+        ),
+        terminal: z.array(z.string().min(1)).nonempty(),
       }),
     })
     .optional(),

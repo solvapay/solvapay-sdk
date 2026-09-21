@@ -2798,6 +2798,26 @@ export function projectUsageSnapshot(args_json) {
 }
 
 /**
+ * Binding for `purchaseUsageIsMetered`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function purchaseUsageIsMetered(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.purchaseUsageIsMetered(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `requireProductRef`. Throws when neither source is set.
  * @param {string} args_json
  * @returns {string}
@@ -3626,7 +3646,8 @@ export function verifyWebhook(body, signature, secret, now_unix_secs) {
 /**
  * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
  *
- * Available on both `edge` and `browser` profiles.
+ * `version` matches [`wasm_version`]: `SOLVAPAY_RELEASE_VERSION` when set,
+ * otherwise `CARGO_PKG_VERSION`. Available on both `edge` and `browser` profiles.
  * @returns {string}
  */
 export function wasmBuildInfo() {
@@ -3643,7 +3664,7 @@ export function wasmBuildInfo() {
 }
 
 /**
- * Returns the crate version string (`CARGO_PKG_VERSION`).
+ * Returns the same version string as [`wasm_build_info`]'s `version` field.
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
  * edge and browser profiles.
@@ -3697,8 +3718,16 @@ function __wbg_get_imports() {
             const ret = arg0.arrayBuffer();
             return ret;
         }, arguments); },
+        __wbg_call_8a2dd23819f8a60a: function() { return handleError(function (arg0, arg1) {
+            const ret = arg0.call(arg1);
+            return ret;
+        }, arguments); },
         __wbg_call_a6e5c5dce5018821: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.call(arg1, arg2);
+            return ret;
+        }, arguments); },
+        __wbg_call_e3b662382210db98: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = arg0.call(arg1, arg2, arg3);
             return ret;
         }, arguments); },
         __wbg_getRandomValues_1ad11c1597afb478: function() { return handleError(function (arg0, arg1) {
@@ -3747,6 +3776,24 @@ function __wbg_get_imports() {
             const ret = new Headers();
             return ret;
         }, arguments); },
+        __wbg_new_aec3e25493d729fe: function(arg0, arg1) {
+            try {
+                var state0 = {a: arg0, b: arg1};
+                var cb0 = (arg0, arg1) => {
+                    const a = state0.a;
+                    state0.a = 0;
+                    try {
+                        return wasm_bindgen__convert__closures_____invoke__h23bdb694a7765c71(a, state0.b, arg0, arg1);
+                    } finally {
+                        state0.a = a;
+                    }
+                };
+                const ret = new Promise(cb0);
+                return ret;
+            } finally {
+                state0.a = 0;
+            }
+        },
         __wbg_new_b667d279fd5aa943: function(arg0, arg1) {
             const ret = new Error(getStringFromWasm0(arg0, arg1));
             return ret;
@@ -3852,11 +3899,16 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 675, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 677, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087);
             return ret;
         },
-        __wbindgen_cast_0000000000000002: function(arg0, arg1) {
+        __wbindgen_cast_0000000000000002: function(arg0) {
+            // Cast intrinsic for `F64 -> Externref`.
+            const ret = arg0;
+            return ret;
+        },
+        __wbindgen_cast_0000000000000003: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
             return ret;

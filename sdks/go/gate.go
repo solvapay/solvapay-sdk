@@ -223,13 +223,17 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 		return nil, &Error{Code: "invalid_config", Message: "product is required"}
 	}
 	startedMs := time.Now().UnixMilli()
+	unit, err := randomUnit()
+	if err != nil {
+		return nil, err
+	}
 	startEvent := map[string]any{
 		"kind":             "start",
 		"customerRef":      customerRef,
 		"product":          opts.Product,
 		"usageType":        opts.UsageType,
 		"startedMs":        startedMs,
-		"randomUnit":       mustRandomUnit(),
+		"randomUnit":       unit,
 		"limitsCacheTTLMs": defaultLimitsCacheTTL.Milliseconds(),
 	}
 	gateNext := func(state any, event map[string]any) (any, map[string]any, error) {
@@ -443,7 +447,11 @@ func CompileStringFieldInputSchema(ctx context.Context, fields map[string]any) (
 }
 
 func callDecisionJSON(ctx context.Context, fn string, args map[string]any) (json.RawMessage, error) {
-	value, err := nativecall.CallValueJSON(ctx, fn, mustJSON(args))
+	payload, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
+	value, err := nativecall.CallValueJSON(ctx, fn, string(payload))
 	if err != nil {
 		return nil, guestToError(err)
 	}
@@ -456,14 +464,6 @@ func guestToError(err error) error {
 		return &Error{Code: g.Code, Message: g.Message, Status: g.Status, Retryable: g.Retryable}
 	}
 	return err
-}
-
-func mustJSON(v any) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
 }
 
 func asObject(v any) map[string]any {

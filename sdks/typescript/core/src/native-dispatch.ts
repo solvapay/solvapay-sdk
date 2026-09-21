@@ -96,6 +96,7 @@ export type NativeCoreSyncMethod =
   | 'normalizeReactivateResponse'
   | 'validatePurchaseRef'
   | 'projectUsageSnapshot'
+  | 'purchaseUsageIsMetered'
   | 'shouldRetryUsageError'
   | 'resolveCheckLimitsParams'
   | 'resolveCustomerRef'

@@ -318,10 +318,10 @@ pub fn emit_mcp_rs(ir: &Ir) -> GenResult<String> {
                 }
             })
             .collect::<Vec<_>>();
+        let ident = rust_ident(&entry.names.rust);
         let _ = writeln!(
             out,
-            "pub fn {}({}) -> Result<Value, String> {{",
-            rust_ident(&entry.names.rust),
+            "pub fn {ident}({}) -> Result<Value, String> {{",
             params.join(", ")
         );
         out.push_str("    let mut call_args = serde_json::Map::new();\n");
@@ -346,6 +346,13 @@ pub fn emit_mcp_rs(ir: &Ir) -> GenResult<String> {
             "    call_sync({:?}, &Value::Object(call_args))\n}}\n",
             entry.id
         );
+        if ident != entry.names.rust {
+            let _ = writeln!(
+                out,
+                "#[allow(non_snake_case, unused_imports)]\npub use self::{ident} as {};\n",
+                entry.names.rust
+            );
+        }
     }
     Ok(out)
 }

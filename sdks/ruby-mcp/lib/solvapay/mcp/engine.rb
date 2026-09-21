@@ -154,10 +154,9 @@ module SolvaPay
         empty_args = {} #: Hash[untyped, untyped]
         args = envelope["args"].is_a?(Hash) ? stringify(envelope["args"]) : empty_args
         args = symbolize(args)
-        unless args.key?(:customer_ref)
-          ref = envelope["customerRef"]
-          args[:customer_ref] = ref if ref.is_a?(String) && !ref.empty?
-        end
+        ref = envelope["customerRef"]
+        mcp_extra = ref.is_a?(String) && !ref.strip.empty? ? ref.strip : nil
+        args[:customer_ref] = mcp_extra if mcp_extra && !args.key?(:customer_ref) && !args.key?("customer_ref")
         result = SolvaPay::Mcp.invoke_payable(
           solvapay: @facade,
           product: spec[:product],
@@ -165,6 +164,7 @@ module SolvaPay
           get_customer_ref: spec[:get_customer_ref],
           usage_type: spec[:usage_type],
           args: args,
+          mcp_extra_customer_ref: mcp_extra,
         )
         resumed = stringify(
           SolvaPay::Mcp::Core.call(

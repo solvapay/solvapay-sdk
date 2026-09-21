@@ -177,6 +177,8 @@ fn yaml_ir() -> Ir {
         core_types_ts: Default::default(),
         core_fns: Default::default(),
         transport_fns: Default::default(),
+        defaults: Default::default(),
+        driver_loops: Default::default(),
     };
     let core_src = paths().contract_input("coreSrc").expect("coreSrc");
     lower_core_types(&mut ir, &core_src, &manifest).expect("lower core types");

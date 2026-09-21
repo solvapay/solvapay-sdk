@@ -31,6 +31,8 @@ installMcpAdapterNative({
 publishNativeSyncApi()
 // Workers/edge may resolve this Node entry (nodejs_compat). Napi is absent
 // there; start WASM init so sync dispatch can fall through on first request.
+// When a native binary did load, loadNativeBinding throws version_skew if
+// its stamp disagrees with this package (Python/Ruby import-time guard).
 if (loadNativeBinding() === null) {
   warmWasm()
 }

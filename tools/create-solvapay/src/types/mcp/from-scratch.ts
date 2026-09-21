@@ -296,9 +296,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
             ? 'go run . --mode http'
             : 'cargo run -- --mode http'
   process.stdout.write(`   ${runHint}\n`)
-  process.stdout.write(
-    `   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`,
-  )
+  process.stdout.write(`   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`)
 
   printConnectionSnippets({ projectName, workerUrl: publicBaseUrl })
 }

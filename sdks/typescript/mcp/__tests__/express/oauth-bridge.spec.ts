@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
@@ -61,6 +61,9 @@ function mockRes() {
     },
     setHeader(name: string, value: string) {
       state.headers[name.toLowerCase()] = value
+    },
+    getHeader(name: string) {
+      return state.headers[name.toLowerCase()]
     },
     end(body?: string) {
       if (body !== undefined) state.bodyText = body
@@ -139,6 +142,24 @@ describe('createOAuthRegisterHandler', () => {
     await handler(req, res, vi.fn())
     expect(state.statusCode).toBe(201)
     expect(client.calls[0]).toMatchObject({ path: '/oauth/register', method: 'POST' })
+  })
+
+  it('answers OPTIONS with CORS preflight', async () => {
+    const client = recordingOauthClient({ status: 500, headers: {}, body: { error: 'dispatched' } })
+    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef, oauthClient: client })
+    const { res, state } = mockRes()
+    await handler(
+      mockReq({
+        method: 'OPTIONS',
+        path: '/oauth/register',
+        headers: { origin: 'cursor://mcp', 'access-control-request-method': 'POST' },
+      }),
+      res,
+      vi.fn(),
+    )
+    expect(state.statusCode).toBe(204)
+    expect(state.headers['access-control-allow-origin']).toBe('cursor://mcp')
+    expect(client.calls).toEqual([])
   })
 
   it('relays 502 when the OAuth client reports upstream unreachable', async () => {
@@ -324,6 +345,61 @@ describe('createMcpOAuthBridge integration', () => {
     expect(state.statusCode).toBe(405)
     expect(state.headers['allow']).toBe('POST, OPTIONS')
     expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
+  })
+
+  it('appends Vary instead of replacing an existing value', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
+    })
+    const { res, state } = mockRes()
+    res.setHeader('Vary', 'Accept')
+    const req = mockReq({
+      method: 'GET',
+      path: '/mcp',
+      headers: { origin: 'cursor://test', accept: 'text/event-stream' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.headers['vary']).toBe('Accept, Origin')
+  })
+
+  it('answers OPTIONS preflight on OAuth routes without dispatching', async () => {
+    const recorded = recordingOauthClient({
+      status: 500,
+      headers: {},
+      body: { error: 'dispatched' },
+    })
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient: {
+        mcpOauthRequest: params => recorded.mcpOauthRequest(params),
+        mcpResolveAuth: async () => ({ kind: 'allow' }),
+      },
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'OPTIONS',
+      path: '/oauth/register',
+      headers: {
+        origin: 'cursor://mcp',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'authorization, content-type',
+      },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(204)
+    expect(state.ended).toBe(true)
+    expect(state.headers['access-control-allow-origin']).toBe('cursor://mcp')
+    expect(state.headers['access-control-allow-methods']).toBe('POST, OPTIONS')
+    expect(recorded.calls).toEqual([])
   })
 
   it('challenges anonymous initialize through mcp auth middleware', async () => {

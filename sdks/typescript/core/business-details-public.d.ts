@@ -31,15 +31,24 @@ export type EuMemberCountry =
 
 export type SupportedBusinessCountry = EuMemberCountry | 'GB' | 'US' | 'JP'
 
-export declare const TAX_ID_TYPES: readonly TaxIdType[]
+export type BusinessCountryOption = {
+  value: SupportedBusinessCountry
+  label: string
+}
+
+export declare function TAX_ID_TYPES(): readonly TaxIdType[]
 
 export declare function isTaxIdType(value: string): value is TaxIdType
 
-export declare const SUPPORTED_BUSINESS_COUNTRIES: readonly SupportedBusinessCountry[]
+export declare function SUPPORTED_BUSINESS_COUNTRIES(): readonly string[]
 
-export declare const COUNTRY_TO_TAX_ID_TYPE: Record<SupportedBusinessCountry, TaxIdType>
+export declare function BUSINESS_COUNTRY_DISPLAY_NAMES(): Record<string, string>
 
-export declare const TAX_ID_EXAMPLE_BY_COUNTRY: Record<SupportedBusinessCountry, string>
+export declare function BUSINESS_COUNTRY_OPTIONS(): BusinessCountryOption[]
+
+export declare function COUNTRY_TO_TAX_ID_TYPE(): Record<string, TaxIdType>
+
+export declare function TAX_ID_EXAMPLE_BY_COUNTRY(): Record<string, string>
 
 export declare function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType
 
@@ -136,11 +145,11 @@ export declare function validateBusinessDetails(
   input: BusinessDetailsInput,
 ): ValidateBusinessDetailsResult
 
-export declare const TAX_BEHAVIORS: readonly ['auto', 'inclusive', 'exclusive']
+export declare function TAX_BEHAVIORS(): readonly string[]
 
-export type TaxBehavior = (typeof TAX_BEHAVIORS)[number]
+export type TaxBehavior = 'auto' | 'inclusive' | 'exclusive'
 
-export declare const TAX_EXCLUSIVE_CURRENCIES: readonly ['USD', 'CAD']
+export declare function TAX_EXCLUSIVE_CURRENCIES(): readonly string[]
 
 export declare function resolveTaxBehavior(
   behavior: TaxBehavior,

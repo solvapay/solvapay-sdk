@@ -3,14 +3,12 @@ import { SolvaPayError } from '@solvapay/core'
 import { callNativeSync, type NativeSyncMethod } from '../src/native'
 import {
   buildPaywallGate,
-  classifyCustomerRef,
   installNativeDecisionApi,
   resetNativeDecisionApiForTests,
   retryNextDelayMs,
 } from '../src/native-decisions'
 import type { PaywallState } from '../src/paywall-state'
 
-const SENTINEL_CLASSIFY = 'SENTINEL_classifyCustomerRef'
 const SENTINEL_GATE = {
   kind: 'payment_required',
   product: 'SENTINEL',
@@ -52,8 +50,6 @@ describe('native-decisions.ts dispatch', () => {
       callNativeSync: (fn: NativeSyncMethod, _argsJson: string) => {
         onCall?.()
         switch (fn) {
-          case 'classifyCustomerRef':
-            return SENTINEL_CLASSIFY
           case 'buildPaywallGate':
             return SENTINEL_GATE
           case 'retryNextDelayMs':
@@ -65,16 +61,14 @@ describe('native-decisions.ts dispatch', () => {
     })
   }
 
-  it('installed binding sentinel wins for helpers, paywall, and retry', () => {
+  it('installed binding sentinel wins for paywall and retry', () => {
     installFakeApi()
 
-    expect(classifyCustomerRef('cus_abc')).toBe(SENTINEL_CLASSIFY)
     expect(buildPaywallGate('prod_1', GATE_LIMITS)).toEqual(SENTINEL_GATE)
     expect(retryNextDelayMs({ ...RETRY_ARGS })).toBe(SENTINEL_RETRY)
   })
 
-  it('uninstalled decision API throws — no core facade, no local fallback', () => {
-    expect(() => classifyCustomerRef('cus_abc')).toThrow('server sync API not installed')
+  it('uninstalled decision API throws for server-only wrappers', () => {
     expect(() => buildPaywallGate('prod_1', GATE_LIMITS)).toThrow(SolvaPayError)
     expect(() => retryNextDelayMs({ ...RETRY_ARGS })).toThrow('server sync API not installed')
   })

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"time"
 )
@@ -32,26 +33,88 @@ func (c *Client) ensureCustomer(ctx context.Context, customerRef string) (string
 	return ref, err
 }
 
+type ensureCustomerIO struct {
+	client *Client
+}
+
+func (h ensureCustomerIO) NowMs() int64 {
+	return time.Now().UnixMilli()
+}
+
+func (h ensureCustomerIO) ReadCustomerCache(key string) (EnsureCustomerCacheHit, bool) {
+	h.client.gate.mu.Lock()
+	entry, ok := h.client.gate.customerCache[key]
+	h.client.gate.mu.Unlock()
+	if !ok {
+		return EnsureCustomerCacheHit{}, false
+	}
+	return EnsureCustomerCacheHit{Found: true, BackendRef: entry.value, TimestampMs: entry.timestampMs}, true
+}
+
+func (h ensureCustomerIO) GetCustomer(ctx context.Context, byExternalRef, byEmail string) (EnsureCustomerLookup, error) {
+	params := map[string]any{}
+	if byExternalRef != "" {
+		params["externalRef"] = byExternalRef
+	} else if byEmail != "" {
+		params["email"] = byEmail
+	}
+	existing, err := h.client.GetCustomer(ctx, params)
+	if err != nil {
+		return EnsureCustomerLookup{ErrorMessage: err.Error()}, nil
+	}
+	obj := asObject(existing)
+	ref, _ := obj["customerRef"].(string)
+	if ref == "" {
+		return EnsureCustomerLookup{}, nil
+	}
+	return EnsureCustomerLookup{Found: true, Customer: obj}, nil
+}
+
+func (h ensureCustomerIO) CreateCustomer(ctx context.Context, params map[string]any) (EnsureCustomerCreate, error) {
+	created, err := h.client.CreateCustomer(ctx, params)
+	if err != nil {
+		return EnsureCustomerCreate{ErrorMessage: err.Error()}, nil
+	}
+	return EnsureCustomerCreate{OK: true, Customer: asObject(created)}, nil
+}
+
+func (h ensureCustomerIO) UpdateCustomer(ctx context.Context, customerRef string, patch map[string]any) (EnsureCustomerUpdate, error) {
+	_, err := h.client.UpdateCustomer(ctx, customerRef, patch)
+	if err != nil {
+		return EnsureCustomerUpdate{ErrorMessage: err.Error()}, nil
+	}
+	return EnsureCustomerUpdate{OK: true}, nil
+}
+
+func (h ensureCustomerIO) WriteCustomerCache(key, backendRef string, timestampMs int64) {
+	h.client.gate.mu.Lock()
+	storeCustomerCache(h.client.gate.customerCache, key, customerCacheEntry{
+		value:       backendRef,
+		timestampMs: timestampMs,
+	})
+	h.client.gate.mu.Unlock()
+}
+
 func (c *Client) runEnsureCustomer(ctx context.Context, customerRef string) (string, error) {
-	var state any
 	event := map[string]any{
 		"kind":              "start",
 		"customerRef":       customerRef,
-		"canCreateCustomer": true,
-		"canUpdateCustomer": true,
+		"canCreateCustomer": clientHasMethod(c, "CreateCustomer"),
+		"canUpdateCustomer": clientHasMethod(c, "UpdateCustomer"),
+		"dedupTTLMs":        CustomerDedupTTLMs,
 		"nowMs":             time.Now().UnixMilli(),
 	}
-	for {
+	return RunGeneratedEnsureCustomerLoop(ctx, func(state any, step map[string]any) (any, map[string]any, error) {
 		outJSON, err := callDecisionJSON(ctx, "sv_ensure_customer_next_binding", map[string]any{
 			"state": state,
-			"event": event,
+			"event": step,
 		})
 		if err != nil {
-			return "", err
+			return nil, nil, err
 		}
 		var out map[string]any
 		if err := json.Unmarshal(outJSON, &out); err != nil {
-			return "", fmt.Errorf("solvapay: ensure_customer_next: %w", err)
+			return nil, nil, fmt.Errorf("solvapay: ensure_customer_next: %w", err)
 		}
 		if _, hasAction := out["action"]; !hasAction {
 			details, _ := out["details"].(string)
@@ -61,112 +124,15 @@ func (c *Client) runEnsureCustomer(ctx context.Context, customerRef string) (str
 			if details == "" {
 				details = "ensure_customer_next failed"
 			}
-			return "", &Error{Code: "internal_error", Message: details}
+			return nil, nil, &Error{Code: "internal_error", Message: details}
 		}
-		state = out["state"]
-		action := asObject(out["action"])
-		switch action["kind"] {
-		case "readCustomerCache":
-			key, _ := action["key"].(string)
-			c.gate.mu.Lock()
-			entry, ok := c.gate.customerCache[key]
-			c.gate.mu.Unlock()
-			if ok {
-				event = map[string]any{
-					"kind":        "customerCacheEntry",
-					"found":       true,
-					"backendRef":  entry.value,
-					"timestampMs": entry.timestampMs,
-					"nowMs":       time.Now().UnixMilli(),
-				}
-			} else {
-				event = map[string]any{
-					"kind":  "customerCacheEntry",
-					"found": false,
-					"nowMs": time.Now().UnixMilli(),
-				}
-			}
-		case "getCustomer":
-			params := map[string]any{}
-			if ref, ok := action["byExternalRef"].(string); ok && ref != "" {
-				params["externalRef"] = ref
-			} else if email, ok := action["byEmail"].(string); ok && email != "" {
-				params["email"] = email
-			}
-			existing, err := c.GetCustomer(ctx, params)
-			if err != nil {
-				event = map[string]any{
-					"kind":         "customerLookupResult",
-					"found":        false,
-					"errorMessage": err.Error(),
-					"nowMs":        time.Now().UnixMilli(),
-				}
-				continue
-			}
-			obj := asObject(existing)
-			ref, _ := obj["customerRef"].(string)
-			if ref == "" {
-				event = map[string]any{
-					"kind":  "customerLookupResult",
-					"found": false,
-					"nowMs": time.Now().UnixMilli(),
-				}
-				continue
-			}
-			event = map[string]any{
-				"kind":     "customerLookupResult",
-				"found":    true,
-				"customer": obj,
-				"nowMs":    time.Now().UnixMilli(),
-			}
-		case "createCustomer":
-			params := asObject(action["params"])
-			created, err := c.CreateCustomer(ctx, params)
-			if err != nil {
-				event = map[string]any{
-					"kind":         "customerCreateResult",
-					"ok":           false,
-					"errorMessage": err.Error(),
-					"nowMs":        time.Now().UnixMilli(),
-				}
-				continue
-			}
-			event = map[string]any{
-				"kind":     "customerCreateResult",
-				"ok":       true,
-				"customer": asObject(created),
-				"nowMs":    time.Now().UnixMilli(),
-			}
-		case "updateCustomer":
-			ref, _ := action["customerRef"].(string)
-			_, err := c.UpdateCustomer(ctx, ref, asObject(action["patch"]))
-			event = map[string]any{
-				"kind":  "customerUpdateResult",
-				"ok":    err == nil,
-				"nowMs": time.Now().UnixMilli(),
-			}
-			if err != nil {
-				event["errorMessage"] = err.Error()
-			}
-		case "resolved":
-			backend, _ := action["backendRef"].(string)
-			if backend == "" {
-				return "", &Error{Code: "internal_error", Message: "ensure_customer_next resolved without backendRef"}
-			}
-			if cache := asObject(action["cache"]); cache["key"] != nil {
-				key, _ := cache["key"].(string)
-				c.gate.mu.Lock()
-				storeCustomerCache(c.gate.customerCache, key, customerCacheEntry{
-					value:       backend,
-					timestampMs: int64(asFloat(cache["timestampMs"])),
-				})
-				c.gate.mu.Unlock()
-			}
-			return backend, nil
-		default:
-			return "", &Error{Code: "internal_error", Message: "ensure_customer_next returned unknown action kind"}
-		}
-	}
+		return out["state"], asObject(out["action"]), nil
+	}, ensureCustomerIO{c}, event)
+}
+
+func clientHasMethod(client *Client, name string) bool {
+	method := reflect.ValueOf(client).MethodByName(name)
+	return method.IsValid() && method.Kind() == reflect.Func
 }
 
 func storeCustomerCache(cache map[string]customerCacheEntry, key string, entry customerCacheEntry) {

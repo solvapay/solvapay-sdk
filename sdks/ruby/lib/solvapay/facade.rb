@@ -115,6 +115,59 @@ module SolvaPay
       end
     end
 
+    class EnsureLoopHost
+      def initialize(facade)
+        @facade = facade
+      end
+
+      def now_ms
+        @facade.send(:now_ms)
+      end
+
+      def read_customer_cache(key)
+        cached = @facade.send(:read_customer_cache_entry, key)
+        return nil unless cached.is_a?(Hash)
+
+        { backend_ref: cached[:value], timestamp_ms: cached[:timestamp_ms] }
+      end
+
+      def get_customer(action)
+        params = if action["byExternalRef"]
+                   { "externalRef" => action["byExternalRef"] }
+                 else
+                   { "email" => action["byEmail"] }
+                 end
+        begin
+          existing = @facade.send(:lookup_customer, params)
+          if existing.is_a?(Hash) && existing["customerRef"]
+            { found: true, customer: existing }
+          else
+            { found: false }
+          end
+        rescue SolvaPayError => e
+          { found: false, error_message: e.message }
+        end
+      end
+
+      def create_customer(params)
+        created = @facade.send(:create_ensured_customer, params)
+        { ok: true, customer: created }
+      rescue SolvaPayError => e
+        { ok: false, error_message: e.message }
+      end
+
+      def update_customer(customer_ref, patch)
+        @facade.send(:update_ensured_customer, customer_ref, patch)
+        { ok: true }
+      rescue SolvaPayError => e
+        { ok: false, error_message: e.message }
+      end
+
+      def write_customer_cache(key, backend_ref, timestamp_ms)
+        @facade.send(:write_customer_cache, key, backend_ref, timestamp_ms)
+      end
+    end
+
     def now_ms
       @clock.call
     end
@@ -202,112 +255,47 @@ module SolvaPay
     end
 
     def run_ensure_customer(customer_ref)
-      state = nil
       event = {
         "kind" => "start",
         "customerRef" => customer_ref,
-        "canCreateCustomer" => true,
-        "canUpdateCustomer" => true,
+        "canCreateCustomer" => @client.respond_to?(:create_customer),
+        "canUpdateCustomer" => @client.respond_to?(:update_customer),
+        "dedupTTLMs" => CUSTOMER_DEDUP_TTL_MS,
         "nowMs" => @clock.call,
       }
-      loop do
-        out = NativeDispatch.call_sync("ensure_customer_next", { "state" => state, "event" => event })
-        unless out.is_a?(Hash)
-          raise SolvaPay::SolvaPayError.new("ensure_customer_next returned unexpected value", code: "internal_error")
-        end
-
-        unless out["action"].is_a?(Hash)
-          details = out["details"]
-          details = out["error"] unless details.is_a?(String) && !details.empty?
-          raise SolvaPay::SolvaPayError.new(details.to_s, code: "internal_error")
-        end
-        state = out["state"]
-        action = out["action"]
-        case action["kind"]
-        when "readCustomerCache"
-          key = action["key"].to_s
-          cached = @mutex.synchronize { @customer_cache[key] }
-          event = if cached.is_a?(Hash)
-                    {
-                      "kind" => "customerCacheEntry",
-                      "found" => true,
-                      "backendRef" => cached[:value],
-                      "timestampMs" => cached[:timestamp_ms],
-                      "nowMs" => @clock.call,
-                    }
-                  else
-                    { "kind" => "customerCacheEntry", "found" => false, "nowMs" => @clock.call }
-                  end
-        when "getCustomer"
-          params = if action["byExternalRef"]
-                     { "externalRef" => action["byExternalRef"] }
-                   else
-                     { "email" => action["byEmail"] }
-                   end
-          begin
-            existing = @client.get_customer(params: params)
-            event = if existing.is_a?(Hash) && existing["customerRef"]
-                      {
-                        "kind" => "customerLookupResult",
-                        "found" => true,
-                        "customer" => existing,
-                        "nowMs" => @clock.call,
-                      }
-                    else
-                      { "kind" => "customerLookupResult", "found" => false, "nowMs" => @clock.call }
-                    end
-          rescue SolvaPayError => e
-            event = {
-              "kind" => "customerLookupResult",
-              "found" => false,
-              "errorMessage" => e.message,
-              "nowMs" => @clock.call,
-            }
-          end
-        when "createCustomer"
-          begin
-            created = @client.create_customer(params: action["params"])
-            event = {
-              "kind" => "customerCreateResult",
-              "ok" => true,
-              "customer" => created,
-              "nowMs" => @clock.call,
-            }
-          rescue SolvaPayError => e
-            event = {
-              "kind" => "customerCreateResult",
-              "ok" => false,
-              "errorMessage" => e.message,
-              "nowMs" => @clock.call,
-            }
-          end
-        when "updateCustomer"
-          begin
-            @client.update_customer(customer_ref: action["customerRef"], params: action["patch"])
-            event = { "kind" => "customerUpdateResult", "ok" => true, "nowMs" => @clock.call }
-          rescue SolvaPayError => e
-            event = {
-              "kind" => "customerUpdateResult",
-              "ok" => false,
-              "errorMessage" => e.message,
-              "nowMs" => @clock.call,
-            }
-          end
-        when "resolved"
-          backend = action["backendRef"]
-          unless backend.is_a?(String) && !backend.empty?
-            raise SolvaPayError.new("ensure_customer_next resolved without backendRef", code: "internal_error")
+      GeneratedEnsureCustomerLoop.run(
+        ensure_next: lambda { |state, step|
+          out = NativeDispatch.call_sync("ensure_customer_next", { "state" => state, "event" => step })
+          unless out.is_a?(Hash)
+            raise SolvaPay::SolvaPayError.new("ensure_customer_next returned unexpected value", code: "internal_error")
           end
 
-          cache = action["cache"]
-          if cache.is_a?(Hash) && cache["key"].is_a?(String)
-            write_customer_cache(cache["key"], backend, cache["timestampMs"])
+          unless out["action"].is_a?(Hash)
+            details = out["details"]
+            details = out["error"] unless details.is_a?(String) && !details.empty?
+            raise SolvaPay::SolvaPayError.new(details.to_s, code: "internal_error")
           end
-          return backend
-        else
-          raise SolvaPay::SolvaPayError.new("ensure_customer_next unknown action kind", code: "internal_error")
-        end
-      end
+          out
+        },
+        host: EnsureLoopHost.new(self),
+        start_event: event,
+      )
+    end
+
+    def read_customer_cache_entry(key)
+      @mutex.synchronize { @customer_cache[key] }
+    end
+
+    def lookup_customer(params)
+      @client.get_customer(params: params)
+    end
+
+    def create_ensured_customer(params)
+      @client.create_customer(params: params)
+    end
+
+    def update_ensured_customer(customer_ref, patch)
+      @client.update_customer(customer_ref: customer_ref, params: patch)
     end
 
     def paywall_short_message(content)
@@ -441,21 +429,29 @@ module SolvaPay
     private
 
     def extract_customer_ref(args, kwargs)
-      kw = kwargs[:customer_ref]
-      return kw if kw.is_a?(String) && !kw.empty?
+      call_args = {}
+      hook = kwargs[:customer_ref]
+      call_args["hookRef"] = hook if hook.is_a?(String) && !hook.empty?
 
       first = args[0]
-      return "anonymous" unless first.is_a?(Hash)
-
-      auth = first[:auth] || first["auth"]
-      if auth.is_a?(Hash)
-        from_auth = auth[:customer_ref] || auth["customer_ref"]
-        return from_auth if from_auth.is_a?(String) && !from_auth.empty?
+      if first.is_a?(Hash)
+        auth = first[:auth] || first["auth"]
+        if auth.is_a?(Hash)
+          from_auth = auth[:customer_ref] || auth["customer_ref"]
+          call_args["argsAuthCustomerRef"] = from_auth if from_auth.is_a?(String) && !from_auth.empty?
+        end
+        from_first = first[:customer_ref] || first["customer_ref"]
+        call_args["argsCustomerRef"] = from_first if from_first.is_a?(String) && !from_first.empty?
       end
-      from_first = first[:customer_ref] || first["customer_ref"]
-      return from_first if from_first.is_a?(String) && !from_first.empty?
 
-      "anonymous"
+      resolved = NativeDispatch.call_sync("resolve_customer_ref", call_args)
+      unless resolved.is_a?(String) && !resolved.empty?
+        raise SolvaPayError.new(
+          "resolve_customer_ref did not return a string",
+          code: "invalid_customer_ref",
+        )
+      end
+      resolved
     end
   end
 

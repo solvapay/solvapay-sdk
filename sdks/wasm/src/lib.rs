@@ -6,11 +6,10 @@
 //!   decision / paywall / retry JSON envelopes ([`decisions`]), sync core + MCP
 //!   payload builders ([`payload_builders`]), and the async
 //!   [`wasm_client::WasmClient`] Groups A–C methods over `FetchTransport`.
-//! - `browser`: public-safe pure surface — `wasm_version` + the
-//!   business-details / credit-display / seller-identity / money-format /
-//!   tax-note subset of `payload_builders` plus the plan-pricing readers
-//!   React's checkout primitives call. No webhook, no secret-key client,
-//!   no MCP symbols (`solvapayCall` / `invokePayableNext` are edge-only).
+//! - `browser`: public-safe pure surface — `wasm_version` + payload builders
+//!   that do not need a secret, plus every `decisions` export whose core fn
+//!   compiles under `client-public`. `resolveAuthenticatedUser`, webhook
+//!   verify, `WasmClient`, and the MCP payload module stay `edge`-only.
 //!
 //! # Panic safety
 //!
@@ -33,36 +32,39 @@ compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser
 compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser`");
 
 mod args;
+pub mod decisions;
 mod error;
 pub mod payload_builders;
-
-/// Public-safe plan-pricing readers for the browser profile. Edge gets the
-/// same envelopes from the `decisions` module.
-#[cfg(feature = "browser")]
-mod plan_pricing;
-
-#[cfg(feature = "edge")]
-pub mod decisions;
 #[cfg(all(feature = "edge", target_arch = "wasm32"))]
 mod wasm_client;
 
 use wasm_bindgen::prelude::*;
 
-/// Returns the crate version string (`CARGO_PKG_VERSION`).
+/// Release-train version when `SOLVAPAY_RELEASE_VERSION` is set at build time,
+/// otherwise the crate version (`CARGO_PKG_VERSION`).
+///
+/// Shared by [`wasm_version`] and [`wasm_build_info`] so the two diagnostics
+/// cannot disagree.
+fn release_version() -> &'static str {
+    option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))
+}
+
+/// Returns the same version string as [`wasm_build_info`]'s `version` field.
 ///
 /// Used as a hello-world smoke export proving the WASM module loads under both
 /// edge and browser profiles.
 #[wasm_bindgen(js_name = wasmVersion)]
 pub fn wasm_version() -> String {
-    env!("CARGO_PKG_VERSION").to_owned()
+    release_version().to_owned()
 }
 
 /// Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
 ///
-/// Available on both `edge` and `browser` profiles.
+/// `version` matches [`wasm_version`]: `SOLVAPAY_RELEASE_VERSION` when set,
+/// otherwise `CARGO_PKG_VERSION`. Available on both `edge` and `browser` profiles.
 #[wasm_bindgen(js_name = wasmBuildInfo)]
 pub fn wasm_build_info() -> String {
-    let version = option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+    let version = release_version();
     let core_sha = option_env!("SOLVAPAY_CORE_SHA").unwrap_or("unknown");
     format!(r#"{{"version":"{version}","coreSha":"{core_sha}"}}"#)
 }
@@ -198,6 +200,19 @@ mod tests {
             err.message(),
             "Invalid webhook payload: body is not valid JSON"
         );
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
+mod version_tests {
+    use super::{wasm_build_info, wasm_version};
+
+    #[test]
+    fn wasm_version_matches_build_info_version() {
+        let version = wasm_version();
+        let info: serde_json::Value = serde_json::from_str(&wasm_build_info()).expect("json");
+        assert_eq!(info["version"], version);
     }
 }
 

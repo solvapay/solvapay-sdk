@@ -3,9 +3,11 @@
 How to regenerate SolvaPay’s six language surfaces from the OpenAPI snapshot and
 contract manifest. This is the day-to-day runbook; architecture rationale lives
 in [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) (§5.6 / §5.7).
-Collapsing the hand-mirrored `bindings:` / harness layers into Rust-derived
-descriptors is sequenced in [`codegen-ast-derivation.md`](./codegen-ast-derivation.md)
-(after step 55).
+YAML `bindings:` is retired. `tools/shared/manifest-schema.ts` rejects a
+non-empty `bindings:` section. Binding descriptors come from `#[solvapay_export]`,
+and `parity:check` reads the generated `binding-symbols.snapshot.json`, not a
+YAML bindings block. The derivation sequence is
+[`codegen-ast-derivation.md`](./codegen-ast-derivation.md).
 
 ## Mental model
 
@@ -53,29 +55,29 @@ Binary blobs in `externalGenerated` are hashed in [`contract/manifest/generated-
 
 Run from the repo root (`solvapay-sdk/`).
 
-| Command                                                    | What it does                                                                                                                                 |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                         |
-| `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                       |
-| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                       |
-| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert an `operations:` stub from OpenAPI DTOs                                                                                               |
-| `pnpm gen:bindings`                                        | Suggest `#[solvapay_export]` targets for orphan catalog operations                                                                           |
-| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs, then rebuild Ruby/Python native bindings when those toolchains are present (`--no-native-prepare` skips) |
-| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                          |
-| `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.                   |
-| `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                           |
-| `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                            |
-| `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                                |
-| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                            |
-| `pnpm parity:check`                                        | Cross-language signature parity                                                                                                              |
-| `pnpm preflight`                                           | Toolchain report: which work tiers are ready (TS-only / codegen / full multi-language parity)                                                |
-| `pnpm gates`                                               | Local contract gate set (`gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, plus snapshot/docs/delegation/required-checks)      |
-| `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                            |
-| `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                                  |
-| `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                               |
-| `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                                 |
-| `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                              |
-| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                         |
+| Command                                                    | What it does                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                                                                                                                                                                                                               |
+| `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                                                                                                                                                                                                             |
+| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                                                                                                                                                                                                             |
+| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert an `operations:` stub from OpenAPI DTOs                                                                                                                                                                                                                                                                                     |
+| `pnpm gen:bindings`                                        | Suggest `#[solvapay_export]` targets for orphan catalog operations                                                                                                                                                                                                                                                                 |
+| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs, then rebuild Ruby/Python native bindings when those toolchains are present (`--no-native-prepare` skips)                                                                                                                                                                                       |
+| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                                                                                                                                                                                                                |
+| `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.                                                                                                                                                                                                         |
+| `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                                                                                                                                                                                                                 |
+| `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                                                                                                                                                                                                                  |
+| `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                                                                                                                                                                                                                      |
+| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                                                                                                                                                                                                                  |
+| `pnpm parity:check`                                        | Cross-language signature parity                                                                                                                                                                                                                                                                                                    |
+| `pnpm preflight`                                           | Toolchain report: which work tiers are ready (TS-only / codegen / full multi-language parity)                                                                                                                                                                                                                                      |
+| `pnpm gates`                                               | `gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, `census:check`, `snapshot:openapi:check`, `docs:coverage`, `docs:parity`, `delegation:check`, `residue:check`, `touch-set:check`, `facade-coverage:check`, `checks:required`, `checks:template-pins`, `generated:external` (`--markers-only`), `generated:headers` |
+| `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                                                                                                                                                                                                                  |
+| `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                                                                                                                                                                                                                        |
+| `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                                                                                                                                                                                                                     |
+| `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                                                                                                                                                                                                                       |
+| `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                                                                                                                                                                                                                    |
+| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                                                                                                                                                                                                               |
 
 There is **no** need to copy a long `cargo run -p dto-gen -- …` line. CI and
 humans both call `pnpm gen` / `pnpm gen:check`, which invoke
@@ -259,9 +261,10 @@ Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`)
 ### C ABI
 
 `sdks/capi/` dispatch is generated (`Toolchain::C`, `--c-bindings-out`). The
-C fixture census (`sdks/capi/ctest/contract.sh`) replays all 763 golden
-fixtures via a test-only fixture-host feature. Signature parity is
-`--c-parity-out`.
+C fixture census (`sdks/capi/ctest/contract.sh`) replays `contract/fixtures`
+through a test-only fixture-host feature. Counts are
+`contract/fixtures/census.generated.json`: parsed 787, executed 782, delegated 5.
+Signature parity is `--c-parity-out`.
 
 ---
 

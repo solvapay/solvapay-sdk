@@ -5,6 +5,7 @@
 //! Do not hand-edit. Regenerate via `dto-gen`.
 
 pub mod error_templates;
+pub mod fixture_groups;
 pub mod overlays;
 pub mod routes;
 pub mod schemas;

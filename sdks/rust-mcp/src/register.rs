@@ -21,6 +21,7 @@ use solvapay_core::mcp::compile_string_field_input_schema;
 use solvapay_core::{
     build_customer_snapshot, resolve_customer_ref as resolve_customer_ref_op, PaywallGate,
 };
+use solvapay_dto::error_templates::paywall::PAYMENT_REQUIRED;
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use solvapay_mcp_core::union_payable_output_schema;
 use thiserror::Error;
@@ -159,8 +160,18 @@ pub fn register_payable_tool<S: Send + Sync + 'static>(
         let handler = Arc::clone(&handler);
         let get_customer_ref = get_customer_ref.clone();
         let args = ctx.arguments.clone().unwrap_or_default();
+        let sources = customer_ref_sources_from_extensions(&ctx.request_context.extensions);
         Box::pin(async move {
-            match invoke_payable(client, product, usage_type, handler, get_customer_ref, args).await
+            match invoke_payable(
+                client,
+                product,
+                usage_type,
+                handler,
+                get_customer_ref,
+                args,
+                sources,
+            )
+            .await
             {
                 Ok(result) => Ok(result.into()),
                 Err(PayableError::Sdk(err)) => Err(rmcp::ErrorData::internal_error(
@@ -187,9 +198,10 @@ pub async fn invoke_payable(
     handler: PayableHandler,
     get_customer_ref: Option<GetCustomerRef>,
     args: JsonObject,
+    sources: CustomerRefSources,
 ) -> Result<CallToolResult, PayableError> {
     let started_ms = now_ms();
-    let customer_ref = resolve_customer_ref(&args, get_customer_ref.as_ref())?;
+    let customer_ref = resolve_customer_ref(&args, get_customer_ref.as_ref(), &sources)?;
     let host = PayableLoopHost {
         client,
         product,
@@ -373,10 +385,10 @@ fn random_unit() -> f64 {
     }
 }
 
-/// Paywall copy: gate message, or `"Payment required"` when empty.
+/// Paywall copy: gate message, or the frozen payment-required template when empty.
 fn paywall_message(gate: &PaywallGate) -> String {
     if gate.message.is_empty() {
-        "Payment required".to_owned()
+        PAYMENT_REQUIRED.to_owned()
     } else {
         gate.message.clone()
     }
@@ -397,22 +409,68 @@ fn allow_limits_value(allow: &Allow) -> Value {
     allow.limits().clone()
 }
 
-/// Resolve customer_ref from the hook, `customer_ref` arg, or `"anonymous"`.
+/// Identity already on the host request, besides the hook and tool arguments.
+#[derive(Clone, Default)]
+pub struct CustomerRefSources {
+    /// Verified bearer subject, when the host has already checked the token.
+    pub verified_jwt_sub: Option<String>,
+    /// `x-user-id` header, when the transport attached request headers.
+    pub header_user_id: Option<String>,
+    /// `x-customer-ref` header, when the transport attached request headers.
+    pub header_customer_ref: Option<String>,
+    /// MCP auth-context or bearer-derived customer ref.
+    pub mcp_extra_customer_ref: Option<String>,
+}
+
+/// Resolve customer_ref from the hook, host request, and tool arguments.
 fn resolve_customer_ref(
     args: &JsonObject,
     hook: Option<&GetCustomerRef>,
+    sources: &CustomerRefSources,
 ) -> Result<String, PayableError> {
     let hook_ref = match hook {
         Some(hook) => Some(hook(args)?),
         None => None,
     };
+    let args_auth = args
+        .get("auth")
+        .and_then(Value::as_object)
+        .and_then(|auth| auth.get("customer_ref"))
+        .and_then(Value::as_str);
     let args_ref = args.get("customer_ref").and_then(Value::as_str);
-    let resolved =
-        resolve_customer_ref_op(hook_ref.as_deref(), None, None, None, None, None, args_ref);
+    let resolved = resolve_customer_ref_op(
+        hook_ref.as_deref(),
+        sources.verified_jwt_sub.as_deref(),
+        sources.header_user_id.as_deref(),
+        sources.header_customer_ref.as_deref(),
+        sources.mcp_extra_customer_ref.as_deref(),
+        args_auth,
+        args_ref,
+    );
     if resolved.is_empty() || resolved == "anonymous" {
         return Err(PayableError::MissingCustomerRef);
     }
     Ok(resolved)
+}
+
+/// Read `x-user-id` and `x-customer-ref` when rmcp stored `http::request::Parts`.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+fn customer_ref_sources_from_extensions(
+    extensions: &rmcp::model::Extensions,
+) -> CustomerRefSources {
+    let mut sources = CustomerRefSources::default();
+    if let Some(parts) = extensions.get::<http::request::Parts>() {
+        sources.header_user_id = header_string(&parts.headers, "x-user-id");
+        sources.header_customer_ref = header_string(&parts.headers, "x-customer-ref");
+    }
+    sources
+}
+
+/// First non-empty header value.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+fn header_string(headers: &http::HeaderMap, name: &str) -> Option<String> {
+    let text = headers.get(name)?.to_str().ok()?.trim();
+    (!text.is_empty()).then(|| text.to_owned())
 }
 
 /// Compile a string-field map into a JSON Schema object.

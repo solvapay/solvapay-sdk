@@ -138,11 +138,6 @@ fn dispatch_op(op: &str, args: &Value) -> Result<Value, SdkError> {
                 ))
             }
         }
-        "validateBusinessDetails" => {
-            let input: BusinessDetailsInput = parse_value(args)?;
-            serde_json::to_value(validate_business_details(&input))
-                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
-        }
         "resolveCustomerRef" => {
             let pick = |key: &str| -> Option<String> {
                 args.get(key)
@@ -159,6 +154,11 @@ fn dispatch_op(op: &str, args: &Value) -> Result<Value, SdkError> {
                 pick("argsAuthCustomerRef").as_deref(),
                 pick("argsCustomerRef").as_deref(),
             )))
+        }
+        "validateBusinessDetails" => {
+            let input: BusinessDetailsInput = parse_value(args)?;
+            serde_json::to_value(validate_business_details(&input))
+                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
         }
         other => Err(SdkError::transport(format!("unknown op: {other}"), false)),
     }

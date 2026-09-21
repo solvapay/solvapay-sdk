@@ -20,6 +20,7 @@ import type {
 } from './types'
 import {
   ensureCustomerNext,
+  extractBearerToken,
   gateNext,
   isErrorResult,
   mapRouteError,
@@ -29,8 +30,8 @@ import {
   resolveCheckLimitsParams,
   resolveCustomerRef,
 } from './native-decisions'
-import { runGeneratedGateLoop } from './drivers.generated'
-import { CUSTOMER_DEDUP_MAX_CACHE_SIZE } from './defaults'
+import { runGeneratedEnsureCustomerLoop, runGeneratedGateLoop } from './drivers.generated'
+import { CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS } from './defaults'
 import { trackUsageWithRetry } from './track-usage-retry'
 import { createRequestDeduplicator } from './utils'
 
@@ -145,6 +146,21 @@ const sharedCheckLimitsDeduplicator = createRequestDeduplicator<LimitResponseWit
 })
 
 const sharedCheckLimitsClaims = new Map<string, number>()
+
+function storeCustomerCache(
+  cache: Map<string, { backendRef: string; timestampMs: number }>,
+  key: string,
+  entry: { backendRef: string; timestampMs: number },
+): void {
+  cache.set(key, entry)
+  const overflow = cache.size - CUSTOMER_DEDUP_MAX_CACHE_SIZE
+  if (overflow <= 0) return
+  const oldest = [...cache.entries()].sort((a, b) => a[1].timestampMs - b[1].timestampMs)
+  for (let index = 0; index < overflow; index += 1) {
+    const drop = oldest[index]?.[0]
+    if (drop !== undefined) cache.delete(drop)
+  }
+}
 
 interface LimitsCacheEntry {
   remaining: number
@@ -316,7 +332,7 @@ export class SolvaPayPaywall {
 
     const inputCustomerRef = getCustomerRef
       ? getCustomerRef(args)
-      : args.auth?.customer_ref || 'anonymous'
+      : authCustomerRef(args.auth?.customer_ref)
 
     const startEvent: Record<string, unknown> = {
       kind: 'start',
@@ -534,12 +550,12 @@ export class SolvaPayPaywall {
     externalRef?: string,
     options?: { email?: string; name?: string },
   ): Promise<string> {
-    let state: unknown = null
-    let event: Record<string, unknown> = {
+    const event: Record<string, unknown> = {
       kind: 'start',
       customerRef,
       canCreateCustomer: typeof this.apiClient.createCustomer === 'function',
       canUpdateCustomer: typeof this.apiClient.updateCustomer === 'function',
+      dedupTTLMs: CUSTOMER_DEDUP_TTL_MS,
       nowMs: Date.now(),
     }
     if (externalRef) {
@@ -552,118 +568,93 @@ export class SolvaPayPaywall {
       event.name = options.name
     }
 
-    for (;;) {
-      const out = ensureCustomerNext(state, event)
-      if (isErrorResult(out)) {
-        const details = (out as { details?: unknown }).details
-        throw new SolvaPayError(typeof details === 'string' && details ? details : out.error)
-      }
-      if (typeof out !== 'object' || out === null || !('action' in out) || !('state' in out)) {
-        throw new SolvaPayError('ensure_customer_next returned unexpected value')
-      }
-      const result = out as {
-        state: unknown
-        action: {
-          kind: string
-          key?: string
-          byExternalRef?: string
-          byEmail?: string
-          params?: Record<string, unknown>
-          customerRef?: string
-          patch?: Record<string, unknown>
-          backendRef?: string
-          cache?: { key: string; backendRef: string; timestampMs: number }
+    return runGeneratedEnsureCustomerLoop(
+      (driverState, driverEvent) => {
+        const out = ensureCustomerNext(driverState, driverEvent)
+        if (isErrorResult(out)) {
+          const details = (out as { details?: unknown }).details
+          throw new SolvaPayError(typeof details === 'string' && details ? details : out.error)
         }
-      }
-      state = result.state
-      const action = result.action
-      if (action.kind === 'readCustomerCache') {
-        const cached = this.customerCache.get(String(action.key))
-        const nowMs = Date.now()
-        event = cached
-          ? {
-              kind: 'customerCacheEntry',
-              found: true,
-              backendRef: cached.backendRef,
-              timestampMs: cached.timestampMs,
-              nowMs,
+        if (typeof out !== 'object' || out === null || !('action' in out) || !('state' in out)) {
+          throw new SolvaPayError('ensure_customer_next returned unexpected value')
+        }
+        return out as { state: unknown; action: { kind: string; [key: string]: unknown } }
+      },
+      {
+        readCustomerCache: async key => {
+          const cached = this.customerCache.get(key)
+          if (!cached) {
+            return { found: false }
+          }
+          return {
+            found: true,
+            backendRef: cached.backendRef,
+            timestampMs: cached.timestampMs,
+          }
+        },
+        getCustomer: async args => {
+          const params = args.byExternalRef
+            ? { externalRef: args.byExternalRef }
+            : { email: args.byEmail ?? '' }
+          try {
+            const customer = await this.apiClient.getCustomer(params)
+            if (customer?.customerRef) {
+              return { found: true, customer }
             }
-          : { kind: 'customerCacheEntry', found: false, nowMs }
-        continue
-      }
-      if (action.kind === 'getCustomer') {
-        const params = action.byExternalRef
-          ? { externalRef: String(action.byExternalRef) }
-          : { email: String(action.byEmail) }
-        try {
-          const customer = await this.apiClient.getCustomer(params)
-          const found = Boolean(customer?.customerRef)
-          event = found
-            ? { kind: 'customerLookupResult', found: true, customer, nowMs: Date.now() }
-            : { kind: 'customerLookupResult', found: false, nowMs: Date.now() }
-        } catch (error) {
-          event = {
-            kind: 'customerLookupResult',
-            found: false,
-            errorMessage: error instanceof Error ? error.message : String(error),
-            nowMs: Date.now(),
+            return { found: false }
+          } catch (error) {
+            return {
+              found: false,
+              errorMessage: error instanceof Error ? error.message : String(error),
+            }
           }
-        }
-        continue
-      }
-      if (action.kind === 'createCustomer') {
-        if (!this.apiClient.createCustomer) {
-          throw new SolvaPayError(
-            `ensure_customer_next createCustomer is not available for ${customerRef}`,
-          )
-        }
-        try {
-          const customer = await this.apiClient.createCustomer(
-            // Driver-built CreateCustomerParams matches the public request body.
-            action.params as Parameters<NonNullable<SolvaPayClient['createCustomer']>>[0],
-          )
-          event = { kind: 'customerCreateResult', ok: true, customer, nowMs: Date.now() }
-        } catch (error) {
-          event = {
-            kind: 'customerCreateResult',
-            ok: false,
-            errorMessage: error instanceof Error ? error.message : String(error),
-            nowMs: Date.now(),
+        },
+        createCustomer: async params => {
+          if (!this.apiClient.createCustomer) {
+            throw new SolvaPayError(
+              `ensure_customer_next createCustomer is not available for ${customerRef}`,
+            )
           }
-        }
-        continue
-      }
-      if (action.kind === 'updateCustomer') {
-        try {
-          if (!this.apiClient.updateCustomer) {
-            throw new Error('updateCustomer is not available')
+          try {
+            const customer = await this.apiClient.createCustomer(
+              params as Parameters<NonNullable<SolvaPayClient['createCustomer']>>[0],
+            )
+            return { ok: true, customer }
+          } catch (error) {
+            return {
+              ok: false,
+              errorMessage: error instanceof Error ? error.message : String(error),
+            }
           }
-          await this.apiClient.updateCustomer(String(action.customerRef), action.patch ?? {})
-          event = { kind: 'customerUpdateResult', ok: true, nowMs: Date.now() }
-        } catch (error) {
-          event = {
-            kind: 'customerUpdateResult',
-            ok: false,
-            errorMessage: error instanceof Error ? error.message : String(error),
-            nowMs: Date.now(),
+        },
+        updateCustomer: async args => {
+          try {
+            if (!this.apiClient.updateCustomer) {
+              throw new Error('updateCustomer is not available')
+            }
+            const patch =
+              typeof args.patch === 'object' && args.patch !== null
+                ? (args.patch as Record<string, unknown>)
+                : {}
+            await this.apiClient.updateCustomer(args.customerRef, patch)
+            return { ok: true }
+          } catch (error) {
+            return {
+              ok: false,
+              errorMessage: error instanceof Error ? error.message : String(error),
+            }
           }
-        }
-        continue
-      }
-      if (action.kind === 'resolved') {
-        if (action.cache) {
-          this.customerCache.set(action.cache.key, {
-            backendRef: action.cache.backendRef,
-            timestampMs: action.cache.timestampMs,
+        },
+        writeCustomerCache: entry => {
+          storeCustomerCache(this.customerCache, entry.key, {
+            backendRef: entry.backendRef,
+            timestampMs: entry.timestampMs,
           })
-        }
-        if (typeof action.backendRef !== 'string' || action.backendRef.length === 0) {
-          throw new SolvaPayError('ensure_customer_next resolved without backendRef')
-        }
-        return action.backendRef
-      }
-      throw new SolvaPayError(`ensure_customer_next unknown action: ${action.kind}`)
-    }
+        },
+        nowMs: () => Date.now(),
+      },
+      event,
+    )
   }
 
   private async emitHandlerUsage(
@@ -774,7 +765,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (options?.getCustomerRef as (req: any) => string) ||
             ((req: Record<string, unknown>) =>
-              (req.auth as Record<string, string>)?.customer_ref || 'anonymous')
+              authCustomerRef((req.auth as { customer_ref?: string } | undefined)?.customer_ref))
 
           const args = extractArgs(req)
           const protectedMethod = await paywall.protect(
@@ -801,7 +792,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     return async (req: any, reply: any) => {
       try {
         const args = defaultExtractArgs(req)
-        const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+        const getCustomerRef = (args: PaywallArgs) => authCustomerRef(args.auth?.customer_ref)
 
         const protectedHandler = await paywall.protect(handler, metadata, getCustomerRef)
         const result = await protectedHandler(args)
@@ -863,7 +854,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
         throw new Error('Method must be decorated with @Paywall')
       }
 
-      const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+      const getCustomerRef = (args: PaywallArgs) => authCustomerRef(args.auth?.customer_ref)
       return wrapWithPaywallCatch(
         paywall.protect(
           method as unknown as (args: PaywallArgs) => Promise<unknown>,
@@ -874,7 +865,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     }
 
     const metadata = methodOrMetadata
-    const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+    const getCustomerRef = (args: PaywallArgs) => authCustomerRef(args.auth?.customer_ref)
     return wrapWithPaywallCatch(paywall.protect(handler!, metadata, getCustomerRef))
   }
 
@@ -903,10 +894,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
 
         args.auth = { customer_ref: customerRef }
 
-        const protectedHandler = await paywall.protect(
-          handler,
-          metadata,
-          (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous',
+        const protectedHandler = await paywall.protect(handler, metadata, (args: PaywallArgs) =>
+          authCustomerRef(args.auth?.customer_ref),
         )
         const result = await protectedHandler(args)
 
@@ -996,11 +985,10 @@ async function defaultExtractNextArgs(
 
 async function defaultGetCustomerRef(request: Request): Promise<string> {
   let verifiedJwtSub: string | undefined
-  const authHeader = request.headers.get('authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  const token = extractBearerToken(request.headers.get('authorization'))
+  if (token) {
     try {
       const { jwtVerify } = await import('jose')
-      const token = authHeader.substring(7)
       const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
       const { payload } = await jwtVerify(token, jwtSecret, {
         issuer: process.env.OAUTH_ISSUER!,
@@ -1026,12 +1014,28 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
 }
 
 export function ensureCustomerRef(customerRef: string): string {
-  // Ensure customer ref is properly formatted
-  // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
-  if (!customerRef || customerRef === 'anonymous') {
-    return 'anonymous'
-  }
-  return customerRef
+  // Empty input resolves to the core anonymous ref. A real ref is returned as-is.
+  return resolveCustomerRef(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    customerRef || undefined,
+  )
+}
+
+function authCustomerRef(authCustomerRefValue: string | undefined): string {
+  return resolveCustomerRef(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    authCustomerRefValue,
+    undefined,
+  )
 }
 
 function classifyPaywallHttpError(error: unknown): {

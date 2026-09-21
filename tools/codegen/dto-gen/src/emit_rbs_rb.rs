@@ -19,7 +19,7 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
     output.push_str(
         "module SolvaPay\n\
          \x20 VERSION: String\n\
-         \x20 CUSTOMER_CACHE_TTL_MS: Integer\n\
+         \x20 CUSTOMER_DEDUP_TTL_MS: Integer\n\
          \x20 CUSTOMER_DEDUP_MAX_CACHE_SIZE: Integer\n\
          \x20 ANONYMOUS_CUSTOMER_REF: String\n\
          \x20 REQUEST_ID_FORMAT: String\n\
@@ -112,6 +112,9 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20 end\n\n\
          \x20 module GeneratedPayableLoop\n\
          \x20   def self.run: (payable_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> untyped\n\
+         \x20 end\n\n\
+         \x20 module GeneratedEnsureCustomerLoop\n\
+         \x20   def self.run: (ensure_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> String\n\
          \x20 end\n\n\
          \x20 class InflightTable\n\
          \x20   def initialize: (Thread::Mutex mutex) -> void\n\
@@ -422,6 +425,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         let output = emit_rbs_rb(&ir).unwrap();
         assert!(output.contains("class Client"));
@@ -452,6 +457,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         ir.entry_points.insert(
             "deriveTaxIdType".into(),
@@ -566,6 +573,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         ir.entry_points.insert(
             "mcpHideToolsByAudience".into(),

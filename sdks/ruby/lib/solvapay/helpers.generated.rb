@@ -205,6 +205,8 @@ module SolvaPay
   end
 
   # Return whether two normalized free limits share the same cap.
+  # @param left First normalized free limit.
+  # @param right Second normalized free limit.
   # @return True when meter, cap, scope, and window days all match.
   def self.free_limits_agree(left:, right:)
     args = {} #: Hash[String, untyped]

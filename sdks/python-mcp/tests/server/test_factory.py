@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import pytest
 from mcp.client import Client
-from solvapay.facade import create_solvapay
-from tests.server.recording_client import RecordingClient
-
 from mcp.server.apps import APP_MIME_TYPE, EXTENSION_ID
 from mcp.server.lowlevel.server import NotificationOptions
+from mcp.shared.exceptions import MCPError
+from solvapay.facade import create_solvapay
+from tests.server.recording_client import RecordingClient
 
 from solvapay_mcp.server.csp import SOLVAPAY_DEFAULT_CSP, merge_csp
 from solvapay_mcp.server.factory import create_solvapay_mcp_server
@@ -64,7 +65,6 @@ async def test_tools_list_matches_solvapay_tools() -> None:
     assert isinstance(ui, dict)
     assert ui.get("resourceUri") == "ui://solvapay/mcp-app.html"
     assert meta.get(RESOURCE_URI_META_KEY) == "ui://solvapay/mcp-app.html"
-    assert meta.get("openai/outputTemplate") == "ui://solvapay/mcp-app.html"
     payment = next(tool for tool in listed.tools if tool.name == names["createPayment"])
     pay_meta = payment.meta or {}
     pay_ui = pay_meta.get("ui") if isinstance(pay_meta, dict) else None
@@ -108,17 +108,12 @@ async def test_widget_resource_read_returns_mcp_app_html() -> None:
     assert "solvapay://bootstrap.json" in text
 
 
-async def test_account_result_stamps_widget_resource_uri() -> None:
+async def test_unauthenticated_account_call_is_an_auth_challenge() -> None:
     names = native_call("MCP_TOOL_NAMES", {})
     assert isinstance(names, dict)
     async with Client(_server()) as client:
-        result = await client.call_tool(str(names["account"]), {})
-    meta = result.meta or {}
-    ui = meta.get("ui") if isinstance(meta, dict) else None
-    assert isinstance(ui, dict)
-    assert ui.get("resourceUri") == "ui://solvapay/mcp-app.html"
-    assert meta.get(RESOURCE_URI_META_KEY) == "ui://solvapay/mcp-app.html"
-    assert meta.get("openai/outputTemplate") == "ui://solvapay/mcp-app.html"
+        with pytest.raises(MCPError, match="Unauthorized"):
+            await client.call_tool(str(names["account"]), {})
 
 
 def test_server_advertises_mcp_apps_extension() -> None:

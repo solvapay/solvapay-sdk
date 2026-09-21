@@ -768,6 +768,11 @@ export function projectTopupProcessOutcome(args_json: string): string;
 export function projectUsageSnapshot(args_json: string): string;
 
 /**
+ * Binding for `purchaseUsageIsMetered`.
+ */
+export function purchaseUsageIsMetered(args_json: string): string;
+
+/**
  * Binding for `requireProductRef`. Throws when neither source is set.
  */
 export function requireProductRef(args_json: string): string;
@@ -983,12 +988,13 @@ export function verifyWebhook(body: string, signature: string, secret: string, n
 /**
  * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
  *
- * Available on both `edge` and `browser` profiles.
+ * `version` matches [`wasm_version`]: `SOLVAPAY_RELEASE_VERSION` when set,
+ * otherwise `CARGO_PKG_VERSION`. Available on both `edge` and `browser` profiles.
  */
 export function wasmBuildInfo(): string;
 
 /**
- * Returns the crate version string (`CARGO_PKG_VERSION`).
+ * Returns the same version string as [`wasm_build_info`]'s `version` field.
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
  * edge and browser profiles.
@@ -1113,6 +1119,7 @@ export interface InitOutput {
     readonly projectPaymentIntentResult: (a: number, b: number) => [number, number];
     readonly projectTopupProcessOutcome: (a: number, b: number) => [number, number];
     readonly projectUsageSnapshot: (a: number, b: number) => [number, number];
+    readonly purchaseUsageIsMetered: (a: number, b: number) => [number, number];
     readonly requireProductRef: (a: number, b: number) => [number, number];
     readonly resolveAccountState: (a: number, b: number) => [number, number];
     readonly resolveAuthenticatedUser: (a: number, b: number) => [number, number];

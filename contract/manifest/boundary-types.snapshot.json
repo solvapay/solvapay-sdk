@@ -13335,6 +13335,28 @@
         }
       }
     },
+    "solvapay_core::usage::purchase_usage_is_metered": {
+      "name": "purchase_usage_is_metered",
+      "module": "usage",
+      "implTy": null,
+      "rustdoc": "Whether a purchase should pay for a `checkLimits` round trip.\n\nA snapshot counts as metered when it sets `isMetered`, or when\n[`crate::pricing_options::counts_usage`] sees a per-unit charge, a limit,\nor a tier. Hosts must not re-derive this.\n\n# Arguments\n\n* `purchase` - Purchase object, or `None`/`Null` when none is active.\n\n# Returns\n\n`true` when the plan snapshot is metered.",
+      "params": [
+        {
+          "rustName": "purchase",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
     "solvapay_core::usage::should_retry_usage_error": {
       "name": "should_retry_usage_error",
       "module": "usage",

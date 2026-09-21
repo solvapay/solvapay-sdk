@@ -1,31 +1,48 @@
 import type { ScaffoldLanguage } from './ids'
+import { RELEASE_TRAIN_VERSION } from './release-train-version.generated'
 
 export type LanguageDep = {
   name: string
   fallback: string
 }
 
+/**
+ * Release-train pin for offline scaffold fallbacks.
+ *
+ * The literal lives in `release-train-version.generated.ts`, stamped by
+ * `readReleaseTrainVersion` via `tools/repo/sync-release-train.ts`. The
+ * published `@solvapay/init` bundle does not ship the monorepo sentinel, so
+ * this constant is the copy that travels with the CLI. An empty stamp throws
+ * here; a stamp that disagrees with the sentinel fails `pnpm checks:release-train`.
+ */
+function scaffoldReleaseTrainVersion(): string {
+  if (RELEASE_TRAIN_VERSION.length === 0) {
+    throw new Error(
+      'release-train: init scaffold fallbacks are missing a sentinel version. Run `pnpm exec tsx tools/repo/sync-release-train.ts`.',
+    )
+  }
+  return RELEASE_TRAIN_VERSION
+}
+
+const releaseTrainVersion = scaffoldReleaseTrainVersion()
+
+function dep(name: string, version = releaseTrainVersion): LanguageDep {
+  return { name, fallback: version }
+}
+
 export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDep[]> = {
   ts: [
-    { name: '@solvapay/mcp', fallback: '2.6.0' },
-    { name: '@solvapay/server', fallback: '2.6.0' },
-    { name: '@solvapay/react', fallback: '2.6.0' },
-    { name: '@solvapay/core', fallback: '2.6.0' },
-    { name: '@solvapay/server-wasm', fallback: '2.6.0' },
+    dep('@solvapay/mcp'),
+    dep('@solvapay/server'),
+    dep('@solvapay/react'),
+    dep('@solvapay/core'),
+    dep('@solvapay/server-wasm'),
   ],
-  python: [
-    { name: 'solvapay', fallback: '2.6.0' },
-    { name: 'solvapay-mcp', fallback: '2.6.0' },
-  ],
-  ruby: [
-    { name: 'solvapay', fallback: '2.6.0' },
-    { name: 'solvapay-mcp', fallback: '2.6.0' },
-  ],
-  go: [{ name: 'github.com/solvapay/solvapay-sdk/sdks/go', fallback: 'v2.6.0' }],
-  rust: [
-    { name: 'solvapay', fallback: '2.6.0' },
-    { name: 'solvapay-mcp', fallback: '2.6.0' },
-  ],
+  python: [dep('solvapay'), dep('solvapay-mcp')],
+  ruby: [dep('solvapay'), dep('solvapay-mcp')],
+  // Go module versions require a leading `v`. Same sentinel, not a second pin.
+  go: [dep('github.com/solvapay/solvapay-sdk/sdks/go', `v${releaseTrainVersion}`)],
+  rust: [dep('solvapay'), dep('solvapay-mcp')],
 }
 
 export type ResolveLatestVersionsOptions = {
@@ -33,7 +50,7 @@ export type ResolveLatestVersionsOptions = {
   onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
   /**
    * When true, a definitive "not published" registry response (HTTP 404)
-   * throws instead of silently substituting the hardcoded fallback. Only the
+   * throws instead of silently substituting the release-train pin. Only the
    * published (non-`--dev`) scaffold lane sets this: pinning a fallback for a
    * package that exists nowhere produces a manifest that can't install, logged
    * as `(offline fallback)`. A network error or timeout is still treated as
@@ -102,8 +119,9 @@ const parseVersion = (language: ScaffoldLanguage, body: unknown): string | undef
 
 /**
  * Resolve current published versions for the language's SolvaPay packages.
- * Registry failures fall back to the hardcoded pin so offline scaffolds still
- * produce an installable manifest.
+ * Registry failures fall back to the release-train pin so offline scaffolds
+ * still produce an installable manifest. The pin is stamped from
+ * `@solvapay/release-train`; a missing stamp throws at import.
  */
 export async function resolveLatestVersions(
   language: ScaffoldLanguage,

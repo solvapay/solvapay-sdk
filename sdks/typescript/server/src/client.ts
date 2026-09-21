@@ -156,7 +156,9 @@ export type ServerClientOptions = {
  * @since 1.0.0
  */
 export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient {
-  if (!opts.apiKey) throw new SolvaPayError('Missing apiKey')
+  if (!opts.apiKey) {
+    throw new SolvaPayError('Missing apiKey', { code: 'missing_api_key' })
+  }
 
   const nativeConfig = { apiKey: opts.apiKey, apiBaseUrl: opts.apiBaseUrl }
 

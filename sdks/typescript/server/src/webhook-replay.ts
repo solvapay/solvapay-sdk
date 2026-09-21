@@ -24,6 +24,12 @@ export type VerifyWebhookOptions = VerifyWebhookParams & {
 
 export type VerifyWebhookEdgeOptions = VerifyWebhookParams & {
   seenEventId?: SeenEventId
+  /**
+   * Host clock as unix seconds. Same override as the Node native
+   * `verifyWebhook` `nowUnixSecs` argument. Omit to use the wall clock
+   * (`Math.floor(Date.now() / 1000)`).
+   */
+  nowUnixSecs?: number
 }
 
 const eventIdFromVerified = (event: WebhookEvent): string => {

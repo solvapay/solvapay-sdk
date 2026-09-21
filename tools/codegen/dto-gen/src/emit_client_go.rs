@@ -286,6 +286,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         ir.entry_points.insert(
             "getMerchant".into(),

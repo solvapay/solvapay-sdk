@@ -6,7 +6,9 @@ use solvapay::{Client, SdkError};
 
 use crate::call_sync;
 use crate::http_util::json_response;
-use crate::register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler};
+use crate::register::{
+    invoke_payable, CustomerRefSources, GetCustomerRef, PayableError, PayableHandler,
+};
 use crate::McpHttpResponse;
 
 /// Registered payable tool used to resume an `invokeHandler` wait.
@@ -53,9 +55,14 @@ async fn resume_payable(
         Some(Value::Object(map)) => map.clone(),
         _ => Map::new(),
     };
+    let mut sources = CustomerRefSources::default();
     if let Some(customer_ref) = envelope.get("customerRef").and_then(Value::as_str) {
-        if !args.contains_key("customer_ref") {
-            args.insert("customer_ref".to_owned(), json!(customer_ref));
+        let trimmed = customer_ref.trim();
+        if !trimmed.is_empty() {
+            sources.mcp_extra_customer_ref = Some(trimmed.to_owned());
+            if !args.contains_key("customer_ref") {
+                args.insert("customer_ref".to_owned(), json!(trimmed));
+            }
         }
     }
     let result = invoke_payable(
@@ -65,6 +72,7 @@ async fn resume_payable(
         spec.handler.clone(),
         spec.get_customer_ref.clone(),
         args,
+        sources,
     )
     .await
     .map_err(payable_to_sdk)?;

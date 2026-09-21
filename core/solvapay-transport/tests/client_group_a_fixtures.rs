@@ -44,8 +44,10 @@ async fn group_a_inventory_is_thirty_seven_fixtures() {
     );
     let wire_count = fixtures.iter().filter(|(_, f)| f.wire.is_some()).count();
     assert_eq!(
-        wire_count, 36,
-        "expected 36 wire fixtures, found {wire_count}"
+        wire_count,
+        GROUP_A_FIXTURE_COUNT - 1,
+        "expected {} wire fixtures, found {wire_count}",
+        GROUP_A_FIXTURE_COUNT - 1
     );
 }
 

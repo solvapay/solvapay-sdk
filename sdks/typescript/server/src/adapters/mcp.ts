@@ -4,6 +4,7 @@
  * Handles MCP tool format with content wrapping
  */
 
+import { SolvaPayError } from '@solvapay/core'
 import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type {
@@ -55,8 +56,8 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
 
     // `extra.http.authInfo` is the official SDK v2 location; the flat
     // `extra.authInfo` is v1 and is still emitted by some third-party
-    // adapters. Reading only the flat one made every v2 call fall
-    // through to `'anonymous'`.
+    // adapters. A missing ref fails closed — usage is never attributed
+    // to `anonymous`.
     const customerRefFromExtra = [
       extra?.http?.authInfo?.extra?.customer_ref,
       extra?.authInfo?.extra?.customer_ref,
@@ -73,8 +74,14 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       customerRefFromExtra ||
       customerRefFromArgs ||
       directCustomerRef ||
-      'anonymous'
+      ''
     ).trim()
+    if (!customerRef || customerRef === 'anonymous') {
+      throw new SolvaPayError('customer_ref missing from MCP auth context', {
+        status: 401,
+        code: 'unauthorized',
+      })
+    }
     return AdapterUtils.ensureCustomerRef(customerRef)
   }
 

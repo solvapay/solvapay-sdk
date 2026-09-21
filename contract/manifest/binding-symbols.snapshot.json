@@ -7260,6 +7260,54 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "purchaseUsageIsMetered": {
+      "core": "solvapay_core::usage::purchase_usage_is_metered",
+      "names": {
+        "ts": "purchaseUsageIsMetered",
+        "py": "purchase_usage_is_metered",
+        "rb": "purchase_usage_is_metered",
+        "go": "PurchaseUsageIsMetered",
+        "rust": "purchase_usage_is_metered",
+        "c": "purchaseUsageIsMetered"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "purchase",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 27,
+      "section": "usage",
+      "doc": "Binding for `purchaseUsageIsMetered`.",
+      "docWasm": null,
+      "rustFnName": "purchase_usage_is_metered_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "purchase.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "purchase_usage_is_metered",
+      "clientCallArgs": []
+    },
     "reactivatePurchase": {
       "core": "solvapay_transport::SolvaPayClient::reactivate_purchase",
       "names": {

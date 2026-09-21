@@ -28,64 +28,16 @@ use solvapay_dto::{
     UpdatePlanRequest, UpdateProductRequest,
 };
 
-/// Group A `input.fn` names covered by step 22.
-pub const GROUP_A_FNS: &[&str] = &[
-    "createCustomer",
-    "updateCustomer",
-    "getCustomer",
-    "assignCredits",
-    "getCustomerBalance",
-    "getCreditActivity",
-    "listPurchases",
-    "getUserInfo",
-    "createCheckoutSession",
-    "createCustomerSession",
-    "getMerchant",
-    "getPlatformConfig",
-];
+pub use solvapay_dto::fixture_groups::{GROUP_A_FNS, GROUP_B_FNS, GROUP_C_FNS};
 
-/// Expected inventory: 36 wire fixtures + `get-customer-missing-params`.
-pub const GROUP_A_FIXTURE_COUNT: usize = 37;
-
-/// Group B `input.fn` names covered by step 23.
-pub const GROUP_B_FNS: &[&str] = &[
-    "createPaymentIntent",
-    "createTopupPaymentIntent",
-    "processPaymentIntent",
-    "attachBusinessDetails",
-    "activatePlan",
-];
+/// Expected inventory: 32 wire fixtures + `get-customer-missing-params`.
+pub const GROUP_A_FIXTURE_COUNT: usize = 33;
 
 /// Expected inventory: 21 wire fixtures (all Group B fixtures have wire).
 pub const GROUP_B_FIXTURE_COUNT: usize = 21;
 
-/// Group C `input.fn` names covered by step 24.
-pub const GROUP_C_FNS: &[&str] = &[
-    "checkLimits",
-    "trackUsage",
-    "trackUsageBulk",
-    "getProduct",
-    "listProducts",
-    "createProduct",
-    "updateProduct",
-    "deleteProduct",
-    "cloneProduct",
-    "bootstrapMcpProduct",
-    "configureMcpPlans",
-    "listPlans",
-    "createPlan",
-    "updatePlan",
-    "deletePlan",
-    "cancelPurchase",
-    "reactivatePurchase",
-    "getPaymentMethod",
-    "getAutoRecharge",
-    "saveAutoRecharge",
-    "disableAutoRecharge",
-];
-
-/// Expected inventory: 67 wire fixtures (all Group C fixtures have wire).
-pub const GROUP_C_FIXTURE_COUNT: usize = 67;
+/// Expected inventory: 71 wire fixtures (all Group C fixtures have wire).
+pub const GROUP_C_FIXTURE_COUNT: usize = 71;
 
 pub fn is_group_a_fixture(fixture: &Fixture) -> bool {
     GROUP_A_FNS.contains(&fixture.input.fn_name.as_str())
@@ -131,14 +83,6 @@ pub async fn dispatch_group_a(client: &Client, fixture: &Fixture) -> Result<Valu
         "getCustomerBalance" => {
             let params: GetCustomerBalanceParams = parse_args(args)?;
             serialize_result(client.get_customer_balance(params).await?)
-        }
-        "getCreditActivity" => {
-            let params: GetCreditActivityParams = parse_args(args)?;
-            serialize_result(client.get_credit_activity(params).await?)
-        }
-        "listPurchases" => {
-            let params: ListPurchasesParams = parse_args(args)?;
-            serialize_result(client.list_purchases(params).await?)
         }
         "getUserInfo" => {
             let params: GetUserInfoParams = parse_args(args)?;
@@ -293,6 +237,14 @@ pub async fn dispatch_group_c(client: &Client, fixture: &Fixture) -> Result<Valu
         "disableAutoRecharge" => {
             let params: DisableAutoRechargeParams = parse_args(args)?;
             client.disable_auto_recharge(params).await
+        }
+        "listPurchases" => {
+            let params: ListPurchasesParams = parse_args(args)?;
+            serialize_result(client.list_purchases(params).await?)
+        }
+        "getCreditActivity" => {
+            let params: GetCreditActivityParams = parse_args(args)?;
+            serialize_result(client.get_credit_activity(params).await?)
         }
         other => Err(SdkError::transport(
             format!("unsupported Group C fixture fn: {other}"),

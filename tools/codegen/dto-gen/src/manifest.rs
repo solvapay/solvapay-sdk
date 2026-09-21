@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 /// Top-level SDK contract manifest.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Manifest {
     /// Client operations.
     #[serde(default)]
@@ -34,21 +35,20 @@ pub struct Manifest {
     /// Manifest-frozen runtime defaults used by every language facade.
     #[serde(default)]
     pub defaults: DefaultsDef,
-    /// Generated host driver loops.
+    /// Generated host driver loops, keyed by catalog name.
     #[serde(default, rename = "driverLoops")]
-    pub driver_loops: Option<DriverLoopsDef>,
-}
-
-/// Host driver loop catalog (`driverLoops:`).
-#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
-pub struct DriverLoopsDef {
-    /// Paywall `gate_next` loop.
-    #[serde(default)]
-    pub gate: Option<DriverLoopDef>,
+    pub driver_loops: BTreeMap<String, DriverLoopDef>,
+    /// Per-symbol public names that differ from the derived ident.
+    #[serde(default, rename = "nameOverrides")]
+    pub name_overrides: BTreeMap<String, BTreeMap<String, String>>,
+    /// Identifiers emitters must not use as generated names.
+    #[serde(default, rename = "reservedWords")]
+    pub reserved_words: BTreeMap<String, Vec<String>>,
 }
 
 /// One generated driver loop.
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+#[serde(deny_unknown_fields)]
 pub struct DriverLoopDef {
     /// I/O actions and the host events they produce.
     #[serde(default)]
@@ -63,6 +63,7 @@ pub struct DriverLoopDef {
 
 /// One I/O action → event pair.
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+#[serde(deny_unknown_fields)]
 pub struct DriverIoDef {
     /// `GateAction` kind.
     pub action: String,
@@ -102,6 +103,7 @@ pub struct BoundaryTypesTsAliasDef {
 
 /// Runtime defaults frozen by `sdk-contract.yaml`.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct DefaultsDef {
     /// Retry policy defaults.
     #[serde(default)]
@@ -133,6 +135,12 @@ pub struct DefaultsDef {
     /// Frozen `trackUsage.actionType`.
     #[serde(default = "default_usage_action_type", rename = "usageActionType")]
     pub usage_action_type: String,
+    /// Idempotency-key templates keyed by flow (`payment`, `topup`).
+    #[serde(default, rename = "idempotencyKeyFormats")]
+    pub idempotency_key_formats: BTreeMap<String, String>,
+    /// Go methods take `context.Context` as the first parameter.
+    #[serde(default, rename = "goContextFirstParam")]
+    pub go_context_first_param: bool,
 }
 
 impl Default for DefaultsDef {
@@ -146,12 +154,15 @@ impl Default for DefaultsDef {
             anonymous_customer_ref: default_anonymous_customer_ref(),
             request_id_format: default_request_id_format(),
             usage_action_type: default_usage_action_type(),
+            idempotency_key_formats: BTreeMap::new(),
+            go_context_first_param: false,
         }
     }
 }
 
 /// Retry defaults frozen by the manifest.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct RetryDefaultsDef {
     /// Retry attempts after the initial call.
     #[serde(default = "default_max_retries", rename = "maxRetries")]
@@ -159,6 +170,9 @@ pub struct RetryDefaultsDef {
     /// Initial delay in milliseconds.
     #[serde(default = "default_initial_delay", rename = "initialDelayMs")]
     pub initial_delay_ms: u64,
+    /// Backoff shape (`fixed` today). Core owns the delay math.
+    #[serde(default)]
+    pub backoff: Option<String>,
 }
 
 impl Default for RetryDefaultsDef {
@@ -166,6 +180,7 @@ impl Default for RetryDefaultsDef {
         Self {
             max_retries: default_max_retries(),
             initial_delay_ms: default_initial_delay(),
+            backoff: None,
         }
     }
 }
@@ -481,8 +496,24 @@ pub struct McpEntry {
     pub feature: Option<String>,
 }
 
+/// Idempotency policy for one operation.
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+#[serde(deny_unknown_fields)]
+pub struct IdempotencyDef {
+    /// `none`, `headerForwarded`, or `autoKey`.
+    #[serde(default)]
+    pub kind: String,
+    /// Header name when `kind` is `headerForwarded`.
+    #[serde(default)]
+    pub header: Option<String>,
+    /// Key template when `kind` is `autoKey`.
+    #[serde(default)]
+    pub format: Option<String>,
+}
+
 /// Per-operation manifest entry.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct OperationDef {
     /// HTTP route for this wire operation.
     #[serde(default)]
@@ -510,6 +541,15 @@ pub struct OperationDef {
     /// Shared doc model for this entry point.
     #[serde(default)]
     pub docs: DocsDef,
+    /// Idempotency policy. Parsed so a new key cannot vanish silently.
+    #[serde(default)]
+    pub idempotency: Option<IdempotencyDef>,
+    /// Overlay names this operation's request and response use.
+    #[serde(default)]
+    pub overlays: Vec<String>,
+    /// Request-shape normalization notes.
+    #[serde(default)]
+    pub normalization: Vec<String>,
 }
 
 /// HTTP method + path for a catalogued wire operation.

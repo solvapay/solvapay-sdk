@@ -106,7 +106,7 @@ pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
          \x20 end\n\n\
          \x20 def test_runtime_defaults_are_exercised_through_host_bridge\n\
          \x20   assert_equal EXPECTED_LIMITS_CACHE_TTL_MS, SolvaPay::DEFAULT_LIMITS_CACHE_TTL_MS\n\
-         \x20   assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_CACHE_TTL_MS\n\
+         \x20   assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_DEDUP_TTL_MS\n\
          \x20   assert_equal EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE\n\
          \x20   assert_equal EXPECTED_ANONYMOUS_CUSTOMER_REF, SolvaPay::ANONYMOUS_CUSTOMER_REF\n\
          \x20   assert_equal EXPECTED_REQUEST_ID_FORMAT, SolvaPay::REQUEST_ID_FORMAT\n\
@@ -168,6 +168,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         let output = emit_parity_suite_rb(&ir).unwrap();
         assert!(output.contains("DEFAULT_LIMITS_CACHE_TTL_MS"));

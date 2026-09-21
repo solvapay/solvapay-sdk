@@ -38,16 +38,21 @@ func (c *Client) emitHandlerUsage(ctx context.Context, state any, event map[stri
 
 func (c *Client) postUsage(ctx context.Context, request map[string]any) error {
 	opts := DefaultRetryOptions()
+	var classifyErr error
 	opts.ShouldRetry = func(err error, _ uint32) bool {
-		retry, classifyErr := shouldRetryUsageError(ctx, err)
-		if classifyErr != nil {
-			panic(classifyErr)
+		retry, err2 := shouldRetryUsageError(ctx, err)
+		if err2 != nil {
+			classifyErr = err2
+			return false
 		}
 		return retry
 	}
 	_, err := WithRetry(ctx, func() (any, error) {
 		return c.TrackUsage(ctx, request)
 	}, opts)
+	if classifyErr != nil {
+		return classifyErr
+	}
 	return err
 }
 
@@ -65,10 +70,10 @@ func shouldRetryUsageError(ctx context.Context, err error) (bool, error) {
 	return retry, nil
 }
 
-func mustRandomUnit() float64 {
+func randomUnit() (float64, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1<<53))
 	if err != nil {
-		panic(fmt.Errorf("solvapay: random unit: %w", err))
+		return 0, fmt.Errorf("solvapay: random unit: %w", err)
 	}
-	return float64(n.Int64()) / float64(1<<53)
+	return float64(n.Int64()) / float64(int64(1)<<53), nil
 }

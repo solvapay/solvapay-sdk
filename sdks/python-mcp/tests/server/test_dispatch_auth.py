@@ -77,7 +77,7 @@ async def test_manage_account_forwards_bearer_to_generated_mcp_dispatch() -> Non
     assert result.structured_content["view"] == "account"
 
 
-async def test_intent_tool_forces_ui_mode_unless_text() -> None:
+async def test_intent_tool_passes_mode_through() -> None:
     captured: list[dict[str, object]] = []
 
     def mcp_dispatch(payload: dict[str, object]) -> dict[str, object]:
@@ -100,7 +100,7 @@ async def test_intent_tool_forces_ui_mode_unless_text() -> None:
     assert isinstance(params, dict)
     arguments = params.get("arguments")
     assert isinstance(arguments, dict)
-    assert arguments.get("mode") == "ui"
+    assert arguments.get("mode") == "auto"
 
 
 async def test_tool_call_logs_the_tool_name(caplog: logging.LogCaptureFixture) -> None:

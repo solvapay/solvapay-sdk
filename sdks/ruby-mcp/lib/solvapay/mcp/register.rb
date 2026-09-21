@@ -28,19 +28,22 @@ module SolvaPay
         title: nil,
         description: nil,
         input_schema: nil,
+        output_schema: nil,
         get_customer_ref: nil,
         usage_type: "requests"
       )
-        empty_properties = {} #: Hash[Symbol, untyped]
-        schema = input_schema.nil? ? { type: "object", properties: empty_properties } : input_schema
+        schema = compile_input_schema(input_schema)
+        paid = append_paid_description(description)
+        unioned = union_output_schema(output_schema)
         mcp = self
-        server.define_tool(
+        define_kwargs = {
           name: name,
           title: title,
-          description: description,
+          description: paid,
           input_schema: schema,
-        ) do |server_context: nil, **args|
-          _ = server_context
+        }
+        define_kwargs[:output_schema] = unioned unless unioned.nil?
+        server.define_tool(**define_kwargs) do |server_context: nil, **args|
           mcp.send(
             :to_mcp_response,
             mcp.invoke_payable(
@@ -50,13 +53,28 @@ module SolvaPay
               get_customer_ref: get_customer_ref,
               usage_type: usage_type,
               args: args,
+              server_context: server_context,
             ),
           )
         end
       end
 
-      def invoke_payable(solvapay:, product:, handler:, get_customer_ref:, args:, usage_type: "requests")
-        customer_ref = resolve_customer_ref(args, get_customer_ref)
+      def invoke_payable(
+        solvapay:,
+        product:,
+        handler:,
+        get_customer_ref:,
+        args:,
+        usage_type: "requests",
+        server_context: nil,
+        mcp_extra_customer_ref: nil
+      )
+        customer_ref = resolve_customer_ref(
+          args,
+          get_customer_ref,
+          server_context,
+          mcp_extra_customer_ref,
+        )
         usage = usage_type.nil? || usage_type.to_s.empty? ? "requests" : usage_type.to_s
         host = PayableLoopHost.new(
           solvapay: solvapay,
@@ -94,18 +112,31 @@ module SolvaPay
         stringify_keys(result)
       end
 
+      FINISHED_SCHEMA_KEYS = %w[
+        type properties required oneOf anyOf allOf $schema items additionalProperties
+      ].freeze
+
       private
 
-      def resolve_customer_ref(args, get_customer_ref)
+      def resolve_customer_ref(args, get_customer_ref, server_context, mcp_extra_customer_ref)
         hook_ref = nil
         unless get_customer_ref.nil?
           resolved = get_customer_ref.call(args)
           hook_ref = resolved if resolved.is_a?(String) && !resolved.strip.empty?
         end
-        raw = args[:customer_ref]
+        headers = request_headers(server_context)
+        auth_args = hash_lookup(args, :auth)
         result = SolvaPay::Mcp::Core.call(
           "resolveCustomerRef",
-          { "hookRef" => hook_ref, "argsCustomerRef" => raw },
+          {
+            "hookRef" => hook_ref,
+            "verifiedJwtSub" => nil,
+            "headerUserId" => header_string(headers, "x-user-id"),
+            "headerCustomerRef" => header_string(headers, "x-customer-ref"),
+            "mcpExtraCustomerRef" => mcp_extra_customer_ref || mcp_extra_from_context(server_context),
+            "argsAuthCustomerRef" => hash_lookup(auth_args, :customer_ref),
+            "argsCustomerRef" => hash_lookup(args, :customer_ref),
+          },
         )
         return result.strip if result.is_a?(String) && !result.strip.empty? && result.strip != "anonymous"
 
@@ -113,6 +144,132 @@ module SolvaPay
           "customer_ref missing from MCP auth context",
           code: "unauthorized",
         )
+      end
+
+      def compile_input_schema(input_schema)
+        return input_schema if finished_json_schema?(input_schema)
+
+        compiled = SolvaPay::NativeDispatch.call_sync(
+          "compile_string_field_input_schema_json",
+          { "fields" => input_schema },
+        )
+        return compiled if compiled.is_a?(Hash)
+
+        raise SolvaPay::SolvaPayError.new(
+          "compile_string_field_input_schema_json did not return an object",
+          code: "invalid_schema",
+        )
+      end
+
+      def append_paid_description(description)
+        paid = SolvaPay.append_paid_tool_description(description: description)
+        return paid if paid.is_a?(String)
+
+        raise SolvaPay::SolvaPayError.new(
+          "append_paid_tool_description did not return a string",
+          code: "invalid_schema",
+        )
+      end
+
+      def union_output_schema(schema)
+        return nil if schema.nil?
+
+        union = {
+          "type" => "object",
+          "oneOf" => [schema, SolvaPay.paywall_structured_content_schema],
+        }
+        stamped = SolvaPay::NativeDispatch.call_sync(
+          "ensure_output_schema_object_type",
+          { "schema" => union },
+        )
+        return stamped if stamped.is_a?(Hash)
+
+        raise SolvaPay::SolvaPayError.new(
+          "ensure_output_schema_object_type did not return an object",
+          code: "invalid_schema",
+        )
+      end
+
+      def finished_json_schema?(schema)
+        return false unless schema.is_a?(Hash)
+
+        FINISHED_SCHEMA_KEYS.any? { |key| schema.key?(key) || schema.key?(key.to_sym) }
+      end
+
+      def hash_lookup(value, key)
+        return nil unless value.is_a?(Hash)
+
+        found = value[key]
+        found = value[key.to_s] if found.nil?
+        found = value[key.to_sym] if found.nil?
+        found.is_a?(String) ? found : nil
+      end
+
+      def context_lookup(context, *names)
+        return nil if context.nil?
+
+        names.each do |name|
+          if context.is_a?(Hash)
+            found = context[name]
+            found = context[name.to_s] if found.nil?
+            found = context[name.to_sym] if found.nil?
+            return found unless found.nil?
+          end
+          if context.respond_to?(name)
+            found = context.public_send(name)
+            return found unless found.nil?
+          end
+          next unless context.respond_to?(:[])
+
+          found = context[name]
+          found = context[name.to_s] if found.nil?
+          found = context[name.to_sym] if found.nil?
+          return found unless found.nil?
+        end
+        nil
+      end
+
+      def request_headers(context)
+        headers = context_lookup(context, :headers)
+        return headers unless headers.nil?
+
+        request = context_lookup(context, :request)
+        headers = context_lookup(request, :headers)
+        return headers unless headers.nil?
+
+        context_lookup(context, :env) || context_lookup(request, :env)
+      end
+
+      def header_string(headers, name)
+        return nil if headers.nil?
+
+        rack_key = "HTTP_#{name.upcase.tr('-', '_')}"
+        [name, name.downcase, rack_key].each do |key|
+          value = if headers.is_a?(Hash)
+                    headers[key] || headers[key.to_sym]
+                  elsif headers.respond_to?(:[])
+                    headers[key]
+                  end
+          value = value.first if value.is_a?(Array)
+          return value if value.is_a?(String) && !value.strip.empty?
+        end
+        return nil unless headers.respond_to?(:get)
+
+        value = headers.get(name)
+        value.is_a?(String) && !value.strip.empty? ? value : nil
+      end
+
+      def mcp_extra_from_context(context)
+        http = context_lookup(context, :http)
+        from_http = customer_ref_from_auth(context_lookup(http, :auth_info, :authInfo))
+        return from_http unless from_http.nil?
+
+        customer_ref_from_auth(context_lookup(context, :auth_info, :authInfo))
+      end
+
+      def customer_ref_from_auth(auth_info)
+        ref = context_lookup(context_lookup(auth_info, :extra), :customer_ref)
+        ref.is_a?(String) && !ref.strip.empty? ? ref.strip : nil
       end
 
       def format_gate(message, gate)
@@ -166,7 +323,7 @@ module SolvaPay
         when SolvaPay::PayablePaywallResult
           gate = SolvaPay::Mcp.send(:stringify_keys, gate_result.content)
           message = gate["message"]
-          message = "Payment required" unless message.is_a?(String) && !message.empty?
+          message = SolvaPay::PAYMENT_REQUIRED unless message.is_a?(String) && !message.empty?
           return { kind: :return, result: format_gate(message, gate) } unless @format_gate_override.nil?
 
           { kind: :paywall, gate: gate, message: message }

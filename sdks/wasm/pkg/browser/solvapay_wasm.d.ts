@@ -77,6 +77,16 @@ export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
 export function TOPUP_BALANCE_POLL_DELAYS_MS(args_json: string): string;
 
 /**
+ * Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs.
+ */
+export function assertValidProductRef(args_json: string): string;
+
+/**
+ * Binding for `attachBusinessDetailsValidationError`.
+ */
+export function attachBusinessDetailsValidationError(args_json: string): string;
+
+/**
  * Binding for `billingCycle`.
  */
 export function billingCycle(args_json: string): string;
@@ -85,6 +95,26 @@ export function billingCycle(args_json: string): string;
  * Binding for `charges`.
  */
 export function charges(args_json: string): string;
+
+/**
+ * Binding for `classifyCancelError`.
+ */
+export function classifyCancelError(args_json: string): string;
+
+/**
+ * Binding for `classifyCreateError`.
+ */
+export function classifyCreateError(args_json: string): string;
+
+/**
+ * Binding for `classifyLookupError`.
+ */
+export function classifyLookupError(args_json: string): string;
+
+/**
+ * Binding for `classifyReactivateError`.
+ */
+export function classifyReactivateError(args_json: string): string;
 
 /**
  * Binding for `countsUsage`.
@@ -135,6 +165,11 @@ export function formatSubtotalLabel(args_json: string): string;
  * Binding for `formatVatSummaryLabel`.
  */
 export function formatVatSummaryLabel(args_json: string): string;
+
+/**
+ * Binding for `freeMeterNamePattern`.
+ */
+export function freeMeterNamePattern(args_json: string): string;
 
 /**
  * Binding for `getBusinessCountryOptions`.
@@ -197,9 +232,19 @@ export function historyRows(args_json: string): string;
 export function includedUnits(args_json: string): string;
 
 /**
+ * Binding for `isCachedCustomerRefValid`.
+ */
+export function isCachedCustomerRefValid(args_json: string): string;
+
+/**
  * Binding for `isCustomerAddressComplete`.
  */
 export function isCustomerAddressComplete(args_json: string): string;
+
+/**
+ * Binding for `isEmailConflict`.
+ */
+export function isEmailConflict(args_json: string): string;
 
 /**
  * Binding for `isPostalCodeRequired`.
@@ -237,6 +282,16 @@ export function meterName(args_json: string): string;
 export function minorUnitsPerMajor(args_json: string): string;
 
 /**
+ * Binding for `normalizeCancelResponse`.
+ */
+export function normalizeCancelResponse(args_json: string): string;
+
+/**
+ * Binding for `normalizeReactivateResponse`.
+ */
+export function normalizeReactivateResponse(args_json: string): string;
+
+/**
  * Binding for `peggedCreditsPerUnit`.
  */
 export function peggedCreditsPerUnit(args_json: string): string;
@@ -257,6 +312,11 @@ export function planConsequence(args_json: string): string;
 export function planPricingShape(args_json: string): string;
 
 /**
+ * Binding for `requireProductRef`. Throws when neither source is set.
+ */
+export function requireProductRef(args_json: string): string;
+
+/**
  * Binding for `resolveAccountState`.
  */
 export function resolveAccountState(args_json: string): string;
@@ -275,6 +335,11 @@ export function resolveDisplayMode(args_json: string): string;
  * Binding for `resolvePlanShape`.
  */
 export function resolvePlanShape(args_json: string): string;
+
+/**
+ * Binding for `resolveProductRef`.
+ */
+export function resolveProductRef(args_json: string): string;
 
 /**
  * Binding for `resolveSellerIdentityDisplay`.
@@ -312,19 +377,55 @@ export function trialDays(args_json: string): string;
 export function usageRate(args_json: string): string;
 
 /**
+ * Binding for `validateAttachBusinessDetailsParams`.
+ */
+export function validateAttachBusinessDetailsParams(args_json: string): string;
+
+/**
  * Binding for `validateBusinessDetails`.
  */
 export function validateBusinessDetails(args_json: string): string;
 
 /**
+ * Binding for `validateCheckoutSessionParams`.
+ */
+export function validateCheckoutSessionParams(args_json: string): string;
+
+/**
+ * Binding for `validateCreatePaymentIntentParams`.
+ */
+export function validateCreatePaymentIntentParams(args_json: string): string;
+
+/**
+ * Binding for `validateGetProductParams`.
+ */
+export function validateGetProductParams(args_json: string): string;
+
+/**
+ * Binding for `validateListPlansParams`.
+ */
+export function validateListPlansParams(args_json: string): string;
+
+/**
+ * Binding for `validateProcessPaymentIntentParams`.
+ */
+export function validateProcessPaymentIntentParams(args_json: string): string;
+
+/**
+ * Binding for `validatePurchaseRef`.
+ */
+export function validatePurchaseRef(args_json: string): string;
+
+/**
  * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
  *
- * Available on both `edge` and `browser` profiles.
+ * `version` matches [`wasm_version`]: `SOLVAPAY_RELEASE_VERSION` when set,
+ * otherwise `CARGO_PKG_VERSION`. Available on both `edge` and `browser` profiles.
  */
 export function wasmBuildInfo(): string;
 
 /**
- * Returns the crate version string (`CARGO_PKG_VERSION`).
+ * Returns the same version string as [`wasm_build_info`]'s `version` field.
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
  * edge and browser profiles.
@@ -350,8 +451,14 @@ export interface InitOutput {
     readonly TAX_ID_TYPES: (a: number, b: number) => [number, number];
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly TOPUP_BALANCE_POLL_DELAYS_MS: (a: number, b: number) => [number, number];
+    readonly assertValidProductRef: (a: number, b: number) => [number, number];
+    readonly attachBusinessDetailsValidationError: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly charges: (a: number, b: number) => [number, number];
+    readonly classifyCancelError: (a: number, b: number) => [number, number];
+    readonly classifyCreateError: (a: number, b: number) => [number, number];
+    readonly classifyLookupError: (a: number, b: number) => [number, number];
+    readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
@@ -362,6 +469,7 @@ export interface InitOutput {
     readonly formatPrice: (a: number, b: number) => [number, number];
     readonly formatSubtotalLabel: (a: number, b: number) => [number, number];
     readonly formatVatSummaryLabel: (a: number, b: number) => [number, number];
+    readonly freeMeterNamePattern: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
     readonly getCustomerAddressFieldErrors: (a: number, b: number) => [number, number];
     readonly getPostalCodeFieldLabel: (a: number, b: number) => [number, number];
@@ -374,7 +482,9 @@ export interface InitOutput {
     readonly headlineCharges: (a: number, b: number) => [number, number];
     readonly historyRows: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
+    readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
     readonly isCustomerAddressComplete: (a: number, b: number) => [number, number];
+    readonly isEmailConflict: (a: number, b: number) => [number, number];
     readonly isPostalCodeRequired: (a: number, b: number) => [number, number];
     readonly isStateRequired: (a: number, b: number) => [number, number];
     readonly isTaxIdType: (a: number, b: number) => [number, number];
@@ -382,14 +492,18 @@ export interface InitOutput {
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly meterName: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
+    readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
+    readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
     readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly planConsequence: (a: number, b: number) => [number, number];
     readonly planPricingShape: (a: number, b: number) => [number, number];
+    readonly requireProductRef: (a: number, b: number) => [number, number];
     readonly resolveAccountState: (a: number, b: number) => [number, number];
     readonly resolveBuyerCountry: (a: number, b: number) => [number, number];
     readonly resolveDisplayMode: (a: number, b: number) => [number, number];
     readonly resolvePlanShape: (a: number, b: number) => [number, number];
+    readonly resolveProductRef: (a: number, b: number) => [number, number];
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
@@ -397,7 +511,14 @@ export interface InitOutput {
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly usageRate: (a: number, b: number) => [number, number];
+    readonly validateAttachBusinessDetailsParams: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
+    readonly validateCheckoutSessionParams: (a: number, b: number) => [number, number];
+    readonly validateCreatePaymentIntentParams: (a: number, b: number) => [number, number];
+    readonly validateGetProductParams: (a: number, b: number) => [number, number];
+    readonly validateListPlansParams: (a: number, b: number) => [number, number];
+    readonly validateProcessPaymentIntentParams: (a: number, b: number) => [number, number];
+    readonly validatePurchaseRef: (a: number, b: number) => [number, number];
     readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

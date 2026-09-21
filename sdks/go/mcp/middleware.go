@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
+
+// Host catalog cache TTL. Not a contract default — the ensure-customer TTL is
+// CustomerDedupTTLMs from the generated defaults file.
+const defaultCatalogTTLMs = 60_000
 
 func installCatalogMiddleware(mcpServer *mcpsdk.Server, s *Server) {
 	mcpServer.AddReceivingMiddleware(func(next mcpsdk.MethodHandler) mcpsdk.MethodHandler {
@@ -34,23 +37,23 @@ func applyCatalogTTL(res mcpsdk.Result) {
 	switch r := res.(type) {
 	case *mcpsdk.ListToolsResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = solvapay.DefaultCatalogTTLMs
+			r.TTLMs = defaultCatalogTTLMs
 		}
 	case *mcpsdk.ListResourcesResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = solvapay.DefaultCatalogTTLMs
+			r.TTLMs = defaultCatalogTTLMs
 		}
 	case *mcpsdk.ListPromptsResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = solvapay.DefaultCatalogTTLMs
+			r.TTLMs = defaultCatalogTTLMs
 		}
 	case *mcpsdk.ListResourceTemplatesResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = solvapay.DefaultCatalogTTLMs
+			r.TTLMs = defaultCatalogTTLMs
 		}
 	case *mcpsdk.ReadResourceResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = solvapay.DefaultCatalogTTLMs
+			r.TTLMs = defaultCatalogTTLMs
 		}
 	}
 }

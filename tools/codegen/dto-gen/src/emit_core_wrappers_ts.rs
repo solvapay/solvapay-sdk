@@ -172,8 +172,18 @@ fn emit_functions_file(
         )));
     }
 
+    let mut reexport_names: Vec<String> = Vec::new();
     let mut body = String::new();
     for id in order.iter() {
+        let sym = ir.binding_symbols.get(id).ok_or_else(|| {
+            GenError::Parse(format!("files.{key}.symbolOrder unknown binding {id}"))
+        })?;
+        // Shared decision helpers already ship from `@solvapay/core`. The server
+        // file re-exports them so the two packages cannot drift.
+        if matches!(set, WrapperSet::Decisions) && is_helper_decision(sym) {
+            reexport_names.push(wrapper_export_name(sym));
+            continue;
+        }
         if let Some(Value::String(comment)) = section_before.get(id) {
             if !body.is_empty() && !body.ends_with("\n\n") {
                 body.push('\n');
@@ -184,13 +194,13 @@ fn emit_functions_file(
             }
             body.push('\n');
         }
-        let sym = ir.binding_symbols.get(id).ok_or_else(|| {
-            GenError::Parse(format!("files.{key}.symbolOrder unknown binding {id}"))
-        })?;
         let func = core_fn_for(ir, sym)?;
         let server = matches!(set, WrapperSet::Decisions);
         body.push_str(&emit_wrapper(ir, sym, func, server)?);
         body.push('\n');
+    }
+    if !reexport_names.is_empty() {
+        body = format!("{}{body}", emit_core_reexports(&reexport_names));
     }
     if postamble.is_empty() {
         while body.ends_with("\n\n") {
@@ -219,6 +229,28 @@ fn emit_functions_file(
         out.push('\n');
     }
     Ok(out)
+}
+
+fn wrapper_export_name(sym: &IrBindingSymbol) -> String {
+    sym.ts_wrapper
+        .as_ref()
+        .and_then(|wrap| wrap.export_name.clone())
+        .unwrap_or_else(|| sym.names.ts.clone())
+}
+
+fn emit_core_reexports(names: &[String]) -> String {
+    let mut out = String::from(
+        "// Shared decision helpers. Node and edge install the same binding on\n\
+         // `@solvapay/core`, so these are not wrapped a second time.\n\
+         export {\n",
+    );
+    for name in names {
+        out.push_str("  ");
+        out.push_str(name);
+        out.push_str(",\n");
+    }
+    out.push_str("} from '@solvapay/core'\n\n");
+    out
 }
 
 fn matching_symbols(ir: &Ir, set: WrapperSet) -> Vec<&IrBindingSymbol> {

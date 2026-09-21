@@ -21,7 +21,6 @@ import { PaywallError } from '@solvapay/server'
 import type { PaywallToolResultContext } from './paywallToolResult'
 import type {
   ContentBlock,
-  PaywallToolResult,
   ResponseOptions,
   ResponseResult,
   SolvaPayCallToolResult,
@@ -48,16 +47,18 @@ export type { NativeMcpSyncMethod } from './native-mcp-dispatch'
 export async function paywallToolResult(
   errOrGate: PaywallError | PaywallStructuredContent,
   _ctx: PaywallToolResultContext = {},
-): Promise<PaywallToolResult> {
+): Promise<SolvaPayCallToolResult> {
   const paywallContent: PaywallStructuredContent =
     errOrGate instanceof PaywallError ? errOrGate.structuredContent : errOrGate
   const narrationText =
     errOrGate instanceof PaywallError ? errOrGate.message : paywallContent.message
 
+  // Native JSON matches `SolvaPayCallToolResult` (required `content`). The
+  // looser `PaywallToolResult` copy is not assignable to that return.
   return requireApi().callNativeSync(
     'paywallToolResult',
     JSON.stringify({ message: narrationText, structuredContent: paywallContent }),
-  ) as PaywallToolResult
+  ) as SolvaPayCallToolResult
 }
 
 export function makeResponseResult<TData>(

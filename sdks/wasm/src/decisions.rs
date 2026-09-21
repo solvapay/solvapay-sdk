@@ -2,58 +2,69 @@
 //! Sync JSON-envelope wasm-bindgen exports for decision / paywall / retry cores
 //! (Step 38R-c).
 //!
-//! Edge-only mirror of `sdks/node-native/src/decisions.rs`. Each function
-//! takes one JSON-args string and returns one envelope string
+//! Per-symbol mirror of `sdks/node-native/src/decisions.rs`.
+//! Pure-compute exports compile on both `edge` and `browser`.
+//! `client-full` symbols and the §7.8 size-budget exclusions stay
+//! `edge`-only. Each function takes one JSON-args string and returns
+//! one envelope string
 //! (`{"ok":true,"value":…}` | `{"ok":false,"error":…}`).
-
-#![cfg(feature = "edge")]
 
 use serde_json::Value;
 use solvapay_core::{
-    append_paid_tool_description, assert_valid_product_ref,
-    attach_business_details_validation_error, billing_cycle, build_create_customer_params,
-    build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate, charges,
-    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
-    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
-    compile_string_field_input_schema_json, counts_usage, credit_signals,
-    credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
-    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
-    derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
-    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
-    extract_bearer_token, format_compact_credits, free_limits_agree, free_meter_name_pattern,
-    free_tool_description_suffix, gate_next, get_history_next, headline_charges, history_rows,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result, link_label,
-    map_route_error, meter_name, next_action_for, normalize_cancel_response, normalize_free_limit,
-    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
-    paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
-    plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
-    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, resolve_usage_extra,
-    select_active_plan_purchase, select_active_purchases, should_retry_usage_error, tier_bands,
-    tier_meters, topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    assert_valid_product_ref, attach_business_details_validation_error, billing_cycle, charges,
+    classify_cancel_error, classify_create_error, classify_lookup_error, classify_reactivate_error,
+    counts_usage, credits_per_unit_from_balance, derive_active_products, derive_default_view,
+    format_compact_credits, free_meter_name_pattern, headline_charges, history_rows,
+    included_units, is_cached_customer_ref_valid, is_email_conflict, meter_name,
+    normalize_cancel_response, normalize_reactivate_response, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_pricing_shape, require_product_ref,
+    resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape, resolve_product_ref,
+    trial_days, usage_rate, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, AuthResolutionInput, Backoff, FreeLimit, FreeLimitInput,
-    GateContent, PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
-    ProductReadinessInput, RetryPolicy, RouteErrorInput, RouteErrorKind, SdkError,
-    DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+};
+
+#[cfg(feature = "edge")]
+use solvapay_core::{
+    append_paid_tool_description, build_create_customer_params, build_customer_snapshot,
+    build_gate_message, build_nudge_message, build_paywall_gate, classify_customer_ref,
+    classify_paywall_state, coerce_customer_options, compile_string_field_input_schema_json,
+    credit_signals, customer_ref_from_claims, decide_paywall_outcome,
+    decode_jwt_payload_unverified, default_mcp_bearer_expectations, ensure_customer_next,
+    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
+    extract_backend_customer_ref, extract_bearer_token, free_limits_agree,
+    free_tool_description_suffix, gate_next, get_history_next, is_error_result, link_label,
+    map_route_error, next_action_for, normalize_free_limit, overlay_claimed_limits,
+    paywall_client_payload, paywall_structured_content_schema, plan_ladder,
+    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    purchase_usage_is_metered, resolve_authenticated_user, resolve_check_limits_params,
+    resolve_customer_ref, resolve_fallback_gate_limits, resolve_purchase_customer_ref,
+    resolve_return_url, resolve_usage_extra, select_active_plan_purchase, select_active_purchases,
+    should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
+    validate_activate_plan_params, validate_topup_payment_intent_params, AuthResolutionInput,
+    Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
+    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
 use wasm_bindgen::prelude::*;
 
 use crate::args::{
-    args_map, option_helper_err, optional_f64, optional_string, optional_typed, optional_u16,
-    optional_u32, optional_u64, optional_value, require_array, require_bool, require_f64,
-    require_i64, require_object, require_string, require_typed, require_u32, result_as_value,
-    to_value,
+    args_map, option_helper_err, optional_f64, optional_string, optional_value, require_f64,
+    require_string, result_as_value, to_value,
+};
+
+#[cfg(feature = "edge")]
+use crate::args::{
+    optional_typed, optional_u16, optional_u32, optional_u64, require_array, require_bool,
+    require_i64, require_object, require_typed, require_u32,
 };
 use crate::error::run_envelope_sync;
 
 // --- customer-sync ---
 
+#[cfg(feature = "edge")]
 /// Binding for `classifyCustomerRef`.
 #[wasm_bindgen(js_name = "classifyCustomerRef")]
 pub fn classify_customer_ref_binding(args_json: String) -> String {
@@ -64,6 +75,7 @@ pub fn classify_customer_ref_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `coerceCustomerOptions`.
 #[wasm_bindgen(js_name = "coerceCustomerOptions")]
 pub fn coerce_customer_options_binding(args_json: String) -> String {
@@ -88,6 +100,7 @@ pub fn free_meter_name_pattern_binding(args_json: String) -> String {
 
 // --- customer-sync ---
 
+#[cfg(feature = "edge")]
 /// Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
 #[wasm_bindgen(js_name = "buildCreateCustomerParams")]
 pub fn build_create_customer_params_binding(args_json: String) -> String {
@@ -110,6 +123,7 @@ pub fn build_create_customer_params_binding(args_json: String) -> String {
 
 // --- free-limit ---
 
+#[cfg(feature = "edge")]
 /// Binding for `normalizeFreeLimit`.
 #[wasm_bindgen(js_name = "normalizeFreeLimit")]
 pub fn normalize_free_limit_binding(args_json: String) -> String {
@@ -122,6 +136,7 @@ pub fn normalize_free_limit_binding(args_json: String) -> String {
 
 // --- customer-sync ---
 
+#[cfg(feature = "edge")]
 /// Binding for `extractBackendCustomerRef`.
 #[wasm_bindgen(js_name = "extractBackendCustomerRef")]
 pub fn extract_backend_customer_ref_binding(args_json: String) -> String {
@@ -137,6 +152,7 @@ pub fn extract_backend_customer_ref_binding(args_json: String) -> String {
 
 // --- free-limit ---
 
+#[cfg(feature = "edge")]
 /// Binding for `freeLimitsAgree`.
 #[wasm_bindgen(js_name = "freeLimitsAgree")]
 pub fn free_limits_agree_binding(args_json: String) -> String {
@@ -162,6 +178,7 @@ pub fn classify_lookup_error_binding(args_json: String) -> String {
 
 // --- free-limit ---
 
+#[cfg(feature = "edge")]
 /// Binding for `freeToolDescriptionSuffix`.
 #[wasm_bindgen(js_name = "freeToolDescriptionSuffix")]
 pub fn free_tool_description_suffix_binding(args_json: String) -> String {
@@ -199,6 +216,7 @@ pub fn is_email_conflict_binding(args_json: String) -> String {
 
 // --- activation ---
 
+#[cfg(feature = "edge")]
 /// Binding for `validateActivatePlanParams`.
 #[wasm_bindgen(js_name = "validateActivatePlanParams")]
 pub fn validate_activate_plan_params_binding(args_json: String) -> String {
@@ -229,6 +247,7 @@ pub fn validate_create_payment_intent_params_binding(args_json: String) -> Strin
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `validateTopupPaymentIntentParams`.
 #[wasm_bindgen(js_name = "validateTopupPaymentIntentParams")]
 pub fn validate_topup_payment_intent_params_binding(args_json: String) -> String {
@@ -281,6 +300,7 @@ pub fn attach_business_details_validation_error_binding(args_json: String) -> St
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `projectPaymentIntentResult`.
 #[wasm_bindgen(js_name = "projectPaymentIntentResult")]
 pub fn project_payment_intent_result_binding(args_json: String) -> String {
@@ -303,6 +323,7 @@ pub fn project_payment_intent_result_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `projectTopupProcessOutcome`.
 #[wasm_bindgen(js_name = "projectTopupProcessOutcome")]
 pub fn project_topup_process_outcome_binding(args_json: String) -> String {
@@ -319,6 +340,7 @@ pub fn project_topup_process_outcome_binding(args_json: String) -> String {
 
 // --- checkout ---
 
+#[cfg(feature = "edge")]
 /// Binding for `resolveReturnUrl`.
 #[wasm_bindgen(js_name = "resolveReturnUrl")]
 pub fn resolve_return_url_binding(args_json: String) -> String {
@@ -351,6 +373,7 @@ pub fn resolve_return_url_binding(args_json: String) -> String {
 
 // --- payment ---
 
+#[cfg(feature = "edge")]
 /// Binding for `topupProcessNext`.
 #[wasm_bindgen(js_name = "topupProcessNext")]
 pub fn topup_process_next_binding(args_json: String) -> String {
@@ -392,6 +415,7 @@ pub fn is_cached_customer_ref_valid_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `resolvePurchaseCustomerRef`.
 #[wasm_bindgen(js_name = "resolvePurchaseCustomerRef")]
 pub fn resolve_purchase_customer_ref_binding(args_json: String) -> String {
@@ -405,6 +429,7 @@ pub fn resolve_purchase_customer_ref_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `selectActivePurchases`.
 #[wasm_bindgen(js_name = "selectActivePurchases")]
 pub fn select_active_purchases_binding(args_json: String) -> String {
@@ -457,6 +482,7 @@ pub fn classify_reactivate_error_binding(args_json: String) -> String {
 
 // --- purchase ---
 
+#[cfg(feature = "edge")]
 /// Binding for `selectActivePlanPurchase`.
 #[wasm_bindgen(js_name = "selectActivePlanPurchase")]
 pub fn select_active_plan_purchase_binding(args_json: String) -> String {
@@ -505,6 +531,7 @@ pub fn validate_purchase_ref_binding(args_json: String) -> String {
 
 // --- usage ---
 
+#[cfg(feature = "edge")]
 /// Binding for `projectUsageSnapshot`.
 #[wasm_bindgen(js_name = "projectUsageSnapshot")]
 pub fn project_usage_snapshot_binding(args_json: String) -> String {
@@ -524,6 +551,7 @@ pub fn project_usage_snapshot_binding(args_json: String) -> String {
 
 // --- limits ---
 
+#[cfg(feature = "edge")]
 /// Binding for `resolveCheckLimitsParams`.
 #[wasm_bindgen(js_name = "resolveCheckLimitsParams")]
 pub fn resolve_check_limits_params_binding(args_json: String) -> String {
@@ -544,6 +572,7 @@ pub fn resolve_check_limits_params_binding(args_json: String) -> String {
 
 // --- usage ---
 
+#[cfg(feature = "edge")]
 /// Binding for `shouldRetryUsageError`.
 #[wasm_bindgen(js_name = "shouldRetryUsageError")]
 pub fn should_retry_usage_error_binding(args_json: String) -> String {
@@ -554,6 +583,18 @@ pub fn should_retry_usage_error_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
+/// Binding for `purchaseUsageIsMetered`.
+#[wasm_bindgen(js_name = "purchaseUsageIsMetered")]
+pub fn purchase_usage_is_metered_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchase = optional_value(&args, "purchase");
+        Ok(Value::Bool(purchase_usage_is_metered(purchase.as_ref())))
+    })
+}
+
+#[cfg(feature = "edge")]
 /// Binding for `resolveUsageExtra`.
 #[wasm_bindgen(js_name = "resolveUsageExtra")]
 pub fn resolve_usage_extra_binding(args_json: String) -> String {
@@ -584,6 +625,7 @@ pub fn validate_list_plans_params_binding(args_json: String) -> String {
 
 // --- error ---
 
+#[cfg(feature = "edge")]
 /// Binding for `isErrorResult`.
 #[wasm_bindgen(js_name = "isErrorResult")]
 pub fn is_error_result_binding(args_json: String) -> String {
@@ -594,6 +636,7 @@ pub fn is_error_result_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`).
 #[wasm_bindgen(js_name = "mapRouteError")]
 pub fn map_route_error_binding(args_json: String) -> String {
@@ -639,6 +682,7 @@ pub fn validate_get_product_params_binding(args_json: String) -> String {
 
 // --- customer ---
 
+#[cfg(feature = "edge")]
 /// Binding for `resolveCustomerRef`.
 #[wasm_bindgen(js_name = "resolveCustomerRef")]
 pub fn resolve_customer_ref_binding(args_json: String) -> String {
@@ -682,6 +726,7 @@ pub fn resolve_product_ref_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `evaluateCachedLimits`.
 #[wasm_bindgen(js_name = "evaluateCachedLimits")]
 pub fn evaluate_cached_limits_binding(args_json: String) -> String {
@@ -692,6 +737,7 @@ pub fn evaluate_cached_limits_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `evaluateFreshLimits`.
 #[wasm_bindgen(js_name = "evaluateFreshLimits")]
 pub fn evaluate_fresh_limits_binding(args_json: String) -> String {
@@ -703,6 +749,7 @@ pub fn evaluate_fresh_limits_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `decidePaywallOutcome`.
 #[wasm_bindgen(js_name = "decidePaywallOutcome")]
 pub fn decide_paywall_outcome_binding(args_json: String) -> String {
@@ -721,6 +768,7 @@ pub fn decide_paywall_outcome_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `resolveFallbackGateLimits`.
 #[wasm_bindgen(js_name = "resolveFallbackGateLimits")]
 pub fn resolve_fallback_gate_limits_binding(args_json: String) -> String {
@@ -733,6 +781,7 @@ pub fn resolve_fallback_gate_limits_binding(args_json: String) -> String {
 
 // --- paywall state / gate / payload ---
 
+#[cfg(feature = "edge")]
 /// Binding for `classifyPaywallState`.
 #[wasm_bindgen(js_name = "classifyPaywallState")]
 pub fn classify_paywall_state_binding(args_json: String) -> String {
@@ -743,6 +792,7 @@ pub fn classify_paywall_state_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `buildGateMessage`.
 #[wasm_bindgen(js_name = "buildGateMessage")]
 pub fn build_gate_message_binding(args_json: String) -> String {
@@ -754,6 +804,7 @@ pub fn build_gate_message_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `buildNudgeMessage`.
 #[wasm_bindgen(js_name = "buildNudgeMessage")]
 pub fn build_nudge_message_binding(args_json: String) -> String {
@@ -767,6 +818,7 @@ pub fn build_nudge_message_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `buildPaywallGate`.
 #[wasm_bindgen(js_name = "buildPaywallGate")]
 pub fn build_paywall_gate_binding(args_json: String) -> String {
@@ -778,6 +830,7 @@ pub fn build_paywall_gate_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `paywallErrorToClientPayload`.
 #[wasm_bindgen(js_name = "paywallErrorToClientPayload")]
 pub fn paywall_error_to_client_payload_binding(args_json: String) -> String {
@@ -807,6 +860,7 @@ pub fn require_product_ref_binding(args_json: String) -> String {
 
 // --- product-readiness ---
 
+#[cfg(feature = "edge")]
 /// Binding for `evaluateProductReadiness`.
 #[wasm_bindgen(js_name = "evaluateProductReadiness")]
 pub fn evaluate_product_readiness_binding(args_json: String) -> String {
@@ -820,6 +874,7 @@ pub fn evaluate_product_readiness_binding(args_json: String) -> String {
 
 // --- paywall-decision ---
 
+#[cfg(feature = "edge")]
 /// Binding for `gateNext`.
 #[wasm_bindgen(js_name = "gateNext")]
 pub fn gate_next_binding(args_json: String) -> String {
@@ -833,6 +888,7 @@ pub fn gate_next_binding(args_json: String) -> String {
 
 // --- paywall state / gate / payload ---
 
+#[cfg(feature = "edge")]
 /// Binding for `paywallStructuredContentSchema`.
 #[wasm_bindgen(js_name = "paywallStructuredContentSchema")]
 pub fn paywall_structured_content_schema_binding(args_json: String) -> String {
@@ -844,6 +900,7 @@ pub fn paywall_structured_content_schema_binding(args_json: String) -> String {
 
 // --- retry ---
 
+#[cfg(feature = "edge")]
 /// Binding for `retryNextDelayMs`.
 #[wasm_bindgen(js_name = "retryNextDelayMs")]
 pub fn retry_next_delay_ms(args_json: String) -> String {
@@ -902,6 +959,7 @@ pub fn assert_valid_product_ref_binding(args_json: String) -> String {
 
 // --- paywall ---
 
+#[cfg(feature = "edge")]
 /// Binding for `creditSignals`.
 #[wasm_bindgen(js_name = "creditSignals")]
 pub fn credit_signals_binding(args_json: String) -> String {
@@ -914,6 +972,7 @@ pub fn credit_signals_binding(args_json: String) -> String {
 
 // --- paywall-decision ---
 
+#[cfg(feature = "edge")]
 /// Binding for `ensureCustomerNext`.
 #[wasm_bindgen(js_name = "ensureCustomerNext")]
 pub fn ensure_customer_next_binding(args_json: String) -> String {
@@ -939,6 +998,7 @@ pub fn charges_binding(args_json: String) -> String {
 
 // --- paywall ---
 
+#[cfg(feature = "edge")]
 /// Binding for `nextActionFor`.
 #[wasm_bindgen(js_name = "nextActionFor")]
 pub fn next_action_for_binding(args_json: String) -> String {
@@ -951,6 +1011,7 @@ pub fn next_action_for_binding(args_json: String) -> String {
 
 // --- auth-resolution ---
 
+#[cfg(feature = "edge")]
 /// Binding for `resolveAuthenticatedUser`.
 #[wasm_bindgen(js_name = "resolveAuthenticatedUser")]
 pub fn resolve_authenticated_user_binding(args_json: String) -> String {
@@ -963,6 +1024,7 @@ pub fn resolve_authenticated_user_binding(args_json: String) -> String {
 
 // --- balance-poll ---
 
+#[cfg(feature = "edge")]
 /// Binding for `evaluateBalanceObservation`.
 #[wasm_bindgen(js_name = "evaluateBalanceObservation")]
 pub fn evaluate_balance_observation_binding(args_json: String) -> String {
@@ -988,6 +1050,7 @@ pub fn headline_charges_binding(args_json: String) -> String {
 
 // --- paywall ---
 
+#[cfg(feature = "edge")]
 /// Binding for `linkLabel`.
 #[wasm_bindgen(js_name = "linkLabel")]
 pub fn link_label_binding(args_json: String) -> String {
@@ -1013,6 +1076,7 @@ pub fn per_unit_charge_binding(args_json: String) -> String {
 
 // --- paywall ---
 
+#[cfg(feature = "edge")]
 /// Binding for `planLadder`.
 #[wasm_bindgen(js_name = "planLadder")]
 pub fn plan_ladder_binding(args_json: String) -> String {
@@ -1023,6 +1087,7 @@ pub fn plan_ladder_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `appendPaidToolDescription`.
 #[wasm_bindgen(js_name = "appendPaidToolDescription")]
 pub fn append_paid_tool_description_binding(args_json: String) -> String {
@@ -1120,6 +1185,7 @@ pub fn counts_usage_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `tierBands`.
 #[wasm_bindgen(js_name = "tierBands")]
 pub fn tier_bands_binding(args_json: String) -> String {
@@ -1131,6 +1197,7 @@ pub fn tier_bands_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `tierMeters`.
 #[wasm_bindgen(js_name = "tierMeters")]
 pub fn tier_meters_binding(args_json: String) -> String {
@@ -1164,6 +1231,7 @@ pub fn plan_pricing_shape_binding(args_json: String) -> String {
 
 // --- paywall state / gate / payload ---
 
+#[cfg(feature = "edge")]
 /// Binding for `buildCustomerSnapshot`.
 #[wasm_bindgen(js_name = "buildCustomerSnapshot")]
 pub fn build_customer_snapshot_binding(args_json: String) -> String {
@@ -1177,6 +1245,7 @@ pub fn build_customer_snapshot_binding(args_json: String) -> String {
 
 // --- history ---
 
+#[cfg(feature = "edge")]
 /// Binding for `getHistoryNext`.
 #[wasm_bindgen(js_name = "getHistoryNext")]
 pub fn get_history_next_binding(args_json: String) -> String {
@@ -1190,6 +1259,7 @@ pub fn get_history_next_binding(args_json: String) -> String {
 
 // --- paywall-decision ---
 
+#[cfg(feature = "edge")]
 /// Binding for `evaluateClaimedLimits`.
 #[wasm_bindgen(js_name = "evaluateClaimedLimits")]
 pub fn evaluate_claimed_limits_binding(args_json: String) -> String {
@@ -1216,6 +1286,7 @@ pub fn history_rows_binding(args_json: String) -> String {
 
 // --- paywall-decision ---
 
+#[cfg(feature = "edge")]
 /// Binding for `overlayClaimedLimits`.
 #[wasm_bindgen(js_name = "overlayClaimedLimits")]
 pub fn overlay_claimed_limits_binding(args_json: String) -> String {
@@ -1306,6 +1377,7 @@ pub fn format_compact_credits_binding(args_json: String) -> String {
 
 // --- auth ---
 
+#[cfg(feature = "edge")]
 /// Binding for `extractBearerToken`.
 #[wasm_bindgen(js_name = "extractBearerToken")]
 pub fn extract_bearer_token_binding(args_json: String) -> String {
@@ -1316,6 +1388,7 @@ pub fn extract_bearer_token_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `decodeJwtPayloadUnverified`.
 #[wasm_bindgen(js_name = "decodeJwtPayloadUnverified")]
 pub fn decode_jwt_payload_unverified_binding(args_json: String) -> String {
@@ -1326,6 +1399,7 @@ pub fn decode_jwt_payload_unverified_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `customerRefFromClaims`.
 #[wasm_bindgen(js_name = "customerRefFromClaims")]
 pub fn customer_ref_from_claims_binding(args_json: String) -> String {
@@ -1340,6 +1414,7 @@ pub fn customer_ref_from_claims_binding(args_json: String) -> String {
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `defaultMcpBearerExpectations`.
 #[wasm_bindgen(js_name = "defaultMcpBearerExpectations")]
 pub fn default_mcp_bearer_expectations_binding(args_json: String) -> String {
@@ -1358,6 +1433,7 @@ pub fn default_mcp_bearer_expectations_binding(args_json: String) -> String {
 
 // --- mcp-schema ---
 
+#[cfg(feature = "edge")]
 /// Binding for `compileStringFieldInputSchemaJson`.
 #[wasm_bindgen(js_name = "compileStringFieldInputSchemaJson")]
 pub fn compile_string_field_input_schema_json_binding(args_json: String) -> String {
@@ -1368,6 +1444,7 @@ pub fn compile_string_field_input_schema_json_binding(args_json: String) -> Stri
     })
 }
 
+#[cfg(feature = "edge")]
 /// Binding for `ensureOutputSchemaObjectType`.
 #[wasm_bindgen(js_name = "ensureOutputSchemaObjectType")]
 pub fn ensure_output_schema_object_type_binding(args_json: String) -> String {

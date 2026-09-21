@@ -1097,7 +1097,15 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             if (typeof configuredRef === 'string') {
               return configuredRef
             }
-            return args.auth?.customer_ref || 'anonymous'
+            return resolveCustomerRef(
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              args.auth?.customer_ref,
+              undefined,
+            )
           }
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
@@ -1107,10 +1115,16 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
 
           const decideMetadata = { ...metadata, ...gateOptions.metadata }
-          const decision = await paywall.decide(
-            args,
-            decideMetadata,
-            (a: PaywallArgs) => a.auth?.customer_ref || 'anonymous',
+          const decision = await paywall.decide(args, decideMetadata, (a: PaywallArgs) =>
+            resolveCustomerRef(
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              a.auth?.customer_ref,
+              undefined,
+            ),
           )
 
           if (decision.outcome === 'gate') {

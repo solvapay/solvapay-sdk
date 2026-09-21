@@ -32,7 +32,7 @@ module SolvaPay
         raise SolvaPay::SolvaPayError, "mcpDefaultGate did not return an object" unless content.is_a?(Hash)
 
         message = content["message"]
-        message = "Payment required" if message.nil? || message.to_s.empty?
+        message = SolvaPay::PAYMENT_REQUIRED if message.nil? || message.to_s.empty?
         raise SolvaPay::PaywallError.new(message, content)
       end
     end

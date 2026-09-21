@@ -148,7 +148,18 @@ fn c_column_emits_full_client_op_surface() {
     assert!(emitted.decisions_rs.is_empty());
     assert!(emitted.payload_builders_rs.is_empty());
     assert!(emitted.register_rs.is_empty());
-    assert!(emitted.args_rs.is_empty());
+    assert!(
+        emitted.args_rs.contains("fn args_map"),
+        "C reuses the shared args parsers"
+    );
+    assert!(
+        emitted.sync_dispatch_rs.contains("fn try_dispatch"),
+        "C helper dispatch must be emitted"
+    );
+    assert!(
+        !emitted.sync_dispatch_rs.contains("args_map(&args_json)"),
+        "C args_json is already &str"
+    );
 }
 
 #[test]

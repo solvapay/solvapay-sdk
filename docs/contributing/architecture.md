@@ -202,6 +202,22 @@ headers, idempotency, and retry. Three op surfaces live in the manifest
 Five first-party surfaces, plus an optional C ABI. All expose the same public
 capabilities; only syntax differs (cross-surface parity is enforced in CI).
 
+`pnpm parity:check` reads integrator-visible declarations: TypeScript portable
+exports, per-language helper modules, and the MCP packages (`python-mcp`,
+`ruby-mcp`, `sdks/go/mcp`, `rust-mcp`). A generic `solvapay_call` dispatcher
+does not count as a named sync op. `pnpm facade-coverage:check` does the same
+for binding symbols. MCP package rows are scored only on MCP-section symbols;
+other ops are `na`. A gap with an empty reason fails the build. Browser wasm
+gaps cite either a capability exclusion (§7.1) or the size budget (§7.8). The
+Go job tests the committed `solvapay_core.wasm`, then warns if a host rebuild
+differs, because `wasm32-wasip1` bytes are not stable across machines.
+
+`SOLVAPAY_PRODUCT_REF` is a host product selector, not a client credential. The
+TypeScript factory reads it when a call omits `product`, and example workers
+(including the Rust Cloudflare worker) read it the same way. It is not part of
+`ClientShell` config and is not required on Python, Ruby, or Go client
+constructors.
+
 | Surface      | Binding toolchain                                                                    | Status                                                                                                                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TypeScript   | napi-rs (Node native), wasm-bindgen (edge + browser)                                 | GA — the published `@solvapay/*` packages                                                                                                                                                    |
@@ -256,9 +272,9 @@ not the same as the gitignored napi `.wasm` under `sdks/node-native/`.
   script is `check-artifacts-present` (not a wasm-bindgen rebuild), so
   TypeScript contributors can `pnpm build:packages` without a Rust toolchain.
 
-Do not gitignore those two trees. Node's optional native `.node` / WASI
-artifacts are installed or built per platform, which is why they stay
-untracked.
+Do not gitignore those two trees. Node's optional native `.node` artifacts are
+installed or built per platform, which is why they stay untracked. There is no
+Node WASI artifact.
 
 **Runtime bindings:** `@solvapay/core` and `@solvapay/server` are Rust-only after
 Steps 52/53 — Node uses `@solvapay/server-native` (napi), edge/browser uses

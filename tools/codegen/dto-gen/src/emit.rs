@@ -6,8 +6,8 @@ use std::fmt::Write as _;
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
-    Ir, IrField, IrOneOf, IrOverlay, IrOverlayStruct, IrStringEnum, IrStruct, IrType, IrTypeRef,
-    OneOfStrategy,
+    Ir, IrBindingArtifact, IrField, IrOneOf, IrOverlay, IrOverlayStruct, IrStringEnum, IrStruct,
+    IrType, IrTypeRef, OneOfStrategy,
 };
 use crate::name::to_snake_case;
 
@@ -28,6 +28,8 @@ pub struct EmittedCrate {
     pub overlays_rs: String,
     /// `error_templates.rs` contents (frozen message templates).
     pub error_templates_rs: String,
+    /// `fixture_groups.rs` contents (client binding sections).
+    pub fixture_groups_rs: String,
 }
 
 /// Emits the source files for `solvapay-dto` from an IR.
@@ -42,6 +44,7 @@ pub fn emit_crate(ir: &Ir) -> GenResult<EmittedCrate> {
         routes_rs: emit_routes(ir)?,
         overlays_rs: emit_overlays(ir)?,
         error_templates_rs: emit_error_templates(ir),
+        fixture_groups_rs: emit_fixture_groups(ir),
     })
 }
 
@@ -55,6 +58,7 @@ fn emit_lib(ir: &Ir) -> String {
     out.push_str("//!\n");
     out.push_str("//! Do not hand-edit. Regenerate via `dto-gen`.\n\n");
     out.push_str("pub mod error_templates;\n");
+    out.push_str("pub mod fixture_groups;\n");
     out.push_str("pub mod overlays;\n");
     out.push_str("pub mod routes;\n");
     out.push_str("pub mod schemas;\n\n");
@@ -125,6 +129,42 @@ fn rust_str_literal(value: &str) -> String {
         }
     }
     out
+}
+
+/// Client-method ids whose binding section is `Group A`, `Group B`, or `Group C`.
+fn emit_fixture_groups(ir: &Ir) -> String {
+    let mut out = banner();
+    out.push_str("\n//! Client operation groups from binding-symbol sections.\n\n");
+    for (const_name, section) in [
+        ("GROUP_A_FNS", "Group A"),
+        ("GROUP_B_FNS", "Group B"),
+        ("GROUP_C_FNS", "Group C"),
+        ("GROUP_MCP_FNS", "MCP composite"),
+    ] {
+        let _ = writeln!(
+            out,
+            "/// Binding symbols in section `{section}`.\npub const {const_name}: &[&str] = &[",
+            section = section,
+            const_name = const_name,
+        );
+        for id in client_ids_in_section(ir, section) {
+            let _ = writeln!(out, "    \"{id}\",");
+        }
+        out.push_str("];\n\n");
+    }
+    out
+}
+
+fn client_ids_in_section<'a>(ir: &'a Ir, section: &str) -> Vec<&'a str> {
+    let mut symbols: Vec<_> = ir
+        .binding_symbols
+        .values()
+        .filter(|sym| {
+            sym.artifact == IrBindingArtifact::Client && sym.section.as_deref() == Some(section)
+        })
+        .collect();
+    symbols.sort_by_key(|sym| (sym.emit_order, sym.id.as_str()));
+    symbols.into_iter().map(|sym| sym.id.as_str()).collect()
 }
 
 /// Emits `error_templates.rs` from `ir.error_templates`.
@@ -203,7 +243,33 @@ fn emit_error_templates(ir: &Ir) -> String {
             out.push_str("        /// Status- / shape-specific case templates (manifest order).\n");
             out.push_str("        pub const CASES: &[&str] = &[\n");
             for case in &op.cases {
-                let _ = writeln!(out, "            \"{}\",", rust_str_literal(case));
+                let _ = writeln!(
+                    out,
+                    "            \"{}\",",
+                    rust_str_literal(&case.message_template)
+                );
+            }
+            out.push_str("        ];\n");
+            out.push_str("        /// HTTP status for each [`CASES`] entry (`None` when unset).\n");
+            out.push_str("        pub const CASE_STATUS: &[Option<u16>] = &[\n");
+            for case in &op.cases {
+                match case.status {
+                    Some(status) => {
+                        let _ = writeln!(out, "            Some({status}),");
+                    }
+                    None => out.push_str("            None,\n"),
+                }
+            }
+            out.push_str("        ];\n");
+            out.push_str("        /// Stable code for each [`CASES`] entry (`None` when unset).\n");
+            out.push_str("        pub const CASE_CODE: &[Option<&str>] = &[\n");
+            for case in &op.cases {
+                match &case.code {
+                    Some(code) => {
+                        let _ = writeln!(out, "            Some(\"{}\"),", rust_str_literal(code));
+                    }
+                    None => out.push_str("            None,\n"),
+                }
             }
             out.push_str("        ];\n");
         }
@@ -800,6 +866,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         let emitted = emit_crate(&ir).expect("emit");
         assert!(emitted.schemas_rs.contains("#[serde(untagged)]"));
@@ -858,6 +926,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         let lib = emit_lib(&ir);
         assert!(lib.contains("crate root → overlays"));
@@ -899,6 +969,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         let lib = emit_lib(&ir);
         assert!(lib.contains("pub use schemas::*;"));

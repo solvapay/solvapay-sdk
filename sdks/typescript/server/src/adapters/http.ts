@@ -10,7 +10,7 @@ import { AdapterUtils } from './base'
 import type { HttpAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 import { SolvaPayError } from '@solvapay/core'
-import { mapRouteError, resolveCustomerRef } from '../native-decisions'
+import { extractBearerToken, mapRouteError, resolveCustomerRef } from '../native-decisions'
 
 /**
  * HTTP context (Express or Fastify)
@@ -48,8 +48,9 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
 
     let verifiedJwtSub: string | undefined
     const authHeader = req.headers?.['authorization']
-    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      const jwtSub = await AdapterUtils.extractFromJWT(authHeader.substring(7))
+    const token = typeof authHeader === 'string' ? extractBearerToken(authHeader) : null
+    if (token) {
+      const jwtSub = await AdapterUtils.extractFromJWT(token)
       if (jwtSub) {
         verifiedJwtSub = jwtSub
       }

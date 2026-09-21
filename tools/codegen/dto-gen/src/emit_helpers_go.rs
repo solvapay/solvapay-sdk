@@ -23,7 +23,8 @@ pub fn emit_helpers_go(ir: &Ir) -> GenResult<String> {
     out.push_str(
         "package solvapay\n\n\
          import (\n\
-         \t\"context\"\n\n\
+         \t\"context\"\n\
+         \t\"encoding/json\"\n\n\
          \t\"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall\"\n\
          )\n\n",
     );
@@ -67,18 +68,25 @@ pub fn emit_helpers_go(ir: &Ir) -> GenResult<String> {
             format!("ctx context.Context, {}", params.join(", "))
         };
         let _ = writeln!(out, "func {go_name}({param_list}) (any, error) {{");
-        out.push_str("\treturn nativecall.CallSync(ctx, ");
-        let _ = write!(out, "{export:?}, mustJSON(map[string]any{{");
+        out.push_str("\tpayload, err := json.Marshal(map[string]any{");
         if public_args.is_empty() {
-            out.push_str("}))\n}\n\n");
-            continue;
+            out.push_str("})\n");
+        } else {
+            out.push('\n');
+            for arg in &public_args {
+                let local = uncapitalize(&arg.name);
+                let _ = writeln!(out, "\t\t{:?}: {local},", arg.name);
+            }
+            out.push_str("\t})\n");
         }
-        out.push('\n');
-        for arg in &public_args {
-            let local = uncapitalize(&arg.name);
-            let _ = writeln!(out, "\t\t{:?}: {local},", arg.name);
-        }
-        out.push_str("\t}))\n}\n\n");
+        let _ = writeln!(
+            out,
+            "\tif err != nil {{\n\
+             \t\treturn nil, err\n\
+             \t}}\n\
+             \treturn nativecall.CallSync(ctx, {export:?}, string(payload))\n\
+             }}\n"
+        );
     }
     gofmt_source(&out)
 }

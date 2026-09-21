@@ -85,6 +85,11 @@ Style/SendWithLiteralMethodName:
   Exclude:
     - 'lib/solvapay/_native.rb'
 
+# Each generated driver loop is its own module in one file.
+Style/OneClassPerFile:
+  Exclude:
+    - 'lib/solvapay/drivers.generated.rb'
+
 Style/TrailingCommaInArguments:
   EnforcedStyleForMultiline: consistent_comma
 

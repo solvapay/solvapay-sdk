@@ -2,11 +2,11 @@
  * Browser profile wrapper — public-safe pure logic only.
  *
  * Exposes `wasmVersion` plus the business-details / credit-display /
- * seller-identity / plan-pricing sync envelope functions (§7.8 public-safe
- * subset). Never exports webhook verification, the transport `WasmClient`,
- * or any MCP / secret-adjacent server symbol — those are compiled out of
- * the browser Rust profile. Exports are enumerated explicitly (not
- * `export *`) so the browser symbol audit can verify the exact surface.
+ * seller-identity / plan-pricing sync envelope functions, plus the
+ * pure-compute decision exports that fit both §7.8 byte gates. Never
+ * exports webhook verification, the transport `WasmClient`, or the MCP
+ * engine — those stay on the edge profile. Exports are enumerated explicitly
+ * (not `export *`) so the browser symbol audit can verify the exact surface.
  * `ready()` warms the module asynchronously; `ensureReadySync()` instantiates
  * from a precompiled `WebAssembly.Module` when the caller already has one.
  */
@@ -81,6 +81,26 @@ import init, {
   BALANCE_RECONCILE_DELAYS_MS,
   REVERSE_CHARGE_NOTE,
   TAX_NOT_COLLECTED_NOTE,
+  assertValidProductRef,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyCreateError,
+  classifyLookupError,
+  classifyReactivateError,
+  freeMeterNamePattern,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  requireProductRef,
+  resolveProductRef,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
 } from '../pkg/browser/solvapay_wasm.js'
 
 export {
@@ -150,6 +170,26 @@ export {
   BALANCE_RECONCILE_DELAYS_MS,
   REVERSE_CHARGE_NOTE,
   TAX_NOT_COLLECTED_NOTE,
+  assertValidProductRef,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyCreateError,
+  classifyLookupError,
+  classifyReactivateError,
+  freeMeterNamePattern,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  requireProductRef,
+  resolveProductRef,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
 }
 
 let initPromise

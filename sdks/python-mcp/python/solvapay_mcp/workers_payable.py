@@ -16,9 +16,15 @@ from types import ModuleType
 from typing import Protocol
 
 from solvapay_mcp._drivers_generated import (
+    run_generated_ensure_customer_loop_async,
     run_generated_gate_loop_async,
     run_generated_payable_loop_async,
 )
+from solvapay_mcp.gate_copy import gate_message
+
+# Contract default `customerDedupTtlMs`. Workers cannot import the native
+# `solvapay` package; `test_workers_dedup_ttl_matches_contract_default` pins this.
+_CUSTOMER_DEDUP_TTL_MS = 60_000
 
 Handler = Callable[[dict[str, object], "WorkersResponseContext"], Awaitable[object]]
 GetCustomerRef = Callable[[dict[str, object]], str | Awaitable[str]]
@@ -128,8 +134,7 @@ class WorkersResponseContext:
         content = _solvapay_call(self._js_module, "mcpDefaultGate", payload)
         if not isinstance(content, Mapping):
             raise TypeError("mcpDefaultGate did not return an object")
-        message = str(content.get("message") or "Payment required")
-        raise PaywallError(message, dict(content))
+        raise PaywallError(gate_message(content), dict(content))
 
 
 @dataclass
@@ -280,16 +285,88 @@ async def _workers_ensure_customer(
     customer_ref: str,
     customer_cache: MutableMapping[str, tuple[str, int]],
 ) -> str:
-    state: object = None
     event: dict[str, object] = {
         "kind": "start",
         "customerRef": customer_ref,
-        "canCreateCustomer": True,
-        "canUpdateCustomer": True,
+        "canCreateCustomer": hasattr(client, "create_customer"),
+        "canUpdateCustomer": hasattr(client, "update_customer"),
+        "dedupTTLMs": _CUSTOMER_DEDUP_TTL_MS,
         "nowMs": _now_ms(),
     }
-    while True:
-        out = _call_js_sync(js_module, "ensureCustomerNext", {"state": state, "event": event})
+
+    def _worker_error(err: BaseException) -> bool:
+        return type(err).__name__ == "WorkersSolvaPayError"
+
+    class _Host:
+        def now_ms(self) -> int:
+            return _now_ms()
+
+        async def read_customer_cache(self, key: str) -> dict[str, object] | None:
+            hit = customer_cache.get(key)
+            if hit is None:
+                return None
+            backend_ref, timestamp_ms = hit
+            return {"backendRef": backend_ref, "timestampMs": timestamp_ms}
+
+        async def get_customer(self, action: dict[str, object]) -> dict[str, object]:
+            params: dict[str, str] = {}
+            if action.get("byExternalRef"):
+                params["externalRef"] = str(action["byExternalRef"])
+            elif action.get("byEmail"):
+                params["email"] = str(action["byEmail"])
+            try:
+                existing = _workers().unwrap_wasm_envelope(
+                    await client.get_customer(json.dumps(params))
+                )
+            except Exception as err:
+                if not _worker_error(err):
+                    raise
+                return {"found": False, "errorMessage": str(err)}
+            if isinstance(existing, dict) and existing.get("customerRef"):
+                return {"found": True, "customer": existing}
+            return {"found": False}
+
+        async def create_customer(self, params: object) -> dict[str, object]:
+            if not isinstance(params, dict):
+                raise _workers().WorkersSolvaPayError(
+                    "ensureCustomerNext createCustomer missing params"
+                )
+            try:
+                created = _workers().unwrap_wasm_envelope(
+                    await client.create_customer(json.dumps(params))
+                )
+            except Exception as err:
+                if not _worker_error(err):
+                    raise
+                return {"ok": False, "errorMessage": str(err)}
+            return {"ok": True, "customer": created if isinstance(created, dict) else {}}
+
+        async def update_customer(
+            self, customer_ref_arg: object, patch: object
+        ) -> dict[str, object]:
+            payload: dict[str, object] = {"customerRef": customer_ref_arg}
+            if isinstance(patch, dict):
+                payload.update(patch)
+            try:
+                _workers().unwrap_wasm_envelope(await client.update_customer(json.dumps(payload)))
+            except Exception as err:
+                if not _worker_error(err):
+                    raise
+                return {"ok": False, "errorMessage": str(err)}
+            return {"ok": True}
+
+        async def write_customer_cache(self, entry: dict[str, object]) -> None:
+            key = entry.get("key")
+            backend = entry.get("backendRef")
+            if not isinstance(key, str) or not isinstance(backend, str):
+                return
+            ts = entry.get("timestampMs")
+            customer_cache[key] = (backend, int(ts) if isinstance(ts, int | float) else _now_ms())
+
+    def step(driver_state: object, driver_event: object) -> dict[str, object]:
+        out = _call_js_sync(
+            js_module, "ensureCustomerNext", {"state": driver_state, "event": driver_event}
+        )
         if not isinstance(out, dict):
             raise _workers().WorkersSolvaPayError("ensureCustomerNext returned a non-object value")
         if "action" not in out and "error" in out:
@@ -300,115 +377,9 @@ async def _workers_ensure_customer(
         action = out.get("action")
         if not isinstance(action, dict):
             raise _workers().WorkersSolvaPayError("ensureCustomerNext returned unexpected action")
-        state = out.get("state")
-        kind = action.get("kind")
-        if kind == "readCustomerCache":
-            key = str(action.get("key") or "")
-            hit = customer_cache.get(key)
-            if hit is None:
-                event = {"kind": "customerCacheEntry", "found": False, "nowMs": _now_ms()}
-            else:
-                backend_ref, timestamp_ms = hit
-                event = {
-                    "kind": "customerCacheEntry",
-                    "found": True,
-                    "backendRef": backend_ref,
-                    "timestampMs": timestamp_ms,
-                    "nowMs": _now_ms(),
-                }
-            continue
-        if kind == "getCustomer":
-            params: dict[str, str] = {}
-            if action.get("byExternalRef"):
-                params["externalRef"] = str(action["byExternalRef"])
-            elif action.get("byEmail"):
-                params["email"] = str(action["byEmail"])
-            try:
-                existing = _workers().unwrap_wasm_envelope(
-                    await client.get_customer(json.dumps(params))
-                )
-                if isinstance(existing, dict) and existing.get("customerRef"):
-                    event = {
-                        "kind": "customerLookupResult",
-                        "found": True,
-                        "customer": existing,
-                        "nowMs": _now_ms(),
-                    }
-                else:
-                    event = {
-                        "kind": "customerLookupResult",
-                        "found": False,
-                        "nowMs": _now_ms(),
-                    }
-            except Exception as err:
-                if type(err).__name__ != "WorkersSolvaPayError":
-                    raise
-                event = {
-                    "kind": "customerLookupResult",
-                    "found": False,
-                    "errorMessage": str(err),
-                    "nowMs": _now_ms(),
-                }
-            continue
-        if kind == "createCustomer":
-            params_obj = action.get("params")
-            if not isinstance(params_obj, dict):
-                raise _workers().WorkersSolvaPayError(
-                    "ensureCustomerNext createCustomer missing params"
-                )
-            try:
-                created = _workers().unwrap_wasm_envelope(
-                    await client.create_customer(json.dumps(params_obj))
-                )
-                event = {
-                    "kind": "customerCreateResult",
-                    "ok": True,
-                    "customer": created if isinstance(created, dict) else {},
-                    "nowMs": _now_ms(),
-                }
-            except Exception as err:
-                if type(err).__name__ != "WorkersSolvaPayError":
-                    raise
-                event = {
-                    "kind": "customerCreateResult",
-                    "ok": False,
-                    "errorMessage": str(err),
-                    "nowMs": _now_ms(),
-                }
-            continue
-        if kind == "updateCustomer":
-            payload: dict[str, object] = {"customerRef": action.get("customerRef")}
-            patch = action.get("patch")
-            if isinstance(patch, dict):
-                payload.update(patch)
-            try:
-                _workers().unwrap_wasm_envelope(await client.update_customer(json.dumps(payload)))
-                event = {"kind": "customerUpdateResult", "ok": True, "nowMs": _now_ms()}
-            except Exception as err:
-                if type(err).__name__ != "WorkersSolvaPayError":
-                    raise
-                event = {
-                    "kind": "customerUpdateResult",
-                    "ok": False,
-                    "errorMessage": str(err),
-                    "nowMs": _now_ms(),
-                }
-            continue
-        if kind == "resolved":
-            backend = action.get("backendRef")
-            if not isinstance(backend, str) or not backend:
-                raise _workers().WorkersSolvaPayError(
-                    "ensureCustomerNext resolved without backendRef"
-                )
-            cache = action.get("cache")
-            if isinstance(cache, dict) and isinstance(cache.get("key"), str):
-                ts = cache.get("timestampMs")
-                customer_cache[str(cache["key"])] = (
-                    backend,
-                    int(ts) if isinstance(ts, int | float) else _now_ms(),
-                )
-            return backend
-        raise _workers().WorkersSolvaPayError(f"ensureCustomerNext unknown action kind: {kind}")
+        return {"state": out.get("state"), "action": action}
+
+    return await run_generated_ensure_customer_loop_async(step, _Host(), event)
 
 
 async def workers_gate(
@@ -550,7 +521,7 @@ async def workers_invoke_payable(
                 return {
                     "kind": "paywall",
                     "gate": gate,
-                    "message": str(gate.get("message") or "Payment required"),
+                    "message": gate_message(gate),
                 }
             return {
                 "kind": "allow",

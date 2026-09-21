@@ -393,6 +393,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         }
     }
 
@@ -441,7 +443,9 @@ mod tests {
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
-            driver_loops: None,
+            driver_loops: Default::default(),
+            name_overrides: BTreeMap::new(),
+            reserved_words: BTreeMap::new(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("LimitResponseWithPlan").expect("overlay") {
@@ -539,7 +543,9 @@ mod tests {
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
-            driver_loops: None,
+            driver_loops: Default::default(),
+            name_overrides: BTreeMap::new(),
+            reserved_words: BTreeMap::new(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("TopupProcessResult").expect("overlay") {

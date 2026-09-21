@@ -8,61 +8,18 @@ import {
   type WasmClientLike,
   type WasmClientMethod,
 } from '../src/wasm'
+import {
+  GROUP_A_FNS,
+  GROUP_B_FNS,
+  GROUP_C_FNS,
+  GROUP_MCP_FNS,
+} from '../../../../tools/conformance/lib/host-fns.generated'
 
-const GROUP_A: WasmClientMethod[] = [
-  'createCustomer',
-  'updateCustomer',
-  'getCustomer',
-  'assignCredits',
-  'getCustomerBalance',
-  'getUserInfo',
-  'createCheckoutSession',
-  'createCustomerSession',
-  'getMerchant',
-  'getPlatformConfig',
-]
-
-const GROUP_B: WasmClientMethod[] = [
-  'createPaymentIntent',
-  'createTopupPaymentIntent',
-  'processPaymentIntent',
-  'attachBusinessDetails',
-  'activatePlan',
-]
-
-const GROUP_C: WasmClientMethod[] = [
-  'checkLimits',
-  'trackUsage',
-  'trackUsageBulk',
-  'getProduct',
-  'listProducts',
-  'createProduct',
-  'updateProduct',
-  'deleteProduct',
-  'cloneProduct',
-  'bootstrapMcpProduct',
-  'configureMcpPlans',
-  'listPlans',
-  'createPlan',
-  'updatePlan',
-  'deletePlan',
-  'cancelPurchase',
-  'reactivatePurchase',
-  'getPaymentMethod',
-  'getAutoRecharge',
-  'saveAutoRecharge',
-  'disableAutoRecharge',
-]
-
-const GROUP_MCP: WasmClientMethod[] = [
-  'mcpBootstrap',
-  'mcpCallBuiltinTool',
-  'mcpReadResource',
-  'mcpOauthRequest',
-  'mcpDispatch',
-  'mcpResolveAuth',
-  'fetchJwks',
-]
+// Binding-symbol sections. The generated ids are the client method names.
+const GROUP_A = [...GROUP_A_FNS] as WasmClientMethod[]
+const GROUP_B = [...GROUP_B_FNS] as WasmClientMethod[]
+const GROUP_C = [...GROUP_C_FNS] as WasmClientMethod[]
+const GROUP_MCP = [...GROUP_MCP_FNS] as WasmClientMethod[]
 
 const ALL_METHODS: WasmClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C, ...GROUP_MCP]
 
@@ -368,6 +325,12 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
     ).toEqual({ fromWasm: 'saveAutoRecharge' })
     expect(await client.disableAutoRecharge!({ customerRef: 'cus_1' })).toEqual({
       fromWasm: 'disableAutoRecharge',
+    })
+    expect(await client.listPurchases!({ customerRef: 'cus_1' })).toEqual({
+      fromWasm: 'listPurchases',
+    })
+    expect(await client.getCreditActivity!({ customerRef: 'cus_1' })).toEqual({
+      fromWasm: 'getCreditActivity',
     })
 
     expect(fetchMock).not.toHaveBeenCalled()

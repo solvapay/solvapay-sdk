@@ -194,7 +194,7 @@ describe('registerFree — tools/call', () => {
     expect(parsed.reason ?? parsed.kind).toBeTruthy()
   })
 
-  it('returns a 401 envelope when the caller is unidentified', async () => {
+  it('returns a paywall when the caller is unidentified', async () => {
     const { solvaPay } = makeSolvaPay()
     const server = buildServer(solvaPay, ({ registerFree }) => {
       registerFree('preview_quote', {
@@ -205,7 +205,10 @@ describe('registerFree — tools/call', () => {
 
     const result = await invokeToolsCall(server, 'preview_quote')
 
-    expect(result.isError).toBe(true)
-    expect(result.structuredContent).toMatchObject({ status: 401 })
+    expect(result.isError).toBeFalsy()
+    const parsed = PaywallStructuredContentSchema.parse(result.structuredContent)
+    expect(parsed).toMatchObject({
+      message: 'customer_ref missing from MCP auth context',
+    })
   })
 })

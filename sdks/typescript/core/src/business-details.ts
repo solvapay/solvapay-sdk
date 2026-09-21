@@ -1,193 +1,68 @@
 import { z } from 'zod'
+import {
+  BUSINESS_COUNTRY_DISPLAY_NAMES as readBusinessCountryDisplayNames,
+  BUSINESS_COUNTRY_OPTIONS,
+  COUNTRY_TO_TAX_ID_TYPE as readCountryToTaxIdType,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  TAX_BEHAVIORS,
+  TAX_EXCLUSIVE_CURRENCIES,
+  TAX_ID_EXAMPLE_BY_COUNTRY as readTaxIdExampleByCountry,
+  TAX_ID_TYPES as readTaxIdTypes,
+  isTaxIdType as coreIsTaxIdType,
+  validateBusinessDetails,
+} from './native-core'
+
+export {
+  BUSINESS_COUNTRY_OPTIONS,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  TAX_BEHAVIORS,
+  TAX_EXCLUSIVE_CURRENCIES,
+  validateBusinessDetails,
+}
 
 export type TaxIdType = 'eu_vat' | 'gb_vat' | 'us_ein' | 'jp_trn'
 
-const TAX_ID_TYPE_VALUES = ['eu_vat', 'gb_vat', 'us_ein', 'jp_trn'] as const
+export type EuMemberCountry =
+  | 'AT'
+  | 'BE'
+  | 'BG'
+  | 'HR'
+  | 'CY'
+  | 'CZ'
+  | 'DK'
+  | 'EE'
+  | 'FI'
+  | 'FR'
+  | 'DE'
+  | 'GR'
+  | 'HU'
+  | 'IE'
+  | 'IT'
+  | 'LV'
+  | 'LT'
+  | 'LU'
+  | 'MT'
+  | 'NL'
+  | 'PL'
+  | 'PT'
+  | 'RO'
+  | 'SK'
+  | 'SI'
+  | 'ES'
+  | 'SE'
 
-/** Type-level tuple for Zod. Runtime list is `TAX_ID_TYPES()` from core after gen. */
-export const TAX_ID_TYPES: readonly TaxIdType[] = TAX_ID_TYPE_VALUES
-
-export function isTaxIdType(value: string): value is TaxIdType {
-  return (TAX_ID_TYPE_VALUES as readonly string[]).includes(value)
-}
-
-/** EU member states (ISO 3166-1 alpha-2) supported for eu_vat. */
-const EU_MEMBER_COUNTRIES = [
-  'AT',
-  'BE',
-  'BG',
-  'HR',
-  'CY',
-  'CZ',
-  'DK',
-  'EE',
-  'FI',
-  'FR',
-  'DE',
-  'GR',
-  'HU',
-  'IE',
-  'IT',
-  'LV',
-  'LT',
-  'LU',
-  'MT',
-  'NL',
-  'PL',
-  'PT',
-  'RO',
-  'SK',
-  'SI',
-  'ES',
-  'SE',
-] as const
-
-export type EuMemberCountry = (typeof EU_MEMBER_COUNTRIES)[number]
-
-export const SUPPORTED_BUSINESS_COUNTRIES = [...EU_MEMBER_COUNTRIES, 'GB', 'US', 'JP'] as const
-export type SupportedBusinessCountry = (typeof SUPPORTED_BUSINESS_COUNTRIES)[number]
-
-/** Stripe Connect English display names for supported business countries. */
-export const BUSINESS_COUNTRY_DISPLAY_NAMES: Record<SupportedBusinessCountry, string> = {
-  AT: 'Austria',
-  BE: 'Belgium',
-  BG: 'Bulgaria',
-  HR: 'Croatia',
-  CY: 'Cyprus',
-  CZ: 'Czechia',
-  DK: 'Denmark',
-  EE: 'Estonia',
-  FI: 'Finland',
-  FR: 'France',
-  DE: 'Germany',
-  GR: 'Greece',
-  HU: 'Hungary',
-  IE: 'Ireland',
-  IT: 'Italy',
-  JP: 'Japan',
-  LV: 'Latvia',
-  LT: 'Lithuania',
-  LU: 'Luxembourg',
-  MT: 'Malta',
-  NL: 'Netherlands',
-  PL: 'Poland',
-  PT: 'Portugal',
-  RO: 'Romania',
-  SK: 'Slovakia',
-  SI: 'Slovenia',
-  ES: 'Spain',
-  SE: 'Sweden',
-  GB: 'United Kingdom',
-  US: 'United States of America',
-}
+export type SupportedBusinessCountry = EuMemberCountry | 'GB' | 'US' | 'JP'
 
 export type BusinessCountryOption = {
   value: SupportedBusinessCountry
   label: string
 }
 
-export const BUSINESS_COUNTRY_OPTIONS: BusinessCountryOption[] = SUPPORTED_BUSINESS_COUNTRIES.map(
-  code => ({
-    value: code,
-    label: BUSINESS_COUNTRY_DISPLAY_NAMES[code],
-  }),
-).sort((a, b) => a.label.localeCompare(b.label))
-
-export const COUNTRY_TO_TAX_ID_TYPE: Record<SupportedBusinessCountry, TaxIdType> = {
-  AT: 'eu_vat',
-  BE: 'eu_vat',
-  BG: 'eu_vat',
-  HR: 'eu_vat',
-  CY: 'eu_vat',
-  CZ: 'eu_vat',
-  DK: 'eu_vat',
-  EE: 'eu_vat',
-  FI: 'eu_vat',
-  FR: 'eu_vat',
-  DE: 'eu_vat',
-  GR: 'eu_vat',
-  HU: 'eu_vat',
-  IE: 'eu_vat',
-  IT: 'eu_vat',
-  JP: 'jp_trn',
-  LV: 'eu_vat',
-  LT: 'eu_vat',
-  LU: 'eu_vat',
-  MT: 'eu_vat',
-  NL: 'eu_vat',
-  PL: 'eu_vat',
-  PT: 'eu_vat',
-  RO: 'eu_vat',
-  SK: 'eu_vat',
-  SI: 'eu_vat',
-  ES: 'eu_vat',
-  SE: 'eu_vat',
-  GB: 'gb_vat',
-  US: 'us_ein',
-}
-
-/** Stripe-aligned example values for tax ID fields. */
-export const TAX_ID_EXAMPLE_BY_COUNTRY: Record<SupportedBusinessCountry, string> = {
-  AT: 'ATU12345678',
-  BE: 'BE0123456789',
-  BG: 'BG0123456789',
-  HR: 'HR12345678912',
-  CY: 'CY12345678Z',
-  CZ: 'CZ1234567890',
-  DK: 'DK12345678',
-  EE: 'EE123456789',
-  FI: 'FI12345678',
-  FR: 'FRAB123456789',
-  DE: 'DE123456789',
-  GR: 'EL123456789',
-  HU: 'HU12345678',
-  IE: 'IE1234567AB',
-  IT: 'IT12345678912',
-  JP: 'T1234567891234',
-  LV: 'LV12345678912',
-  LT: 'LT123456789',
-  LU: 'LU12345678',
-  MT: 'MT12345678',
-  NL: 'NL123456789B12',
-  PL: 'PL1234567890',
-  PT: 'PT123456789',
-  RO: 'RO1234567891',
-  SK: 'SK1234567891',
-  SI: 'SI12345678',
-  ES: 'ESA1234567Z',
-  SE: 'SE123456789123',
-  GB: 'GB123456789',
-  US: '12-3456789',
-}
-
-/**
- * Shape-only Zod schema (no validation refine). Runtime validation is Rust-only
- * via {@link validateBusinessDetails} after Step 52.
- */
-export const BusinessDetailsSchema = z.object({
-  isBusiness: z.boolean(),
-  businessName: z.string().optional(),
-  country: z.string().optional(),
-  customerCountry: z.string().optional(),
-  customerName: z.string().max(100).optional(),
-  customerState: z.string().optional(),
-  customerPostalCode: z.string().optional(),
-  taxId: z.string().optional(),
-  taxIdType: z.enum(TAX_ID_TYPE_VALUES).optional(),
-})
-
-export type {
-  BusinessDetails,
-  BusinessDetailsInput,
-  BusinessDetailsValidationError,
-  BusinessDetailsValidationIssue,
-  ValidateBusinessDetailsResult,
-} from './types/boundary.generated'
-
-export const TAX_BEHAVIORS = ['auto', 'inclusive', 'exclusive'] as const
-export type TaxBehavior = (typeof TAX_BEHAVIORS)[number]
-
-export const TAX_EXCLUSIVE_CURRENCIES = ['USD', 'CAD'] as const
+export type TaxBehavior = 'auto' | 'inclusive' | 'exclusive'
 
 export type TaxBreakdown = {
   subtotal: number
@@ -198,3 +73,118 @@ export type TaxBreakdown = {
   currency: string
   inclusive: boolean
 }
+
+export type {
+  BusinessDetails,
+  BusinessDetailsInput,
+  BusinessDetailsValidationError,
+  BusinessDetailsValidationIssue,
+  ValidateBusinessDetailsResult,
+} from './types/boundary.generated'
+
+export function isTaxIdType(value: string): value is TaxIdType
+export function isTaxIdType(value: unknown): value is TaxIdType
+export function isTaxIdType(value: unknown): value is TaxIdType {
+  return typeof value === 'string' && coreIsTaxIdType(value)
+}
+
+function unexpected(value: unknown): string {
+  if (value === null) return 'null'
+  if (Array.isArray(value)) return 'an array'
+  return typeof value
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readStringRecord(value: unknown, name: string): Record<string, string> {
+  if (!isPlainRecord(value)) {
+    throw new TypeError(`${name} returned ${unexpected(value)}, expected an object`)
+  }
+  const out: Record<string, string> = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== 'string') {
+      throw new TypeError(`${name}.${key} returned ${unexpected(entry)}, expected a string`)
+    }
+    out[key] = entry
+  }
+  return out
+}
+
+/** Map of supported business country codes to display names. */
+export function BUSINESS_COUNTRY_DISPLAY_NAMES(): Record<string, string> {
+  return readStringRecord(readBusinessCountryDisplayNames(), 'BUSINESS_COUNTRY_DISPLAY_NAMES')
+}
+
+/** Map of business country codes to default tax ID types. */
+export function COUNTRY_TO_TAX_ID_TYPE(): Record<string, TaxIdType> {
+  const record = readStringRecord(readCountryToTaxIdType(), 'COUNTRY_TO_TAX_ID_TYPE')
+  const out: Record<string, TaxIdType> = {}
+  for (const [country, taxIdType] of Object.entries(record)) {
+    if (!isTaxIdType(taxIdType)) {
+      throw new TypeError(
+        `COUNTRY_TO_TAX_ID_TYPE.${country} returned ${JSON.stringify(taxIdType)}, expected a tax ID type`,
+      )
+    }
+    out[country] = taxIdType
+  }
+  return out
+}
+
+/** Map of country codes to example tax ID strings. */
+export function TAX_ID_EXAMPLE_BY_COUNTRY(): Record<string, string> {
+  return readStringRecord(readTaxIdExampleByCountry(), 'TAX_ID_EXAMPLE_BY_COUNTRY')
+}
+
+/** Frozen set of supported tax ID type values. */
+export function TAX_ID_TYPES(): readonly TaxIdType[] {
+  const values = readTaxIdTypes()
+  const narrowed: TaxIdType[] = []
+  for (const value of values) {
+    if (!isTaxIdType(value)) {
+      throw new TypeError(`TAX_ID_TYPES contained ${JSON.stringify(value)}, expected a tax ID type`)
+    }
+    narrowed.push(value)
+  }
+  return narrowed
+}
+
+const businessDetailsShape = z.object({
+  isBusiness: z.boolean(),
+  businessName: z.string().optional(),
+  country: z.string().optional(),
+  customerCountry: z.string().optional(),
+  customerName: z.string().optional(),
+  customerState: z.string().optional(),
+  customerPostalCode: z.string().optional(),
+  taxId: z.string().optional(),
+  taxIdType: z.string().optional(),
+})
+
+/**
+ * Shape check plus core validation. Country, tax-ID, and address rules come
+ * from {@link validateBusinessDetails}; a successful parse returns the input
+ * object unchanged.
+ */
+export const BusinessDetailsSchema = businessDetailsShape.superRefine((value, ctx) => {
+  if (value.taxIdType !== undefined && !isTaxIdType(value.taxIdType)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['taxIdType'],
+      message: 'Invalid tax ID type',
+    })
+    return
+  }
+
+  const result = validateBusinessDetails(value)
+  if (result.success) return
+
+  for (const issue of result.error.issues) {
+    ctx.addIssue({
+      code: 'custom',
+      path: issue.path,
+      message: issue.message,
+    })
+  }
+})

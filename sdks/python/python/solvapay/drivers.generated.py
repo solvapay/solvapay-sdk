@@ -255,3 +255,248 @@ async def run_generated_payable_loop_async(
                 await host.track_usage(track["request"])
             return action.get("result")
         raise RuntimeError(f"invoke_payable_next unknown action kind: {kind}")
+
+
+class EnsureCustomerHost(Protocol):
+    def read_customer_cache(self, key: str) -> dict[str, object] | None: ...
+    def get_customer(self, action: dict[str, object]) -> dict[str, object]: ...
+    def create_customer(self, params: object) -> dict[str, object]: ...
+    def update_customer(self, customer_ref: object, patch: object) -> dict[str, object]: ...
+    def write_customer_cache(self, entry: dict[str, object]) -> None: ...
+    def now_ms(self) -> int: ...
+
+
+class AsyncEnsureCustomerHost(Protocol):
+    def read_customer_cache(self, key: str) -> Awaitable[dict[str, object] | None]: ...
+    def get_customer(self, action: dict[str, object]) -> Awaitable[dict[str, object]]: ...
+    def create_customer(self, params: object) -> Awaitable[dict[str, object]]: ...
+    def update_customer(
+        self, customer_ref: object, patch: object
+    ) -> Awaitable[dict[str, object]]: ...
+    def write_customer_cache(self, entry: dict[str, object]) -> Awaitable[None] | None: ...
+    def now_ms(self) -> int: ...
+
+
+def _ensure_cache_event(cached: dict[str, object] | None, now_ms: int) -> dict[str, object]:
+    if cached is None:
+        return {"kind": "customerCacheEntry", "found": False, "nowMs": now_ms}
+    return {
+        "kind": "customerCacheEntry",
+        "found": True,
+        "backendRef": cached["backendRef"],
+        "timestampMs": cached["timestampMs"],
+        "nowMs": now_ms,
+    }
+
+
+def _ensure_lookup_event(lookup: dict[str, object], now_ms: int) -> dict[str, object]:
+    if lookup.get("found") is True:
+        return {
+            "kind": "customerLookupResult",
+            "found": True,
+            "customer": lookup.get("customer"),
+            "nowMs": now_ms,
+        }
+    event: dict[str, object] = {"kind": "customerLookupResult", "found": False, "nowMs": now_ms}
+    message = lookup.get("errorMessage")
+    if isinstance(message, str) and message:
+        event["errorMessage"] = message
+    return event
+
+
+def _ensure_create_event(created: dict[str, object], now_ms: int) -> dict[str, object]:
+    if created.get("ok") is True:
+        return {
+            "kind": "customerCreateResult",
+            "ok": True,
+            "customer": created.get("customer"),
+            "nowMs": now_ms,
+        }
+    message = created.get("errorMessage")
+    return {
+        "kind": "customerCreateResult",
+        "ok": False,
+        "errorMessage": message if isinstance(message, str) else "",
+        "nowMs": now_ms,
+    }
+
+
+def _ensure_update_event(updated: dict[str, object], now_ms: int) -> dict[str, object]:
+    if updated.get("ok") is True:
+        return {"kind": "customerUpdateResult", "ok": True, "nowMs": now_ms}
+    message = updated.get("errorMessage")
+    return {
+        "kind": "customerUpdateResult",
+        "ok": False,
+        "errorMessage": message if isinstance(message, str) else "",
+        "nowMs": now_ms,
+    }
+
+
+def _ensure_apply_cache(host: EnsureCustomerHost, action: dict[str, object]) -> str:
+    cache = action.get("cache")
+    if isinstance(cache, dict) and isinstance(cache.get("key"), str):
+        backend = cache.get("backendRef", action.get("backendRef"))
+        host.write_customer_cache(
+            {
+                "key": cache["key"],
+                "backendRef": backend,
+                "timestampMs": cache.get("timestampMs"),
+            }
+        )
+    backend_ref = action.get("backendRef")
+    if not isinstance(backend_ref, str) or not backend_ref:
+        raise RuntimeError("ensure_customer_next resolved without backendRef")
+    return backend_ref
+
+
+def run_generated_ensure_customer_loop(
+    ensure_next: Callable[[object, object], dict[str, object]],
+    host: EnsureCustomerHost,
+    start_event: dict[str, object],
+) -> str:
+    state: object = None
+    event: dict[str, object] = start_event
+    while True:
+        out = ensure_next(state, event)
+        state = out["state"]
+        action = _as_map(out["action"])
+        kind = action["kind"]
+        if kind == "readCustomerCache":
+            event = _ensure_cache_event(
+                host.read_customer_cache(str(action.get("key") or "")),
+                host.now_ms(),
+            )
+            continue
+        if kind == "getCustomer":
+            event = _ensure_lookup_event(host.get_customer(action), host.now_ms())
+            continue
+        if kind == "createCustomer":
+            event = _ensure_create_event(
+                host.create_customer(action.get("params")),
+                host.now_ms(),
+            )
+            continue
+        if kind == "updateCustomer":
+            event = _ensure_update_event(
+                host.update_customer(action.get("customerRef"), action.get("patch")),
+                host.now_ms(),
+            )
+            continue
+        if kind == "resolved":
+            return _ensure_apply_cache(host, action)
+        raise RuntimeError(f"ensure_customer_next unknown action kind: {kind}")
+
+
+async def run_generated_ensure_customer_loop_async(
+    ensure_next: Callable[[object, object], dict[str, object]],
+    host: AsyncEnsureCustomerHost,
+    start_event: dict[str, object],
+) -> str:
+    state: object = None
+    event: dict[str, object] = start_event
+    while True:
+        out = ensure_next(state, event)
+        state = out["state"]
+        action = _as_map(out["action"])
+        kind = action["kind"]
+        if kind == "readCustomerCache":
+            cached = await host.read_customer_cache(str(action.get("key") or ""))
+            event = _ensure_cache_event(cached, host.now_ms())
+            continue
+        if kind == "getCustomer":
+            event = _ensure_lookup_event(await host.get_customer(action), host.now_ms())
+            continue
+        if kind == "createCustomer":
+            event = _ensure_create_event(
+                await host.create_customer(action.get("params")),
+                host.now_ms(),
+            )
+            continue
+        if kind == "updateCustomer":
+            event = _ensure_update_event(
+                await host.update_customer(action.get("customerRef"), action.get("patch")),
+                host.now_ms(),
+            )
+            continue
+        if kind == "resolved":
+            cache = action.get("cache")
+            if isinstance(cache, dict) and isinstance(cache.get("key"), str):
+                backend = cache.get("backendRef", action.get("backendRef"))
+                write = host.write_customer_cache(
+                    {
+                        "key": cache["key"],
+                        "backendRef": backend,
+                        "timestampMs": cache.get("timestampMs"),
+                    }
+                )
+                if write is not None:
+                    await write
+            backend_ref = action.get("backendRef")
+            if not isinstance(backend_ref, str) or not backend_ref:
+                raise RuntimeError("ensure_customer_next resolved without backendRef")
+            return backend_ref
+        raise RuntimeError(f"ensure_customer_next unknown action kind: {kind}")
+
+
+def run_generated_with_retry_blocking(
+    invoke,
+    *,
+    max_retries: int,
+    initial_delay: int,
+    backoff_strategy: str,
+    next_delay_ms,
+    sleep,
+    should_retry=None,
+    on_retry=None,
+):
+    """Blocking host retry loop. `next_delay_ms` is the core delay function."""
+    attempt = 0
+    while True:
+        try:
+            return invoke()
+        except Exception as err:
+            delay = next_delay_ms(attempt, max_retries, initial_delay, backoff_strategy)
+            if delay is None:
+                raise
+            if should_retry is not None and not should_retry(err, attempt):
+                raise
+            if on_retry is not None:
+                on_retry(err, attempt, delay)
+            sleep(delay)
+            attempt += 1
+
+
+async def run_generated_with_retry_async(
+    invoke,
+    *,
+    max_retries: int,
+    initial_delay: int,
+    backoff_strategy: str,
+    next_delay_ms,
+    sleep,
+    should_retry=None,
+    on_retry=None,
+):
+    """Async host retry loop. `sleep` and `invoke` may be coroutines."""
+    import inspect
+
+    attempt = 0
+    while True:
+        try:
+            result = invoke()
+            if inspect.isawaitable(result):
+                result = await result
+            return result
+        except Exception as err:
+            delay = next_delay_ms(attempt, max_retries, initial_delay, backoff_strategy)
+            if delay is None:
+                raise
+            if should_retry is not None and not should_retry(err, attempt):
+                raise
+            if on_retry is not None:
+                on_retry(err, attempt, delay)
+            slept = sleep(delay)
+            if inspect.isawaitable(slept):
+                await slept
+            attempt += 1

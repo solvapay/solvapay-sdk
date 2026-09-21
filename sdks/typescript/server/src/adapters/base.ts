@@ -5,6 +5,7 @@
  * Each adapter handles extraction, transformation, and formatting for its specific context.
  */
 
+import { resolveCustomerRef } from '../native-decisions'
 import { PaywallError } from '../paywall'
 import type { SolvaPayPaywall } from '../paywall'
 import type { PaywallArgs, PaywallMetadata, PaywallStructuredContent } from '../types'
@@ -100,12 +101,15 @@ export class AdapterUtils {
    * Ensure customer reference is properly formatted
    */
   static ensureCustomerRef(customerRef: string): string {
-    if (!customerRef || customerRef === 'anonymous') {
-      return 'anonymous'
-    }
-
-    // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
-    return customerRef
+    return resolveCustomerRef(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      customerRef || undefined,
+    )
   }
 
   /**
@@ -183,7 +187,16 @@ export async function createAdapterHandler<TContext, TResult>(
     // checkLimits, and emits `trackUsage('paywall', ...)` on gate
     // outcomes — matching the observability contract of the legacy
     // throw-based `protect()` path.
-    const decideGetCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
+    const decideGetCustomerRef = (args: PaywallArgs) =>
+      resolveCustomerRef(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        args.auth?.customer_ref,
+        undefined,
+      )
     try {
       const decision = await paywall.decide(args, metadata, decideGetCustomerRef)
 

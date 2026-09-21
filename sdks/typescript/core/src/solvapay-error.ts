@@ -39,18 +39,33 @@ export class SolvaPayError extends Error {
   readonly code?: string
 
   /**
+   * Envelope kind (`Api`, `Webhook`, `Transport`, …) when the error
+   * was reconstructed from a native or WASM call.
+   */
+  readonly kind?: string
+
+  /**
+   * Whether the caller should retry. Present when core set it on the
+   * envelope; absent when the failure is not a transport decision.
+   */
+  readonly retryable?: boolean
+
+  /**
    * Creates a new SolvaPayError instance.
    *
    * @param message - Error message
-   * @param init - Optional `{ status, code }` metadata. Both fields
-   *   are preserved on the instance so downstream consumers
-   *   (`handleRouteError`, MCP trace wrappers) can branch on HTTP
-   *   status without parsing the message string.
+   * @param init - Optional metadata. Fields are preserved on the instance
+   *   so downstream consumers can branch without parsing the message.
    */
-  constructor(message: string, init: { status?: number; code?: string } = {}) {
+  constructor(
+    message: string,
+    init: { status?: number; code?: string; kind?: string; retryable?: boolean } = {},
+  ) {
     super(message)
     this.name = 'SolvaPayError'
     this.status = init.status
     this.code = init.code
+    this.kind = init.kind
+    this.retryable = init.retryable
   }
 }

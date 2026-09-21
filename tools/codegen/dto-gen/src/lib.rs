@@ -23,7 +23,9 @@ pub mod emit_conformance_rs;
 pub mod emit_conformance_ts;
 pub mod emit_core_types_ts;
 pub mod emit_core_wrappers_ts;
+pub mod emit_defaults;
 pub mod emit_drivers;
+mod emit_ensure_loop;
 pub mod emit_fixture_runner_rs;
 pub mod emit_helpers;
 pub mod emit_helpers_go;
@@ -35,6 +37,7 @@ pub mod emit_native_rb;
 pub mod emit_parity_suite;
 pub mod emit_pyi_py;
 pub mod emit_rbs_rb;
+mod emit_retry_loop;
 pub mod emit_sync_ops;
 pub mod emit_ts;
 pub mod error;
@@ -72,6 +75,10 @@ pub use emit_conformance_rs::emit_conformance_rs;
 pub use emit_conformance_ts::emit_conformance_ts;
 pub use emit_core_types_ts::emit_core_types_ts;
 pub use emit_core_wrappers_ts::{emit_core_wrappers_ts, CoreWrapperKind};
+pub use emit_defaults::{
+    emit_defaults_go, emit_defaults_py, emit_defaults_rb, emit_defaults_rs,
+    emit_defaults_transport_rs, emit_defaults_ts,
+};
 pub use emit_drivers::{
     emit_drivers_go, emit_drivers_py, emit_drivers_rb, emit_drivers_rs, emit_drivers_ts,
 };
@@ -183,6 +190,8 @@ pub struct GenOutputs<'a> {
     pub native_ts_out: Option<&'a Path>,
     /// `--wasm-ts-out`
     pub wasm_ts_out: Option<&'a Path>,
+    /// `--ts-envelope-out`
+    pub ts_envelope_out: Option<&'a Path>,
     /// `--native-py-out`
     pub native_py_out: Option<&'a Path>,
     /// `--py-stub-out`
@@ -251,6 +260,18 @@ pub struct GenOutputs<'a> {
     pub rb_drivers_out: Option<&'a Path>,
     /// `--rs-drivers-out`
     pub rs_drivers_out: Option<&'a Path>,
+    /// `--ts-defaults-out`
+    pub ts_defaults_out: Option<&'a Path>,
+    /// `--py-defaults-out`
+    pub py_defaults_out: Option<&'a Path>,
+    /// `--rb-defaults-out`
+    pub rb_defaults_out: Option<&'a Path>,
+    /// `--go-defaults-out`
+    pub go_defaults_out: Option<&'a Path>,
+    /// `--rs-defaults-out`
+    pub rs_defaults_out: Option<&'a Path>,
+    /// `--transport-defaults-out`
+    pub transport_defaults_out: Option<&'a Path>,
     /// `--sync-ops-rs-out`
     pub sync_ops_rs_out: Option<&'a Path>,
     /// `--sync-ops-ts-out`
@@ -408,6 +429,12 @@ pub fn generate_from_snapshot(
                 false,
             ),
             (
+                "--ts-envelope-out",
+                outputs.ts_envelope_out,
+                emit_bindings_ts::emit_envelope_ts,
+                false,
+            ),
+            (
                 "--native-py-out",
                 outputs.native_py_out,
                 emit_native_py,
@@ -539,6 +566,42 @@ pub fn generate_from_snapshot(
                 "--rs-drivers-out",
                 outputs.rs_drivers_out,
                 emit_drivers_rs,
+                true,
+            ),
+            (
+                "--ts-defaults-out",
+                outputs.ts_defaults_out,
+                emit_defaults_ts,
+                false,
+            ),
+            (
+                "--py-defaults-out",
+                outputs.py_defaults_out,
+                emit_defaults_py,
+                false,
+            ),
+            (
+                "--rb-defaults-out",
+                outputs.rb_defaults_out,
+                emit_defaults_rb,
+                false,
+            ),
+            (
+                "--go-defaults-out",
+                outputs.go_defaults_out,
+                emit_defaults_go,
+                false,
+            ),
+            (
+                "--rs-defaults-out",
+                outputs.rs_defaults_out,
+                emit_defaults_rs,
+                true,
+            ),
+            (
+                "--transport-defaults-out",
+                outputs.transport_defaults_out,
+                emit_defaults_transport_rs,
                 true,
             ),
             (
@@ -784,7 +847,14 @@ fn write_go_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
 }
 
 fn write_c_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
-    write_formatted_files(dir, &[("dispatch.rs", &emitted.client_rs)])
+    write_formatted_files(
+        dir,
+        &[
+            ("dispatch.rs", &emitted.client_rs),
+            ("args.rs", &emitted.args_rs),
+            ("sync_dispatch.rs", &emitted.sync_dispatch_rs),
+        ],
+    )
 }
 
 fn write_python_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
@@ -828,12 +898,14 @@ pub fn write_emitted(out_dir: &Path, emitted: &EmittedCrate) -> GenResult<()> {
         out_dir.join("routes.rs"),
         out_dir.join("overlays.rs"),
         out_dir.join("error_templates.rs"),
+        out_dir.join("fixture_groups.rs"),
     ];
     write_file(&paths[0], &emitted.lib_rs)?;
     write_file(&paths[1], &emitted.schemas_rs)?;
     write_file(&paths[2], &emitted.routes_rs)?;
     write_file(&paths[3], &emitted.overlays_rs)?;
     write_file(&paths[4], &emitted.error_templates_rs)?;
+    write_file(&paths[5], &emitted.fixture_groups_rs)?;
     rustfmt_files(&paths)?;
     Ok(())
 }
@@ -898,6 +970,7 @@ mod output_dispatch_tests {
             "--c-parity-out",
             "--native-ts-out",
             "--wasm-ts-out",
+            "--ts-envelope-out",
             "--native-py-out",
             "--py-stub-out",
             "--py-helpers-out",
@@ -921,6 +994,12 @@ mod output_dispatch_tests {
             "--go-drivers-out",
             "--rb-drivers-out",
             "--rs-drivers-out",
+            "--ts-defaults-out",
+            "--py-defaults-out",
+            "--rb-defaults-out",
+            "--go-defaults-out",
+            "--rs-defaults-out",
+            "--transport-defaults-out",
             "--sync-ops-rs-out",
             "--sync-ops-ts-out",
             "--ts-conformance-out",

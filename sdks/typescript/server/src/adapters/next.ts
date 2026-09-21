@@ -9,7 +9,7 @@ import { AdapterUtils } from './base'
 import type { NextAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
 import { SolvaPayError } from '@solvapay/core'
-import { mapRouteError, resolveCustomerRef } from '../native-decisions'
+import { extractBearerToken, mapRouteError, resolveCustomerRef } from '../native-decisions'
 
 /**
  * Next.js context (Web Request + optional route context)
@@ -73,9 +73,9 @@ export class NextAdapter implements Adapter<NextContext, Response> {
     }
 
     let verifiedJwtSub: string | undefined
-    const authHeader = request.headers.get('authorization')
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtSub = await AdapterUtils.extractFromJWT(authHeader.substring(7))
+    const token = extractBearerToken(request.headers.get('authorization'))
+    if (token) {
+      const jwtSub = await AdapterUtils.extractFromJWT(token)
       if (jwtSub) {
         verifiedJwtSub = jwtSub
       }

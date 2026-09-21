@@ -80,6 +80,14 @@ def test_workers_payable_does_not_import_native_solvapay() -> None:
     assert "from solvapay_mcp._drivers_generated import" in source
 
 
+def test_workers_dedup_ttl_matches_contract_default() -> None:
+    from solvapay.defaults import _CUSTOMER_DEDUP_TTL_MS as contract_ttl
+
+    from solvapay_mcp.workers_payable import _CUSTOMER_DEDUP_TTL_MS as workers_ttl
+
+    assert workers_ttl == contract_ttl
+
+
 def test_workers_driver_loops_match_python_sdk() -> None:
     sdk = (REPO / "sdks/python/python/solvapay/drivers.generated.py").read_text()
     workers = (REPO / "sdks/python-mcp/python/solvapay_mcp/_drivers_generated.py").read_text()

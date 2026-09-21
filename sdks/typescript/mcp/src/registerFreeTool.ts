@@ -13,8 +13,6 @@ import type { CallToolResult } from '@modelcontextprotocol/server'
 import { z, type ZodTypeAny } from 'zod'
 import {
   buildPayableHandler,
-  defaultGetCustomerRef,
-  toolErrorResult,
   type PayableHandler,
   type SolvaPayToolAnnotations,
   type SolvaPayToolIcon,
@@ -142,16 +140,6 @@ export function registerFreeTool<
     args: Record<string, unknown>,
     extra?: import('@solvapay/mcp-core').McpToolExtra,
   ): Promise<CallToolResult> => {
-    const resolved = getCustomerRef
-      ? await getCustomerRef(args, extra)
-      : defaultGetCustomerRef(extra)
-    if (!resolved || resolved === 'anonymous') {
-      return toolErrorResult({
-        error: 'Unauthorized',
-        status: 401,
-        details: 'customer_ref missing from MCP auth context',
-      }) as CallToolResult
-    }
     return (await protectedHandler(args, extra)) as CallToolResult
   }
 

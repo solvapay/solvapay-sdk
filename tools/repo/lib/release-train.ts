@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { internalPackageRel, joinRel, lookupRel, REPO_PATHS } from '../../shared/paths.js'
+import {
+  internalPackageRel,
+  joinRel,
+  lookupRel,
+  REPO_PATHS,
+  toolPackageRel,
+} from '../../shared/paths.js'
 
 export const RELEASE_TRAIN_PACKAGE = '@solvapay/release-train'
 export const RELEASE_TRAIN_PACKAGE_REL = `${internalPackageRel('release-train')}/package.json`
@@ -45,8 +51,12 @@ export const RELEASE_TRAIN_GO_VERSION_TESTS = [
   'sdks/go/version_skew_test.go',
 ] as const
 
+/** Stamped into `@solvapay/init` because the published CLI does not ship the sentinel file. */
+export const RELEASE_TRAIN_INIT_SCAFFOLD_VERSION = `${toolPackageRel('init')}/src/language/release-train-version.generated.ts`
+
 const PACKAGE_VERSION_RE = /^version\s*=\s*"([^"]+)"/m
 const RUBY_VERSION_RE = /VERSION\s*=\s*"([^"]+)"/
+const INIT_SCAFFOLD_VERSION_RE = /export const RELEASE_TRAIN_VERSION = ['"]([^'"]*)['"]/
 
 export function readReleaseTrainVersion(repoRoot: string): string {
   const raw: unknown = JSON.parse(
@@ -58,7 +68,8 @@ export function readReleaseTrainVersion(repoRoot: string): string {
     !('name' in raw) ||
     !('version' in raw) ||
     raw.name !== RELEASE_TRAIN_PACKAGE ||
-    typeof raw.version !== 'string'
+    typeof raw.version !== 'string' ||
+    raw.version.length === 0
   ) {
     throw new Error(
       `release-train: ${RELEASE_TRAIN_PACKAGE_REL} is not a valid sentinel package.json`,
@@ -111,6 +122,21 @@ export function readGoPinnedVersion(text: string): string {
   return found[0] ?? ''
 }
 
+export function readInitScaffoldVersion(text: string): string {
+  const match = text.match(INIT_SCAFFOLD_VERSION_RE)
+  if (!match?.[1]) {
+    throw new Error('release-train: missing RELEASE_TRAIN_VERSION in init scaffold stamp')
+  }
+  return match[1]
+}
+
+export function stampInitScaffoldVersion(text: string, version: string): string {
+  if (!INIT_SCAFFOLD_VERSION_RE.test(text)) {
+    throw new Error('release-train: cannot stamp missing init scaffold version')
+  }
+  return text.replace(INIT_SCAFFOLD_VERSION_RE, `export const RELEASE_TRAIN_VERSION = '${version}'`)
+}
+
 export function stampRubyVersion(text: string, version: string): string {
   if (!RUBY_VERSION_RE.test(text)) {
     throw new Error('release-train: cannot stamp missing VERSION')
@@ -148,6 +174,12 @@ export function collectReleaseTrainDrift(
   for (const rel of RELEASE_TRAIN_GO_VERSION_TESTS) {
     const actual = readGoPinnedVersion(readFileSync(joinRel(repoRoot, rel), 'utf8'))
     if (actual !== expected) drift.push({ path: rel, expected, actual })
+  }
+  const initScaffold = readInitScaffoldVersion(
+    readFileSync(joinRel(repoRoot, RELEASE_TRAIN_INIT_SCAFFOLD_VERSION), 'utf8'),
+  )
+  if (initScaffold !== expected) {
+    drift.push({ path: RELEASE_TRAIN_INIT_SCAFFOLD_VERSION, expected, actual: initScaffold })
   }
   return drift
 }

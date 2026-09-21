@@ -40,6 +40,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub use client::SolvaPayClient;
 use error::{BindingError, SolvaPayError};
 use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList};
+use serde_json::Value;
 
 /// Inner pure helper: verifies a webhook and returns the JSON body string.
 ///
@@ -117,7 +119,7 @@ fn panic_probe() -> PyResult<()> {
 
 /// Verifies a SolvaPay webhook signature using the host wall clock.
 ///
-/// Returns the parsed JSON body as a string on success. On failure raises
+/// Returns the parsed event as a Python `dict` on success. On failure raises
 /// [`SolvaPayError`] whose `code` is the snake_case webhook error code.
 ///
 /// # Arguments
@@ -131,20 +133,72 @@ fn verify_webhook(
     body: String,
     signature: String,
     secret: String,
-) -> PyResult<String> {
+) -> PyResult<Py<PyAny>> {
     let result = catch_unwind(AssertUnwindSafe(|| {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| BindingError::clock_failed(e.to_string()))?
             .as_secs() as i64;
-        verify_webhook_json(&body, &signature, &secret, now)
+        solvapay_core::verify_webhook(&body, &signature, &secret, now)
+            .map_err(BindingError::from_webhook)
     }));
 
     match result {
-        Ok(Ok(json)) => Ok(json),
+        Ok(Ok(value)) => webhook_event_to_py(py, value),
         Ok(Err(err)) => Err(err.into_py_err(py)),
         Err(payload) => Err(BindingError::from_panic_payload(payload).into_py_err(py)),
     }
+}
+
+/// Converts a verified webhook [`Value`] into a Python object.
+///
+/// The public return is a `dict`. A non-object payload is a binding bug and
+/// raises rather than being re-encoded as a string.
+fn webhook_event_to_py(py: Python<'_>, value: Value) -> PyResult<Py<PyAny>> {
+    if !value.is_object() {
+        return Err(BindingError::serialize_failed(
+            "verified webhook payload is not a JSON object",
+        )
+        .into_py_err(py));
+    }
+    Ok(json_value_to_py(py, value)?.unbind())
+}
+
+/// Maps one JSON value onto the matching Python object.
+fn json_value_to_py<'py>(py: Python<'py>, value: Value) -> PyResult<Bound<'py, PyAny>> {
+    Ok(match value {
+        Value::Null => py.None().into_bound(py),
+        Value::Bool(flag) => flag.into_pyobject(py)?.to_owned().into_any(),
+        Value::Number(number) => {
+            if let Some(integer) = number.as_i64() {
+                integer.into_pyobject(py)?.into_any()
+            } else if let Some(integer) = number.as_u64() {
+                integer.into_pyobject(py)?.into_any()
+            } else if let Some(float) = number.as_f64() {
+                float.into_pyobject(py)?.into_any()
+            } else {
+                return Err(BindingError::serialize_failed(format!(
+                    "unsupported JSON number in webhook payload: {number}"
+                ))
+                .into_py_err(py));
+            }
+        }
+        Value::String(text) => text.into_pyobject(py)?.into_any(),
+        Value::Array(items) => {
+            let list = PyList::empty(py);
+            for item in items {
+                list.append(json_value_to_py(py, item)?)?;
+            }
+            list.into_any()
+        }
+        Value::Object(map) => {
+            let dict = PyDict::new(py);
+            for (key, item) in map {
+                dict.set_item(key, json_value_to_py(py, item)?)?;
+            }
+            dict.into_any()
+        }
+    })
 }
 
 /// Test-only webhook verification with an injected unix-seconds clock (Step 42).
@@ -208,6 +262,7 @@ mod tests {
     use super::verify_webhook_json;
     use crate::client::build_solvapay_client;
     use crate::error::{err_envelope, ok_envelope};
+    use pyo3::prelude::*;
     use serde_json::Value;
     use solvapay_core::SdkError;
 
@@ -231,6 +286,36 @@ mod tests {
         let value: Value = serde_json::from_str(&json).expect("json");
         assert_eq!(value["type"], "purchase.created");
         assert_eq!(value["id"], "evt_fixture_1");
+    }
+
+    #[test]
+    fn webhook_event_to_py_returns_dict() {
+        let json =
+            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW)
+                .expect("accept fixture must verify");
+        let value: Value = serde_json::from_str(&json).expect("json");
+        pyo3::Python::initialize();
+        pyo3::Python::attach(|py| {
+            let obj = super::webhook_event_to_py(py, value).expect("dict");
+            let bound = obj.bind(py);
+            assert!(bound.cast::<pyo3::types::PyString>().is_err());
+            let dict = bound.cast::<pyo3::types::PyDict>().expect("dict");
+            assert_eq!(
+                dict.get_item("type")
+                    .expect("lookup")
+                    .expect("type")
+                    .extract::<String>()
+                    .expect("str"),
+                "purchase.created"
+            );
+            let data = dict.get_item("data").expect("lookup").expect("data");
+            let data_dict = data.cast::<pyo3::types::PyDict>().expect("nested dict");
+            assert!(data_dict
+                .get_item("previous_attributes")
+                .expect("lookup")
+                .expect("previous_attributes")
+                .is_none());
+        });
     }
 
     #[test]

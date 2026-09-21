@@ -181,9 +181,9 @@ Two emitters, no scanner.
 
 1. **`Toolchain::C` column** on the `Toolchain` enum in `emit_bindings_rs.rs`,
    replacing the hand-written **one-op** (`getMerchant`) scaffold in
-   `sdks/capi/src/dispatch.rs` with a generated 42-op table. Closes the
+   `sdks/capi/src/dispatch.rs` with a generated dispatch of 38 routed methods plus 7 MCP composites (45 arms). Closes the
    deferred half of step 54. Prerequisite for C full parity in Phase 5: fixture
-   replay needs all 42 ops reachable; `ctest/smoke.c` still exercises one op.
+   replay needs all 45 dispatch ops reachable; `ctest/smoke.c` still exercises one op.
 2. **Fixture-runner registry emitter.** `IrBindingSymbol` already carries
    `core`, `core_call`, `args`, and `call.serialize` — everything a wrap invoke
    fn needs. Generating `tools/conformance/fixture-runner/src/registry.rs` emits the
@@ -263,11 +263,10 @@ over annotated signatures; snapshot byte-identical; `pnpm manifest:check` +
 
 **Landed:** `core/solvapay-export` (a pass-through proc-macro — Rust has no
 stable user-definable inert attribute) plus `scan_core_types.rs` /
-`derive_bindings.rs` in dto-gen. All **105** symbols are derived from the
-attribute: 69 in `solvapay-core`, and the 36 client methods in
-`solvapay-transport/src/client.rs`. `sdk-contract.yaml` drops from 6,595 to
-3,159 lines, and `binding-symbols.snapshot.json` reproduces
-**byte-identically** — the migration is descriptor-preserving by construction.
+`derive_bindings.rs` in dto-gen. Exported symbols are derived from the
+attribute. `solvapay-transport/src/client.rs` carries the 38 routed client
+methods. `binding-symbols.snapshot.json` has 197 symbols: 152 in
+`solvapay-core` and 45 in `solvapay-transport`.
 
 One deviation from the plan above: the **28 verbatim bodies were relocated, not
 retired.** Shim-emission residue that the AST cannot supply now lives in

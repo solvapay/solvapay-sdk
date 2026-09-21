@@ -70,6 +70,7 @@ use crate::decisions::plan_pricing_shape_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
+use crate::decisions::purchase_usage_is_metered_binding;
 use crate::decisions::require_product_ref_binding;
 use crate::decisions::resolve_account_state_binding;
 use crate::decisions::resolve_authenticated_user_binding;
@@ -215,6 +216,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(project_usage_snapshot_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_check_limits_params_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_retry_usage_error_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(purchase_usage_is_metered_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_usage_extra_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_list_plans_params_binding, m)?)?;
     m.add_function(wrap_pyfunction!(is_error_result_binding, m)?)?;

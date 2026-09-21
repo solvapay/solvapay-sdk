@@ -75,6 +75,30 @@ browserSafe:
   - BALANCE_RECONCILE_DELAYS_MS
   - REVERSE_CHARGE_NOTE
   - TAX_NOT_COLLECTED_NOTE
+  # Pure-compute decisions that fit both §7.8 byte gates. The full set is
+  # 200,826 browser-wasm gzip (ceiling 163,517). A larger curated set was
+  # 158,608 wasm gzip but 300,046 wasm2js gzip (cap 230,122). This slice
+  # measured 122,791 wasm gzip and 224,247 wasm2js gzip.
+  - assertValidProductRef
+  - attachBusinessDetailsValidationError
+  - classifyCancelError
+  - classifyCreateError
+  - classifyLookupError
+  - classifyReactivateError
+  - freeMeterNamePattern
+  - isCachedCustomerRefValid
+  - isEmailConflict
+  - normalizeCancelResponse
+  - normalizeReactivateResponse
+  - requireProductRef
+  - resolveProductRef
+  - validateAttachBusinessDetailsParams
+  - validateCheckoutSessionParams
+  - validateCreatePaymentIntentParams
+  - validateGetProductParams
+  - validateListPlansParams
+  - validateProcessPaymentIntentParams
+  - validatePurchaseRef
 
 excluded:
   - name: verifyWebhook
@@ -85,3 +109,117 @@ excluded:
     reason: MCP engine dispatch; edge-only
   - name: invokePayableNext
     reason: MCP payable driver; edge-only
+  - name: resolveAuthenticatedUser
+    reason: needs client-full (HMAC); compiled out of the browser profile (§7.1)
+  - name: buildCustomerSnapshot
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: buildPaywallGate
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: decidePaywallOutcome
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: ensureCustomerNext
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: evaluateCachedLimits
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: evaluateClaimedLimits
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: evaluateFreshLimits
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: evaluateProductReadiness
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: gateNext
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: getHistoryNext
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: overlayClaimedLimits
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: paywallErrorToClientPayload
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: projectTopupProcessOutcome
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolveFallbackGateLimits
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: topupProcessNext
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: appendPaidToolDescription
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: buildCreateCustomerParams
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: buildGateMessage
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: buildNudgeMessage
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: classifyCustomerRef
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: classifyPaywallState
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: coerceCustomerOptions
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: compileStringFieldInputSchemaJson
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: creditSignals
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: customerRefFromClaims
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: decodeJwtPayloadUnverified
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: defaultMcpBearerExpectations
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: ensureOutputSchemaObjectType
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: evaluateBalanceObservation
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: extractBackendCustomerRef
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: extractBearerToken
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: freeLimitsAgree
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: freeToolDescriptionSuffix
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: isErrorResult
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: linkLabel
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: mapRouteError
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: nextActionFor
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: normalizeFreeLimit
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: paywallStructuredContentSchema
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: planLadder
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: projectPaymentIntentResult
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: projectUsageSnapshot
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: purchaseUsageIsMetered
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolveCheckLimitsParams
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolveCustomerRef
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolvePurchaseCustomerRef
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolveReturnUrl
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: resolveUsageExtra
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: retryNextDelayMs
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: selectActivePlanPurchase
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: selectActivePurchases
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: shouldRetryUsageError
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: tierBands
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: tierMeters
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: validateActivatePlanParams
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget
+  - name: validateTopupPaymentIntentParams
+    reason: pure-compute symbol omitted from the browser profile under the §7.8 size budget

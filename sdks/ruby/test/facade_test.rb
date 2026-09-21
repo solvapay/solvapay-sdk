@@ -356,6 +356,16 @@ class FacadeTest < Minitest::Test
         FacadeTest.fake_ensure_customer_next(args)
       when "should_retry_usage_error"
         args["message"].to_s.include?("Customer not found")
+      when "resolve_customer_ref"
+        keys = %w[
+          hookRef verifiedJwtSub headerUserId headerCustomerRef
+          mcpExtraCustomerRef argsAuthCustomerRef argsCustomerRef
+        ]
+        keys.each do |key|
+          value = args[key]
+          return value.strip if value.is_a?(String) && !value.strip.empty?
+        end
+        "anonymous"
       when "retry_next_delay_ms"
         attempt = args["attempt"].to_i
         max = args["maxRetries"].to_i

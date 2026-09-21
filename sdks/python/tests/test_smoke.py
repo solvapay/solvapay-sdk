@@ -38,8 +38,8 @@ def test_version_matches_crate() -> None:
 def test_verify_webhook_accepts_fresh_signature() -> None:
     now = int(time.time())
     sig = _sign(FIXTURE_BODY, FIXTURE_SECRET, now)
-    raw = verify_webhook(FIXTURE_BODY, sig, FIXTURE_SECRET)
-    value = json.loads(raw)
+    value = verify_webhook(FIXTURE_BODY, sig, FIXTURE_SECRET)
+    assert isinstance(value, dict)
     assert value["type"] == "purchase.created"
     assert value["id"] == "evt_fixture_1"
 

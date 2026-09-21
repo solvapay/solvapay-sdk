@@ -17,6 +17,9 @@ pub fn mcp_tool_names() -> Result<Value, String> {
     call_sync("MCP_TOOL_NAMES", &Value::Object(call_args))
 }
 
+#[allow(non_snake_case, unused_imports)]
+pub use self::mcp_tool_names as MCP_TOOL_NAMES;
+
 /// Assert a value is a branded response envelope; brand failures are Transport errors.
 ///
 /// # Arguments

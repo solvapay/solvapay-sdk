@@ -144,7 +144,10 @@ describe('native.ts dispatch + envelope reconstructor', () => {
     await expect(callNative('getPlatformConfig', '{}', { apiKey: 'sk_test' })).rejects.toSatisfy(
       (err: unknown) => {
         expect(err).toBeInstanceOf(SolvaPayError)
-        expect((err as SolvaPayError).message).toBe('connection reset')
+        const solvaPayError = err as SolvaPayError
+        expect(solvaPayError.message).toBe('connection reset')
+        expect(solvaPayError.kind).toBe('Transport')
+        expect(solvaPayError.retryable).toBe(true)
         return true
       },
     )

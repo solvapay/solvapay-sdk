@@ -2,8 +2,17 @@
  * Utility functions for the SolvaPay Server SDK
  */
 
+import { INITIAL_DELAY_MS, MAX_RETRIES, RETRY_BACKOFF } from './defaults'
+import { runGeneratedWithRetryLoop } from './drivers.generated'
 import { retryNextDelayMs } from './native-decisions'
 import type { RetryOptions, TrackUsageRequest } from './types'
+
+function contractBackoff(value: string): 'fixed' | 'linear' | 'exponential' {
+  if (value === 'fixed' || value === 'linear' || value === 'exponential') {
+    return value
+  }
+  throw new Error(`unsupported retry backoff: ${value}`)
+}
 
 /**
  * Execute an async function with automatic retry logic.
@@ -47,48 +56,33 @@ import type { RetryOptions, TrackUsageRequest } from './types'
  */
 export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
-    maxRetries = 2,
-    initialDelay = 500,
-    backoffStrategy = 'fixed',
+    maxRetries = MAX_RETRIES,
+    initialDelay = INITIAL_DELAY_MS,
+    backoffStrategy = contractBackoff(RETRY_BACKOFF),
     shouldRetry,
     onRetry,
   } = options
 
-  let lastError: Error
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
-
-      const delay = retryNextDelayMs({
-        maxRetries,
-        initialDelay,
-        backoffStrategy,
-        attempt,
-      })
-      if (delay === null) {
-        throw lastError
-      }
-
-      // If shouldRetry is provided, use it to determine if we should retry
-      if (shouldRetry && !shouldRetry(lastError, attempt)) {
-        throw lastError
-      }
-
-      // Call onRetry callback if provided
-      if (onRetry) {
-        onRetry(lastError, attempt)
-      }
-
-      // Wait before retrying
-      await sleep(delay)
-    }
-  }
-
-  // This should never be reached, but TypeScript needs it
-  throw lastError!
+  return runGeneratedWithRetryLoop({
+    maxRetries,
+    initialDelay,
+    backoffStrategy,
+    invoke: fn,
+    sleep,
+    nextDelayMs: args =>
+      retryNextDelayMs({
+        maxRetries: args.maxRetries,
+        initialDelay: args.initialDelay,
+        backoffStrategy: contractBackoff(args.backoffStrategy),
+        attempt: args.attempt,
+      }),
+    shouldRetry,
+    onRetry: onRetry
+      ? (error, attempt) => {
+          onRetry(error, attempt)
+        }
+      : undefined,
+  })
 }
 
 /**

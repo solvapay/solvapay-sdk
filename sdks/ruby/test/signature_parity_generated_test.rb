@@ -144,7 +144,7 @@ class SignatureParityGeneratedTest < Minitest::Test
 
   def test_runtime_defaults_are_exercised_through_host_bridge
     assert_equal EXPECTED_LIMITS_CACHE_TTL_MS, SolvaPay::DEFAULT_LIMITS_CACHE_TTL_MS
-    assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_CACHE_TTL_MS
+    assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_DEDUP_TTL_MS
     assert_equal EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE
     assert_equal EXPECTED_ANONYMOUS_CUSTOMER_REF, SolvaPay::ANONYMOUS_CUSTOMER_REF
     assert_equal EXPECTED_REQUEST_ID_FORMAT, SolvaPay::REQUEST_ID_FORMAT

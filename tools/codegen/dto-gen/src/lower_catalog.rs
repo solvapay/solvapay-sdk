@@ -4,9 +4,9 @@ use std::collections::BTreeSet;
 
 use crate::error::{GenError, GenResult};
 use crate::ir::{
-    Ir, IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEmissionMode, IrEntryPoint,
-    IrEntrySection, IrErrorKind, IrLangNames, IrMcpSurface, IrParam, IrRubyReceiver, IrRubyTarget,
-    IrSyncKind,
+    Ir, IrAvailability, IrDefaults, IrDocModel, IrDriverIo, IrDriverLoop, IrDriverLoops,
+    IrEmissionMatrix, IrEmissionMode, IrEntryPoint, IrEntrySection, IrErrorKind, IrLangNames,
+    IrMcpSurface, IrParam, IrRubyReceiver, IrRubyTarget, IrSyncKind,
 };
 use crate::lower_overlays::lower_type_ref;
 use crate::manifest::{
@@ -68,7 +68,36 @@ pub fn lower_catalog(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
         ir.entry_points.insert(id.clone(), ep);
     }
     validate_ruby_catalog(&ir.entry_points)?;
+    ir.defaults = defaults_from_manifest(&manifest.defaults);
+    ir.driver_loops = lower_driver_loops(&manifest.driver_loops);
     Ok(())
+}
+
+fn lower_driver_loops(
+    loops: &std::collections::BTreeMap<String, crate::manifest::DriverLoopDef>,
+) -> IrDriverLoops {
+    IrDriverLoops {
+        loops: loops
+            .iter()
+            .map(|(name, loop_def)| {
+                (
+                    name.clone(),
+                    IrDriverLoop {
+                        io: loop_def
+                            .io
+                            .iter()
+                            .map(|io| IrDriverIo {
+                                action: io.action.clone(),
+                                event: io.event.clone(),
+                            })
+                            .collect(),
+                        terminal: loop_def.terminal.clone(),
+                        usage: loop_def.usage.clone(),
+                    },
+                )
+            })
+            .collect(),
+    }
 }
 
 fn lower_operation(
@@ -458,6 +487,13 @@ fn defaults_from_manifest(defaults: &crate::manifest::DefaultsDef) -> IrDefaults
         anonymous_customer_ref: defaults.anonymous_customer_ref.clone(),
         request_id_format: defaults.request_id_format.clone(),
         usage_action_type: defaults.usage_action_type.clone(),
+        retry_backoff: defaults
+            .retry
+            .backoff
+            .clone()
+            .unwrap_or_else(|| "fixed".to_owned()),
+        idempotency_key_formats: defaults.idempotency_key_formats.clone(),
+        go_context_first_param: defaults.go_context_first_param,
     }
 }
 
@@ -519,6 +555,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         }
     }
 
@@ -795,6 +833,9 @@ topLevel:
                     cases: vec![],
                 },
                 docs: DocsDef::default(),
+                idempotency: None,
+                overlays: vec![],
+                normalization: vec![],
             },
         );
         let manifest = Manifest {
@@ -807,7 +848,9 @@ topLevel:
             mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
-            driver_loops: None,
+            driver_loops: Default::default(),
+            name_overrides: BTreeMap::new(),
+            reserved_words: BTreeMap::new(),
         };
         lower_catalog(&mut ir, &manifest).unwrap();
         assert_eq!(

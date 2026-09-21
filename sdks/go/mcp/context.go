@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 // Response is the branded envelope from ResponseContext.Respond.
@@ -42,7 +44,7 @@ type GateSignal struct {
 
 func (g *GateSignal) Error() string {
 	if g == nil || g.Reason == "" {
-		return "Payment required"
+		return solvapay.PaymentRequiredMessage
 	}
 	return g.Reason
 }
@@ -99,7 +101,7 @@ func (rc *ResponseContext) Gate(reason string) error {
 	}
 	message := parsed.Message
 	if message == "" {
-		message = "Payment required"
+		message = solvapay.PaymentRequiredMessage
 	}
 	return &GateSignal{Reason: message, Gate: gate}
 }

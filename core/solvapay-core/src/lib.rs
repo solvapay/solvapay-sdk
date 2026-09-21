@@ -203,7 +203,9 @@ pub use tax_summary::{
 pub use topup_process::{
     topup_process_next, TopupPending, TopupProcessAction, TopupProcessNextOutput, TopupProcessState,
 };
-pub use usage::{project_usage_snapshot, should_retry_usage_error, UsageSnapshot};
+pub use usage::{
+    project_usage_snapshot, purchase_usage_is_metered, should_retry_usage_error, UsageSnapshot,
+};
 pub use usage_request::{build_usage_request, resolve_usage_extra, UsageClass, UsageExtra};
 #[cfg(feature = "webhook-verify")]
 pub use webhook::{verify_webhook, verify_webhook_json, WebhookError, WebhookErrorCode};

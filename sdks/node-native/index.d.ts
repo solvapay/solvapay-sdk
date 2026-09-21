@@ -439,6 +439,9 @@ export declare function projectTopupProcessOutcome(argsJson: string): string
 /** Binding for `projectUsageSnapshot`. */
 export declare function projectUsageSnapshot(argsJson: string): string
 
+/** Binding for `purchaseUsageIsMetered`. */
+export declare function purchaseUsageIsMetered(argsJson: string): string
+
 /** Binding for `requireProductRef`. Throws when neither source is set. */
 export declare function requireProductRef(argsJson: string): string
 

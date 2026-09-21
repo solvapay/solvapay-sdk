@@ -2,7 +2,7 @@
  * Read generated client method names from language facades for parity:check.
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { SdkContractManifest } from '../../shared/manifest-schema.js'
 import type { Language } from '../../shared/manifest-schema.js'
@@ -58,25 +58,34 @@ export function readCClientMethods(repoRoot: string): Set<string> {
 }
 
 export function readRustClientMethods(repoRoot: string): Set<string> {
-  const source = readFileSync(path.join(repoRoot, 'sdks/rust/src/client_generated.rs'), 'utf8')
-  return quotedStrings(source, /pub async fn ([a-z0-9_]+)\(/g)
+  const source = ['sdks/rust/src/client_generated.rs', 'sdks/rust/src/blocking_generated.rs']
+    .map(rel => readFileSync(path.join(repoRoot, rel), 'utf8'))
+    .join('\n')
+  return quotedStrings(source, /pub (?:async )?fn ([a-z0-9_]+)\(/g)
 }
 
 export interface McpSurfaceRead {
   symbols: Set<string>
-  hasCallEnvelope: boolean
 }
 
-function addPascalAndCamel(symbols: Set<string>, name: string): void {
-  symbols.add(name)
-  if (name.length > 0) {
-    symbols.add(name[0].toUpperCase() + name.slice(1))
+function readTree(root: string, include: (name: string) => boolean): string {
+  if (!existsSync(root)) {
+    return ''
   }
-}
-
-/** wasm-bindgen js_name camelCase ↔ catalog `names.rust` snake_case. */
-function camelToSnake(name: string): string {
-  return name.replace(/[A-Z]/g, ch => `_${ch.toLowerCase()}`).replace(/^_/, '')
+  const chunks: string[] = []
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name === '__pycache__' || entry.name === 'target') continue
+        walk(full)
+        continue
+      }
+      if (include(entry.name)) chunks.push(readFileSync(full, 'utf8'))
+    }
+  }
+  walk(root)
+  return chunks.join('\n')
 }
 
 export function readRbHelpers(repoRoot: string): Set<string> {
@@ -139,59 +148,51 @@ export function readTsMcpSymbols(repoRoot: string): McpSurfaceRead {
   for (const match of source.matchAll(/export function ([A-Za-z][A-Za-z0-9]*)\(/g)) {
     if (match[1] !== undefined) symbols.add(match[1])
   }
-  return {
-    symbols,
-    hasCallEnvelope: source.includes('callMcpSyncOp'),
-  }
+  return { symbols }
 }
 
+/** Public Python MCP package plus the SDK package (integrator-visible defs). */
 export function readPyMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const builders = readFileSync(path.join(repoRoot, 'sdks/python/src/payload_builders.rs'), 'utf8')
-  const lib = readFileSync(path.join(repoRoot, 'sdks/python/src/lib.rs'), 'utf8')
-  const symbols = quotedStrings(builders, /#\[pyfunction\(name = "([^"]+)"\)\]/g)
-  return { symbols, hasCallEnvelope: lib.includes('fn solvapay_call') }
+  const source = [
+    path.join(repoRoot, 'sdks/python-mcp/python/solvapay_mcp'),
+    path.join(repoRoot, 'sdks/python/python/solvapay'),
+  ]
+    .map(root => readTree(root, name => name.endsWith('.py') && !name.startsWith('test_')))
+    .join('\n')
+  return { symbols: quotedStrings(source, /^def ([A-Za-z][A-Za-z0-9_]*)\(/gm) }
 }
 
+/** Public Ruby MCP library, not the Magnus extension shim. */
 export function readRbMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const register = readFileSync(
-    path.join(repoRoot, 'sdks/ruby/ext/solvapay/src/register.rs'),
-    'utf8',
-  )
-  const lib = readFileSync(path.join(repoRoot, 'sdks/ruby/ext/solvapay/src/lib.rs'), 'utf8')
-  const symbols = quotedStrings(register, /define_singleton_method\(\s*"([^"]+)"/g)
-  return { symbols, hasCallEnvelope: lib.includes('fn solvapay_call') }
+  const source = readTree(path.join(repoRoot, 'sdks/ruby-mcp/lib'), name => name.endsWith('.rb'))
+  return {
+    symbols: quotedStrings(source, /^\s*def (?:self\.)?([A-Za-z][A-Za-z0-9_]*)/gm),
+  }
 }
 
+/** Exported Go MCP identifiers. The conformance harness is not a facade. */
 export function readGoMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const dispatch = readFileSync(
-    path.join(repoRoot, 'sdks/go/internal/contract/dispatch.go'),
-    'utf8',
+  const source = readTree(
+    path.join(repoRoot, 'sdks/go/mcp'),
+    name => name.endsWith('.go') && !name.endsWith('_test.go'),
   )
-  const core = readFileSync(path.join(repoRoot, 'sdks/go/mcp/core.go'), 'utf8')
-  const symbols = new Set<string>()
-  for (const name of quotedStrings(dispatch, /"([A-Za-z][A-Za-z0-9_]+)"\s*:/g)) {
-    addPascalAndCamel(symbols, name)
-  }
-  return { symbols, hasCallEnvelope: core.includes('CallSync') }
+  return { symbols: quotedStrings(source, /^func ([A-Z][A-Za-z0-9_]*)\(/gm) }
 }
 
+/** Public rust-mcp crate. Not the wasm tree. */
 export function readRustMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const source = readFileSync(path.join(repoRoot, 'sdks/wasm/src/payload_builders.rs'), 'utf8')
-  const lib = readFileSync(path.join(repoRoot, 'sdks/wasm/src/lib.rs'), 'utf8')
-  const symbols = quotedStrings(source, /js_name = "([^"]+)"/g)
-  for (const jsName of [...symbols]) {
-    const snake = camelToSnake(jsName)
-    if (snake !== jsName) symbols.add(snake)
+  const source = readTree(
+    path.join(repoRoot, 'sdks/rust-mcp/src'),
+    name => name.endsWith('.rs') && !name.endsWith('_test.rs'),
+  )
+  const symbols = quotedStrings(source, /pub (?:async )?fn ([A-Za-z0-9_]+)\(/g)
+  for (const match of source.matchAll(/pub use .*::([A-Za-z0-9_]+);/g)) {
+    if (match[1] !== undefined) symbols.add(match[1])
   }
-  for (const match of source.matchAll(/pub fn ([a-z0-9_]+)\(/g)) {
-    const fn = match[1]
-    if (fn === undefined) continue
-    symbols.add(fn)
-    if (fn.endsWith('_binding')) {
-      symbols.add(fn.slice(0, -'_binding'.length))
-    }
+  for (const match of source.matchAll(/pub use self::[A-Za-z0-9_]+ as ([A-Za-z0-9_]+);/g)) {
+    if (match[1] !== undefined) symbols.add(match[1])
   }
-  return { symbols, hasCallEnvelope: lib.includes('solvapay_call') }
+  return { symbols }
 }
 
 export function readCMcpSymbols(repoRoot: string): McpSurfaceRead {
@@ -201,7 +202,6 @@ export function readCMcpSymbols(repoRoot: string): McpSurfaceRead {
   ].join('\n')
   return {
     symbols: quotedStrings(source, /"([A-Za-z][A-Za-z0-9]+)"\s*=>/g),
-    hasCallEnvelope: false,
   }
 }
 

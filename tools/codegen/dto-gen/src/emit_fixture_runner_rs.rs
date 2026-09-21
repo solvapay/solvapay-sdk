@@ -18,7 +18,6 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
     let preamble = chrome_str(&chrome, &["preamble"])?;
     let skip = string_array(&chrome, "skip")?;
     let webhook_keep = string_array(&chrome, "webhookKeep")?;
-    let order = string_array(&chrome, "order")?;
 
     let wrap: Vec<&IrBindingSymbol> = ir
         .binding_symbols
@@ -65,6 +64,7 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
         .and_then(Value::as_object)
         .ok_or_else(|| GenError::Parse("snapshot missing extras".into()))?;
 
+    let order = registration_order(&wrap, extras, routing);
     let mut registers: Vec<String> = Vec::new();
     let mut seen = std::collections::BTreeSet::new();
     for id in &order {
@@ -126,6 +126,35 @@ pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
         invoke_fns.join("\n\n"),
         registers.join("\n")
     ))
+}
+
+fn registration_order(
+    wrap: &[&IrBindingSymbol],
+    extras: &serde_json::Map<String, Value>,
+    routing: &serde_json::Map<String, Value>,
+) -> Vec<String> {
+    let mut wrap_sorted: Vec<&IrBindingSymbol> = wrap.to_vec();
+    wrap_sorted.sort_by_key(|sym| (sym.emit_order, sym.id.as_str()));
+    let mut order = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for sym in wrap_sorted {
+        if seen.insert(sym.id.as_str()) {
+            order.push(sym.id.clone());
+        }
+    }
+    let mut rest: Vec<&str> = extras
+        .keys()
+        .map(String::as_str)
+        .chain(routing.keys().map(String::as_str))
+        .collect();
+    rest.sort_unstable();
+    rest.dedup();
+    for id in rest {
+        if seen.insert(id) {
+            order.push(id.to_owned());
+        }
+    }
+    order
 }
 
 fn register_stmt(id: &str, target: &str) -> String {

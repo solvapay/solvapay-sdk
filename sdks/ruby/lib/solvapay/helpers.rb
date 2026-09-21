@@ -22,9 +22,9 @@ module SolvaPay
   # @yield [] Operation to retry.
   # @return [Object] The block's return value.
   def with_retry(
-    max_retries: 2,
-    initial_delay: 500,
-    backoff_strategy: "fixed",
+    max_retries: MAX_RETRIES,
+    initial_delay: INITIAL_DELAY_MS,
+    backoff_strategy: RETRY_BACKOFF,
     should_retry: nil,
     on_retry: nil,
     sleeper: ->(seconds) { sleep(seconds) },
@@ -32,24 +32,25 @@ module SolvaPay
   )
     raise ArgumentError, "with_retry requires a block" unless operation
 
-    attempt = 0
-    loop do
-      return operation.call
-    rescue StandardError => e
-      delay_ms = NativeDispatch.call_sync(
-        "retry_next_delay_ms",
-        {
-          "attempt" => attempt,
-          "maxRetries" => max_retries,
-          "initialDelay" => initial_delay,
-          "backoffStrategy" => backoff_strategy,
-        },
-      )
-      raise if delay_ms.nil? || (should_retry && !should_retry.call(e, attempt))
-
-      on_retry&.call(e, attempt, delay_ms)
-      sleeper.call(delay_ms.to_f / 1_000)
-      attempt += 1
-    end
+    GeneratedRetryLoop.run(
+      invoke: operation,
+      max_retries: max_retries,
+      initial_delay: initial_delay,
+      backoff_strategy: backoff_strategy,
+      next_delay_ms: lambda { |attempt, retries, delay, strategy|
+        NativeDispatch.call_sync(
+          "retry_next_delay_ms",
+          {
+            "attempt" => attempt,
+            "maxRetries" => retries,
+            "initialDelay" => delay,
+            "backoffStrategy" => strategy,
+          },
+        )
+      },
+      sleeper: ->(delay_ms) { sleeper.call(delay_ms.to_f / 1_000) },
+      should_retry: should_retry,
+      on_retry: on_retry,
+    )
   end
 end

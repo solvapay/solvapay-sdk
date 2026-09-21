@@ -282,6 +282,20 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
         )
     if name == "should_retry_usage_error":
         return "Customer not found" in str(args.get("message") or "")
+    if name == "resolve_customer_ref":
+        for key in (
+            "hookRef",
+            "verifiedJwtSub",
+            "headerUserId",
+            "headerCustomerRef",
+            "mcpExtraCustomerRef",
+            "argsAuthCustomerRef",
+            "argsCustomerRef",
+        ):
+            value = args.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return "anonymous"
     raise AssertionError(f"unexpected decision {name}")
 
 

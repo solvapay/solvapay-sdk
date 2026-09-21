@@ -202,6 +202,8 @@ export type {
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret (`whsec_…`)
  * @param params.seenEventId - Optional host-owned replay check
+ * @param params.nowUnixSecs - Optional host clock as unix seconds. Omit to use
+ *   `Math.floor(Date.now() / 1000)`. Same override as the Node native binding.
  * @returns Parsed and typed {@link WebhookEvent} object
  * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid,
  *   or when `seenEventId` reports a duplicate (`code: 'duplicate_event'`)
@@ -221,10 +223,11 @@ export async function verifyWebhook({
   signature,
   secret,
   seenEventId,
+  nowUnixSecs,
 }: VerifyWebhookEdgeOptions): Promise<WebhookEvent> {
   // Rust-only after Step 53 — loader throws when WASM is unavailable instead
   // of running a duplicate Web Crypto implementation on the edge.
-  const event = await verifyWebhookWasm({ body, signature, secret })
+  const event = await verifyWebhookWasm({ body, signature, secret, nowUnixSecs })
   await rejectIfSeenEventId(event, seenEventId)
   return event
 }

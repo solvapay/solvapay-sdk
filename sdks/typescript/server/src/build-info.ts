@@ -3,6 +3,8 @@
  *
  * Reads `{version, coreSha}` from `@solvapay/server-native`. This is binding
  * infrastructure, not a catalog op — see `contract/delegation-allowlist.json`.
+ * Opt-in diagnostics only. The import-time skew guard lives in
+ * `version-skew.ts` and runs from `loadNativeBinding` when a binary is loaded.
  */
 
 import { createRequire } from 'node:module'

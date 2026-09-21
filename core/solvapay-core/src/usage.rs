@@ -146,6 +146,39 @@ pub fn should_retry_usage_error(message: &str) -> bool {
     message.contains("Customer not found")
 }
 
+/// Whether a purchase should pay for a `checkLimits` round trip.
+///
+/// A snapshot counts as metered when it sets `isMetered`, or when
+/// [`crate::pricing_options::counts_usage`] sees a per-unit charge, a limit,
+/// or a tier. Hosts must not re-derive this.
+///
+/// # Arguments
+///
+/// * `purchase` - Purchase object, or `None`/`Null` when none is active.
+///
+/// # Returns
+///
+/// `true` when the plan snapshot is metered.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "usage",
+    emit_order = 27
+)]
+pub fn purchase_usage_is_metered(purchase: Option<&Value>) -> bool {
+    let Some(purchase) = purchase.filter(|value| !value.is_null()) else {
+        return false;
+    };
+    let Some(snapshot) = purchase
+        .get("planSnapshot")
+        .filter(|value| !value.is_null())
+    else {
+        return false;
+    };
+    snapshot.get("isMetered") == Some(&Value::Bool(true))
+        || crate::pricing_options::counts_usage(Some(snapshot))
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -157,6 +190,28 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn metered_flag_or_counted_usage_requests_limits() {
+        let flagged = json!({ "planSnapshot": { "isMetered": true } });
+        let counted = json!({
+            "planSnapshot": {
+                "isMetered": false,
+                "options": [{
+                    "kind": "limit",
+                    "cap": 3,
+                    "scope": "billing_period",
+                    "meter": "tokens",
+                    "onExceed": "block"
+                }]
+            }
+        });
+        let flat = json!({ "planSnapshot": { "isMetered": false } });
+        assert!(purchase_usage_is_metered(Some(&flagged)));
+        assert!(purchase_usage_is_metered(Some(&counted)));
+        assert!(!purchase_usage_is_metered(Some(&flat)));
+        assert!(!purchase_usage_is_metered(None));
+    }
 
     #[test]
     fn no_active_purchase() {

@@ -139,3 +139,128 @@ module SolvaPay
     end
   end
 end
+
+module SolvaPay
+  module GeneratedEnsureCustomerLoop
+    def self.run(ensure_next:, host:, start_event:)
+      state = nil
+      event = start_event
+      loop do
+        out = ensure_next.call(state, event)
+        unless out.is_a?(Hash) && out["action"].is_a?(Hash)
+          raise SolvaPay::SolvaPayError.new("ensure_customer_next returned unexpected value", code: "internal_error")
+        end
+
+        state = out["state"]
+        action = out["action"]
+        case action["kind"]
+        when "readCustomerCache"
+          cached = host.read_customer_cache(action["key"].to_s)
+          now = host.now_ms
+          event = if cached.is_a?(Hash)
+                    {
+                      "kind" => "customerCacheEntry",
+                      "found" => true,
+                      "backendRef" => cached[:backend_ref] || cached["backendRef"],
+                      "timestampMs" => cached[:timestamp_ms] || cached["timestampMs"],
+                      "nowMs" => now,
+                    }
+                  else
+                    { "kind" => "customerCacheEntry", "found" => false, "nowMs" => now }
+                  end
+        when "getCustomer"
+          lookup = host.get_customer(action)
+          now = host.now_ms
+          event = if lookup[:found]
+                    {
+                      "kind" => "customerLookupResult",
+                      "found" => true,
+                      "customer" => lookup[:customer],
+                      "nowMs" => now,
+                    }
+                  else
+                    event = {
+                      "kind" => "customerLookupResult",
+                      "found" => false,
+                      "nowMs" => now,
+                    }
+                    event["errorMessage"] = lookup[:error_message] if lookup[:error_message]
+                    event
+                  end
+        when "createCustomer"
+          created = host.create_customer(action["params"])
+          now = host.now_ms
+          event = if created[:ok]
+                    {
+                      "kind" => "customerCreateResult",
+                      "ok" => true,
+                      "customer" => created[:customer],
+                      "nowMs" => now,
+                    }
+                  else
+                    {
+                      "kind" => "customerCreateResult",
+                      "ok" => false,
+                      "errorMessage" => created[:error_message].to_s,
+                      "nowMs" => now,
+                    }
+                  end
+        when "updateCustomer"
+          updated = host.update_customer(action["customerRef"], action["patch"])
+          now = host.now_ms
+          event = {
+            "kind" => "customerUpdateResult",
+            "ok" => updated[:ok] ? true : false,
+            "nowMs" => now,
+          }
+          event["errorMessage"] = updated[:error_message].to_s unless updated[:ok]
+        when "resolved"
+          backend = action["backendRef"]
+          unless backend.is_a?(String) && !backend.empty?
+            raise SolvaPay::SolvaPayError.new(
+              "ensure_customer_next resolved without backendRef",
+              code: "internal_error",
+            )
+          end
+
+          cache = action["cache"]
+          if cache.is_a?(Hash) && cache["key"].is_a?(String)
+            cached_backend = cache["backendRef"]
+            cached_backend = backend unless cached_backend.is_a?(String) && !cached_backend.empty?
+            host.write_customer_cache(cache["key"], cached_backend, cache["timestampMs"])
+          end
+          return backend
+        else
+          raise SolvaPay::SolvaPayError.new("ensure_customer_next unknown action kind", code: "internal_error")
+        end
+      end
+    end
+  end
+end
+
+module SolvaPay
+  module GeneratedRetryLoop
+    def self.run(
+      invoke:,
+      max_retries:,
+      initial_delay:,
+      backoff_strategy:,
+      next_delay_ms:,
+      sleeper:,
+      should_retry: nil,
+      on_retry: nil
+    )
+      attempt = 0
+      loop do
+        return invoke.call
+      rescue StandardError => e
+        delay_ms = next_delay_ms.call(attempt, max_retries, initial_delay, backoff_strategy)
+        raise if delay_ms.nil? || (should_retry && !should_retry.call(e, attempt))
+
+        on_retry&.call(e, attempt, delay_ms)
+        sleeper.call(delay_ms)
+        attempt += 1
+      end
+    end
+  end
+end

@@ -81,11 +81,15 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
 
     if let Some(verify) = ir.entry_points.get("verifyWebhook") {
         let doc = render_pydoc(verify);
-        out.push_str("def verify_webhook(body: str, signature: str, secret: str) -> str:\n");
+        out.push_str(
+            "def verify_webhook(body: str, signature: str, secret: str) -> dict[str, object]:\n",
+        );
         write_pydoc_block(&mut out, &doc, "    ");
         out.push_str("    ...\n");
     } else {
-        out.push_str("def verify_webhook(body: str, signature: str, secret: str) -> str: ...\n");
+        out.push_str(
+            "def verify_webhook(body: str, signature: str, secret: str) -> dict[str, object]: ...\n",
+        );
     }
 
     out.push_str(
@@ -334,6 +338,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         }
     }
 

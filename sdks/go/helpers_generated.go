@@ -5,6 +5,7 @@ package solvapay
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
@@ -33,7 +34,11 @@ func COUNTRY_TO_TAX_ID_TYPE(ctx context.Context) (any, error) {
 // POSTAL_CODE_REQUIRED_COUNTRIES countries that require a postal or ZIP code for Stripe Tax.
 // Returns Country code list.
 func POSTAL_CODE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_postal_code_required_countries_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_postal_code_required_countries_binding", string(payload))
 }
 
 // REVERSE_CHARGE_NOTE buyer-facing note when VAT reverse charge applies.
@@ -49,7 +54,11 @@ func SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(ctx context.Context) (any, erro
 // STATE_REQUIRED_COUNTRIES countries that require a state or province for Stripe Tax.
 // Returns Country code list.
 func STATE_REQUIRED_COUNTRIES(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_state_required_countries_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_state_required_countries_binding", string(payload))
 }
 
 // SUPPORTED_BUSINESS_COUNTRIES frozen list of country codes supported for seller business details.
@@ -93,483 +102,713 @@ func TOPUP_BALANCE_POLL_DELAYS_MS(ctx context.Context) (any, error) {
 // The description parameter is Optional merchant-authored description; trailing whitespace is stripped.
 // Returns Description plus hint, or the hint alone when no description is present.
 func AppendPaidToolDescription(ctx context.Context, description any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_append_paid_tool_description_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"description": description,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_append_paid_tool_description_binding", string(payload))
 }
 
 // AssertValidProductRef reject empty, placeholder, or non-prd_ product refs at construction time.
 // Returns Throws when the ref is not a real prd_ identifier.
 func AssertValidProductRef(ctx context.Context, productRef any, context any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_assert_valid_product_ref_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"productRef": productRef,
 		"context":    context,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_assert_valid_product_ref_binding", string(payload))
 }
 
 // BillingCycle read the billing-cycle option from a plan.
 // Returns Interval (and count when greater than 1), or null.
 func BillingCycle(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_billing_cycle_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_billing_cycle_binding", string(payload))
 }
 
 // BuildCustomerSnapshot build the merchant-facing customer snapshot from a limits body.
 // Returns Customer snapshot with defaults applied, including throttled and overage.
 func BuildCustomerSnapshot(ctx context.Context, customerRef any, limits any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_build_customer_snapshot_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"customerRef": customerRef,
 		"limits":      limits,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_build_customer_snapshot_binding", string(payload))
 }
 
 // BuildGateMessage build the human-readable paywall gate message from state and gate content.
 // Returns Gate message string.
 func BuildGateMessage(ctx context.Context, state any, gate any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_build_gate_message_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"state": state,
 		"gate":  gate,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_build_gate_message_binding", string(payload))
 }
 
 // BuildNudgeMessage build a soft nudge message when usage approaches plan limits.
 // Returns Nudge message string.
 func BuildNudgeMessage(ctx context.Context, state any, limits any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_build_nudge_message_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"state":  state,
 		"limits": limits,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_build_nudge_message_binding", string(payload))
 }
 
 // BuildPaywallGate build the structured paywall gate payload for a product and limits snapshot.
 // Returns Structured gate content for paywall responses.
 func BuildPaywallGate(ctx context.Context, productRef any, limits any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_build_paywall_gate_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"productRef": productRef,
 		"limits":     limits,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_build_paywall_gate_binding", string(payload))
 }
 
 // Charges return every charge option on a plan, in wire order.
 // Returns Charge objects (flat, unit, or seat).
 func Charges(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_charges_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_charges_binding", string(payload))
 }
 
 // ClassifyPaywallState classify paywall state from limits and product context.
 // Returns Canonical paywall state label.
 func ClassifyPaywallState(ctx context.Context, limits any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_classify_paywall_state_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"limits": limits,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_classify_paywall_state_binding", string(payload))
 }
 
 // CountsUsage true when the plan counts usage via a per-unit charge, limit, or tier.
 // Returns Whether the plan has a usage counter even without a per-unit rate.
 func CountsUsage(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_counts_usage_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_counts_usage_binding", string(payload))
 }
 
 // CreditSignals coalesce credit-balance channels and derive shortfall and remaining-call counts.
 // The limits parameter is Limits response, or null/absent when no check has run.
 // Returns Credit signals including isCreditBased and optional shortfall fields.
 func CreditSignals(ctx context.Context, limits any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_credit_signals_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"limits": limits,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credit_signals_binding", string(payload))
 }
 
 // CreditsPerUnitFromBalance credits per metered call when the charge currency matches the balance peg.
 // Returns Credits per unit, or null when the rate cannot be established honestly.
 func CreditsPerUnitFromBalance(ctx context.Context, priced any, balance any, meter any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_credits_per_unit_from_balance_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced":  priced,
 		"balance": balance,
 		"meter":   meter,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credits_per_unit_from_balance_binding", string(payload))
 }
 
 // CreditsToDisplayMinorUnits convert credit units into display minor units for a currency.
 // Returns Display amount in minor units.
 func CreditsToDisplayMinorUnits(ctx context.Context, credits any, creditsPerMinorUnit any, displayExchangeRate any, displayCurrency any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_credits_to_display_minor_units_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"credits":             credits,
 		"creditsPerMinorUnit": creditsPerMinorUnit,
 		"displayExchangeRate": displayExchangeRate,
 		"displayCurrency":     displayCurrency,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credits_to_display_minor_units_binding", string(payload))
 }
 
 // DeriveTaxIdType derive the tax ID type for a business country.
 // Returns Tax ID type string when known.
 func DeriveTaxIdType(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_derive_tax_id_type_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_derive_tax_id_type_binding", string(payload))
 }
 
 // EvaluateProductReadiness evaluate whether a product can be sold (active status plus an active plan).
 // Returns Readiness result with issues and plan counts.
 func EvaluateProductReadiness(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_evaluate_product_readiness_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_evaluate_product_readiness_binding", string(payload))
 }
 
 // FormatPrice format a minor-unit amount as buyer-facing money.
 // Returns Formatted price string.
 func FormatPrice(ctx context.Context, amountMinor any, currency any, interval any, intervalCount any, free any, currencyDisplay any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_format_price_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"amountMinor":     amountMinor,
 		"currency":        currency,
 		"interval":        interval,
 		"intervalCount":   intervalCount,
 		"free":            free,
 		"currencyDisplay": currencyDisplay,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_format_price_binding", string(payload))
 }
 
 // FormatSubtotalLabel return the checkout subtotal label for a tax treatment.
 // Returns Subtotal or Subtotal (excl. VAT).
 func FormatSubtotalLabel(ctx context.Context, treatment any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_format_subtotal_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"treatment": treatment,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_format_subtotal_label_binding", string(payload))
 }
 
 // FormatVatSummaryLabel return the VAT row label for a treatment and rate.
 // Returns VAT label string.
 func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_format_vat_summary_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"treatment": treatment,
 		"taxRate":   taxRate,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_format_vat_summary_label_binding", string(payload))
 }
 
 // FreeLimitsAgree return whether two normalized free limits share the same cap.
+// The left parameter is First normalized free limit.
+// The right parameter is Second normalized free limit.
 // Returns True when meter, cap, scope, and window days all match.
 func FreeLimitsAgree(ctx context.Context, left any, right any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_free_limits_agree_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"left":  left,
 		"right": right,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_free_limits_agree_binding", string(payload))
 }
 
 // FreeMeterNamePattern return the frozen regex source for free-allowance meter names.
 // Returns The `^free-[a-z0-9-]+$` pattern string.
 func FreeMeterNamePattern(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_free_meter_name_pattern_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_free_meter_name_pattern_binding", string(payload))
 }
 
 // FreeToolDescriptionSuffix build the free-tool description suffix, including shared-meter names.
 // Returns The `Free tool — …` sentence, plus a share tail when names are present.
 func FreeToolDescriptionSuffix(ctx context.Context, limit any, sharedWith any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_free_tool_description_suffix_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"limit":      limit,
 		"sharedWith": sharedWith,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_free_tool_description_suffix_binding", string(payload))
 }
 
 // GetPostalCodeFieldLabel return the postal or ZIP code field label for a country.
 // Returns Field label string.
 func GetPostalCodeFieldLabel(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_postal_code_field_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_postal_code_field_label_binding", string(payload))
 }
 
 // GetPostalCodePlaceholder return the postal or ZIP code field placeholder for a country.
 // Returns Placeholder string.
 func GetPostalCodePlaceholder(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_postal_code_placeholder_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_postal_code_placeholder_binding", string(payload))
 }
 
 // GetSellerTaxIdentifierDisplayLabel return the display label for a seller tax identifier type.
 // Returns Display label string.
 func GetSellerTaxIdentifierDisplayLabel(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_seller_tax_identifier_display_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_seller_tax_identifier_display_label_binding", string(payload))
 }
 
 // GetStateFieldLabel return the state or province field label for a country.
 // Returns Field label string.
 func GetStateFieldLabel(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_state_field_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_state_field_label_binding", string(payload))
 }
 
 // GetTaxIdExample return an example tax ID string for a country.
 // Returns Example tax ID string.
 func GetTaxIdExample(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_tax_id_example_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_tax_id_example_binding", string(payload))
 }
 
 // GetTaxIdFieldLabel return the localized field label for a country tax ID.
 // Returns Field label string.
 func GetTaxIdFieldLabel(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_tax_id_field_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_tax_id_field_label_binding", string(payload))
 }
 
 // GetTaxIdHelperText return helper text describing the tax ID format for a country.
 // Returns Helper text string.
 func GetTaxIdHelperText(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_get_tax_id_helper_text_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_get_tax_id_helper_text_binding", string(payload))
 }
 
 // HeadlineCharges return the headline flat charge in each currency, excluding setup fees.
 // Returns One flat charge per currency, in first-seen order.
 func HeadlineCharges(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_headline_charges_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_headline_charges_binding", string(payload))
 }
 
 // IncludedUnits read the included-unit cap for a meter from the limit option.
 // Returns Cap (0 means unlimited), or null when no limit is configured.
 func IncludedUnits(ctx context.Context, priced any, meter any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_included_units_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
 		"meter":  meter,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_included_units_binding", string(payload))
 }
 
 // IsPostalCodeRequired whether Stripe Tax requires a postal or ZIP code for a country.
 // Returns True when a postal or ZIP code is required.
 func IsPostalCodeRequired(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_is_postal_code_required_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_postal_code_required_binding", string(payload))
 }
 
 // IsStateRequired whether Stripe Tax requires a state or province for a country.
 // Returns True when a state or province is required.
 func IsStateRequired(ctx context.Context, country any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_is_state_required_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country": country,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_state_required_binding", string(payload))
 }
 
 // IsTaxIdType whether a string is a supported tax ID type.
 // The value parameter is Candidate tax ID type wire value.
 // Returns True when the value is one of TAX_ID_TYPES.
 func IsTaxIdType(ctx context.Context, value any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_is_tax_id_type_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"value": value,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_tax_id_type_binding", string(payload))
 }
 
 // IsUnlimitedRemaining return whether remaining is the backend unlimited sentinel (-1).
 // Returns True only when remaining is exactly -1.
 func IsUnlimitedRemaining(ctx context.Context, remaining any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_is_unlimited_remaining_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"remaining": remaining,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_unlimited_remaining_binding", string(payload))
 }
 
 // IsZeroDecimalCurrency return whether a currency uses zero decimal places.
 // Returns True when the currency has zero decimal places.
 func IsZeroDecimalCurrency(ctx context.Context, currency any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_is_zero_decimal_currency_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"currency": currency,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_zero_decimal_currency_binding", string(payload))
 }
 
 // LinkLabel escape markdown link-label delimiters in a provider-authored plan name.
 // The name parameter is Plan display name or reference.
 // Returns Label safe to embed in a markdown link.
 func LinkLabel(ctx context.Context, name any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_link_label_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"name": name,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_link_label_binding", string(payload))
 }
 
 // MeterName read the meter a plan counts against from a per-unit charge, tier, or limit option.
 // Returns Meter name, or null when no charge, tier, or limit names one.
 func MeterName(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_meter_name_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_meter_name_binding", string(payload))
 }
 
 // MinorUnitsPerMajor return how many minor units make one major unit for a currency.
 // Returns Minor units per major unit.
 func MinorUnitsPerMajor(ctx context.Context, currency any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_minor_units_per_major_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"currency": currency,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_minor_units_per_major_binding", string(payload))
 }
 
 // NextActionFor map a classified paywall state to its single primary recovery action.
 // The state parameter is Classified paywall state.
 // Returns Primary recovery action (topup, checkout, activate, or account).
 func NextActionFor(ctx context.Context, state any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_next_action_for_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"state": state,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_next_action_for_binding", string(payload))
 }
 
 // NormalizeFreeLimit normalize a free-tool allowance, defaulting and validating the meter.
 // Returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
 func NormalizeFreeLimit(ctx context.Context, limit any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_normalize_free_limit_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"limit": limit,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_normalize_free_limit_binding", string(payload))
 }
 
 // PaywallErrorToClientPayload project a PaywallError into the client-facing payload shape.
 // Returns Client payload object for paywall responses.
 func PaywallErrorToClientPayload(ctx context.Context, message any, structuredContent any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_paywall_error_to_client_payload_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"message":           message,
 		"structuredContent": structuredContent,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_paywall_error_to_client_payload_binding", string(payload))
 }
 
 // PaywallStructuredContentSchema jSON Schema for paywall structuredContent (payment_required | activation_required).
 // Returns A oneOf schema covering both gate branches.
 func PaywallStructuredContentSchema(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_paywall_structured_content_schema_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_paywall_structured_content_schema_binding", string(payload))
 }
 
 // PeggedCreditsPerUnit convert a per-unit charge in minor units to credits via the USD peg.
 // Returns Credits per metered unit (0 for a free meter).
 func PeggedCreditsPerUnit(ctx context.Context, chargeMinor any, creditsPerMinorUnit any, usdToChargeRate any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_pegged_credits_per_unit_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"chargeMinor":         chargeMinor,
 		"creditsPerMinorUnit": creditsPerMinorUnit,
 		"usdToChargeRate":     usdToChargeRate,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_pegged_credits_per_unit_binding", string(payload))
 }
 
 // PerUnitCharge return the first per-unit charge, optionally scoped to one meter.
 // Returns The metered charge, or null when the plan does not meter usage.
 func PerUnitCharge(ctx context.Context, priced any, meter any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_per_unit_charge_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
 		"meter":  meter,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_per_unit_charge_binding", string(payload))
 }
 
 // PlanLadder build a cheapest-first markdown checkout ladder from gate plans.
 // The gate parameter is Gate content carrying plans and the active planRef.
 // Returns Joined markdown links, or null when no plan has a checkoutUrl.
 func PlanLadder(ctx context.Context, gate any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_plan_ladder_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"gate": gate,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_plan_ladder_binding", string(payload))
 }
 
 // PlanPricingShape derive the pricing shape a plan-row or narration surface should branch on.
 // Returns Shape, headline, currency, cycle, and usage rate.
 func PlanPricingShape(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_plan_pricing_shape_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_plan_pricing_shape_binding", string(payload))
 }
 
 // RequireProductRef resolve a product ref from metadata or env, or throw a named missing-ref error.
 // Returns A product ref string, or throws when neither is set.
 func RequireProductRef(ctx context.Context, metadataProduct any, envProduct any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_require_product_ref_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"metadataProduct": metadataProduct,
 		"envProduct":      envProduct,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_require_product_ref_binding", string(payload))
 }
 
 // ResolveSellerIdentityDisplay resolve seller identity fields into a display projection.
 // Returns Display projection for seller identity.
 func ResolveSellerIdentityDisplay(ctx context.Context, country any, vatNumber any, taxId any, companyNumber any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_resolve_seller_identity_display_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"country":       country,
 		"vatNumber":     vatNumber,
 		"taxId":         taxId,
 		"companyNumber": companyNumber,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_resolve_seller_identity_display_binding", string(payload))
 }
 
 // ResolveTaxBehavior resolve inclusive vs exclusive tax behavior for a currency/country pair.
 // Returns Resolved tax behavior.
 func ResolveTaxBehavior(ctx context.Context, behavior any, currency any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_resolve_tax_behavior_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"behavior": behavior,
 		"currency": currency,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_resolve_tax_behavior_binding", string(payload))
 }
 
 // ResolveTaxTreatmentNote return the buyer-facing note for a non-standard tax treatment.
 // Returns Note string, or null when no note applies.
 func ResolveTaxTreatmentNote(ctx context.Context, treatment any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_resolve_tax_treatment_note_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"treatment": treatment,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_resolve_tax_treatment_note_binding", string(payload))
 }
 
 // ShouldShowTaxRow return whether a VAT amount row should render for a tax treatment.
 // Returns True when a VAT row should be shown.
 func ShouldShowTaxRow(ctx context.Context, treatment any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_should_show_tax_row_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"treatment": treatment,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_should_show_tax_row_binding", string(payload))
 }
 
 // TierBands return the tier bands a plan prices a meter with, ordered by floor.
 // Returns One meter's band stack; empty when the plan has no bands for that meter.
 func TierBands(ctx context.Context, priced any, meter any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_tier_bands_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
 		"meter":  meter,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_tier_bands_binding", string(payload))
 }
 
 // TierMeters list every meter the plan prices with tier bands, in first-seen order.
 // Returns Meter names; empty when the plan has no tier bands.
 func TierMeters(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_tier_meters_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_tier_meters_binding", string(payload))
 }
 
 // ToMajorUnits convert a minor-unit amount to its major-unit equivalent.
 // Returns Major-unit amount.
 func ToMajorUnits(ctx context.Context, amountMinor any, currency any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_to_major_units_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"amountMinor": amountMinor,
 		"currency":    currency,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_to_major_units_binding", string(payload))
 }
 
 // TrialDays read the free-trial length in days from a plan.
 // Returns Trial length in days, or null when the plan has no trial.
 func TrialDays(ctx context.Context, priced any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_trial_days_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_trial_days_binding", string(payload))
 }
 
 // UsageRate return what one metered unit costs, from a per-unit charge or the first priced band.
 // Returns The entry rate, with tiered true when that rate is the floor of a stack.
 func UsageRate(ctx context.Context, priced any, meter any) (any, error) {
-	return nativecall.CallSync(ctx, "sv_usage_rate_binding", mustJSON(map[string]any{
+	payload, err := json.Marshal(map[string]any{
 		"priced": priced,
 		"meter":  meter,
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_usage_rate_binding", string(payload))
 }
 
 // ValidateBusinessDetails validate seller business-details fields before submission.
 // Returns Validation issues when present.
 func ValidateBusinessDetails(ctx context.Context) (any, error) {
-	return nativecall.CallSync(ctx, "sv_validate_business_details_binding", mustJSON(map[string]any{}))
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_validate_business_details_binding", string(payload))
 }

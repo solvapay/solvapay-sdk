@@ -487,15 +487,22 @@ describe('solvapayWebhook', () => {
     )
   })
 
-  it('returns 401 when signature verification fails', async () => {
-    mockVerifyWebhook.mockRejectedValue(new Error('Invalid webhook signature'))
+  it('returns 401 with the verifier message and code when verification fails', async () => {
+    mockVerifyWebhook.mockRejectedValue(
+      Object.assign(new Error('Webhook signature timestamp too old'), {
+        code: 'timestamp_too_old',
+      }),
+    )
     const onEvent = vi.fn()
 
     const handler = solvapayWebhook({ secret: 'whsec_test', onEvent })
     const res = await handler(fakeWebhookPost('{}', 'bad'))
 
     expect(res.status).toBe(401)
-    expect(await res.json()).toMatchObject({ error: 'Invalid webhook signature' })
+    expect(await res.json()).toEqual({
+      error: 'Webhook signature timestamp too old',
+      code: 'timestamp_too_old',
+    })
     expect(onEvent).not.toHaveBeenCalled()
   })
 

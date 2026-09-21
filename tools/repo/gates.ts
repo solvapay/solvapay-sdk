@@ -23,6 +23,7 @@ export const GATE_SCRIPTS = [
   'checks:required',
   'checks:template-pins',
   'generated:external',
+  'generated:headers',
 ] as const
 
 export function gateTasks(): Task[] {

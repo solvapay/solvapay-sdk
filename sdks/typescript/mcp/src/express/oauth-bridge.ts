@@ -16,6 +16,7 @@ import {
   type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
+import { corsPreflight } from '../fetch/cors'
 import {
   DEFAULT_AUTHORIZATION_SERVER_PATH,
   DEFAULT_PROTECTED_RESOURCE_PATH,
@@ -50,6 +51,7 @@ type ResponseLike = {
   status: (code: number) => ResponseLike
   json: (payload: unknown) => void
   setHeader: (name: string, value: string) => void
+  getHeader?: (name: string) => string | number | string[] | undefined
   end?: (body?: string) => void
   send?: (body?: string | Buffer) => void
 }
@@ -153,11 +155,55 @@ function getRequestQuery(req: RequestLike): string {
   return qIndex === -1 ? '' : raw.slice(qIndex)
 }
 
+function readResponseHeader(res: ResponseLike, name: string): string | undefined {
+  if (typeof res.getHeader !== 'function') return undefined
+  const current = res.getHeader(name)
+  if (typeof current === 'string') return current.length > 0 ? current : undefined
+  if (typeof current === 'number') return String(current)
+  if (!Array.isArray(current)) return undefined
+  const parts: string[] = []
+  for (const part of current) {
+    if (part.length > 0) parts.push(part)
+  }
+  return parts.length > 0 ? parts.join(', ') : undefined
+}
+
+function writeCorsHeader(res: ResponseLike, name: string, value: string): void {
+  if (name.toLowerCase() !== 'vary') {
+    res.setHeader(name, value)
+    return
+  }
+  const existing = readResponseHeader(res, name)
+  res.setHeader(name, existing ? `${existing}, ${value}` : value)
+}
+
 function applyCorsHeaders(req: RequestLike, res: ResponseLike) {
   const { headers } = mcpNativeCors({ origin: getHeader(req, 'origin') })
   for (const [key, value] of Object.entries(headers)) {
-    res.setHeader(key, value)
+    writeCorsHeader(res, key, value)
   }
+}
+
+function answerCorsPreflight(req: RequestLike, res: ResponseLike): void {
+  const headers = new Headers()
+  const origin = getHeader(req, 'origin')
+  if (origin) headers.set('origin', origin)
+  const requestedMethod = getHeader(req, 'access-control-request-method')
+  if (requestedMethod) headers.set('access-control-request-method', requestedMethod)
+  const requestedHeaders = getHeader(req, 'access-control-request-headers')
+  if (requestedHeaders) headers.set('access-control-request-headers', requestedHeaders)
+  const response = corsPreflight(
+    new Request('https://mcp.local/preflight', { method: 'OPTIONS', headers }),
+  )
+  res.status(response.status)
+  response.headers.forEach((value, key) => {
+    writeCorsHeader(res, key, value)
+  })
+  if (typeof res.end === 'function') {
+    res.end()
+    return
+  }
+  res.json({})
 }
 
 function requestHeaders(req: RequestLike): Record<string, string> {
@@ -250,7 +296,11 @@ export function createOAuthRegisterHandler(options: OAuthRegisterHandlerOptions)
       next()
       return
     }
-    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
+    if (req.method === 'OPTIONS') {
+      answerCorsPreflight(req, res)
+      return
+    }
+    if (req.method !== 'POST') {
       next()
       return
     }
@@ -274,7 +324,11 @@ export function createOAuthAuthorizeHandler(options: OAuthAuthorizeHandlerOption
       next()
       return
     }
-    if (req.method !== 'OPTIONS' && req.method !== 'GET') {
+    if (req.method === 'OPTIONS') {
+      answerCorsPreflight(req, res)
+      return
+    }
+    if (req.method !== 'GET') {
       next()
       return
     }
@@ -298,7 +352,11 @@ export function createOAuthTokenHandler(options: OAuthTokenHandlerOptions): Midd
       next()
       return
     }
-    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
+    if (req.method === 'OPTIONS') {
+      answerCorsPreflight(req, res)
+      return
+    }
+    if (req.method !== 'POST') {
       next()
       return
     }
@@ -330,7 +388,11 @@ export function createOAuthRevokeHandler(options: OAuthRevokeHandlerOptions): Mi
       next()
       return
     }
-    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
+    if (req.method === 'OPTIONS') {
+      answerCorsPreflight(req, res)
+      return
+    }
+    if (req.method !== 'POST') {
       next()
       return
     }
@@ -399,7 +461,8 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     }
     const method = req.method ?? 'GET'
     if (method === 'OPTIONS' && route.corsPreflight) {
-      // OPTIONS is claimed by the OAuth table; native CORS lives in the op.
+      answerCorsPreflight(req, res)
+      return
     }
     const dispatchPath = route.dispatchPath(pathname, getRequestQuery(req))
     if (route.defaultFormContentType) {

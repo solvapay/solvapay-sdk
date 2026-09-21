@@ -7,7 +7,9 @@ use crate::emit_client_rs::render_rustdoc;
 use crate::emit_helpers::catalog_helper_bindings;
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
-use crate::ir::{Ir, IrCoreFieldTy, IrCoreFn, IrCoreParamTy};
+use crate::ir::{
+    Ir, IrBindingCatalogLink, IrBindingSymbol, IrCoreFieldTy, IrCoreFn, IrCoreParamTy,
+};
 
 /// Emits `sdks/rust/src/helpers_generated.rs`.
 ///
@@ -78,7 +80,109 @@ pub fn emit_helpers_rs(ir: &Ir) -> GenResult<String> {
         out.push_str("};\n\n");
     }
     out.push_str(&items);
+    out.push_str(&emit_unscoped_bindings(ir)?);
     Ok(out)
+}
+
+/// Binding symbols with `catalog: none` are real core functions the other
+/// facades call by name. Re-export them so the Rust crate is not a subset.
+/// Driver steppers stay in a hidden module; they are host-loop internals.
+fn emit_unscoped_bindings(ir: &Ir) -> GenResult<String> {
+    let mut public = String::new();
+    let mut internal = String::new();
+    let mut symbols: Vec<&IrBindingSymbol> = ir
+        .binding_symbols
+        .values()
+        .filter(|binding| matches!(binding.catalog, IrBindingCatalogLink::None))
+        .collect();
+    symbols.sort_by(|left, right| left.id.cmp(&right.id));
+    for binding in symbols {
+        if is_driver_stepper(binding) {
+            push_reexport(&mut internal, binding)?;
+            continue;
+        }
+        if is_inherent_method(&binding.core) {
+            push_method_forwarder(&mut public, binding)?;
+            continue;
+        }
+        push_reexport(&mut public, binding)?;
+    }
+    let mut out = String::new();
+    if !public.is_empty() {
+        out.push_str("\n// Internal cores (`catalog: none`) re-exported for facade parity.\n\n");
+        out.push_str(&public);
+    }
+    if !internal.is_empty() {
+        out.push_str(
+            "\n/// Driver steppers. Host loops call these; they are not integrator API.\n",
+        );
+        out.push_str("#[doc(hidden)]\n");
+        out.push_str("pub mod internal {\n");
+        for line in internal.lines() {
+            if line.is_empty() {
+                out.push('\n');
+            } else {
+                out.push_str("    ");
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+        out.push_str("}\n");
+    }
+    Ok(out)
+}
+
+fn is_driver_stepper(binding: &IrBindingSymbol) -> bool {
+    binding.names.rust.ends_with("_next")
+}
+
+fn is_inherent_method(core: &str) -> bool {
+    core.split("::")
+        .skip(1)
+        .any(|segment| segment.starts_with(|c: char| c.is_ascii_uppercase()))
+}
+
+fn push_reexport(out: &mut String, binding: &IrBindingSymbol) -> GenResult<()> {
+    push_binding_doc(out, binding);
+    let rust_name = binding.names.rust.as_str();
+    let last = binding.core.rsplit("::").next().unwrap_or(rust_name);
+    if last == rust_name {
+        let _ = writeln!(out, "pub use {};\n", binding.core);
+    } else {
+        let _ = writeln!(out, "pub use {} as {rust_name};\n", binding.core);
+    }
+    Ok(())
+}
+
+fn push_method_forwarder(out: &mut String, binding: &IrBindingSymbol) -> GenResult<()> {
+    if binding.id != "retryNextDelayMs" {
+        return Err(GenError::Parse(format!(
+            "catalog-none binding {} is an inherent method ({}); add an explicit Rust forwarder",
+            binding.id, binding.core
+        )));
+    }
+    push_binding_doc(out, binding);
+    out.push_str(
+        "#[inline]\n\
+         pub fn retry_next_delay_ms(\n\
+         \x20   policy: &solvapay_core::RetryPolicy,\n\
+         \x20   attempt: u32,\n\
+         ) -> Option<std::time::Duration> {\n\
+         \x20   policy.next_delay(attempt)\n\
+         }\n\n",
+    );
+    Ok(())
+}
+
+fn push_binding_doc(out: &mut String, binding: &IrBindingSymbol) {
+    let doc = binding.doc.trim();
+    if doc.is_empty() {
+        let _ = writeln!(out, "/// `{}`.", binding.id);
+        return;
+    }
+    for line in doc.lines() {
+        let _ = writeln!(out, "/// {line}");
+    }
 }
 
 fn collect_named_types(ir: &Ir, core_path: &str, out: &mut BTreeSet<String>) -> GenResult<()> {

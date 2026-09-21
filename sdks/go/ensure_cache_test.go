@@ -5,6 +5,19 @@ import (
 	"testing"
 )
 
+func TestClientCustomerWriteMethodsAreDetected(t *testing.T) {
+	var client *Client
+	if !clientHasMethod(client, "CreateCustomer") {
+		t.Fatal("CreateCustomer should be detected on *Client")
+	}
+	if !clientHasMethod(client, "UpdateCustomer") {
+		t.Fatal("UpdateCustomer should be detected on *Client")
+	}
+	if clientHasMethod(client, "NotACustomerMethod") {
+		t.Fatal("missing method should not be detected")
+	}
+}
+
 func TestStoreCustomerCacheEvictsPastMax(t *testing.T) {
 	cache := map[string]customerCacheEntry{}
 	if CustomerDedupMaxCacheSize != 1000 {

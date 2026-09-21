@@ -1,4 +1,8 @@
-import { countsUsage, projectUsageSnapshot } from '../native-decisions'
+import {
+  projectUsageSnapshot,
+  purchaseUsageIsMetered,
+  selectActivePlanPurchase,
+} from '../native-decisions'
 import { trackUsageWithRetry } from '../track-usage-retry'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
@@ -45,13 +49,18 @@ export type UsageLimitsInput = {
   limit?: number
 }
 
+function isUsagePurchase(value: unknown): value is UsageSnapshotPurchase {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 /**
  * Derive a usage snapshot from an active purchase plus an optional cap.
  *
  * Pass `limits` when you already hold a `checkLimits` response to avoid the
  * extra round trip {@link getUsageCore} makes for metered plans.
+ *
+ * @deprecated Use {@link projectUsageSnapshot}.
  */
-/** @deprecated Use {@link projectUsageSnapshot}. */
 export function deriveUsageSnapshot(
   activePurchase: UsageSnapshotPurchase | null | undefined,
   limits: UsageLimitsInput | null | undefined,
@@ -69,7 +78,8 @@ export async function getUsageCore(
   const purchaseResult = await checkPurchaseCore(request, options)
   if (isErrorResult(purchaseResult)) return purchaseResult
 
-  const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
+  const picked = selectActivePlanPurchase(purchaseResult.purchases ?? [], null)
+  const activePurchase = isUsagePurchase(picked) ? picked : null
   if (!activePurchase) {
     return projectUsageSnapshot(null, options.limits ?? null)
   }
@@ -78,15 +88,12 @@ export async function getUsageCore(
     return projectUsageSnapshot(activePurchase, options.limits ?? null)
   }
 
-  const snapshot = activePurchase.planSnapshot
-  const usageCounted =
-    countsUsage(snapshot) ||
-    (typeof snapshot === 'object' &&
-      snapshot !== null &&
-      'isMetered' in snapshot &&
-      snapshot.isMetered === true)
   const productRef = activePurchase.productRef
-  if (!usageCounted || typeof productRef !== 'string' || productRef.length === 0) {
+  if (
+    !purchaseUsageIsMetered(activePurchase) ||
+    typeof productRef !== 'string' ||
+    productRef.length === 0
+  ) {
     return projectUsageSnapshot(activePurchase, null)
   }
 

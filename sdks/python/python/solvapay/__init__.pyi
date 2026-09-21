@@ -558,7 +558,7 @@ def version() -> str:
 def native_build_info() -> str:
     """Return `{version, coreSha}` JSON for version-stamping diagnostics."""
     ...
-def verify_webhook(body: str, signature: str, secret: str) -> str:
+def verify_webhook(body: str, signature: str, secret: str) -> dict[str, object]:
     """Verify a SolvaPay webhook signature and parse the event payload.
     @param options Webhook body, signature header, and signing secret.
     @returns Parsed webhook event when verification succeeds.
@@ -720,6 +720,8 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> str:
     ...
 def free_limits_agree(left: object, right: object) -> bool:
     """Return whether two normalized free limits share the same cap.
+    @param left First normalized free limit.
+    @param right Second normalized free limit.
     @returns True when meter, cap, scope, and window days all match.
     """
     ...

@@ -65,6 +65,26 @@
     "TOPUP_BALANCE_POLL_DELAYS_MS",
     "BALANCE_RECONCILE_DELAYS_MS",
     "REVERSE_CHARGE_NOTE",
-    "TAX_NOT_COLLECTED_NOTE"
+    "TAX_NOT_COLLECTED_NOTE",
+    "assertValidProductRef",
+    "attachBusinessDetailsValidationError",
+    "classifyCancelError",
+    "classifyCreateError",
+    "classifyLookupError",
+    "classifyReactivateError",
+    "freeMeterNamePattern",
+    "isCachedCustomerRefValid",
+    "isEmailConflict",
+    "normalizeCancelResponse",
+    "normalizeReactivateResponse",
+    "requireProductRef",
+    "resolveProductRef",
+    "validateAttachBusinessDetailsParams",
+    "validateCheckoutSessionParams",
+    "validateCreatePaymentIntentParams",
+    "validateGetProductParams",
+    "validateListPlansParams",
+    "validateProcessPaymentIntentParams",
+    "validatePurchaseRef"
   ]
 }

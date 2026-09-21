@@ -22,6 +22,9 @@
 
 pub(crate) mod auth_cache;
 pub mod client;
+#[allow(dead_code)]
+#[path = "contract_defaults.generated.rs"]
+pub(crate) mod contract_defaults;
 pub mod http;
 pub mod shell;
 pub mod transport;

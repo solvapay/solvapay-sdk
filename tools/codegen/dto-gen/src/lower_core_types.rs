@@ -660,6 +660,8 @@ pub fn ignore_me(_u: UnusedRoot) {}
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
             ..Ir::default()
         };
         let first = dump_core_types(&ir).unwrap();

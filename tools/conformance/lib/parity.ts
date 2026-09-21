@@ -107,6 +107,9 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'installNativeCoreApi',
   'resetNativeCoreApiForTests',
   'isRenewalError',
+  'reconstructSolvaPayEnvelopeError',
+  'unwrapEnvelope',
+  'EnvelopeError',
   'Env',
   'version',
   // OpenAPI namespace re-export
@@ -120,21 +123,176 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'getWasmClient',
   'setWasmClientForTests',
   'resetWasmCache',
+  // Explicit TypeScript type and options surface. The Core / Adapter /
+  // AdapterOptions suffix rule used to accept new names without a decision.
+  'NextAdapter',
+  'CreateSolvaPayConfig',
+  'SolvaPay',
+  'PayableFunction',
+  'PayableGateOptions',
+  'PayableGateResult',
+  'PayablePaywallResult',
+  'PayableAllowResult',
+  'ServerClientOptions',
+  'ProductConfigurationStatus',
+  'VerifyProductConfigurationOptions',
+  'NativeBuildInfo',
+  'ProtectHandlerContext',
+  'PaywallStructuredContentSchema',
+  'CreditSignals',
+  'PaywallState',
+  'VirtualToolsOptions',
+  'VirtualToolDefinition',
+  'McpServerLike',
+  'RegisterVirtualToolsMcpOptions',
+  'LimitActivationBalance',
+  'LimitActivationProduct',
+  'LimitAutoRechargeDto',
+  'LimitPlanSummary',
+  'LimitResponseWithPlan',
+  'CheckLimitsRequest',
+  'FreeLimit',
+  'FreeLimitInput',
+  'FreeLimitScope',
+  'SolvaPayClient',
+  'PayableOptions',
+  'HttpAdapterOptions',
+  'NextAdapterOptions',
+  'PaywallArgs',
+  'PaywallDecision',
+  'PaywallGateRecoveryFields',
+  'PaywallMetadata',
+  'PaywallNextAction',
+  'PaywallReason',
+  'PaywallStructuredContent',
+  'RetryOptions',
+  'WebhookEvent',
+  'WebhookEventType',
+  'WebhookEventForType',
+  'WebhookEventObjectMap',
+  'CustomerWebhookObject',
+  'WebhookProduct',
+  'SeenEventIdSync',
+  'VerifyWebhookOptions',
+  'PurchaseInfo',
+  'OneTimePurchaseInfo',
+  'AttachBusinessDetailsParams',
+  'AttachBusinessDetailsResult',
+  'ProcessPaymentResult',
+  'TopupProcessResult',
+  'CustomerResponseMapped',
+  'ActivatePlanResult',
+  'PaymentMethodInfo',
+  'AutoRechargeConfig',
+  'AutoRechargeDisplayBlock',
+  'CreditDisplayBlock',
+  'AutoRechargeInput',
+  'SaveAutoRechargeInput',
+  'AutoRechargeResponse',
+  'SaveAutoRechargeResponse',
+  'McpBootstrapRequest',
+  'McpBootstrapResponse',
+  'McpBootstrapPlanInput',
+  'ConfigureMcpPlansRequest',
+  'ConfigureMcpPlansResponse',
+  'McpToolPlanMappingInput',
+  'ToolPlanMappingInput',
+  'SdkMerchantResponse',
+  'SdkProductResponse',
+  'CreditActivityType',
+  'CreditActivityEntry',
+  'CreditActivityResult',
+  'GetHistoryResult',
+  'CreditDebitSkipReason',
+  'CreditDebitResult',
+  'TrackUsageRequest',
+  'TrackUsageResponse',
+  'TrackUsageBulkRequest',
+  'TrackUsageBulkResponse',
+  'AssignCreditsRequest',
+  'AssignCreditsResponse',
+  'getHistoryCore',
+  'ErrorResult',
+  'AuthenticatedUser',
+  'CustomerBalanceResult',
+  'PurchaseCheckResult',
+  'GetUsageResult',
+  'UsageLimitsInput',
+  'SolvaPayConfig',
+  'AllowConsequence',
+  'ActiveProduct',
+  'AuthResolutionInput',
+  'BillingCycle',
+  'BillingInterval',
+  'Charge',
+  'ChargePer',
+  'CustomerSnapshot',
+  'DefaultMcpBearerExpectations',
+  'GateAction',
+  'GateCacheOp',
+  'GateNextOutput',
+  'McpDisplayModeState',
+  'PlanPricingShape',
+  'Tier',
+  'TierMode',
+  'UsageExtra',
+  'UsageRate',
+  'BalancePegLike',
+  'BillingCycleLike',
+  'ChargeLike',
+  'PricedLike',
+  'PricingOptionLike',
+  'TierLike',
+  'BusinessDetailsSchema',
+  'BusinessCountryOption',
+  'BusinessDetails',
+  'BusinessDetailsInput',
+  'BusinessDetailsValidationError',
+  'BusinessDetailsValidationIssue',
+  'EuMemberCountry',
+  'SupportedBusinessCountry',
+  'TaxBehavior',
+  'TaxBreakdown',
+  'TaxIdType',
+  'ValidateBusinessDetailsResult',
+  'SellerIdentityDisplay',
+  'SellerIdentityRow',
+  'ProductReadinessInput',
+  'ProductReadinessResult',
+  'CoercedCustomerOptions',
+  'CreateCustomerParams',
+  'CreateErrorKind',
+  'CustomerRefKind',
+  'LookupErrorKind',
+  'ActivatePlanValidationError',
+  'PaymentHelperError',
+  'PaymentIntentProjection',
+  'PaymentIntentSource',
+  'TopupProcessOutcome',
+  'CheckoutHelperError',
+  'RenewalHelperError',
+  'UsageSnapshot',
+  'UsageSnapshotPurchase',
+  'CheckLimitsParams',
+  'LimitsHelperError',
+  'PlansHelperError',
+  'RouteErrorInput',
+  'RouteErrorKind',
+  'RouteErrorResult',
+  'ProductHelperError',
+  'CachedLimitsEvaluation',
+  'FreshLimitsEvaluation',
+  'PaywallDecisionLimits',
+  'PaywallOutcome',
+  'NarratorPlanShape',
 ] as const
 
-/** Suffix / pattern allowlist for TS-only supporting exports. */
+/** Explicit allowlist for TS-only supporting exports. No suffix matching. */
 export function isTsOnlyAllowlisted(
   name: string,
   explicit: ReadonlySet<string> = new Set(TS_ONLY_ALLOWLIST),
 ): boolean {
-  if (explicit.has(name)) {
-    return true
-  }
-  // Route helper cores and adapter option types
-  if (name.endsWith('Core') || name.endsWith('Adapter') || name.endsWith('AdapterOptions')) {
-    return true
-  }
-  return false
+  return explicit.has(name)
 }
 
 /** Build the catalogued TS entry list from a parsed manifest. */
@@ -204,7 +362,6 @@ export interface CataloguedMcpEntry {
 
 export interface McpLanguageSurface {
   symbols: Set<string>
-  hasCallEnvelope: boolean
 }
 
 /** True when the language is a declared skip (`omitted` or `handWritten`). */
@@ -329,9 +486,7 @@ export function checkMcpParity(
       }
       const surface = surfaces[lang]
       const expected = entry.names[lang]
-      if (entry.surface === 'syncOp' && surface?.hasCallEnvelope === true) {
-        continue
-      }
+      // A generic solvapay_call / CallSync dispatcher does not satisfy a named syncOp.
       const symbols = surface?.symbols ?? new Set<string>()
       if (symbols.has(expected)) {
         continue
@@ -464,13 +619,11 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
 }
 
 /**
- * Heuristic for uncatalogued *callable* extras.
- * PascalCase names are treated as types/classes (DTO surface) and ignored here —
- * catalogued classes like `SolvaPayError` are already checked via presence.
- * ALL_CAPS constants are ignored (coreHelpers covers the catalogued ones).
+ * Uncatalogued public names. CamelCase callables, PascalCase types, and
+ * ALL_CAPS constants all count. Catalogued names are excluded before this runs.
  */
 function looksLikePortableEntry(name: string): boolean {
-  return /^[a-z][a-zA-Z0-9]*$/.test(name)
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(name)
 }
 
 export function formatParityReport(issues: ParityIssue[]): string {

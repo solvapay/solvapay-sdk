@@ -212,6 +212,11 @@ pub use solvapay_core::tax_summary::format_vat_summary_label;
 
 /// Return whether two normalized free limits share the same cap.
 ///
+/// # Arguments
+///
+/// * `left` — First normalized free limit.
+/// * `right` — Second normalized free limit.
+///
 /// # Returns
 ///
 /// True when meter, cap, scope, and window days all match.
@@ -498,3 +503,261 @@ pub use solvapay_core::pricing_options::usage_rate;
 ///
 /// Validation issues when present.
 pub use solvapay_core::business_details::validate_business_details;
+
+// Internal cores (`catalog: none`) re-exported for facade parity.
+
+/// Binding for `MCP_TOOL_NAMES`.
+pub use solvapay_core::mcp::mcp_tool_names_json as MCP_TOOL_NAMES;
+
+/// Binding for `assertResponseResult` — brand failures are Transport errors
+/// (TS wrapper rethrows as plain `Error` for fixture name parity).
+pub use solvapay_core::mcp::assert_response_result;
+
+/// Binding for `attachBusinessDetailsValidationError`.
+pub use solvapay_core::payment::attach_business_details_validation_error;
+
+/// Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
+pub use solvapay_core::customer_sync::build_create_customer_params;
+
+/// Binding for `buildPayableToolResult`.
+pub use solvapay_core::mcp::build_payable_tool_result;
+
+/// Binding for `buildPromptDescriptorMetadata`.
+pub use solvapay_core::mcp::build_prompt_descriptor_metadata;
+
+/// Binding for `buildPromptUserMessage`.
+pub use solvapay_core::mcp::build_prompt_user_message;
+
+/// Binding for `buildToolDescriptorMetadata`.
+pub use solvapay_core::mcp::build_tool_descriptor_metadata;
+
+/// Binding for `classifyCancelError`.
+pub use solvapay_core::renewal::classify_cancel_error;
+
+/// Binding for `classifyCreateError`.
+pub use solvapay_core::customer_sync::classify_create_error;
+
+/// Binding for `classifyCustomerRef`.
+pub use solvapay_core::customer_sync::classify_customer_ref;
+
+/// Binding for `classifyLookupError`.
+pub use solvapay_core::customer_sync::classify_lookup_error;
+
+/// Binding for `classifyReactivateError`.
+pub use solvapay_core::renewal::classify_reactivate_error;
+
+/// Binding for `coerceCustomerOptions`.
+pub use solvapay_core::customer_sync::coerce_customer_options;
+
+/// Binding for `compileStringFieldInputSchemaJson`.
+pub use solvapay_core::mcp::compile_string_field_input_schema_json;
+
+/// Binding for `customerRefFromClaims`.
+pub use solvapay_core::jwt_util::customer_ref_from_claims;
+
+/// Binding for `decidePaywallOutcome`.
+pub use solvapay_core::paywall_decision::decide_paywall_outcome;
+
+/// Binding for `decodeJwtPayloadUnverified`.
+pub use solvapay_core::jwt_util::decode_jwt_payload_unverified;
+
+/// Binding for `defaultMcpBearerExpectations`.
+pub use solvapay_core::jwt_util::default_mcp_bearer_expectations;
+
+/// Binding for `deriveActiveProducts`.
+pub use solvapay_core::purchase::derive_active_products;
+
+/// Binding for `deriveDefaultView`.
+pub use solvapay_core::mcp::derive_default_view;
+
+/// Binding for `deriveIcons` — absent/empty branding → JSON `null`.
+pub use solvapay_core::mcp::derive_icons;
+
+/// Binding for `ensureOutputSchemaObjectType`.
+pub use solvapay_core::mcp::ensure_output_schema_object_type;
+
+/// Binding for `evaluateBalanceObservation`.
+pub use solvapay_core::balance_poll::evaluate_balance_observation;
+
+/// Binding for `evaluateCachedLimits`.
+pub use solvapay_core::paywall_decision::evaluate_cached_limits;
+
+/// Binding for `evaluateClaimedLimits`.
+pub use solvapay_core::paywall_decision::evaluate_claimed_limits;
+
+/// Binding for `evaluateFreshLimits`.
+pub use solvapay_core::paywall_decision::evaluate_fresh_limits;
+
+/// Binding for `extractBackendCustomerRef`.
+pub use solvapay_core::customer_sync::extract_backend_customer_ref;
+
+/// Binding for `extractBearerToken`.
+pub use solvapay_core::jwt_util::extract_bearer_token;
+
+/// Binding for `formatCompactCredits`.
+pub use solvapay_core::money_format::format_compact_credits;
+
+/// Binding for `getBusinessCountryOptions`.
+pub use solvapay_core::business_details::get_business_country_options;
+
+/// Binding for `getCustomerAddressFieldErrors`.
+pub use solvapay_core::business_details::get_customer_address_field_errors;
+
+/// Binding for `historyRows`.
+pub use solvapay_core::history::history_rows;
+
+/// Binding for `isCachedCustomerRefValid`.
+pub use solvapay_core::purchase::is_cached_customer_ref_valid;
+
+/// Binding for `isCustomerAddressComplete`.
+pub use solvapay_core::business_details::is_customer_address_complete;
+
+/// Binding for `isEmailConflict`.
+pub use solvapay_core::customer_sync::is_email_conflict;
+
+/// Binding for `isErrorResult`.
+pub use solvapay_core::route_error::is_error_result;
+
+/// Binding for `makeResponseResult`.
+pub use solvapay_core::mcp::make_response_result;
+
+/// Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`).
+pub use solvapay_core::route_error::map_route_error;
+
+/// Binding for `mcpViewMaps`.
+pub use solvapay_core::mcp::mcp_view_maps;
+
+/// Binding for `normalizeCancelResponse`.
+pub use solvapay_core::renewal::normalize_cancel_response;
+
+/// Binding for `normalizeReactivateResponse`.
+pub use solvapay_core::renewal::normalize_reactivate_response;
+
+/// Binding for `overlayClaimedLimits`.
+pub use solvapay_core::paywall_decision::overlay_claimed_limits;
+
+/// Binding for `paywallToolResult`.
+pub use solvapay_core::mcp::paywall_tool_result;
+
+/// Binding for `planConsequence`.
+pub use solvapay_core::mcp::plan_consequence;
+
+/// Binding for `projectPaymentIntentResult`.
+pub use solvapay_core::payment::project_payment_intent_result;
+
+/// Binding for `projectTopupProcessOutcome`.
+pub use solvapay_core::payment::project_topup_process_outcome;
+
+/// Binding for `projectUsageSnapshot`.
+pub use solvapay_core::usage::project_usage_snapshot;
+
+/// Binding for `purchaseUsageIsMetered`.
+pub use solvapay_core::usage::purchase_usage_is_metered;
+
+/// Binding for `resolveAccountState`.
+pub use solvapay_core::mcp::resolve_account_state;
+
+/// Binding for `resolveAuthenticatedUser`.
+pub use solvapay_core::auth_resolution::resolve_authenticated_user;
+
+/// Binding for `resolveBuyerCountry`.
+pub use solvapay_core::business_details::resolve_buyer_country;
+
+/// Binding for `resolveCheckLimitsParams`.
+///
+/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is freeLimit.meter, then meterName, then usageType, then `requests`.
+pub use solvapay_core::limits::resolve_check_limits_params;
+
+/// Binding for `resolveCustomerRef`.
+pub use solvapay_core::customer_ref::resolve_customer_ref;
+
+/// Binding for `resolveDisplayMode`.
+pub use solvapay_core::mcp::resolve_display_mode;
+
+/// Binding for `resolveFallbackGateLimits`.
+pub use solvapay_core::paywall_decision::resolve_fallback_gate_limits;
+
+/// Binding for `resolvePlanShape`.
+pub use solvapay_core::mcp::resolve_narrator_plan_shape as resolve_plan_shape;
+
+/// Binding for `resolveProductRef`.
+pub use solvapay_core::paywall_decision::resolve_product_ref;
+
+/// Binding for `resolvePurchaseCustomerRef`.
+pub use solvapay_core::purchase::resolve_purchase_customer_ref;
+
+/// Binding for `resolveReturnUrl`.
+pub use solvapay_core::checkout::resolve_return_url;
+
+/// Binding for `resolveUsageExtra`.
+pub use solvapay_core::usage_request::resolve_usage_extra;
+
+/// Binding for `retryNextDelayMs`.
+///
+/// Args: `{ maxRetries?, initialDelay?, backoffStrategy?, attempt }`.
+/// Envelope value is delay milliseconds, or `null` when retries are exhausted.
+#[inline]
+pub fn retry_next_delay_ms(
+    policy: &solvapay_core::RetryPolicy,
+    attempt: u32,
+) -> Option<std::time::Duration> {
+    policy.next_delay(attempt)
+}
+
+/// Binding for `selectActivePlanPurchase`.
+pub use solvapay_core::purchase::select_active_plan_purchase;
+
+/// Binding for `selectActivePurchases`.
+pub use solvapay_core::purchase::select_active_purchases;
+
+/// Binding for `shouldRetryUsageError`.
+pub use solvapay_core::usage::should_retry_usage_error;
+
+/// Binding for `validateActivatePlanParams`.
+pub use solvapay_core::activation::validate_activate_plan_params;
+
+/// Binding for `validateAttachBusinessDetailsParams`.
+pub use solvapay_core::payment::validate_attach_business_details_params;
+
+/// Binding for `validateCheckoutSessionParams`.
+pub use solvapay_core::checkout::validate_checkout_session_params;
+
+/// Binding for `validateCreatePaymentIntentParams`.
+pub use solvapay_core::payment::validate_create_payment_intent_params;
+
+/// Binding for `validateGetProductParams`.
+pub use solvapay_core::product::validate_get_product_params;
+
+/// Binding for `validateListPlansParams`.
+pub use solvapay_core::plans::validate_list_plans_params;
+
+/// Binding for `validateProcessPaymentIntentParams`.
+pub use solvapay_core::payment::validate_process_payment_intent_params;
+
+/// Binding for `validatePublicBaseUrl` — invalid → error message string; valid → `null`.
+pub use solvapay_core::mcp::validate_public_base_url;
+
+/// Binding for `validatePurchaseRef`.
+pub use solvapay_core::renewal::validate_purchase_ref;
+
+/// Binding for `validateTopupPaymentIntentParams`.
+pub use solvapay_core::payment::validate_topup_payment_intent_params;
+
+/// Driver steppers. Host loops call these; they are not integrator API.
+#[doc(hidden)]
+pub mod internal {
+    /// Binding for `ensureCustomerNext`.
+    pub use solvapay_core::ensure_customer::ensure_customer_next;
+
+    /// Binding for `gateNext`.
+    pub use solvapay_core::gate_driver::gate_next;
+
+    /// Binding for `getHistoryNext`.
+    pub use solvapay_core::history::get_history_next;
+
+    /// Binding for `invokePayableNext`.
+    pub use solvapay_core::invoke_payable::invoke_payable_next;
+
+    /// Binding for `topupProcessNext`.
+    pub use solvapay_core::topup_process::topup_process_next;
+}

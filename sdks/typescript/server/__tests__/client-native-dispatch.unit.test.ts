@@ -8,61 +8,18 @@ import {
   type NativeClientLike,
   type NativeClientMethod,
 } from '../src/native'
+import {
+  GROUP_A_FNS,
+  GROUP_B_FNS,
+  GROUP_C_FNS,
+  GROUP_MCP_FNS,
+} from '../../../../tools/conformance/lib/host-fns.generated'
 
-const GROUP_A: NativeClientMethod[] = [
-  'createCustomer',
-  'updateCustomer',
-  'getCustomer',
-  'assignCredits',
-  'getCustomerBalance',
-  'getUserInfo',
-  'createCheckoutSession',
-  'createCustomerSession',
-  'getMerchant',
-  'getPlatformConfig',
-]
-
-const GROUP_B: NativeClientMethod[] = [
-  'createPaymentIntent',
-  'createTopupPaymentIntent',
-  'processPaymentIntent',
-  'attachBusinessDetails',
-  'activatePlan',
-]
-
-const GROUP_C: NativeClientMethod[] = [
-  'checkLimits',
-  'trackUsage',
-  'trackUsageBulk',
-  'getProduct',
-  'listProducts',
-  'createProduct',
-  'updateProduct',
-  'deleteProduct',
-  'cloneProduct',
-  'bootstrapMcpProduct',
-  'configureMcpPlans',
-  'listPlans',
-  'createPlan',
-  'updatePlan',
-  'deletePlan',
-  'cancelPurchase',
-  'reactivatePurchase',
-  'getPaymentMethod',
-  'getAutoRecharge',
-  'saveAutoRecharge',
-  'disableAutoRecharge',
-]
-
-const GROUP_MCP: NativeClientMethod[] = [
-  'mcpBootstrap',
-  'mcpCallBuiltinTool',
-  'mcpReadResource',
-  'mcpOauthRequest',
-  'mcpDispatch',
-  'mcpResolveAuth',
-  'fetchJwks',
-]
+// Binding-symbol sections. The generated ids are the client method names.
+const GROUP_A = [...GROUP_A_FNS] as NativeClientMethod[]
+const GROUP_B = [...GROUP_B_FNS] as NativeClientMethod[]
+const GROUP_C = [...GROUP_C_FNS] as NativeClientMethod[]
+const GROUP_MCP = [...GROUP_MCP_FNS] as NativeClientMethod[]
 
 const ALL_METHODS: NativeClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C, ...GROUP_MCP]
 
@@ -368,6 +325,12 @@ describe('createSolvaPayClient Group B/C native dispatch', () => {
     ).toEqual({ fromNative: 'saveAutoRecharge' })
     expect(await client.disableAutoRecharge!({ customerRef: 'cus_1' })).toEqual({
       fromNative: 'disableAutoRecharge',
+    })
+    expect(await client.listPurchases!({ customerRef: 'cus_1' })).toEqual({
+      fromNative: 'listPurchases',
+    })
+    expect(await client.getCreditActivity!({ customerRef: 'cus_1' })).toEqual({
+      fromNative: 'getCreditActivity',
     })
 
     expect(fetchMock).not.toHaveBeenCalled()

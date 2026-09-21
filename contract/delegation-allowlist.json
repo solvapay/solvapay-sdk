@@ -92,6 +92,11 @@
     },
     {
       "package": "@solvapay/core",
+      "symbol": "reconstructSolvaPayEnvelopeError",
+      "reason": "binding-infra"
+    },
+    {
+      "package": "@solvapay/core",
       "symbol": "REVERSE_CHARGE_NOTE",
       "reason": "type-guard-or-const"
     },
@@ -139,6 +144,11 @@
       "package": "@solvapay/core",
       "symbol": "TAX_NOT_COLLECTED_NOTE",
       "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/core",
+      "symbol": "unwrapEnvelope",
+      "reason": "binding-infra"
     },
     {
       "package": "@solvapay/core",

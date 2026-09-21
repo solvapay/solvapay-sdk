@@ -187,6 +187,28 @@ describe('edge verifyWebhook public facade', () => {
     expect(event.type).toBe('purchase.created')
   })
 
+  it('forwards nowUnixSecs and does not substitute Date.now', async () => {
+    setWasmWebhookBindingForTests(fakeBinding)
+    mockVerifyWebhook.mockReturnValue(eventBody)
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000)
+
+    const event = await verifyWebhookEdge({
+      body: eventBody,
+      signature: 't=1,v1=deadbeef',
+      secret: 'whsec_test',
+      nowUnixSecs: 1_782_864_000,
+    })
+
+    expect(mockVerifyWebhook).toHaveBeenCalledWith(
+      eventBody,
+      't=1,v1=deadbeef',
+      'whsec_test',
+      1_782_864_000,
+    )
+    expect(event.type).toBe('purchase.created')
+    nowSpy.mockRestore()
+  })
+
   it('throws when the WASM binding is unavailable', async () => {
     setWasmWebhookBindingForTests(null)
 

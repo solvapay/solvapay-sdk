@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::Value;
-use solvapay_core::{RetryPolicy, SdkError};
+use solvapay_core::{Backoff, RetryPolicy, SdkError};
 
 pub use solvapay_core::random9_from_f64;
 
@@ -49,6 +49,73 @@ pub type SleeperFn = Arc<dyn Fn(Duration) -> BoxFuture<'static, ()> + Send + Syn
 /// Host-side sleep on wasm32.
 #[cfg(target_arch = "wasm32")]
 pub type SleeperFn = Arc<dyn Fn(Duration) -> BoxFuture<'static, ()>>;
+
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+use wasm_bindgen::JsCast;
+
+/// Policy from generated `defaults.retry` (`sdk-contract.yaml`).
+fn contract_retry_policy() -> RetryPolicy {
+    const _: () = assert!(
+        matches!(
+            crate::contract_defaults::RETRY_BACKOFF.as_bytes(),
+            b"fixed" | b"linear" | b"exponential"
+        ),
+        "defaults.retry.backoff must be fixed, linear, or exponential"
+    );
+    let backoff = match crate::contract_defaults::RETRY_BACKOFF {
+        "linear" => Backoff::Linear,
+        "exponential" => Backoff::Exponential,
+        _ => Backoff::Fixed,
+    };
+    RetryPolicy {
+        max_retries: crate::contract_defaults::DEFAULT_MAX_RETRIES,
+        initial_delay_ms: crate::contract_defaults::DEFAULT_INITIAL_DELAY_MS,
+        backoff,
+    }
+}
+
+/// Sleep used by the contract retry policy.
+///
+/// Native builds wait with `tokio`. Browser and worker builds use `setTimeout`.
+/// The WASI guest blocks its thread; wazero runs that guest on a host thread.
+fn default_sleeper() -> SleeperFn {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        Arc::new(|duration| Box::pin(tokio::time::sleep(duration)))
+    }
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    {
+        Arc::new(|duration| {
+            Box::pin(async move {
+                let ms = i32::try_from(duration.as_millis()).unwrap_or(i32::MAX);
+                let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+                    let global = js_sys::global();
+                    let Ok(set_timeout) = js_sys::Reflect::get(
+                        &global,
+                        &wasm_bindgen::JsValue::from_str("setTimeout"),
+                    ) else {
+                        let _ = resolve.call0(&resolve);
+                        return;
+                    };
+                    let Some(fun) = set_timeout.dyn_ref::<js_sys::Function>() else {
+                        let _ = resolve.call0(&resolve);
+                        return;
+                    };
+                    let _ = fun.call2(&global, &resolve, &wasm_bindgen::JsValue::from(ms));
+                });
+                let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+            })
+        })
+    }
+    #[cfg(all(target_arch = "wasm32", not(target_os = "unknown")))]
+    {
+        Arc::new(|duration| {
+            Box::pin(async move {
+                std::thread::sleep(duration);
+            })
+        })
+    }
+}
 
 /// How the shell should set (or omit) the `Idempotency-Key` header.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,7 +158,7 @@ pub struct ClientShell {
     api_key: String,
     /// Origin without trailing slash (default [`DEFAULT_BASE_URL`]).
     base_url: String,
-    /// Retry policy; shell default is `max_retries: 0` (no retries).
+    /// Retry policy. [`ClientShell::new`] installs the contract default (2 / 500 ms / fixed).
     retry_policy: RetryPolicy,
     /// Epoch-ms clock.
     clock: ClockFn,
@@ -102,8 +169,8 @@ pub struct ClientShell {
 }
 
 impl ClientShell {
-    /// Builds a shell with default base URL, no-retry policy, real clock/RNG, and
-    /// a no-op sleeper (callers that enable retries should inject a real sleeper).
+    /// Builds a shell with the contract retry policy (2 retries / 500 ms / fixed),
+    /// a real sleeper, the default base URL, and real clock/RNG.
     ///
     /// # Arguments
     ///
@@ -118,13 +185,10 @@ impl ClientShell {
             transport,
             api_key: api_key.into(),
             base_url: normalize_base_url(DEFAULT_BASE_URL),
-            retry_policy: RetryPolicy {
-                max_retries: 0,
-                ..RetryPolicy::default()
-            },
+            retry_policy: contract_retry_policy(),
             clock: Arc::new(default_clock_ms),
             rng: Arc::new(default_random),
-            sleeper: Arc::new(|_d| Box::pin(async {})),
+            sleeper: default_sleeper(),
         }
     }
 
@@ -317,6 +381,9 @@ impl ClientShell {
     fn build_http_request(&self, req: &ShellRequest) -> Result<HttpRequest, SdkError> {
         let url = assemble_url(&self.base_url, &req.path, &req.query);
         let mut headers = Vec::new();
+        // No User-Agent and no X-SolvaPay-* client header. Traffic identity, if
+        // added, belongs in this one function so every language sends the same
+        // value. Per-facade headers are how that split starts.
         headers.push((
             HeaderName::new("Content-Type")?,
             "application/json".to_owned(),

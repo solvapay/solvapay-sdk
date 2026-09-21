@@ -59,6 +59,8 @@ pub struct EmittedBindings {
     pub webhook_rs: String,
     /// Python-only `register.rs` (`#[pymodule]` wiring). Empty for Node/Wasm/Ruby/Go.
     pub register_rs: String,
+    /// C-only `sync_dispatch.rs` (client-less helper match). Empty otherwise.
+    pub sync_dispatch_rs: String,
 }
 
 const SNAPSHOT: &str = include_str!("../assets/binding-emit.snapshot.json");
@@ -97,17 +99,23 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
             client_rs: emit_go_client(ir)?,
             webhook_rs: emit_go_webhook(),
             register_rs: String::new(),
+            sync_dispatch_rs: String::new(),
         });
     }
 
     if toolchain == Toolchain::C {
+        let node_art = chrome
+            .get("artifacts")
+            .and_then(|a| a.get("node"))
+            .ok_or_else(|| GenError::Parse("snapshot missing artifacts.node".into()))?;
         return Ok(EmittedBindings {
-            args_rs: String::new(),
+            args_rs: with_generated_header(chrome_str(node_art, &["argsRs"])?, Toolchain::C),
             decisions_rs: String::new(),
             payload_builders_rs: String::new(),
             client_rs: emit_c_client(ir)?,
             webhook_rs: String::new(),
             register_rs: String::new(),
+            sync_dispatch_rs: emit_c_sync_dispatch(ir)?,
         });
     }
 
@@ -132,6 +140,7 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
                 client_rs: emit_ruby_client(ir, art)?,
                 webhook_rs: String::new(),
                 register_rs: emit_ruby_register(ir),
+                sync_dispatch_rs: String::new(),
             })
         }
         Toolchain::Python => Ok(EmittedBindings {
@@ -141,6 +150,7 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
             client_rs: emit_python_client(ir, art)?,
             webhook_rs: String::new(),
             register_rs: emit_python_register(ir)?,
+            sync_dispatch_rs: String::new(),
         }),
         Toolchain::Node | Toolchain::Wasm => Ok(EmittedBindings {
             args_rs: with_generated_header(chrome_str(art, &["argsRs"])?, toolchain),
@@ -149,6 +159,7 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
             client_rs: emit_client(ir, toolchain, art)?,
             webhook_rs: String::new(),
             register_rs: String::new(),
+            sync_dispatch_rs: String::new(),
         }),
         Toolchain::Go => unreachable!("Go is emitted above via the inline chrome"),
         Toolchain::C => unreachable!("C is emitted above via the C chrome snapshot"),
@@ -158,12 +169,15 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
 // --- decisions.rs ------------------------------------------------------------
 
 fn emit_decisions(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> {
-    let header = with_merged_core_imports(
+    let mut header = with_merged_core_imports(
         chrome_str(art, &["decisions", "header"])?,
         ir,
         IrBindingArtifact::Decisions,
         &[],
     );
+    if toolchain == Toolchain::Wasm {
+        header = prepare_wasm_decisions_header(&header, ir);
+    }
     let trailer = chrome_str(art, &["decisions", "testsTrailer"])?;
     let symbols = symbols_for(ir, IrBindingArtifact::Decisions);
 
@@ -271,7 +285,7 @@ fn emit_payload_builders(
         Toolchain::Go => {
             unreachable!("Go payload builders are emitted via emit_go_payload_builders")
         }
-        Toolchain::C => unreachable!("C emits client dispatch only"),
+        Toolchain::C => unreachable!("C helper dispatch is emit_c_sync_dispatch"),
     }
 }
 
@@ -322,8 +336,9 @@ fn emit_ruby_payload_builders(ir: &Ir, art: &Value) -> GenResult<String> {
 fn emit_client(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> {
     let header = chrome_str(art, &["client", "header"])?;
     let preamble = chrome_str(art, &["client", "preamble"])?;
-    let postamble = chrome_str(art, &["client", "postamble"])?;
     let symbols = symbols_for(ir, IrBindingArtifact::Client);
+    let postamble =
+        inject_client_dispatch_arms(chrome_str(art, &["client", "postamble"])?, &symbols);
 
     let mut chunks: Vec<String> = Vec::new();
     let mut prev_section: Option<&str> = None;
@@ -348,6 +363,32 @@ fn emit_client(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> 
         chunks.join("\n\n"),
         postamble
     ))
+}
+
+/// Replaces the frozen `dispatch_envelope_for_fn` name list with client symbol ids.
+fn inject_client_dispatch_arms(postamble: &str, symbols: &[&IrBindingSymbol]) -> String {
+    let Some(match_at) = postamble.find("match fn_name {") else {
+        return postamble.to_string();
+    };
+    let tail_at = match_at + "match fn_name {".len();
+    let Some(other_rel) = postamble[tail_at..].find("other =>") else {
+        return postamble.to_string();
+    };
+    let other_at = tail_at + other_rel;
+    let mut arms = String::from("\n");
+    for (index, sym) in symbols.iter().enumerate() {
+        if index + 1 == symbols.len() {
+            arms.push_str(&format!("        | \"{}\" => None,\n        ", sym.id));
+        } else if index == 0 {
+            arms.push_str(&format!("        \"{}\"\n", sym.id));
+        } else {
+            arms.push_str(&format!("        | \"{}\"\n", sym.id));
+        }
+    }
+    if symbols.is_empty() {
+        arms = String::from("\n        ");
+    }
+    format!("{}{arms}{}", &postamble[..tail_at], &postamble[other_at..])
 }
 
 /// Emits the full PyO3 `client.rs` (Groups A–C, async + blocking twins).
@@ -1067,6 +1108,168 @@ fn strip_envelope_await<'a>(inner: &'a str, id: &str) -> GenResult<&'a str> {
         .ok_or_else(|| GenError::Parse(format!("{id} expected client_call_body to end in .await")))
 }
 
+/// Client-less helper match for `solvapay_call`: every decision and payload
+/// symbol, one arm, bodies from [`sync_body`]. MCP sync ops stay on
+/// `solvapay_mcp_core::dispatch_sync`; the caller tries this table first.
+fn emit_c_sync_dispatch(ir: &Ir) -> GenResult<String> {
+    let mut symbols: Vec<&IrBindingSymbol> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for artifact in [
+        IrBindingArtifact::Decisions,
+        IrBindingArtifact::PayloadBuilders,
+    ] {
+        for sym in symbols_for(ir, artifact) {
+            if seen.insert(sym.id.as_str()) {
+                symbols.push(sym);
+            }
+        }
+    }
+    symbols.sort_by(|a, b| a.id.cmp(&b.id));
+
+    let mut imports: Vec<String> = Vec::new();
+    for artifact in [
+        IrBindingArtifact::Decisions,
+        IrBindingArtifact::PayloadBuilders,
+    ] {
+        for name in solvapay_core_fn_names(ir, artifact, &[]) {
+            imports.push(name.to_string());
+        }
+        imports.extend(solvapay_core_typed_names(ir, artifact, &[]));
+    }
+    for sym in &symbols {
+        for word in type_idents(&sync_body(sym, Toolchain::C)) {
+            if !PASCAL_SKIP.contains(&word.as_str()) {
+                imports.push(word);
+            }
+        }
+    }
+    for word in type_idents(GO_PAYLOAD_HELPERS) {
+        if !PASCAL_SKIP.contains(&word.as_str()) {
+            imports.push(word);
+        }
+    }
+    imports.sort();
+    imports.dedup();
+
+    let import_block = if imports.is_empty() {
+        "use solvapay_core::SdkError;\n".to_string()
+    } else {
+        format!(
+            "use solvapay_core::{{\n    SdkError,\n    {},\n}};\n",
+            imports.join(",\n    ")
+        )
+    };
+
+    let mut ids: Vec<&str> = symbols.iter().map(|sym| sym.id.as_str()).collect();
+    ids.sort_unstable();
+    let mut id_list = String::new();
+    for id in &ids {
+        let _ = std::fmt::Write::write_fmt(&mut id_list, format_args!("    \"{id}\",\n"));
+    }
+
+    let mut arms = String::new();
+    for sym in &symbols {
+        let body = sync_body(sym, Toolchain::C);
+        let _ = std::fmt::Write::write_fmt(
+            &mut arms,
+            format_args!("        \"{}\" => {{\n{}\n        }}\n", sym.id, body),
+        );
+    }
+
+    let header = generated_header(
+        crate::header::CommentStyle::ModuleDoc,
+        bindings_flag(Toolchain::C),
+    );
+    let src = format!(
+        "{header}\
+#![allow(\n    missing_docs,\n    clippy::missing_docs_in_private_items,\n    clippy::too_many_lines,\n    clippy::cognitive_complexity,\n)]\n\
+//! Client-less helper dispatch for [`crate::solvapay_call`].\n\
+//!\n\
+//! One match arm per decision and payload-builder symbol. Unknown ops return\n\
+//! `None` so the caller can fall through to MCP `dispatch_sync`.\n\n\
+use serde_json::{{Map, Value}};\n\
+{import_block}\n\
+use crate::args::*;\n\
+use crate::error::run_envelope_sync;\n\n\
+{GO_PAYLOAD_HELPERS}\n\
+const HELPER_OPS: &[&str] = &[\n{id_list}];\n\
+/// Dispatch a core helper. `None` means `op` is not in this table.\n\
+pub(crate) fn try_dispatch(op: &str, args_json: &str) -> Option<String> {{\n\
+    if HELPER_OPS.binary_search(&op).is_err() {{\n\
+        return None;\n\
+    }}\n\
+    Some(run_envelope_sync(|| dispatch_helper(op, args_json)))\n\
+}}\n\n\
+fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {{\n\
+    match op {{\n\
+{arms}\
+        other => Err(SdkError::transport(format!(\"unknown op: {{other}}\"), false)),\n\
+    }}\n\
+}}\n"
+    );
+    // C passes `args_json: &str`. The shared shim text borrows it again.
+    Ok(src.replace("&args_json", "args_json"))
+}
+
+/// Type names written as `: Type`, `::<Type>`, `Type {`, or `Type::` in a shim body.
+fn type_idents(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(index) = rest.find("::<") {
+        let after = &rest[index + 3..];
+        push_type_name(&mut out, after);
+        rest = &rest[index + 3..];
+    }
+    let bytes = text.as_bytes();
+    let mut index = 0;
+    while index + 2 < bytes.len() {
+        if bytes[index] == b':'
+            && bytes[index + 1] == b' '
+            && (index == 0 || bytes[index - 1] != b':')
+        {
+            push_type_name(&mut out, &text[index + 2..]);
+        }
+        index += 1;
+    }
+    let mut start: Option<usize> = None;
+    for (index, ch) in text.char_indices() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            if start.is_none() {
+                start = Some(index);
+            }
+            continue;
+        }
+        if let Some(from) = start.take() {
+            let word = &text[from..index];
+            let next = text[index..].chars().next();
+            let followed_by_path_or_struct =
+                next == Some(':') || next == Some('{') || next == Some(' ');
+            if followed_by_path_or_struct
+                && word.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+                && (next != Some(' ') || text[index..].starts_with(" {"))
+            {
+                out.push(word.to_string());
+            }
+        }
+    }
+    out
+}
+
+fn push_type_name(out: &mut Vec<String>, after: &str) {
+    let name: String = after
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect();
+    if name.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+        out.push(name);
+    }
+}
+
+const PASCAL_SKIP: &[&str] = &[
+    "Arc", "Box", "Err", "Map", "None", "Ok", "Option", "Rc", "Result", "SdkError", "Some",
+    "String", "Value", "Vec",
+];
+
 /// Emits the C ABI `dispatch.rs` match table (full Groups A–C surface).
 fn emit_c_client(ir: &Ir) -> GenResult<String> {
     let chrome: Value = serde_json::from_str(C_SNAPSHOT)
@@ -1254,11 +1457,179 @@ fn emit_sync_fn(sym: &IrBindingSymbol, toolchain: Toolchain) -> String {
     } else {
         format!("{attr}\n")
     };
+    let cfg_line = if toolchain == Toolchain::Wasm && wasm_symbol_is_edge_only(sym) {
+        "#[cfg(feature = \"edge\")]\n"
+    } else {
+        ""
+    };
     let fn_name = &sym.rust_fn_name;
     let body = sync_body(sym, toolchain);
     format!(
-        "{doc}\n{attr_line}pub fn {fn_name}(args_json: String) -> String {{\n    run_envelope_sync(|| {{\n{body}\n    }})\n}}"
+        "{cfg_line}{doc}\n{attr_line}pub fn {fn_name}(args_json: String) -> String {{\n    run_envelope_sync(|| {{\n{body}\n    }})\n}}"
     )
+}
+
+/// Pure-compute decision symbols kept off the browser profile for size.
+///
+/// Admitting every pure-compute export measured 200,826 gzip bytes against the
+/// 163,517 browser-wasm ceiling. A smaller set fit that ceiling (158,608) but
+/// pushed the wasm2js artifact to 300,046 gzip against its 230,122 cap, so the
+/// browser-js gate limits the second tranche. These stay `edge`-only with a
+/// size-budget reason. They are not a capability split.
+const WASM_BROWSER_BUDGET_EXCLUSIONS: &[&str] = &[
+    "buildCustomerSnapshot",
+    "buildPaywallGate",
+    "decidePaywallOutcome",
+    "ensureCustomerNext",
+    "evaluateCachedLimits",
+    "evaluateClaimedLimits",
+    "evaluateFreshLimits",
+    "evaluateProductReadiness",
+    "gateNext",
+    "getHistoryNext",
+    "overlayClaimedLimits",
+    "paywallErrorToClientPayload",
+    "projectTopupProcessOutcome",
+    "resolveFallbackGateLimits",
+    "topupProcessNext",
+    // Fits the browser-wasm ceiling, exceeds the wasm2js gzip cap.
+    "appendPaidToolDescription",
+    "buildCreateCustomerParams",
+    "buildGateMessage",
+    "buildNudgeMessage",
+    "classifyCustomerRef",
+    "classifyPaywallState",
+    "coerceCustomerOptions",
+    "compileStringFieldInputSchemaJson",
+    "creditSignals",
+    "customerRefFromClaims",
+    "decodeJwtPayloadUnverified",
+    "defaultMcpBearerExpectations",
+    "ensureOutputSchemaObjectType",
+    "evaluateBalanceObservation",
+    "extractBackendCustomerRef",
+    "extractBearerToken",
+    "freeLimitsAgree",
+    "freeToolDescriptionSuffix",
+    "isErrorResult",
+    "linkLabel",
+    "mapRouteError",
+    "nextActionFor",
+    "normalizeFreeLimit",
+    "paywallStructuredContentSchema",
+    "planLadder",
+    "projectPaymentIntentResult",
+    "projectUsageSnapshot",
+    "purchaseUsageIsMetered",
+    "resolveCheckLimitsParams",
+    "resolveCustomerRef",
+    "resolvePurchaseCustomerRef",
+    "resolveReturnUrl",
+    "resolveUsageExtra",
+    "retryNextDelayMs",
+    "selectActivePlanPurchase",
+    "selectActivePurchases",
+    "shouldRetryUsageError",
+    "tierBands",
+    "tierMeters",
+    "validateActivatePlanParams",
+    "validateTopupPaymentIntentParams",
+];
+
+/// `client-full` / `webhook-verify` symbols, plus the §7.8 budget exclusions.
+fn wasm_symbol_is_edge_only(sym: &IrBindingSymbol) -> bool {
+    sym.id == "resolveAuthenticatedUser"
+        || WASM_BROWSER_BUDGET_EXCLUSIONS.contains(&sym.id.as_str())
+        || sym.core.ends_with("resolve_authenticated_user")
+        || sym.core.ends_with("verify_webhook")
+        || sym.core.ends_with("verify_webhook_json")
+}
+
+/// Drop the file-level `edge` cfg and move imports that only the edge-only
+/// symbols name behind `#[cfg(feature = "edge")]`.
+fn prepare_wasm_decisions_header(header: &str, ir: &Ir) -> String {
+    let mut without_crate_cfg = header
+        .lines()
+        .filter(|line| line.trim() != "#![cfg(feature = \"edge\")]")
+        .collect::<Vec<_>>()
+        .join("\n");
+    if header.ends_with('\n') {
+        without_crate_cfg.push('\n');
+    }
+    let rewritten = without_crate_cfg.replace(
+        "//! Edge-only mirror of `sdks/node-native/src/decisions.rs`. Each function\n//! takes one JSON-args string and returns one envelope string",
+        "//! Per-symbol mirror of `sdks/node-native/src/decisions.rs`.\n\
+         //! Pure-compute exports compile on both `edge` and `browser`.\n\
+         //! `client-full` symbols and the §7.8 size-budget exclusions stay\n\
+         //! `edge`-only. Each function takes one JSON-args string and returns\n\
+         //! one envelope string",
+    );
+    let with_core = split_use_by_profile(&rewritten, "use solvapay_core::{", ir);
+    split_use_by_profile(&with_core, "use crate::args::{", ir)
+}
+
+fn symbol_mentions_ident(sym: &IrBindingSymbol, ident: &str) -> bool {
+    if sym.core.rsplit("::").next() == Some(ident) {
+        return true;
+    }
+    if sym
+        .args
+        .iter()
+        .any(|arg| arg.typed_as.as_deref() == Some(ident))
+    {
+        return true;
+    }
+    let body = sync_body(sym, Toolchain::Wasm);
+    body.split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+        .any(|tok| tok == ident)
+}
+
+fn split_use_by_profile(header: &str, start_pat: &str, ir: &Ir) -> String {
+    let Some(start) = header.find(start_pat) else {
+        return header.to_string();
+    };
+    let inner_start = start + start_pat.len();
+    let rest = &header[inner_start..];
+    let Some(close) = rest.find('}') else {
+        return header.to_string();
+    };
+    let symbols = symbols_for(ir, IrBindingArtifact::Decisions);
+    let mut keep = Vec::new();
+    let mut edge = Vec::new();
+    for part in rest[..close].split(',') {
+        let ident = part.trim();
+        if ident.is_empty() {
+            continue;
+        }
+        let used_by_browser = symbols
+            .iter()
+            .any(|sym| !wasm_symbol_is_edge_only(sym) && symbol_mentions_ident(sym, ident));
+        let used_by_edge = symbols
+            .iter()
+            .any(|sym| wasm_symbol_is_edge_only(sym) && symbol_mentions_ident(sym, ident));
+        if used_by_edge && !used_by_browser {
+            edge.push(ident.to_string());
+        } else {
+            keep.push(ident.to_string());
+        }
+    }
+    if edge.is_empty() {
+        return header.to_string();
+    }
+    keep.sort();
+    keep.dedup();
+    edge.sort();
+    edge.dedup();
+    let main = format!("{start_pat}\n    {},\n}};", keep.join(",\n    "));
+    let gated = format!(
+        "\n\n#[cfg(feature = \"edge\")]\n{start_pat}\n    {},\n}};",
+        edge.join(",\n    ")
+    );
+    let after_close = inner_start + close + 1;
+    let after = header[after_close..]
+        .strip_prefix(';')
+        .unwrap_or(&header[after_close..]);
+    format!("{}{main}{gated}{after}", &header[..start])
 }
 
 /// Emits Python `register.rs` — wires every sync `#[pyfunction]` into `_solvapay`.
@@ -1770,6 +2141,8 @@ mod tests {
             core_types_ts: Default::default(),
             core_fns: Default::default(),
             transport_fns: Default::default(),
+            defaults: Default::default(),
+            driver_loops: Default::default(),
         };
         for symbol in symbols {
             ir.binding_symbols.insert(symbol.id.clone(), symbol);

@@ -130,10 +130,8 @@ function attr(prefix: AttrPrefix, suffix: string): string {
   return `data-solvapay-${prefix}-${suffix}`
 }
 
-const SUPPORTED_BUSINESS_COUNTRIES_SET = new Set<string>(SUPPORTED_BUSINESS_COUNTRIES)
-
 function isSupportedBusinessCountry(value: string): value is SupportedBusinessCountry {
-  return SUPPORTED_BUSINESS_COUNTRIES_SET.has(value)
+  return SUPPORTED_BUSINESS_COUNTRIES().includes(value)
 }
 
 function resolveTaxIdLabel(country: string): string {
@@ -293,7 +291,7 @@ export function createBusinessDetailsParts(
     const defaultOptions = (
       <>
         <option value="">Select country</option>
-        {BUSINESS_COUNTRY_OPTIONS.map(({ value, label }) => (
+        {BUSINESS_COUNTRY_OPTIONS().map(({ value, label }) => (
           <option key={value} value={value}>
             {label}
           </option>

@@ -12,9 +12,7 @@
  * `checkoutUrl` for terminal-first hosts.
  */
 
-import type { PaywallStructuredContent } from '@solvapay/server'
-import { PaywallError } from '@solvapay/server'
-import type { BootstrapPayload, McpToolExtra, PaywallToolResult } from './types'
+import type { BootstrapPayload, McpToolExtra } from './types'
 
 export interface PaywallToolResultContext {
   /**
@@ -30,48 +28,4 @@ export interface PaywallToolResultContext {
   buildBootstrap?: (view: string, extra?: McpToolExtra) => Promise<BootstrapPayload>
   /** Forwarded for logging / telemetry; not consumed by the text path. */
   extra?: McpToolExtra
-}
-
-/**
- * Convert a paywall gate (either a `PaywallError` or the underlying
- * `PaywallStructuredContent` returned by `paywall.decide()`) into a
- * text-only `PaywallToolResult`.
- *
- * ```ts
- * const decision = await solvaPay.paywall.decide(args, { product })
- * if (decision.outcome === 'gate') {
- *   return paywallToolResult(decision.gate)
- * }
- * ```
- *
- * The legacy `PaywallError`-first form continues to work for custom
- * adapters that still `try/catch`:
- *
- * ```ts
- * try {
- *   return await solvaPay.payable({ product }).mcp(handler)(args, extra)
- * } catch (err) {
- *   if (err instanceof PaywallError) return paywallToolResult(err)
- *   throw err
- * }
- * ```
- */
-export async function paywallToolResult(
-  errOrGate: PaywallError | PaywallStructuredContent,
-  _ctx: PaywallToolResultContext = {},
-): Promise<PaywallToolResult> {
-  const paywallContent: PaywallStructuredContent =
-    errOrGate instanceof PaywallError ? errOrGate.structuredContent : errOrGate
-  const narrationText =
-    errOrGate instanceof PaywallError ? errOrGate.message : paywallContent.message
-
-  return {
-    // Deliberately `false`: paywall is a user-actionable gate, not a
-    // tool failure. The LLM narrates the recovery from
-    // `content[0].text` and the structured gate content on
-    // `structuredContent` is available for programmatic consumers.
-    isError: false,
-    content: [{ type: 'text', text: narrationText }],
-    structuredContent: paywallContent as unknown as Record<string, unknown>,
-  }
 }

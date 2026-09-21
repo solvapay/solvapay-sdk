@@ -141,6 +141,7 @@ module SolvaPay
       project_usage_snapshot
       resolve_check_limits_params
       should_retry_usage_error
+      purchase_usage_is_metered
       resolve_usage_extra
       validate_list_plans_params
       is_error_result

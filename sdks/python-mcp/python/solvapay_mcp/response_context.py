@@ -6,6 +6,7 @@ from solvapay.errors import PaywallError
 
 from solvapay_mcp._layer2 import make_response_result
 from solvapay_mcp.core import call
+from solvapay_mcp.gate_copy import gate_message
 
 
 class ResponseContext:
@@ -44,5 +45,4 @@ class ResponseContext:
         content = call("mcpDefaultGate", payload)
         if not isinstance(content, Mapping):
             raise TypeError("mcpDefaultGate did not return an object")
-        message = str(content.get("message") or "Payment required")
-        raise PaywallError(message, dict(content))
+        raise PaywallError(gate_message(content), dict(content))

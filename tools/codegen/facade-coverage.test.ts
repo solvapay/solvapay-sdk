@@ -7,10 +7,11 @@ import {
 } from './facade-coverage.js'
 
 describe('facade-coverage', () => {
-  it('enumerates the 12 sdks/ facades (wasm split into edge/browser)', () => {
+  it('enumerates sdk facades, including MCP rows and the wasm split', () => {
     expect(FACADES).toEqual(expect.arrayContaining(['wasm-edge', 'wasm-browser']))
     expect(FACADES).not.toContain('wasm')
-    expect(FACADES).toHaveLength(12)
+    expect(FACADES).toEqual(expect.arrayContaining(['typescript-mcp', 'go-mcp']))
+    expect(FACADES).toHaveLength(14)
   })
 
   it('flags gaps that lack a reason', () => {

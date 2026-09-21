@@ -29,9 +29,13 @@ func loadFixtureCensus(t *testing.T, root string) (wantParsed, wantReplayed int)
 	if census.Parsed <= 0 {
 		t.Fatal("census.parsed must be positive")
 	}
-	return census.Parsed, census.Parsed - census.Delegated
+	// Delegated fixtures are host loops the Rust runner does not execute.
+	// The Go guest replays them. unsupportedFns is the only way to exclude one.
+	return census.Parsed, census.Parsed
 }
 
+// Declared skips only. An empty map means every discovered fixture is replayed.
+// Do not add a bare continue above the lookup.
 var unsupportedFns = map[string]struct{}{}
 
 func TestContractFixtureCensus(t *testing.T) {
@@ -60,9 +64,6 @@ func TestContractFixtureCensus(t *testing.T) {
 			t.Fatalf("%s: %v", path, err)
 		}
 		rel, _ := filepath.Rel(filepath.Join(root, "contract", "fixtures"), path)
-		if fixture.Input.Fn == "topupProcessNext" {
-			continue
-		}
 		_, listed := unsupportedFns[fixture.Input.Fn]
 		outcome, err := contract.Replay(ctx, fixture)
 		if listed {
@@ -87,7 +88,11 @@ func TestContractFixtureCensus(t *testing.T) {
 		replayed++
 	}
 
-	if replayed != wantReplayed {
+	skipped := 0
+	for _, n := range seenUnsupported {
+		skipped += n
+	}
+	if replayed != wantReplayed-skipped {
 		failures = append(failures, "replayed count mismatch")
 	}
 	for fn := range unsupportedFns {

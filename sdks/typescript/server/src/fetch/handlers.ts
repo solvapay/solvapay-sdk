@@ -355,6 +355,18 @@ export async function getProduct(req: Request): Promise<Response> {
   return jsonResponseWithCors(result, req)
 }
 
+function webhookVerifyFailureBody(error: unknown): { error: string; code?: string } {
+  const message = error instanceof Error ? error.message : String(error)
+  const body: { error: string; code?: string } = { error: message }
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code?: unknown }).code
+    if (typeof code === 'string' && code.length > 0) {
+      body.code = code
+    }
+  }
+  return body
+}
+
 export interface SolvapayWebhookOptions {
   secret?: string
   onEvent: (event: WebhookEvent) => void | Promise<void>
@@ -401,7 +413,10 @@ export function solvapayWebhook(
           headers: { 'Content-Type': 'application/json' },
         })
       }
-      return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {
+      // Signature and verification failures stay HTTP 401, but the body is the
+      // verifier's own message and stable code. A fixed string here hid the
+      // core code (`timestamp_too_old`, `invalid_payload`, …).
+      return new Response(JSON.stringify(webhookVerifyFailureBody(error)), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       })

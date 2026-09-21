@@ -4,11 +4,22 @@
  * paywall via the shared Rust `invokePayableNext` driver.
  */
 
-import type { FreeLimit, LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
+import type {
+  FreeLimit,
+  LimitResponseWithPlan,
+  PaywallArgs,
+  PaywallStructuredContent,
+  SolvaPay,
+} from '@solvapay/server'
 import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
 import { runGeneratedPayableLoop } from './drivers.generated'
 import { defaultGetCustomerRef } from './helpers'
-import { assertResponseResult, callMcpSyncOp, invokePayableNext } from './native-mcp'
+import {
+  assertResponseResult,
+  callMcpSyncOp,
+  invokePayableNext,
+  paywallToolResult,
+} from './native-mcp'
 import { buildResponseContext } from './response-context'
 import type {
   BootstrapPayload,
@@ -114,6 +125,13 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     extra?: McpToolExtra,
   ): Promise<SolvaPayCallToolResult> => {
     const customerRef = await resolvePayableCustomerRef(args, extra, getCustomerRef)
+    if (!customerRef || customerRef === 'anonymous') {
+      const gate = callMcpSyncOp<PaywallStructuredContent>('mcpDefaultGate', {
+        product,
+        reason: 'customer_ref missing from MCP auth context',
+      })
+      return await paywallToolResult(gate)
+    }
     const result = await runGeneratedPayableLoop(
       (state, event) => {
         const out = invokePayableNext(state, event)

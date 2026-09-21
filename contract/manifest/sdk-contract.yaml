@@ -3274,7 +3274,11 @@ coreHelpers:
       go: FreeLimitsAgree
       rust: free_limits_agree
       c: freeLimitsAgree
-    params: []
+    params:
+      - name: left
+        type: unknown
+      - name: right
+        type: unknown
     docs:
       summary: 'Return whether two normalized free limits share the same cap.'
       params:
@@ -5766,6 +5770,31 @@ driverLoops:
         event: limitsResult
     terminal: [allow, gate]
     usage: [emitUsage, skipUsage]
+  invokePayable:
+    io:
+      - action: runGate
+        event: gateAllow
+      - action: invokeHandler
+        event: handlerOk
+    terminal: [done]
+  ensureCustomer:
+    io:
+      - action: readCustomerCache
+        event: customerCacheEntry
+      - action: getCustomer
+        event: customerLookupResult
+      - action: createCustomer
+        event: customerCreateResult
+      - action: updateCustomer
+        event: customerUpdateResult
+    terminal: [resolved]
+  withRetry:
+    io:
+      - action: invoke
+        event: attemptResult
+      - action: sleep
+        event: slept
+    terminal: [return]
 
 nameOverrides:
   createSolvaPay:

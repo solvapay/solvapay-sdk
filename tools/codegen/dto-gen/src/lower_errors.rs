@@ -1,7 +1,7 @@
 //! Lower `errors:` + per-operation error templates from the manifest into IR.
 
 use crate::error::GenResult;
-use crate::ir::{Ir, IrErrorTemplates, IrOperationErrorTemplates};
+use crate::ir::{Ir, IrErrorCase, IrErrorTemplates, IrOperationErrorTemplates};
 use crate::manifest::Manifest;
 
 /// Copies frozen error templates from the manifest into `ir.error_templates`.
@@ -28,7 +28,11 @@ pub fn lower_errors(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
                     .errors
                     .cases
                     .iter()
-                    .map(|c| c.message_template.clone())
+                    .map(|c| IrErrorCase {
+                        message_template: c.message_template.clone(),
+                        status: c.status,
+                        code: c.code.clone(),
+                    })
                     .collect(),
             },
         );

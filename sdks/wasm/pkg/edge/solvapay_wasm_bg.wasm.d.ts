@@ -115,6 +115,7 @@ export const planPricingShape: (a: number, b: number) => [number, number];
 export const projectPaymentIntentResult: (a: number, b: number) => [number, number];
 export const projectTopupProcessOutcome: (a: number, b: number) => [number, number];
 export const projectUsageSnapshot: (a: number, b: number) => [number, number];
+export const purchaseUsageIsMetered: (a: number, b: number) => [number, number];
 export const requireProductRef: (a: number, b: number) => [number, number];
 export const resolveAccountState: (a: number, b: number) => [number, number];
 export const resolveAuthenticatedUser: (a: number, b: number) => [number, number];

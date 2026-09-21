@@ -67,6 +67,8 @@ async fn group_c_inventory_is_sixty_seven_fixtures() {
         ("getAutoRecharge", 2),
         ("saveAutoRecharge", 2),
         ("disableAutoRecharge", 2),
+        ("listPurchases", 2),
+        ("getCreditActivity", 2),
     ]
     .into_iter()
     .collect();

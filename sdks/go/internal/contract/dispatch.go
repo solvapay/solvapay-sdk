@@ -107,6 +107,7 @@ var SyncExports = map[string]string{
 	"projectUsageSnapshot":                        "sv_project_usage_snapshot_binding",
 	"resolveCheckLimitsParams":                    "sv_resolve_check_limits_params_binding",
 	"shouldRetryUsageError":                       "sv_should_retry_usage_error_binding",
+	"purchaseUsageIsMetered":                      "sv_purchase_usage_is_metered_binding",
 	"resolveUsageExtra":                           "sv_resolve_usage_extra_binding",
 	"validateListPlansParams":                     "sv_validate_list_plans_params_binding",
 	"isErrorResult":                               "sv_is_error_result_binding",

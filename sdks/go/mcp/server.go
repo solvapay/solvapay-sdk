@@ -147,19 +147,14 @@ func (s *Server) RegisterPayable(name string, opts Options) error {
 	if err := validatePayableOptions(name, &opts); err != nil {
 		return err
 	}
-	schema, err := compileInputSchema(opts.InputSchema)
+	tool, err := payableMCPTool(name, opts)
 	if err != nil {
 		return err
 	}
 	s.mu.Lock()
 	s.payables[name] = opts
 	s.mu.Unlock()
-	s.MCP.AddTool(&mcpsdk.Tool{
-		Name:        name,
-		Title:       opts.Title,
-		Description: opts.Description,
-		InputSchema: schema,
-	}, s.dispatchToolHandler(name))
+	s.MCP.AddTool(tool, s.dispatchToolHandler(name))
 	return nil
 }
 
@@ -368,18 +363,18 @@ func (s *Server) resumePayableFromEnvelope(ctx context.Context, envelope map[str
 		return nil, fmt.Errorf("unknown payable tool: %s", tool)
 	}
 	args := asMap(envelope["args"])
-	if _, has := args["customer_ref"]; !has {
-		if ref, ok := asString(envelope["customerRef"]); ok && ref != "" {
-			args["customer_ref"] = ref
-		}
+	sources := sourcesFromEnvelope(envelope)
+	if _, has := args["customer_ref"]; !has && sources.mcpExtraCustomerRef != "" {
+		args["customer_ref"] = sources.mcpExtraCustomerRef
 	}
 	if opts.GetCustomerRef == nil {
-		if ref, _ := args["customer_ref"].(string); ref == "" {
+		argRef, _ := args["customer_ref"].(string)
+		if argRef == "" && sources.mcpExtraCustomerRef == "" {
 			return nil, fmt.Errorf(
 				"payable tool %s: bearer token carries no customer identity (checked customerRef, customer_ref, sub) and no customer_ref argument", tool)
 		}
 	}
-	result, err := InvokePayable(ctx, args, opts)
+	result, err := invokePayable(ctx, args, opts, sources)
 	if err != nil {
 		return nil, err
 	}

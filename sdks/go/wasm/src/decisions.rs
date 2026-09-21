@@ -28,10 +28,10 @@ use solvapay_core::{
     normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
     paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
     plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
-    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, resolve_usage_extra,
+    project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
+    resolve_authenticated_user, resolve_check_limits_params, resolve_customer_ref,
+    resolve_display_mode, resolve_fallback_gate_limits, resolve_narrator_plan_shape,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_return_url, resolve_usage_extra,
     select_active_plan_purchase, select_active_purchases, should_retry_usage_error, tier_bands,
     tier_meters, topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
     validate_attach_business_details_params, validate_checkout_session_params,
@@ -817,6 +817,24 @@ pub unsafe extern "C" fn sv_should_retry_usage_error_binding(
         let args = args_map(&args_json)?;
         let message = require_string(&args, "message")?;
         Ok(Value::Bool(should_retry_usage_error(&message)))
+    }))
+}
+
+/// Binding for `purchaseUsageIsMetered`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_purchase_usage_is_metered_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchase = optional_value(&args, "purchase");
+        Ok(Value::Bool(purchase_usage_is_metered(purchase.as_ref())))
     }))
 }
 

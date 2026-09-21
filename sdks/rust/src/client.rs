@@ -6,10 +6,13 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
-use serde_json::Value;
+use crate::drivers_generated::{
+    EnsureCacheHit, EnsureCreateOutcome, EnsureLookupOutcome, EnsureUpdateOutcome,
+};
+use serde_json::{Map, Value};
 use solvapay_core::{
-    ensure_customer_next, gate_next, should_retry_usage_error, EnsureCustomerAction, FreeLimit,
-    FreeLimitScope, GateAction, GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
+    gate_next, should_retry_usage_error, CreateCustomerParams, FreeLimit, FreeLimitScope,
+    GateAction, GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
 };
 use solvapay_dto::{
     CheckLimitRequestFreeAllowance, CheckLimitRequestFreeAllowanceScope, CheckLimitsRequest,
@@ -325,158 +328,163 @@ impl Client {
     }
 
     async fn find_or_create_customer(&self, customer_ref: &str) -> Result<String, SdkError> {
-        let mut state: Option<Value> = None;
-        let mut event = serde_json::json!({
+        let start_event = serde_json::json!({
             "kind": "start",
             "customerRef": customer_ref,
-            "canCreateCustomer": true,
-            "canUpdateCustomer": true,
+            "canCreateCustomer": client_can_create_customer(&self.inner.api),
+            "canUpdateCustomer": client_can_update_customer(&self.inner.api),
+            "dedupTTLMs": crate::CUSTOMER_DEDUP_TTL_MS,
             "nowMs": now_ms() as i64,
         });
-        loop {
-            let out = ensure_customer_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
-            state = Some(serde_json::to_value(&out.state).map_err(|err| {
-                SdkError::transport(format!("ensure_customer_next state: {err}"), false)
-            })?);
-            match out.action {
-                EnsureCustomerAction::ReadCustomerCache { key } => {
-                    let cached = {
-                        let gate = self.inner.gate.lock().await;
-                        gate.customer_cache.get(&key).cloned()
-                    };
-                    event = match cached {
-                        Some(entry) => serde_json::json!({
-                            "kind": "customerCacheEntry",
-                            "found": true,
-                            "backendRef": entry.value,
-                            "timestampMs": entry.timestamp_ms,
-                            "nowMs": now_ms() as i64,
-                        }),
-                        None => serde_json::json!({
-                            "kind": "customerCacheEntry",
-                            "found": false,
-                            "nowMs": now_ms() as i64,
-                        }),
-                    };
-                }
-                EnsureCustomerAction::GetCustomer {
-                    by_external_ref,
-                    by_email,
-                } => {
-                    let lookup = GetCustomerParams {
-                        customer_ref: None,
-                        email: by_email,
-                        external_ref: by_external_ref,
-                    };
-                    match self.inner.api.get_customer(lookup).await {
-                        Ok(mapped) if !mapped.customer_ref.is_empty() => {
-                            event = serde_json::json!({
-                                "kind": "customerLookupResult",
-                                "found": true,
-                                "customer": {
-                                    "customerRef": mapped.customer_ref,
-                                    "externalRef": mapped.external_ref,
-                                },
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                        Ok(_) => {
-                            event = serde_json::json!({
-                                "kind": "customerLookupResult",
-                                "found": false,
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                        Err(err) => {
-                            event = serde_json::json!({
-                                "kind": "customerLookupResult",
-                                "found": false,
-                                "errorMessage": sdk_error_message(&err),
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                    }
-                }
-                EnsureCustomerAction::CreateCustomer { params } => {
-                    let request = CreateCustomerRequest {
-                        description: None,
-                        email: Some(params.email),
-                        external_ref: params.external_ref,
-                        metadata: Some(
-                            params
-                                .metadata
-                                .into_iter()
-                                .collect::<std::collections::BTreeMap<_, _>>(),
-                        ),
-                        name: params.name,
-                        telephone: None,
-                    };
-                    match self.inner.api.create_customer(request).await {
-                        Ok(created) => {
-                            event = serde_json::json!({
-                                "kind": "customerCreateResult",
-                                "ok": true,
-                                "customer": { "customerRef": created.customer_ref },
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                        Err(err) => {
-                            event = serde_json::json!({
-                                "kind": "customerCreateResult",
-                                "ok": false,
-                                "errorMessage": sdk_error_message(&err),
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                    }
-                }
-                EnsureCustomerAction::UpdateCustomer {
-                    customer_ref: backend,
-                    patch,
-                } => {
-                    let params = UpdateCustomerParams {
-                        email: None,
-                        external_ref: patch
-                            .get("externalRef")
-                            .and_then(Value::as_str)
-                            .map(str::to_owned),
-                        metadata: None,
-                        name: None,
-                        telephone: None,
-                    };
-                    match self.inner.api.update_customer(&backend, params).await {
-                        Ok(_) => {
-                            event = serde_json::json!({
-                                "kind": "customerUpdateResult",
-                                "ok": true,
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                        Err(err) => {
-                            event = serde_json::json!({
-                                "kind": "customerUpdateResult",
-                                "ok": false,
-                                "errorMessage": sdk_error_message(&err),
-                                "nowMs": now_ms() as i64,
-                            });
-                        }
-                    }
-                }
-                EnsureCustomerAction::Resolved { backend_ref, cache } => {
-                    if let Some(write) = cache {
-                        let mut gate = self.inner.gate.lock().await;
-                        insert_customer_cache(
-                            &mut gate.customer_cache,
-                            write.key,
-                            CustomerCacheEntry {
-                                value: write.backend_ref,
-                                timestamp_ms: write.timestamp_ms,
-                            },
-                        );
-                    }
-                    return Ok(backend_ref);
-                }
+        crate::drivers_generated::run_generated_ensure_customer_loop(self, start_event).await
+    }
+}
+
+/// `SolvaPayClient::create_customer` is an inherent method, so every value of
+/// this type can create. Naming the method is the check.
+fn client_can_create_customer(api: &SolvaPayClient) -> bool {
+    let _ = (api, SolvaPayClient::create_customer);
+    true
+}
+
+/// `SolvaPayClient::update_customer` is an inherent method, so every value of
+/// this type can update. Naming the method is the check.
+fn client_can_update_customer(api: &SolvaPayClient) -> bool {
+    let _ = (api, SolvaPayClient::update_customer);
+    true
+}
+
+#[allow(clippy::manual_async_fn)]
+impl crate::drivers_generated::EnsureCustomerHost for Client {
+    fn now_ms(&self) -> i64 {
+        now_ms() as i64
+    }
+
+    fn read_customer_cache(&self, key: &str) -> impl Future<Output = Option<EnsureCacheHit>> {
+        async move {
+            let gate = self.inner.gate.lock().await;
+            gate.customer_cache.get(key).map(|entry| EnsureCacheHit {
+                backend_ref: entry.value.clone(),
+                timestamp_ms: entry.timestamp_ms,
+            })
+        }
+    }
+
+    fn get_customer(
+        &self,
+        by_external_ref: Option<&str>,
+        by_email: Option<&str>,
+    ) -> impl Future<Output = EnsureLookupOutcome> {
+        async move {
+            let lookup = GetCustomerParams {
+                customer_ref: None,
+                email: by_email.map(str::to_owned),
+                external_ref: by_external_ref.map(str::to_owned),
+            };
+            match self.inner.api.get_customer(lookup).await {
+                Ok(mapped) if !mapped.customer_ref.is_empty() => EnsureLookupOutcome {
+                    found: true,
+                    customer: serde_json::json!({
+                        "customerRef": mapped.customer_ref,
+                        "externalRef": mapped.external_ref,
+                    }),
+                    error_message: None,
+                },
+                Ok(_) => EnsureLookupOutcome {
+                    found: false,
+                    customer: Value::Null,
+                    error_message: None,
+                },
+                Err(err) => EnsureLookupOutcome {
+                    found: false,
+                    customer: Value::Null,
+                    error_message: Some(sdk_error_message(&err)),
+                },
             }
+        }
+    }
+
+    fn create_customer(
+        &self,
+        params: &CreateCustomerParams,
+    ) -> impl Future<Output = EnsureCreateOutcome> {
+        async move {
+            let request = CreateCustomerRequest {
+                description: None,
+                email: Some(params.email.clone()),
+                external_ref: params.external_ref.clone(),
+                metadata: Some(
+                    params
+                        .metadata
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect(),
+                ),
+                name: params.name.clone(),
+                telephone: None,
+            };
+            match self.inner.api.create_customer(request).await {
+                Ok(created) => EnsureCreateOutcome {
+                    ok: true,
+                    customer: serde_json::json!({ "customerRef": created.customer_ref }),
+                    error_message: None,
+                },
+                Err(err) => EnsureCreateOutcome {
+                    ok: false,
+                    customer: Value::Null,
+                    error_message: Some(sdk_error_message(&err)),
+                },
+            }
+        }
+    }
+
+    fn update_customer(
+        &self,
+        customer_ref: &str,
+        patch: &Map<String, Value>,
+    ) -> impl Future<Output = EnsureUpdateOutcome> {
+        async move {
+            let params = UpdateCustomerParams {
+                email: None,
+                external_ref: patch
+                    .get("externalRef")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                metadata: None,
+                name: None,
+                telephone: None,
+            };
+            match self.inner.api.update_customer(customer_ref, params).await {
+                Ok(_) => EnsureUpdateOutcome {
+                    ok: true,
+                    error_message: None,
+                },
+                Err(err) => EnsureUpdateOutcome {
+                    ok: false,
+                    error_message: Some(sdk_error_message(&err)),
+                },
+            }
+        }
+    }
+
+    fn write_customer_cache(
+        &self,
+        key: &str,
+        backend_ref: &str,
+        timestamp_ms: i64,
+    ) -> impl Future<Output = ()> {
+        let key = key.to_owned();
+        let backend_ref = backend_ref.to_owned();
+        async move {
+            let mut gate = self.inner.gate.lock().await;
+            insert_customer_cache(
+                &mut gate.customer_cache,
+                key,
+                CustomerCacheEntry {
+                    value: backend_ref,
+                    timestamp_ms,
+                },
+            );
         }
     }
 }
@@ -623,6 +631,19 @@ mod tests {
                 }
             })
         }
+    }
+
+    #[test]
+    fn ensure_customer_capabilities_follow_api_methods() {
+        let client = Client::with_transport(
+            MockTransport::new(vec![]),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        assert!(client_can_create_customer(&client.inner.api));
+        assert!(client_can_update_customer(&client.inner.api));
     }
 
     #[test]

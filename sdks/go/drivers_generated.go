@@ -167,3 +167,180 @@ func RunGeneratedPayableLoop(
 		}
 	}
 }
+
+// EnsureCustomerCacheHit is a raw customer-cache map read.
+type EnsureCustomerCacheHit struct {
+	Found       bool
+	BackendRef  string
+	TimestampMs int64
+}
+
+// EnsureCustomerLookup is a getCustomer result.
+type EnsureCustomerLookup struct {
+	Found        bool
+	Customer     any
+	ErrorMessage string
+}
+
+// EnsureCustomerCreate is a createCustomer result.
+type EnsureCustomerCreate struct {
+	OK           bool
+	Customer     any
+	ErrorMessage string
+}
+
+// EnsureCustomerUpdate is an updateCustomer result.
+type EnsureCustomerUpdate struct {
+	OK           bool
+	ErrorMessage string
+}
+
+// EnsureCustomerHost is the I/O surface for RunGeneratedEnsureCustomerLoop.
+type EnsureCustomerHost interface {
+	ReadCustomerCache(key string) (EnsureCustomerCacheHit, bool)
+	GetCustomer(ctx context.Context, byExternalRef, byEmail string) (EnsureCustomerLookup, error)
+	CreateCustomer(ctx context.Context, params map[string]any) (EnsureCustomerCreate, error)
+	UpdateCustomer(ctx context.Context, customerRef string, patch map[string]any) (EnsureCustomerUpdate, error)
+	WriteCustomerCache(key, backendRef string, timestampMs int64)
+	NowMs() int64
+}
+
+// RunGeneratedEnsureCustomerLoop drives ensure_customer_next until resolved.
+func RunGeneratedEnsureCustomerLoop(
+	ctx context.Context,
+	ensureNext func(state any, event map[string]any) (any, map[string]any, error),
+	host EnsureCustomerHost,
+	startEvent map[string]any,
+) (string, error) {
+	state := any(nil)
+	event := startEvent
+	for {
+		nextState, action, err := ensureNext(state, event)
+		if err != nil {
+			return "", err
+		}
+		state = nextState
+		kind, _ := action["kind"].(string)
+		switch kind {
+		case "readCustomerCache":
+			key, _ := action["key"].(string)
+			now := host.NowMs()
+			if hit, ok := host.ReadCustomerCache(key); ok && hit.Found {
+				event = map[string]any{
+					"kind": "customerCacheEntry", "found": true,
+					"backendRef": hit.BackendRef, "timestampMs": hit.TimestampMs, "nowMs": now,
+				}
+			} else {
+				event = map[string]any{"kind": "customerCacheEntry", "found": false, "nowMs": now}
+			}
+		case "getCustomer":
+			byRef, _ := action["byExternalRef"].(string)
+			byEmail, _ := action["byEmail"].(string)
+			lookup, err := host.GetCustomer(ctx, byRef, byEmail)
+			if err != nil {
+				return "", err
+			}
+			now := host.NowMs()
+			if lookup.Found {
+				event = map[string]any{
+					"kind": "customerLookupResult", "found": true,
+					"customer": lookup.Customer, "nowMs": now,
+				}
+			} else {
+				event = map[string]any{"kind": "customerLookupResult", "found": false, "nowMs": now}
+				if lookup.ErrorMessage != "" {
+					event["errorMessage"] = lookup.ErrorMessage
+				}
+			}
+		case "createCustomer":
+			params := asObject(action["params"])
+			created, err := host.CreateCustomer(ctx, params)
+			if err != nil {
+				return "", err
+			}
+			now := host.NowMs()
+			if created.OK {
+				event = map[string]any{
+					"kind": "customerCreateResult", "ok": true,
+					"customer": created.Customer, "nowMs": now,
+				}
+			} else {
+				event = map[string]any{
+					"kind": "customerCreateResult", "ok": false,
+					"errorMessage": created.ErrorMessage, "nowMs": now,
+				}
+			}
+		case "updateCustomer":
+			ref, _ := action["customerRef"].(string)
+			updated, err := host.UpdateCustomer(ctx, ref, asObject(action["patch"]))
+			if err != nil {
+				return "", err
+			}
+			now := host.NowMs()
+			event = map[string]any{"kind": "customerUpdateResult", "ok": updated.OK, "nowMs": now}
+			if !updated.OK {
+				event["errorMessage"] = updated.ErrorMessage
+			}
+		case "resolved":
+			backend, _ := action["backendRef"].(string)
+			if backend == "" {
+				return "", &Error{Code: "internal_error", Message: "ensure_customer_next resolved without backendRef"}
+			}
+			if cache := asObject(action["cache"]); cache["key"] != nil {
+				key, _ := cache["key"].(string)
+				cachedBackend, _ := cache["backendRef"].(string)
+				if cachedBackend == "" {
+					cachedBackend = backend
+				}
+				host.WriteCustomerCache(key, cachedBackend, int64(asFloat(cache["timestampMs"])))
+			}
+			return backend, nil
+		default:
+			return "", &Error{Code: "internal_error", Message: "ensure_customer_next returned unknown action kind"}
+		}
+	}
+}
+
+// RetryLoopHost is the I/O surface for [`RunGeneratedWithRetryLoop`].
+type RetryLoopHost[T any] struct {
+	MaxRetries      int
+	InitialDelayMs  int
+	BackoffStrategy string
+	Invoke          func() (T, error)
+	Sleep           func(delayMs int) error
+	NextDelayMs     func(attempt int, maxRetries int, initialDelayMs int, backoffStrategy string) (int, bool, error)
+	ShouldRetry     func(err error, attempt int) bool
+	OnRetry         func(err error, attempt int, delayMs int)
+}
+
+// RunGeneratedWithRetryLoop drives invoke → core delay → sleep until success or exhaustion.
+func RunGeneratedWithRetryLoop[T any](host RetryLoopHost[T]) (T, error) {
+	var zero T
+	if host.Invoke == nil || host.NextDelayMs == nil || host.Sleep == nil {
+		return zero, fmt.Errorf("solvapay: retry loop host is missing invoke, delay, or sleep")
+	}
+	attempt := 0
+	for {
+		value, err := host.Invoke()
+		if err == nil {
+			return value, nil
+		}
+		delayMs, ok, delayErr := host.NextDelayMs(attempt, host.MaxRetries, host.InitialDelayMs, host.BackoffStrategy)
+		if delayErr != nil {
+			return zero, delayErr
+		}
+		if !ok {
+			return zero, err
+		}
+		if host.ShouldRetry != nil && !host.ShouldRetry(err, attempt) {
+			return zero, err
+		}
+		if host.OnRetry != nil {
+			host.OnRetry(err, attempt, delayMs)
+		}
+		if sleepErr := host.Sleep(delayMs); sleepErr != nil {
+			return zero, sleepErr
+		}
+		attempt++
+	}
+}

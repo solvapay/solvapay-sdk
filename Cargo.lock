@@ -2245,6 +2245,7 @@ name = "solvapay-mcp"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "http",
  "js-sys",
  "repo-paths",
  "rmcp",

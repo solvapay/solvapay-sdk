@@ -160,6 +160,9 @@ generated:
   - id: wasmTs
     path: sdks/typescript/server/src/wasm.ts
     flag: --wasm-ts-out
+  - id: tsEnvelope
+    path: sdks/typescript/server/src/envelope.generated.ts
+    flag: --ts-envelope-out
   - id: nativePy
     path: sdks/python/python/solvapay/_native.py
     flag: --native-py-out
@@ -256,7 +259,9 @@ generated:
     path: sdks/capi/src
     flag: --c-bindings-out
     driftPaths:
+      - sdks/capi/src/args.rs
       - sdks/capi/src/dispatch.rs
+      - sdks/capi/src/sync_dispatch.rs
   - id: cConformance
     path: sdks/capi/ctest/contract
     flag: --c-conformance-out
@@ -307,6 +312,24 @@ generated:
   - id: rsDrivers
     path: sdks/rust/src/drivers.generated.rs
     flag: --rs-drivers-out
+  - id: tsDefaults
+    path: sdks/typescript/server/src/defaults.ts
+    flag: --ts-defaults-out
+  - id: pyDefaults
+    path: sdks/python/python/solvapay/defaults.py
+    flag: --py-defaults-out
+  - id: rbDefaults
+    path: sdks/ruby/lib/solvapay/defaults.rb
+    flag: --rb-defaults-out
+  - id: goDefaults
+    path: sdks/go/defaults.go
+    flag: --go-defaults-out
+  - id: rsDefaults
+    path: sdks/rust/src/defaults_generated.rs
+    flag: --rs-defaults-out
+  - id: transportDefaults
+    path: core/solvapay-transport/src/contract_defaults.generated.rs
+    flag: --transport-defaults-out
   - id: syncOpsRs
     path: core/solvapay-mcp/src/sync_ops.generated.rs
     flag: --sync-ops-rs-out
@@ -339,6 +362,7 @@ drift:
   - tsParity
   - nativeTs
   - wasmTs
+  - tsEnvelope
   - bindingSymbols
   - facadeCoverage
   - fixtureCensus
@@ -390,6 +414,12 @@ drift:
   - goDrivers
   - rbDrivers
   - rsDrivers
+  - tsDefaults
+  - pyDefaults
+  - rbDefaults
+  - goDefaults
+  - rsDefaults
+  - transportDefaults
   - syncOpsRs
   - syncOpsTs
   - tsConformance
@@ -442,8 +472,9 @@ externalGenerated:
     nonDeterministic: true
   - id: goCoreWasm
     # wasm32-wasip1 output is not bit-stable across hosts (mac vs linux/amd64 vs
-    # GHA). The sha256 is a local-rebuild aid, not a CI hard fail. CI warns on
-    # mismatch. Refresh the committed blob from linux/amd64 when go-wasm/core
+    # GHA). The sha256 is a local-rebuild aid, not a CI hard fail. CI runs the
+    # Go suite against the committed blob first, then warns if a host rebuild
+    # differs. Refresh the committed blob from linux/amd64 when go-wasm/core
     # sources change:
     #   docker run --rm --platform linux/amd64 -v "$PWD:/workspace" -w /workspace \
     #     rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:$PATH; rustup target add wasm32-wasip1; ./sdks/go/scripts/build-wasm.sh'

@@ -10,6 +10,7 @@
 #![allow(clippy::result_large_err)]
 
 mod abi;
+mod args;
 mod dispatch;
 mod error;
 #[cfg(feature = "fixture-host")]
@@ -17,6 +18,7 @@ mod fixture_host;
 pub mod fuzz_oracle;
 mod handle;
 mod runtime;
+mod sync_dispatch;
 
 use std::os::raw::c_char;
 use std::panic::AssertUnwindSafe;
@@ -258,12 +260,33 @@ pub unsafe extern "C" fn solvapay_call(op: *const c_char, args_json: *const c_ch
             Ok(pair) => pair,
             Err(env) => return into_c_string(env),
         };
-        into_c_string(solvapay_mcp_core::dispatch_sync(&op_str, &args))
+        let envelope = match op_str.as_str() {
+            "verifyWebhook" => verify_webhook_envelope(&args),
+            other => match sync_dispatch::try_dispatch(other, &args) {
+                Some(envelope) => envelope,
+                None => solvapay_mcp_core::dispatch_sync(other, &args),
+            },
+        };
+        into_c_string(envelope)
     }));
     match result {
         Ok(ptr) => ptr,
         Err(payload) => into_c_string(envelope_from_panic_payload(payload)),
     }
+}
+
+/// JSON envelope for `verifyWebhook` (`solvapay_call` and the dedicated export).
+fn verify_webhook_envelope(args_json: &str) -> String {
+    run_envelope_sync(|| {
+        let parsed: VerifyWebhookArgs = parse_args_json(args_json)?;
+        core_verify_webhook(
+            &parsed.body,
+            &parsed.signature,
+            &parsed.secret,
+            parsed.now_unix_secs,
+        )
+        .map_err(SdkError::from)
+    })
 }
 
 /// Verifies a webhook signature. Returns a JSON envelope (caller frees).
@@ -280,16 +303,7 @@ pub unsafe extern "C" fn solvapay_verify_webhook(args_json: *const c_char) -> *m
                 false,
             )));
         };
-        into_c_string(run_envelope_sync(|| {
-            let parsed: VerifyWebhookArgs = parse_args_json(&args)?;
-            core_verify_webhook(
-                &parsed.body,
-                &parsed.signature,
-                &parsed.secret,
-                parsed.now_unix_secs,
-            )
-            .map_err(SdkError::from)
-        }))
+        into_c_string(verify_webhook_envelope(&args))
     }));
     match result {
         Ok(ptr) => ptr,
@@ -441,6 +455,15 @@ mod tests {
         let args = CString::new(r#"{"isBusiness":false}"#).unwrap();
         let env = parse_envelope(unsafe { solvapay_call(op.as_ptr(), args.as_ptr()) });
         assert_eq!(env["ok"], true);
+    }
+
+    #[test]
+    fn solvapay_call_dispatches_decision_helpers() {
+        let op = CString::new("isPostalCodeRequired").unwrap();
+        let args = CString::new(r#"{"country":"US"}"#).unwrap();
+        let env = parse_envelope(unsafe { solvapay_call(op.as_ptr(), args.as_ptr()) });
+        assert_eq!(env["ok"], true);
+        assert_eq!(env["value"], true);
     }
 
     #[test]

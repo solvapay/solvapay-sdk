@@ -220,6 +220,8 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
 
 def free_limits_agree(left: Any, right: Any) -> Any:
     """Return whether two normalized free limits share the same cap.
+    @param left First normalized free limit.
+    @param right Second normalized free limit.
     @returns True when meter, cap, scope, and window days all match.
     """
     payload: dict[str, Any] = {}

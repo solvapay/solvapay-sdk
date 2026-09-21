@@ -12,8 +12,11 @@
 
 use std::future::Future;
 
-use serde_json::Value;
-use solvapay_core::{gate_next, FreeLimit, GateAction, GateCacheOp, HelperErrorResult, SdkError};
+use serde_json::{Map, Value};
+use solvapay_core::{
+    gate_next, CreateCustomerParams, FreeLimit, GateAction, GateCacheOp, HelperErrorResult,
+    SdkError,
+};
 
 pub trait GateDriverHost {
     fn now_ms(&self) -> i64;
@@ -222,6 +225,208 @@ pub async fn run_generated_payable_loop<H: PayableDriverHost>(
                     host.track_usage(track.request).await?;
                 }
                 return Ok(result);
+            }
+        }
+    }
+}
+
+pub struct EnsureCacheHit {
+    pub backend_ref: String,
+    pub timestamp_ms: i64,
+}
+
+pub struct EnsureLookupOutcome {
+    pub found: bool,
+    pub customer: Value,
+    pub error_message: Option<String>,
+}
+
+pub struct EnsureCreateOutcome {
+    pub ok: bool,
+    pub customer: Value,
+    pub error_message: Option<String>,
+}
+
+pub struct EnsureUpdateOutcome {
+    pub ok: bool,
+    pub error_message: Option<String>,
+}
+
+pub trait EnsureCustomerHost {
+    fn now_ms(&self) -> i64;
+    fn read_customer_cache(&self, key: &str) -> impl Future<Output = Option<EnsureCacheHit>>;
+    fn get_customer(
+        &self,
+        by_external_ref: Option<&str>,
+        by_email: Option<&str>,
+    ) -> impl Future<Output = EnsureLookupOutcome>;
+    fn create_customer(
+        &self,
+        params: &CreateCustomerParams,
+    ) -> impl Future<Output = EnsureCreateOutcome>;
+    fn update_customer(
+        &self,
+        customer_ref: &str,
+        patch: &Map<String, Value>,
+    ) -> impl Future<Output = EnsureUpdateOutcome>;
+    fn write_customer_cache(
+        &self,
+        key: &str,
+        backend_ref: &str,
+        timestamp_ms: i64,
+    ) -> impl Future<Output = ()>;
+}
+
+pub async fn run_generated_ensure_customer_loop<H: EnsureCustomerHost>(
+    host: &H,
+    start_event: Value,
+) -> Result<String, SdkError> {
+    use solvapay_core::{ensure_customer_next, EnsureCustomerAction};
+
+    let mut state: Option<Value> = None;
+    let mut event = start_event;
+    loop {
+        let out = ensure_customer_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
+        state = Some(serde_json::to_value(&out.state).map_err(|err| {
+            SdkError::transport(format!("ensure_customer_next state: {err}"), false)
+        })?);
+        match out.action {
+            EnsureCustomerAction::ReadCustomerCache { key } => {
+                let now = host.now_ms();
+                event = match host.read_customer_cache(&key).await {
+                    Some(hit) => serde_json::json!({
+                        "kind": "customerCacheEntry",
+                        "found": true,
+                        "backendRef": hit.backend_ref,
+                        "timestampMs": hit.timestamp_ms,
+                        "nowMs": now,
+                    }),
+                    None => serde_json::json!({
+                        "kind": "customerCacheEntry",
+                        "found": false,
+                        "nowMs": now,
+                    }),
+                };
+            }
+            EnsureCustomerAction::GetCustomer {
+                by_external_ref,
+                by_email,
+            } => {
+                let lookup = host
+                    .get_customer(by_external_ref.as_deref(), by_email.as_deref())
+                    .await;
+                let now = host.now_ms();
+                event = if lookup.found {
+                    serde_json::json!({
+                        "kind": "customerLookupResult",
+                        "found": true,
+                        "customer": lookup.customer,
+                        "nowMs": now,
+                    })
+                } else {
+                    let mut miss = serde_json::json!({
+                        "kind": "customerLookupResult",
+                        "found": false,
+                        "nowMs": now,
+                    });
+                    if let Some(message) = lookup.error_message {
+                        miss["errorMessage"] = Value::String(message);
+                    }
+                    miss
+                };
+            }
+            EnsureCustomerAction::CreateCustomer { params } => {
+                let created = host.create_customer(&params).await;
+                let now = host.now_ms();
+                event = if created.ok {
+                    serde_json::json!({
+                        "kind": "customerCreateResult",
+                        "ok": true,
+                        "customer": created.customer,
+                        "nowMs": now,
+                    })
+                } else {
+                    serde_json::json!({
+                        "kind": "customerCreateResult",
+                        "ok": false,
+                        "errorMessage": created.error_message.unwrap_or_default(),
+                        "nowMs": now,
+                    })
+                };
+            }
+            EnsureCustomerAction::UpdateCustomer {
+                customer_ref,
+                patch,
+            } => {
+                let updated = host.update_customer(&customer_ref, &patch).await;
+                let now = host.now_ms();
+                event = if updated.ok {
+                    serde_json::json!({
+                        "kind": "customerUpdateResult",
+                        "ok": true,
+                        "nowMs": now,
+                    })
+                } else {
+                    serde_json::json!({
+                        "kind": "customerUpdateResult",
+                        "ok": false,
+                        "errorMessage": updated.error_message.unwrap_or_default(),
+                        "nowMs": now,
+                    })
+                };
+            }
+            EnsureCustomerAction::Resolved { backend_ref, cache } => {
+                if backend_ref.is_empty() {
+                    return Err(SdkError::transport(
+                        "ensure_customer_next resolved without backendRef",
+                        false,
+                    ));
+                }
+                if let Some(write) = cache {
+                    host.write_customer_cache(&write.key, &write.backend_ref, write.timestamp_ms)
+                        .await;
+                }
+                return Ok(backend_ref);
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn run_generated_with_retry_loop<T, E, F, Fut, D, S, O, Z, ZFut>(
+    invoke: F,
+    max_retries: u32,
+    initial_delay_ms: u64,
+    backoff: solvapay_core::Backoff,
+    next_delay_ms: D,
+    should_retry: S,
+    on_retry: O,
+    sleep: Z,
+) -> Result<T, E>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+    D: Fn(u32, u32, u64, solvapay_core::Backoff) -> Option<u64>,
+    S: Fn(&E, u32) -> bool,
+    O: Fn(&E, u32, u64),
+    Z: Fn(std::time::Duration) -> ZFut,
+    ZFut: Future<Output = ()>,
+{
+    let mut attempt = 0_u32;
+    loop {
+        match invoke().await {
+            Ok(value) => return Ok(value),
+            Err(err) => {
+                let Some(delay_ms) = next_delay_ms(attempt, max_retries, initial_delay_ms, backoff)
+                else {
+                    return Err(err);
+                };
+                if !should_retry(&err, attempt) {
+                    return Err(err);
+                }
+                on_retry(&err, attempt, delay_ms);
+                sleep(std::time::Duration::from_millis(delay_ms)).await;
+                attempt = attempt.saturating_add(1);
             }
         }
     }

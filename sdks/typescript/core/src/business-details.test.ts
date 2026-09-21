@@ -5,6 +5,8 @@ import {
   BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
+  TAX_EXCLUSIVE_CURRENCIES,
+  type SupportedBusinessCountry,
 } from './business-details'
 import {
   deriveTaxIdType,
@@ -25,30 +27,38 @@ import {
   validateBusinessDetails,
 } from './native-core'
 
+function isSupportedBusinessCountry(value: string): value is SupportedBusinessCountry {
+  return Object.hasOwn(BUSINESS_COUNTRY_DISPLAY_NAMES(), value)
+}
+
 describe('BUSINESS_COUNTRY_OPTIONS', () => {
   it('provides a non-empty label for every supported country', () => {
-    for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
-      expect(BUSINESS_COUNTRY_DISPLAY_NAMES[country].trim().length).toBeGreaterThan(0)
+    const displayNames = BUSINESS_COUNTRY_DISPLAY_NAMES()
+    const countries = SUPPORTED_BUSINESS_COUNTRIES()
+    for (const country of countries) {
+      expect(displayNames[country]?.trim().length).toBeGreaterThan(0)
     }
 
-    expect(BUSINESS_COUNTRY_OPTIONS).toHaveLength(SUPPORTED_BUSINESS_COUNTRIES.length)
-    for (const option of BUSINESS_COUNTRY_OPTIONS) {
+    const options = BUSINESS_COUNTRY_OPTIONS()
+    expect(options).toHaveLength(countries.length)
+    for (const option of options) {
       expect(option.label.trim().length).toBeGreaterThan(0)
       expect(option.value).toBeDefined()
     }
   })
 
   it('sorts options alphabetically by label', () => {
-    const labels = BUSINESS_COUNTRY_OPTIONS.map(option => option.label)
+    const labels = BUSINESS_COUNTRY_OPTIONS().map(option => option.label)
     const sortedLabels = [...labels].sort((a, b) => a.localeCompare(b))
     expect(labels).toEqual(sortedLabels)
   })
 
   it('uses Stripe-aligned English labels', () => {
-    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.DE).toBe('Germany')
-    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.US).toBe('United States of America')
-    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.GB).toBe('United Kingdom')
-    expect(BUSINESS_COUNTRY_DISPLAY_NAMES.CZ).toBe('Czechia')
+    const displayNames = BUSINESS_COUNTRY_DISPLAY_NAMES()
+    expect(displayNames.DE).toBe('Germany')
+    expect(displayNames.US).toBe('United States of America')
+    expect(displayNames.GB).toBe('United Kingdom')
+    expect(displayNames.CZ).toBe('Czechia')
   })
 })
 
@@ -226,7 +236,10 @@ describe('tax id field helpers', () => {
   })
 
   it('provides examples that pass validation for every supported country', () => {
-    for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
+    for (const country of SUPPORTED_BUSINESS_COUNTRIES()) {
+      if (!isSupportedBusinessCountry(country)) {
+        throw new Error(`core returned country ${country} outside SupportedBusinessCountry`)
+      }
       const example = getTaxIdExample(country)
       const result = validateBusinessDetails({
         isBusiness: true,
@@ -244,6 +257,10 @@ describe('tax id field helpers', () => {
 })
 
 describe('resolveTaxBehavior', () => {
+  it('reads tax-exclusive currencies from core', () => {
+    expect(TAX_EXCLUSIVE_CURRENCIES()).toEqual(['USD', 'CAD'])
+  })
+
   it('resolves auto to exclusive for USD and CAD', () => {
     expect(resolveTaxBehavior('auto', 'USD')).toBe('exclusive')
     expect(resolveTaxBehavior('auto', 'CAD')).toBe('exclusive')
@@ -266,14 +283,15 @@ describe('resolveTaxBehavior', () => {
 
 describe('BusinessDetailsSchema', () => {
   it('exports supported countries aligned with tax id types', () => {
-    expect(SUPPORTED_BUSINESS_COUNTRIES.length).toBeGreaterThan(0)
-    for (const country of SUPPORTED_BUSINESS_COUNTRIES) {
-      expect(COUNTRY_TO_TAX_ID_TYPE[country]).toBeDefined()
+    const countries = SUPPORTED_BUSINESS_COUNTRIES()
+    const taxIdTypes = COUNTRY_TO_TAX_ID_TYPE()
+    expect(countries.length).toBeGreaterThan(0)
+    for (const country of countries) {
+      expect(taxIdTypes[country]).toBeDefined()
     }
   })
 
-  it('shape-only schema accepts customerCountry without transforming it', () => {
-    // Validation / normalization is Rust-only via validateBusinessDetails (Step 52).
+  it('accepts a supported customerCountry without rewriting the input', () => {
     const result = BusinessDetailsSchema.parse({
       isBusiness: false,
       customerCountry: 'se',
@@ -294,6 +312,22 @@ describe('BusinessDetailsSchema', () => {
         expect.arrayContaining([
           expect.objectContaining({
             path: ['customerCountry'],
+          }),
+        ]),
+      )
+    }
+
+    const parsed = BusinessDetailsSchema.safeParse({
+      isBusiness: false,
+      customerCountry: 'ZZ',
+    })
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) {
+      expect(parsed.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ['customerCountry'],
+            message: 'Billing country is not supported for tax calculation',
           }),
         ]),
       )

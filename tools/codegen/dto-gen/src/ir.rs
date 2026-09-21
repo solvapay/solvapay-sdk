@@ -30,6 +30,37 @@ pub struct Ir {
     pub core_fns: BTreeMap<String, IrCoreFn>,
     /// Scanned `pub fn` signatures from `solvapay-transport` (Phase 4b).
     pub transport_fns: BTreeMap<String, IrCoreFn>,
+    /// Manifest `defaults:` copied once for facade emitters.
+    pub defaults: IrDefaults,
+    /// Manifest `driverLoops:` keyed by loop name.
+    pub driver_loops: IrDriverLoops,
+}
+
+/// Generated host driver loops (`driverLoops:`).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct IrDriverLoops {
+    /// Loop name (`gate`, `invokePayable`, …) → definition.
+    pub loops: BTreeMap<String, IrDriverLoop>,
+}
+
+/// One host driver loop.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct IrDriverLoop {
+    /// I/O action kind → host event kind, in manifest order.
+    pub io: Vec<IrDriverIo>,
+    /// Terminal action kinds.
+    pub terminal: Vec<String>,
+    /// Usage action kinds that must not appear during decide.
+    pub usage: Vec<String>,
+}
+
+/// One I/O action → event pair.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct IrDriverIo {
+    /// Action `kind`.
+    pub action: String,
+    /// Event `kind` produced after the host I/O.
+    pub event: String,
 }
 
 /// Manifest overlay that maps Rust core types onto the public TypeScript surface.
@@ -736,6 +767,12 @@ pub struct IrDefaults {
     pub request_id_format: String,
     /// Frozen `trackUsage.actionType`.
     pub usage_action_type: String,
+    /// Retry backoff name (`fixed`, `linear`, `exponential`).
+    pub retry_backoff: String,
+    /// Idempotency-key templates keyed by flow (`payment`, `topup`).
+    pub idempotency_key_formats: BTreeMap<String, String>,
+    /// Go methods take `context.Context` as the first parameter.
+    pub go_context_first_param: bool,
 }
 
 impl Default for IrDefaults {
@@ -750,6 +787,9 @@ impl Default for IrDefaults {
             anonymous_customer_ref: "anonymous".to_owned(),
             request_id_format: "solvapay_{epochMs}_{random9}".to_owned(),
             usage_action_type: "api_call".to_owned(),
+            retry_backoff: "fixed".to_owned(),
+            idempotency_key_formats: BTreeMap::new(),
+            go_context_first_param: false,
         }
     }
 }
@@ -866,13 +906,24 @@ pub struct IrErrorTemplates {
     pub operations: BTreeMap<String, IrOperationErrorTemplates>,
 }
 
+/// One operation error case, including the optional status and stable code.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct IrErrorCase {
+    /// Template string with `{placeholder}` slots.
+    pub message_template: String,
+    /// HTTP status that selects this case, when the manifest set one.
+    pub status: Option<u16>,
+    /// Stable code that selects this case, when the manifest set one.
+    pub code: Option<String>,
+}
+
 /// Error templates for one client operation.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct IrOperationErrorTemplates {
     /// Default HTTP-failure template.
     pub default_template: String,
     /// Case templates in manifest order.
-    pub cases: Vec<String>,
+    pub cases: Vec<IrErrorCase>,
 }
 
 /// How an overlay type should be emitted.

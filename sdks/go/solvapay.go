@@ -12,6 +12,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
@@ -128,9 +130,25 @@ type Client struct {
 // NewClient builds a client authenticated with apiKey.
 //
 // The caller owns the returned Client and must Close it to release the runtime.
-func NewClient(ctx context.Context, apiKey string, opts ...Option) (*Client, error) {
+// NewClientFromEnv reads SOLVAPAY_SECRET_KEY and optional SOLVAPAY_API_BASE_URL.
+// Options passed by the caller are applied after the env base URL, so an explicit
+// WithBaseURL wins.
+func NewClientFromEnv(ctx context.Context, opts ...Option) (*Client, error) {
+	apiKey := strings.TrimSpace(os.Getenv("SOLVAPAY_SECRET_KEY"))
 	if apiKey == "" {
-		return nil, &Error{Code: "invalid_config", Message: "apiKey must not be empty"}
+		return nil, &Error{Code: "missing_api_key", Message: "SOLVAPAY_SECRET_KEY is required"}
+	}
+	var envOpts []Option
+	if base := strings.TrimSpace(os.Getenv("SOLVAPAY_API_BASE_URL")); base != "" {
+		envOpts = append(envOpts, WithBaseURL(base))
+	}
+	envOpts = append(envOpts, opts...)
+	return NewClient(ctx, apiKey, envOpts...)
+}
+
+func NewClient(ctx context.Context, apiKey string, opts ...Option) (*Client, error) {
+	if strings.TrimSpace(apiKey) == "" {
+		return nil, &Error{Code: "missing_api_key", Message: "apiKey must not be empty"}
 	}
 	cfg := runtime.Config{APIKey: apiKey, MaxInstances: defaultMaxInstances}
 	for _, opt := range opts {
@@ -160,6 +178,7 @@ type envelopeError struct {
 	Message   string          `json:"message"`
 	Code      json.RawMessage `json:"code"`
 	Status    *int            `json:"status"`
+	Gate      json.RawMessage `json:"gate"`
 	Retryable bool            `json:"retryable"`
 }
 
@@ -184,10 +203,20 @@ func decodeEnvelope(raw string, out any) error {
 	return nil
 }
 
-// envelopeToError converts an error envelope into a public *Error.
-func envelopeToError(e *envelopeError) *Error {
+// envelopeToError converts an error envelope into a public error.
+// Paywall envelopes become *PaywallError so the gate payload survives.
+func envelopeToError(e *envelopeError) error {
 	if e == nil {
 		return &Error{Code: "internal_error", Message: "malformed error envelope"}
+	}
+	if e.Kind == "Paywall" || e.Kind == "paywall" {
+		gate := any(map[string]any{})
+		if len(e.Gate) > 0 && string(e.Gate) != "null" {
+			if err := json.Unmarshal(e.Gate, &gate); err != nil {
+				return fmt.Errorf("solvapay: decode paywall gate: %w", err)
+			}
+		}
+		return &PaywallError{Message: e.Message, StructuredContent: gate}
 	}
 	code := decodeCode(e.Code)
 	if code == "" {

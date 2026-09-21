@@ -2,10 +2,11 @@ package mcp
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"strings"
 	"time"
 
@@ -14,7 +15,11 @@ import (
 )
 
 func randUnit() float64 {
-	return rand.Float64()
+	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(1<<53))
+	if err != nil {
+		return 0
+	}
+	return float64(n.Int64()) / float64(int64(1)<<53)
 }
 
 // Handler is the merchant payable tool implementation.
@@ -31,8 +36,16 @@ type Options struct {
 	Title          string
 	Description    string
 	InputSchema    map[string]any
+	OutputSchema   map[string]any
 	UsageType      string
 	GetCustomerRef GetCustomerRef
+}
+
+type customerRefSources struct {
+	verifiedJwtSub      string
+	headerUserID        string
+	headerCustomerRef   string
+	mcpExtraCustomerRef string
 }
 
 type formatGateFn func(ctx context.Context, message string, gate json.RawMessage) (json.RawMessage, error)
@@ -66,16 +79,11 @@ func RegisterPayableTool(server *mcpsdk.Server, name string, opts Options) error
 	if err := validatePayableOptions(name, &opts); err != nil {
 		return err
 	}
-	schema, err := compileInputSchema(opts.InputSchema)
+	tool, err := payableMCPTool(name, opts)
 	if err != nil {
 		return err
 	}
-	server.AddTool(&mcpsdk.Tool{
-		Name:        name,
-		Title:       opts.Title,
-		Description: opts.Description,
-		InputSchema: schema,
-	}, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
+	server.AddTool(tool, func(ctx context.Context, req *mcpsdk.CallToolRequest) (*mcpsdk.CallToolResult, error) {
 		result, err := dispatchPayable(ctx, req, opts)
 		if err != nil {
 			return nil, err
@@ -110,15 +118,19 @@ func dispatchPayable(ctx context.Context, req *mcpsdk.CallToolRequest, opts Opti
 			return nil, fmt.Errorf("decode tool arguments: %w", err)
 		}
 	}
-	return InvokePayable(ctx, args, opts)
+	return invokePayable(ctx, args, opts, sourcesFromCall(req))
 }
 
 // InvokePayable runs the payable decision sequence for one tool call.
 func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcpsdk.CallToolResult, error) {
+	return invokePayable(ctx, args, opts, customerRefSources{})
+}
+
+func invokePayable(ctx context.Context, args map[string]any, opts Options, sources customerRefSources) (*mcpsdk.CallToolResult, error) {
 	if args == nil {
 		args = map[string]any{}
 	}
-	customerRef, err := resolveCustomerRef(ctx, args, opts.GetCustomerRef)
+	customerRef, err := resolveCustomerRef(ctx, args, opts.GetCustomerRef, sources)
 	if err != nil {
 		return nil, err
 	}
@@ -292,19 +304,131 @@ func formatGateOverrideActive() bool {
 	return fmt.Sprintf("%p", formatGate) != fmt.Sprintf("%p", paywallToolResult)
 }
 
-func resolveCustomerRef(ctx context.Context, args map[string]any, hook GetCustomerRef) (string, error) {
+func payableMCPTool(name string, opts Options) (*mcpsdk.Tool, error) {
+	ctx := context.Background()
+	schema, err := compileInputSchema(opts.InputSchema)
+	if err != nil {
+		return nil, err
+	}
+	description, err := appendPaidDescription(ctx, opts.Description)
+	if err != nil {
+		return nil, err
+	}
+	tool := &mcpsdk.Tool{
+		Name:        name,
+		Title:       opts.Title,
+		Description: description,
+		InputSchema: schema,
+	}
+	if opts.OutputSchema != nil {
+		unioned, err := unionPayableOutputSchema(ctx, opts.OutputSchema)
+		if err != nil {
+			return nil, err
+		}
+		tool.OutputSchema = unioned
+	}
+	return tool, nil
+}
+
+func appendPaidDescription(ctx context.Context, description string) (string, error) {
+	var input any
+	if strings.TrimSpace(description) != "" {
+		input = description
+	}
+	raw, err := solvapay.AppendPaidToolDescription(ctx, input)
+	if err != nil {
+		return "", err
+	}
+	text, ok := raw.(string)
+	if !ok {
+		return "", fmt.Errorf("appendPaidToolDescription returned %T", raw)
+	}
+	return text, nil
+}
+
+func unionPayableOutputSchema(ctx context.Context, merchant map[string]any) (any, error) {
+	paywall, err := solvapay.PaywallStructuredContentSchema(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ensured, err := CallSync(ctx, "ensureOutputSchemaObjectType", map[string]any{
+		"schema": map[string]any{
+			"type":  "object",
+			"oneOf": []any{merchant, paywall},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := json.Unmarshal(ensured, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func sourcesFromCall(req *mcpsdk.CallToolRequest) customerRefSources {
+	var sources customerRefSources
+	if req == nil || req.Extra == nil {
+		return sources
+	}
+	if req.Extra.Header != nil {
+		sources.headerUserID = strings.TrimSpace(req.Extra.Header.Get("x-user-id"))
+		sources.headerCustomerRef = strings.TrimSpace(req.Extra.Header.Get("x-customer-ref"))
+	}
+	if req.Extra.TokenInfo != nil {
+		sources.verifiedJwtSub = strings.TrimSpace(req.Extra.TokenInfo.UserID)
+		if ref, ok := req.Extra.TokenInfo.Extra["customer_ref"].(string); ok {
+			sources.mcpExtraCustomerRef = strings.TrimSpace(ref)
+		}
+	}
+	return sources
+}
+
+func sourcesFromEnvelope(envelope map[string]any) customerRefSources {
+	ref, ok := asString(envelope["customerRef"])
+	if !ok {
+		return customerRefSources{}
+	}
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return customerRefSources{}
+	}
+	return customerRefSources{mcpExtraCustomerRef: ref}
+}
+
+func putCustomerRef(callArgs map[string]any, key, value string) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed != "" {
+		callArgs[key] = trimmed
+	}
+}
+
+func argsAuthCustomerRef(args map[string]any) string {
+	auth, ok := args["auth"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	ref, _ := auth["customer_ref"].(string)
+	return ref
+}
+
+func resolveCustomerRef(ctx context.Context, args map[string]any, hook GetCustomerRef, sources customerRefSources) (string, error) {
 	callArgs := map[string]any{}
 	if hook != nil {
 		ref, err := hook(ctx, args)
 		if err != nil {
 			return "", err
 		}
-		if strings.TrimSpace(ref) != "" {
-			callArgs["hookRef"] = strings.TrimSpace(ref)
-		}
+		putCustomerRef(callArgs, "hookRef", ref)
 	}
-	if raw, ok := args["customer_ref"].(string); ok && raw != "" {
-		callArgs["argsCustomerRef"] = raw
+	putCustomerRef(callArgs, "verifiedJwtSub", sources.verifiedJwtSub)
+	putCustomerRef(callArgs, "headerUserId", sources.headerUserID)
+	putCustomerRef(callArgs, "headerCustomerRef", sources.headerCustomerRef)
+	putCustomerRef(callArgs, "mcpExtraCustomerRef", sources.mcpExtraCustomerRef)
+	putCustomerRef(callArgs, "argsAuthCustomerRef", argsAuthCustomerRef(args))
+	if raw, ok := args["customer_ref"].(string); ok {
+		putCustomerRef(callArgs, "argsCustomerRef", raw)
 	}
 	raw, err := CallSync(ctx, "resolveCustomerRef", callArgs)
 	if err != nil {
@@ -325,10 +449,10 @@ func gateMessage(gate json.RawMessage) string {
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(gate, &parsed); err != nil {
-		return "Payment required"
+		return solvapay.PaymentRequiredMessage
 	}
 	if parsed.Message == "" {
-		return "Payment required"
+		return solvapay.PaymentRequiredMessage
 	}
 	return parsed.Message
 }
