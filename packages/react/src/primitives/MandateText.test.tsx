@@ -124,6 +124,25 @@ describe('MandateText primitive', () => {
     })
   })
 
+  it('always names SolvaPay legal pages and adds merchant links only when set', async () => {
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText mode="topup" amountMinor={500} currency="usd" data-testid="mandate" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => {
+      const text = screen.getByTestId('mandate').textContent
+      expect(text).toContain("Acme's")
+      expect(text).toContain("SolvaPay's")
+      expect(text).toContain('You agree to')
+    })
+    const hrefs = screen.getAllByRole('link').map(link => link.getAttribute('href'))
+    expect(hrefs).toContain('https://acme.com/terms')
+    expect(hrefs).toContain('https://solvapay.com/legal/terms')
+    expect(hrefs).toContain('https://solvapay.com/legal/privacy')
+    expect(hrefs).not.toContain('https://acme.com/privacy')
+  })
+
   it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(<MandateText planRef="pln" />)).toThrow(MissingProviderError)

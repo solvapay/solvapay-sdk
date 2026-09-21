@@ -49,6 +49,14 @@ describe('mergeCopy', () => {
     expect(merged.errors.paymentElementMissing).toBe(enCopy.errors.paymentElementMissing)
   })
 
+  it('keeps legal document labels when other sections are overridden', () => {
+    const merged = mergeCopy(enCopy, { legalFooter: { terms: 'Villkor' } })
+    expect(merged.legal.termsOfService).toBe('Terms of Service')
+    expect(merged.legal.privacyPolicy).toBe('Privacy Policy')
+    expect(merged.legalFooter.terms).toBe('Villkor')
+    expect(merged.legalFooter.privacy).toBe(enCopy.legalFooter.privacy)
+  })
+
   it('accepts function-form mandate overrides', () => {
     const merged = mergeCopy(enCopy, {
       mandate: { recurring: () => 'custom' },
