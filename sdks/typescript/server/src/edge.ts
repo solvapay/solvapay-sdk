@@ -85,6 +85,9 @@ export type { PaywallDecision } from './types/paywall'
 // Export types
 export type {
   components,
+  FreeLimit,
+  FreeLimitInput,
+  FreeLimitScope,
   LimitActivationBalance,
   LimitActivationProduct,
   LimitAutoRechargeDto,
@@ -133,6 +136,12 @@ export type {
 
 // Export retry utility for general use
 export { withRetry } from './utils'
+export {
+  normalizeFreeLimit,
+  freeLimitsAgree,
+  freeToolDescriptionSuffix,
+  freeMeterNamePattern,
+} from './native-decisions'
 
 // Export route helpers (generic, framework-agnostic)
 // These work in edge runtimes as they use standard Web API Request
