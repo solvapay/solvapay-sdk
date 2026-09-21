@@ -17,16 +17,12 @@ import type { AdditionalToolsContext } from '@solvapay/mcp'
  * or non-JSON responses, and carries `{ status, contentType, bodySnippet }`
  * on the thrown error so the MCP `isError` envelope tells the LLM (and
  * the human) exactly why upstream rejected the call.
- *
- * The matching `server.registerPrompt(...)` below surfaces this tool as
- * a slash-command in hosts with prompt UI (Claude Desktop). Purely
- * additive — hosts without prompt support silently ignore it.
  */
 export function register__TOOL_NAME_PASCAL__(ctx: AdditionalToolsContext): void {
   ctx.registerPayable('__TOOL_NAME__', {
     title: '__TOOL_NAME__',
     description:
-      'Placeholder paid tool — echoes the input message back so you can verify the paywall is wired before writing real logic. 1 credit per call; when gated, text-only narration names `account` (or `activate_plan` when a planRef is known). Replace this description (and the handler) with your tool semantics before going live.',
+      'Placeholder paid tool — echoes the input message so you can verify the paywall is wired before writing real logic. 1 credit per call; when gated, text-only narration names `account` (or `activate_plan` when a planRef is known).',
     schema: {
       message: z.string().describe('What the caller wants').optional(),
     },
@@ -37,29 +33,8 @@ export function register__TOOL_NAME_PASCAL__(ctx: AdditionalToolsContext): void 
     handler: async (input, c) => {
       const data = { ok: true, echoed: input.message ?? 'hello' }
       return c.respond(data, {
-        text: '__TOOL_NAME__ ran (placeholder). Render as a simple key-value list.',
+        text: '__TOOL_NAME__ ran (placeholder). Replace this tool with your business logic.',
       })
     },
   })
-
-  ctx.server.registerPrompt(
-    '__TOOL_NAME__',
-    {
-      title: '__TOOL_NAME__',
-      description:
-        'Call the placeholder `__TOOL_NAME__` paid tool. Replace with your real prompt copy when you replace the tool.',
-      argsSchema: { message: z.string().optional() },
-    },
-    async ({ message }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: `Run __TOOL_NAME__ with message "${message ?? ''}".`,
-          },
-        },
-      ],
-    }),
-  )
 }

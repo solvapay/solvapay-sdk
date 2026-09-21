@@ -8,10 +8,8 @@
 import type { McpServer } from '@modelcontextprotocol/server'
 import type {
   CacheHint,
-  CallToolResult,
   Icon,
   ReadResourceCallback,
-  ReadResourceResult,
   RegisteredResource,
   RegisteredTool,
   ResourceMetadata,
@@ -88,4 +86,4 @@ export function registerAppResource(
   return server.registerResource(name, uri, { mimeType: RESOURCE_MIME_TYPE, ...config }, handler)
 }
 
-export type { CallToolResult, ReadResourceResult }
+export type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/server'

@@ -2,5 +2,4 @@
 import * as glue from './solvapay_wasm_bg.js'
 import * as core from './solvapay_wasm2js.js'
 glue.__wbg_set_wasm(core)
-core.__wbindgen_start?.()
 export * from './solvapay_wasm_bg.js'

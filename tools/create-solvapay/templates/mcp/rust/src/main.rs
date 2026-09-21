@@ -85,7 +85,12 @@ fn placeholder_handler() -> PayableHandler {
                 .and_then(Value::as_str)
                 .unwrap_or("hello")
                 .to_owned();
-            ctx.respond(json!({ "ok": true, "echoed": echoed }), None)
+            ctx.respond(
+                json!({ "ok": true, "echoed": echoed }),
+                Some(json!({
+                    "text": "__TOOL_NAME__ ran (placeholder). Replace this tool with your business logic."
+                })),
+            )
         }
         .boxed() as PayableFuture<'static, _>
     })

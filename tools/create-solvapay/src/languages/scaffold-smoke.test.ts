@@ -61,6 +61,12 @@ describe('language MCP templates', () => {
         const gitignore = await readFile(path.join(target, '.gitignore'), 'utf8')
         expect(gitignore).toContain('.env')
 
+        if (language === 'go') {
+          const gomod = await readFile(path.join(target, 'go.mod'), 'utf8')
+          expect(gomod).toContain('github.com/modelcontextprotocol/go-sdk v1.8.0')
+          expect(gomod).toContain('go 1.25.0')
+        }
+
         const readme = await readFile(path.join(target, 'README.md'), 'utf8')
         expect(readme).toMatch(new RegExp(`^# ${deriveServerName('demo-mcp')}\\n`))
         expect(readme).not.toContain('**SERVER_NAME**')
@@ -68,11 +74,16 @@ describe('language MCP templates', () => {
         // F9: placeholder descriptions may only name factory-registered
         // recovery tools (`account`, `activate_plan`) plus the paid tool.
         const factoryRegistered = new Set(['account', 'activate_plan', names.toolNameSnake])
+        let sawPlaceholder = false
         for (const file of files) {
           if (file.endsWith('.png') || file.endsWith('.wasm')) continue
           const raw = await readFile(file, 'utf8')
           if (!raw.includes('Placeholder paid tool')) continue
+          sawPlaceholder = true
           expect(raw, file).toMatch(/`account`/)
+          expect(raw, file).toContain(
+            `${names.toolNameSnake} ran (placeholder). Replace this tool with your business logic.`,
+          )
           const named = [...raw.matchAll(/`([a-z][a-z0-9_]*)`/g)].map(m => m[1])
           for (const name of named) {
             expect(factoryRegistered.has(name), `${file} names unregistered tool \`${name}\``).toBe(
@@ -80,6 +91,7 @@ describe('language MCP templates', () => {
             )
           }
         }
+        expect(sawPlaceholder).toBe(true)
       } finally {
         await rm(target, { recursive: true, force: true })
       }

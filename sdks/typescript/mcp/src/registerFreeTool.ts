@@ -23,7 +23,6 @@ import type { FreeLimit, SolvaPay } from '@solvapay/server'
 import {
   PaywallStructuredContentSchema,
   normalizeFreeLimit,
-  freeLimitsAgree,
   freeToolDescriptionSuffix,
 } from '@solvapay/server'
 import {
@@ -39,7 +38,7 @@ export type { FreeLimit }
 /** Mirrors `freeMeterNamePattern()` from solvapay-core. */
 export const FREE_METER_NAME_PATTERN = /^free-[a-z0-9-]+$/
 
-export { normalizeFreeLimit, freeLimitsAgree, freeToolDescriptionSuffix }
+export { normalizeFreeLimit, freeLimitsAgree, freeToolDescriptionSuffix } from '@solvapay/server'
 
 export interface RegisterFreeToolOptions<
   InputSchema extends InputSchemaOption = undefined,

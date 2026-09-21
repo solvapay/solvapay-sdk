@@ -103,6 +103,10 @@ const DEV_PATHS = (
         '@solvapay/react': abs(['sdks', 'typescript', 'react']),
         '@solvapay/core': abs(['sdks', 'typescript', 'core']),
         '@solvapay/server-wasm': abs(['sdks', 'wasm']),
+        // Pin zod to the checkout copy. file:/link: @solvapay/* packages
+        // resolve `zod` from the monorepo; a second copy in the scaffold
+        // (`^4.3.6` → latest 4.x) makes tsc reject schema/prompt args.
+        zod: abs(['node_modules', 'zod']),
       }
     case 'python':
       return {
@@ -292,13 +296,9 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
             ? 'go run . --mode http'
             : 'cargo run -- --mode http'
   process.stdout.write(`   ${runHint}\n`)
-  if (language === 'ts') {
-    process.stdout.write(`   # Edit src/tools/${toolName}.ts to replace the placeholder.\n`)
-  } else {
-    process.stdout.write(
-      `   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`,
-    )
-  }
+  process.stdout.write(
+    `   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`,
+  )
 
   printConnectionSnippets({ projectName, workerUrl: publicBaseUrl })
 }

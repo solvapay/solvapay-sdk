@@ -14,10 +14,12 @@ func registerTools(srv *solvapaymcp.Server, product string) error {
 		InputSchema: map[string]any{"message": map[string]any{"type": "string"}},
 		Handler: func(ctx context.Context, args map[string]any, rc *solvapaymcp.ResponseContext) (solvapaymcp.Response, error) {
 			message := "hello"
-			if raw, ok := args["message"].(string); ok && raw != "" {
+			if raw, ok := args["message"].(string); ok {
 				message = raw
 			}
-			return rc.Respond(map[string]any{"ok": true, "echoed": message}, nil)
+			return rc.Respond(map[string]any{"ok": true, "echoed": message}, map[string]any{
+				"text": "__TOOL_NAME__ ran (placeholder). Replace this tool with your business logic.",
+			})
 		},
 	})
 }

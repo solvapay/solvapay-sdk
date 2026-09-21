@@ -59,6 +59,10 @@ describe('runFromScratch --dev (ts lane)', () => {
       // Paths land where repo-paths.yaml maps them.
       expect(pkg.dependencies['@solvapay/core']).toContain(path.join('sdks', 'typescript', 'core'))
       expect(pkg.dependencies['@solvapay/server-wasm']).toContain(path.join('sdks', 'wasm'))
+      // Same physical zod as the file:-linked SDK packages, so tsc does
+      // not see two ZodType identities (scaffold npm zod vs monorepo zod).
+      expect(pkg.dependencies.zod).toMatch(/^(link|file):/)
+      expect(pkg.dependencies.zod).toContain(path.join('node_modules', 'zod'))
       // The unpublished server-wasm never blocks the dev lane (F1).
 
       const toolSrc = await readFile(path.join(target, 'src', 'tools', 'generate_haiku.ts'), 'utf8')
@@ -72,6 +76,13 @@ describe('runFromScratch --dev (ts lane)', () => {
         )
       }
       expect(placeholder?.[1]).toMatch(/`account`/)
+      expect(toolSrc).not.toContain('registerPrompt')
+      expect(toolSrc).toContain(
+        'Placeholder paid tool — echoes the input message so you can verify the paywall is wired',
+      )
+      expect(toolSrc).toContain(
+        'generate_haiku ran (placeholder). Replace this tool with your business logic.',
+      )
     } finally {
       await rm(parent, { recursive: true, force: true })
     }

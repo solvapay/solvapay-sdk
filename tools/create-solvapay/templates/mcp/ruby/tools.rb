@@ -20,7 +20,10 @@ module __RUBY_MODULE__
         },
         handler: lambda { |args, ctx|
           message = args.is_a?(Hash) ? (args["message"] || args[:message]) : nil
-          ctx.respond({ "ok" => true, "echoed" => message || "hello" })
+          ctx.respond(
+            { "ok" => true, "echoed" => message || "hello" },
+            { "text" => "__TOOL_NAME__ ran (placeholder). Replace this tool with your business logic." },
+          )
         },
       )
     end

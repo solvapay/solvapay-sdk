@@ -74,6 +74,30 @@ describe('applyDevPathDeps', () => {
     expect(out.endsWith('\n')).toBe(true)
   })
 
+  it('rewrites zod to the checkout copy when --dev maps it', () => {
+    const raw = `${JSON.stringify(
+      {
+        dependencies: {
+          '@solvapay/mcp': '^1.0.0',
+          zod: '^4.3.6',
+        },
+      },
+      null,
+      2,
+    )}\n`
+    const out = applyDevPathDeps(
+      'ts',
+      raw,
+      {
+        '@solvapay/mcp': '/repo/sdks/typescript/mcp',
+        zod: '/repo/node_modules/zod',
+      },
+      'file',
+    )
+    const pkg = JSON.parse(out) as { dependencies: Record<string, string> }
+    expect(pkg.dependencies.zod).toBe('file:/repo/node_modules/zod')
+  })
+
   it('uses file: protocol for npm (no link: support)', () => {
     const raw = `${JSON.stringify({ dependencies: { '@solvapay/core': '^2.0.0' } }, null, 2)}\n`
     const out = applyDevPathDeps(
