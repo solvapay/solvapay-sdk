@@ -609,12 +609,13 @@ resolveCheckLimitsParams:
   tsWrapper:
     paramStyle:
       usageType: optionalNull
+      freeLimit: optionalNull
   doc: >-
     Binding for `resolveCheckLimitsParams`.
 
 
     Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is
-    meterName, then usageType, then `requests`.
+    freeLimit.meter, then meterName, then usageType, then `requests`.
   docWasm: Binding for `resolveCheckLimitsParams`.
   args:
     - name: productRef
@@ -632,10 +633,17 @@ resolveCheckLimitsParams:
       required: false
       extract: optionalString
       local: usage_type
+    - name: freeLimit
+      type: value
+      required: false
+      extract: optionalTyped
+      typedAs: FreeLimit
+      local: free_limit
   callArgs:
     - product_ref.as_deref()
     - meter_name.as_deref()
     - usage_type.as_deref()
+    - free_limit.as_ref()
 resolveFallbackGateLimits:
   tsWrapper:
     optionalStyle: optional

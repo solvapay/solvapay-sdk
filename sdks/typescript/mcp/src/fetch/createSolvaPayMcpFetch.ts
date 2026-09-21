@@ -14,12 +14,8 @@ import {
   type HideToolsByAudienceConfig,
 } from '../internal/buildMcpServer'
 import { z } from 'zod'
-import {
-  payableToolAnnotations,
-  registerPayableTool,
-  wrapInputSchema,
-  type RegisterPayableToolOptions,
-} from '../registerPayableTool'
+import { bindAdditionalTools } from '../bindAdditionalTools'
+import { payableToolAnnotations, wrapInputSchema } from '../registerPayableTool'
 import type { AdditionalToolsContext } from '../server'
 import {
   createSolvaPayMcpFetchHandler,
@@ -59,6 +55,36 @@ function bindEnginePayables(
     solvaPay,
     resourceUri: '',
     productRef,
+    registerFree: (name, opts) => {
+      const product = opts.product ?? productRef
+      const protectedHandler = buildPayableHandler(
+        solvaPay,
+        {
+          product,
+          getCustomerRef: opts.getCustomerRef,
+          toolName: name,
+          freeLimit: {
+            meter: opts.limit.meter ?? 'free-requests',
+            cap: opts.limit.cap,
+            scope: opts.limit.scope,
+            ...(opts.limit.windowDays !== undefined ? { windowDays: opts.limit.windowDays } : {}),
+          },
+        },
+        opts.handler as never,
+      )
+      const wrappedSchema = wrapInputSchema(opts.schema)
+      payables.set(name, {
+        invoke: (args, customerRef) =>
+          protectedHandler(
+            args,
+            customerRef ? { authInfo: { extra: { customer_ref: customerRef } } } : undefined,
+          ),
+        ...(opts.title !== undefined ? { title: opts.title } : {}),
+        ...(opts.description !== undefined ? { description: opts.description } : {}),
+        ...(wrappedSchema !== undefined ? { inputSchema: z.toJSONSchema(wrappedSchema) } : {}),
+        annotations: payableToolAnnotations(opts.annotations),
+      })
+    },
     registerPayable: (name, opts) => {
       const product = opts.product ?? productRef
       const protectedHandler = buildPayableHandler(
@@ -115,14 +141,7 @@ function buildServerForRequest(
 
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
-    const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
-      registerPayableTool(server, name, {
-        solvaPay,
-        ...opts,
-        product: opts.product ?? productRef,
-      } as RegisterPayableToolOptions)
-    }
-    additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
+    bindAdditionalTools(server, solvaPay, productRef, resourceUri, additionalTools)
   }
 
   const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)

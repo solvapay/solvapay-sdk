@@ -42,6 +42,9 @@ use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
 use crate::decisions::extract_bearer_token_binding;
 use crate::decisions::format_compact_credits_binding;
+use crate::decisions::free_limits_agree_binding;
+use crate::decisions::free_meter_name_pattern_binding;
+use crate::decisions::free_tool_description_suffix_binding;
 use crate::decisions::gate_next_binding;
 use crate::decisions::get_history_next_binding;
 use crate::decisions::headline_charges_binding;
@@ -55,6 +58,7 @@ use crate::decisions::map_route_error_binding;
 use crate::decisions::meter_name_binding;
 use crate::decisions::next_action_for_binding;
 use crate::decisions::normalize_cancel_response_binding;
+use crate::decisions::normalize_free_limit_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::overlay_claimed_limits_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
@@ -78,6 +82,7 @@ use crate::decisions::resolve_plan_shape_binding;
 use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
+use crate::decisions::resolve_usage_extra_binding;
 use crate::decisions::retry_next_delay_ms;
 use crate::decisions::select_active_plan_purchase_binding;
 use crate::decisions::select_active_purchases_binding;
@@ -163,16 +168,29 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(coerce_customer_options_binding, 1),
     )?;
     native.define_singleton_method(
+        "free_meter_name_pattern",
+        function!(free_meter_name_pattern_binding, 1),
+    )?;
+    native.define_singleton_method(
         "build_create_customer_params",
         function!(build_create_customer_params_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "normalize_free_limit",
+        function!(normalize_free_limit_binding, 1),
     )?;
     native.define_singleton_method(
         "extract_backend_customer_ref",
         function!(extract_backend_customer_ref_binding, 1),
     )?;
+    native.define_singleton_method("free_limits_agree", function!(free_limits_agree_binding, 1))?;
     native.define_singleton_method(
         "classify_lookup_error",
         function!(classify_lookup_error_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "free_tool_description_suffix",
+        function!(free_tool_description_suffix_binding, 1),
     )?;
     native.define_singleton_method(
         "classify_create_error",
@@ -274,6 +292,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "should_retry_usage_error",
         function!(should_retry_usage_error_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "resolve_usage_extra",
+        function!(resolve_usage_extra_binding, 1),
     )?;
     native.define_singleton_method(
         "validate_list_plans_params",

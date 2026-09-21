@@ -52,6 +52,14 @@ export type {
 
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
+export {
+  registerFreeTool,
+  normalizeFreeLimit,
+  freeLimitsAgree,
+  freeToolDescriptionSuffix,
+  FREE_METER_NAME_PATTERN,
+} from './registerFreeTool'
+export type { RegisterFreeToolOptions } from './registerFreeTool'
 
 // ---- MCP Apps server helpers ----
 // `@modelcontextprotocol/ext-apps` has no SDK v2 build, so the three server-side

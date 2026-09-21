@@ -271,6 +271,15 @@ export declare function formatSubtotalLabel(argsJson: string): string
 /** Binding for `formatVatSummaryLabel`. */
 export declare function formatVatSummaryLabel(argsJson: string): string
 
+/** Binding for `freeLimitsAgree`. */
+export declare function freeLimitsAgree(argsJson: string): string
+
+/** Binding for `freeMeterNamePattern`. */
+export declare function freeMeterNamePattern(argsJson: string): string
+
+/** Binding for `freeToolDescriptionSuffix`. */
+export declare function freeToolDescriptionSuffix(argsJson: string): string
+
 /** Binding for `gateNext`. */
 export declare function gateNext(argsJson: string): string
 
@@ -380,6 +389,9 @@ export declare function nextActionFor(argsJson: string): string
 /** Binding for `normalizeCancelResponse`. */
 export declare function normalizeCancelResponse(argsJson: string): string
 
+/** Binding for `normalizeFreeLimit`. */
+export declare function normalizeFreeLimit(argsJson: string): string
+
 /** Binding for `normalizeReactivateResponse`. */
 export declare function normalizeReactivateResponse(argsJson: string): string
 
@@ -442,7 +454,7 @@ export declare function resolveBuyerCountry(argsJson: string): string
 /**
  * Binding for `resolveCheckLimitsParams`.
  *
- * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.
+ * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is freeLimit.meter, then meterName, then usageType, then `requests`.
  */
 export declare function resolveCheckLimitsParams(argsJson: string): string
 
@@ -475,6 +487,9 @@ export declare function resolveTaxBehavior(argsJson: string): string
 
 /** Binding for `resolveTaxTreatmentNote`. */
 export declare function resolveTaxTreatmentNote(argsJson: string): string
+
+/** Binding for `resolveUsageExtra`. */
+export declare function resolveUsageExtra(argsJson: string): string
 
 /**
  * Binding for `retryNextDelayMs`.

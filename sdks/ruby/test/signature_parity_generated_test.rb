@@ -74,6 +74,9 @@ class SignatureParityGeneratedTest < Minitest::Test
     format_price
     format_subtotal_label
     format_vat_summary_label
+    free_limits_agree
+    free_meter_name_pattern
+    free_tool_description_suffix
     get_postal_code_field_label
     get_postal_code_placeholder
     get_seller_tax_identifier_display_label
@@ -92,6 +95,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     meter_name
     minor_units_per_major
     next_action_for
+    normalize_free_limit
     paywall_error_to_client_payload
     paywall_structured_content_schema
     pegged_credits_per_unit

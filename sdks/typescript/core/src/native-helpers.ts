@@ -37,7 +37,7 @@ import type { PlansHelperError } from './plans'
 import type { ProductHelperError } from './product'
 import type { RenewalHelperError } from './renewal'
 import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
-import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, DefaultMcpBearerExpectations, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageRate } from './types/boundary.generated'
+import type { ActiveProduct, AuthResolutionInput, BillingCycle, Charge, CreditSignals, DefaultMcpBearerExpectations, FreeLimit, FreeLimitInput, McpDisplayModeState, PaywallNextAction, PlanPricingShape, Tier, UsageExtra, UsageRate } from './types/boundary.generated'
 import type { BalancePegLike, PricedLike } from './pricing-options-types'
 
 export type NarratorPlanShape = 'trial' | 'free' | 'recurring-metered' | 'recurring-unlimited' | 'usage-based'
@@ -289,6 +289,51 @@ export function appendPaidToolDescription(description: string | null | undefined
   return dispatchSync('appendPaidToolDescription', { description: description ?? null })
 }
 
+export function resolveUsageExtra(
+  freeLimit: FreeLimit | null | undefined,
+  outcome: string,
+  consequence: string | null | undefined,
+): UsageExtra {
+  return dispatchSync('resolveUsageExtra', {
+    freeLimit: freeLimit ?? null,
+    outcome,
+    consequence: consequence ?? null,
+  })
+}
+
+/**
+ * Build the free-tool description suffix, including shared-meter names.
+ * @returns The `Free tool — …` sentence, plus a share tail when names are present.
+ */
+export function freeToolDescriptionSuffix(
+  limit: FreeLimit,
+  sharedWith: unknown | null | undefined,
+): string {
+  return dispatchSync('freeToolDescriptionSuffix', { limit, sharedWith: sharedWith ?? null })
+}
+
+/**
+ * Return whether two normalized free limits share the same cap.
+ * @returns True when meter, cap, scope, and window days all match.
+ */
+export function freeLimitsAgree(a: FreeLimit, b: FreeLimit): boolean {
+  return dispatchSync('freeLimitsAgree', { a, b })
+}
+
+/**
+ * Normalize a free-tool allowance, defaulting and validating the meter.
+ * @returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+ */
+export function normalizeFreeLimit(limit: FreeLimitInput): FreeLimit | LimitsHelperError {
+  return dispatchSync('normalizeFreeLimit', { limit })
+}
+
+/**
+ * Return the frozen regex source for free-allowance meter names.
+ * @returns The `^free-[a-z0-9-]+$` pattern string.
+ */
+export function freeMeterNamePattern(): string { return dispatchSync('freeMeterNamePattern', {}) }
+
 /**
  * Coalesce credit-balance channels and derive shortfall and remaining-call counts.
  * @param limits Limits response, or null/absent when no check has run.
@@ -345,11 +390,13 @@ export function resolveCheckLimitsParams(
   productRef: string | null | undefined,
   meterName: string | null | undefined,
   usageType?: string | null,
+  freeLimit?: FreeLimit | null,
 ): CheckLimitsParams | LimitsHelperError {
   return dispatchSync('resolveCheckLimitsParams', {
     productRef: productRef ?? null,
     meterName: meterName ?? null,
     usageType: usageType ?? null,
+    freeLimit: freeLimit ?? null,
   })
 }
 

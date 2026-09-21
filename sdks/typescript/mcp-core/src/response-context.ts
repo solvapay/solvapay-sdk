@@ -9,7 +9,12 @@
  * forward-compatible handlers today; real implementations land in V1.1.
  */
 
-import type { LimitResponseWithPlan, PaywallStructuredContent, SolvaPay } from '@solvapay/server'
+import type {
+  FreeLimit,
+  LimitResponseWithPlan,
+  PaywallStructuredContent,
+  SolvaPay,
+} from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
 import { callMcpSyncOp, dispatchSync, makeResponseResult } from './native-mcp'
 import type {
@@ -47,6 +52,8 @@ export interface BuildResponseContextParams {
   bootstrapPlan?: BootstrapPlan | null
   /** SolvaPay instance used for `ctx.customer.fresh()` round-trips. */
   solvaPay: SolvaPay
+  /** Capped free-tool allowance; `fresh()` checks the free meter. */
+  freeLimit?: FreeLimit
 }
 
 /**
@@ -113,7 +120,7 @@ export interface BuildResponseContextResult {
 export function buildResponseContext(
   params: BuildResponseContextParams,
 ): BuildResponseContextResult {
-  const { customerRef, limits, product, bootstrapProduct, solvaPay } = params
+  const { customerRef, limits, product, bootstrapProduct, solvaPay, freeLimit } = params
 
   // Resolve `bootstrapPlan`: caller-provided projection wins; otherwise
   // synthesize a minimal plan stub from `limits.plan` (the plan ref
@@ -133,7 +140,8 @@ export function buildResponseContext(
     const freshLimits = await solvaPay.checkLimits({
       customerRef,
       productRef: product,
-      meterName: 'requests',
+      meterName: freeLimit?.meter ?? 'requests',
+      ...(freeLimit ? { freeAllowance: freeLimit } : {}),
     })
     return snapshotFromLimits({
       customerRef,

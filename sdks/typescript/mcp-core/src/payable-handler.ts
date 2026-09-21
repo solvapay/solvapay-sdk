@@ -4,7 +4,7 @@
  * paywall via the shared Rust `invokePayableNext` driver.
  */
 
-import type { LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
+import type { FreeLimit, LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
 import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
 import { runGeneratedPayableLoop } from './drivers.generated'
 import { defaultGetCustomerRef } from './helpers'
@@ -40,6 +40,10 @@ export interface BuildPayableHandlerContext {
    * Defaults to `'requests'`.
    */
   usageType?: string
+  /** Capped free-tool allowance forwarded into `paywall.decide`. */
+  freeLimit?: FreeLimit
+  /** Tool name recorded on usage events. */
+  toolName?: string
 }
 
 type MerchantHandler<TArgs, TResult> = (
@@ -102,8 +106,8 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
   ctx: BuildPayableHandlerContext,
   handler: MerchantHandler<TArgs, TResult>,
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
-  const { product, getCustomerRef } = ctx
-  const usageType = resolveUsageType(ctx.usageType)
+  const { product, getCustomerRef, freeLimit, toolName } = ctx
+  const usageType = resolveUsageType(freeLimit?.meter ?? ctx.usageType)
 
   return async (
     args: Record<string, unknown>,
@@ -125,7 +129,11 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
         runGate: async action => {
           const decision = await solvaPay.paywall.decide(
             { auth: { customer_ref: String(action.customerRef ?? customerRef) } } as PaywallArgs,
-            { product: String(action.product ?? product) },
+            {
+              product: String(action.product ?? product),
+              ...(freeLimit ? { freeLimit } : {}),
+              ...(toolName ? { toolName } : {}),
+            },
           )
           if (decision.outcome === 'gate') {
             return { kind: 'paywall', gate: decision.gate, message: decision.gate.message }
@@ -143,6 +151,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
             limits,
             product,
             solvaPay,
+            ...(freeLimit ? { freeLimit } : {}),
           })
           try {
             const returned = await handler(args as TArgs, responseCtx)

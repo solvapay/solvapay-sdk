@@ -77,7 +77,7 @@ boundaryTypesTs:
         checkoutUrl?: string
         confirmationUrl?: string
         activationRequired?: boolean
-        paywallReason?: 'activation_required' | 'topup_required' | 'payment_required'
+        paywallReason?: 'activation_required' | 'topup_required' | 'payment_required' | 'limit_reached'
         plans?: unknown
         balance?: unknown
         product?: unknown
@@ -2437,7 +2437,7 @@ overlays:
         required: false
         doc: 'Deprecated alias of planRef. The backend never populates this.'
       paywallReason:
-        enum: [activation_required, topup_required, payment_required]
+        enum: [activation_required, topup_required, payment_required, limit_reached]
         required: false
       planRef:
         type: string
@@ -3218,6 +3218,91 @@ coreHelpers:
       params:
         description: 'Optional merchant-authored description; trailing whitespace is stripped.'
       returns: 'Description plus hint, or the hint alone when no description is present.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  freeMeterNamePattern:
+    names:
+      ts: freeMeterNamePattern
+      py: free_meter_name_pattern
+      rb: free_meter_name_pattern
+      go: FreeMeterNamePattern
+      rust: free_meter_name_pattern
+      c: freeMeterNamePattern
+    params: []
+    docs:
+      summary: 'Return the frozen regex source for free-allowance meter names.'
+      params: {}
+      returns: 'The `^free-[a-z0-9-]+$` pattern string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  normalizeFreeLimit:
+    names:
+      ts: normalizeFreeLimit
+      py: normalize_free_limit
+      rb: normalize_free_limit
+      go: NormalizeFreeLimit
+      rust: normalize_free_limit
+      c: normalizeFreeLimit
+    params: []
+    docs:
+      summary: 'Normalize a free-tool allowance, defaulting and validating the meter.'
+      params:
+        limit: 'Author-supplied free-limit fields. Meter defaults to `free-requests`.'
+      returns: 'Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  freeLimitsAgree:
+    names:
+      ts: freeLimitsAgree
+      py: free_limits_agree
+      rb: free_limits_agree
+      go: FreeLimitsAgree
+      rust: free_limits_agree
+      c: freeLimitsAgree
+    params: []
+    docs:
+      summary: 'Return whether two normalized free limits share the same cap.'
+      params:
+        a: 'First normalized free limit.'
+        b: 'Second normalized free limit.'
+      returns: 'True when meter, cap, scope, and window days all match.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  freeToolDescriptionSuffix:
+    names:
+      ts: freeToolDescriptionSuffix
+      py: free_tool_description_suffix
+      rb: free_tool_description_suffix
+      go: FreeToolDescriptionSuffix
+      rust: free_tool_description_suffix
+      c: freeToolDescriptionSuffix
+    params: []
+    docs:
+      summary: 'Build the free-tool description suffix, including shared-meter names.'
+      params:
+        limit: 'Normalized free limit.'
+        sharedWith: 'Other tool names already registered on this meter.'
+      returns: 'The `Free tool — …` sentence, plus a share tail when names are present.'
     sync:
       ts: sync
       py: sync

@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-limit-reached-free-meter-total",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": { "kind": "limit_reached" },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "message": "",
+        "shortMessage": "Payment required",
+        "meterName": "free-previews",
+        "included": { "used": 5, "total": 5, "remaining": 0 }
+      }
+    }
+  },
+  "expect": {
+    "result": "You've used all 5 free previews for this period. Call the `account` tool with view: 'checkout'."
+  }
+}

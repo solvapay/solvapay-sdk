@@ -112,6 +112,7 @@ export type {
   PlanPricingShape,
   Tier,
   TierMode,
+  UsageExtra,
   UsageRate,
 } from './types/boundary.generated'
 
@@ -189,7 +190,13 @@ export { isRenewalError, type RenewalHelperError } from './renewal'
 
 export { type UsageSnapshot, type UsageSnapshotPurchase } from './usage'
 
-export { type CheckLimitsParams, type LimitsHelperError } from './limits'
+export {
+  type CheckLimitsParams,
+  type FreeLimit,
+  type FreeLimitInput,
+  type FreeLimitScope,
+  type LimitsHelperError,
+} from './limits'
 
 export { type PlansHelperError } from './plans'
 

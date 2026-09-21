@@ -21,6 +21,7 @@ pub fn emit_drivers_ts(_ir: &Ir) -> GenResult<String> {
          \x20   meterName: string\n\
          \x20   includeCheckoutSession: boolean\n\
          \x20   cacheDeleteKey?: string\n\
+         \x20   freeAllowance?: unknown\n\
          \x20 }): Promise<unknown>\n\
          \x20 applyCache(cache: unknown): void\n\
          \x20 nowMs(): number\n\
@@ -68,6 +69,7 @@ pub fn emit_drivers_ts(_ir: &Ir) -> GenResult<String> {
          \x20       ...(typeof action.cacheDeleteKey === 'string'\n\
          \x20         ? { cacheDeleteKey: action.cacheDeleteKey }\n\
          \x20         : {}),\n\
+         \x20       ...(action.freeAllowance != null ? { freeAllowance: action.freeAllowance } : {}),\n\
          \x20     })\n\
          \x20     event = { kind: 'limitsResult', limits, nowMs: host.nowMs() }\n\
          \x20     continue\n\
@@ -737,7 +739,7 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          use std::future::Future;\n\n\
          use serde_json::Value;\n\
          use solvapay_core::{\n\
-         \x20   gate_next, GateAction, GateCacheOp, HelperErrorResult, SdkError,\n\
+         \x20   gate_next, FreeLimit, GateAction, GateCacheOp, HelperErrorResult, SdkError,\n\
          };\n\n\
          pub trait GateDriverHost {\n\
          \x20   fn now_ms(&self) -> i64;\n\
@@ -753,6 +755,7 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          \x20       meter_name: &str,\n\
          \x20       include_checkout_session: bool,\n\
          \x20       cache_delete_key: Option<&str>,\n\
+         \x20       free_allowance: Option<FreeLimit>,\n\
          \x20   ) -> impl Future<Output = Result<Value, SdkError>>;\n\
          \x20   fn apply_cache(&self, cache: Option<GateCacheOp>) -> impl Future<Output = ()>;\n\
          }\n\n\
@@ -803,6 +806,7 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          \x20               meter_name,\n\
          \x20               include_checkout_session,\n\
          \x20               cache_delete_key,\n\
+         \x20               free_allowance,\n\
          \x20           } => {\n\
          \x20               let limits = host\n\
          \x20                   .check_limits(\n\
@@ -811,6 +815,7 @@ pub fn emit_drivers_rs(_ir: &Ir) -> GenResult<String> {
          \x20                       &meter_name,\n\
          \x20                       include_checkout_session,\n\
          \x20                       cache_delete_key.as_deref(),\n\
+         \x20                       free_allowance,\n\
          \x20                   )\n\
          \x20                   .await?;\n\
          \x20               event = serde_json::json!({\n\

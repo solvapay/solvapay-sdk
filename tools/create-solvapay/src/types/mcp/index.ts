@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import type { ProjectType } from '../registry'
@@ -11,7 +12,7 @@ import {
 } from '../../args'
 import { assertOpenapiLanguage } from '../../languages/matrix'
 import { defaultGoModule } from '../../languages/names'
-import { runFromOpenapi } from './from-openapi'
+import { isAbsoluteHttpUrl, runFromOpenapi } from './from-openapi'
 import { runFromScratch } from './from-scratch'
 
 const DEFAULT_TOOL_NAME = 'helloTool'
@@ -105,7 +106,7 @@ async function resolveOpenapiSpec(
   value: string | undefined,
   nonInteractive: boolean,
 ): Promise<string> {
-  if (value && value.trim()) return value.trim()
+  if (value && value.trim()) return resolveSpecLocation(value.trim())
   if (nonInteractive) {
     throw new Error('--openapi <url|path> is required in non-interactive from-openapi mode.')
   }
@@ -117,7 +118,18 @@ async function resolveOpenapiSpec(
   if (!trimmed) {
     throw new Error('No spec provided.')
   }
-  return trimmed
+  return resolveSpecLocation(trimmed)
+}
+
+/**
+ * Keep http(s) spec URLs as-is. Resolve local paths against the user's
+ * cwd — `describe.mjs` / `scaffold.mjs` spawn with `cwd` set to
+ * `scripts/mcp/`, so a relative `./openapi.yaml` would otherwise look
+ * inside the published package.
+ */
+export function resolveSpecLocation(value: string): string {
+  if (isAbsoluteHttpUrl(value)) return value
+  return resolve(process.cwd(), value)
 }
 
 async function resolveToolName(

@@ -37,11 +37,17 @@ const server = createSolvaPayMcpServer({
   resourceUri: 'ui://my-app/mcp-app.html',
   htmlPath: './dist/mcp-app.html',
   publicBaseUrl: 'https://my-app.example.com',
-  additionalTools: ({ registerPayable }) => {
+  additionalTools: ({ registerPayable, registerFree }) => {
     registerPayable('create_video', {
       schema: { prompt: z.string() },
       description: 'Generate a short video from a text prompt.',
       handler: async ({ prompt }, ctx) => ctx.respond({ videoUrl: await generate(prompt) }),
+    })
+    registerFree('preview_clip', {
+      description: 'Free preview clip, capped per customer.',
+      schema: { prompt: z.string() },
+      limit: { cap: 5, scope: 'rolling_window', windowDays: 30 },
+      handler: async ({ prompt }, ctx) => ctx.respond({ preview: await preview(prompt) }),
     })
   },
 })
@@ -51,11 +57,11 @@ One call wires transport tools, UI resource (Stripe CSP baseline), and your paya
 
 ## Subpath exports
 
-| Import                  | Use when                                                        |
-| ----------------------- | --------------------------------------------------------------- |
-| `@solvapay/mcp`         | `createSolvaPayMcpServer`, `registerPayableTool`                |
-| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware                        |
-| `@solvapay/mcp/fetch`   | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
+| Import                  | Use when                                                             |
+| ----------------------- | -------------------------------------------------------------------- |
+| `@solvapay/mcp`         | `createSolvaPayMcpServer`, `registerPayableTool`, `registerFreeTool` |
+| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware                             |
+| `@solvapay/mcp/fetch`   | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch`      |
 
 Framework-neutral contracts live in [`@solvapay/mcp-core`](../mcp-core).
 

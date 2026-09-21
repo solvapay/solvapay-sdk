@@ -170,6 +170,7 @@ describe('createSolvaPayMcpServer', () => {
     expect(ctx.productRef).toBe('prd_test')
     expect(ctx.resourceUri).toBe('ui://test/view.html')
     expect(typeof ctx.registerPayable).toBe('function')
+    expect(typeof ctx.registerFree).toBe('function')
   })
 
   it('advertises an object inputSchema on every listed tool', async () => {

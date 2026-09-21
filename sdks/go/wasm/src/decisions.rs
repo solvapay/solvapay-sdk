@@ -3,9 +3,10 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    AuthResolutionInput, Backoff, GateContent, PaymentIntentSource, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy, RouteErrorInput,
-    RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    AuthResolutionInput, Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource,
+    PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput,
+    RetryPolicy, RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS,
+    DEFAULT_MAX_RETRIES,
 };
 
 use solvapay_core::{
@@ -20,20 +21,21 @@ use solvapay_core::{
     derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
     evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
     evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
-    extract_bearer_token, format_compact_credits, gate_next, get_history_next, headline_charges,
-    history_rows, included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
-    link_label, map_route_error, meter_name, next_action_for, normalize_cancel_response,
+    extract_bearer_token, format_compact_credits, free_limits_agree, free_meter_name_pattern,
+    free_tool_description_suffix, gate_next, get_history_next, headline_charges, history_rows,
+    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result, link_label,
+    map_route_error, meter_name, next_action_for, normalize_cancel_response, normalize_free_limit,
     normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
     paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
     plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, require_product_ref, resolve_account_state, resolve_authenticated_user,
     resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
     resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, select_active_plan_purchase,
-    select_active_purchases, should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
-    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
+    resolve_purchase_customer_ref, resolve_return_url, resolve_usage_extra,
+    select_active_plan_purchase, select_active_purchases, should_retry_usage_error, tier_bands,
+    tier_meters, topup_process_next, trial_days, usage_rate, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_checkout_session_params,
+    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params,
 };
@@ -85,6 +87,27 @@ pub unsafe extern "C" fn sv_coerce_customer_options_binding(
     }))
 }
 
+// --- free-limit ---
+
+/// Binding for `freeMeterNamePattern`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_free_meter_name_pattern_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(free_meter_name_pattern().to_owned()))
+    }))
+}
+
+// --- customer-sync ---
+
 /// Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
 ///
 /// # Safety
@@ -113,6 +136,28 @@ pub unsafe extern "C" fn sv_build_create_customer_params_binding(
     }))
 }
 
+// --- free-limit ---
+
+/// Binding for `normalizeFreeLimit`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_normalize_free_limit_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let limit = require_typed::<FreeLimitInput>(&args, "limit")?;
+        result_as_value(normalize_free_limit(&limit))
+    }))
+}
+
+// --- customer-sync ---
+
 /// Binding for `extractBackendCustomerRef`.
 ///
 /// # Safety
@@ -134,6 +179,26 @@ pub unsafe extern "C" fn sv_extract_backend_customer_ref_binding(
     }))
 }
 
+// --- free-limit ---
+
+/// Binding for `freeLimitsAgree`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_free_limits_agree_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let a = require_typed::<FreeLimit>(&args, "a")?;
+        let b = require_typed::<FreeLimit>(&args, "b")?;
+        Ok(Value::Bool(free_limits_agree(&a, &b)))
+    }))
+}
+
+// --- customer-sync ---
+
 /// Binding for `classifyLookupError`.
 ///
 /// # Safety
@@ -151,6 +216,31 @@ pub unsafe extern "C" fn sv_classify_lookup_error_binding(
         to_value(&classify_lookup_error(&message))
     }))
 }
+
+// --- free-limit ---
+
+/// Binding for `freeToolDescriptionSuffix`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_free_tool_description_suffix_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let limit = require_typed::<FreeLimit>(&args, "limit")?;
+        let shared_with = optional_value(&args, "sharedWith");
+        Ok(Value::String(
+            free_tool_description_suffix(&limit, shared_with.as_ref()).to_owned(),
+        ))
+    }))
+}
+
+// --- customer-sync ---
 
 /// Binding for `classifyCreateError`.
 ///
@@ -684,7 +774,7 @@ pub unsafe extern "C" fn sv_project_usage_snapshot_binding(
 
 /// Binding for `resolveCheckLimitsParams`.
 ///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.
+/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is freeLimit.meter, then meterName, then usageType, then `requests`.
 ///
 /// # Safety
 ///
@@ -700,10 +790,12 @@ pub unsafe extern "C" fn sv_resolve_check_limits_params_binding(
         let product_ref = optional_string(&args, "productRef")?;
         let meter_name = optional_string(&args, "meterName")?;
         let usage_type = optional_string(&args, "usageType")?;
+        let free_limit = optional_typed::<FreeLimit>(&args, "freeLimit")?;
         result_as_value(resolve_check_limits_params(
             product_ref.as_deref(),
             meter_name.as_deref(),
             usage_type.as_deref(),
+            free_limit.as_ref(),
         ))
     }))
 }
@@ -725,6 +817,27 @@ pub unsafe extern "C" fn sv_should_retry_usage_error_binding(
         let args = args_map(&args_json)?;
         let message = require_string(&args, "message")?;
         Ok(Value::Bool(should_retry_usage_error(&message)))
+    }))
+}
+
+/// Binding for `resolveUsageExtra`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_resolve_usage_extra_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let free_limit = optional_typed::<FreeLimit>(&args, "freeLimit")?;
+        let outcome = require_string(&args, "outcome")?;
+        let consequence = optional_string(&args, "consequence")?;
+        to_value(&resolve_usage_extra(
+            free_limit.as_ref(),
+            &outcome,
+            consequence.as_deref(),
+        ))
     }))
 }
 

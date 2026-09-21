@@ -1,0 +1,13 @@
+{
+  "suite": "helper-usage",
+  "case": "usage-extra-fail-empty",
+  "input": {
+    "fn": "resolveUsageExtra",
+    "args": {
+      "outcome": "fail"
+    }
+  },
+  "expect": {
+    "result": {}
+  }
+}

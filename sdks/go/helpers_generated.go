@@ -249,6 +249,30 @@ func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any
 	}))
 }
 
+// FreeLimitsAgree return whether two normalized free limits share the same cap.
+// Returns True when meter, cap, scope, and window days all match.
+func FreeLimitsAgree(ctx context.Context, a any, b any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_free_limits_agree_binding", mustJSON(map[string]any{
+		"a": a,
+		"b": b,
+	}))
+}
+
+// FreeMeterNamePattern return the frozen regex source for free-allowance meter names.
+// Returns The `^free-[a-z0-9-]+$` pattern string.
+func FreeMeterNamePattern(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_free_meter_name_pattern_binding", mustJSON(map[string]any{}))
+}
+
+// FreeToolDescriptionSuffix build the free-tool description suffix, including shared-meter names.
+// Returns The `Free tool — …` sentence, plus a share tail when names are present.
+func FreeToolDescriptionSuffix(ctx context.Context, limit any, sharedWith any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_free_tool_description_suffix_binding", mustJSON(map[string]any{
+		"limit":      limit,
+		"sharedWith": sharedWith,
+	}))
+}
+
 // GetPostalCodeFieldLabel return the postal or ZIP code field label for a country.
 // Returns Field label string.
 func GetPostalCodeFieldLabel(ctx context.Context, country any) (any, error) {
@@ -394,6 +418,14 @@ func MinorUnitsPerMajor(ctx context.Context, currency any) (any, error) {
 func NextActionFor(ctx context.Context, state any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_next_action_for_binding", mustJSON(map[string]any{
 		"state": state,
+	}))
+}
+
+// NormalizeFreeLimit normalize a free-tool allowance, defaulting and validating the meter.
+// Returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+func NormalizeFreeLimit(ctx context.Context, limit any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_normalize_free_limit_binding", mustJSON(map[string]any{
+		"limit": limit,
 	}))
 }
 

@@ -1,0 +1,20 @@
+{
+  "suite": "free-limit",
+  "case": "limits-disagree-cap",
+  "input": {
+    "fn": "freeLimitsAgree",
+    "args": {
+      "a": {
+        "meter": "free-requests",
+        "cap": 5,
+        "scope": "lifetime"
+      },
+      "b": {
+        "meter": "free-requests",
+        "cap": 10,
+        "scope": "lifetime"
+      }
+    }
+  },
+  "expect": { "result": false }
+}

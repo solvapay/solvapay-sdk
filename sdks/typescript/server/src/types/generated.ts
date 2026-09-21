@@ -1067,6 +1067,15 @@ export interface components {
         };
         CheckLimitRequest: {
             customerRef: string;
+            /** @description SDK-only free-tool allowance. Authenticated by the provider secret key, so `cap` is the provider's own declaration, not customer input. */
+            freeAllowance?: {
+                cap?: number;
+                /** @description Free meter name. Must match `/^free-[a-z0-9-]+$/`. */
+                meter?: string;
+                /** @enum {string} */
+                scope?: "rolling_window" | "lifetime";
+                windowDays?: number;
+            };
             includeCheckoutSession?: boolean;
             meterName?: string;
             productRef: string;
@@ -1722,7 +1731,7 @@ export interface components {
              * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
              * @enum {string}
              */
-            paywallReason?: "activation_required" | "topup_required" | "payment_required";
+            paywallReason?: "activation_required" | "topup_required" | "payment_required" | "limit_reached";
             /** @description Display name of the active or default plan */
             planName?: string;
             /** @description Active plan reference when the customer already holds a purchase */

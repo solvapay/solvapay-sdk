@@ -149,14 +149,14 @@ module SolvaPay
     def shared_check_limits(key, action)
       @limits_inflight.run(key) do
         @mutex.synchronize { @limits_claims[key] = 0 }
-        @client.check_limits(
-          params: {
-            "customerRef" => action["customerRef"],
-            "productRef" => action["productRef"],
-            "meterName" => action["meterName"],
-            "includeCheckoutSession" => action["includeCheckoutSession"],
-          },
-        )
+        params = {
+          "customerRef" => action["customerRef"],
+          "productRef" => action["productRef"],
+          "meterName" => action["meterName"],
+          "includeCheckoutSession" => action["includeCheckoutSession"],
+        }
+        params["freeAllowance"] = action["freeAllowance"] unless action["freeAllowance"].nil?
+        @client.check_limits(params: params)
       end
     end
 

@@ -204,6 +204,31 @@ module SolvaPay
     NativeDispatch.call_sync("format_vat_summary_label", args)
   end
 
+  # Return whether two normalized free limits share the same cap.
+  # @return True when meter, cap, scope, and window days all match.
+  def self.free_limits_agree(a:, b:)
+    args = {} #: Hash[String, untyped]
+    args["a"] = a
+    args["b"] = b
+    NativeDispatch.call_sync("free_limits_agree", args)
+  end
+
+  # Return the frozen regex source for free-allowance meter names.
+  # @return The `^free-[a-z0-9-]+$` pattern string.
+  def self.free_meter_name_pattern
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("free_meter_name_pattern", args)
+  end
+
+  # Build the free-tool description suffix, including shared-meter names.
+  # @return The `Free tool — …` sentence, plus a share tail when names are present.
+  def self.free_tool_description_suffix(limit:, shared_with: nil)
+    args = {} #: Hash[String, untyped]
+    args["limit"] = limit
+    args["sharedWith"] = shared_with unless shared_with.nil?
+    NativeDispatch.call_sync("free_tool_description_suffix", args)
+  end
+
   # Return the postal or ZIP code field label for a country.
   # @return Field label string.
   def self.get_postal_code_field_label(country:)
@@ -350,6 +375,14 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["state"] = state
     NativeDispatch.call_sync("next_action_for", args)
+  end
+
+  # Normalize a free-tool allowance, defaulting and validating the meter.
+  # @return Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+  def self.normalize_free_limit(limit:)
+    args = {} #: Hash[String, untyped]
+    args["limit"] = limit
+    NativeDispatch.call_sync("normalize_free_limit", args)
   end
 
   # Project a PaywallError into the client-facing payload shape.

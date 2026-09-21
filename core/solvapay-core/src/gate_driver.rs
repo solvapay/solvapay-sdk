@@ -8,7 +8,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::customer_ref::ANONYMOUS_CUSTOMER_REF;
 use crate::customer_sync::{classify_customer_ref, CustomerRefKind};
+use crate::free_limit::{normalize_free_limit, FreeLimit, FreeLimitInput};
 use crate::helper_error::HelperErrorResult;
 use crate::limits::resolve_check_limits_params;
 use crate::paywall_decision::{
@@ -16,7 +18,7 @@ use crate::paywall_decision::{
 };
 use crate::paywall_gate::PaywallGate;
 use crate::serde_util::serialize_whole_f64;
-use crate::usage_request::{build_usage_request, mint_request_id};
+use crate::usage_request::{build_usage_request, mint_request_id, resolve_usage_extra, UsageExtra};
 
 /// Opaque-enough driver state passed back on every step.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -46,6 +48,12 @@ pub struct GateDriverState {
     /// Limits-cache TTL in ms (`limitsCacheTTLMs`, default 10000).
     #[serde(rename = "limitsCacheTTLMs")]
     pub limits_cache_ttl_ms: i64,
+    /// Normalized free-tool allowance when this gate is `registerFree`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_limit: Option<FreeLimit>,
+    /// Last allow consequence, used when tracking a successful handler.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_consequence: Option<AllowConsequence>,
 }
 
 /// Merchant-facing customer projection from the last limits check.
@@ -155,6 +163,9 @@ pub enum GateAction {
         /// Optional key to delete before the HTTP call (stale entry).
         #[serde(skip_serializing_if = "Option::is_none")]
         cache_delete_key: Option<String>,
+        /// Free-tool allowance forwarded as `freeAllowance`.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        free_allowance: Option<FreeLimit>,
     },
     /// Terminal allow. Host applies `cache` then proceeds.
     #[serde(rename_all = "camelCase")]
@@ -282,7 +293,19 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
         .get("limitsCacheTTLMs")
         .and_then(Value::as_i64)
         .unwrap_or(DEFAULT_LIMITS_CACHE_TTL_MS);
-    let resolved = resolve_check_limits_params(Some(&product), None, usage_type)?;
+    let free_limit = parse_free_limit(event.get("freeLimit"))?;
+    if free_limit.is_some() {
+        let resolved = customer_ref.trim();
+        if resolved.is_empty() || resolved == ANONYMOUS_CUSTOMER_REF {
+            return Err(HelperErrorResult::with_details(
+                "identity_required",
+                401,
+                "identity required",
+            ));
+        }
+    }
+    let resolved =
+        resolve_check_limits_params(Some(&product), None, usage_type, free_limit.as_ref())?;
     let mut state = GateDriverState {
         product: resolved.product_ref,
         meter_name: resolved.meter_name,
@@ -297,6 +320,8 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
             .map(str::to_owned),
         limits_key: None,
         limits_cache_ttl_ms,
+        free_limit,
+        last_consequence: None,
     };
     match classify_customer_ref(&customer_ref) {
         CustomerRefKind::NeedsEnsure => Ok(GateNextOutput {
@@ -376,6 +401,7 @@ fn check_limits_action(
             meter_name: state.meter_name.clone(),
             include_checkout_session: true,
             cache_delete_key,
+            free_allowance: state.free_limit.clone(),
         },
         state,
     })
@@ -437,6 +463,7 @@ fn on_handler_succeeded(
         &state.request_id,
         state.tool_name.as_deref(),
         None,
+        &usage_extra_for(&state, "success"),
     );
     Ok(GateNextOutput {
         state,
@@ -480,6 +507,7 @@ fn on_handler_failed(
         &state.request_id,
         state.tool_name.as_deref(),
         error_message,
+        &usage_extra_for(&state, "fail"),
     );
     Ok(GateNextOutput {
         state,
@@ -513,19 +541,24 @@ fn finish(
     let duration_ms = (now_ms - state.started_ms).max(0) as f64;
     let customer = customer_snapshot(&customer_ref, &limits);
     match decision {
-        crate::paywall_decision::PaywallOutcome::Allow => Ok(GateNextOutput {
-            action: GateAction::Allow {
-                customer_ref,
-                product: state.product.clone(),
-                meter_name: state.meter_name.clone(),
-                limits: limits.clone(),
-                customer,
-                consequence: allow_consequence(&limits),
-                cache,
-                request_id: state.request_id.clone(),
-            },
-            state,
-        }),
+        crate::paywall_decision::PaywallOutcome::Allow => {
+            let consequence = allow_consequence(&limits);
+            let mut state = state;
+            state.last_consequence = consequence;
+            Ok(GateNextOutput {
+                action: GateAction::Allow {
+                    customer_ref,
+                    product: state.product.clone(),
+                    meter_name: state.meter_name.clone(),
+                    limits: limits.clone(),
+                    customer,
+                    consequence,
+                    cache,
+                    request_id: state.request_id.clone(),
+                },
+                state,
+            })
+        }
         crate::paywall_decision::PaywallOutcome::Gate { gate } => {
             let request = build_usage_request(
                 &customer_ref,
@@ -537,6 +570,7 @@ fn finish(
                 &state.request_id,
                 state.tool_name.as_deref(),
                 None,
+                &usage_extra_for(&state, "paywall"),
             );
             Ok(GateNextOutput {
                 action: GateAction::Gate {
@@ -619,6 +653,25 @@ fn allow_consequence(limits: &Value) -> Option<AllowConsequence> {
 /// Cache key `{backend}:{product}:{meter}` used by the host lookup.
 fn limits_key(backend: &str, product: &str, meter: &str) -> String {
     format!("{backend}:{product}:{meter}")
+}
+
+/// Deserialize and normalize an optional `freeLimit` on a start event.
+fn parse_free_limit(value: Option<&Value>) -> Result<Option<FreeLimit>, HelperErrorResult> {
+    let Some(value) = value.filter(|v| !v.is_null()) else {
+        return Ok(None);
+    };
+    let input: FreeLimitInput = serde_json::from_value(value.clone())
+        .map_err(|err| HelperErrorResult::transport(format!("freeLimit: {err}")))?;
+    Ok(Some(normalize_free_limit(&input)?))
+}
+
+/// Usage metadata for the current gate state and handler outcome.
+fn usage_extra_for(state: &GateDriverState, outcome: &str) -> UsageExtra {
+    let consequence = state.last_consequence.map(|c| match c {
+        AllowConsequence::Overage => "overage",
+        AllowConsequence::Throttled => "throttled",
+    });
+    resolve_usage_extra(state.free_limit.as_ref(), outcome, consequence)
 }
 
 /// Deserialize driver state from the host payload.
@@ -1104,5 +1157,23 @@ mod tests {
         assert!(snap.throttled);
         assert!(!snap.overage);
         assert!(snap.is_credit_based);
+    }
+
+    #[test]
+    fn free_limit_rejects_anonymous() {
+        let err = gate_next(
+            None,
+            Some(&json!({
+                "kind": "start",
+                "customerRef": "anonymous",
+                "product": "prd_1",
+                "startedMs": 1_000,
+                "randomUnit": 0.5,
+                "freeLimit": { "cap": 5, "scope": "lifetime" }
+            })),
+        )
+        .unwrap_err();
+        assert_eq!(err.error, "identity_required");
+        assert_eq!(err.status, 401);
     }
 }

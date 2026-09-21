@@ -48,7 +48,8 @@
           "metadata": {
             "action": "requests",
             "requestId": "solvapay_1000_i",
-            "toolName": "search_flights"
+            "toolName": "search_flights",
+            "usageClass": "included"
           },
           "timestamp": "1970-01-01T00:00:01.040Z"
         }

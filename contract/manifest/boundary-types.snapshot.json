@@ -1029,6 +1029,20 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "free_allowance",
+            "wireName": "freeAllowance",
+            "rustdoc": "Free-tool allowance forwarded as `freeAllowance` on the request body.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "FreeLimit"
+            }
           }
         ]
       }
@@ -2008,6 +2022,162 @@
         ]
       }
     },
+    "FreeLimit": {
+      "module": "free_limit",
+      "rustdoc": "Normalized free-tool allowance.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "meter",
+            "wireName": "meter",
+            "rustdoc": "Lowercased meter matching [`FREE_METER_NAME_PATTERN`].",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "cap",
+            "wireName": "cap",
+            "rustdoc": "Positive call cap.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "scope",
+            "wireName": "scope",
+            "rustdoc": "Window kind.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "FreeLimitScope"
+            }
+          },
+          {
+            "rustName": "window_days",
+            "wireName": "windowDays",
+            "rustdoc": "Present when [`FreeLimitScope::RollingWindow`].",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          }
+        ]
+      }
+    },
+    "FreeLimitInput": {
+      "module": "free_limit",
+      "rustdoc": "Author-supplied free-limit input (meter optional; normalized later).",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "meter",
+            "wireName": "meter",
+            "rustdoc": "Optional meter; defaults to `free-requests`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "cap",
+            "wireName": "cap",
+            "rustdoc": "Positive call cap.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "scope",
+            "wireName": "scope",
+            "rustdoc": "Window kind.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "FreeLimitScope"
+            }
+          },
+          {
+            "rustName": "window_days",
+            "wireName": "windowDays",
+            "rustdoc": "Required when [`FreeLimitScope::RollingWindow`].",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          }
+        ]
+      }
+    },
+    "FreeLimitScope": {
+      "module": "free_limit",
+      "rustdoc": "Allowance window for a free-capped tool.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "rustName": "RollingWindow",
+            "wireName": "rolling_window",
+            "rustdoc": "Rolling window of `window_days` days.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Lifetime",
+            "wireName": "lifetime",
+            "rustdoc": "Lifetime cap, never resets.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
     "FreshLimitsEvaluation": {
       "module": "paywall_decision",
       "rustdoc": "Cache-miss path evaluation after `checkLimits` returns.",
@@ -2180,6 +2350,20 @@
                 "cfgFeature": null,
                 "ty": {
                   "kind": "string"
+                }
+              },
+              {
+                "rustName": "free_allowance",
+                "wireName": "freeAllowance",
+                "rustdoc": "Free-tool allowance forwarded as `freeAllowance`.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "FreeLimit"
                 }
               }
             ]
@@ -2976,6 +3160,34 @@
             "cfgFeature": null,
             "ty": {
               "kind": "i64"
+            }
+          },
+          {
+            "rustName": "free_limit",
+            "wireName": "freeLimit",
+            "rustdoc": "Normalized free-tool allowance when this gate is `registerFree`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "FreeLimit"
+            }
+          },
+          {
+            "rustName": "last_consequence",
+            "wireName": "lastConsequence",
+            "rustdoc": "Last allow consequence, used when tracking a successful handler.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "AllowConsequence"
             }
           }
         ]
@@ -7653,6 +7865,71 @@
         ]
       }
     },
+    "UsageClass": {
+      "module": "usage_request",
+      "rustdoc": "Usage-class tag written onto `trackUsage.metadata.usageClass`.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Included",
+            "wireName": "included",
+            "rustdoc": "Counted against the included allowance.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Overage",
+            "wireName": "overage",
+            "rustdoc": "Past the included cap under `onExceed: charge`.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "UsageExtra": {
+      "module": "usage_request",
+      "rustdoc": "Extra `trackUsage` metadata derived from a free limit and the outcome.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Free-meter name; omitted on paid tools.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "usage_class",
+            "wireName": "usageClass",
+            "rustdoc": "Paid success-path class; omitted on free tools and non-success outcomes.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "UsageClass"
+            }
+          }
+        ]
+      }
+    },
     "UsageRate": {
       "module": "pricing_options",
       "rustdoc": "What one metered unit costs, and whether that rate is the first of several bands.",
@@ -9495,6 +9772,113 @@
         }
       }
     },
+    "solvapay_core::free_limit::free_limits_agree": {
+      "name": "free_limits_agree",
+      "module": "free_limit",
+      "implTy": null,
+      "rustdoc": "True when two normalized free limits name the same cap.\n\n# Arguments\n\n* `a` - First limit.\n* `b` - Second limit.\n\n# Returns\n\n`true` when meter, cap, scope, and window days all match.",
+      "params": [
+        {
+          "rustName": "a",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimit"
+          }
+        },
+        {
+          "rustName": "b",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimit"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::free_limit::free_meter_name_pattern": {
+      "name": "free_meter_name_pattern",
+      "module": "free_limit",
+      "implTy": null,
+      "rustdoc": "Frozen regex source for free-meter names.\n\n# Returns\n\nThe `^free-[a-z0-9-]+$` pattern string.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::free_limit::free_tool_description_suffix": {
+      "name": "free_tool_description_suffix",
+      "module": "free_limit",
+      "implTy": null,
+      "rustdoc": "Description suffix appended to a free-capped MCP tool.\n\n# Arguments\n\n* `limit` - Normalized free limit.\n* `shared_with` - Other tool names already on this meter.\n\n# Returns\n\nThe `Free tool — …` sentence, plus a share tail when `shared_with` is\nnon-empty.",
+      "params": [
+        {
+          "rustName": "limit",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimit"
+          }
+        },
+        {
+          "rustName": "shared_with",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::free_limit::normalize_free_limit": {
+      "name": "normalize_free_limit",
+      "module": "free_limit",
+      "implTy": null,
+      "rustdoc": "Normalize a free-limit declaration.\n\nMeter defaults to `free-requests`, is lowercased, and must match\n[`FREE_METER_NAME_PATTERN`]. `rolling_window` requires `windowDays`.\n\n# Arguments\n\n* `limit` - Author-supplied free-limit fields.\n\n# Errors\n\nReturns a 400 helper error when the meter is invalid or `windowDays`\nis missing for a rolling window.",
+      "params": [
+        {
+          "rustName": "limit",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimitInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "FreeLimit"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::fuzz_oracle::EnvelopeFuzzInput::decode": {
       "name": "decode",
       "module": "fuzz_oracle",
@@ -10171,7 +10555,7 @@
       "name": "resolve_check_limits_params",
       "module": "limits",
       "implTy": null,
-      "rustdoc": "Validate check-limits query params (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n* `meter_name` - Optional meter; falsy → `\"requests\"`.\n\n# Returns\n\n[`Ok`] with resolved params, or [`Err`] with the frozen 400.",
+      "rustdoc": "Validate check-limits query params (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n* `meter_name` - Optional meter; falsy → `\"requests\"`.\n* `usage_type` - Alias used when `meter_name` is falsy.\n* `free_limit` - When present, its meter wins and is forwarded as `freeAllowance`.\n\n# Returns\n\n[`Ok`] with resolved params, or [`Err`] with the frozen 400.",
       "params": [
         {
           "rustName": "product_ref",
@@ -10195,6 +10579,15 @@
           "optional": true,
           "ty": {
             "kind": "string"
+          }
+        },
+        {
+          "rustName": "free_limit",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimit"
           }
         }
       ],
@@ -11670,7 +12063,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n3. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n4. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n5. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n6. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",
@@ -12968,7 +13361,7 @@
       "name": "build_usage_request",
       "module": "usage_request",
       "implTy": null,
-      "rustdoc": "Render the complete `trackUsage` body, including request ID and timestamp.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref billed for this event.\n* `product` - Product reference.\n* `meter_name` - Usage meter (`metadata.action`).\n* `outcome` - `success` / `fail` / `paywall`.\n* `duration_ms` - Elapsed milliseconds.\n* `now_ms` - Host clock (authoritative timestamp).\n* `request_id` - Id minted at decide time by [`mint_request_id`].\n* `tool_name` - Optional MCP tool that triggered the call.\n* `error_message` - Optional fail-path message.",
+      "rustdoc": "Render the complete `trackUsage` body, including request ID and timestamp.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref billed for this event.\n* `product` - Product reference.\n* `meter_name` - Usage meter (`metadata.action`).\n* `outcome` - `success` / `fail` / `paywall`.\n* `duration_ms` - Elapsed milliseconds.\n* `now_ms` - Host clock (authoritative timestamp).\n* `request_id` - Id minted at decide time by [`mint_request_id`].\n* `tool_name` - Optional MCP tool that triggered the call.\n* `error_message` - Optional fail-path message.\n* `extra` - Free-meter / usage-class metadata.",
       "params": [
         {
           "rustName": "customer_ref",
@@ -13041,6 +13434,15 @@
           "ty": {
             "kind": "string"
           }
+        },
+        {
+          "rustName": "extra",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "UsageExtra"
+          }
         }
       ],
       "return": {
@@ -13077,6 +13479,46 @@
         "optional": false,
         "ty": {
           "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::usage_request::resolve_usage_extra": {
+      "name": "resolve_usage_extra",
+      "module": "usage_request",
+      "implTy": null,
+      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage` / `throttled`); unused on free tools.",
+      "params": [
+        {
+          "rustName": "free_limit",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "named",
+            "name": "FreeLimit"
+          }
+        },
+        {
+          "rustName": "outcome",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "consequence",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "UsageExtra"
         }
       }
     },

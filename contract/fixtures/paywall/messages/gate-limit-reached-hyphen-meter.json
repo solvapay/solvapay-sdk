@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-limit-reached-hyphen-meter",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": { "kind": "limit_reached" },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "message": "",
+        "shortMessage": "Payment required",
+        "meterName": "api-calls",
+        "included": { "used": 3, "total": 3, "remaining": 0 }
+      }
+    }
+  },
+  "expect": {
+    "result": "You've used 3 of 3 included api calls this period. Call the `account` tool with view: 'checkout'."
+  }
+}

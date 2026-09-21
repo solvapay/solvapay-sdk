@@ -36,7 +36,8 @@
         "startedMs": 1000,
         "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
-        "limitsCacheTTLMs": 10000
+        "limitsCacheTTLMs": 10000,
+        "lastConsequence": "throttled"
       },
       "action": {
         "kind": "allow",

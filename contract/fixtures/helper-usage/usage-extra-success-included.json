@@ -1,0 +1,16 @@
+{
+  "suite": "helper-usage",
+  "case": "usage-extra-success-included",
+  "input": {
+    "fn": "resolveUsageExtra",
+    "args": {
+      "outcome": "success",
+      "consequence": "throttled"
+    }
+  },
+  "expect": {
+    "result": {
+      "usageClass": "included"
+    }
+  }
+}

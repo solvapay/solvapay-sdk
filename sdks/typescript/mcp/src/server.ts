@@ -21,11 +21,8 @@ import {
 } from './internal/buildMcpServer'
 
 export type { HideToolsByAudienceConfig } from './internal/buildMcpServer'
-import {
-  registerPayableTool,
-  type InputSchemaOption,
-  type RegisterPayableToolOptions,
-} from './registerPayableTool'
+import { bindAdditionalTools } from './bindAdditionalTools'
+import { type InputSchemaOption, type RegisterPayableToolOptions } from './registerPayableTool'
 
 /**
  * Callback fired from the `additionalTools` hook with helpers bound for
@@ -46,6 +43,19 @@ export interface AdditionalToolsContext {
   registerPayable: <InputSchema extends InputSchemaOption = undefined, TData = unknown>(
     name: string,
     options: Omit<RegisterPayableToolOptions<InputSchema, TData>, 'solvaPay' | 'product'> & {
+      product?: string
+    },
+  ) => void
+  /**
+   * `registerFreeTool` bound like `registerPayable`, with a shared-meter
+   * cap check across tools registered in this hook.
+   */
+  registerFree: <InputSchema extends InputSchemaOption = undefined, TData = unknown>(
+    name: string,
+    options: Omit<
+      import('./registerFreeTool').RegisterFreeToolOptions<InputSchema, TData>,
+      'solvaPay' | 'product' | 'sharedWith'
+    > & {
       product?: string
     },
   ) => void
@@ -121,14 +131,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
 
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
-    const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
-      registerPayableTool(server, name, {
-        solvaPay,
-        ...opts,
-        product: opts.product ?? productRef,
-      })
-    }
-    additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
+    bindAdditionalTools(server, solvaPay, productRef, resourceUri, additionalTools)
   }
 
   const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)

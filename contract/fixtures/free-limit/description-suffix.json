@@ -1,0 +1,18 @@
+{
+  "suite": "free-limit",
+  "case": "description-suffix",
+  "input": {
+    "fn": "freeToolDescriptionSuffix",
+    "args": {
+      "limit": {
+        "meter": "free-requests",
+        "cap": 10,
+        "scope": "lifetime"
+      },
+      "sharedWith": []
+    }
+  },
+  "expect": {
+    "result": "Free tool — 10 calls per lifetime, then a plan is required. Call `account` for remaining usage."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "suite": "paywall",
+  "case": "reason-limit-reached",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "remaining": 5,
+        "paywallReason": "limit_reached"
+      }
+    }
+  },
+  "expect": { "result": { "kind": "limit_reached" } }
+}

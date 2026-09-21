@@ -704,7 +704,7 @@ fn helper_error_alias(sym: Option<&IrBindingSymbol>) -> &'static str {
         Some("activation") => "ActivatePlanValidationError",
         Some("payment") => "PaymentHelperError",
         Some("checkout") => "CheckoutHelperError",
-        Some("limits") => "LimitsHelperError",
+        Some("limits") | Some("free-limit") => "LimitsHelperError",
         Some("plans") => "PlansHelperError",
         Some("product") => "ProductHelperError",
         Some("renewal") => "RenewalHelperError",
@@ -716,6 +716,7 @@ fn helper_error_alias(sym: Option<&IrBindingSymbol>) -> &'static str {
 fn result_alias(sym: Option<&IrBindingSymbol>) -> String {
     match sym.and_then(|s| s.section.as_deref()) {
         Some("limits") => "CheckLimitsParams | LimitsHelperError".into(),
+        Some("free-limit") => "FreeLimit | LimitsHelperError".into(),
         Some("renewal") => "Record<string, unknown> | RenewalHelperError".into(),
         Some(PRODUCT_READINESS_SECTION) => "void".into(),
         _ => "unknown".into(),

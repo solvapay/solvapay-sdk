@@ -150,6 +150,11 @@ fn core_root_reexport_names() -> BTreeSet<&'static str> {
         "PaywallOutcome",
         "CustomerSnapshot",
         "AllowConsequence",
+        "FreeLimit",
+        "FreeLimitInput",
+        "FreeLimitScope",
+        "UsageExtra",
+        "UsageClass",
     ]
     .into_iter()
     .collect()

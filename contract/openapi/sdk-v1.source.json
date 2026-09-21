@@ -1508,6 +1508,35 @@
             "minLength": 1,
             "type": "string"
           },
+          "freeAllowance": {
+            "description": "SDK-only free-tool allowance. Authenticated by the provider secret key, so `cap` is the provider's own declaration, not customer input.",
+            "properties": {
+              "cap": {
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "meter": {
+                "description": "Free meter name. Must match `/^free-[a-z0-9-]+$/`.",
+                "minLength": 1,
+                "pattern": "^free-[a-z0-9-]+$",
+                "type": "string"
+              },
+              "scope": {
+                "enum": [
+                  "rolling_window",
+                  "lifetime"
+                ],
+                "type": "string"
+              },
+              "windowDays": {
+                "exclusiveMinimum": false,
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
           "includeCheckoutSession": {
             "type": "boolean"
           },
@@ -5420,7 +5449,8 @@
             "enum": [
               "activation_required",
               "topup_required",
-              "payment_required"
+              "payment_required",
+              "limit_reached"
             ],
             "type": "string"
           },

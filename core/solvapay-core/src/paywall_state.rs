@@ -272,14 +272,16 @@ pub struct GateContent {
 ///
 /// Precedence mirrors TypeScript `classifyPaywallState`:
 /// 1. `activation_required == Some(true)` **or** `paywall_reason == "activation_required"`.
-/// 2. `paywall_reason == "topup_required"` — backend stays authoritative for
+/// 2. `paywall_reason == "limit_reached"` — free-allowance exhaustion (no
+///    purchase / plan ref) must not fall through to `upgrade_required`.
+/// 3. `paywall_reason == "topup_required"` — backend stays authoritative for
 ///    credit-based denials (same rule as Managed MCP).
-/// 3. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
+/// 4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
 ///    `Some(true)`.
-/// 4. Credit-field presence **and** a real shortfall (`balance < cost`), then
+/// 5. Credit-field presence **and** a real shortfall (`balance < cost`), then
 ///    `balance == 0`, then `cost` unknown && `remaining == 0`.
-/// 5. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.
-/// 6. Floor: never `upgrade_required` when credit fields or a purchase are
+/// 6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.
+/// 7. Floor: never `upgrade_required` when credit fields or a purchase are
 ///    present. Everything else (including `None` limits) → `upgrade_required`.
 ///
 /// # Arguments
@@ -304,6 +306,10 @@ pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
         || limits.paywall_reason.as_deref() == Some("activation_required")
     {
         return PaywallState::ActivationRequired;
+    }
+
+    if limits.paywall_reason.as_deref() == Some("limit_reached") {
+        return PaywallState::LimitReached;
     }
 
     if limits.paywall_reason.as_deref() == Some("topup_required") {
@@ -607,6 +613,26 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
 
     match state {
         PaywallState::LimitReached => {
+            if is_free_meter(gate.meter_name.as_deref()) {
+                let used_line = match gate.included.as_ref().map(|included| included.total) {
+                    Some(total) => format!(
+                        "You've used all {} {} for this period.",
+                        format_count(total),
+                        meter_label(gate.meter_name.as_deref())
+                    ),
+                    None => format!(
+                        "You've used all {} for this period.",
+                        meter_label(gate.meter_name.as_deref())
+                    ),
+                };
+                let switch_line = match &ladder {
+                    Some(ladder) => {
+                        format!(" Pick a plan to keep going: {ladder}. {}", account_usage_recovery())
+                    }
+                    None => recover_clause(url, "keep going", Some("checkout"), "Open checkout"),
+                };
+                return format!("{used_line}{switch_line}");
+            }
             let price = unit_price_display(gate);
             let used_line = match &gate.included {
                 Some(included) => format!(
@@ -756,9 +782,17 @@ fn has_active_plan(gate: &GateContent) -> bool {
             .is_some_and(|value| !value.is_empty())
 }
 
+/// True when the meter is a `registerFree` free-allowance meter.
+fn is_free_meter(meter_name: Option<&str>) -> bool {
+    meter_name.is_some_and(|name| name.starts_with("free-"))
+}
+
 /// Human meter name, or `"units"` when the backend omitted one.
 fn meter_label(meter_name: Option<&str>) -> String {
-    meter_name.map_or_else(|| "units".to_owned(), |name| name.replace('_', " "))
+    meter_name.map_or_else(
+        || "units".to_owned(),
+        |name| name.replace(['_', '-'], " "),
+    )
 }
 
 /// Formatted per-unit price from gate recovery fields.

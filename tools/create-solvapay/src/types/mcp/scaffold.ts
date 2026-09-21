@@ -12,33 +12,13 @@
  */
 
 import { spawn } from 'node:child_process'
-import { readFileSync } from 'node:fs'
 import { mkdir, readdir, readFile, writeFile, copyFile, stat, chmod } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { PackageManager } from '@solvapay/init'
 import { LANGUAGE_RUNTIME_DEPS } from '@solvapay/init'
 export { resolveLatestSolvapayVersions } from '@solvapay/init'
 export type { ResolveLatestVersionsOptions } from '@solvapay/init'
-
-function resolvePackageRoot(startFile: string): string {
-  let dir = dirname(startFile)
-  while (true) {
-    const parent = dirname(dir)
-    if (parent === dir) break
-    try {
-      const raw = readFileSync(join(dir, 'package.json'), 'utf8')
-      const pkg = JSON.parse(raw) as { name?: string }
-      if (pkg.name === 'create-solvapay') return dir
-    } catch {
-      // keep walking up
-    }
-    dir = parent
-  }
-  throw new Error('Could not locate create-solvapay package root')
-}
-
-const PACKAGE_ROOT = resolvePackageRoot(fileURLToPath(import.meta.url))
+import { PACKAGE_ROOT } from '../../package-root'
 export const MCP_TS_TEMPLATE_ROOT = join(PACKAGE_ROOT, 'templates', 'mcp', 'ts')
 export const MCP_SHARED_SCRIPTS_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_shared', 'scripts')
 export const BASE_TEMPLATE_DIR = join(MCP_TS_TEMPLATE_ROOT, '_base')
@@ -403,7 +383,7 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out(`   Cursor — add to \`~/.cursor/mcp.json\` (or the workspace's \`.cursor/mcp.json\`):`)
   out('     {')
   out('       "mcpServers": {')
-  out(`         "${projectName}": { "url": "${workerUrl}/" }`)
+  out(`         "${projectName}": { "url": "${workerUrl}/mcp" }`)
   out('       }')
   out('     }')
   out('')
@@ -412,20 +392,20 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out('       "mcpServers": {')
   out(`         "${projectName}": {`)
   out('           "command": "npx",')
-  out(`           "args": ["mcp-remote", "${workerUrl}/"]`)
+  out(`           "args": ["mcp-remote", "${workerUrl}/mcp"]`)
   out('         }')
   out('       }')
   out('     }')
   out('')
   out('   ChatGPT (Custom Connectors) — add a Custom MCP Connector with:')
-  out(`     URL: ${workerUrl}/`)
+  out(`     URL: ${workerUrl}/mcp`)
   out('     Note: ChatGPT needs a reachable (deployed or tunneled) URL —')
   out('     localhost only works for native-scheme hosts. Use `npm run deploy`')
   out('     and point ChatGPT at the *.workers.dev URL once available.')
   out('')
   out('   MCP Inspector — explore tools locally:')
   out('     npx @modelcontextprotocol/inspector')
-  out(`     (set the server URL to ${workerUrl}/)`)
+  out(`     (set the server URL to ${workerUrl}/mcp)`)
   out('')
 }
 

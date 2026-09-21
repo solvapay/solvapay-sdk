@@ -71,6 +71,12 @@ const _: fn(&Map<String, Value>, &str) -> String =
 const _: fn(&str) -> bool = solvapay_core::customer_sync::is_email_conflict;
 const _: fn(Option<&Value>, Option<&Value>) -> Result<EnsureCustomerNextOutput, HelperErrorResult> =
     solvapay_core::ensure_customer::ensure_customer_next;
+const _: fn(&FreeLimit, &FreeLimit) -> bool = solvapay_core::free_limit::free_limits_agree;
+const _: fn() -> String = solvapay_core::free_limit::free_meter_name_pattern;
+const _: fn(&FreeLimit, Option<&Value>) -> String =
+    solvapay_core::free_limit::free_tool_description_suffix;
+const _: fn(&FreeLimitInput) -> Result<FreeLimit, HelperErrorResult> =
+    solvapay_core::free_limit::normalize_free_limit;
 const _: fn(&str, Option<&Value>) -> CustomerSnapshot =
     solvapay_core::gate_driver::build_customer_snapshot;
 const _: fn(Option<&Value>, Option<&Value>) -> Result<GateNextOutput, HelperErrorResult> =
@@ -92,6 +98,7 @@ const _: fn(
     Option<&str>,
     Option<&str>,
     Option<&str>,
+    Option<&FreeLimit>,
 ) -> Result<CheckLimitsParams, HelperErrorResult> =
     solvapay_core::limits::resolve_check_limits_params;
 const _: fn(Option<&Value>) -> Result<String, HelperErrorResult> =
@@ -239,6 +246,8 @@ const _: fn(Option<&Value>, Option<&Value>) -> Result<TopupProcessNextOutput, He
 const _: fn(Option<&Value>, Option<&Value>) -> UsageSnapshot =
     solvapay_core::usage::project_usage_snapshot;
 const _: fn(&str) -> bool = solvapay_core::usage::should_retry_usage_error;
+const _: fn(Option<&FreeLimit>, &str, Option<&str>) -> UsageExtra =
+    solvapay_core::usage_request::resolve_usage_extra;
 const _: fn(&str, &str, &str, i64) -> Result<Value, WebhookError> =
     solvapay_core::webhook::verify_webhook;
 const _: () = assert_boundary::<ActivatePlanDto>();

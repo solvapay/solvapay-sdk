@@ -909,9 +909,9 @@ const GO_DECISIONS_HEADER: &str = r#"//! WASI guest decision / paywall / retry s
 
 use serde_json::Value;
 use solvapay_core::{
-    AuthResolutionInput, Backoff, GateContent, PaymentIntentSource, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy, RouteErrorInput,
-    RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    AuthResolutionInput, Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
+    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
 
 use crate::abi::{pack, read_string};
@@ -1633,6 +1633,17 @@ fn solvapay_core_fn_names<'a>(
     fns
 }
 
+fn solvapay_core_typed_names(ir: &Ir, artifact: IrBindingArtifact) -> Vec<String> {
+    let mut names: Vec<String> = symbols_for(ir, artifact)
+        .iter()
+        .flat_map(|sym| sym.args.iter().filter_map(|arg| arg.typed_as.clone()))
+        .filter(|name| name.chars().next().is_some_and(|c| c.is_ascii_uppercase()))
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
 fn solvapay_core_fn_import_block(ir: &Ir, artifact: IrBindingArtifact) -> String {
     let fns = solvapay_core_fn_names(ir, artifact, &[]);
     if fns.is_empty() {
@@ -1669,6 +1680,11 @@ fn with_merged_core_imports(
     for name in derived {
         if !idents.iter().any(|ident| ident == name) {
             idents.push(name.to_string());
+        }
+    }
+    for name in solvapay_core_typed_names(ir, artifact) {
+        if !idents.iter().any(|ident| ident == &name) {
+            idents.push(name);
         }
     }
     idents.sort();

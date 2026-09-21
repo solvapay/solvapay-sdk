@@ -501,14 +501,15 @@ class SolvaPay:
                 delete_key = action.get("cacheDeleteKey")
                 if isinstance(delete_key, str):
                     self._facade._limits_cache.pop(delete_key, None)
-                args_json = json.dumps(
-                    {
-                        "customerRef": action.get("customerRef"),
-                        "productRef": action.get("productRef"),
-                        "meterName": action.get("meterName"),
-                        "includeCheckoutSession": bool(action.get("includeCheckoutSession")),
-                    }
-                )
+                payload: dict[str, Any] = {
+                    "customerRef": action.get("customerRef"),
+                    "productRef": action.get("productRef"),
+                    "meterName": action.get("meterName"),
+                    "includeCheckoutSession": bool(action.get("includeCheckoutSession")),
+                }
+                if action.get("freeAllowance") is not None:
+                    payload["freeAllowance"] = action.get("freeAllowance")
+                args_json = json.dumps(payload)
                 client = self._facade.get_api_client()
                 dedup_key = (
                     f"{action.get('customerRef')}:{action.get('productRef')}:"

@@ -1,0 +1,20 @@
+{
+  "suite": "free-limit",
+  "case": "normalize-default-meter",
+  "input": {
+    "fn": "normalizeFreeLimit",
+    "args": {
+      "limit": {
+        "cap": 10,
+        "scope": "lifetime"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meter": "free-requests",
+      "cap": 10,
+      "scope": "lifetime"
+    }
+  }
+}

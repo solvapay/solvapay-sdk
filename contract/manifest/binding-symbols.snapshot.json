@@ -3951,6 +3951,162 @@
       "coreCall": "format_vat_summary_label",
       "clientCallArgs": []
     },
+    "freeLimitsAgree": {
+      "core": "solvapay_core::free_limit::free_limits_agree",
+      "names": {
+        "ts": "freeLimitsAgree",
+        "py": "free_limits_agree",
+        "rb": "free_limits_agree",
+        "go": "FreeLimitsAgree",
+        "rust": "free_limits_agree",
+        "c": "freeLimitsAgree"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "freeLimitsAgree"
+      },
+      "args": [
+        {
+          "name": "a",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "FreeLimit",
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "b",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "FreeLimit",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 3,
+      "section": "free-limit",
+      "doc": "Binding for `freeLimitsAgree`.",
+      "docWasm": null,
+      "rustFnName": "free_limits_agree_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&a",
+          "&b"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "free_limits_agree",
+      "clientCallArgs": []
+    },
+    "freeMeterNamePattern": {
+      "core": "solvapay_core::free_limit::free_meter_name_pattern",
+      "names": {
+        "ts": "freeMeterNamePattern",
+        "py": "free_meter_name_pattern",
+        "rb": "free_meter_name_pattern",
+        "go": "FreeMeterNamePattern",
+        "rust": "free_meter_name_pattern",
+        "c": "freeMeterNamePattern"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "freeMeterNamePattern"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 1,
+      "section": "free-limit",
+      "doc": "Binding for `freeMeterNamePattern`.",
+      "docWasm": null,
+      "rustFnName": "free_meter_name_pattern_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "free_meter_name_pattern",
+      "clientCallArgs": []
+    },
+    "freeToolDescriptionSuffix": {
+      "core": "solvapay_core::free_limit::free_tool_description_suffix",
+      "names": {
+        "ts": "freeToolDescriptionSuffix",
+        "py": "free_tool_description_suffix",
+        "rb": "free_tool_description_suffix",
+        "go": "FreeToolDescriptionSuffix",
+        "rust": "free_tool_description_suffix",
+        "c": "freeToolDescriptionSuffix"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "freeToolDescriptionSuffix"
+      },
+      "args": [
+        {
+          "name": "limit",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "FreeLimit",
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "sharedWith",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "shared_with"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 4,
+      "section": "free-limit",
+      "doc": "Binding for `freeToolDescriptionSuffix`.",
+      "docWasm": null,
+      "rustFnName": "free_tool_description_suffix_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&limit",
+          "shared_with.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "free_tool_description_suffix",
+      "clientCallArgs": []
+    },
     "gateNext": {
       "core": "solvapay_core::gate_driver::gate_next",
       "names": {
@@ -6251,6 +6407,55 @@
       "coreCall": "normalize_cancel_response",
       "clientCallArgs": []
     },
+    "normalizeFreeLimit": {
+      "core": "solvapay_core::free_limit::normalize_free_limit",
+      "names": {
+        "ts": "normalizeFreeLimit",
+        "py": "normalize_free_limit",
+        "rb": "normalize_free_limit",
+        "go": "NormalizeFreeLimit",
+        "rust": "normalize_free_limit",
+        "c": "normalizeFreeLimit"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "normalizeFreeLimit"
+      },
+      "args": [
+        {
+          "name": "limit",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "FreeLimitInput",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 2,
+      "section": "free-limit",
+      "doc": "Binding for `normalizeFreeLimit`.",
+      "docWasm": null,
+      "rustFnName": "normalize_free_limit_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "&limit"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "normalize_free_limit",
+      "clientCallArgs": []
+    },
     "normalizeReactivateResponse": {
       "core": "solvapay_core::renewal::normalize_reactivate_response",
       "names": {
@@ -7333,6 +7538,16 @@
           "typedAs": null,
           "typedStyle": "turbofish",
           "local": "usage_type"
+        },
+        {
+          "name": "freeLimit",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalTyped",
+          "typedAs": "FreeLimit",
+          "typedStyle": "turbofish",
+          "local": "free_limit"
         }
       ],
       "splitPathRefs": [],
@@ -7342,7 +7557,7 @@
       "artifact": "decisions",
       "emitOrder": 26,
       "section": "limits",
-      "doc": "Binding for `resolveCheckLimitsParams`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.",
+      "doc": "Binding for `resolveCheckLimitsParams`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is freeLimit.meter, then meterName, then usageType, then `requests`.",
       "docWasm": "Binding for `resolveCheckLimitsParams`.",
       "rustFnName": "resolve_check_limits_params_binding",
       "call": {
@@ -7351,7 +7566,8 @@
         "args": [
           "product_ref.as_deref()",
           "meter_name.as_deref()",
-          "usage_type.as_deref()"
+          "usage_type.as_deref()",
+          "free_limit.as_ref()"
         ]
       },
       "verbatimBody": null,
@@ -7987,6 +8203,76 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "resolve_tax_treatment_note",
+      "clientCallArgs": []
+    },
+    "resolveUsageExtra": {
+      "core": "solvapay_core::usage_request::resolve_usage_extra",
+      "names": {
+        "ts": "resolveUsageExtra",
+        "py": "resolve_usage_extra",
+        "rb": "resolve_usage_extra",
+        "go": "ResolveUsageExtra",
+        "rust": "resolve_usage_extra",
+        "c": "resolveUsageExtra"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "freeLimit",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalTyped",
+          "typedAs": "FreeLimit",
+          "typedStyle": "turbofish",
+          "local": "free_limit"
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "consequence",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 27,
+      "section": "usage",
+      "doc": "Binding for `resolveUsageExtra`.",
+      "docWasm": null,
+      "rustFnName": "resolve_usage_extra_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "free_limit.as_ref()",
+          "&outcome",
+          "consequence.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_usage_extra",
       "clientCallArgs": []
     },
     "retryNextDelayMs": {

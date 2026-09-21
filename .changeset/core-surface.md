@@ -89,6 +89,9 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `formatPrice`
 - added symbol `formatSubtotalLabel`
 - added symbol `formatVatSummaryLabel`
+- added symbol `freeLimitsAgree`
+- added symbol `freeMeterNamePattern`
+- added symbol `freeToolDescriptionSuffix`
 - added symbol `gateNext`
 - added symbol `getAutoRecharge`
 - added symbol `getBusinessCountryOptions`
@@ -139,6 +142,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `minorUnitsPerMajor`
 - added symbol `nextActionFor`
 - added symbol `normalizeCancelResponse`
+- added symbol `normalizeFreeLimit`
 - added symbol `normalizeReactivateResponse`
 - added symbol `overlayClaimedLimits`
 - added symbol `paywallErrorToClientPayload`
@@ -169,6 +173,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `resolveSellerIdentityDisplay`
 - added symbol `resolveTaxBehavior`
 - added symbol `resolveTaxTreatmentNote`
+- added symbol `resolveUsageExtra`
 - added symbol `retryNextDelayMs`
 - added symbol `saveAutoRecharge`
 - added symbol `selectActivePlanPurchase`
@@ -228,6 +233,9 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added boundary type `EnsureCustomerNextOutput`
 - added boundary type `EnsureCustomerState`
 - added boundary type `EnsurePending`
+- added boundary type `FreeLimit`
+- added boundary type `FreeLimitInput`
+- added boundary type `FreeLimitScope`
 - added boundary type `FreshLimitsEvaluation`
 - added boundary type `GateAction`
 - added boundary type `GateCacheOp`
@@ -299,6 +307,8 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added boundary type `TopupProcessNextOutput`
 - added boundary type `TopupProcessOutcome`
 - added boundary type `TopupProcessState`
+- added boundary type `UsageClass`
+- added boundary type `UsageExtra`
 - added boundary type `UsageRate`
 - added boundary type `UsageSnapshot`
 - added boundary type `ValidateBusinessDetailsResult`
@@ -988,6 +998,27 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `formatVatSummaryLabel` on facade `typescript`
 - exposed `formatVatSummaryLabel` on facade `wasm-browser`
 - exposed `formatVatSummaryLabel` on facade `wasm-edge`
+- exposed `freeLimitsAgree` on facade `go`
+- exposed `freeLimitsAgree` on facade `node-native`
+- exposed `freeLimitsAgree` on facade `python`
+- exposed `freeLimitsAgree` on facade `ruby`
+- exposed `freeLimitsAgree` on facade `rust`
+- exposed `freeLimitsAgree` on facade `typescript`
+- exposed `freeLimitsAgree` on facade `wasm-edge`
+- exposed `freeMeterNamePattern` on facade `go`
+- exposed `freeMeterNamePattern` on facade `node-native`
+- exposed `freeMeterNamePattern` on facade `python`
+- exposed `freeMeterNamePattern` on facade `ruby`
+- exposed `freeMeterNamePattern` on facade `rust`
+- exposed `freeMeterNamePattern` on facade `typescript`
+- exposed `freeMeterNamePattern` on facade `wasm-edge`
+- exposed `freeToolDescriptionSuffix` on facade `go`
+- exposed `freeToolDescriptionSuffix` on facade `node-native`
+- exposed `freeToolDescriptionSuffix` on facade `python`
+- exposed `freeToolDescriptionSuffix` on facade `ruby`
+- exposed `freeToolDescriptionSuffix` on facade `rust`
+- exposed `freeToolDescriptionSuffix` on facade `typescript`
+- exposed `freeToolDescriptionSuffix` on facade `wasm-edge`
 - exposed `gateNext` on facade `go`
 - exposed `gateNext` on facade `node-native`
 - exposed `gateNext` on facade `python`
@@ -1385,6 +1416,13 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `normalizeCancelResponse` on facade `ruby`
 - exposed `normalizeCancelResponse` on facade `typescript`
 - exposed `normalizeCancelResponse` on facade `wasm-edge`
+- exposed `normalizeFreeLimit` on facade `go`
+- exposed `normalizeFreeLimit` on facade `node-native`
+- exposed `normalizeFreeLimit` on facade `python`
+- exposed `normalizeFreeLimit` on facade `ruby`
+- exposed `normalizeFreeLimit` on facade `rust`
+- exposed `normalizeFreeLimit` on facade `typescript`
+- exposed `normalizeFreeLimit` on facade `wasm-edge`
 - exposed `normalizeReactivateResponse` on facade `go`
 - exposed `normalizeReactivateResponse` on facade `node-native`
 - exposed `normalizeReactivateResponse` on facade `python`
@@ -1597,6 +1635,12 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `resolveTaxTreatmentNote` on facade `typescript`
 - exposed `resolveTaxTreatmentNote` on facade `wasm-browser`
 - exposed `resolveTaxTreatmentNote` on facade `wasm-edge`
+- exposed `resolveUsageExtra` on facade `go`
+- exposed `resolveUsageExtra` on facade `node-native`
+- exposed `resolveUsageExtra` on facade `python`
+- exposed `resolveUsageExtra` on facade `ruby`
+- exposed `resolveUsageExtra` on facade `typescript`
+- exposed `resolveUsageExtra` on facade `wasm-edge`
 - exposed `retryNextDelayMs` on facade `go`
 - exposed `retryNextDelayMs` on facade `node-native`
 - exposed `retryNextDelayMs` on facade `python`

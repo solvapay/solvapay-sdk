@@ -63,6 +63,7 @@ export type AttachBusinessDetailsResult = components['schemas']['AttachBusinessD
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
+export type { FreeLimit, FreeLimitInput, FreeLimitScope } from '@solvapay/core'
 
 /**
  * Extended CustomerResponse with proper field mapping

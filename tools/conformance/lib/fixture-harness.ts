@@ -143,6 +143,11 @@ import {
   projectUsageSnapshot,
   topupProcessNext,
   resolveCheckLimitsParams,
+  resolveUsageExtra,
+  normalizeFreeLimit,
+  freeLimitsAgree,
+  freeToolDescriptionSuffix,
+  freeMeterNamePattern,
   resolveProductRef,
   requireProductRef,
   resolvePurchaseCustomerRef,
@@ -520,8 +525,9 @@ function isPaywallStructuredContentValue(value: unknown): value is PaywallStruct
     typeof kind === 'string' &&
     (PAYWALL_GATE_KINDS as readonly string[]).includes(kind) &&
     typeof Reflect.get(value, 'product') === 'string' &&
-    typeof Reflect.get(value, 'checkoutUrl') === 'string' &&
-    typeof Reflect.get(value, 'message') === 'string'
+    typeof Reflect.get(value, 'message') === 'string' &&
+    (Reflect.get(value, 'checkoutUrl') === undefined ||
+      typeof Reflect.get(value, 'checkoutUrl') === 'string')
   )
 }
 
@@ -2432,8 +2438,47 @@ export function createDefaultRegistry(): FixtureRegistry {
           'resolveCheckLimitsParams args.productRef/meterName/usageType must be string, null, or omitted',
         )
       }
-      return resolveCheckLimitsParams(args.productRef, args.meterName, args.usageType)
+      return resolveCheckLimitsParams(
+        args.productRef,
+        args.meterName,
+        args.usageType,
+        args.freeLimit as never,
+      )
     },
+  })
+
+  registry.register('resolveUsageExtra', {
+    id: 'core',
+    invoke: args =>
+      resolveUsageExtra(
+        (args.freeLimit ?? null) as never,
+        String(args.outcome ?? ''),
+        args.consequence == null ? null : String(args.consequence),
+      ),
+  })
+
+  registry.register('normalizeFreeLimit', {
+    id: 'core',
+    invoke: args => normalizeFreeLimit((args.limit ?? args) as never),
+  })
+
+  registry.register('freeLimitsAgree', {
+    id: 'core',
+    invoke: args => freeLimitsAgree(args.a as never, args.b as never),
+  })
+
+  registry.register('freeToolDescriptionSuffix', {
+    id: 'core',
+    invoke: args =>
+      freeToolDescriptionSuffix(
+        args.limit as never,
+        Array.isArray(args.sharedWith) ? (args.sharedWith as string[]) : [],
+      ),
+  })
+
+  registry.register('freeMeterNamePattern', {
+    id: 'core',
+    invoke: () => freeMeterNamePattern(),
   })
 
   registry.register('validateListPlansParams', {

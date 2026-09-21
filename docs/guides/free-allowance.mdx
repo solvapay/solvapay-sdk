@@ -1,0 +1,110 @@
+---
+title: "Add a free allowance to MCP tools"
+description: "Cap otherwise-free MCP tools per customer in code, share one allowance across tools, and emit the existing paywall gate when the cap is reached."
+---
+
+Use `registerFree` when a tool should stay free up to a per-customer cap you declare in code. Exhaustion uses the same paywall gate as a paid tool. This path is TypeScript SDK only. Managed MCP public tools stay unlimited.
+
+## Who this is for
+
+Teams that register MCP tools with `createSolvaPayMcpServer` and want a preview, trial, or otherwise-free tool that still converts into a paid plan when the cap is reached.
+
+## What you will achieve
+
+- A free MCP tool with a per-customer cap declared next to the tool
+- One shared allowance when several tools name the same free meter
+- The existing paywall gate on exhaustion, so hosts recover the same way they recover a paid tool
+
+## Prerequisites
+
+- A product with at least one paid plan so the gate can show a plan ladder
+- An identified customer (OAuth, or your own `getCustomerRef`). Unidentified callers fail with `401` / `identity_required` — there is no anonymous bucket
+
+## Register a capped free tool
+
+Call `registerFree` inside `additionalTools`. Omitting `meter` defaults to `free-requests`.
+
+```typescript
+additionalTools: ({ registerFree }) => {
+  registerFree('search_docs', {
+    description: 'Search public docs.',
+    schema: { query: z.string().min(1) },
+    limit: { cap: 100, scope: 'rolling_window', windowDays: 30 },
+    handler: async ({ query }, ctx) => ctx.respond(await searchDocs(query)),
+  })
+}
+```
+
+The cap lives in your code. There is no Console control for it. `registerFree` counts usage and, on exhaustion, returns the gate before your handler runs — you do not add cap arithmetic in the handler.
+
+`scope` is `rolling_window` (pass `windowDays`) or `lifetime` (anchored at the customer’s `createdAt`). `billing_period` is not valid here because a free-tool caller typically has no purchase cycle to anchor.
+
+## Share one allowance across tools
+
+Naming the same `limit.meter` is the whole sharing mechanism. Two tools on `free-previews` draw from one counter. A tool that names its own meter gets a private allowance.
+
+```typescript
+const PREVIEW_ALLOWANCE = {
+  meter: 'free-previews',
+  cap: 5,
+  scope: 'rolling_window',
+  windowDays: 30,
+} as const
+
+additionalTools: ({ registerFree }) => {
+  registerFree('preview_market_quote', {
+    description: 'Price-only quote preview.',
+    schema: { symbol: z.string() },
+    limit: PREVIEW_ALLOWANCE,
+    handler: async ({ symbol }, ctx) => ctx.respond(await previewQuote(symbol)),
+  })
+
+  registerFree('preview_company_profile', {
+    description: 'Name and sector preview.',
+    schema: { symbol: z.string() },
+    limit: PREVIEW_ALLOWANCE,
+    handler: async ({ symbol }, ctx) => ctx.respond(await previewProfile(symbol)),
+  })
+}
+```
+
+The meter name must match `/^free-[a-z0-9-]+$/`. It is a naming convention, not a Meter you create in the Console. Do not register a billable meter with a `free-` name — the backend rejects that collision.
+
+If two tools name the same meter but disagree on `cap`, `scope`, or `windowDays`, registration throws. Hand the same object to both.
+
+Per-tool attribution still rides `metadata.toolName` on each usage event, so **Usage** in the Console can still break the shared allowance down by tool.
+
+## What happens at the cap
+
+The sixth call (in the example above) never reaches the handler. The result is `isError: false` with `paywallReason: 'limit_reached'`, `used` / `limit` on the free meter, and the product’s plan ladder. Hosts render recovery the same way they render a paid-tool gate. Call **account** with `view: "checkout"`, or `activate_plan` when a `planRef` is known.
+
+## Included vs free
+
+The Console usage page splits successful calls into three kinds. Keep them distinct:
+
+| Kind | Meaning |
+| --- | --- |
+| **Included** | Usage that counts against a plan’s included amount (`LimitOption.cap`) |
+| **Overage** | Billed usage past that included amount |
+| **Free** | A `registerFree` allowance |
+
+A free allowance is not plan-derived. Do not call it included. Free usage does not reduce a customer’s paid remaining.
+
+## Managed MCP
+
+Public tools on Managed MCP stay unlimited. There is no Console setting for this cap. If you need a per-customer free allowance that converts to a paid plan, use the TypeScript SDK path on this page.
+
+## Verify
+
+1. Call the free tool under the cap — the handler returns data.
+2. Exhaust the cap — the next call is a `limit_reached` gate with a plan ladder.
+3. If two tools share a meter, mix the calls and confirm they drain one counter.
+4. Call a paid tool for the same customer and confirm its remaining is unchanged.
+
+The [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app) example ships `preview_market_quote` and `preview_company_profile` on a shared `free-previews` allowance. See that repo’s `SMOKE_TEST.md` for the mixed-tool walkthrough.
+
+## Next related tasks
+
+- [MCP Server integration](/sdks/typescript/guides/mcp) — `registerPayable` and the factory
+- [Usage events](/sdks/typescript/guides/usage-events) — recording usage from your app
+- [Monetize an MCP server with SDK integration](/guides/monetize-mcp-server-with-sdk)

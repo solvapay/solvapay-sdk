@@ -1,0 +1,16 @@
+{
+  "suite": "helper-usage",
+  "case": "usage-extra-success-overage",
+  "input": {
+    "fn": "resolveUsageExtra",
+    "args": {
+      "outcome": "success",
+      "consequence": "overage"
+    }
+  },
+  "expect": {
+    "result": {
+      "usageClass": "overage"
+    }
+  }
+}

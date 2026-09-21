@@ -97,8 +97,9 @@ What that line hides (from `@solvapay/react/mcp`):
 ## `src/demo-tools.ts`
 
 Two example-local paywalled data tools (`search_knowledge`,
-`get_market_quote`) plus matching slash-command prompts. Registered
-via `additionalTools({ registerPayable, server })` — consumes the
+`get_market_quote`) plus two `registerFree` previews that share a
+`free-previews` allowance, and matching slash-command prompts. Registered
+via `additionalTools({ registerPayable, registerFree, server })` — consumes the
 public `@solvapay/mcp` API the way a third-party integrator would.
 Gated behind `DEMO_TOOLS` env var.
 

@@ -15,6 +15,7 @@ import type {
   McpAdapterOptions,
   McpToolExtra,
   CustomerResponseMapped,
+  CheckLimitsRequest,
   LimitResponseWithPlan,
   McpBootstrapRequest,
   McpBootstrapResponse,
@@ -531,14 +532,7 @@ export interface SolvaPay {
    * }
    * ```
    */
-  checkLimits(params: {
-    customerRef: string
-    productRef: string
-    planRef?: string
-    meterName?: string
-    /** @deprecated Use `meterName`. */
-    usageType?: string
-  }): Promise<LimitResponseWithPlan>
+  checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   /**
    * Track usage for a customer action.
@@ -1033,6 +1027,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         meterName: options.meterName,
         usageType: options.usageType,
         ...(options.toolName ? { toolName: options.toolName } : {}),
+        ...(options.freeLimit ? { freeLimit: options.freeLimit } : {}),
       }
 
       return {

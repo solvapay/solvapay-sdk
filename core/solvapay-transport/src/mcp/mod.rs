@@ -509,6 +509,7 @@ fn attach_customer_credit_fields(customer: &mut Value, limits_value: &Value) {
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {
     CheckLimitsRequest {
         customer_ref: Some(customer_ref.to_owned()),
+        free_allowance: None,
         include_checkout_session: None,
         meter_name: Some("requests".to_owned()),
         product_ref: Some(product_ref.to_owned()),

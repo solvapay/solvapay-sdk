@@ -12,6 +12,7 @@ import { usePurchase } from '../../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../../hooks/usePurchaseStatus'
 import { useTransport } from '../../../hooks/useTransport'
 import { ExternalLinkGlyph } from '../../../components/ExternalLinkGlyph'
+import { BackLink } from '../BackLink'
 import type { Cx } from './shared'
 
 const POLL_INTERVAL_MS = 3_000
@@ -31,6 +32,8 @@ export interface HostedCheckoutProps {
    */
   planName?: string
   onPurchaseSuccess?: () => void
+  onBack?: () => void
+  backLabel?: string
   cx: Cx
   children?: React.ReactNode
 }
@@ -241,6 +244,8 @@ type UpgradeBodyProps = {
   planName?: string
   checkout: AsyncUrlState
   onLaunch: (href: string) => void
+  onBack?: () => void
+  backLabel: string
   cx: Cx
 }
 
@@ -248,21 +253,25 @@ const UpgradeBody = React.memo(function UpgradeBody({
   planName,
   checkout,
   onLaunch,
+  onBack,
+  backLabel,
   cx,
 }: UpgradeBodyProps) {
   return (
     <>
+      {onBack ? <BackLink label={backLabel} onClick={onBack} /> : null}
       <h2 className={cx.heading}>
         {planName ? `Complete your ${planName} purchase` : 'Upgrade your plan'}
       </h2>
       <p className={cx.muted}>
-        The SolvaPay checkout opens in a new tab. Return here after payment and your purchase will
-        show up automatically.
+        This host does not allow embedded payments. Open the SolvaPay checkout in a new tab to
+        complete your purchase there. Return here after payment and your purchase will show up
+        automatically.
       </p>
       <HostedLinkButton
         state={checkout}
         loadingLabel="Loading checkout…"
-        readyLabel="Upgrade"
+        readyLabel="Open SolvaPay checkout"
         onLaunch={onLaunch}
         cx={cx}
       />
@@ -280,6 +289,8 @@ export function HostedCheckout({
   planRef,
   planName,
   onPurchaseSuccess,
+  onBack,
+  backLabel = 'Change plan',
   cx,
   children,
 }: HostedCheckoutProps) {
@@ -421,7 +432,16 @@ export function HostedCheckout({
       )
     }
 
-    return <UpgradeBody planName={planName} checkout={checkout} onLaunch={beginAwaiting} cx={cx} />
+    return (
+      <UpgradeBody
+        planName={planName}
+        checkout={checkout}
+        onLaunch={beginAwaiting}
+        onBack={onBack}
+        backLabel={backLabel}
+        cx={cx}
+      />
+    )
   }, [
     awaiting,
     awaitingHref,
@@ -436,19 +456,17 @@ export function HostedCheckout({
     checkout,
     beginAwaiting,
     planName,
+    onBack,
+    backLabel,
     cx,
   ])
 
   if (loading) {
-    return (
-      <div className={cx.card}>
-        <p>Loading purchase…</p>
-      </div>
-    )
+    return <p>Loading purchase…</p>
   }
 
   return (
-    <div className={cx.card} data-refreshing={isRefetching ? 'true' : undefined}>
+    <div data-refreshing={isRefetching ? 'true' : undefined}>
       {inner}
       {children}
     </div>

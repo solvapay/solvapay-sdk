@@ -772,6 +772,10 @@ pub struct CheckLimitRequest {
     #[serde(rename = "customerRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub customer_ref: Option<String>,
+    /// SDK-only free-tool allowance. Authenticated by the provider secret key, so `cap` is the provider's own declaration, not customer input.
+    #[serde(rename = "freeAllowance")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_allowance: Option<CheckLimitRequestFreeAllowance>,
     /// Generated wire DTO.
     #[serde(rename = "includeCheckoutSession")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -788,6 +792,38 @@ pub struct CheckLimitRequest {
     #[serde(rename = "usageType")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub usage_type: Option<String>,
+}
+
+/// SDK-only free-tool allowance. Authenticated by the provider secret key, so `cap` is the provider's own declaration, not customer input.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CheckLimitRequestFreeAllowance {
+    /// Generated wire DTO.
+    #[serde(rename = "cap")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cap: Option<i64>,
+    /// Free meter name. Must match `/^free-[a-z0-9-]+$/`.
+    #[serde(rename = "meter")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meter: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "scope")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<CheckLimitRequestFreeAllowanceScope>,
+    /// Generated wire DTO.
+    #[serde(rename = "windowDays")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_days: Option<i64>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CheckLimitRequestFreeAllowanceScope {
+    /// Wire value `lifetime`.
+    #[serde(rename = "lifetime")]
+    Lifetime,
+    /// Wire value `rolling_window`.
+    #[serde(rename = "rolling_window")]
+    RollingWindow,
 }
 
 /// Generated wire DTO.
@@ -3143,6 +3179,9 @@ pub enum LimitResponsePaywallReason {
     /// Wire value `activation_required`.
     #[serde(rename = "activation_required")]
     ActivationRequired,
+    /// Wire value `limit_reached`.
+    #[serde(rename = "limit_reached")]
+    LimitReached,
     /// Wire value `payment_required`.
     #[serde(rename = "payment_required")]
     PaymentRequired,

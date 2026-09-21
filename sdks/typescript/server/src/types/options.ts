@@ -117,6 +117,12 @@ export interface PayableOptions {
    * from the registered tool name.
    */
   toolName?: string
+
+  /**
+   * Capped free-tool allowance. When set, the free meter wins over
+   * `meterName` / `usageType` and anonymous callers are rejected.
+   */
+  freeLimit?: import('./client').FreeLimit
 }
 
 /**

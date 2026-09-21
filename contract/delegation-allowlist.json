@@ -542,6 +542,16 @@
     },
     {
       "package": "@solvapay/mcp",
+      "symbol": "registerFreeTool",
+      "reason": "section-8-exclusion"
+    },
+    {
+      "package": "@solvapay/mcp",
+      "symbol": "FREE_METER_NAME_PATTERN",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/mcp",
       "symbol": "RESOURCE_MIME_TYPE",
       "reason": "section-8-exclusion"
     },

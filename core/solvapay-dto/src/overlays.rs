@@ -54,6 +54,9 @@ pub enum LimitResponseWithPlanPaywallReason {
     /// Wire value `activation_required`.
     #[serde(rename = "activation_required")]
     ActivationRequired,
+    /// Wire value `limit_reached`.
+    #[serde(rename = "limit_reached")]
+    LimitReached,
     /// Wire value `payment_required`.
     #[serde(rename = "payment_required")]
     PaymentRequired,

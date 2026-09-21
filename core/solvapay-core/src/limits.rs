@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::free_limit::FreeLimit;
 use crate::helper_error::HelperErrorResult;
 
 /// Frozen 400 message when productRef is missing or empty.
@@ -11,13 +12,16 @@ const PRODUCT_REF_MISSING: &str = "Missing required parameter: productRef";
 const DEFAULT_METER_NAME: &str = "requests";
 
 /// Resolved check-limits query params.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckLimitsParams {
     /// Required product reference.
     pub product_ref: String,
     /// Meter name (`'requests'` when the input was falsy).
     pub meter_name: String,
+    /// Free-tool allowance forwarded as `freeAllowance` on the request body.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_allowance: Option<FreeLimit>,
 }
 
 /// Validate check-limits query params (JS truthiness: empty string fails).
@@ -26,6 +30,8 @@ pub struct CheckLimitsParams {
 ///
 /// * `product_ref` - Product reference; empty/`None` fails.
 /// * `meter_name` - Optional meter; falsy → `"requests"`.
+/// * `usage_type` - Alias used when `meter_name` is falsy.
+/// * `free_limit` - When present, its meter wins and is forwarded as `freeAllowance`.
 ///
 /// # Returns
 ///
@@ -40,16 +46,20 @@ pub fn resolve_check_limits_params(
     product_ref: Option<&str>,
     meter_name: Option<&str>,
     usage_type: Option<&str>,
+    free_limit: Option<&FreeLimit>,
 ) -> Result<CheckLimitsParams, HelperErrorResult> {
     let Some(product_ref) = product_ref.filter(|s| !s.is_empty()) else {
         return Err(HelperErrorResult::without_details(PRODUCT_REF_MISSING, 400));
     };
-    let meter = js_or_str(meter_name)
+    let meter = free_limit
+        .map(|limit| limit.meter.clone())
+        .or_else(|| js_or_str(meter_name))
         .or_else(|| js_or_str(usage_type))
         .unwrap_or_else(|| DEFAULT_METER_NAME.to_owned());
     Ok(CheckLimitsParams {
         product_ref: product_ref.to_owned(),
         meter_name: meter,
+        free_allowance: free_limit.cloned(),
     })
 }
 
@@ -87,47 +97,72 @@ mod tests {
 
     #[test]
     fn product_ref_missing() {
-        let err = resolve_check_limits_params(None, Some("requests"), None).unwrap_err();
+        let err = resolve_check_limits_params(None, Some("requests"), None, None).unwrap_err();
         assert_eq!(err.error, PRODUCT_REF_MISSING);
         assert_eq!(err.status, 400);
     }
 
     #[test]
     fn product_ref_empty() {
-        let err = resolve_check_limits_params(Some(""), Some("requests"), None).unwrap_err();
+        let err = resolve_check_limits_params(Some(""), Some("requests"), None, None).unwrap_err();
         assert_eq!(err.error, PRODUCT_REF_MISSING);
     }
 
     #[test]
     fn both_present() {
-        let params = resolve_check_limits_params(Some("prd_1"), Some("api_calls"), None).unwrap();
+        let params =
+            resolve_check_limits_params(Some("prd_1"), Some("api_calls"), None, None).unwrap();
         assert_eq!(params.product_ref, "prd_1");
         assert_eq!(params.meter_name, "api_calls");
     }
 
     #[test]
     fn meter_name_defaults_when_absent() {
-        let params = resolve_check_limits_params(Some("prd_1"), None, None).unwrap();
+        let params = resolve_check_limits_params(Some("prd_1"), None, None, None).unwrap();
         assert_eq!(params.meter_name, DEFAULT_METER_NAME);
     }
 
     #[test]
     fn meter_name_defaults_when_empty() {
-        let params = resolve_check_limits_params(Some("prd_1"), Some(""), None).unwrap();
+        let params = resolve_check_limits_params(Some("prd_1"), Some(""), None, None).unwrap();
         assert_eq!(params.meter_name, DEFAULT_METER_NAME);
     }
 
     #[test]
     fn usage_type_alias_when_meter_absent() {
-        let params = resolve_check_limits_params(Some("prd_1"), None, Some("tokens")).unwrap();
+        let params =
+            resolve_check_limits_params(Some("prd_1"), None, Some("tokens"), None).unwrap();
         assert_eq!(params.meter_name, "tokens");
     }
 
     #[test]
     fn meter_name_wins_over_usage_type() {
         let params =
-            resolve_check_limits_params(Some("prd_1"), Some("api_calls"), Some("tokens")).unwrap();
+            resolve_check_limits_params(Some("prd_1"), Some("api_calls"), Some("tokens"), None)
+                .unwrap();
         assert_eq!(params.meter_name, "api_calls");
+    }
+
+    #[test]
+    fn free_limit_meter_wins() {
+        let limit = FreeLimit {
+            meter: "free-previews".to_owned(),
+            cap: 5.0,
+            scope: crate::free_limit::FreeLimitScope::Lifetime,
+            window_days: None,
+        };
+        let params = resolve_check_limits_params(
+            Some("prd_1"),
+            Some("api_calls"),
+            Some("tokens"),
+            Some(&limit),
+        )
+        .unwrap();
+        assert_eq!(params.meter_name, "free-previews");
+        assert_eq!(
+            params.free_allowance.as_ref().map(|l| l.meter.as_str()),
+            Some("free-previews")
+        );
     }
 
     #[test]

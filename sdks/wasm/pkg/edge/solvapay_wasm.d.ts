@@ -523,6 +523,21 @@ export function formatSubtotalLabel(args_json: string): string;
 export function formatVatSummaryLabel(args_json: string): string;
 
 /**
+ * Binding for `freeLimitsAgree`.
+ */
+export function freeLimitsAgree(args_json: string): string;
+
+/**
+ * Binding for `freeMeterNamePattern`.
+ */
+export function freeMeterNamePattern(args_json: string): string;
+
+/**
+ * Binding for `freeToolDescriptionSuffix`.
+ */
+export function freeToolDescriptionSuffix(args_json: string): string;
+
+/**
  * Binding for `gateNext`.
  */
 export function gateNext(args_json: string): string;
@@ -683,6 +698,11 @@ export function nextActionFor(args_json: string): string;
 export function normalizeCancelResponse(args_json: string): string;
 
 /**
+ * Binding for `normalizeFreeLimit`.
+ */
+export function normalizeFreeLimit(args_json: string): string;
+
+/**
  * Binding for `normalizeReactivateResponse`.
  */
 export function normalizeReactivateResponse(args_json: string): string;
@@ -821,6 +841,11 @@ export function resolveTaxBehavior(args_json: string): string;
  * Binding for `resolveTaxTreatmentNote`.
  */
 export function resolveTaxTreatmentNote(args_json: string): string;
+
+/**
+ * Binding for `resolveUsageExtra`.
+ */
+export function resolveUsageExtra(args_json: string): string;
 
 /**
  * Binding for `retryNextDelayMs`.
@@ -1039,6 +1064,9 @@ export interface InitOutput {
     readonly formatPrice: (a: number, b: number) => [number, number];
     readonly formatSubtotalLabel: (a: number, b: number) => [number, number];
     readonly formatVatSummaryLabel: (a: number, b: number) => [number, number];
+    readonly freeLimitsAgree: (a: number, b: number) => [number, number];
+    readonly freeMeterNamePattern: (a: number, b: number) => [number, number];
+    readonly freeToolDescriptionSuffix: (a: number, b: number) => [number, number];
     readonly gateNext: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
     readonly getCustomerAddressFieldErrors: (a: number, b: number) => [number, number];
@@ -1071,6 +1099,7 @@ export interface InitOutput {
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
     readonly nextActionFor: (a: number, b: number) => [number, number];
     readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
+    readonly normalizeFreeLimit: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly overlayClaimedLimits: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
@@ -1099,6 +1128,7 @@ export interface InitOutput {
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
+    readonly resolveUsageExtra: (a: number, b: number) => [number, number];
     readonly retryNextDelayMs: (a: number, b: number) => [number, number];
     readonly selectActivePlanPurchase: (a: number, b: number) => [number, number];
     readonly selectActivePurchases: (a: number, b: number) => [number, number];

@@ -1,0 +1,20 @@
+{
+  "suite": "free-limit",
+  "case": "normalize-rolling-window-missing-days",
+  "input": {
+    "fn": "normalizeFreeLimit",
+    "args": {
+      "limit": {
+        "meter": "free-requests",
+        "cap": 5,
+        "scope": "rolling_window"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "windowDays is required when scope is rolling_window",
+      "status": 400
+    }
+  }
+}

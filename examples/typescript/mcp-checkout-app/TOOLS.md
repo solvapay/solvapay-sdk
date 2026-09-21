@@ -87,11 +87,13 @@ test against.
 Enabled when `DEMO_TOOLS !== 'false'` — see
 [`src/demo-tools.ts`](src/demo-tools.ts).
 
-| Tool                 | Purpose                                                                                            | When to use                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `search_knowledge`   | Returns 3 deterministic stub snippets for a query                                                  | Exercise the paywall from `basic-host` — each call consumes 1 credit                      |
-| `get_market_quote`   | Returns a deterministic fake market quote                                                          | Second tool so you can show the paywall firing on something other than `search_knowledge` |
-| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response     |
+| Tool                      | Purpose                                                                                                      | When to use                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `preview_market_quote`    | Price-only quote preview. Shares a 5-call / 30-day `free-previews` allowance with `preview_company_profile`. | Exercise `registerFree` and the shared-meter cap                                          |
+| `preview_company_profile` | Name and sector preview on the same free allowance                                                           | Mix with `preview_market_quote` to prove sharing                                          |
+| `search_knowledge`        | Returns 3 deterministic stub snippets for a query                                                            | Exercise the paywall from `basic-host` — each call consumes 1 credit                      |
+| `get_market_quote`        | Returns a deterministic fake market quote                                                                    | Second tool so you can show the paywall firing on something other than `search_knowledge` |
+| `query_sales_trends`      | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low           | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response     |
 
 All three are wrapped with `registerPayable` (which builds
 `buildPayableHandler`) so the credit balance decrements per call, and the

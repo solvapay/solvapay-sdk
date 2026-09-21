@@ -105,11 +105,11 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
  * paywall-protected tools drop into `additionalTools` — everything else
  * stays declarative.
  *
- * When `DEMO_TOOLS` is unset (or not `"false"`), two paywalled demo
- * tools (`search_knowledge`, `get_market_quote`) + their slash-command
- * prompts land on the server so the paywall flow can be exercised from
- * `basic-host` without hand-rolling a gated tool. See
- * `examples/mcp-checkout-app/src/demo-tools.ts`.
+ * When `DEMO_TOOLS` is unset (or not `"false"`), demo tools including
+ * two `registerFree` previews and paywalled tools (`search_knowledge`,
+ * `get_market_quote`) + their slash-command prompts land on the server so
+ * the paywall flow can be exercised from `basic-host` without hand-rolling
+ * a gated tool. See `examples/typescript/mcp-checkout-app/src/demo-tools.ts`.
  */
 export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
   // Allow the merchant logo + other provider-served assets to load from

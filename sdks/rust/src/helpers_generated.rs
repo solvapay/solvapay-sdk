@@ -5,10 +5,10 @@
 #[allow(unused_imports)]
 pub use solvapay_core::{
     BillingCycle, BusinessDetailsInput, Charge, CreditSignals, CreditsToDisplayInput,
-    CustomerSnapshot, GateContent, PaywallClientPayload, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallNextAction, PaywallState, PlanPricingShape, ProductReadinessInput,
-    ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput, TaxIdType, UsageRate,
-    ValidateBusinessDetailsResult,
+    CustomerSnapshot, FreeLimit, FreeLimitInput, GateContent, PaywallClientPayload, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallNextAction, PaywallState, PlanPricingShape,
+    ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput,
+    TaxIdType, UsageRate, ValidateBusinessDetailsResult,
 };
 
 /// Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
@@ -210,6 +210,27 @@ pub use solvapay_core::tax_summary::format_subtotal_label;
 /// VAT label string.
 pub use solvapay_core::tax_summary::format_vat_summary_label;
 
+/// Return whether two normalized free limits share the same cap.
+///
+/// # Returns
+///
+/// True when meter, cap, scope, and window days all match.
+pub use solvapay_core::free_limit::free_limits_agree;
+
+/// Return the frozen regex source for free-allowance meter names.
+///
+/// # Returns
+///
+/// The `^free-[a-z0-9-]+$` pattern string.
+pub use solvapay_core::free_limit::free_meter_name_pattern;
+
+/// Build the free-tool description suffix, including shared-meter names.
+///
+/// # Returns
+///
+/// The `Free tool — …` sentence, plus a share tail when names are present.
+pub use solvapay_core::free_limit::free_tool_description_suffix;
+
 /// Return the postal or ZIP code field label for a country.
 ///
 /// # Returns
@@ -347,6 +368,13 @@ pub use solvapay_core::credit_display::minor_units_per_major;
 ///
 /// Primary recovery action (topup, checkout, activate, or account).
 pub use solvapay_core::paywall_state::next_action_for;
+
+/// Normalize a free-tool allowance, defaulting and validating the meter.
+///
+/// # Returns
+///
+/// Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+pub use solvapay_core::free_limit::normalize_free_limit;
 
 /// Project a PaywallError into the client-facing payload shape.
 ///

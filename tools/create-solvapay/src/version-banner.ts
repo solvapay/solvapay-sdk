@@ -6,10 +6,13 @@
  * re-resolved to the freshest publish rather than reusing a stale
  * npx cache entry.
  */
-import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { PACKAGE_ROOT } from './package-root'
 
-const require = createRequire(import.meta.url)
-const pkg = require('../package.json') as { version: string }
+const pkg = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'package.json'), 'utf8')) as {
+  version: string
+}
 
 export const PACKAGE_VERSION = pkg.version
 

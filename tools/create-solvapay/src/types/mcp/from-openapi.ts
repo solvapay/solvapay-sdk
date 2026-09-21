@@ -77,7 +77,16 @@ type Selections = {
         kind: 'apiKey-multi'
         headers: Array<{ name: string; value: string }>
       }
-  operations: Array<{ operationId: string; tier: 'free' | 'paid' | 'skip' }>
+  operations: Array<{
+    operationId: string
+    tier: 'free' | 'free-capped' | 'paid' | 'skip'
+    freeLimit?: {
+      meter?: string
+      cap: number
+      scope: 'rolling_window' | 'lifetime'
+      windowDays?: number
+    }
+  }>
 }
 
 export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
@@ -122,7 +131,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     mode: 'one-to-one',
     upstreamAuth: authChoice,
     operations: operations.map(
-      (op: { operationId: string; suggestedTier: 'free' | 'paid' | 'skip' }) => ({
+      (op: { operationId: string; suggestedTier: 'free' | 'free-capped' | 'paid' | 'skip' }) => ({
         operationId: op.operationId,
         tier: op.suggestedTier,
       }),
@@ -265,7 +274,7 @@ async function resolveUpstreamBaseUrl(
   }
 }
 
-function isAbsoluteHttpUrl(value: string): boolean {
+export function isAbsoluteHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value)
     return parsed.protocol === 'https:' || parsed.protocol === 'http:'

@@ -52,6 +52,8 @@ export function demoToolsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
   return env.DEMO_TOOLS !== 'false'
 }
 
+const ORACLE_AS_OF = '2026-04-24T00:00:00.000Z'
+
 /**
  * Registers two paywalled demo tools + their slash-command prompts on the
  * server provided by `createSolvaPayMcpServer`'s `additionalTools` hook.
@@ -63,7 +65,59 @@ export function demoToolsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
  * `solvaPay.payable().mcp()` inside `registerPayable`).
  */
 export function registerDemoTools(ctx: AdditionalToolsContext): void {
-  const { registerPayable, server } = ctx
+  const { registerPayable, registerFree, server } = ctx
+
+  const PREVIEW_ALLOWANCE = {
+    meter: 'free-previews',
+    cap: 5,
+    scope: 'rolling_window' as const,
+    windowDays: 30,
+  }
+
+  const previewNudge = {
+    kind: 'approaching-limit' as const,
+    message:
+      `Last free preview for this period — it is shared across both preview tools. ` +
+      `\`get_market_quote\` has the full quote; call \`${VIEWER_TOOL_NAME}\` with ` +
+      `view: "checkout" to pick a plan.`,
+  }
+
+  registerFree('preview_market_quote', {
+    title: 'Preview market quote (free demo)',
+    description:
+      `Free preview of \`get_market_quote\` — price only, no spread or volume. ` +
+      `Shares a ${PREVIEW_ALLOWANCE.cap}-call / 30-day free allowance with ` +
+      `\`preview_company_profile\`; after that the gate points at the paid plans.`,
+    schema: { symbol: z.string().min(1).max(8) },
+    limit: PREVIEW_ALLOWANCE,
+    annotations: { readOnlyHint: true, idempotentHint: true },
+    handler: async ({ symbol }, ctx) => {
+      const upper = symbol.toUpperCase()
+      const quote = { symbol: upper, price: 123.45, currency: 'USD', asOf: ORACLE_AS_OF }
+
+      return ctx.customer.remaining === 1
+        ? ctx.respond(quote, { nudge: previewNudge })
+        : ctx.respond(quote)
+    },
+  })
+
+  registerFree('preview_company_profile', {
+    title: 'Preview company profile (free demo)',
+    description:
+      `Free preview of a company profile — name and sector only. Draws on the same ` +
+      `${PREVIEW_ALLOWANCE.cap}-call / 30-day allowance as \`preview_market_quote\`, so ` +
+      `calls to either one count against the shared total.`,
+    schema: { symbol: z.string().min(1).max(8) },
+    limit: PREVIEW_ALLOWANCE,
+    annotations: { readOnlyHint: true, idempotentHint: true },
+    handler: async ({ symbol }, ctx) => {
+      const profile = { symbol: symbol.toUpperCase(), name: 'Demo Corp', sector: 'Technology' }
+
+      return ctx.customer.remaining === 1
+        ? ctx.respond(profile, { nudge: previewNudge })
+        : ctx.respond(profile)
+    },
+  })
 
   registerPayable('search_knowledge', {
     title: 'Search knowledge base (demo)',
@@ -284,7 +338,6 @@ function buildDeterministicRows(range: string): Array<{
 // used for the confidence CDF.
 
 const ORACLE_HISTORY_DAYS = 30
-const ORACLE_AS_OF = '2026-04-24T00:00:00.000Z'
 // One-sided 80% confidence band multiplier (~1.2816 standard normal).
 const ORACLE_Z80 = 1.2816
 
@@ -438,6 +491,50 @@ function deriveVerdict(path: SimulatedPath): {
 function registerDemoPrompts(server: McpServer): void {
   const promptHost = server as unknown as McpServerWithPrompts
   if (typeof promptHost.registerPrompt !== 'function') return
+
+  promptHost.registerPrompt(
+    'preview_market_quote',
+    {
+      title: 'Preview market quote (free demo)',
+      description: `Call the demo \`preview_market_quote\` free-capped tool. Shares a 5-call / 30-day allowance with \`preview_company_profile\`.`,
+      argsSchema: { symbol: z.string().optional() },
+    },
+    async ({ symbol }: { symbol?: string }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: symbol
+              ? `Preview a market quote for ${symbol}.`
+              : 'Preview a market quote for a ticker you care about.',
+          },
+        },
+      ],
+    }),
+  )
+
+  promptHost.registerPrompt(
+    'preview_company_profile',
+    {
+      title: 'Preview company profile (free demo)',
+      description: `Call the demo \`preview_company_profile\` free-capped tool. Shares the \`free-previews\` allowance with \`preview_market_quote\`.`,
+      argsSchema: { symbol: z.string().optional() },
+    },
+    async ({ symbol }: { symbol?: string }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: symbol
+              ? `Preview the company profile for ${symbol}.`
+              : 'Preview a company profile for a ticker you care about.',
+          },
+        },
+      ],
+    }),
+  )
 
   promptHost.registerPrompt(
     'search_knowledge',

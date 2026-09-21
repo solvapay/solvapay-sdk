@@ -319,12 +319,16 @@ func (h gateLoopHost) CheckLimits(ctx context.Context, action map[string]any) (a
 		delete(h.c.gate.limitsCache, deleteKey)
 		h.c.gate.mu.Unlock()
 	}
-	raw, err := h.c.sharedCheckLimits(ctx, map[string]any{
+	params := map[string]any{
 		"customerRef":            action["customerRef"],
 		"productRef":             action["productRef"],
 		"meterName":              action["meterName"],
 		"includeCheckoutSession": asBool(action["includeCheckoutSession"]),
-	})
+	}
+	if allowance, ok := action["freeAllowance"]; ok && allowance != nil {
+		params["freeAllowance"] = allowance
+	}
+	raw, err := h.c.sharedCheckLimits(ctx, params)
 	if err != nil {
 		return nil, err
 	}

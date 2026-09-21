@@ -8,12 +8,12 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use solvapay_core::{
-    ensure_customer_next, gate_next, should_retry_usage_error, EnsureCustomerAction, GateAction,
-    GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
+    ensure_customer_next, gate_next, should_retry_usage_error, EnsureCustomerAction, FreeLimit,
+    FreeLimitScope, GateAction, GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
 };
 use solvapay_dto::{
-    CheckLimitsRequest, CreateCustomerRequest, GetCustomerParams, TrackUsageRequest,
-    UpdateCustomerParams,
+    CheckLimitRequestFreeAllowance, CheckLimitRequestFreeAllowanceScope, CheckLimitsRequest,
+    CreateCustomerRequest, GetCustomerParams, TrackUsageRequest, UpdateCustomerParams,
 };
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
 use tokio::sync::{Mutex, Notify};
@@ -22,6 +22,19 @@ use crate::config::{Config, CUSTOMER_DEDUP_MAX_CACHE_SIZE};
 use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
 use crate::host_time::now_ms;
 use crate::retry::with_retry_if;
+
+/// Map a core [`FreeLimit`] onto the OpenAPI `freeAllowance` body field.
+fn free_limit_to_allowance(limit: FreeLimit) -> CheckLimitRequestFreeAllowance {
+    CheckLimitRequestFreeAllowance {
+        cap: Some(limit.cap as i64),
+        meter: Some(limit.meter),
+        scope: Some(match limit.scope {
+            FreeLimitScope::Lifetime => CheckLimitRequestFreeAllowanceScope::Lifetime,
+            FreeLimitScope::RollingWindow => CheckLimitRequestFreeAllowanceScope::RollingWindow,
+        }),
+        window_days: limit.window_days.map(|days| days as i64),
+    }
+}
 
 fn require_api_key(config: &Config) -> Result<(), SdkError> {
     if config.api_key.trim().is_empty() {
@@ -255,10 +268,12 @@ impl Client {
         product: &str,
         usage_type: &str,
         include_checkout_session: bool,
+        free_allowance: Option<FreeLimit>,
     ) -> Result<Value, SdkError> {
         let include = include_checkout_session.then_some(true);
         let params = CheckLimitsRequest {
             customer_ref: Some(customer_ref.to_owned()),
+            free_allowance: free_allowance.map(free_limit_to_allowance),
             product_ref: Some(product.to_owned()),
             meter_name: Some(usage_type.to_owned()),
             include_checkout_session: include,
@@ -495,6 +510,7 @@ impl crate::drivers_generated::GateDriverHost for Client {
         meter_name: &str,
         include_checkout_session: bool,
         cache_delete_key: Option<&str>,
+        free_allowance: Option<FreeLimit>,
     ) -> impl Future<Output = Result<Value, SdkError>> {
         async move {
             if let Some(key) = cache_delete_key {
@@ -506,6 +522,7 @@ impl crate::drivers_generated::GateDriverHost for Client {
                 product_ref,
                 meter_name,
                 include_checkout_session,
+                free_allowance,
             )
             .await
         }

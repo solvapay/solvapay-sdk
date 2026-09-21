@@ -290,6 +290,7 @@ fn on_handler_ok(
         &mint_request_id(now_ms, random_unit),
         None,
         None,
+        &crate::usage_request::resolve_usage_extra(None, "success", None),
     );
     Ok(done(
         state,
@@ -335,6 +336,7 @@ fn on_handler_err(
         &mint_request_id(now_ms, random_unit),
         None,
         Some(message.to_owned()),
+        &crate::usage_request::resolve_usage_extra(None, "fail", None),
     );
     Ok(done(
         state,

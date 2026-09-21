@@ -22,7 +22,7 @@ export type CreditDisplayBlockRateSource = 'db' | 'fallback' | 'parity'
 /**
  * Enum for `LimitResponseWithPlan.paywallReason`.
  */
-export type LimitResponseWithPlanPaywallReason = 'activation_required' | 'payment_required' | 'topup_required'
+export type LimitResponseWithPlanPaywallReason = 'activation_required' | 'limit_reached' | 'payment_required' | 'topup_required'
 
 /**
  * Enum for `RetryOptions.backoffStrategy`.

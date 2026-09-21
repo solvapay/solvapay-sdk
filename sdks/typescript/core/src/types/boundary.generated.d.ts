@@ -235,6 +235,10 @@ export type CheckLimitsParams = {
    * Meter name (`'requests'` when the input was falsy).
    */
   meterName: string
+  /**
+   * Free-tool allowance forwarded as `freeAllowance` on the request body.
+   */
+  freeAllowance?: FreeLimit
 }
 
 /**
@@ -474,6 +478,55 @@ export type EnsureCustomerState = {
 export type EnsurePending = 'none' | 'cache' | 'lookupInitial' | 'create' | 'lookupConflictExternal' | 'lookupConflictEmail' | 'updateBackfill' | 'createGeneratedEmail'
 
 /**
+ * Normalized free-tool allowance.
+ */
+export type FreeLimit = {
+  /**
+   * Lowercased meter matching [`FREE_METER_NAME_PATTERN`].
+   */
+  meter: string
+  /**
+   * Positive call cap.
+   */
+  cap: number
+  /**
+   * Window kind.
+   */
+  scope: FreeLimitScope
+  /**
+   * Present when [`FreeLimitScope::RollingWindow`].
+   */
+  windowDays?: number
+}
+
+/**
+ * Author-supplied free-limit input (meter optional; normalized later).
+ */
+export type FreeLimitInput = {
+  /**
+   * Optional meter; defaults to `free-requests`.
+   */
+  meter?: string
+  /**
+   * Positive call cap.
+   */
+  cap: number
+  /**
+   * Window kind.
+   */
+  scope: FreeLimitScope
+  /**
+   * Required when [`FreeLimitScope::RollingWindow`].
+   */
+  windowDays?: number
+}
+
+/**
+ * Allowance window for a free-capped tool.
+ */
+export type FreeLimitScope = 'rolling_window' | 'lifetime'
+
+/**
  * Cache-miss path evaluation after `checkLimits` returns.
  */
 export type FreshLimitsEvaluation = {
@@ -497,7 +550,7 @@ export type FreshLimitsEvaluation = {
 export type GateAction =
   | { kind: 'ensureCustomer'; customerRef: string }
   | { kind: 'readLimitsCache'; key: string }
-  | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
+  | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string; freeAllowance?: FreeLimit }
   | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; consequence?: AllowConsequence; cache?: GateCacheOp; requestId: string }
   | { kind: 'gate'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; gate: unknown; cache?: GateCacheOp; request: unknown; requestId: string }
   | { kind: 'emitUsage'; request: unknown }
@@ -553,6 +606,14 @@ export type GateDriverState = {
    * Limits-cache TTL in ms (`limitsCacheTTLMs`, default 10000).
    */
   limitsCacheTTLMs: number
+  /**
+   * Normalized free-tool allowance when this gate is `registerFree`.
+   */
+  freeLimit?: FreeLimit
+  /**
+   * Last allow consequence, used when tracking a successful handler.
+   */
+  lastConsequence?: AllowConsequence
 }
 
 /**
@@ -1099,6 +1160,25 @@ export type TopupProcessState = {
 }
 
 /**
+ * Usage-class tag written onto `trackUsage.metadata.usageClass`.
+ */
+export type UsageClass = 'included' | 'overage'
+
+/**
+ * Extra `trackUsage` metadata derived from a free limit and the outcome.
+ */
+export type UsageExtra = {
+  /**
+   * Free-meter name; omitted on paid tools.
+   */
+  meterName?: string
+  /**
+   * Paid success-path class; omitted on free tools and non-success outcomes.
+   */
+  usageClass?: UsageClass
+}
+
+/**
  * What one metered unit costs, and whether that rate is the first of several bands.
  */
 export type UsageRate = {
@@ -1199,7 +1279,7 @@ export type PaywallDecisionLimits = {
   checkoutUrl?: string
   confirmationUrl?: string
   activationRequired?: boolean
-  paywallReason?: 'activation_required' | 'topup_required' | 'payment_required'
+  paywallReason?: 'activation_required' | 'topup_required' | 'payment_required' | 'limit_reached'
   plans?: unknown
   balance?: unknown
   product?: unknown

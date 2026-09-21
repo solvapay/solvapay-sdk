@@ -13,7 +13,7 @@
 use std::future::Future;
 
 use serde_json::Value;
-use solvapay_core::{gate_next, GateAction, GateCacheOp, HelperErrorResult, SdkError};
+use solvapay_core::{gate_next, FreeLimit, GateAction, GateCacheOp, HelperErrorResult, SdkError};
 
 pub trait GateDriverHost {
     fn now_ms(&self) -> i64;
@@ -27,6 +27,7 @@ pub trait GateDriverHost {
         meter_name: &str,
         include_checkout_session: bool,
         cache_delete_key: Option<&str>,
+        free_allowance: Option<FreeLimit>,
     ) -> impl Future<Output = Result<Value, SdkError>>;
     fn apply_cache(&self, cache: Option<GateCacheOp>) -> impl Future<Output = ()>;
 }
@@ -80,6 +81,7 @@ pub async fn run_generated_gate_loop<H: GateDriverHost>(
                 meter_name,
                 include_checkout_session,
                 cache_delete_key,
+                free_allowance,
             } => {
                 let limits = host
                     .check_limits(
@@ -88,6 +90,7 @@ pub async fn run_generated_gate_loop<H: GateDriverHost>(
                         &meter_name,
                         include_checkout_session,
                         cache_delete_key.as_deref(),
+                        free_allowance,
                     )
                     .await?;
                 event = serde_json::json!({

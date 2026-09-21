@@ -218,6 +218,32 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
     payload["taxRate"] = tax_rate
     return call_native_sync("format_vat_summary_label", json.dumps(payload))
 
+def free_limits_agree(a: Any, b: Any) -> Any:
+    """Return whether two normalized free limits share the same cap.
+    @returns True when meter, cap, scope, and window days all match.
+    """
+    payload: dict[str, Any] = {}
+    payload["a"] = a
+    payload["b"] = b
+    return call_native_sync("free_limits_agree", json.dumps(payload))
+
+def free_meter_name_pattern() -> Any:
+    """Return the frozen regex source for free-allowance meter names.
+    @returns The `^free-[a-z0-9-]+$` pattern string.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("free_meter_name_pattern", json.dumps(payload))
+
+def free_tool_description_suffix(limit: Any, shared_with: Any | None = None) -> Any:
+    """Build the free-tool description suffix, including shared-meter names.
+    @returns The `Free tool — …` sentence, plus a share tail when names are present.
+    """
+    payload: dict[str, Any] = {}
+    payload["limit"] = limit
+    if shared_with is not None:
+        payload["sharedWith"] = shared_with
+    return call_native_sync("free_tool_description_suffix", json.dumps(payload))
+
 def get_postal_code_field_label(country: str) -> Any:
     """Return the postal or ZIP code field label for a country.
     @returns Field label string.
@@ -370,6 +396,14 @@ def next_action_for(state: Any) -> Any:
     payload: dict[str, Any] = {}
     payload["state"] = state
     return call_native_sync("next_action_for", json.dumps(payload))
+
+def normalize_free_limit(limit: Any) -> Any:
+    """Normalize a free-tool allowance, defaulting and validating the meter.
+    @returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+    """
+    payload: dict[str, Any] = {}
+    payload["limit"] = limit
+    return call_native_sync("normalize_free_limit", json.dumps(payload))
 
 def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
     """Project a PaywallError into the client-facing payload shape.

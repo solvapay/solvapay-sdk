@@ -94,6 +94,11 @@ export interface PaywallMetadata {
    * attributable. Set by `registerPayable` / `buildPayableHandler`.
    */
   toolName?: string
+  /**
+   * Capped free-tool allowance. When set, the free meter wins over
+   * `meterName` / `usageType` and anonymous callers are rejected.
+   */
+  freeLimit?: import('./client').FreeLimit
 }
 
 /**

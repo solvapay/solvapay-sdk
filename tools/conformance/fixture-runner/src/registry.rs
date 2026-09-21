@@ -19,31 +19,32 @@ use solvapay_core::{
     evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
     evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
     format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
-    gate_next, get_business_country_options, get_customer_address_field_errors, get_history_next,
+    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, gate_next,
+    get_business_country_options, get_customer_address_field_errors, get_history_next,
     get_postal_code_field_label, get_postal_code_placeholder,
     get_seller_tax_identifier_display_label, get_state_field_label, headline_charges, history_rows,
     included_units, invoke_payable_next, is_cached_customer_ref_valid,
     is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
     is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
     link_label, mcp_view_maps, meter_name, minor_units_per_major, next_action_for,
-    normalize_cancel_response, normalize_reactivate_response, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
-    postal_code_required_countries, project_topup_process_outcome, require_product_ref,
-    resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
+    normalize_cancel_response, normalize_free_limit, normalize_reactivate_response,
+    overlay_claimed_limits, paywall_client_payload, paywall_structured_content_schema,
+    paywall_tool_result, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder,
+    plan_pricing_shape, postal_code_required_countries, project_topup_process_outcome,
+    require_product_ref, resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
     resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
     resolve_narrator_plan_shape, resolve_product_ref, resolve_purchase_customer_ref,
-    resolve_tax_treatment_note, reverse_charge_note, select_active_plan_purchase,
-    should_retry_usage_error, should_show_tax_row, state_required_countries,
-    supported_business_countries, tax_behaviors, tax_exclusive_currencies,
-    tax_id_example_by_country, tax_id_types, tax_not_collected_note, tier_bands, tier_meters,
-    to_major_units, topup_balance_poll_delays_ms, topup_process_next, trial_days, usage_rate,
-    validate_activate_plan_params, validate_attach_business_details_params,
+    resolve_tax_treatment_note, resolve_usage_extra, reverse_charge_note,
+    select_active_plan_purchase, should_retry_usage_error, should_show_tax_row,
+    state_required_countries, supported_business_countries, tax_behaviors,
+    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
+    tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
+    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, BusinessDetailsInput, GateContent, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
+    validate_topup_payment_intent_params, BusinessDetailsInput, FreeLimit, FreeLimitInput,
+    GateContent, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -558,6 +559,27 @@ fn invoke_format_vat_summary_label(input: &FixtureInput) -> Result<Value, Bindin
     ))
 }
 
+fn invoke_free_limits_agree(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let a = require_typed::<FreeLimit>(&args, "a")?;
+    let b = require_typed::<FreeLimit>(&args, "b")?;
+    Ok(Value::Bool(free_limits_agree(&a, &b)))
+}
+
+fn invoke_free_meter_name_pattern(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(free_meter_name_pattern().to_owned()))
+}
+
+fn invoke_free_tool_description_suffix(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let limit = require_typed::<FreeLimit>(&args, "limit")?;
+    let shared_with = optional_value(&args, "sharedWith");
+    Ok(Value::String(
+        free_tool_description_suffix(&limit, shared_with.as_ref()).to_owned(),
+    ))
+}
+
 fn invoke_gate_next(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let state = optional_value(&args, "state");
@@ -846,6 +868,12 @@ fn invoke_normalize_cancel_response(input: &FixtureInput) -> Result<Value, Bindi
     result_as_value(normalize_cancel_response(&response))
 }
 
+fn invoke_normalize_free_limit(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let limit = require_typed::<FreeLimitInput>(&args, "limit")?;
+    result_as_value(normalize_free_limit(&limit))
+}
+
 fn invoke_normalize_reactivate_response(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let response = args.get("response").cloned().unwrap_or(Value::Null);
@@ -999,10 +1027,12 @@ fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, Bin
     let product_ref = optional_string(&args, "productRef")?;
     let meter_name = optional_string(&args, "meterName")?;
     let usage_type = optional_string(&args, "usageType")?;
+    let free_limit = optional_typed::<FreeLimit>(&args, "freeLimit")?;
     result_as_value(resolve_check_limits_params(
         product_ref.as_deref(),
         meter_name.as_deref(),
         usage_type.as_deref(),
+        free_limit.as_ref(),
     ))
 }
 
@@ -1123,6 +1153,18 @@ fn invoke_resolve_tax_treatment_note(input: &FixtureInput) -> Result<Value, Bind
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
     to_value(&resolve_tax_treatment_note(treatment.as_deref()))
+}
+
+fn invoke_resolve_usage_extra(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let free_limit = optional_typed::<FreeLimit>(&args, "freeLimit")?;
+    let outcome = require_string(&args, "outcome")?;
+    let consequence = optional_string(&args, "consequence")?;
+    to_value(&resolve_usage_extra(
+        free_limit.as_ref(),
+        &outcome,
+        consequence.as_deref(),
+    ))
 }
 
 fn invoke_select_active_plan_purchase(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -2139,6 +2181,27 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "freeLimitsAgree",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_free_limits_agree(&fixture.input)),
+        },
+    );
+    registry.register(
+        "freeMeterNamePattern",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_free_meter_name_pattern(&fixture.input)),
+        },
+    );
+    registry.register(
+        "freeToolDescriptionSuffix",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_free_tool_description_suffix(&fixture.input)),
+        },
+    );
+    registry.register(
         "gateNext",
         Binding {
             id: "core",
@@ -2244,6 +2307,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "normalizeFreeLimit",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_normalize_free_limit(&fixture.input)),
+        },
+    );
+    registry.register(
         "overlayClaimedLimits",
         Binding {
             id: "core",
@@ -2318,6 +2388,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(|fixture| invoke_resolve_tax_treatment_note(&fixture.input)),
+        },
+    );
+    registry.register(
+        "resolveUsageExtra",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_resolve_usage_extra(&fixture.input)),
         },
     );
     registry.register(

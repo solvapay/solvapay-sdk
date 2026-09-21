@@ -22,6 +22,7 @@ pub mod error;
 pub mod ffi_envelope;
 #[cfg(feature = "conformance")]
 pub mod fixture_host;
+pub mod free_limit;
 #[cfg(feature = "conformance")]
 pub mod fuzz_oracle;
 pub mod gate_driver;
@@ -102,6 +103,10 @@ pub use error::{render_template, SdkError};
 pub use ffi_envelope::{
     envelope_from_panic_payload, err_envelope, internal_error_envelope, ok_envelope,
     parse_args_json, run_envelope_result, run_envelope_sync,
+};
+pub use free_limit::{
+    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, normalize_free_limit,
+    FreeLimit, FreeLimitInput, FreeLimitScope, FREE_METER_NAME_PATTERN,
 };
 pub use gate_driver::{
     build_customer_snapshot, gate_next, AllowConsequence, CustomerSnapshot, GateAction,
@@ -199,7 +204,7 @@ pub use topup_process::{
     topup_process_next, TopupPending, TopupProcessAction, TopupProcessNextOutput, TopupProcessState,
 };
 pub use usage::{project_usage_snapshot, should_retry_usage_error, UsageSnapshot};
-pub use usage_request::build_usage_request;
+pub use usage_request::{build_usage_request, resolve_usage_extra, UsageClass, UsageExtra};
 #[cfg(feature = "webhook-verify")]
 pub use webhook::{verify_webhook, verify_webhook_json, WebhookError, WebhookErrorCode};
 

@@ -247,7 +247,12 @@ export class SolvaPayPaywall {
   }
 
   private resolveMeterName(product: string, metadata: PaywallMetadata): string {
-    const resolved = resolveCheckLimitsParams(product, metadata.meterName, metadata.usageType)
+    const resolved = resolveCheckLimitsParams(
+      product,
+      metadata.meterName,
+      metadata.usageType,
+      metadata.freeLimit,
+    )
     if ('error' in resolved) {
       throw new SolvaPayError(resolved.error)
     }
@@ -322,6 +327,7 @@ export class SolvaPayPaywall {
       randomUnit: Math.random(),
       limitsCacheTTLMs: this.limitsCacheTTL,
       ...(metadata.toolName ? { toolName: metadata.toolName } : {}),
+      ...(metadata.freeLimit ? { freeLimit: metadata.freeLimit } : {}),
     }
 
     const { state, action } = await runGeneratedGateLoop(
@@ -355,6 +361,7 @@ export class SolvaPayPaywall {
                 productRef: action.productRef,
                 meterName: action.meterName,
                 includeCheckoutSession: action.includeCheckoutSession,
+                ...(action.freeAllowance ? { freeAllowance: action.freeAllowance } : {}),
               })
             },
           )

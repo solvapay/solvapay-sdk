@@ -14,6 +14,7 @@ export type GateDriverHost = {
     meterName: string
     includeCheckoutSession: boolean
     cacheDeleteKey?: string
+    freeAllowance?: unknown
   }): Promise<unknown>
   applyCache(cache: unknown): void
   nowMs(): number
@@ -63,6 +64,7 @@ export async function runGeneratedGateLoop(
         ...(typeof action.cacheDeleteKey === 'string'
           ? { cacheDeleteKey: action.cacheDeleteKey }
           : {}),
+        ...(action.freeAllowance != null ? { freeAllowance: action.freeAllowance } : {}),
       })
       event = { kind: 'limitsResult', limits, nowMs: host.nowMs() }
       continue

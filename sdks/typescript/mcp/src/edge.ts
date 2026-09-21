@@ -14,6 +14,8 @@ export type {
 
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
+export { registerFreeTool, FREE_METER_NAME_PATTERN } from './registerFreeTool'
+export type { RegisterFreeToolOptions } from './registerFreeTool'
 
 export {
   registerAppResource,

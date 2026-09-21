@@ -337,6 +337,44 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     // Use file lock for thread-safe file operations
     return await this.withFileLock(async () => {
+      if (params.freeAllowance) {
+        const meter = params.freeAllowance.meter?.toLowerCase()
+        const cap = params.freeAllowance.cap
+        if (meter === undefined || cap === undefined) {
+          throw new Error('freeAllowance requires meter and cap')
+        }
+        const freeTierData = await this.loadFreeTierData()
+        const key = `${params.customerRef}_${meter}`
+        const now = new Date()
+        let usage = freeTierData[key]
+        if (!usage) {
+          usage = { count: 0, lastReset: now.toISOString() }
+          freeTierData[key] = usage
+        }
+        const withinLimits = usage.count < cap
+        if (withinLimits) {
+          usage.count += 1
+          await this.saveFreeTierData(freeTierData)
+        }
+        const used = usage.count
+        const remaining = Math.max(0, cap - used)
+        const result = {
+          ...(await this.limitsRecovery(params.productRef, remaining)),
+          withinLimits,
+          remaining,
+          used,
+          limit: cap,
+          meterName: meter,
+          plan: '',
+        }
+        if (withinLimits) return result
+        return {
+          ...result,
+          paywallReason: 'limit_reached' as const,
+          checkoutUrl: `https://customer.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
+        }
+      }
+
       // Load customer data from persistent storage
       const customerData = await this.loadCustomerData()
       const customer = customerData[params.customerRef]

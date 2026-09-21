@@ -1,0 +1,21 @@
+{
+  "suite": "helper-usage",
+  "case": "usage-extra-free",
+  "input": {
+    "fn": "resolveUsageExtra",
+    "args": {
+      "freeLimit": {
+        "meter": "free-previews",
+        "cap": 5,
+        "scope": "lifetime"
+      },
+      "outcome": "success",
+      "consequence": "overage"
+    }
+  },
+  "expect": {
+    "result": {
+      "meterName": "free-previews"
+    }
+  }
+}

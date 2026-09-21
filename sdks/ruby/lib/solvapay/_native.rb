@@ -61,15 +61,19 @@ module SolvaPay
       coerce_customer_options
       derive_tax_id_type
       format_subtotal_label
+      free_meter_name_pattern
       to_major_units
       build_create_customer_params
       format_vat_summary_label
+      normalize_free_limit
       resolve_tax_behavior
       extract_backend_customer_ref
+      free_limits_agree
       get_tax_id_example
       resolve_tax_treatment_note
       REVERSE_CHARGE_NOTE
       classify_lookup_error
+      free_tool_description_suffix
       get_tax_id_field_label
       TAX_NOT_COLLECTED_NOTE
       classify_create_error
@@ -137,6 +141,7 @@ module SolvaPay
       project_usage_snapshot
       resolve_check_limits_params
       should_retry_usage_error
+      resolve_usage_extra
       validate_list_plans_params
       is_error_result
       map_route_error

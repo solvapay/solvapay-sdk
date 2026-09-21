@@ -317,6 +317,8 @@ function McpCheckoutBody({
           planRef={flow.selectedPlanRef ?? undefined}
           planName={selectedPlanShape?.name ?? undefined}
           onPurchaseSuccess={onPurchaseSuccess}
+          onBack={() => flow.back()}
+          backLabel={flow.branch === 'payg' ? 'Change amount' : 'Change plan'}
           cx={cx}
         />
       )

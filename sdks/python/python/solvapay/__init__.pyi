@@ -718,6 +718,21 @@ def format_vat_summary_label(treatment: str | None, tax_rate: float) -> str:
     @returns VAT label string.
     """
     ...
+def free_limits_agree(a: object, b: object) -> bool:
+    """Return whether two normalized free limits share the same cap.
+    @returns True when meter, cap, scope, and window days all match.
+    """
+    ...
+def free_meter_name_pattern() -> str:
+    """Return the frozen regex source for free-allowance meter names.
+    @returns The `^free-[a-z0-9-]+$` pattern string.
+    """
+    ...
+def free_tool_description_suffix(limit: object, shared_with: object | None = None) -> str:
+    """Build the free-tool description suffix, including shared-meter names.
+    @returns The `Free tool — …` sentence, plus a share tail when names are present.
+    """
+    ...
 def get_postal_code_field_label(country: str) -> str:
     """Return the postal or ZIP code field label for a country.
     @returns Field label string.
@@ -809,6 +824,11 @@ def next_action_for(state: object) -> object:
     """Map a classified paywall state to its single primary recovery action.
     @param state Classified paywall state.
     @returns Primary recovery action (topup, checkout, activate, or account).
+    """
+    ...
+def normalize_free_limit(limit: object) -> object:
+    """Normalize a free-tool allowance, defaulting and validating the meter.
+    @returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
     """
     ...
 def paywall_error_to_client_payload(message: str, structured_content: object) -> object:

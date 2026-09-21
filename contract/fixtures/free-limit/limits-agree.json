@@ -1,0 +1,22 @@
+{
+  "suite": "free-limit",
+  "case": "limits-agree",
+  "input": {
+    "fn": "freeLimitsAgree",
+    "args": {
+      "a": {
+        "meter": "free-requests",
+        "cap": 5,
+        "scope": "rolling_window",
+        "windowDays": 30
+      },
+      "b": {
+        "meter": "free-requests",
+        "cap": 5,
+        "scope": "rolling_window",
+        "windowDays": 30
+      }
+    }
+  },
+  "expect": { "result": true }
+}
