@@ -12,19 +12,34 @@ function trialPhrase(ctx: MandateContext): string {
   return trialDays ? ` after your ${trialDays}-day free trial` : ''
 }
 
-function termsSentence(ctx: MandateContext): string {
-  const { termsUrl, privacyUrl } = ctx.merchant
-  if (termsUrl && privacyUrl) {
-    return ` See ${termsUrl} and ${privacyUrl}.`
-  }
-  if (termsUrl) return ` See ${termsUrl}.`
-  if (privacyUrl) return ` See ${privacyUrl}.`
-  return ''
+function joinLegalDocs(urls: string[]): string {
+  if (urls.length === 2) return `${urls[0]} and ${urls[1]}`
+  return urls[0] ?? ''
 }
 
 /**
- * Canonical English copy. Preserves the exact copy shipped before the i18n
- * refactor so no visible behavior changes for English consumers.
+ * Hosted-style consent tail: SolvaPay's terms always, plus the merchant's
+ * own Terms / Privacy only when set. URLs are embedded verbatim so
+ * `MandateText` can swap them for labelled `<a>`s.
+ */
+function legalSentence(ctx: MandateContext): string {
+  const solvaClause = `SolvaPay's ${ctx.solvapay.termsUrl} and ${ctx.solvapay.privacyUrl}`
+
+  const merchantDocs: string[] = []
+  if (ctx.merchant.termsUrl) merchantDocs.push(ctx.merchant.termsUrl)
+  if (ctx.merchant.privacyUrl) merchantDocs.push(ctx.merchant.privacyUrl)
+
+  if (merchantDocs.length === 0) {
+    return ` You agree to ${solvaClause}.`
+  }
+
+  const brand = ctx.merchant.displayName || ctx.merchant.legalName
+  return ` You agree to ${brand}'s ${joinLegalDocs(merchantDocs)}, and ${solvaClause}.`
+}
+
+/**
+ * Canonical English copy. Mandate variants keep their SCA lead-ins and
+ * close with the hosted-style legal consent tail (`legalSentence`).
  */
 export const enCopy: SolvaPayCopy = {
   mandate: {
@@ -32,11 +47,11 @@ export const enCopy: SolvaPayCopy = {
       const period = intervalPhrase(ctx)
       const trial = trialPhrase(ctx)
       const every = period ? ` every ${period}` : ''
-      return `By subscribing, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${every}${trial} until you cancel. You can cancel any time. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By subscribing, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${every}${trial} until you cancel. You can cancel any time. Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
     oneTime: (ctx: MandateContext) => {
       const product = ctx.product?.name ? ` for ${ctx.product.name}` : ''
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge a one-time ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge a one-time ${ctx.amountFormatted}${product}. Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
     topup: (ctx: MandateContext) => {
       const product = ctx.product?.name
@@ -45,18 +60,18 @@ export const enCopy: SolvaPayCopy = {
       const savedCard = ctx.savesPaymentMethod
         ? ` You also authorize ${ctx.merchant.legalName} to save this card and charge it for future auto-recharges, which you can turn off any time.`
         : ''
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Credits are non-refundable once used.${savedCard} Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Credits are non-refundable once used.${savedCard} Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
     usageMetered: (ctx: MandateContext) => {
       const measures = ctx.plan?.measures ?? 'request'
       const cycle = ctx.plan?.billingCycle ?? 'monthly'
       const product = ctx.product?.name ?? 'the service'
-      return `By confirming, you authorize ${ctx.merchant.legalName} to charge your payment method for metered usage of ${product} at ${ctx.amountFormatted} per ${measures}, billed ${cycle}. You can cancel any time. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you authorize ${ctx.merchant.legalName} to charge your payment method for metered usage of ${product} at ${ctx.amountFormatted} per ${measures}, billed ${cycle}. You can cancel any time. Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
     freeTier: (ctx: MandateContext) => {
       const product = ctx.product?.name ?? 'this plan'
       const planPhrase = ctx.plan?.name ? ` on ${ctx.plan.name}` : ''
-      return `By confirming, you activate ${product}${planPhrase}. Payments are processed by SolvaPay.${termsSentence(ctx)}`
+      return `By confirming, you activate ${product}${planPhrase}. Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
   },
   cta: {
@@ -344,6 +359,10 @@ export const enCopy: SolvaPayCopy = {
       paymentOneTime: 'Confirm your card to complete the purchase.',
       paymentPayg: 'Confirm your card to add credits to your balance.',
     },
+  },
+  legal: {
+    termsOfService: 'Terms of Service',
+    privacyPolicy: 'Privacy Policy',
   },
   legalFooter: {
     terms: 'Terms',
