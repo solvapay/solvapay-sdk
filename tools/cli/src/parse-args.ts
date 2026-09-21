@@ -1,6 +1,7 @@
 import { parseScaffoldLanguage, type ScaffoldLanguage } from '@solvapay/init'
 
 export type ParsedInitArgs = {
+  help: boolean
   yes: boolean
   dev: boolean
   productRef?: string
@@ -17,6 +18,7 @@ const readApiBaseValue = (argv: string[], index: number): string => {
 }
 
 export function parseInitArgs(argv: string[]): ParsedInitArgs {
+  let help = false
   let yes = false
   let dev = false
   let productRef: string | undefined
@@ -24,7 +26,9 @@ export function parseInitArgs(argv: string[]): ParsedInitArgs {
   let apiBaseUrl: string | undefined
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
-    if (arg === '--yes' || arg === '-y') {
+    if (arg === '--help' || arg === '-h') {
+      help = true
+    } else if (arg === '--yes' || arg === '-y') {
       yes = true
     } else if (arg === '--dev') {
       dev = true
@@ -45,17 +49,26 @@ export function parseInitArgs(argv: string[]): ParsedInitArgs {
       if (!productRef || productRef.startsWith('-')) {
         throw new Error('--product requires a product reference')
       }
+    } else if (arg.startsWith('-')) {
+      throw new Error(`Unknown init flag: ${arg}`)
     }
   }
-  return { yes, dev, productRef, language, apiBaseUrl }
+  return { help, yes, dev, productRef, language, apiBaseUrl }
 }
 
-export function parseDoctorArgs(argv: string[]): { dev: boolean; apiBaseUrl?: string } {
+export function parseDoctorArgs(argv: string[]): {
+  help: boolean
+  dev: boolean
+  apiBaseUrl?: string
+} {
+  let help = false
   let dev = false
   let apiBaseUrl: string | undefined
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
-    if (arg === '--dev') {
+    if (arg === '--help' || arg === '-h') {
+      help = true
+    } else if (arg === '--dev') {
       dev = true
     } else if (arg === '--api-base') {
       apiBaseUrl = readApiBaseValue(argv, ++i)
@@ -63,5 +76,5 @@ export function parseDoctorArgs(argv: string[]): { dev: boolean; apiBaseUrl?: st
       throw new Error(`Unknown doctor flag: ${arg}`)
     }
   }
-  return { dev, apiBaseUrl }
+  return { help, dev, apiBaseUrl }
 }

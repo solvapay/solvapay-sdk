@@ -509,6 +509,19 @@ describe('runInitInDirectory', () => {
     expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
   })
 
+  it('skips SDK install under --dev so checkout path deps are not clobbered', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD, options: { dev: true, yes: true } })
+
+    expect(installSdk).not.toHaveBeenCalled()
+    expect(output.join('')).toContain('Skipping SDK install (--dev)')
+  })
+
   it('hard-fails when verifyMerchant returns not_found', async () => {
     mockSuccessfulAuth()
     vi.mocked(verifyMerchant).mockResolvedValue({ status: 'not_found' })

@@ -450,7 +450,19 @@ export const runInitInDirectory = async ({
     }
   }
 
-  if (!skipSdkInstall) {
+  // Under --dev the project path-depends the SolvaPay SDK on a local
+  // solvapay-sdk checkout (create-solvapay rewrote the manifest to
+  // file:/link:/path deps). Re-installing the packages from a registry here
+  // would clobber those path deps for TypeScript and outright fail for
+  // python/ruby/rust, whose SDK packages are not published. Skip it — the
+  // scaffold already installed the checkout deps.
+  const skipSdk = skipSdkInstall || Boolean(options.dev)
+  if (skipSdk && !skipSdkInstall && options.dev) {
+    process.stdout.write(
+      '⏭  Skipping SDK install (--dev): the project path-depends the SolvaPay SDK on your checkout.\n',
+    )
+  }
+  if (!skipSdk) {
     const onInstallProgress = createInstallProgressReporter()
     onInstallProgress('Resolving packages')
     const installResult = await installSdk(language, cwd, onInstallProgress)

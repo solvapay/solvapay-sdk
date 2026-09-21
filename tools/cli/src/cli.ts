@@ -42,14 +42,24 @@ const main = async () => {
   }
 
   if (command === 'init') {
+    const initArgs = parseInitArgs(process.argv.slice(3))
+    if (initArgs.help) {
+      process.stdout.write(`${HELP_TEXT}\n`)
+      return
+    }
     printVersionBanner()
-    await runInitCommand(parseInitArgs(process.argv.slice(3)))
+    await runInitCommand(initArgs)
     return
   }
 
   if (command === 'doctor') {
+    const doctorArgs = parseDoctorArgs(process.argv.slice(3))
+    if (doctorArgs.help) {
+      process.stdout.write(`${HELP_TEXT}\n`)
+      return
+    }
     printVersionBanner()
-    await runDoctorCommand(parseDoctorArgs(process.argv.slice(3)))
+    await runDoctorCommand(doctorArgs)
     return
   }
 
