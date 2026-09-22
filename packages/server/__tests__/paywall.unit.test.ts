@@ -465,11 +465,16 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         },
       )
 
-      // MCP adapter wraps response in MCP format
+      // MCP adapter wraps response in MCP format. Merchant data lives
+      // on `structuredContent`; `content[0].text` is a short narration
+      // so hosts that feed both fields to the model do not see a
+      // duplicate JSON dump.
       expect(result).toHaveProperty('content')
       expect(result.content[0].type).toBe('text')
-      const parsedResult = JSON.parse(result.content[0].text)
-      expect(parsedResult).toEqual({ tools: ['test'] })
+      expect(result.content[0].text).toBe('Success')
+      expect(result.content[0].text).not.toBe(JSON.stringify({ tools: ['test'] }))
+      expect(result.content[0].text).not.toBe(JSON.stringify({ tools: ['test'] }, null, 2))
+      expect(result.structuredContent).toEqual({ tools: ['test'] })
 
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -478,6 +483,30 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         }),
         expect.anything(),
       )
+    })
+
+    it('keeps JSON in content text when the result cannot ride on structuredContent', async () => {
+      const handler = vi.fn().mockResolvedValue(['alpha', 'beta'])
+      const payable = solvaPay.payable({ product: 'mcp-array' })
+      const mcpHandler = payable.mcp(handler)
+
+      const result = await mcpHandler(
+        { input: 'test' },
+        {
+          authInfo: {
+            token: 'test-token',
+            clientId: 'test-client',
+            scopes: ['openid'],
+            extra: { customer_ref: 'mcp_user' },
+          },
+        },
+      )
+
+      expect(result.structuredContent).toBeUndefined()
+      expect(result.content[0]).toEqual({
+        type: 'text',
+        text: JSON.stringify(['alpha', 'beta'], null, 2),
+      })
     })
 
     it('should use payable-level getCustomerRef when adapter-level is not provided', async () => {

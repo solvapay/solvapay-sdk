@@ -510,12 +510,18 @@ export interface ResponseOptions {
   /** Inline upsell strip rendered below the tool result. */
   nudge?: NudgeSpec
   /**
-   * Append the serialized payload as a trailing text block so the model
-   * receives it on hosts that read `content` and ignore
-   * `structuredContent`. Defaults to `true` — the MCP tools spec's
-   * server-directed SHOULD, and the only way a response is complete on
-   * both host families. Set `false` for payloads large enough that the
-   * duplicate is not worth the tokens.
+   * Append the serialized payload as a trailing text block so hosts
+   * that ignore `structuredContent` still receive it in `content`.
+   *
+   * Silent `ctx.respond(data)` does **not** dump the payload into
+   * `content[0].text` — merchant data already rides on
+   * `structuredContent`, and duplicating it doubles tokens on hosts
+   * that feed both fields to the model (Cursor, Grok Bot).
+   *
+   * When the merchant supplies `text` or `nudge`, a trailing JSON
+   * block is still appended unless this is `false` (the MCP tools
+   * spec SHOULD for hosts that drop structured content). Set `true`
+   * to opt in to a trailing JSON block even without narration.
    */
   dataInText?: boolean
   /**

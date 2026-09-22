@@ -81,7 +81,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
   })
 
   describe('ctx.respond minimal form', () => {
-    it('unwraps ResponseResult envelope into structuredContent + content[0].text', async () => {
+    it('unwraps ResponseResult envelope into structuredContent + a short success narration', async () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
       const data = { foo: 'bar', list: [1, 2, 3] }
@@ -98,9 +98,37 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       expect(result.content).toHaveLength(1)
       expect(result.content[0]).toEqual({
         type: 'text',
-        text: JSON.stringify(data),
+        text: 'Success',
       })
       expect(result._meta).toBeUndefined()
+    })
+
+    it('does not duplicate the full payload in content text when structuredContent already carries it', async () => {
+      const client = makeMockClient()
+      const solvaPay = makeSolvaPay(client)
+      const data = { foo: 'bar', list: [1, 2, 3] }
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test' },
+        async (_args, ctx: ResponseContext) => ctx.respond(data),
+      )
+
+      const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
+      const compact = JSON.stringify(data)
+      const pretty = JSON.stringify(data, null, 2)
+      const textBlocks = result.content.filter(
+        (block): block is { type: 'text'; text: string } => block.type === 'text',
+      )
+
+      expect(result.structuredContent).toEqual(data)
+      expect(textBlocks).toHaveLength(1)
+      expect(textBlocks[0].text).toBe('Success')
+      expect(textBlocks[0].text).not.toBe(compact)
+      expect(textBlocks[0].text).not.toBe(pretty)
+      expect(textBlocks.some(block => block.text === compact || block.text === pretty)).toBe(
+        false,
+      )
     })
 
     it('omits the trailing data block when dataInText is false', async () => {
@@ -116,7 +144,25 @@ describe('buildPayableHandler — ctx.respond V1', () => {
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
       expect(result.content).toHaveLength(1)
-      expect(result.content[0]).toEqual({ type: 'text', text: JSON.stringify(data) })
+      expect(result.content[0]).toEqual({ type: 'text', text: 'Success' })
+      expect(result.structuredContent).toEqual(data)
+    })
+
+    it('appends a trailing JSON block when dataInText is explicitly true', async () => {
+      const client = makeMockClient()
+      const solvaPay = makeSolvaPay(client)
+      const data = { foo: 'bar' }
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test' },
+        async (_args, ctx: ResponseContext) => ctx.respond(data, { dataInText: true }),
+      )
+
+      const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
+      expect(result.content).toHaveLength(2)
+      expect(result.content[0]).toEqual({ type: 'text', text: 'Success' })
+      expect(result.content[1]).toEqual({ type: 'text', text: JSON.stringify(data) })
       expect(result.structuredContent).toEqual(data)
     })
   })
@@ -162,12 +208,14 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       // Merchant data rides on `structuredContent` verbatim.
       expect(result.structuredContent).toEqual({ y: 2 })
 
-      // `content[0].text` narrates merchant data + nudge suffix so
+      // `content[0].text` narrates success + nudge suffix so
       // terminal / text-only hosts render both without a second
-      // surface.
+      // surface. Merchant JSON stays on `structuredContent` (and the
+      // trailing `dataInText` block).
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(firstBlock.text.startsWith(JSON.stringify({ y: 2 }))).toBe(true)
+      expect(firstBlock.text.startsWith('Success')).toBe(true)
+      expect(firstBlock.text).not.toBe(JSON.stringify({ y: 2 }))
       expect(firstBlock.text).toContain(nudge.message)
 
       const dataBlock = result.content[1] as { type: string; text: string }
@@ -218,12 +266,13 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       // Merchant data rides on `structuredContent` unchanged.
       expect(result.structuredContent).toEqual(merchantData)
 
-      // `content[0].text` carries the merchant data as JSON, with
+      // `content[0].text` carries the silent-success narration, with
       // the nudge message appended as a plain-text suffix. Separator
       // is a double newline so terminal hosts render cleanly.
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(firstBlock.text.startsWith(JSON.stringify(merchantData))).toBe(true)
+      expect(firstBlock.text.startsWith('Success')).toBe(true)
+      expect(firstBlock.text).not.toBe(JSON.stringify(merchantData))
       expect(firstBlock.text).toContain(nudge.message)
 
       expect(result._meta).toBeUndefined()
@@ -475,7 +524,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
       expect(result.content[0]).toEqual({ type: 'text', text: 'intermediate 1' })
       expect(result.content[1]).toEqual({ type: 'text', text: 'intermediate 2' })
-      expect(result.content[2]).toEqual({ type: 'text', text: JSON.stringify({ final: true }) })
+      expect(result.content[2]).toEqual({ type: 'text', text: 'Success' })
       expect(result.content).toHaveLength(3)
     })
   })
