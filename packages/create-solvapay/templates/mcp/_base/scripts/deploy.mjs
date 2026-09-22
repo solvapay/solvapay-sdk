@@ -103,7 +103,10 @@ function listWorkerSecretNames() {
 }
 
 function putWorkerSecret(name, value) {
-  const result = runWrangler(['secret', 'put', name], { input: value })
+  const workerName = readWranglerConfig().name
+  const args = ['secret', 'put', name]
+  if (workerName && !workerName.includes('__')) args.push('--name', workerName)
+  const result = runWrangler(args, { input: value })
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
@@ -119,12 +122,16 @@ function getWranglerWhoami() {
   }
 }
 
-function wranglerConfigPaths() {
+export function wranglerConfigPaths() {
   const home = homedir()
   const paths = []
 
   if (process.env.WRANGLER_HOME) {
     paths.push(join(process.env.WRANGLER_HOME, 'config', 'default.toml'))
+  }
+
+  if (process.env.XDG_CONFIG_HOME) {
+    paths.push(join(process.env.XDG_CONFIG_HOME, '.wrangler', 'config', 'default.toml'))
   }
 
   paths.push(join(home, 'Library', 'Preferences', '.wrangler', 'config', 'default.toml'))
@@ -133,13 +140,17 @@ function wranglerConfigPaths() {
   return paths
 }
 
-function readWranglerOAuthToken() {
-  for (const path of wranglerConfigPaths()) {
+export function readOAuthTokenFromConfigPaths(paths) {
+  for (const path of paths) {
     if (!existsSync(path)) continue
     const match = readFileSync(path, 'utf8').match(/^oauth_token\s*=\s*"([^"]+)"/m)
-    if (match?.[1]) return match[1]
+    return match?.[1] ?? null
   }
   return null
+}
+
+function readWranglerOAuthToken() {
+  return readOAuthTokenFromConfigPaths(wranglerConfigPaths())
 }
 
 function resolveCloudflareApiToken() {
@@ -313,9 +324,10 @@ function failSubdomainNotRegistered(accountId) {
     [
       '',
       'This Cloudflare account has not registered a workers.dev subdomain yet.',
-      'Register one (one-time setup), then re-run `npm run deploy`:',
+      `Account ${accountId}: opening Workers & Pages creates the workers.dev subdomain; no paid plan needed.`,
+      'Do that once, then re-run `npm run deploy`:',
       '',
-      `  https://dash.cloudflare.com/${accountId}/workers/onboarding`,
+      '  https://dash.cloudflare.com/?to=/:account/workers-and-pages',
       '',
     ].join('\n'),
   )
@@ -843,72 +855,100 @@ function parseDotEnv(contents) {
   return env
 }
 
-const localEnv = existsSync(dotEnvPath) ? parseDotEnv(readFileSync(dotEnvPath, 'utf8')) : {}
-
-if (!existsSync(dotEnvPath)) {
-  console.error(
-    [
-      '',
-      `⚠  ${dotEnvPath} not found — deploying with placeholder vars from wrangler.jsonc.`,
-      '   Run `npx solvapay init` (which writes SOLVAPAY_SECRET_KEY) and verify the other',
-      '   keys in .env match your merchant, then re-run `npm run deploy` — it uploads',
-      '   SOLVAPAY_SECRET_KEY from .env as a Worker secret on the first deploy.',
-      '',
-    ].join('\n'),
-  )
+function uploadWorkerSecrets(localEnv, { dryRun, force }) {
+  ensureSolvaPaySecretKey(localEnv, { dryRun })
+  ensureUpstreamApiKeySecret(localEnv, { dryRun, force })
+  ensureUpstreamOAuthSecrets(localEnv, { dryRun })
+  ensureUpstreamApiHeadersSecret(localEnv, { dryRun, force })
 }
 
-const dryRun = passthrough.includes('--dry-run')
-const yesFlag =
-  passthrough.includes('--yes') ||
-  passthrough.includes('-y') ||
-  process.env.SOLVAPAY_DEPLOY_YES === '1'
-const forceFlag = passthrough.includes('--force')
-
-const preflight = await runDeployPreflight({ dryRun })
-const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun })
-
-const confirmation = await confirmDeploymentUrl(localEnv, preflight, { dryRun, yes: yesFlag })
-if (confirmation === 'abort') process.exit(1)
-
-// Verify the merchant exists on the SolvaPay backend before uploading
-// the secret key. Otherwise a 404-from-the-backend deploy looks like a
-// success at the `wrangler deploy` level but every paid tool fails at
-// runtime.
-await runSolvaPayPreflight({
-  secretKey: localEnv.SOLVAPAY_SECRET_KEY?.trim(),
-  apiBaseUrl: localEnv.SOLVAPAY_API_BASE_URL?.trim(),
-  dryRun,
-})
-
-ensureSolvaPaySecretKey(localEnv, { dryRun })
-ensureUpstreamApiKeySecret(localEnv, { dryRun, force: forceFlag })
-ensureUpstreamOAuthSecrets(localEnv, { dryRun })
-ensureUpstreamApiHeadersSecret(localEnv, { dryRun, force: forceFlag })
-
-const wranglerPassthrough = passthrough.filter(
-  arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',
-)
-const wranglerArgs = ['deploy']
-for (const name of OVERRIDABLE_VARS) {
-  const value = localEnv[name]
-  if (value) wranglerArgs.push('--var', `${name}:${value}`)
-}
-wranglerArgs.push(...wranglerPassthrough)
-
-const result = runWrangler(wranglerArgs, { captureOutput: true })
-printCapturedWranglerOutput(result)
-
-if (resolvedPublicUrl && !dryRun) {
-  verifyDeployedWorkersDevUrl(resolvedPublicUrl, `${result.stdout ?? ''}\n${result.stderr ?? ''}`)
+function runProjectBuild() {
+  const result = spawnSync('npm', ['run', 'build'], { cwd: projectRoot, stdio: 'inherit' })
+  if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1)
 }
 
-if (!dryRun && (result.status ?? 1) === 0) {
-  const finalUrl = localEnv.MCP_PUBLIC_BASE_URL?.trim()
-  if (finalUrl) {
-    const { name } = readWranglerConfig()
-    printDeployedConnectionSnippets(finalUrl, name)
+async function main() {
+  const localEnv = existsSync(dotEnvPath) ? parseDotEnv(readFileSync(dotEnvPath, 'utf8')) : {}
+
+  if (!existsSync(dotEnvPath)) {
+    console.error(
+      [
+        '',
+        `⚠  ${dotEnvPath} not found — deploying with placeholder vars from wrangler.jsonc.`,
+        '   Run `npx -y solvapay@latest init` (which writes SOLVAPAY_SECRET_KEY) and verify the other',
+        '   keys in .env match your merchant, then re-run `npm run deploy` — it uploads',
+        '   SOLVAPAY_SECRET_KEY from .env as a Worker secret on the first deploy.',
+        '',
+      ].join('\n'),
+    )
   }
+
+  const dryRun = passthrough.includes('--dry-run')
+  const yesFlag =
+    passthrough.includes('--yes') ||
+    passthrough.includes('-y') ||
+    process.env.SOLVAPAY_DEPLOY_YES === '1'
+  const forceFlag = passthrough.includes('--force')
+
+  const preflight = await runDeployPreflight({ dryRun })
+  runProjectBuild()
+  const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun })
+
+  const confirmation = await confirmDeploymentUrl(localEnv, preflight, { dryRun, yes: yesFlag })
+  if (confirmation === 'abort') process.exit(1)
+
+  // Verify the merchant exists on the SolvaPay backend before uploading
+  // the secret key. Otherwise a 404-from-the-backend deploy looks like a
+  // success at the `wrangler deploy` level but every paid tool fails at
+  // runtime.
+  await runSolvaPayPreflight({
+    secretKey: localEnv.SOLVAPAY_SECRET_KEY?.trim(),
+    apiBaseUrl: localEnv.SOLVAPAY_API_BASE_URL?.trim(),
+    dryRun,
+  })
+
+  // `wrangler secret put` on a worker that does not exist yet prompts to
+  // create one. Upload only after the first successful deploy in that case.
+  const workerExistedBeforeDeploy = listWorkerSecretNames() !== null
+  if (workerExistedBeforeDeploy) {
+    uploadWorkerSecrets(localEnv, { dryRun, force: forceFlag })
+  }
+
+  const wranglerPassthrough = passthrough.filter(
+    arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',
+  )
+  const wranglerArgs = ['deploy']
+  for (const name of OVERRIDABLE_VARS) {
+    const value = localEnv[name]
+    if (value) wranglerArgs.push('--var', `${name}:${value}`)
+  }
+  wranglerArgs.push(...wranglerPassthrough)
+
+  const result = runWrangler(wranglerArgs, { captureOutput: true })
+  printCapturedWranglerOutput(result)
+
+  if ((result.status ?? 1) === 0 && !workerExistedBeforeDeploy) {
+    uploadWorkerSecrets(localEnv, { dryRun, force: forceFlag })
+  }
+
+  if (resolvedPublicUrl && !dryRun) {
+    verifyDeployedWorkersDevUrl(resolvedPublicUrl, `${result.stdout ?? ''}\n${result.stderr ?? ''}`)
+  }
+
+  if (!dryRun && (result.status ?? 1) === 0) {
+    const finalUrl = localEnv.MCP_PUBLIC_BASE_URL?.trim()
+    if (finalUrl) {
+      const { name } = readWranglerConfig()
+      printDeployedConnectionSnippets(finalUrl, name)
+    }
+  }
+
+  process.exit(result.status ?? 1)
 }
 
-process.exit(result.status ?? 1)
+const isDirectRun =
+  Boolean(process.argv[1]) && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isDirectRun) {
+  await main()
+}

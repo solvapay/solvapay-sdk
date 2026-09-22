@@ -96,7 +96,7 @@ npm run verify -- http://localhost:8787 --credentials-file ./credentials.json
 `.env` (gitignored) is what `wrangler dev` reads:
 
 ```
-SOLVAPAY_SECRET_KEY=sk_test_…       # populated by `npx solvapay init`
+SOLVAPAY_SECRET_KEY=sk_sand_…       # populated by `npx -y solvapay@latest init`
 SOLVAPAY_PRODUCT_REF=__SOLVAPAY_PRODUCT_REF__
 MCP_PUBLIC_BASE_URL=__MCP_PUBLIC_BASE_URL__
 UPSTREAM_API_KEY=…                  # bearer or single apiKey-header upstream auth
