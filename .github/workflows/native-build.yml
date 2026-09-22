@@ -1,0 +1,88 @@
+name: Native platform bindings
+
+# Reusable 8-target napi matrix. Called by publish.yml / publish-preview.yml.
+# Not a workflow_dispatch publish workflow — do not add to PUBLISH_WORKFLOW_FILES.
+
+on:
+  workflow_call:
+
+jobs:
+  node-binding:
+    name: node-binding (${{ matrix.settings.target }})
+    runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sdks/node-native
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: npx napi build --platform --release --target x86_64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: npx napi build --platform --release --target aarch64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: npx napi build --platform --release --target x86_64-unknown-linux-musl --cross-compile
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: npx napi build --platform --release --target aarch64-unknown-linux-musl --cross-compile
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: npx napi build --platform --release --target aarch64-apple-darwin
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: npx napi build --platform --release --target x86_64-apple-darwin
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: npx napi build --platform --release --target x86_64-pc-windows-msvc
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build: npx napi build --platform --release --target aarch64-pc-windows-msvc
+        node:
+          - '22'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install Rust toolchain
+        run: rustup show && rustup target add ${{ matrix.settings.target }}
+
+      - name: Setup zig (musl cross)
+        if: contains(matrix.settings.target, 'musl')
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Build binding
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: '-D__ARM_ARCH=8'
+          CFLAGS_aarch64_unknown_linux_musl: '-D__ARM_ARCH=8'
+        run: ${{ matrix.settings.build }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: |
+            sdks/node-native/server-native.*.node
+            sdks/node-native/index.js
+            sdks/node-native/index.d.ts
+          if-no-files-found: error

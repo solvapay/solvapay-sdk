@@ -1,0 +1,900 @@
+//! Async SolvaPay client — thin facade over [`SolvaPayClient`] plus gate plumbing.
+
+#![allow(clippy::missing_docs_in_private_items)]
+
+use std::collections::HashMap;
+use std::future::Future;
+use std::sync::Arc;
+
+use crate::drivers_generated::{
+    EnsureCacheHit, EnsureCreateOutcome, EnsureLookupOutcome, EnsureUpdateOutcome,
+};
+use serde_json::{Map, Value};
+use solvapay_core::{
+    gate_next, should_retry_usage_error, CreateCustomerParams, FreeLimit, FreeLimitScope,
+    GateAction, GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
+};
+use solvapay_dto::{
+    CheckLimitRequestFreeAllowance, CheckLimitRequestFreeAllowanceScope, CheckLimitsRequest,
+    CreateCustomerRequest, GetCustomerParams, TrackUsageRequest, UpdateCustomerParams,
+};
+use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
+use tokio::sync::{Mutex, Notify};
+
+use crate::config::{Config, CUSTOMER_DEDUP_MAX_CACHE_SIZE};
+use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
+use crate::host_time::now_ms;
+use crate::retry::with_retry_if;
+
+/// Map a core [`FreeLimit`] onto the OpenAPI `freeAllowance` body field.
+fn free_limit_to_allowance(limit: FreeLimit) -> CheckLimitRequestFreeAllowance {
+    CheckLimitRequestFreeAllowance {
+        cap: Some(limit.cap as i64),
+        meter: Some(limit.meter),
+        scope: Some(match limit.scope {
+            FreeLimitScope::Lifetime => CheckLimitRequestFreeAllowanceScope::Lifetime,
+            FreeLimitScope::RollingWindow => CheckLimitRequestFreeAllowanceScope::RollingWindow,
+        }),
+        window_days: limit.window_days.map(|days| days as i64),
+    }
+}
+
+fn require_api_key(config: &Config) -> Result<(), SdkError> {
+    if config.api_key.trim().is_empty() {
+        return Err(SdkError::Api {
+            message: "SOLVAPAY_SECRET_KEY is required".to_owned(),
+            status: None,
+            code: Some("missing_api_key".to_owned()),
+        });
+    }
+    Ok(())
+}
+
+/// Public async SolvaPay SDK client.
+#[derive(Clone)]
+pub struct Client {
+    inner: Arc<ClientInner>,
+}
+
+struct ClientInner {
+    api: SolvaPayClient,
+    limits_cache_ttl_ms: u64,
+    gate: Mutex<GateState>,
+}
+
+struct GateState {
+    limits_cache: HashMap<String, LimitsCacheEntry>,
+    customer_cache: HashMap<String, CustomerCacheEntry>,
+    customer_inflight: HashMap<String, Arc<CustomerInflight>>,
+}
+
+struct LimitsCacheEntry {
+    timestamp_ms: u64,
+    remaining: f64,
+    limits: Value,
+}
+
+#[derive(Clone)]
+struct CustomerCacheEntry {
+    value: String,
+    timestamp_ms: i64,
+}
+
+struct CustomerInflight {
+    notify: Notify,
+    done: Mutex<bool>,
+    result: Mutex<Option<Result<String, SdkError>>>,
+}
+
+impl Client {
+    /// Builds a client with the default native [`solvapay_transport::ReqwestTransport`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SdkError::Transport`] when the HTTP client fails to initialize.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn new(config: Config) -> Result<Self, SdkError> {
+        require_api_key(&config)?;
+        let transport: SharedTransport = Arc::new(solvapay_transport::ReqwestTransport::new()?);
+        Ok(Self::with_transport(transport, config))
+    }
+
+    /// Builds a client with the default wasm [`solvapay_transport::FetchTransport`].
+    ///
+    /// # Errors
+    ///
+    /// [`SdkError::Api`] when the secret key is missing.
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    pub fn new(config: Config) -> Result<Self, SdkError> {
+        require_api_key(&config)?;
+        let transport: SharedTransport = Arc::new(solvapay_transport::FetchTransport::new());
+        Ok(Self::with_transport(transport, config))
+    }
+
+    /// Builds a client over an injected transport (tests, custom HTTP stacks).
+    pub fn with_transport(transport: SharedTransport, config: Config) -> Self {
+        let shell = build_shell(transport, &config);
+        Self::with_shell(shell, config)
+    }
+
+    /// Builds a client from a preconfigured [`ClientShell`] (fixture clock/rng hooks).
+    pub fn with_shell(shell: ClientShell, config: Config) -> Self {
+        let api = SolvaPayClient::new(shell);
+        // wasm32-unknown-unknown: the isolate is single-threaded; tokio sync
+        // primitives and FetchTransport are not Send+Sync, but Client is still
+        // cloned across `.await` points via Arc.
+        #[cfg_attr(
+            all(target_arch = "wasm32", target_os = "unknown"),
+            allow(clippy::arc_with_non_send_sync)
+        )]
+        let inner = Arc::new(ClientInner {
+            api,
+            limits_cache_ttl_ms: config.limits_cache_ttl_ms,
+            gate: Mutex::new(GateState {
+                limits_cache: HashMap::new(),
+                customer_cache: HashMap::new(),
+                customer_inflight: HashMap::new(),
+            }),
+        });
+        Self { inner }
+    }
+
+    /// Paywall gate for a customer and product (§2.4). Sequencing is [`gate_next`].
+    pub async fn gate(&self, customer_ref: &str, opts: GateOpts) -> Result<GateOutcome, SdkError> {
+        let started_ms = now_ms();
+        let start_event = serde_json::json!({
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": opts.product,
+            "usageType": opts.usage_type,
+            "startedMs": started_ms,
+            "randomUnit": self.random_unit(),
+            "limitsCacheTTLMs": self.inner.limits_cache_ttl_ms,
+        });
+        let (state, action) =
+            crate::drivers_generated::run_generated_gate_loop(self, start_event).await?;
+        match action {
+            GateAction::Allow {
+                customer_ref: backend_ref,
+                product,
+                meter_name,
+                limits,
+                customer,
+                consequence,
+                cache: _,
+                request_id,
+            } => Ok(GateOutcome::Allow(Allow {
+                client: self.clone(),
+                backend_ref,
+                product,
+                meter_name,
+                limits,
+                customer: Allow::from_core_customer(customer),
+                consequence,
+                request_id,
+                driver_state: state,
+            })),
+            GateAction::Gate {
+                gate,
+                cache: _,
+                request,
+                ..
+            } => {
+                self.post_usage_request(request).await?;
+                Ok(GateOutcome::Paywall(gate))
+            }
+            other => Err(SdkError::transport(
+                format!("gate_next returned unexpected terminal action: {other:?}"),
+                false,
+            )),
+        }
+    }
+
+    /// Returns a product-scoped helper for repeated gate calls.
+    pub fn payable(&self, product: impl Into<String>, usage_type: impl Into<String>) -> Payable {
+        Payable {
+            client: self.clone(),
+            product: product.into(),
+            usage_type: usage_type.into(),
+        }
+    }
+
+    pub(crate) fn random_unit(&self) -> f64 {
+        self.inner.api.shell().random_unit()
+    }
+
+    pub(crate) async fn emit_handler_usage(
+        &self,
+        state: &Value,
+        event: Value,
+    ) -> Result<(), SdkError> {
+        let out = gate_next(Some(state), Some(&event)).map_err(helper_to_sdk)?;
+        match out.action {
+            GateAction::SkipUsage => Ok(()),
+            GateAction::EmitUsage { request } => self.post_usage_request(request).await,
+            other => Err(SdkError::transport(
+                format!("gate_next handler event returned unexpected action: {other:?}"),
+                false,
+            )),
+        }
+    }
+
+    pub(crate) async fn post_usage_request(&self, request: Value) -> Result<(), SdkError> {
+        let params: TrackUsageRequest = serde_json::from_value(request)
+            .map_err(|err| SdkError::transport(format!("gate_next usage request: {err}"), false))?;
+        with_retry_if(
+            || self.inner.api.track_usage(params.clone()),
+            RetryPolicy::default(),
+            |err, _attempt| should_retry_usage_error(&sdk_error_message(err)),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn apply_gate_cache(&self, cache: Option<GateCacheOp>) {
+        let Some(cache) = cache else {
+            return;
+        };
+        let mut gate = self.inner.gate.lock().await;
+        match cache {
+            GateCacheOp::Delete { key } => {
+                gate.limits_cache.remove(&key);
+            }
+            GateCacheOp::UpdateRemaining { key, remaining } => {
+                if let Some(entry) = gate.limits_cache.get_mut(&key) {
+                    entry.remaining = remaining;
+                }
+            }
+            GateCacheOp::Set {
+                key,
+                remaining,
+                limits,
+                timestamp,
+                checkout_url: _,
+                meter_name: _,
+            } => {
+                gate.limits_cache.insert(
+                    key,
+                    LimitsCacheEntry {
+                        timestamp_ms: timestamp.max(0) as u64,
+                        remaining,
+                        limits,
+                    },
+                );
+            }
+        }
+    }
+
+    async fn fetch_limits(
+        &self,
+        customer_ref: &str,
+        product: &str,
+        usage_type: &str,
+        include_checkout_session: bool,
+        free_allowance: Option<FreeLimit>,
+    ) -> Result<Value, SdkError> {
+        let include = include_checkout_session.then_some(true);
+        let params = CheckLimitsRequest {
+            customer_ref: Some(customer_ref.to_owned()),
+            free_allowance: free_allowance.map(free_limit_to_allowance),
+            product_ref: Some(product.to_owned()),
+            meter_name: Some(usage_type.to_owned()),
+            include_checkout_session: include,
+            usage_type: None,
+        };
+        self.inner.api.check_limits(params).await
+    }
+
+    async fn ensure_customer(&self, customer_ref: &str) -> Result<String, SdkError> {
+        let (inflight, is_leader) = {
+            let mut gate = self.inner.gate.lock().await;
+            match gate.customer_inflight.get(customer_ref) {
+                Some(existing) => (Arc::clone(existing), false),
+                None => {
+                    let cell = Arc::new(CustomerInflight {
+                        notify: Notify::new(),
+                        done: Mutex::new(false),
+                        result: Mutex::new(None),
+                    });
+                    gate.customer_inflight
+                        .insert(customer_ref.to_owned(), Arc::clone(&cell));
+                    (cell, true)
+                }
+            }
+        };
+
+        if is_leader {
+            let outcome = self.find_or_create_customer(customer_ref).await;
+            {
+                *inflight.done.lock().await = true;
+                *inflight.result.lock().await = Some(outcome.clone());
+            }
+            inflight.notify.notify_waiters();
+            {
+                let mut gate = self.inner.gate.lock().await;
+                gate.customer_inflight.remove(customer_ref);
+            }
+            return outcome;
+        }
+
+        loop {
+            inflight.notify.notified().await;
+            if *inflight.done.lock().await {
+                let result = inflight.result.lock().await.clone();
+                return result
+                    .unwrap_or_else(|| Err(SdkError::transport("customer lookup failed", false)));
+            }
+        }
+    }
+
+    async fn find_or_create_customer(&self, customer_ref: &str) -> Result<String, SdkError> {
+        let start_event = serde_json::json!({
+            "kind": "start",
+            "customerRef": customer_ref,
+            "canCreateCustomer": client_can_create_customer(&self.inner.api),
+            "canUpdateCustomer": client_can_update_customer(&self.inner.api),
+            "dedupTTLMs": crate::CUSTOMER_DEDUP_TTL_MS,
+            "nowMs": now_ms() as i64,
+        });
+        crate::drivers_generated::run_generated_ensure_customer_loop(self, start_event).await
+    }
+}
+
+/// `SolvaPayClient::create_customer` is an inherent method, so every value of
+/// this type can create. Naming the method is the check.
+fn client_can_create_customer(api: &SolvaPayClient) -> bool {
+    let _ = (api, SolvaPayClient::create_customer);
+    true
+}
+
+/// `SolvaPayClient::update_customer` is an inherent method, so every value of
+/// this type can update. Naming the method is the check.
+fn client_can_update_customer(api: &SolvaPayClient) -> bool {
+    let _ = (api, SolvaPayClient::update_customer);
+    true
+}
+
+#[allow(clippy::manual_async_fn)]
+impl crate::drivers_generated::EnsureCustomerHost for Client {
+    fn now_ms(&self) -> i64 {
+        now_ms() as i64
+    }
+
+    fn read_customer_cache(&self, key: &str) -> impl Future<Output = Option<EnsureCacheHit>> {
+        async move {
+            let gate = self.inner.gate.lock().await;
+            gate.customer_cache.get(key).map(|entry| EnsureCacheHit {
+                backend_ref: entry.value.clone(),
+                timestamp_ms: entry.timestamp_ms,
+            })
+        }
+    }
+
+    fn get_customer(
+        &self,
+        by_external_ref: Option<&str>,
+        by_email: Option<&str>,
+    ) -> impl Future<Output = EnsureLookupOutcome> {
+        async move {
+            let lookup = GetCustomerParams {
+                customer_ref: None,
+                email: by_email.map(str::to_owned),
+                external_ref: by_external_ref.map(str::to_owned),
+            };
+            match self.inner.api.get_customer(lookup).await {
+                Ok(mapped) if !mapped.customer_ref.is_empty() => EnsureLookupOutcome {
+                    found: true,
+                    customer: serde_json::json!({
+                        "customerRef": mapped.customer_ref,
+                        "externalRef": mapped.external_ref,
+                    }),
+                    error_message: None,
+                },
+                Ok(_) => EnsureLookupOutcome {
+                    found: false,
+                    customer: Value::Null,
+                    error_message: None,
+                },
+                Err(err) => EnsureLookupOutcome {
+                    found: false,
+                    customer: Value::Null,
+                    error_message: Some(sdk_error_message(&err)),
+                },
+            }
+        }
+    }
+
+    fn create_customer(
+        &self,
+        params: &CreateCustomerParams,
+    ) -> impl Future<Output = EnsureCreateOutcome> {
+        async move {
+            let request = CreateCustomerRequest {
+                description: None,
+                email: Some(params.email.clone()),
+                external_ref: params.external_ref.clone(),
+                metadata: Some(
+                    params
+                        .metadata
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect(),
+                ),
+                name: params.name.clone(),
+                telephone: None,
+            };
+            match self.inner.api.create_customer(request).await {
+                Ok(created) => EnsureCreateOutcome {
+                    ok: true,
+                    customer: serde_json::json!({ "customerRef": created.customer_ref }),
+                    error_message: None,
+                },
+                Err(err) => EnsureCreateOutcome {
+                    ok: false,
+                    customer: Value::Null,
+                    error_message: Some(sdk_error_message(&err)),
+                },
+            }
+        }
+    }
+
+    fn update_customer(
+        &self,
+        customer_ref: &str,
+        patch: &Map<String, Value>,
+    ) -> impl Future<Output = EnsureUpdateOutcome> {
+        async move {
+            let params = UpdateCustomerParams {
+                email: None,
+                external_ref: patch
+                    .get("externalRef")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                metadata: None,
+                name: None,
+                telephone: None,
+            };
+            match self.inner.api.update_customer(customer_ref, params).await {
+                Ok(_) => EnsureUpdateOutcome {
+                    ok: true,
+                    error_message: None,
+                },
+                Err(err) => EnsureUpdateOutcome {
+                    ok: false,
+                    error_message: Some(sdk_error_message(&err)),
+                },
+            }
+        }
+    }
+
+    fn write_customer_cache(
+        &self,
+        key: &str,
+        backend_ref: &str,
+        timestamp_ms: i64,
+    ) -> impl Future<Output = ()> {
+        let key = key.to_owned();
+        let backend_ref = backend_ref.to_owned();
+        async move {
+            let mut gate = self.inner.gate.lock().await;
+            insert_customer_cache(
+                &mut gate.customer_cache,
+                key,
+                CustomerCacheEntry {
+                    value: backend_ref,
+                    timestamp_ms,
+                },
+            );
+        }
+    }
+}
+
+#[allow(clippy::manual_async_fn)]
+impl crate::drivers_generated::GateDriverHost for Client {
+    fn now_ms(&self) -> i64 {
+        now_ms() as i64
+    }
+
+    fn ensure_customer(
+        &self,
+        customer_ref: &str,
+    ) -> impl Future<Output = Result<String, SdkError>> {
+        async move { self.ensure_customer(customer_ref).await }
+    }
+
+    fn read_limits_cache(&self, key: &str) -> impl Future<Output = Option<(f64, Value, u64)>> {
+        async move {
+            let gate = self.inner.gate.lock().await;
+            gate.limits_cache
+                .get(key)
+                .map(|entry| (entry.remaining, entry.limits.clone(), entry.timestamp_ms))
+        }
+    }
+
+    fn check_limits(
+        &self,
+        customer_ref: &str,
+        product_ref: &str,
+        meter_name: &str,
+        include_checkout_session: bool,
+        cache_delete_key: Option<&str>,
+        free_allowance: Option<FreeLimit>,
+    ) -> impl Future<Output = Result<Value, SdkError>> {
+        async move {
+            if let Some(key) = cache_delete_key {
+                let mut gate = self.inner.gate.lock().await;
+                gate.limits_cache.remove(key);
+            }
+            self.fetch_limits(
+                customer_ref,
+                product_ref,
+                meter_name,
+                include_checkout_session,
+                free_allowance,
+            )
+            .await
+        }
+    }
+
+    fn apply_cache(&self, cache: Option<GateCacheOp>) -> impl Future<Output = ()> {
+        async move { self.apply_gate_cache(cache).await }
+    }
+}
+
+fn build_shell(transport: SharedTransport, config: &Config) -> ClientShell {
+    let mut shell = ClientShell::new(transport, config.api_key.clone());
+    if let Some(base) = config.api_base_url.as_deref() {
+        shell = shell.with_base_url(base);
+    }
+    shell.with_retry_policy(config.retry_policy)
+}
+
+fn insert_customer_cache(
+    cache: &mut HashMap<String, CustomerCacheEntry>,
+    key: String,
+    entry: CustomerCacheEntry,
+) {
+    cache.insert(key, entry);
+    let overflow = cache.len().saturating_sub(CUSTOMER_DEDUP_MAX_CACHE_SIZE);
+    if overflow == 0 {
+        return;
+    }
+    let mut oldest: Vec<(String, i64)> = cache
+        .iter()
+        .map(|(cache_key, cached)| (cache_key.clone(), cached.timestamp_ms))
+        .collect();
+    oldest.sort_by_key(|(_, timestamp)| *timestamp);
+    for (cache_key, _) in oldest.into_iter().take(overflow) {
+        cache.remove(&cache_key);
+    }
+}
+
+fn sdk_error_message(err: &SdkError) -> String {
+    match err {
+        SdkError::Api { message, .. }
+        | SdkError::Paywall { message, .. }
+        | SdkError::Transport { message, .. } => message.clone(),
+        other => format!("{other:?}"),
+    }
+}
+
+fn helper_to_sdk(err: HelperErrorResult) -> SdkError {
+    SdkError::Api {
+        message: err.details.unwrap_or(err.error),
+        status: Some(err.status),
+        code: None,
+    }
+}
+
+#[path = "client_generated.rs"]
+mod client_generated;
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+    use crate::gate::TrackOpts;
+    use solvapay_transport::http::{HttpRequest, HttpResponse, Method};
+    use solvapay_transport::transport::{BoxFuture, Transport};
+    use std::sync::Mutex as StdMutex;
+
+    struct MockTransport {
+        responses: StdMutex<Vec<Result<HttpResponse, SdkError>>>,
+        recorded: StdMutex<Vec<HttpRequest>>,
+    }
+
+    impl MockTransport {
+        fn new(responses: Vec<Result<HttpResponse, SdkError>>) -> Arc<Self> {
+            Arc::new(Self {
+                responses: StdMutex::new(responses),
+                recorded: StdMutex::new(Vec::new()),
+            })
+        }
+
+        fn recorded(&self) -> Vec<HttpRequest> {
+            self.recorded.lock().expect("lock").clone()
+        }
+    }
+
+    impl Transport for MockTransport {
+        fn send(&self, req: HttpRequest) -> BoxFuture<'_, Result<HttpResponse, SdkError>> {
+            let recorded = &self.recorded;
+            let responses = &self.responses;
+            Box::pin(async move {
+                recorded.lock().expect("lock").push(req);
+                let mut guard = responses.lock().expect("lock");
+                if guard.is_empty() {
+                    Err(SdkError::transport("mock responses exhausted", false))
+                } else {
+                    guard.remove(0)
+                }
+            })
+        }
+    }
+
+    #[test]
+    fn ensure_customer_capabilities_follow_api_methods() {
+        let client = Client::with_transport(
+            MockTransport::new(vec![]),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        assert!(client_can_create_customer(&client.inner.api));
+        assert!(client_can_update_customer(&client.inner.api));
+    }
+
+    #[test]
+    fn customer_cache_evicts_past_max() {
+        assert_eq!(CUSTOMER_DEDUP_MAX_CACHE_SIZE, 1000);
+        let mut cache = HashMap::new();
+        for index in 0..=CUSTOMER_DEDUP_MAX_CACHE_SIZE {
+            insert_customer_cache(
+                &mut cache,
+                format!("k{index}"),
+                CustomerCacheEntry {
+                    value: format!("cus_{index}"),
+                    timestamp_ms: index as i64,
+                },
+            );
+        }
+        assert!(!cache.contains_key("k0"));
+        assert!(cache.contains_key(&format!("k{CUSTOMER_DEDUP_MAX_CACHE_SIZE}")));
+        assert_eq!(cache.len(), CUSTOMER_DEDUP_MAX_CACHE_SIZE);
+    }
+
+    #[test]
+    fn iso8601_millis_unix_epoch() {
+        assert_eq!(solvapay_core::iso8601_millis(0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(
+            solvapay_core::iso8601_millis(1_704_067_200_123),
+            "2024-01-01T00:00:00.123Z"
+        );
+    }
+
+    #[test]
+    fn config_default_limits_ttl_is_10s() {
+        assert_eq!(Config::default().limits_cache_ttl_ms, 10_000);
+    }
+
+    #[test]
+    fn config_from_env_reads_api_key() {
+        // SAFETY: test-only env mutation; single-threaded test harness.
+        unsafe { std::env::set_var("SOLVAPAY_SECRET_KEY", "sk_from_env") };
+        let config = Config::from_env().expect("from_env");
+        assert_eq!(config.api_key, "sk_from_env");
+        unsafe { std::env::remove_var("SOLVAPAY_SECRET_KEY") };
+    }
+
+    #[test]
+    fn client_new_rejects_empty_api_key() {
+        let err = match Client::new(Config::default()) {
+            Ok(_) => panic!("empty key must fail"),
+            Err(err) => err,
+        };
+        match err {
+            SdkError::Api { code, .. } => assert_eq!(code.as_deref(), Some("missing_api_key")),
+            other => panic!("expected Api missing_api_key, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn client_with_transport_uses_injected_transport() {
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(br#"{"displayName":"Acme"}"#))]);
+        let client = Client::with_transport(
+            mock.clone(),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let merchant = client.get_merchant().await.expect("merchant");
+        assert_eq!(merchant.display_name.as_deref(), Some("Acme"));
+        let recorded = mock.recorded();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(recorded[0].method, Method::Get);
+        assert!(recorded[0].url.contains("/v1/sdk/merchant"));
+    }
+
+    #[tokio::test]
+    async fn gate_allow_returns_allow_when_within_limits() {
+        let limits_body = br#"{"withinLimits":true,"remaining":3,"plan":"pro"}"#;
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(limits_body))]);
+        let client = Client::with_transport(
+            mock,
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let outcome = client
+            .gate(
+                "cus_test",
+                GateOpts {
+                    product: "prd_x".to_owned(),
+                    usage_type: "requests".to_owned(),
+                },
+            )
+            .await
+            .expect("gate");
+        assert!(matches!(outcome, GateOutcome::Allow(_)));
+    }
+
+    #[tokio::test]
+    async fn gate_paywall_returns_gate_when_over_limit() {
+        let limits_body = br#"{"withinLimits":false,"remaining":0,"plan":"pro"}"#;
+        let usage_ok = br#"{}"#;
+        let mock = MockTransport::new(vec![
+            Ok(HttpResponse::ok(limits_body)),
+            Ok(HttpResponse::ok(usage_ok)),
+        ]);
+        let client = Client::with_transport(
+            mock.clone(),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let outcome = client
+            .gate(
+                "cus_test",
+                GateOpts {
+                    product: "prd_x".to_owned(),
+                    usage_type: "requests".to_owned(),
+                },
+            )
+            .await
+            .expect("gate");
+        assert!(matches!(outcome, GateOutcome::Paywall(_)));
+        let recorded = mock.recorded();
+        assert_eq!(recorded.len(), 2);
+        assert!(recorded[1].url.contains("/v1/sdk/usages"));
+        let body: Value =
+            serde_json::from_slice(recorded[1].body.as_ref().expect("body")).expect("usage json");
+        assert_eq!(body.get("outcome").and_then(Value::as_str), Some("paywall"));
+        assert_eq!(
+            body.get("actionType").and_then(Value::as_str),
+            Some("api_call")
+        );
+        assert_eq!(body.get("units").and_then(Value::as_i64), Some(1));
+        assert_eq!(
+            body.get("metadata")
+                .and_then(Value::as_object)
+                .and_then(|m| m.get("action"))
+                .and_then(Value::as_str),
+            Some("requests")
+        );
+        assert!(body.get("timestamp").and_then(Value::as_str).is_some());
+        assert!(body
+            .get("metadata")
+            .and_then(Value::as_object)
+            .and_then(|m| m.get("requestId"))
+            .and_then(Value::as_str)
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn allow_track_success_issues_track_usage() {
+        let limits_body = br#"{"withinLimits":true,"remaining":1,"plan":"pro"}"#;
+        let usage_ok = br#"{}"#;
+        let mock = MockTransport::new(vec![
+            Ok(HttpResponse::ok(limits_body)),
+            Ok(HttpResponse::ok(usage_ok)),
+        ]);
+        let client = Client::with_transport(
+            mock.clone(),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let outcome = client
+            .gate(
+                "cus_test",
+                GateOpts {
+                    product: "prd_x".to_owned(),
+                    usage_type: "requests".to_owned(),
+                },
+            )
+            .await
+            .expect("gate");
+        let GateOutcome::Allow(allow) = outcome else {
+            panic!("expected allow");
+        };
+        allow
+            .track_success(TrackOpts::default())
+            .await
+            .expect("track");
+        let recorded = mock.recorded();
+        assert_eq!(recorded.len(), 2);
+        assert_eq!(recorded[1].method, Method::Post);
+        assert!(recorded[1].url.contains("/v1/sdk/usages"));
+        let body: Value =
+            serde_json::from_slice(recorded[1].body.as_ref().expect("body")).expect("usage json");
+        assert_eq!(body.get("outcome").and_then(Value::as_str), Some("success"));
+        assert_eq!(
+            body.get("actionType").and_then(Value::as_str),
+            Some("api_call")
+        );
+        assert_eq!(body.get("units").and_then(Value::as_i64), Some(1));
+        assert_eq!(
+            body.get("metadata")
+                .and_then(Value::as_object)
+                .and_then(|m| m.get("action"))
+                .and_then(Value::as_str),
+            Some("requests")
+        );
+        assert!(body.get("duration").is_some());
+        assert!(body.get("timestamp").and_then(Value::as_str).is_some());
+    }
+
+    #[tokio::test]
+    async fn allow_track_fail_paywall_error_skips_usage() {
+        use solvapay_core::{PaywallGate, PaywallGateKind};
+
+        let limits_body = br#"{"withinLimits":true,"remaining":1,"plan":"pro"}"#;
+        let mock = MockTransport::new(vec![Ok(HttpResponse::ok(limits_body))]);
+        let client = Client::with_transport(
+            mock.clone(),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let outcome = client
+            .gate(
+                "cus_test",
+                GateOpts {
+                    product: "prd_x".to_owned(),
+                    usage_type: "requests".to_owned(),
+                },
+            )
+            .await
+            .expect("gate");
+        let GateOutcome::Allow(allow) = outcome else {
+            panic!("expected allow");
+        };
+        let err = SdkError::paywall(
+            "Payment required",
+            PaywallGate {
+                kind: PaywallGateKind::PaymentRequired,
+                product: "prd_x".to_owned(),
+                checkout_url: String::new(),
+                message: "Payment required".to_owned(),
+                short_message: "Payment required".to_owned(),
+                confirmation_url: None,
+                plans: None,
+                balance: None,
+                product_details: None,
+                ..PaywallGate::default()
+            },
+        );
+        allow
+            .track_fail(err, TrackOpts::default())
+            .await
+            .expect("track_fail");
+        assert_eq!(mock.recorded().len(), 1);
+    }
+}

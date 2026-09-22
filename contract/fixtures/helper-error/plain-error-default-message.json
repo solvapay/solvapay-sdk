@@ -1,0 +1,19 @@
+{
+  "suite": "helper-error",
+  "case": "plain-error-default-message",
+  "input": {
+    "fn": "mapRouteError",
+    "args": {
+      "kind": "error",
+      "message": "boom",
+      "operationName": "Get something"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Get something failed",
+      "status": 500,
+      "details": "boom"
+    }
+  }
+}

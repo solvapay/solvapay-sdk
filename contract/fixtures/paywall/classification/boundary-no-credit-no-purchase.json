@@ -1,0 +1,13 @@
+{
+  "suite": "paywall",
+  "case": "boundary-no-credit-no-purchase",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "remaining": 0
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

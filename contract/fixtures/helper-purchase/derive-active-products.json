@@ -1,0 +1,57 @@
+{
+  "suite": "helper-purchase",
+  "case": "derive-active-products",
+  "input": {
+    "fn": "deriveActiveProducts",
+    "args": {
+      "purchases": [
+        {
+          "reference": "pur_1",
+          "customerRef": "cus_1",
+          "productName": "Cool MCP",
+          "status": "active",
+          "startDate": "2026-09-03T00:00:00Z",
+          "createdAt": "2026-09-03T00:00:00Z",
+          "amount": 0,
+          "currency": "USD",
+          "isRecurring": false,
+          "planRef": "pln_payg",
+          "planSnapshot": {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "currency": "USD",
+            "price": 0,
+            "isMetered": true
+          }
+        },
+        {
+          "reference": "pur_top",
+          "customerRef": "cus_1",
+          "status": "active",
+          "startDate": "2026-09-04T00:00:00Z",
+          "createdAt": "2026-09-04T00:00:00Z",
+          "amount": 5000,
+          "currency": "USD",
+          "isRecurring": false,
+          "origin": "credit_topup"
+        }
+      ],
+      "productRef": null
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "reference": "pur_1",
+        "productName": "Cool MCP",
+        "productRef": null,
+        "planName": "Pay as you go",
+        "planRef": "pln_payg",
+        "since": "2026-09-03T00:00:00Z",
+        "isMetered": true,
+        "amount": 0,
+        "currency": "USD"
+      }
+    ]
+  }
+}

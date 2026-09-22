@@ -1,0 +1,9 @@
+{
+  "suite": "helper-limits",
+  "case": "is-unlimited-sentinel",
+  "input": {
+    "fn": "isUnlimitedRemaining",
+    "args": { "remaining": -1 }
+  },
+  "expect": { "result": true }
+}

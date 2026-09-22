@@ -1,0 +1,24 @@
+{
+  "suite": "mandate-legal",
+  "case": "resolve-merchant-neither",
+  "input": {
+    "fn": "resolveMandateLegalDocs",
+    "args": {
+      "input": {}
+    }
+  },
+  "expect": {
+    "result": {
+      "merchantBrand": null,
+      "merchantDocs": [],
+      "solvapayDocs": [
+        { "url": "https://solvapay.com/legal/terms", "kind": "terms" },
+        { "url": "https://solvapay.com/legal/privacy", "kind": "privacy" }
+      ],
+      "links": [
+        { "url": "https://solvapay.com/legal/terms", "kind": "terms" },
+        { "url": "https://solvapay.com/legal/privacy", "kind": "privacy" }
+      ]
+    }
+  }
+}

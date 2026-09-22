@@ -8,7 +8,6 @@ description: "Protect Model Context Protocol (MCP) tools with SolvaPay using cre
 - [Installation](#installation)
 - [Basic Setup](#basic-setup)
 - [Protecting Tools](#protecting-tools)
-- [Free tools with a usage cap](#free-tools-with-a-usage-cap)
 - [Authentication](#authentication)
 - [Response Format](#response-format)
 - [Plan Activation](#plan-activation)
@@ -143,9 +142,9 @@ additionalTools: ({ registerPayable, registerFree }) => {
 }
 ```
 
-Naming the same `limit.meter` is what shares the allowance — five calls total across both preview tools, not five each. Omitting `meter` defaults to `free-requests`. Unidentified callers fail with `401`; there is no anonymous bucket. Reserve **included** for a plan’s included amount; a free allowance is the **Free** series on **Usage**.
+Naming the same `limit.meter` is what shares the allowance — five calls total across both preview tools, not five each. Omitting `meter` defaults to `free-requests`. Unidentified callers fail with `401`; there is no anonymous bucket. Reserve **included** for a plan's included amount; a free allowance is the **Free** series on **Usage**.
 
-Full contract: [Add a free allowance to MCP tools](/sdks/typescript/guides/free-allowance). The [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app) example ships the two preview tools above.
+Full contract: [Add a free allowance to MCP tools](/sdks/typescript/guides/free-allowance). The [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app) example ships the two preview tools above.
 
 ## Authentication
 
@@ -403,7 +402,7 @@ app.listen(3006, () => {
 ### Stateless and text-only deployments
 
 - **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., responseMode: 'json' })` from `@solvapay/mcp/fetch` so each request returns a single JSON body (required on Workers / Supabase Edge).
-- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
+- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe.
 
 ## Low-level Adapter (escape hatch)
 
@@ -447,6 +446,7 @@ try {
 
 ## Next Steps
 
+- [Add a free allowance to MCP tools](/sdks/typescript/guides/free-allowance) — `registerFree` for capped free tools
 - [MCP App integration](/sdks/typescript/guides/mcp-app) - Render a custom checkout/account UI inside the host iframe
 - [Express.js Integration Guide](./express) - HTTP framework integration patterns
 - [Usage Events](./usage-events) - Track and bill tool usage

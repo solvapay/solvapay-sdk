@@ -1,0 +1,23 @@
+{
+  "suite": "mcp",
+  "case": "text-override",
+  "input": {
+    "fn": "buildPayableToolResult",
+    "args": {
+      "envelope": {
+        "__solvapayResponse": true,
+        "data": { "x": 1 },
+        "options": { "text": "Found 1 result" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        { "type": "text", "text": "Found 1 result" },
+        { "type": "text", "text": "{\"x\":1}" }
+      ],
+      "structuredContent": { "x": 1 }
+    }
+  }
+}

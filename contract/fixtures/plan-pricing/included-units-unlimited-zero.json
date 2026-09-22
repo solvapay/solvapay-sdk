@@ -1,0 +1,23 @@
+{
+  "suite": "plan-pricing",
+  "case": "included-units-unlimited-zero",
+  "input": {
+    "fn": "includedUnits",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "limit",
+            "cap": 0,
+            "scope": "billing_period",
+            "meter": "requests",
+            "onExceed": "block"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": 0
+  }
+}

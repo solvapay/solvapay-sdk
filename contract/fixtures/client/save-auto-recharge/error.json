@@ -1,0 +1,45 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "saveAutoRecharge",
+    "args": {
+      "customerRef": "cus_fixture",
+      "enabled": true,
+      "triggerType": "balance",
+      "thresholdAmountMajor": 5,
+      "topupAmountMajor": 20,
+      "currency": "usd"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "save-auto-recharge-error",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/auto-recharge",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "enabled": true,
+        "triggerType": "balance",
+        "thresholdAmountMajor": 5,
+        "topupAmountMajor": 20,
+        "currency": "usd"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Save auto-recharge failed (400): bad",
+      "status": 400
+    }
+  }
+}

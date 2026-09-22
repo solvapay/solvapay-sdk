@@ -1,0 +1,40 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomerBalance",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-balance-success",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers/cus_fixture/balance",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_fixture",
+        "credits": 100,
+        "displayCurrency": "usd",
+        "creditsPerMinorUnit": 1,
+        "displayExchangeRate": 1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "cus_fixture",
+      "credits": 100,
+      "displayCurrency": "usd",
+      "creditsPerMinorUnit": 1,
+      "displayExchangeRate": 1
+    }
+  }
+}

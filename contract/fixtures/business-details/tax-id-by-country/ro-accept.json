@@ -1,0 +1,24 @@
+{
+  "suite": "business-details",
+  "case": "ro-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "RO",
+      "taxId": "RO1234567891"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "RO",
+        "taxId": "RO1234567891",
+        "taxIdType": "eu_vat",
+        "customerCountry": "RO"
+      }
+    }
+  }
+}

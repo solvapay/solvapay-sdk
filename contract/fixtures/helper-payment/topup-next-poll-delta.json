@@ -1,0 +1,38 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-next-poll-delta",
+  "input": {
+    "fn": "topupProcessNext",
+    "args": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1",
+        "canGetBalance": true,
+        "baselineCredits": 100,
+        "pollAttempt": 0,
+        "pending": "pollBalance"
+      },
+      "event": {
+        "kind": "balanceResult",
+        "credits": 250
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1",
+        "canGetBalance": true,
+        "baselineCredits": 100,
+        "pollAttempt": 0,
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "status": "succeeded",
+        "creditsAdded": 150
+      }
+    }
+  }
+}

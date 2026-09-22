@@ -1,0 +1,14 @@
+{
+  "suite": "paywall",
+  "case": "resolve-metadata-wins",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {
+      "metadataProduct": "prd_meta",
+      "envProduct": "prd_env"
+    }
+  },
+  "expect": {
+    "result": "prd_meta"
+  }
+}

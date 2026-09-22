@@ -1,0 +1,50 @@
+{
+  "suite": "narrate",
+  "case": "auto-recharge-on",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "auto-recharge",
+      "payload": {
+        "view": "auto-recharge",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [],
+        "autoRechargeUrl": "https://portal.example/s?tab=credits&intent=autorecharge",
+        "customer": {
+          "ref": "cus_1",
+          "autoRecharge": { "enabled": true, "status": "active" },
+          "purchase": null,
+          "paymentMethod": null,
+          "balance": {
+            "credits": 1000,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Auto-recharge — Acme Knowledge Base**\n\nBalance: 1,000 credits (~$0.10)\nAuto-recharge is on. It tops your balance up automatically so calls do not fail.\nManage: [Manage account](https://portal.example/s?tab=credits&intent=autorecharge) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"account\".",
+      "links": [
+        {
+          "uri": "https://portal.example/s?tab=credits&intent=autorecharge",
+          "name": "Manage auto-recharge"
+        }
+      ]
+    }
+  }
+}

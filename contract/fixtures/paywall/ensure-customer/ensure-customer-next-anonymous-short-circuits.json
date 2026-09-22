@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-anonymous-short-circuits",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "anonymous",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "anonymous",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "anonymous",
+        "pending": "none"
+      },
+      "action": {
+        "kind": "resolved",
+        "backendRef": "anonymous"
+      }
+    }
+  }
+}

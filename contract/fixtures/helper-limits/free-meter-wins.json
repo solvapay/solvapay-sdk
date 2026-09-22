@@ -1,0 +1,28 @@
+{
+  "suite": "helper-limits",
+  "case": "free-meter-wins",
+  "input": {
+    "fn": "resolveCheckLimitsParams",
+    "args": {
+      "productRef": "prd_1",
+      "meterName": "api_calls",
+      "usageType": "tokens",
+      "freeLimit": {
+        "meter": "free-previews",
+        "cap": 5,
+        "scope": "lifetime"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "productRef": "prd_1",
+      "meterName": "free-previews",
+      "freeAllowance": {
+        "meter": "free-previews",
+        "cap": 5,
+        "scope": "lifetime"
+      }
+    }
+  }
+}

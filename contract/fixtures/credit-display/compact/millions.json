@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "compact-millions",
+  "input": {
+    "fn": "formatCompactCredits",
+    "args": {
+      "credits": 5000000
+    }
+  },
+  "expect": {
+    "result": "5M credits"
+  }
+}

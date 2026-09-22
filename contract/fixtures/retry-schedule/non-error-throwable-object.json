@@ -1,0 +1,18 @@
+{
+  "suite": "retry-schedule",
+  "case": "non-error-throwable-object",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "throwRaw": {} }],
+      "options": { "maxRetries": 0 }
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [],
+      "events": ["call:0"],
+      "outcome": { "type": "rejected", "name": "Error", "message": "[object Object]" }
+    }
+  }
+}

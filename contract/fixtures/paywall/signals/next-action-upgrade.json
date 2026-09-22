@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "next-action-upgrade",
+  "input": {
+    "fn": "nextActionFor",
+    "args": { "state": { "kind": "upgrade_required" } }
+  },
+  "expect": { "result": "checkout" }
+}

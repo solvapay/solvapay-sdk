@@ -1,0 +1,22 @@
+{
+  "suite": "helper-auth",
+  "case": "header-malformed-token",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "headerUserId": "middleware-user",
+      "authorizationHeader": "Bearer not.a.jwt",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "middleware-user",
+      "email": null,
+      "name": null
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "listProducts",
+    "args": {},
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "list-products-success-products-wrapper",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/products",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "products": [
+          {
+            "reference": "prd_a",
+            "name": "A"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "reference": "prd_a",
+        "name": "A"
+      }
+    ]
+  }
+}

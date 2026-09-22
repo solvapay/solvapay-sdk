@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "us",
+  "input": {
+    "fn": "deriveTaxIdType",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "us_ein"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-outcome-timeout-with-message",
+  "input": {
+    "fn": "projectTopupProcessOutcome",
+    "args": {
+      "status": "timeout",
+      "message": "Webhook delayed"
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "timeout",
+      "message": "Webhook delayed"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "next-action-activation",
+  "input": {
+    "fn": "nextActionFor",
+    "args": { "state": { "kind": "activation_required" } }
+  },
+  "expect": { "result": "activate" }
+}

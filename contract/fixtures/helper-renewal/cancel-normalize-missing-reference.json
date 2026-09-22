@@ -1,0 +1,16 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-normalize-missing-reference",
+  "input": {
+    "fn": "normalizeCancelResponse",
+    "args": {
+      "response": { "status": "cancelled" }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Cancel purchase response missing required fields",
+      "status": 500
+    }
+  }
+}

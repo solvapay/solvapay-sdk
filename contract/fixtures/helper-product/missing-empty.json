@@ -1,0 +1,16 @@
+{
+  "suite": "helper-product",
+  "case": "missing-empty",
+  "input": {
+    "fn": "validateGetProductParams",
+    "args": {
+      "productRef": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: productRef",
+      "status": 400
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "listPurchases",
+    "args": {
+      "customerRef": "cus_123"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "list-purchases-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/purchases",
+      "query": {
+        "customerRef": "cus_123"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "List purchases failed (400): bad",
+      "status": 400
+    }
+  }
+}

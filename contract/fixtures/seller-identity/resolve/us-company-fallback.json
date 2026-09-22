@@ -1,0 +1,21 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-us-company-fallback",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "US",
+      "taxId": null,
+      "companyNumber": "12-3456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "EIN",
+        "value": "12-3456789"
+      },
+      "companyNumber": null
+    }
+  }
+}

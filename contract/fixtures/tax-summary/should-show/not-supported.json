@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "should-show-not-supported",
+  "input": {
+    "fn": "shouldShowTaxRow",
+    "args": {
+      "treatment": "not_supported"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

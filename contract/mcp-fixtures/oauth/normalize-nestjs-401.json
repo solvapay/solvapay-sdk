@@ -1,0 +1,22 @@
+{
+  "suite": "oauth",
+  "case": "normalize-nestjs-401",
+  "input": {
+    "fn": "mcpNormalizeOauthError",
+    "args": {
+      "body": {
+        "error": "Unauthorized",
+        "message": "Client authentication failed",
+        "statusCode": 401
+      },
+      "text": "",
+      "status": 401
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "invalid_client",
+      "error_description": "Client authentication failed"
+    }
+  }
+}

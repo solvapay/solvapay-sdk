@@ -1,0 +1,40 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-cache-stale-refetches",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "cache"
+      },
+      "event": {
+        "kind": "customerCacheEntry",
+        "found": true,
+        "backendRef": "cus_1",
+        "timestampMs": 1000,
+        "nowMs": 61000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "lookupInitial"
+      },
+      "action": {
+        "kind": "getCustomer",
+        "byExternalRef": "user-1"
+      }
+    }
+  }
+}

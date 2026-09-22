@@ -1,0 +1,22 @@
+{
+  "suite": "mcp",
+  "case": "with-options-nudge",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": { "ok": true },
+      "options": {
+        "nudge": { "kind": "low-balance", "message": "Low balance — top up soon" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "ok": true },
+      "options": {
+        "nudge": { "kind": "low-balance", "message": "Low balance — top up soon" }
+      }
+    }
+  }
+}

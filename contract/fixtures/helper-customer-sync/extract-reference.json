@@ -1,0 +1,16 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "extract-reference",
+  "input": {
+    "fn": "extractBackendCustomerRef",
+    "args": {
+      "response": {
+        "reference": "cus_from_reference"
+      },
+      "fallback": "fallback"
+    }
+  },
+  "expect": {
+    "result": "cus_from_reference"
+  }
+}

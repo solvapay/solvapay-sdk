@@ -1,0 +1,15 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-outcome-timeout-no-message",
+  "input": {
+    "fn": "projectTopupProcessOutcome",
+    "args": {
+      "status": "timeout"
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "timeout"
+    }
+  }
+}

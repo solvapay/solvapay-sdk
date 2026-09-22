@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "minor-units-JPY-uppercase",
+  "input": {
+    "fn": "minorUnitsPerMajor",
+    "args": {
+      "currency": "jpy"
+    }
+  },
+  "expect": {
+    "result": 1
+  }
+}

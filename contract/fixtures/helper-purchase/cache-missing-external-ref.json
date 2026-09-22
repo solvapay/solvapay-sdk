@@ -1,0 +1,13 @@
+{
+  "suite": "helper-purchase",
+  "case": "cache-missing-external-ref",
+  "input": {
+    "fn": "isCachedCustomerRefValid",
+    "args": {
+      "externalRef": null,
+      "userId": "user_123",
+      "customerRef": "cus_ABC"
+    }
+  },
+  "expect": { "result": false }
+}

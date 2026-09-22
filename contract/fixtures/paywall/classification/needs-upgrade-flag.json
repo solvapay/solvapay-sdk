@@ -1,0 +1,17 @@
+{
+  "suite": "paywall",
+  "case": "needs-upgrade-flag",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "needsUpgrade": true,
+        "creditBalance": 0,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

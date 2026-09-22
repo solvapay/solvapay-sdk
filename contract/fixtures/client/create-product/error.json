@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createProduct",
+    "args": {
+      "name": "Fixture Product",
+      "config": {},
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-product-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Fixture Product",
+        "config": {},
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create product failed (400): bad",
+      "status": 400
+    }
+  }
+}

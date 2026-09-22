@@ -1,0 +1,20 @@
+{
+  "suite": "default-gate",
+  "case": "custom-reason",
+  "input": {
+    "fn": "mcpDefaultGate",
+    "args": {
+      "product": "prd_demo",
+      "reason": "Upgrade required"
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "",
+      "message": "Upgrade required",
+      "shortMessage": "Payment required"
+    }
+  }
+}

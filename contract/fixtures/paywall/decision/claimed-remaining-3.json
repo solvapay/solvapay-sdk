@@ -1,0 +1,19 @@
+{
+  "suite": "paywall",
+  "case": "claimed-remaining-3",
+  "input": {
+    "fn": "evaluateClaimedLimits",
+    "args": {
+      "withinLimits": true,
+      "remaining": 3,
+      "claimed": 4
+    }
+  },
+  "expect": {
+    "result": {
+      "withinLimits": false,
+      "remaining": 0,
+      "shouldCache": false
+    }
+  }
+}

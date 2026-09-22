@@ -1,0 +1,16 @@
+{
+  "suite": "business-details",
+  "case": "address-us-incomplete",
+  "input": {
+    "fn": "isCustomerAddressComplete",
+    "args": {
+      "input": {
+        "isBusiness": false,
+        "customerCountry": "US"
+      }
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

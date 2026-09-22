@@ -1,0 +1,300 @@
+//! Emit `tools/conformance/fixture-runner/src/registry.rs` from IR wrap symbols plus
+//! chrome for hand-written / extra registrations.
+
+use serde_json::Value;
+
+use crate::emit_bindings_rs::{extract_line, serialize_expr};
+use crate::error::{GenError, GenResult};
+use crate::header::{generated_header, CommentStyle};
+use crate::ir::{Ir, IrBindingArg, IrBindingArtifact, IrBindingCall, IrBindingSymbol};
+
+const SNAPSHOT: &str = include_str!("../assets/fixture-runner-emit.snapshot.json");
+
+/// Generated fixture-runner registry source.
+pub fn emit_fixture_runner(ir: &Ir) -> GenResult<String> {
+    let chrome: Value = serde_json::from_str(SNAPSHOT)
+        .map_err(|e| GenError::Parse(format!("invalid fixture-runner-emit snapshot: {e}")))?;
+    let header = chrome_str(&chrome, &["header"])?;
+    let preamble = chrome_str(&chrome, &["preamble"])?;
+    let skip = string_array(&chrome, "skip")?;
+    let webhook_keep = string_array(&chrome, "webhookKeep")?;
+
+    let wrap: Vec<&IrBindingSymbol> = ir
+        .binding_symbols
+        .values()
+        .filter(|sym| emittable_symbol(sym, &skip, &webhook_keep))
+        .collect();
+
+    let mut core_imports: Vec<String> = wrap
+        .iter()
+        .filter_map(|sym| sym.core_call.clone())
+        .collect();
+    for sym in &wrap {
+        for arg in &sym.args {
+            if let Some(ty) = &arg.typed_as {
+                core_imports.push(ty.clone());
+            }
+        }
+    }
+    core_imports.sort();
+    core_imports.dedup();
+
+    let core_use = if core_imports.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "use solvapay_core::{{\n    {},\n}};\n",
+            core_imports.join(",\n    ")
+        )
+    };
+
+    let mut wrap_by_id = std::collections::BTreeMap::new();
+    let mut invoke_fns: Vec<String> = Vec::new();
+    for sym in &wrap {
+        wrap_by_id.insert(sym.id.as_str(), *sym);
+        invoke_fns.push(emit_invoke(sym)?);
+    }
+
+    let routing = chrome
+        .get("routing")
+        .and_then(Value::as_object)
+        .ok_or_else(|| GenError::Parse("snapshot missing routing".into()))?;
+    let extras = chrome
+        .get("extras")
+        .and_then(Value::as_object)
+        .ok_or_else(|| GenError::Parse("snapshot missing extras".into()))?;
+
+    let order = registration_order(&wrap, extras, routing);
+    let mut registers: Vec<String> = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for id in &order {
+        seen.insert(id.as_str());
+        let target = if wrap_by_id.contains_key(id.as_str()) {
+            invoke_fn_name(wrap_by_id[id.as_str()])
+        } else if let Some(extra) = extras.get(id).and_then(Value::as_str) {
+            extra.to_owned()
+        } else if let Some(route) = routing.get(id).and_then(Value::as_str) {
+            route.to_owned()
+        } else {
+            return Err(GenError::Parse(format!(
+                "no wrap/routing/extras target for {id}"
+            )));
+        };
+        registers.push(register_stmt(id, &target));
+    }
+
+    for (id, extra) in extras {
+        let id = id.as_str();
+        if seen.contains(id) {
+            continue;
+        }
+        let target = extra
+            .as_str()
+            .ok_or_else(|| GenError::Parse(format!("extras.{id} not a string")))?;
+        registers.push(register_stmt(id, target));
+    }
+
+    for sym in &wrap {
+        if seen.contains(sym.id.as_str()) {
+            continue;
+        }
+        registers.push(register_stmt(&sym.id, &invoke_fn_name(sym)));
+    }
+
+    let mut client_ids: Vec<&str> = ir
+        .binding_symbols
+        .values()
+        .filter(|sym| {
+            sym.artifact == IrBindingArtifact::Client
+                && skip.iter().all(|s| s != &sym.id)
+                && webhook_keep.iter().all(|s| s != &sym.id)
+        })
+        .map(|sym| sym.id.as_str())
+        .collect();
+    client_ids.sort_unstable();
+    for id in client_ids {
+        if seen.contains(id) {
+            continue;
+        }
+        seen.insert(id);
+        registers.push(register_client_stmt(id));
+    }
+
+    Ok(format!(
+        "{}{header}\n{core_use}{preamble}\n{}\n\n/// Builds the default [`BindingRegistry`] from generated wrap bodies plus chrome-routed hand-written helpers.\npub fn create_default_registry() -> BindingRegistry {{\n    let mut registry = BindingRegistry::new();\n\n{}\n\n    registry\n}}\n",
+        generated_header(CommentStyle::ModuleDoc, "fixture-runner-out"),
+        invoke_fns.join("\n\n"),
+        registers.join("\n")
+    ))
+}
+
+fn registration_order(
+    wrap: &[&IrBindingSymbol],
+    extras: &serde_json::Map<String, Value>,
+    routing: &serde_json::Map<String, Value>,
+) -> Vec<String> {
+    let mut wrap_sorted: Vec<&IrBindingSymbol> = wrap.to_vec();
+    wrap_sorted.sort_by_key(|sym| (sym.emit_order, sym.id.as_str()));
+    let mut order = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for sym in wrap_sorted {
+        if seen.insert(sym.id.as_str()) {
+            order.push(sym.id.clone());
+        }
+    }
+    let mut rest: Vec<&str> = extras
+        .keys()
+        .map(String::as_str)
+        .chain(routing.keys().map(String::as_str))
+        .collect();
+    rest.sort_unstable();
+    rest.dedup();
+    for id in rest {
+        if seen.insert(id) {
+            order.push(id.to_owned());
+        }
+    }
+    order
+}
+
+fn register_stmt(id: &str, target: &str) -> String {
+    format!(
+        "    registry.register(\n        \"{id}\",\n        Binding {{\n            id: \"core\",\n            invoke: Box::new(|fixture| {target}(&fixture.input)),\n        }},\n    );"
+    )
+}
+
+fn register_client_stmt(id: &str) -> String {
+    format!(
+        "    registry.register(\n        \"{id}\",\n        Binding {{\n            id: \"client\",\n            invoke: Box::new(crate::client_replay::invoke),\n        }},\n    );"
+    )
+}
+
+fn invoke_fn_name(sym: &IrBindingSymbol) -> String {
+    let stem = sym
+        .rust_fn_name
+        .strip_suffix("_binding")
+        .unwrap_or(&sym.rust_fn_name);
+    format!("invoke_{stem}")
+}
+
+fn emittable_symbol(sym: &IrBindingSymbol, skip: &[String], webhook_keep: &[String]) -> bool {
+    if skip.iter().any(|s| s == &sym.id)
+        || webhook_keep.iter().any(|s| s == &sym.id)
+        || sym.id == "validatePublicBaseUrl"
+        || sym.id == "assertResponseResult"
+    {
+        return false;
+    }
+    if sym.artifact == IrBindingArtifact::Client {
+        return false;
+    }
+    match &sym.call {
+        IrBindingCall::Wrap { .. } => true,
+        IrBindingCall::Verbatim => sym.verbatim_body.is_some(),
+    }
+}
+
+fn emit_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
+    match &sym.call {
+        IrBindingCall::Wrap { .. } => emit_wrap_invoke(sym),
+        IrBindingCall::Verbatim => emit_verbatim_invoke(sym),
+    }
+}
+
+fn emit_verbatim_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
+    let body = sym
+        .verbatim_body
+        .as_deref()
+        .ok_or_else(|| GenError::Parse(format!("{} is verbatim without a body", sym.id)))?;
+    let name = invoke_fn_name(sym);
+    let adapted = adapt_verbatim_body(body);
+    Ok(format!(
+        "fn {name}(input: &FixtureInput) -> Result<Value, BindingError> {{\n    let args_json = fixture_args_json(input)?;\n    {adapted}\n}}"
+    ))
+}
+
+fn adapt_verbatim_body(body: &str) -> String {
+    let rewritten = body
+        .replace("args_map(&args_json)", "args_map_json(&args_json)")
+        .replace("SdkError::transport", "verbatim_sdk_transport");
+    let trimmed = rewritten.trim();
+    if trimmed.contains('\n') {
+        let lines: Vec<&str> = trimmed.lines().collect();
+        let rest = lines[1..]
+            .iter()
+            .map(|line| {
+                let stripped = line.strip_prefix("            ").unwrap_or(line);
+                format!("    {stripped}")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("{}\n{rest}", lines[0])
+    } else {
+        trimmed.to_owned()
+    }
+}
+
+fn emit_wrap_invoke(sym: &IrBindingSymbol) -> GenResult<String> {
+    let IrBindingCall::Wrap { serialize, args } = &sym.call else {
+        return Err(GenError::Parse(format!("{} is not wrap", sym.id)));
+    };
+    let name = invoke_fn_name(sym);
+    let args_bind = if sym.args.is_empty() { "_args" } else { "args" };
+    let mut lines = vec![format!("    let {args_bind} = args_map(input);")];
+    for arg in &sym.args {
+        lines.push(format!("    {}", fixture_extract_line(arg)));
+    }
+    let call_args = args.join(", ");
+    let core = sym
+        .core_call
+        .as_deref()
+        .ok_or_else(|| GenError::Parse(format!("wrap symbol {} missing coreCall", sym.id)))?;
+    lines.push(format!(
+        "    {}",
+        serialize_expr(*serialize, core, &call_args)
+    ));
+    Ok(format!(
+        "fn {name}(input: &FixtureInput) -> Result<Value, BindingError> {{\n{}\n}}",
+        lines.join("\n")
+    ))
+}
+
+fn fixture_extract_line(arg: &IrBindingArg) -> String {
+    if arg.host_injected && arg.name == "nowMs" {
+        let local = arg.local.clone().unwrap_or_else(|| "now_ms".to_owned());
+        return format!("let {local} = require_clock_ms(input)?;");
+    }
+    extract_line(arg)
+}
+
+fn chrome_str<'a>(art: &'a Value, path: &[&str]) -> GenResult<&'a str> {
+    let mut cur = art;
+    for key in path {
+        cur = cur.get(*key).ok_or_else(|| {
+            GenError::Parse(format!(
+                "fixture-runner snapshot missing {}",
+                path.join(".")
+            ))
+        })?;
+    }
+    cur.as_str().ok_or_else(|| {
+        GenError::Parse(format!(
+            "fixture-runner snapshot {} is not a string",
+            path.join(".")
+        ))
+    })
+}
+
+fn string_array(chrome: &Value, key: &str) -> GenResult<Vec<String>> {
+    let arr = chrome
+        .get(key)
+        .and_then(Value::as_array)
+        .ok_or_else(|| GenError::Parse(format!("snapshot missing {key} array")))?;
+    arr.iter()
+        .map(|v| {
+            v.as_str()
+                .map(str::to_owned)
+                .ok_or_else(|| GenError::Parse(format!("snapshot {key} entry not a string")))
+        })
+        .collect()
+}

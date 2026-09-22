@@ -1,0 +1,29 @@
+{
+  "latitude": 51.493847,
+  "longitude": -0.1630249,
+  "generationtime_ms": 0.32639503479003906,
+  "utc_offset_seconds": 3600,
+  "timezone": "Europe/London",
+  "timezone_abbreviation": "GMT+1",
+  "elevation": 23.0,
+  "daily_units": {
+    "time": "iso8601",
+    "weather_code": "wmo code",
+    "temperature_2m_max": "\u00b0C",
+    "temperature_2m_min": "\u00b0C",
+    "apparent_temperature_max": "\u00b0C",
+    "apparent_temperature_min": "\u00b0C",
+    "precipitation_sum": "mm",
+    "wind_speed_10m_max": "km/h"
+  },
+  "daily": {
+    "time": ["2024-01-01", "2024-01-02", "2024-01-03"],
+    "weather_code": [61, 61, 61],
+    "temperature_2m_max": [10.1, 12.9, 10.4],
+    "temperature_2m_min": [5.9, 8.8, 6.5],
+    "apparent_temperature_max": [6.3, 8.9, 6.2],
+    "apparent_temperature_min": [1.0, 2.5, 2.7],
+    "precipitation_sum": [8.3, 9.6, 2.3],
+    "wind_speed_10m_max": [30.6, 52.3, 25.9]
+  }
+}

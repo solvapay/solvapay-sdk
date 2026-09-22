@@ -1,0 +1,17 @@
+{
+  "suite": "mcp",
+  "case": "empty-emitted-blocks-omitted",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": { "ok": true },
+      "emittedBlocks": []
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "ok": true }
+    }
+  }
+}

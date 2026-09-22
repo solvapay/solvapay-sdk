@@ -1,6 +1,6 @@
 ---
-title: "TypeScript SDK"
-description: "SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and purchase management."
+title: 'TypeScript SDK'
+description: 'SolvaPay SDK is a modern TypeScript SDK for monetizing APIs, AI agents, and MCP (Model Context Protocol) servers with paywall protection and purchase management.'
 ---
 
 ## What is SolvaPay SDK?
@@ -58,24 +58,28 @@ function CheckoutPage() {
 ## Why teams use it
 
 - Single server API for Node and Edge runtimes
-- CLI setup with `npx solvapay@latest init`
+- CLI setup with `npx solvapay init`
 - Headless React components for checkout flows
 - Built-in auth adapters and Next.js helpers
 
 ## Packages
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `@solvapay/core` | 1.7.1 | Types, schemas, and shared utilities |
-| `@solvapay/server` | 2.8.0 | Paywall protection, purchase checks, and webhooks. `@solvapay/server/fetch` ships fetch-native handlers for Edge / Deno / Cloudflare / Supabase Edge Functions |
-| `@solvapay/react` | 2.3.1 | Provider, hooks, checkout, and account components |
-| `@solvapay/react-supabase` | 1.0.12 | Supabase adapter for React |
-| `@solvapay/auth` | 1.1.0 | Auth adapters and server helpers |
-| `@solvapay/next` | 1.3.11 | Next.js route helpers |
-| `@solvapay/mcp` | 0.4.3 | MCP server adapter; `@solvapay/mcp/fetch` and `@solvapay/mcp/express` subpaths bridge OAuth by runtime |
-| `@solvapay/mcp-core` | 0.4.4 | Framework-neutral MCP contracts (tool names, paywall meta, OAuth discovery) |
-| `solvapay` | 1.3.0 | CLI — `npx solvapay@latest init` adds SolvaPay to an existing project |
-| `create-solvapay` | 0.7.0 | Scaffolder — `npm create solvapay@latest -- --type mcp \| next-auth0` |
+Each package is versioned independently — follow the npm link for the current release.
+
+| Package                                                                              | Purpose                                                                                                                                                        |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@solvapay/core`](https://www.npmjs.com/package/@solvapay/core)                     | Types, schemas, and shared utilities                                                                                                                           |
+| [`@solvapay/server`](https://www.npmjs.com/package/@solvapay/server)                 | Paywall protection, purchase checks, and webhooks. `@solvapay/server/fetch` ships fetch-native handlers for Edge / Deno / Cloudflare / Supabase Edge Functions |
+| [`@solvapay/react`](https://www.npmjs.com/package/@solvapay/react)                   | Provider, hooks, checkout, and account components. `@solvapay/react/mcp` adds the MCP App surface                                                              |
+| [`@solvapay/react-supabase`](https://www.npmjs.com/package/@solvapay/react-supabase) | Supabase adapter for React                                                                                                                                     |
+| [`@solvapay/auth`](https://www.npmjs.com/package/@solvapay/auth)                     | Auth adapters and server helpers                                                                                                                               |
+| [`@solvapay/next`](https://www.npmjs.com/package/@solvapay/next)                     | Next.js route helpers                                                                                                                                          |
+| [`@solvapay/mcp`](https://www.npmjs.com/package/@solvapay/mcp)                       | MCP server adapter for `@modelcontextprotocol/server`; `@solvapay/mcp/fetch` and `@solvapay/mcp/express` subpaths bridge OAuth by runtime                      |
+| [`@solvapay/mcp-core`](https://www.npmjs.com/package/@solvapay/mcp-core)             | Framework-neutral MCP contracts — tool names, descriptors, bootstrap payloads                                                                                  |
+| [`solvapay`](https://www.npmjs.com/package/solvapay)                                 | CLI — `npx solvapay init` adds SolvaPay to an existing project                                                                                                 |
+| [`create-solvapay`](https://www.npmjs.com/package/create-solvapay)                   | Scaffolder — `npm create solvapay -- --type mcp \| next-auth0`                                                                                                 |
+
+`@solvapay/mcp` and `@solvapay/mcp-core` require Node 20+; the rest require Node 18.17+.
 
 ## Next Steps
 
@@ -83,4 +87,3 @@ function CheckoutPage() {
 - [Quick start](./setup/quick-start) - Protect your first endpoint
 - [Installation](./setup/installation) - Manual setup path
 - [Core concepts](./setup/core-concepts) - Products, plans, purchases, and usage
-- [Add a free allowance to MCP tools](./guides/free-allowance) - Cap otherwise-free MCP tools per customer

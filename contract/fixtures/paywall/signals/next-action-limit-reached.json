@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "next-action-limit-reached",
+  "input": {
+    "fn": "nextActionFor",
+    "args": { "state": { "kind": "limit_reached" } }
+  },
+  "expect": { "result": "checkout" }
+}

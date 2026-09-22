@@ -1,0 +1,49 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createPaymentIntent",
+    "args": {
+      "productRef": "prod_fixture",
+      "planRef": "plan_basic",
+      "customerRef": "cus_fixture",
+      "currency": "eur",
+      "idempotencyKey": "currency_key"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-payment-intent-success-currency",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture",
+        "Idempotency-Key": "currency_key"
+      },
+      "body": {
+        "productRef": "prod_fixture",
+        "planRef": "plan_basic",
+        "customerRef": "cus_fixture",
+        "currency": "eur"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "processorPaymentId": "pi_fixture_1",
+        "clientSecret": "pi_fixture_1_secret",
+        "publishableKey": "pk_test_fixture",
+        "amount": 1000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "processorPaymentId": "pi_fixture_1",
+      "clientSecret": "pi_fixture_1_secret",
+      "publishableKey": "pk_test_fixture",
+      "amount": 1000
+    }
+  }
+}

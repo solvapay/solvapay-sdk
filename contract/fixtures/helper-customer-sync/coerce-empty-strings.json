@@ -1,0 +1,14 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "coerce-empty-strings",
+  "input": {
+    "fn": "coerceCustomerOptions",
+    "args": {
+      "email": "",
+      "name": ""
+    }
+  },
+  "expect": {
+    "result": {}
+  }
+}

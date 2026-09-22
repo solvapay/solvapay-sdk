@@ -1,0 +1,51 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "listPurchases",
+    "args": {
+      "customerRef": "cus_123",
+      "productRef": "prd_widget"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "list-purchases-success",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/purchases",
+      "query": {
+        "customerRef": "cus_123",
+        "productRef": "prd_widget"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "purchases": [
+          {
+            "reference": "pur_1",
+            "customerRef": "cus_123",
+            "productRef": "prd_widget",
+            "status": "active"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "purchases": [
+        {
+          "reference": "pur_1",
+          "customerRef": "cus_123",
+          "productRef": "prd_widget",
+          "status": "active"
+        }
+      ]
+    }
+  }
+}

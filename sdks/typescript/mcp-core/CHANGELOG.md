@@ -1,0 +1,405 @@
+# @solvapay/mcp-core changelog
+
+## 0.4.2
+
+### Patch Changes
+
+- c67e78e: Account narration is a snapshot, not a gate: states A and F lead with plan and position, one-time plans keep their `once` qualifier, and the account UI placeholder no longer attributes a catalog plan price when there is no active purchase. Recovery copy no longer points at the provider SDK docs; `docs://solvapay/overview.md` stays registered for discovery.
+- dbd0108: Account narration now trusts `limits.planRef` when the purchase list is empty, so a just-enrolled or just-activated customer is no longer described as having no plan. Bootstrap refetches the purchase list when limits names a purchase the parallel snapshot missed, and credit top-ups are filtered on `origin`.
+- c67e78e: Stop asking an already-paying customer to switch plan on a credit shortfall, and stop minting hosted checkout sessions with a non-browsable MCP endpoint as `returnUrl`. Pass `returnUrl: null` to `createCheckoutSessionCore` to omit the field instead of falling back to the request origin.
+- c67e78e: One ordered active-plan selector, invalidate the limits cache after `activate_plan`, stop double-emitting merchant JSON, and narrate every activate_plan status. Gate and account copy share one recovery vocabulary, print credit amounts next to money when the backend sends the peg, and point auto-recharge at the account portal.
+- c67e78e: Scope account narration and the default viewer to the current product, pick the newest ownership purchase, and only claim unlimited access or unused credits when the payload actually says so.
+
+## 0.4.1
+
+### Patch Changes
+
+- a67bb7c: Gate link honesty: thread `purpose: 'credit_topup'` through checkout session creation, label recovery links by destination (`Add credits` vs `Open checkout`), drop invented top-up presets from the narrator, and classify recovery links from `paywallReason` instead of URL substring heuristics.
+- d15f9ca: Classify each SDK paywall denial honestly and name the recovery. Credit shortfalls report balance, cost and shortfall instead of "no active plan"; included-usage exhaustion reaches `limit_reached`; failed auto-upgrades keep `upgrade_required` with distinct copy. Gate messages append a named per-plan checkout ladder when the backend sends `plans[].checkoutUrl`.
+
+  The `account` tool no longer crashes on a successful limits check (the backend never sends `plan`, and an unguarded `ref.length` threw). Tool errors now validate against the registered output schema so hosts report the real message instead of `-32602`. `attach_business_details` accepts every backend tax ID type. `already_purchased` completes activation. Top-up no longer invents a 100-credit peg when `creditsPerMinorUnit` is missing.
+
+- Updated dependencies [d15f9ca]
+  - @solvapay/core@1.7.1
+
+## 0.4.0
+
+### Minor Changes
+
+- 5d37370: Make MCP gate and intent-tool results usable on text-only hosts. Default `mode` is `auto`, the paywall gate names included usage and a pasteable https checkout URL, and narrators emit plan refs so recovery no longer depends on an iframe.
+
+### Patch Changes
+
+- f994f1a: MCP core transport and narration for the account widget release.
+
+  Account text-mode narration branches on the nine v3 states (A–F, H–J) and reads `usage.total` / `remaining` / `periodEnd`. Add UI-only `get_history` tool descriptor; auto-recharge view narration. Single-source intent-tool names from `MCP_TOOL_NAMES`; trim duplicated description prose.
+
+  Stamp `_meta["openai/visibility"] = "private"` on UI-only transport tools so ChatGPT does not list them for the model. Make every tool result independently complete on `content[].text` (`dataInText` default on, embedded low-balance nudge, inline manage URL, named recovery calls). `registerPayable` accepts an opt-in `outputSchema`.
+
+  Pass billing-country fields through MCP attach/confirm helpers.
+
+- Updated dependencies [f994f1a]
+  - @solvapay/core@1.7.0
+
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [a98faa9]
+  - @solvapay/core@1.6.0
+
+## 0.3.3
+
+### Patch Changes
+
+- 4af6384: Surface the `/v1/sdk/limits` outcome flags (`throttled`, `overage`, `needsTopUp`, `needsUpgrade`, `upgraded`) on `checkLimits()`, `useLimits()`, and MCP `ctx.customer`. An allow decision now carries an optional `consequence` so a throttled or overage request is distinguishable from a plain allow.
+
+  `useLimits`' `isUnlimited` now matches only the backend's `-1` sentinel. An unexpected negative is no longer treated as unlimited.
+
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [a47adff]
+  - @solvapay/core@1.5.0
+
+## 0.3.1
+
+### Patch Changes
+
+- e936ac0: Plan pricing is read from the wire's `options[]` instead of scalar fields the backend stopped sending.
+
+  `GET /v1/sdk/products/:ref/plans` returns pricing as a composable `options[]` array
+  (`charge`, `billingCycle`, `limit`, `trial`) with a derived headline `price`. The SDK
+  was still reading `planType`, `creditsPerUnit`, `billingCycle`, `meterRef`, `limit`, and
+  `pricingOptions` off the plan — none of which appear in the schema. Because every test
+  fixture hand-wrote those fields, the suites passed while real payloads silently took the
+  wrong branch.
+
+  **New — `@solvapay/core` pricing-option readers.** `charges`, `headlineCharges`,
+  `perUnitCharge`, `billingCycle`, `trialDays`, `includedUnits`, `peggedCreditsPerUnit`,
+  and `creditsPerUnitFromBalance` read a plan or a frozen plan snapshot. One reader for
+  both the MCP text narration and the MCP UI panel, so the two agree.
+
+  **Fixed — every paid plan rendered as a one-time payment.** The billing cycle now comes
+  from the `billingCycle` option, so subscriptions show the `/month` suffix and the
+  "start your _plan_ plan" payment copy again instead of "complete the purchase".
+
+  **Fixed — plan labels.** `narrate` derives the label from `type` plus `requiresPayment`,
+  so one-time, hybrid ("subscription + usage"), pay-as-you-go, and free plans are no longer
+  all labelled "recurring". `'free'` and `'trial'` were never backend plan types: a free
+  plan is `requiresPayment: false` and a trial is a `trial` option. The upgrade surface
+  filters on `requiresPayment`, which stops it offering a $0 plan.
+
+  **Fixed — "Cost per call" was absent, and the credit figure was wrong.** The rate is a
+  per-unit charge in **minor units**, not credits, so converting needs the wallet's peg
+  (`creditsPerMinorUnit` and `displayExchangeRate`). The row is emitted only when the
+  charge currency matches `balance.displayCurrency` — the peg carries no cross-currency
+  rate, so anything else would be wrong by the FX ratio. With no balance to peg against,
+  PAYG surfaces show the charge itself (`$0.02 / call`) rather than inventing a credit
+  count.
+
+  **Fixed — included allowance counted the wrong thing.** It is the `limit` option's `cap`,
+  counted in metered items, and it is labelled with the plan's meter. `0` is the backend's
+  unlimited sentinel and is no longer shown as an allowance of zero.
+
+  **Fixed — pay-as-you-go resolved as a free plan.** `resolvePlanShape` keyed off
+  `planType`, `meterRef`, `meterId`, and `limit`, so every plan fell through to its unknown
+  branch. A PAYG plan has no headline `price` and so came back `'free'`: no Top up action,
+  a Cancel action for a plan with no renewal to cancel, and the free-usage activity strip
+  instead of the balance. Metered subscriptions were also indistinguishable from unlimited
+  ones. The shape now derives from `options[]` — a billing cycle separates a subscription
+  from a one-off, a per-unit charge or included allowance marks it metered — and works for
+  both a plan and the frozen snapshot on a purchase, which carry different fields.
+
+  **Breaking — `SuccessMeta`.** `creditsIncluded` is replaced by `includedUnits` plus
+  `meterName`. The old field claimed credits while carrying a per-cycle item allowance.
+
+  **Breaking — `PlanLike`** (`@solvapay/react/mcp`) drops `planType`, `meterRef`,
+  `meterId`, and `limit` for `options`, `requiresPayment`, and `isMetered`, matching what
+  the backend sends.
+
+  **Deprecated on `Plan`.** `pricingOptions`, `creditsPerUnit`, `billingCycle`, `freeUnits`,
+  `setupFee`, `trialDays`, `limit`, and `rolloverUnusedUnits` are kept for consumers who
+  build plans through a custom fetcher, but the backend does not send them — read `options[]`
+  instead. `Plan.type` adds `'hybrid'`.
+
+- Updated dependencies [e936ac0]
+  - @solvapay/core@1.4.0
+
+## 0.3.0
+
+### Minor Changes
+
+- 12f446b: `hideToolsByAudience` now reads `User-Agent` from Web `Request` headers. This is the primary ChatGPT detection path for 2026-era connections, where `initialize` never runs and the previous detection had nothing to key off.
+
+  The `zod` peer narrows to `^4.2.0` and `engines.node` moves to `>=20`. Consumers still on zod 3 or Node 18 must upgrade.
+
+### Patch Changes
+
+- c6d3ddc: Fix `customer_ref` never resolving on the official MCP SDK v2, which left every authenticated tool call unauthenticated.
+
+  SDK v2 moved the auth envelope on the tool-handler context from the flat `extra.authInfo` to `extra.http.authInfo`. The customer-ref extractors still read the v1 location, so `getCustomerRef` resolved to `null` even when the OAuth bridge had authenticated the request correctly.
+
+  The failure was silent in most paths: intent tools returned a bootstrap payload with `customer: null`, rendering an empty "no active plan" account panel for paying customers, and `registerPayable` tools billed against `'anonymous'`. Only `create_checkout_session` failed loudly, with `customer_ref missing from MCP auth context`.
+
+  `defaultGetCustomerRef`, the MCP paywall adapter, and the virtual-tools extractor now read `extra.http.authInfo` first and fall back to the flat `extra.authInfo` that some third-party adapters still emit. `McpToolExtra` gained a typed `http.authInfo` member.
+
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+- Updated dependencies [800f081]
+- Updated dependencies [3a310eb]
+  - @solvapay/core@1.3.0
+
+## 0.2.8
+
+### Patch Changes
+
+- 215d045: Add business purchase / VAT support to plan checkout (`PaymentForm.BusinessDetails`, tax-aware summary, attach-before-confirm) and MCP embedded surfaces via the new `attach_business_details` transport tool.
+- e8490d8: Widen the `@solvapay/server` peer dependency range to `^1.4.0 || ^2.0.0`. Both packages consume only stable `@solvapay/server` exports (paywall helpers, nudge builders, the `SolvaPay` type) and are unaffected by the auto-recharge breaking change in `@solvapay/server@2.0.0`. Declaring the wider range keeps them installable against both `server@1.x` and `server@2.x`, so a `server` major no longer forces a false-major cascade onto `@solvapay/mcp` / `@solvapay/mcp-core` (and onward to `@solvapay/react` / `@solvapay/react-supabase`).
+- Updated dependencies [ede9365]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [349777e]
+  - @solvapay/core@1.1.1
+
+## 0.2.6
+
+### Patch Changes
+
+- 5a9ec8d: `manage_account` narration no longer treats credit top-ups as an active plan and shows the customer's balance in the no-plan welcome path so credited-but-planless users are routed to `activate_plan`.
+- 4892771: Stop upgrade/topup intent tools from inviting model retries in default `ui` mode by including assistant-audience plan narration alongside the UI placeholder, rewriting the placeholder to confirm the panel is shown, and marking checkout/topup as idempotent for dedupe-aware hosts. Replace `<McpApp>`'s timer-based `waitForInitialToolResult` mount race with an event-driven flow keyed on `classifyHostEntry`: intent entries consume the host's one-shot opening `toolresult` via the live handler (no duplicate intent-tool call), while `other` entries fetch bootstrap once.
+
+  Add an idempotent `solvapay://bootstrap.json` MCP resource so widget remounts on hosts that scrub `structuredContent` (e.g. MCPJam) recover via `readServerResource` instead of replaying intent tools. Explicit refresh paths still use `fetchMcpBootstrap`.
+
+- 0eebbdb: Intent tools (`upgrade`, `topup`, `manage_account`) are now annotated `{ readOnlyHint: true, idempotentHint: true }` — they only open the UI or return a read-only bootstrap snapshot. UI-only transport tools dual-stamp `_meta.ui.visibility: ["app"]` and `_meta["openai/widgetAccessible"]: true` so the embedded iframe can invoke them on the ChatGPT Apps SDK runtime.
+- 1ec6297: UI-only transport tools (`create_payment_intent`, etc.) now carry SEP-1865 `_meta.ui.visibility: ["app"]` so MCP Apps hosts hide them from the model while the embedded iframe can still invoke them. The proprietary `_meta.audience: "ui"` tag remains for server-side `hideToolsByAudience` on non-SEP-1865 hosts.
+- 7a03c7f: Credit → fiat display helpers (`creditsToDisplayMinorUnits`, `minorUnitsPerMajor`, `isZeroDecimalCurrency`) now live in `@solvapay/core` so Next.js client components can import them without pulling the Node-only `@solvapay/mcp-core` server bundle. `@solvapay/mcp-core` re-exports the same symbols for backward compatibility.
+- Updated dependencies [7a03c7f]
+  - @solvapay/core@1.1.0
+
+## 0.2.5
+
+### Patch Changes
+
+- 254498f: Preserve OAuth resource metadata in bearer auth by exposing `extra.resource`, instead of inferring MCP client identity from resource-only `aud` claims.
+
+## 0.2.4
+
+### Patch Changes
+
+- 36ac2ad: `hideToolsByAudience` on `createSolvaPayMcpServer` and `createSolvaPayMcpFetch` is now ChatGPT-aware. The audience filter still trims `tools/list` for text-only hosts (Claude Desktop, MCPJam, Cursor) so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own merchant-registered data tools, but it now **automatically returns the full eleven-tool catalog to ChatGPT**. Without this, ChatGPT's Custom Connector gateway re-validates iframe-initiated `tools/call` against the cached `tools/list` and rejects any hidden tool with `MCP error -32000: MCP Resource not found`, breaking the embedded SolvaPay iframe.
+
+  The auto-detection runs against `request.headers['user-agent']` and the post-`initialize` `clientInfo.name`, both matched against `/openai-mcp/i`. Verified live against `openai-mcp/1.0.0 (ChatGPT)` on goldberg-demo (probe 2026-05-04). The pattern is liberal enough to survive a UA bump to `openai-mcp/2.x` without code changes.
+
+  Pass the new object form to extend or override the bypass:
+
+  ```ts
+  hideToolsByAudience: {
+    audiences: ['ui'],
+    bypassWhen: ctx => /openai-mcp|future-iframe-host/i.test(
+      ctx.extra?.requestInfo?.headers?.['user-agent'] ?? '',
+    ),
+  }
+  ```
+
+  Or pass `bypassWhen: () => false` to apply the filter unconditionally on a known text-only deployment.
+
+  The array shorthand (`hideToolsByAudience: ['ui']`) keeps working — it's just shorthand for `{ audiences: ['ui'] }` and gets the default ChatGPT-aware bypass for free. No migration needed for existing integrators.
+
+  New exports from `@solvapay/mcp-core`: `defaultIsChatGptRequest`, `ApplyHideToolsByAudienceContext`, `ApplyHideToolsByAudienceOptions`, `HideToolsByAudienceBypass`. New export from `@solvapay/mcp`: `HideToolsByAudienceConfig`.
+
+  > **Note on semver level**: this change adds public API surface, which by strict semver would warrant a `minor` bump on these pre-1.0 packages. It's released as `patch` because a minor bump on a 0.x package puts the `workspace:*` reference held by dependents (`@solvapay/react`, `@solvapay/react-supabase`, etc.) "out of range" of `^0.2.x`, which the changesets cascade then promotes to a _major_ bump on every dependent — accidentally publishing `@solvapay/react@2.0.0` and similar majors despite no breaking changes. Once the SDK adopts a different inter-package versioning strategy (e.g. `linked` or `workspace:^`), the next `hideToolsByAudience`-style API addition can ship at the proper `minor` level.
+
+- 9c66d68: Stamp a fresh `_meta["openai/widgetSessionId"]` UUID on every intent-tool response (`topup`, `upgrade`, `manage_account`, plus the `activate_plan` picker bootstrap). This is a forward-looking workaround for a separate ChatGPT MCP connector bug where the host returns `-32000 MCP Resource not found` on the second `tools/call` of a session even though the call never reaches the server. Stamping a UUID per invocation gives the host a routing key that changes every call, which the [OpenAI Apps SDK community thread](https://community.openai.com/t/connector-tool-calls-generating-fresh-mcp-session-each-invocation/1364975) reports unsticks the failure mode.
+
+  Matches the shape used by [`openai/openai-apps-sdk-examples`'s `shopping_cart_python`](https://github.com/openai/openai-apps-sdk-examples) server. Safe on any host that doesn't consume the key. Removable once the upstream bug ships a fix.
+
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [40db2c4]
+  - @solvapay/core@1.0.9
+
+## 0.2.2
+
+### Patch Changes
+
+- 4b3de6a: Resync stable manifests so dependents pin to stable `@solvapay/core` and `@solvapay/auth` instead of the leftover `1.0.8-preview.10` references that the previous release accidentally baked into `@solvapay/server@1.0.9`, `@solvapay/next@1.0.8`, `@solvapay/mcp-core@0.2.1`, and `@solvapay/mcp@0.2.1`.
+
+  The root cause was that `core`, `auth`, `solvapay` (CLI), and `react-supabase` had pre-release `1.0.8-preview.X` strings sitting in their `package.json` `version` fields on `main` (leftovers from the pre-changesets preview workflow that the migration commit never reset). Because no changeset had touched those four since the migration, changesets-action never bumped them, and `pnpm publish` substituted every `workspace:*` reference in the recently-released siblings with that literal preview string.
+
+  This changeset:
+  - Resets `core`, `auth`, `solvapay`, and `react-supabase` to the last actually-published stable (`1.0.7`) so the patch bumps below land on `1.0.8`.
+  - Forces a patch bump on `server`, `next`, `mcp-core`, and `mcp` so they re-publish with their workspace dep references substituted from the now-stable `1.0.8` siblings.
+
+  The publish workflow has also been hardened to reject any workspace package that carries a pre-release version identifier on `main` before invoking `changesets/action`, and `scripts/verify-npm-publishes.mjs` now checks each freshly-published manifest for `dependencies` / `peerDependencies` values that resolve to pre-release identifiers — both of which would have caught this regression.
+
+- Updated dependencies [4b3de6a]
+  - @solvapay/core@1.0.8
+
+## 0.2.1
+
+### Patch Changes
+
+- 7f33787: `buildSolvaPayDescriptors` accepts a new optional `apiBaseUrl` that is
+  auto-appended to the resolved CSP's `resourceDomains` + `connectDomains`.
+  Integrators who used to hand-extend `csp` to get merchant branding
+  images rendering from their SolvaPay API origin can now drop the
+  override entirely — pass the same value they pass to
+  `createSolvaPay({ apiBaseUrl })` and the widget iframe's CSP envelope
+  includes it automatically.
+
+  `mergeCsp` grows the same optional second parameter. The origin is
+  normalised via `new URL(apiBaseUrl).origin`, so trailing slashes /
+  paths are stripped before insertion, and duplicates against
+  integrator-supplied overrides are deduped through the existing `Set`
+  merge.
+
+  When `apiBaseUrl` is omitted the behaviour is unchanged — the Stripe
+  baseline + integrator `csp` override still compose exactly as they did
+  in `0.2.0`.
+
+  See Phase 2a of `.cursor/plans/preview_iteration_+_promote_roadmap_88a4eaa0.plan.md`
+  for the original footgun this closes (merchant logos blocked by CSP in
+  the Goldberg smoke).
+
+From `1.0.9` onwards this changelog is generated by
+[changesets](https://github.com/changesets/changesets) — entries below
+the inaugural release are maintained by hand.
+
+## 0.2.1
+
+### Added: `apiBaseUrl` auto-includes the SolvaPay API origin in CSP
+
+`buildSolvaPayDescriptors` and `mergeCsp` accept a new optional
+`apiBaseUrl`. When provided, the origin is appended to the resolved
+CSP's `resourceDomains` + `connectDomains` so the widget iframe can
+load merchant branding images (`GET /v1/files/public/provider-assets/...`)
+and make XHR / fetch calls back to the SolvaPay API without the
+integrator hand-extending `csp.resourceDomains`.
+
+Pass the same `apiBaseUrl` value you pass to
+`createSolvaPay({ apiBaseUrl })`. Origins are normalised via
+`new URL(apiBaseUrl).origin` so trailing slashes and paths are
+stripped, and duplicates against integrator-supplied overrides are
+deduped through the existing `Set` merge.
+
+When `apiBaseUrl` is omitted the behaviour is unchanged: the Stripe
+baseline + integrator `csp` override still compose exactly as they
+did in `0.2.0`.
+
+Surfaced during the Goldberg `mcp-goldberg.solvapay.com` smoke, where
+merchant logos served from `https://api-dev.solvapay.com/...` were
+CSP-blocked inside the widget iframe. Integrators on that pattern can
+now drop their `csp: { resourceDomains: [apiBaseUrl], connectDomains: [apiBaseUrl] }`
+stopgap.
+
+## 0.2.0
+
+Two behaviour additions + one public-surface trim — released together
+as a 0.x minor. Hand-set version (bypasses the Changesets peer-dep
+cascade that would otherwise force `mcp-core` to `1.0.0` when
+`@solvapay/server` bumps `1.0.7 → 1.0.8`). See
+`.changeset/hand-set-versions-consolidation.md` for the full rationale.
+
+### Added: `applyHideToolsByAudience` (shared helper for parallel adapters)
+
+New exported helper — `applyHideToolsByAudience(server, audiences?)` —
+that wraps the server's `tools/list` handler so any tool whose
+`_meta.audience` matches one of the supplied values is dropped from
+the response. The tools stay `enabled: true` so `tools/call` still
+reaches their handlers; the helper only affects the `tools/list`
+shape. Consumed by `@solvapay/mcp` (root + `./fetch`) so both parallel
+adapters can apply the same filter without reimplementing the
+`_requestHandlers` reach-in. See the matching
+`CreateSolvaPayMcpServerOptions.hideToolsByAudience` on
+`@solvapay/mcp@0.2.0` for the integrator-facing surface.
+
+### Removed (breaking): text-only paywall surface
+
+Per SEP-1865 / MCP Apps (2026-01-26) descriptor-advertising means the
+host MUST open the iframe on every call. Stamping
+`_meta.ui.resourceUri` on merchant payable data tools made silent
+successes flash an empty widget next to every
+`predict_direction` / `search_knowledge` result — the original "MCP
+App: ui://…" empty box complaint. Paywall / nudge / activation
+responses are now plain text narrations instead; the widget iframe
+only opens when the user (or LLM) deliberately invokes one of the
+three intent tools (`upgrade` / `manage_account` / `topup`) whose UX
+genuinely is the iframe.
+
+Removed public types / helpers:
+
+- `BuildPayableHandlerContext.resourceUri` field.
+- `SolvaPayMcpPaywallContent` type alias.
+- `buildPaywallUiMeta` helper + `PaywallUiMeta`, `PaywallUiMetaInput`
+  types (previously deprecated).
+- `SolvaPayMcpViewKind` narrowed to `'checkout' | 'account' | 'topup'`
+  — the `'paywall'` and `'nudge'` variants are gone.
+- `BootstrapPayload` no longer carries the `paywall`, `nudge`, or
+  `data` fields.
+
+Migration: if you were constructing `BuildPayableHandlerContext`
+manually, drop the `resourceUri` field. If you were reading
+`paywall` / `nudge` / `data` off `BootstrapPayload`, the narration is
+now on `content[0].text` via the `@solvapay/server` gate helpers
+(`classifyPaywallState` + new `buildGateMessage`).
+
+## 0.1.0
+
+Inaugural release. Framework-neutral MCP contracts for the SolvaPay SDK:
+
+- `MCP_TOOL_NAMES` + `buildSolvaPayDescriptors` — the canonical tool
+  name map + schema-only descriptor builder consumed by every adapter
+  (`@modelcontextprotocol/sdk`, `fastmcp`, raw JSON-RPC).
+- `buildPayableHandler` — the runtime-agnostic payable wrapper that
+  projects `@solvapay/server`'s paywall decision into an
+  `{ isError, content }` envelope plus `_meta['solvapay.com/paywall']`.
+- OAuth discovery JSON builders — `getOAuthProtectedResourceResponse`
+  / `getOAuthAuthorizationServerResponse` return plain JSON; the Node
+  and fetch OAuth bridges (`@solvapay/mcp-express`, `@solvapay/mcp-fetch`)
+  own the HTTP framing.
+- Bearer + JWT helpers — `getCustomerRefFromBearerAuthHeader`,
+  `McpBearerAuthError`, `decodeJwtPayload` — the canonical shape every
+  adapter uses to convert a `Authorization: Bearer …` header into a
+  `customerRef`.
+- Paywall meta, CSP, bootstrap payload types — the cross-boundary
+  shapes `@solvapay/react`, `@solvapay/mcp`, and the fetch/express
+  bridges all agree on.
+
+Zero runtime dependency on `@modelcontextprotocol/*`.
+
+### Peer dependencies
+
+`@solvapay/server` is a **required** peer. Every barrel re-export
+(`descriptors`, `bootstrap-payload`, `payable-handler`,
+`paywall-meta`, `response-context`, `paywallToolResult`) resolves
+runtime values from `@solvapay/server` (the merchant API `*Core`
+functions, `PaywallError`, `isPaywallStructuredContent`, …), so
+listing it as an optional peer would crash any import at module
+resolution time with `ERR_MODULE_NOT_FOUND`. The peer shape —
+instead of a direct dependency — preserves singleton semantics
+across the adapter family (one `PaywallError` constructor, one
+`SolvaPay` client instance) when `@solvapay/mcp`, `mcp-express`,
+`mcp-fetch`, and app-level code all share a single hoisted
+`@solvapay/server` install.
+
+### Rename history
+
+`@solvapay/mcp-core` is the rename of the old `@solvapay/mcp` package
+(which in this reshuffle now holds the official `@modelcontextprotocol/sdk`
+adapter). The old `@solvapay/mcp` name was never published to npm —
+this is a clean first publish, no migration shim. Integrators who
+imported framework-neutral types from the old `@solvapay/mcp` should
+switch to `@solvapay/mcp-core`:
+
+```diff
+- import { MCP_TOOL_NAMES, buildSolvaPayDescriptors } from '@solvapay/mcp'
++ import { MCP_TOOL_NAMES, buildSolvaPayDescriptors } from '@solvapay/mcp-core'
+```

@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "create-missing-plan-ref",
+  "input": {
+    "fn": "validateCreatePaymentIntentParams",
+    "args": {
+      "planRef": "",
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameters: planRef and productRef are required",
+      "status": 400
+    }
+  }
+}

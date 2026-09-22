@@ -1,0 +1,26 @@
+{
+  "suite": "mcp",
+  "case": "message-topup-with-arg",
+  "input": {
+    "fn": "buildPromptUserMessage",
+    "args": {
+      "promptName": "topup",
+      "args": {
+        "amount": "25"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "messages": [
+        {
+          "role": "user",
+          "content": {
+            "type": "text",
+            "text": "Call the `account` tool with view: \"topup\" and top up my credits by 25."
+          }
+        }
+      ]
+    }
+  }
+}

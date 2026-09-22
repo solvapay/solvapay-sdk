@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "name-precedence-full-name",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1IiwidXNlcl9tZXRhZGF0YSI6eyJmdWxsX25hbWUiOiJGdWxsIiwibmFtZSI6Ik1ldGEifSwibmFtZSI6IlRvcCJ9.not-a-signature",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "u",
+      "email": null,
+      "name": "Full"
+    }
+  }
+}

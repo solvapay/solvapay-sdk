@@ -1,0 +1,21 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-invalid-signature",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyLTMifQ.wwiYOSvRNVOk65TeFhKujVpBHaq9v0SXix9qjO_AGoI",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Unauthorized",
+      "status": 401,
+      "details": "Invalid or expired authentication token"
+    }
+  }
+}

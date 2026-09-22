@@ -1,0 +1,19 @@
+{
+  "suite": "helper-usage",
+  "case": "no-active-purchase",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": null
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": null,
+      "total": null,
+      "used": 0,
+      "remaining": null,
+      "percentUsed": null
+    }
+  }
+}

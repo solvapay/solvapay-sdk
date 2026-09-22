@@ -1,0 +1,16 @@
+{
+  "suite": "native-cors",
+  "case": "unknown-scheme",
+  "input": {
+    "fn": "mcpNativeCors",
+    "args": {
+      "origin": "https://example.com"
+    }
+  },
+  "expect": {
+    "result": {
+      "allowed": false,
+      "headers": {}
+    }
+  }
+}

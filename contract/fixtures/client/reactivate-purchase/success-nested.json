@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "reactivatePurchase",
+    "args": {
+      "purchaseRef": "pur_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "reactivate-purchase-success-nested",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/pur_fixture/reactivate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "purchase": {
+          "reference": "pur_fixture",
+          "status": "active"
+        },
+        "message": "ok"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "pur_fixture",
+      "status": "active"
+    }
+  }
+}

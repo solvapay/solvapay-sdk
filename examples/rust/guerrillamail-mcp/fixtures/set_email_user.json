@@ -1,0 +1,10 @@
+{
+  "alias_error": "",
+  "alias": "solva-alias",
+  "email_addr": "solvatestinbox@guerrillamailblock.com",
+  "email_timestamp": 1700000000,
+  "site_id": 1,
+  "sid_token": "sid_alpha",
+  "site": "emjd",
+  "auth": { "success": true, "error_codes": [] }
+}

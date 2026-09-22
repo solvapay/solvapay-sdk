@@ -1,0 +1,247 @@
+/**
+ * Browser profile wrapper — public-safe pure logic only.
+ *
+ * Exposes `wasmVersion` plus the business-details / credit-display /
+ * seller-identity / mandate-legal / plan-pricing sync envelope functions, plus the
+ * pure-compute decision exports that fit both §7.8 byte gates. Never
+ * exports webhook verification, the transport `WasmClient`, or the MCP
+ * engine — those stay on the edge profile. Exports are enumerated explicitly
+ * (not `export *`) so the browser symbol audit can verify the exact surface.
+ * `ready()` warms the module asynchronously; `ensureReadySync()` instantiates
+ * from a precompiled `WebAssembly.Module` when the caller already has one.
+ */
+import init, {
+  initSync,
+  wasmVersion,
+  wasmBuildInfo,
+  // business-details (public-safe)
+  validateBusinessDetails,
+  deriveTaxIdType,
+  isTaxIdType,
+  TAX_ID_TYPES,
+  resolveTaxBehavior,
+  getTaxIdExample,
+  getTaxIdFieldLabel,
+  getTaxIdHelperText,
+  getBusinessCountryOptions,
+  resolveBuyerCountry,
+  getCustomerAddressFieldErrors,
+  isCustomerAddressComplete,
+  isPostalCodeRequired,
+  isStateRequired,
+  getStateFieldLabel,
+  getPostalCodeFieldLabel,
+  getPostalCodePlaceholder,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
+  BUSINESS_COUNTRY_DISPLAY_NAMES,
+  BUSINESS_COUNTRY_OPTIONS,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  COUNTRY_TO_TAX_ID_TYPE,
+  TAX_ID_EXAMPLE_BY_COUNTRY,
+  TAX_BEHAVIORS,
+  TAX_EXCLUSIVE_CURRENCIES,
+  // credit-display (public-safe)
+  creditsToDisplayMinorUnits,
+  isZeroDecimalCurrency,
+  isUnlimitedRemaining,
+  minorUnitsPerMajor,
+  // seller-identity (public-safe)
+  resolveSellerIdentityDisplay,
+  getSellerTaxIdentifierDisplayLabel,
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  // mandate-legal (public-safe)
+  solvapayTermsUrl,
+  solvapayPrivacyUrl,
+  solvapayWebsiteUrl,
+  resolveMandateLegalDocs,
+  // plan-pricing (public-safe)
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  countsUsage,
+  meterName,
+  usageRate,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
+  planPricingShape,
+  resolveAccountState,
+  deriveDefaultView,
+  resolvePlanShape,
+  planConsequence,
+  deriveActiveProducts,
+  historyRows,
+  formatCompactCredits,
+  resolveDisplayMode,
+  formatPrice,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  shouldShowTaxRow,
+  toMajorUnits,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+  BALANCE_RECONCILE_DELAYS_MS,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
+  assertValidProductRef,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyCreateError,
+  classifyLookupError,
+  classifyReactivateError,
+  freeMeterNamePattern,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  requireProductRef,
+  resolveProductRef,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+} from '../pkg/browser/solvapay_wasm.js'
+
+export {
+  initSync,
+  wasmVersion,
+  wasmBuildInfo,
+  validateBusinessDetails,
+  deriveTaxIdType,
+  isTaxIdType,
+  TAX_ID_TYPES,
+  resolveTaxBehavior,
+  getTaxIdExample,
+  getTaxIdFieldLabel,
+  getTaxIdHelperText,
+  getBusinessCountryOptions,
+  resolveBuyerCountry,
+  getCustomerAddressFieldErrors,
+  isCustomerAddressComplete,
+  isPostalCodeRequired,
+  isStateRequired,
+  getStateFieldLabel,
+  getPostalCodeFieldLabel,
+  getPostalCodePlaceholder,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
+  BUSINESS_COUNTRY_DISPLAY_NAMES,
+  BUSINESS_COUNTRY_OPTIONS,
+  SUPPORTED_BUSINESS_COUNTRIES,
+  COUNTRY_TO_TAX_ID_TYPE,
+  TAX_ID_EXAMPLE_BY_COUNTRY,
+  TAX_BEHAVIORS,
+  TAX_EXCLUSIVE_CURRENCIES,
+  creditsToDisplayMinorUnits,
+  isZeroDecimalCurrency,
+  isUnlimitedRemaining,
+  minorUnitsPerMajor,
+  resolveSellerIdentityDisplay,
+  getSellerTaxIdentifierDisplayLabel,
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  solvapayTermsUrl,
+  solvapayPrivacyUrl,
+  solvapayWebsiteUrl,
+  resolveMandateLegalDocs,
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  countsUsage,
+  meterName,
+  usageRate,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
+  planPricingShape,
+  resolveAccountState,
+  deriveDefaultView,
+  resolvePlanShape,
+  planConsequence,
+  deriveActiveProducts,
+  historyRows,
+  formatCompactCredits,
+  resolveDisplayMode,
+  formatPrice,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  shouldShowTaxRow,
+  toMajorUnits,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
+  BALANCE_RECONCILE_DELAYS_MS,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
+  assertValidProductRef,
+  attachBusinessDetailsValidationError,
+  classifyCancelError,
+  classifyCreateError,
+  classifyLookupError,
+  classifyReactivateError,
+  freeMeterNamePattern,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  requireProductRef,
+  resolveProductRef,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+}
+
+let initPromise
+let syncInitDone = false
+
+export function readyFromBytes(bytes) {
+  if (!initPromise) {
+    initPromise = init({ module_or_path: bytes }).then(() => {
+      syncInitDone = true
+      return undefined
+    })
+  }
+  return initPromise
+}
+
+export function ready(source) {
+  if (source !== undefined) {
+    return readyFromBytes(source)
+  }
+  if (!initPromise) {
+    initPromise = init({
+      module_or_path: new URL('../pkg/browser/solvapay_wasm_bg.wasm', import.meta.url),
+    }).then(() => {
+      syncInitDone = true
+      return undefined
+    })
+  }
+  return initPromise
+}
+
+/**
+ * Synchronously instantiates from an already-compiled `WebAssembly.Module`.
+ * Browsers have no synchronous byte access, so callers that need the sync path
+ * must pass a module they compiled/streamed themselves; otherwise use
+ * {@link ready} to warm asynchronously first.
+ */
+export function ensureReadySync(wasmModule) {
+  if (syncInitDone) return
+  if (wasmModule === undefined) {
+    throw new Error(
+      '@solvapay/server-wasm/browser: ensureReadySync() needs a WebAssembly.Module; await ready() to warm asynchronously instead',
+    )
+  }
+  initSync({ module: wasmModule })
+  syncInitDone = true
+}

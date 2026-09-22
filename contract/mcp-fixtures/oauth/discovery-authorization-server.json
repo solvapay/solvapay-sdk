@@ -1,0 +1,39 @@
+{
+  "suite": "oauth",
+  "case": "discovery-authorization-server",
+  "input": {
+    "fn": "mcpOauthDiscovery",
+    "args": {
+      "kind": "authorization-server",
+      "publicBaseUrl": "https://mcp.example.com/"
+    }
+  },
+  "expect": {
+    "result": {
+      "issuer": "https://mcp.example.com",
+      "authorization_endpoint": "https://mcp.example.com/oauth/authorize",
+      "token_endpoint": "https://mcp.example.com/oauth/token",
+      "registration_endpoint": "https://mcp.example.com/oauth/register",
+      "revocation_endpoint": "https://mcp.example.com/oauth/revoke",
+      "token_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post"
+      ],
+      "response_types_supported": [
+        "code"
+      ],
+      "grant_types_supported": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes_supported": [
+        "openid",
+        "profile",
+        "email"
+      ],
+      "code_challenge_methods_supported": [
+        "S256"
+      ]
+    }
+  }
+}

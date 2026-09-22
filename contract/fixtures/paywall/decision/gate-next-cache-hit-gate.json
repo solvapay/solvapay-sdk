@@ -1,0 +1,92 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-cache-hit-gate",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "limitsCacheEntry",
+        "remaining": 0,
+        "limits": {
+          "withinLimits": false,
+          "remaining": 0
+        },
+        "nowMs": 1250,
+        "found": true,
+        "timestampMs": 1000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "requestId": "solvapay_1000_i",
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "gate",
+        "customerRef": "cus_abc",
+        "product": "prd_1",
+        "meterName": "requests",
+        "limits": {
+          "withinLimits": false,
+          "remaining": 0
+        },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 0,
+          "withinLimits": false,
+          "throttled": false,
+          "overage": false,
+          "isCreditBased": false
+        },
+        "gate": {
+          "kind": "payment_required",
+          "product": "prd_1",
+          "checkoutUrl": "",
+          "message": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'.",
+          "shortMessage": "Payment required",
+          "reason": "upgrade_required",
+          "nextAction": "checkout",
+          "remainingCalls": 0
+        },
+        "cache": {
+          "op": "delete",
+          "key": "cus_abc:prd_1:requests"
+        },
+        "request": {
+          "customerRef": "cus_abc",
+          "actionType": "api_call",
+          "units": 1,
+          "outcome": "paywall",
+          "productRef": "prd_1",
+          "duration": 250,
+          "idempotencyKey": "solvapay_1000_i:paywall",
+          "metadata": {
+            "action": "requests",
+            "requestId": "solvapay_1000_i"
+          },
+          "timestamp": "1970-01-01T00:00:01.250Z"
+        },
+        "requestId": "solvapay_1000_i"
+      }
+    }
+  }
+}

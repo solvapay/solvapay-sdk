@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-jpy-zero-decimal",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 10000,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 150,
+      "displayCurrency": "JPY"
+    }
+  },
+  "expect": {
+    "result": 150
+  }
+}

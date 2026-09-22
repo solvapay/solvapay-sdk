@@ -1,0 +1,19 @@
+{
+  "suite": "product-readiness",
+  "case": "inactive-status",
+  "input": {
+    "fn": "evaluateProductReadiness",
+    "args": {
+      "status": "draft",
+      "plans": [{ "isActive": true }]
+    }
+  },
+  "expect": {
+    "result": {
+      "ready": false,
+      "issues": ["product status is \"draft\""],
+      "activePlans": 1,
+      "totalPlans": 1
+    }
+  }
+}

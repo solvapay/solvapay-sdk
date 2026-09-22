@@ -1,0 +1,11 @@
+{
+  "suite": "mcp",
+  "case": "empty-branding",
+  "input": {
+    "fn": "deriveIcons",
+    "args": {}
+  },
+  "expect": {
+    "result": null
+  }
+}

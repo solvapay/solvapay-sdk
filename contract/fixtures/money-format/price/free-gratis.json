@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-free-gratis",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 0,
+      "currency": "usd",
+      "free": "Gratis"
+    }
+  },
+  "expect": {
+    "result": "Gratis"
+  }
+}

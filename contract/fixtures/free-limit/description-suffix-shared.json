@@ -1,0 +1,19 @@
+{
+  "suite": "free-limit",
+  "case": "description-suffix-shared",
+  "input": {
+    "fn": "freeToolDescriptionSuffix",
+    "args": {
+      "limit": {
+        "meter": "free-requests",
+        "cap": 10,
+        "scope": "rolling_window",
+        "windowDays": 30
+      },
+      "sharedWith": ["preview_quote", "preview_profile"]
+    }
+  },
+  "expect": {
+    "result": "Free tool — 10 calls per 30 days, then a plan is required. Call `account` for remaining usage. Shares a free allowance with `preview_quote`, `preview_profile`."
+  }
+}

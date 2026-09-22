@@ -1,0 +1,19 @@
+{
+  "suite": "retry-schedule",
+  "case": "should-retry-not-consulted-on-last-attempt",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "throw": "boom" }, { "throw": "boom" }],
+      "options": { "maxRetries": 1 },
+      "shouldRetry": "always"
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500],
+      "events": ["call:0", "shouldRetry:0=true", "sleep:500", "call:1"],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

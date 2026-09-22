@@ -1,0 +1,16 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-normalize-not-cancelled",
+  "input": {
+    "fn": "normalizeCancelResponse",
+    "args": {
+      "response": { "reference": "pur_1", "status": "active" }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cancellation failed: backend returned status 'active' without cancelledAt timestamp",
+      "status": 500
+    }
+  }
+}

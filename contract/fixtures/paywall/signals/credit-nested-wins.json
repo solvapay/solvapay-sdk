@@ -1,0 +1,28 @@
+{
+  "suite": "paywall",
+  "case": "credit-nested-wins",
+  "input": {
+    "fn": "creditSignals",
+    "args": {
+      "limits": {
+        "creditBalance": 100,
+        "creditsPerUnit": 10,
+        "remaining": 3,
+        "balance": {
+          "creditBalance": 50,
+          "creditsPerUnit": 25,
+          "remainingUnits": 2
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "creditBalance": 50,
+      "creditsPerCall": 25,
+      "shortfallCredits": 0,
+      "remainingCalls": 2,
+      "isCreditBased": true
+    }
+  }
+}

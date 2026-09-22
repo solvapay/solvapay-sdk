@@ -1,0 +1,20 @@
+{
+  "suite": "free-limit",
+  "case": "normalize-bad-meter",
+  "input": {
+    "fn": "normalizeFreeLimit",
+    "args": {
+      "limit": {
+        "meter": "requests",
+        "cap": 5,
+        "scope": "lifetime"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Free allowance meter 'requests' must match ^free-[a-z0-9-]+$",
+      "status": 400
+    }
+  }
+}

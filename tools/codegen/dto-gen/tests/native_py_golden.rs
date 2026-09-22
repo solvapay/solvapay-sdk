@@ -1,0 +1,49 @@
+//! Golden test: emitted `_native.py` must match the committed marshalling glue
+//! once the `@generated` header is stripped (step 41-c).
+
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+mod support;
+
+use std::fs;
+use std::path::Path;
+
+use dto_gen::emit_native_py;
+
+fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
+    let committed = fs::read_to_string(committed_path)
+        .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));
+    let got = support::strip_generated_header(emitted);
+    let want = support::strip_generated_header(&committed);
+    if got != want {
+        let g: Vec<&str> = got.lines().collect();
+        let w: Vec<&str> = want.lines().collect();
+        let mut first = 0;
+        while first < g.len() && first < w.len() && g[first] == w[first] {
+            first += 1;
+        }
+        let ctx = |v: &[&str]| {
+            let start = first.saturating_sub(2);
+            let end = (first + 4).min(v.len());
+            v[start..end].join("\n")
+        };
+        panic!(
+            "emitted {tag} does not match committed at line ~{first}\n--- emitted ---\n{}\n--- committed ---\n{}",
+            ctx(&g),
+            ctx(&w)
+        );
+    }
+}
+
+#[test]
+fn native_py_matches_committed() {
+    let ir = support::lower_bindings_ir();
+    let emitted = emit_native_py(&ir).expect("emit _native.py");
+    assert_matches(
+        &emitted,
+        &support::paths()
+            .generated_path("nativePy")
+            .expect("nativePy"),
+        "_native.py",
+    );
+}

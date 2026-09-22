@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "helper-text-us",
+  "input": {
+    "fn": "getTaxIdHelperText",
+    "args": {
+      "country": "US"
+    }
+  },
+  "expect": {
+    "result": "Enter your EIN, e.g. 12-3456789"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "suite": "retry-schedule",
+  "case": "should-retry-and-on-retry-ordering",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "throw": "boom" }, { "throw": "boom" }, { "throw": "boom" }],
+      "options": { "maxRetries": 2 },
+      "shouldRetry": "always",
+      "onRetry": true
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500, 500],
+      "events": [
+        "call:0",
+        "shouldRetry:0=true",
+        "onRetry:0",
+        "sleep:500",
+        "call:1",
+        "shouldRetry:1=true",
+        "onRetry:1",
+        "sleep:500",
+        "call:2"
+      ],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

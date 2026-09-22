@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-negative-credits",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": -10000,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 1,
+      "displayCurrency": "USD"
+    }
+  },
+  "expect": {
+    "result": -100
+  }
+}

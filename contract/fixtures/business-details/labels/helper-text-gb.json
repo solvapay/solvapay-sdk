@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "helper-text-gb",
+  "input": {
+    "fn": "getTaxIdHelperText",
+    "args": {
+      "country": "GB"
+    }
+  },
+  "expect": {
+    "result": "Enter your full VAT number including the country code, e.g. GB123456789"
+  }
+}

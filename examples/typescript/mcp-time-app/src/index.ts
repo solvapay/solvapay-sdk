@@ -1,0 +1,55 @@
+import 'dotenv/config'
+import express from 'express'
+import { createMcpHandler } from '@modelcontextprotocol/server'
+import { toNodeHandler } from '@modelcontextprotocol/node'
+import { createMcpOAuthBridge, type McpOAuthBridgeOptions } from '@solvapay/mcp/express'
+import { createServer } from './server'
+import {
+  mcpPublicBaseUrl,
+  paywallEnabled,
+  solvaPay,
+  solvapayApiBaseUrl,
+  solvapayProductRef,
+} from './config'
+
+// SDK v2 is stateless: no session map, no `initialize` routing. The factory
+// runs per request and `createMcpHandler` owns the transport lifecycle.
+const mcpHandler = createMcpHandler(() => createServer(), {
+  onerror: error => {
+    console.error('[mcp-time-app] MCP handler error', error)
+  },
+})
+
+const app = express()
+app.use(express.json())
+// /oauth/token uses application/x-www-form-urlencoded; parse it so the bridge can forward it.
+app.use(express.urlencoded({ extended: false }))
+app.use(
+  ...createMcpOAuthBridge({
+    publicBaseUrl: mcpPublicBaseUrl,
+    apiBaseUrl: solvapayApiBaseUrl,
+    productRef: solvapayProductRef,
+    requireAuth: paywallEnabled,
+    mcpPath: '/mcp',
+    ...(solvaPay ? { oauthClient: solvaPay.apiClient } : {}),
+  } as McpOAuthBridgeOptions),
+)
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', server: 'mcp-time-app' })
+})
+
+// Pass `req.body` explicitly — Express calls `(req, res, next)`, and
+// `toNodeHandler` must not treat `next` as the parsed body (stream already
+// consumed by `express.json()`).
+const handleMcp = toNodeHandler(mcpHandler)
+app.all('/mcp', (req, res) => {
+  void handleMcp(req, res, req.body)
+})
+
+const port = parseInt(process.env.MCP_PORT || '3005', 10)
+const host = process.env.MCP_HOST || 'localhost'
+
+app.listen(port, host, () => {
+  console.error(`MCP time app listening on http://${host}:${port}`)
+})

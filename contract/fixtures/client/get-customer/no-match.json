@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomer",
+    "args": {
+      "externalRef": "ext_missing"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-no-match",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers",
+      "query": {
+        "externalRef": "ext_missing"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "customers": []
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "No customer found with externalRef: ext_missing"
+    }
+  }
+}

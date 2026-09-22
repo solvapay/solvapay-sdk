@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "de",
+  "input": {
+    "fn": "deriveTaxIdType",
+    "args": {
+      "country": "DE"
+    }
+  },
+  "expect": {
+    "result": "eu_vat"
+  }
+}

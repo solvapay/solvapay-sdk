@@ -1,0 +1,21 @@
+{
+  "suite": "free-limit",
+  "case": "normalize-uppercase-meter",
+  "input": {
+    "fn": "normalizeFreeLimit",
+    "args": {
+      "limit": {
+        "meter": "Free-Previews",
+        "cap": 5,
+        "scope": "lifetime"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meter": "free-previews",
+      "cap": 5,
+      "scope": "lifetime"
+    }
+  }
+}

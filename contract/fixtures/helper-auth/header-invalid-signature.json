@@ -1,0 +1,22 @@
+{
+  "suite": "helper-auth",
+  "case": "header-invalid-signature",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "headerUserId": "middleware-user",
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyLTMifQ.wwiYOSvRNVOk65TeFhKujVpBHaq9v0SXix9qjO_AGoI",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "middleware-user",
+      "email": null,
+      "name": null
+    }
+  }
+}

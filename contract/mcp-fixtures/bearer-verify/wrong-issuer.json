@@ -1,0 +1,32 @@
+{
+  "suite": "bearer-verify",
+  "case": "wrong-issuer",
+  "input": {
+    "fn": "mcpVerifyBearer",
+    "args": {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImZpeHR1cmUtcnNhLTEifQ.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vZXZpbC5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiZXhwIjo0MTAyNDQ0ODAwfQ.av2lc5gmTeRzQiFVD2NzNMDH8vX35ecit57_K_rN4vNsD3cd5Mp-CltHBoV8yOso7KXQWSGUQu_TvitG6CE6FGzyh0tMZmVF7tLd1mHO4oBOOjVGkrpMM0gtGl8iuRBv558XSjxHPXxWHJWcbFakslWZx7GaML44Ovj9iGbCx7tkbnbTz-kTwmNeDXlSWoTW5WBXwm6VRK2-IjjKfodFCgaQHhzvABHupDk-vuiHSc7rV84NjdFSySZDoiA29LFFp23tiRJB0_-a0ule5wZY_JA20tigU2PNoGeitQZt3oLgyDGTmot7YpWttaGrJds246zvZCHY_4CLIhQn2YBU9g",
+      "jwksJson": {
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "fixture-rsa-1",
+            "alg": "RS256",
+            "use": "sig",
+            "n": "r7g6SkSR2i6LhgAMgcBYIDkbOMWr3rFSx_vwLeZhLwIO0NMNJM2l62SPcuff_fbckM0i2nQpEqL3YVHdwUD7vr6KoZuGZfmoTgM7y6Mu27tPzwJCHW2mcf0fHRg2QzYFGW3dGgrfcNE5YdtuFkDAOPlPcxol7BM9Dvx-QSC2SCgNngsuOonTWNIo2t0G7QNiNpVCccXj6ZQx-HiScLsJefIEtoKFPeyWbIETzHJe_AyBP9kOLdXnoLBWNKcb51e0nRIORn9_EIdpMXv_kFwjB7_Mswrl21fVqNAKYLE5cejdqvxERlX_FLzaH7shFQhOSzh2uBm_vWCLa_cRk5JGuQ",
+            "e": "AQAB"
+          }
+        ]
+      },
+      "expectedIssuer": "https://mcp.example.com",
+      "expectedAudience": "https://mcp.example.com",
+      "nowUnixSecs": 1700000000
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "unauthorized",
+      "status": 401,
+      "message": "Token issuer mismatch"
+    }
+  }
+}

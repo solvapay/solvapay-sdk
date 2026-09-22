@@ -1,0 +1,13 @@
+{
+  "suite": "seller-identity",
+  "case": "label-lowercase-de",
+  "input": {
+    "fn": "getSellerTaxIdentifierDisplayLabel",
+    "args": {
+      "country": "de"
+    }
+  },
+  "expect": {
+    "result": "VAT number"
+  }
+}
