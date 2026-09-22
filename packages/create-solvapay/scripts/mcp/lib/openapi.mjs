@@ -15,12 +15,14 @@
  *   - buildAdvisories(operations, schemes) -> Advisory[]
  *   - buildSpecShapeAdvisories({ servers, operations, schemes }) -> Advisory[]
  *
- * The only non-stdlib dependency is `@apidevtools/swagger-parser`,
- * pulled on demand via `npx --package @apidevtools/swagger-parser`.
+ * Non-stdlib dependencies live in `scripts/mcp/package.json`
+ * (`@apidevtools/swagger-parser`, `js-yaml`).
  */
 
-import { access } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { access, readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import yaml from 'js-yaml'
 
 const SUPPORTED_AUTH_KINDS = new Set([
   'http-bearer',
@@ -30,6 +32,16 @@ const SUPPORTED_AUTH_KINDS = new Set([
 ])
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+const OPENAPI_31_PATCH = /^3\.1\.\d+$/
+
+export function swaggerParserInstallHint() {
+  const scriptsDir = dirname(dirname(fileURLToPath(import.meta.url)))
+  return (
+    '`@apidevtools/swagger-parser` is not installed. Run `npm install` inside ' +
+    `${scriptsDir} (one-time setup), then re-run.`
+  )
+}
 
 /**
  * Load + parse an OpenAPI document and run `$ref` resolution through
@@ -41,10 +53,20 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
  */
 export async function loadSpec(specPath) {
   const SwaggerParser = await loadSwaggerParser()
+  const document = normaliseOpenApiPatch(await readSpecDocument(specPath))
+  try {
+    const spec = await SwaggerParser.dereference(document)
+    return { spec }
+  } catch (err) {
+    throw wrapSpecLoadError(err, specPath)
+  }
+}
+
+async function readSpecDocument(specPath) {
   if (/^https?:\/\//i.test(specPath)) {
+    let response
     try {
-      const spec = await SwaggerParser.dereference(specPath)
-      return { spec }
+      response = await fetch(specPath)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(
@@ -52,6 +74,13 @@ export async function loadSpec(specPath) {
           'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
       )
     }
+    if (!response.ok) {
+      throw new Error(
+        `Could not load OpenAPI spec from ${specPath}: HTTP ${response.status}. ` +
+          'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+      )
+    }
+    return parseSpecText(await response.text(), specPath)
   }
 
   const absolute = resolve(specPath)
@@ -63,16 +92,63 @@ export async function loadSpec(specPath) {
     }
     throw err
   }
-  const spec = await SwaggerParser.dereference(absolute)
-  return { spec }
+  return parseSpecText(await readFile(absolute, 'utf8'), absolute)
+}
+
+function parseSpecText(text, source) {
+  const trimmed = text.trim()
+  try {
+    if (trimmed.startsWith('{')) return JSON.parse(text)
+    const document = yaml.load(text)
+    if (!document || typeof document !== 'object' || Array.isArray(document)) {
+      throw new Error('document is not an object')
+    }
+    return document
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      `Could not load OpenAPI spec from ${source}: ${message}. ` +
+        'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+    )
+  }
+}
+
+function normaliseOpenApiPatch(spec) {
+  if (
+    typeof spec?.openapi === 'string' &&
+    OPENAPI_31_PATCH.test(spec.openapi) &&
+    spec.openapi !== '3.1.0' &&
+    spec.openapi !== '3.1.1'
+  ) {
+    console.log('OpenAPI 3.1.x patch version normalised to 3.1.1 for parsing.')
+    spec.openapi = '3.1.1'
+  }
+  return spec
+}
+
+function wrapSpecLoadError(err, specPath) {
+  const message = err instanceof Error ? err.message : String(err)
+  if (message.includes('Unsupported OpenAPI version')) {
+    return new Error(
+      `Could not parse OpenAPI spec from ${specPath}: ${message} ` +
+        'OpenAPI 3.1.x patch versions are rewritten to 3.1.1 before parsing. ' +
+        'For any other unsupported version, set the openapi field to 3.1.1 in a local copy of the spec.',
+    )
+  }
+  if (/^https?:\/\//i.test(specPath)) {
+    return new Error(
+      `Could not load OpenAPI spec from ${specPath}: ${message}. ` +
+        'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+    )
+  }
+  return err instanceof Error ? err : new Error(message)
 }
 
 /**
- * Lazy-load `@apidevtools/swagger-parser`. The skill ships a tiny
- * `scripts/package.json` declaring this single dep; the user runs
- * `npm install` inside `scripts/` once per checkout before invoking
- * `describe.mjs`, `scaffold.mjs`, or `test.mjs`. The error message
- * here exists for the case where someone skipped that step.
+ * Lazy-load `@apidevtools/swagger-parser`. `scripts/mcp/package.json`
+ * declares it; the user runs `npm install` inside `scripts/mcp` once
+ * before invoking `describe.mjs`, `scaffold.mjs`, or `test.mjs`. The
+ * error message here exists for the case where someone skipped that step.
  */
 async function loadSwaggerParser() {
   try {
@@ -80,10 +156,7 @@ async function loadSwaggerParser() {
     return mod.default ?? mod
   } catch (err) {
     if (err && typeof err === 'object' && err.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error(
-        '`@apidevtools/swagger-parser` is not installed. Run `npm install` inside the ' +
-          '`scripts/` directory of this skill (one-time setup), then re-run.',
-      )
+      throw new Error(swaggerParserInstallHint())
     }
     throw err
   }
