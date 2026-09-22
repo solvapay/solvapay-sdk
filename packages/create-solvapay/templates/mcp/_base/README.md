@@ -96,7 +96,7 @@ npm run verify -- http://localhost:8787 --credentials-file ./credentials.json
 `.env` (gitignored) is what `wrangler dev` reads:
 
 ```
-SOLVAPAY_SECRET_KEY=sk_sand_…       # populated by `npx -y solvapay@latest init`
+SOLVAPAY_SECRET_KEY=sk_sandbox_…    # populated by `npx -y solvapay@latest init`
 SOLVAPAY_PRODUCT_REF=__SOLVAPAY_PRODUCT_REF__
 MCP_PUBLIC_BASE_URL=__MCP_PUBLIC_BASE_URL__
 UPSTREAM_API_KEY=…                  # bearer or single apiKey-header upstream auth
@@ -139,7 +139,7 @@ Then redeploy.
 ## Go-live (swap sandbox → live)
 
 1. Generate a live key in the SolvaPay Console (API Keys → Live).
-2. Replace `SOLVAPAY_SECRET_KEY=sk_test_…` with `SOLVAPAY_SECRET_KEY=sk_live_…` in `.env`.
+2. Replace `SOLVAPAY_SECRET_KEY=sk_sandbox_…` with `SOLVAPAY_SECRET_KEY=sk_live_…` in `.env`.
 3. The first-deploy auto-upload only runs when no `SOLVAPAY_SECRET_KEY` is present on the worker. Since one is already there, push the new value explicitly: `npx wrangler secret put SOLVAPAY_SECRET_KEY`.
 4. `npm run deploy`.
 

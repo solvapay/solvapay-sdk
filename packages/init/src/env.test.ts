@@ -67,13 +67,13 @@ describe('writeSolvaPaySecretToEnv', () => {
     })
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sand_old\n', 'utf8')
-      await expect(writeSolvaPaySecretToEnv('sk_sand_new', { cwd })).rejects.toThrow('exit 1')
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sandbox_old\n', 'utf8')
+      await expect(writeSolvaPaySecretToEnv('sk_sandbox_new', { cwd })).rejects.toThrow('exit 1')
       expect(error).toHaveBeenCalledWith(
         'SOLVAPAY_SECRET_KEY already set in .env; re-run with --yes to overwrite',
       )
       const content = await readFile(path.join(cwd, '.env'), 'utf8')
-      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sand_old\n')
+      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sandbox_old\n')
     } finally {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: originalIsTTY })
       exit.mockRestore()
