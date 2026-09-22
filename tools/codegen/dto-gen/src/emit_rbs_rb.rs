@@ -25,6 +25,14 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20 REQUEST_ID_FORMAT: String\n\
          \x20 USAGE_ACTION_TYPE: String\n\
          \x20 DEFAULT_LIMITS_CACHE_TTL_MS: Integer\n\
+         \x20 MAX_RETRIES: Integer\n\
+         \x20 INITIAL_DELAY_MS: Integer\n\
+         \x20 RETRY_BACKOFF: String\n\
+         \x20 WEBHOOK_TOLERANCE_SEC: Integer\n\
+         \x20 PAYMENT_IDEMPOTENCY_KEY_FORMAT: String\n\
+         \x20 TOPUP_IDEMPOTENCY_KEY_FORMAT: String\n\
+         \x20 GO_CONTEXT_FIRST_PARAM: bool\n\
+         \x20 PAYMENT_REQUIRED: String\n\
          \x20 TOPUP_BALANCE_POLL_DELAYS_MS: Array[Integer]\n\
          \x20 BALANCE_RECONCILE_DELAYS_MS: Array[Integer]\n\
          \x20 Error: singleton(SolvaPayError)\n\n\
@@ -116,6 +124,9 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20 module GeneratedEnsureCustomerLoop\n\
          \x20   def self.run: (ensure_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> String\n\
          \x20 end\n\n\
+         \x20 module GeneratedRetryLoop\n\
+         \x20   def self.run: (invoke: ^() -> untyped, max_retries: Integer, initial_delay: Integer, backoff_strategy: String, next_delay_ms: ^(Integer, Integer, Integer, String) -> Integer?, sleeper: ^(Integer) -> void, ?should_retry: (^(untyped, Integer) -> bool)?, ?on_retry: (^(untyped, Integer, Numeric) -> void)?) -> untyped\n\
+         \x20 end\n\n\
          \x20 class InflightTable\n\
          \x20   def initialize: (Thread::Mutex mutex) -> void\n\
          \x20   def run: [T] (untyped key) { () -> T } -> T\n\
@@ -148,6 +159,16 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20     def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]\n\
          \x20     def apply_cache: (untyped cache) -> void\n\
          \x20   end\n\
+         \x20   class EnsureLoopHost\n\
+         \x20     @facade: Facade\n\
+         \x20     def initialize: (Facade facade) -> void\n\
+         \x20     def now_ms: () -> Integer\n\
+         \x20     def read_customer_cache: (String key) -> Hash[Symbol, untyped]?\n\
+         \x20     def get_customer: (Hash[String, untyped] action) -> Hash[Symbol, untyped]\n\
+         \x20     def create_customer: (Hash[String, untyped] params) -> Hash[Symbol, untyped]\n\
+         \x20     def update_customer: (String customer_ref, Hash[String, untyped] patch) -> Hash[Symbol, untyped]\n\
+         \x20     def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void\n\
+         \x20   end\n\
          \x20   private\n\
          \x20   def now_ms: () -> Integer\n\
          \x20   def read_limits_cache: (String key) -> untyped\n\
@@ -158,6 +179,10 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def ensure_customer: (String customer_ref) -> String\n\
          \x20   def run_ensure_customer: (String customer_ref) -> String\n\
          \x20   def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void\n\
+         \x20   def read_customer_cache_entry: (String key) -> untyped\n\
+         \x20   def lookup_customer: (Hash[String, untyped] params) -> untyped\n\
+         \x20   def create_ensured_customer: (Hash[String, untyped] params) -> untyped\n\
+         \x20   def update_ensured_customer: (String customer_ref, Hash[String, untyped] patch) -> untyped\n\
          \x20   def paywall_short_message: (untyped content) -> String\n\
          \x20   def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult\n\
          \x20   def random_unit: () -> Numeric\n\

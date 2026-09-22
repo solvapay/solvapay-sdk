@@ -74,10 +74,12 @@ fn nonempty(value: Option<&str>) -> Option<String> {
         .map(str::to_owned)
 }
 
+/// One legal document, ready to embed in a mandate sentence.
 fn doc(url: String, kind: MandateLegalDocKind) -> MandateLegalDoc {
     MandateLegalDoc { url, kind }
 }
 
+/// Append a document when its URL is not already in `links`.
 fn push_unique(links: &mut Vec<MandateLegalDoc>, url: String, kind: MandateLegalDocKind) {
     if links.iter().any(|existing| existing.url == url) {
         return;

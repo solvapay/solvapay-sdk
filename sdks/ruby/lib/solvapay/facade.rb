@@ -429,7 +429,7 @@ module SolvaPay
     private
 
     def extract_customer_ref(args, kwargs)
-      call_args = {}
+      call_args = {} #: Hash[String, untyped]
       hook = kwargs[:customer_ref]
       call_args["hookRef"] = hook if hook.is_a?(String) && !hook.empty?
 

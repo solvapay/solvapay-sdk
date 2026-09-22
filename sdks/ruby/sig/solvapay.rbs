@@ -8,6 +8,14 @@ module SolvaPay
   REQUEST_ID_FORMAT: String
   USAGE_ACTION_TYPE: String
   DEFAULT_LIMITS_CACHE_TTL_MS: Integer
+  MAX_RETRIES: Integer
+  INITIAL_DELAY_MS: Integer
+  RETRY_BACKOFF: String
+  WEBHOOK_TOLERANCE_SEC: Integer
+  PAYMENT_IDEMPOTENCY_KEY_FORMAT: String
+  TOPUP_IDEMPOTENCY_KEY_FORMAT: String
+  GO_CONTEXT_FIRST_PARAM: bool
+  PAYMENT_REQUIRED: String
   TOPUP_BALANCE_POLL_DELAYS_MS: Array[Integer]
   BALANCE_RECONCILE_DELAYS_MS: Array[Integer]
   Error: singleton(SolvaPayError)
@@ -142,6 +150,10 @@ module SolvaPay
     def self.run: (ensure_next: ^(untyped, Hash[String, untyped]) -> untyped, host: untyped, start_event: Hash[String, untyped]) -> String
   end
 
+  module GeneratedRetryLoop
+    def self.run: (invoke: ^() -> untyped, max_retries: Integer, initial_delay: Integer, backoff_strategy: String, next_delay_ms: ^(Integer, Integer, Integer, String) -> Integer?, sleeper: ^(Integer) -> void, ?should_retry: (^(untyped, Integer) -> bool)?, ?on_retry: (^(untyped, Integer, Numeric) -> void)?) -> untyped
+  end
+
   class InflightTable
     def initialize: (Thread::Mutex mutex) -> void
     def run: [T] (untyped key) { () -> T } -> T
@@ -175,6 +187,16 @@ module SolvaPay
       def check_limits: (Hash[String, untyped] action) -> Hash[String, untyped]
       def apply_cache: (untyped cache) -> void
     end
+    class EnsureLoopHost
+      @facade: Facade
+      def initialize: (Facade facade) -> void
+      def now_ms: () -> Integer
+      def read_customer_cache: (String key) -> Hash[Symbol, untyped]?
+      def get_customer: (Hash[String, untyped] action) -> Hash[Symbol, untyped]
+      def create_customer: (Hash[String, untyped] params) -> Hash[Symbol, untyped]
+      def update_customer: (String customer_ref, Hash[String, untyped] patch) -> Hash[Symbol, untyped]
+      def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void
+    end
     private
     def now_ms: () -> Integer
     def read_limits_cache: (String key) -> untyped
@@ -185,6 +207,10 @@ module SolvaPay
     def ensure_customer: (String customer_ref) -> String
     def run_ensure_customer: (String customer_ref) -> String
     def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void
+    def read_customer_cache_entry: (String key) -> untyped
+    def lookup_customer: (Hash[String, untyped] params) -> untyped
+    def create_ensured_customer: (Hash[String, untyped] params) -> untyped
+    def update_ensured_customer: (String customer_ref, Hash[String, untyped] patch) -> untyped
     def paywall_short_message: (untyped content) -> String
     def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult
     def random_unit: () -> Numeric
