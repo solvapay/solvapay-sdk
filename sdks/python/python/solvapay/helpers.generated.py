@@ -478,6 +478,15 @@ def require_product_ref(metadata_product: str | None = None, env_product: str | 
         payload["envProduct"] = env_product
     return call_native_sync("require_product_ref", json.dumps(payload))
 
+def resolve_mandate_legal_docs(input: Any) -> Any:
+    """Choose the legal documents a mandate names, and the order of the links.
+    @param input Merchant legal URLs and names. SolvaPay URLs are not inputs.
+    @returns Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+    """
+    payload: dict[str, Any] = {}
+    payload["input"] = input
+    return call_native_sync("resolve_mandate_legal_docs", json.dumps(payload))
+
 def resolve_seller_identity_display(
     country: str | None = None,
     vat_number: str | None = None,
@@ -524,6 +533,27 @@ def should_show_tax_row(treatment: str | None = None) -> Any:
     if treatment is not None:
         payload["treatment"] = treatment
     return call_native_sync("should_show_tax_row", json.dumps(payload))
+
+def solvapay_privacy_url() -> Any:
+    """Hosted SolvaPay Privacy Policy URL.
+    @returns The SolvaPay privacy URL.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("solvapay_privacy_url", json.dumps(payload))
+
+def solvapay_terms_url() -> Any:
+    """Hosted SolvaPay Terms of Service URL.
+    @returns The SolvaPay terms URL.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("solvapay_terms_url", json.dumps(payload))
+
+def solvapay_website_url() -> Any:
+    """SolvaPay website URL used by the footer attribution link.
+    @returns The SolvaPay website URL.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("solvapay_website_url", json.dumps(payload))
 
 def tier_bands(priced: Any | None = None, meter: str | None = None) -> Any:
     """Return the tier bands a plan prices a meter with, ordered by floor.

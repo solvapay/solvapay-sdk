@@ -970,8 +970,8 @@ const GO_PAYLOAD_HEADER: &str = r#"//! WASI guest payload-builder shims.
 use serde_json::{Map, Value};
 use solvapay_core::{
     BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
-    CreditsToDisplayInput, MerchantBranding, PaywallGate, ResponseEnvelope, SdkError,
-    SellerIdentityInput,
+    CreditsToDisplayInput, MandateLegalInput, MerchantBranding, PaywallGate, ResponseEnvelope,
+    SdkError, SellerIdentityInput,
 };
 
 use crate::abi::{pack, read_string};

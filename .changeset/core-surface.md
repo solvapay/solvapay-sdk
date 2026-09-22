@@ -167,6 +167,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `resolveCustomerRef`
 - added symbol `resolveDisplayMode`
 - added symbol `resolveFallbackGateLimits`
+- added symbol `resolveMandateLegalDocs`
 - added symbol `resolvePlanShape`
 - added symbol `resolveProductRef`
 - added symbol `resolvePurchaseCustomerRef`
@@ -181,6 +182,9 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `selectActivePurchases`
 - added symbol `shouldRetryUsageError`
 - added symbol `shouldShowTaxRow`
+- added symbol `solvapayPrivacyUrl`
+- added symbol `solvapayTermsUrl`
+- added symbol `solvapayWebsiteUrl`
 - added symbol `tierBands`
 - added symbol `tierMeters`
 - added symbol `toMajorUnits`
@@ -257,6 +261,10 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added boundary type `InvokePayableState`
 - added boundary type `InvokePayableTrack`
 - added boundary type `LookupErrorKind`
+- added boundary type `MandateLegalDoc`
+- added boundary type `MandateLegalDocKind`
+- added boundary type `MandateLegalDocs`
+- added boundary type `MandateLegalInput`
 - added boundary type `McpContainerDimensions`
 - added boundary type `McpContentBlock`
 - added boundary type `McpDisplayMode`
@@ -1592,6 +1600,15 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `resolveFallbackGateLimits` on facade `rust`
 - exposed `resolveFallbackGateLimits` on facade `typescript`
 - exposed `resolveFallbackGateLimits` on facade `wasm-edge`
+- exposed `resolveMandateLegalDocs` on facade `capi`
+- exposed `resolveMandateLegalDocs` on facade `go`
+- exposed `resolveMandateLegalDocs` on facade `node-native`
+- exposed `resolveMandateLegalDocs` on facade `python`
+- exposed `resolveMandateLegalDocs` on facade `ruby`
+- exposed `resolveMandateLegalDocs` on facade `rust`
+- exposed `resolveMandateLegalDocs` on facade `typescript`
+- exposed `resolveMandateLegalDocs` on facade `wasm-browser`
+- exposed `resolveMandateLegalDocs` on facade `wasm-edge`
 - exposed `resolvePlanShape` on facade `capi`
 - exposed `resolvePlanShape` on facade `node-native`
 - exposed `resolvePlanShape` on facade `rust`
@@ -1683,6 +1700,33 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `shouldShowTaxRow` on facade `typescript`
 - exposed `shouldShowTaxRow` on facade `wasm-browser`
 - exposed `shouldShowTaxRow` on facade `wasm-edge`
+- exposed `solvapayPrivacyUrl` on facade `capi`
+- exposed `solvapayPrivacyUrl` on facade `go`
+- exposed `solvapayPrivacyUrl` on facade `node-native`
+- exposed `solvapayPrivacyUrl` on facade `python`
+- exposed `solvapayPrivacyUrl` on facade `ruby`
+- exposed `solvapayPrivacyUrl` on facade `rust`
+- exposed `solvapayPrivacyUrl` on facade `typescript`
+- exposed `solvapayPrivacyUrl` on facade `wasm-browser`
+- exposed `solvapayPrivacyUrl` on facade `wasm-edge`
+- exposed `solvapayTermsUrl` on facade `capi`
+- exposed `solvapayTermsUrl` on facade `go`
+- exposed `solvapayTermsUrl` on facade `node-native`
+- exposed `solvapayTermsUrl` on facade `python`
+- exposed `solvapayTermsUrl` on facade `ruby`
+- exposed `solvapayTermsUrl` on facade `rust`
+- exposed `solvapayTermsUrl` on facade `typescript`
+- exposed `solvapayTermsUrl` on facade `wasm-browser`
+- exposed `solvapayTermsUrl` on facade `wasm-edge`
+- exposed `solvapayWebsiteUrl` on facade `capi`
+- exposed `solvapayWebsiteUrl` on facade `go`
+- exposed `solvapayWebsiteUrl` on facade `node-native`
+- exposed `solvapayWebsiteUrl` on facade `python`
+- exposed `solvapayWebsiteUrl` on facade `ruby`
+- exposed `solvapayWebsiteUrl` on facade `rust`
+- exposed `solvapayWebsiteUrl` on facade `typescript`
+- exposed `solvapayWebsiteUrl` on facade `wasm-browser`
+- exposed `solvapayWebsiteUrl` on facade `wasm-edge`
 - exposed `tierBands` on facade `capi`
 - exposed `tierBands` on facade `go`
 - exposed `tierBands` on facade `node-native`

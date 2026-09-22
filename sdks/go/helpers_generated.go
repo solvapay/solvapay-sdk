@@ -688,6 +688,19 @@ func RequireProductRef(ctx context.Context, metadataProduct any, envProduct any)
 	return nativecall.CallSync(ctx, "sv_require_product_ref_binding", string(payload))
 }
 
+// ResolveMandateLegalDocs choose the legal documents a mandate names, and the order of the links.
+// The input parameter is Merchant legal URLs and names. SolvaPay URLs are not inputs.
+// Returns Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+func ResolveMandateLegalDocs(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_resolve_mandate_legal_docs_binding", string(payload))
+}
+
 // ResolveSellerIdentityDisplay resolve seller identity fields into a display projection.
 // Returns Display projection for seller identity.
 func ResolveSellerIdentityDisplay(ctx context.Context, country any, vatNumber any, taxId any, companyNumber any) (any, error) {
@@ -738,6 +751,36 @@ func ShouldShowTaxRow(ctx context.Context, treatment any) (any, error) {
 		return nil, err
 	}
 	return nativecall.CallSync(ctx, "sv_should_show_tax_row_binding", string(payload))
+}
+
+// SolvapayPrivacyUrl hosted SolvaPay Privacy Policy URL.
+// Returns The SolvaPay privacy URL.
+func SolvapayPrivacyUrl(ctx context.Context) (any, error) {
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_solvapay_privacy_url_binding", string(payload))
+}
+
+// SolvapayTermsUrl hosted SolvaPay Terms of Service URL.
+// Returns The SolvaPay terms URL.
+func SolvapayTermsUrl(ctx context.Context) (any, error) {
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_solvapay_terms_url_binding", string(payload))
+}
+
+// SolvapayWebsiteUrl solvaPay website URL used by the footer attribution link.
+// Returns The SolvaPay website URL.
+func SolvapayWebsiteUrl(ctx context.Context) (any, error) {
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_solvapay_website_url_binding", string(payload))
 }
 
 // TierBands return the tier bands a plan prices a meter with, ordered by floor.

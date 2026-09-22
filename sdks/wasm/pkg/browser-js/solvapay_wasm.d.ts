@@ -332,6 +332,11 @@ export function resolveBuyerCountry(args_json: string): string;
 export function resolveDisplayMode(args_json: string): string;
 
 /**
+ * Binding for `resolveMandateLegalDocs`.
+ */
+export function resolveMandateLegalDocs(args_json: string): string;
+
+/**
  * Binding for `resolvePlanShape`.
  */
 export function resolvePlanShape(args_json: string): string;
@@ -360,6 +365,21 @@ export function resolveTaxTreatmentNote(args_json: string): string;
  * Binding for `shouldShowTaxRow`.
  */
 export function shouldShowTaxRow(args_json: string): string;
+
+/**
+ * Binding for `solvapayPrivacyUrl`.
+ */
+export function solvapayPrivacyUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayTermsUrl`.
+ */
+export function solvapayTermsUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayWebsiteUrl`.
+ */
+export function solvapayWebsiteUrl(args_json: string): string;
 
 /**
  * Binding for `toMajorUnits`.

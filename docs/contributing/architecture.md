@@ -377,6 +377,14 @@ These are platform constraints, not missing ports:
 
 A missing customer ref on a payable tool must raise (never attribute usage to `"anonymous"`). HTTP reconnect uses the 401 challenge bytes from `mcpAuthGate` / `mcpDispatch`.
 
+## Recorded follow-ups
+
+These are known gaps left in place on purpose. They are not silent drift.
+
+- **`deriveVariant(plan, mode)`** in `sdks/typescript/react/src/primitives/MandateText.tsx` still picks the mandate variant from plan shape in TypeScript. `resolvePlanShape` / `planPricingShape` already exist in core. It is a JSON-in / JSON-out decision on the facade, and it predates the mandate-legal port.
+- **Example widget copies are older than canonical.** The four example/scaffold `mcp-app.html` copies (`3ecf9f25`) and `examples/typescript/mcp-time-app/mcp-app.html` (`91d2a0e4`) are older builds than the canonical widget (`b8f8b2fa`). `example-widget-parity.test.ts` compares the four copies to each other, not to canonical, so they can drift. Demo is not the SDK; the gap is recorded here so it stays visible.
+- **Historical dev-sync drops.** `pnpm sync:audit` still reports confirmed drops from `origin/dev` commits after the layout remap, outside the LegalFooter host-link repair and the mandate-legal port. Those hunks are intentional divergence on this branch (rust rewrite, deleted files, superseded copy). Do not replay them blindly. Re-run `pnpm sync:audit` before the next `origin/dev` merge and triage anything new.
+
 ## Where to read next
 
 - [`mcp-authoring-adapter-contract.md`](./mcp-authoring-adapter-contract.md) — layer-3 `registerPayable` / `ctx` contract and `contract/mcp-fixtures/` corpus

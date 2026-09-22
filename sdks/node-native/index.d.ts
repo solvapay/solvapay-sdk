@@ -470,6 +470,9 @@ export declare function resolveDisplayMode(argsJson: string): string
 /** Binding for `resolveFallbackGateLimits`. */
 export declare function resolveFallbackGateLimits(argsJson: string): string
 
+/** Binding for `resolveMandateLegalDocs`. */
+export declare function resolveMandateLegalDocs(argsJson: string): string
+
 /** Binding for `resolvePlanShape`. */
 export declare function resolvePlanShape(argsJson: string): string
 
@@ -522,6 +525,15 @@ export declare function shouldShowTaxRow(argsJson: string): string
 
 /** Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`. */
 export declare function solvapayCall(argsJson: string): string
+
+/** Binding for `solvapayPrivacyUrl`. */
+export declare function solvapayPrivacyUrl(argsJson: string): string
+
+/** Binding for `solvapayTermsUrl`. */
+export declare function solvapayTermsUrl(argsJson: string): string
+
+/** Binding for `solvapayWebsiteUrl`. */
+export declare function solvapayWebsiteUrl(argsJson: string): string
 
 /** Binding for `STATE_REQUIRED_COUNTRIES`. */
 export declare function STATE_REQUIRED_COUNTRIES(argsJson: string): string

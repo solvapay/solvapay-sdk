@@ -11,6 +11,7 @@
  *   pnpm facade-coverage --check
  */
 
+import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
@@ -409,12 +410,33 @@ export function missingReasons(coverage: FacadeCoverageFile): string[] {
   return missing
 }
 
+/**
+ * Working copy wins. `gen:verify` deletes this file before regen; the committed
+ * copy is what still holds the hand-filled gap reasons.
+ */
+export function selectPreviousCoverageText(
+  onDisk: string | null,
+  committed: string | null,
+): string | null {
+  if (onDisk !== null) return onDisk
+  return committed
+}
+
+function readCommittedCoverage(): string | null {
+  const result = spawnSync('git', ['show', `HEAD:${FACADE_COVERAGE_PATH}`], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
+  if (result.status !== 0 || result.stdout.length === 0) return null
+  return result.stdout
+}
+
 function readPrevious(): FacadeCoverageFile | null {
   const abs = absRel(FACADE_COVERAGE_PATH)
-  if (!existsSync(abs)) {
-    return null
-  }
-  return JSON.parse(readFileSync(abs, 'utf8')) as FacadeCoverageFile
+  const onDisk = existsSync(abs) ? readFileSync(abs, 'utf8') : null
+  const text = selectPreviousCoverageText(onDisk, onDisk === null ? readCommittedCoverage() : null)
+  if (text === null || text.length === 0) return null
+  return JSON.parse(text) as FacadeCoverageFile
 }
 
 function readSnapshot(): BindingSnapshot {

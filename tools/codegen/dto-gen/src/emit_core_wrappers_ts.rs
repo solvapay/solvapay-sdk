@@ -30,6 +30,7 @@ const DOMAIN_SECTIONS: &[&str] = &[
     "business-details",
     "credit-display",
     "seller-identity",
+    "mandate-legal",
     "tax-summary",
     "money-format",
     "balance-poll",

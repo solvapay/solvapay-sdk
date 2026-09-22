@@ -3,6 +3,7 @@ import {
   FACADES,
   missingReasons,
   parseDtsExports,
+  selectPreviousCoverageText,
   type FacadeCoverageFile,
 } from './facade-coverage.js'
 
@@ -40,6 +41,12 @@ describe('facade-coverage', () => {
     for (const facade of FACADES) {
       expect(coverage.ops.createCustomer[facade]?.exposed).toBe(true)
     }
+  })
+
+  it('keeps hand-filled gap reasons when gen:verify has deleted the working copy', () => {
+    const committed = '{"ops":{"resolveBuyerCountry":{"go":{"exposed":false,"reason":"kept"}}}}'
+    expect(selectPreviousCoverageText(null, committed)).toBe(committed)
+    expect(selectPreviousCoverageText('{"ops":{}}', committed)).toBe('{"ops":{}}')
   })
 
   it('parses exported functions, consts, and class methods from a .d.ts', () => {

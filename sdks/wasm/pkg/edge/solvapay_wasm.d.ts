@@ -813,6 +813,11 @@ export function resolveDisplayMode(args_json: string): string;
 export function resolveFallbackGateLimits(args_json: string): string;
 
 /**
+ * Binding for `resolveMandateLegalDocs`.
+ */
+export function resolveMandateLegalDocs(args_json: string): string;
+
+/**
  * Binding for `resolvePlanShape`.
  */
 export function resolvePlanShape(args_json: string): string;
@@ -883,6 +888,21 @@ export function shouldShowTaxRow(args_json: string): string;
  * Edge-only: the browser profile must not ship the MCP engine.
  */
 export function solvapayCall(args_json: string): string;
+
+/**
+ * Binding for `solvapayPrivacyUrl`.
+ */
+export function solvapayPrivacyUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayTermsUrl`.
+ */
+export function solvapayTermsUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayWebsiteUrl`.
+ */
+export function solvapayWebsiteUrl(args_json: string): string;
 
 /**
  * Binding for `tierBands`.
@@ -1128,6 +1148,7 @@ export interface InitOutput {
     readonly resolveCustomerRef: (a: number, b: number) => [number, number];
     readonly resolveDisplayMode: (a: number, b: number) => [number, number];
     readonly resolveFallbackGateLimits: (a: number, b: number) => [number, number];
+    readonly resolveMandateLegalDocs: (a: number, b: number) => [number, number];
     readonly resolvePlanShape: (a: number, b: number) => [number, number];
     readonly resolveProductRef: (a: number, b: number) => [number, number];
     readonly resolvePurchaseCustomerRef: (a: number, b: number) => [number, number];
@@ -1142,6 +1163,9 @@ export interface InitOutput {
     readonly shouldRetryUsageError: (a: number, b: number) => [number, number];
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
     readonly solvapayCall: (a: number, b: number) => [number, number];
+    readonly solvapayPrivacyUrl: (a: number, b: number) => [number, number];
+    readonly solvapayTermsUrl: (a: number, b: number) => [number, number];
+    readonly solvapayWebsiteUrl: (a: number, b: number) => [number, number];
     readonly tierBands: (a: number, b: number) => [number, number];
     readonly tierMeters: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];

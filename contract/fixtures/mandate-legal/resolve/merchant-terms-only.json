@@ -1,0 +1,29 @@
+{
+  "suite": "mandate-legal",
+  "case": "resolve-merchant-terms-only",
+  "input": {
+    "fn": "resolveMandateLegalDocs",
+    "args": {
+      "input": {
+        "merchantTermsUrl": "https://merchant.example/terms",
+        "merchantPrivacyUrl": "  ",
+        "merchantDisplayName": "Acme"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "merchantBrand": "Acme",
+      "merchantDocs": [{ "url": "https://merchant.example/terms", "kind": "terms" }],
+      "solvapayDocs": [
+        { "url": "https://solvapay.com/legal/terms", "kind": "terms" },
+        { "url": "https://solvapay.com/legal/privacy", "kind": "privacy" }
+      ],
+      "links": [
+        { "url": "https://merchant.example/terms", "kind": "terms" },
+        { "url": "https://solvapay.com/legal/terms", "kind": "terms" },
+        { "url": "https://solvapay.com/legal/privacy", "kind": "privacy" }
+      ]
+    }
+  }
+}

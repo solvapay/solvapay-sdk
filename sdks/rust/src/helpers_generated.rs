@@ -5,10 +5,11 @@
 #[allow(unused_imports)]
 pub use solvapay_core::{
     BillingCycle, BusinessDetailsInput, Charge, CreditSignals, CreditsToDisplayInput,
-    CustomerSnapshot, FreeLimit, FreeLimitInput, GateContent, PaywallClientPayload, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallNextAction, PaywallState, PlanPricingShape,
-    ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput,
-    TaxIdType, UsageRate, ValidateBusinessDetailsResult,
+    CustomerSnapshot, FreeLimit, FreeLimitInput, GateContent, MandateLegalDocs, MandateLegalInput,
+    PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallNextAction,
+    PaywallState, PlanPricingShape, ProductReadinessInput, ProductReadinessResult,
+    SellerIdentityDisplay, SellerIdentityInput, TaxIdType, UsageRate,
+    ValidateBusinessDetailsResult,
 };
 
 /// Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.
@@ -434,6 +435,17 @@ pub use solvapay_core::pricing_options::plan_pricing_shape;
 /// A product ref string, or throws when neither is set.
 pub use solvapay_core::paywall_decision::require_product_ref;
 
+/// Choose the legal documents a mandate names, and the order of the links.
+///
+/// # Arguments
+///
+/// * `input` — Merchant legal URLs and names. SolvaPay URLs are not inputs.
+///
+/// # Returns
+///
+/// Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+pub use solvapay_core::mandate_legal::resolve_mandate_legal_docs;
+
 /// Resolve seller identity fields into a display projection.
 ///
 /// # Returns
@@ -461,6 +473,27 @@ pub use solvapay_core::tax_summary::resolve_tax_treatment_note;
 ///
 /// True when a VAT row should be shown.
 pub use solvapay_core::tax_summary::should_show_tax_row;
+
+/// Hosted SolvaPay Privacy Policy URL.
+///
+/// # Returns
+///
+/// The SolvaPay privacy URL.
+pub use solvapay_core::mandate_legal::solvapay_privacy_url;
+
+/// Hosted SolvaPay Terms of Service URL.
+///
+/// # Returns
+///
+/// The SolvaPay terms URL.
+pub use solvapay_core::mandate_legal::solvapay_terms_url;
+
+/// SolvaPay website URL used by the footer attribution link.
+///
+/// # Returns
+///
+/// The SolvaPay website URL.
+pub use solvapay_core::mandate_legal::solvapay_website_url;
 
 /// Return the tier bands a plan prices a meter with, ordered by floor.
 ///

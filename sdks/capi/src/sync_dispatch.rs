@@ -44,24 +44,25 @@ use solvapay_core::{
     project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
     resolve_authenticated_user, resolve_buyer_country, resolve_check_limits_params,
     resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
-    resolve_narrator_plan_shape, resolve_product_ref, resolve_purchase_customer_ref,
-    resolve_return_url, resolve_seller_identity_display, resolve_tax_behavior,
-    resolve_tax_treatment_note, resolve_usage_extra, reverse_charge_note,
+    resolve_mandate_legal_docs, resolve_narrator_plan_shape, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, resolve_seller_identity_display,
+    resolve_tax_behavior, resolve_tax_treatment_note, resolve_usage_extra, reverse_charge_note,
     select_active_plan_purchase, select_active_purchases,
     seller_tax_identifier_display_label_by_type, should_retry_usage_error, should_show_tax_row,
-    state_required_countries, supported_business_countries, tax_behaviors,
-    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
-    tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
-    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
+    solvapay_privacy_url, solvapay_terms_url, solvapay_website_url, state_required_countries,
+    supported_business_countries, tax_behaviors, tax_exclusive_currencies,
+    tax_id_example_by_country, tax_id_types, tax_not_collected_note, tier_bands, tier_meters,
+    to_major_units, topup_balance_poll_delays_ms, topup_process_next, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
     validate_business_details, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_public_base_url, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, Backoff,
     BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
-    CreditsToDisplayInput, FreeLimit, FreeLimitInput, GateContent, MerchantBranding,
-    PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
-    ProductReadinessInput, ResponseEnvelope, RetryPolicy, RouteErrorInput, RouteErrorKind,
-    SdkError, SellerIdentityInput, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    CreditsToDisplayInput, FreeLimit, FreeLimitInput, GateContent, MandateLegalInput,
+    MerchantBranding, PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits,
+    PaywallState, ProductReadinessInput, ResponseEnvelope, RetryPolicy, RouteErrorInput,
+    RouteErrorKind, SdkError, SellerIdentityInput, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
 
 use crate::args::*;
@@ -241,6 +242,7 @@ const HELPER_OPS: &[&str] = &[
     "resolveCustomerRef",
     "resolveDisplayMode",
     "resolveFallbackGateLimits",
+    "resolveMandateLegalDocs",
     "resolvePlanShape",
     "resolveProductRef",
     "resolvePurchaseCustomerRef",
@@ -254,6 +256,9 @@ const HELPER_OPS: &[&str] = &[
     "selectActivePurchases",
     "shouldRetryUsageError",
     "shouldShowTaxRow",
+    "solvapayPrivacyUrl",
+    "solvapayTermsUrl",
+    "solvapayWebsiteUrl",
     "tierBands",
     "tierMeters",
     "toMajorUnits",
@@ -1172,6 +1177,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let checkout_url = optional_string(&args, "checkoutUrl")?;
             to_value(&resolve_fallback_gate_limits(checkout_url.as_deref()))
         }
+        "resolveMandateLegalDocs" => {
+            let args = args_map(args_json)?;
+            let input = require_typed::<MandateLegalInput>(&args, "input")?;
+            to_value(&resolve_mandate_legal_docs(&input))
+        }
         "resolvePlanShape" => {
             let args = args_map(args_json)?;
             let priced = optional_value(&args, "priced");
@@ -1317,6 +1327,18 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let args = args_map(args_json)?;
             let treatment = optional_string(&args, "treatment")?;
             Ok(Value::Bool(should_show_tax_row(treatment.as_deref())))
+        }
+        "solvapayPrivacyUrl" => {
+            let _args = args_map(args_json)?;
+            Ok(Value::String(solvapay_privacy_url().to_owned()))
+        }
+        "solvapayTermsUrl" => {
+            let _args = args_map(args_json)?;
+            Ok(Value::String(solvapay_terms_url().to_owned()))
+        }
+        "solvapayWebsiteUrl" => {
+            let _args = args_map(args_json)?;
+            Ok(Value::String(solvapay_website_url().to_owned()))
         }
         "tierBands" => {
             let args = args_map(args_json)?;

@@ -332,6 +332,11 @@ export function resolveBuyerCountry(args_json: string): string;
 export function resolveDisplayMode(args_json: string): string;
 
 /**
+ * Binding for `resolveMandateLegalDocs`.
+ */
+export function resolveMandateLegalDocs(args_json: string): string;
+
+/**
  * Binding for `resolvePlanShape`.
  */
 export function resolvePlanShape(args_json: string): string;
@@ -360,6 +365,21 @@ export function resolveTaxTreatmentNote(args_json: string): string;
  * Binding for `shouldShowTaxRow`.
  */
 export function shouldShowTaxRow(args_json: string): string;
+
+/**
+ * Binding for `solvapayPrivacyUrl`.
+ */
+export function solvapayPrivacyUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayTermsUrl`.
+ */
+export function solvapayTermsUrl(args_json: string): string;
+
+/**
+ * Binding for `solvapayWebsiteUrl`.
+ */
+export function solvapayWebsiteUrl(args_json: string): string;
 
 /**
  * Binding for `toMajorUnits`.
@@ -502,12 +522,16 @@ export interface InitOutput {
     readonly resolveAccountState: (a: number, b: number) => [number, number];
     readonly resolveBuyerCountry: (a: number, b: number) => [number, number];
     readonly resolveDisplayMode: (a: number, b: number) => [number, number];
+    readonly resolveMandateLegalDocs: (a: number, b: number) => [number, number];
     readonly resolvePlanShape: (a: number, b: number) => [number, number];
     readonly resolveProductRef: (a: number, b: number) => [number, number];
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
+    readonly solvapayPrivacyUrl: (a: number, b: number) => [number, number];
+    readonly solvapayTermsUrl: (a: number, b: number) => [number, number];
+    readonly solvapayWebsiteUrl: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly usageRate: (a: number, b: number) => [number, number];

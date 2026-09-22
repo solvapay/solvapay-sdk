@@ -23,6 +23,10 @@ import {
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
+  resolveMandateLegalDocs,
+  solvapayPrivacyUrl,
+  solvapayTermsUrl,
+  solvapayWebsiteUrl,
   resolveTaxBehavior,
   resolveTaxTreatmentNote,
   REVERSE_CHARGE_NOTE,
@@ -759,6 +763,22 @@ function isOptionalCountryArg(args: Record<string, unknown>): args is { country?
 
 function isOptionalStringOrNull(value: unknown): value is string | null | undefined {
   return value === undefined || value === null || typeof value === 'string'
+}
+
+function isMandateLegalInput(value: unknown): value is {
+  merchantTermsUrl?: string | null
+  merchantPrivacyUrl?: string | null
+  merchantDisplayName?: string | null
+  merchantLegalName?: string | null
+} {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const fields = [
+    'merchantTermsUrl',
+    'merchantPrivacyUrl',
+    'merchantDisplayName',
+    'merchantLegalName',
+  ]
+  return fields.every(key => isOptionalStringOrNull(Reflect.get(value, key)))
 }
 
 function isResolveSellerIdentityArgs(args: Record<string, unknown>): args is {
@@ -2072,6 +2092,38 @@ export function createDefaultRegistry(): FixtureRegistry {
         )
       }
       return resolveSellerIdentityDisplay(args)
+    },
+  })
+
+  registry.register('solvapayTermsUrl', {
+    id: 'core',
+    invoke: () => solvapayTermsUrl(),
+  })
+
+  registry.register('solvapayPrivacyUrl', {
+    id: 'core',
+    invoke: () => solvapayPrivacyUrl(),
+  })
+
+  registry.register('solvapayWebsiteUrl', {
+    id: 'core',
+    invoke: () => solvapayWebsiteUrl(),
+  })
+
+  registry.register('resolveMandateLegalDocs', {
+    id: 'core',
+    invoke: args => {
+      if (!isMandateLegalInput(args.input)) {
+        throw new Error(
+          'resolveMandateLegalDocs args.input merchant fields must be string, null, or omitted',
+        )
+      }
+      return resolveMandateLegalDocs({
+        merchantTermsUrl: args.input.merchantTermsUrl ?? null,
+        merchantPrivacyUrl: args.input.merchantPrivacyUrl ?? null,
+        merchantDisplayName: args.input.merchantDisplayName ?? null,
+        merchantLegalName: args.input.merchantLegalName ?? null,
+      })
     },
   })
 

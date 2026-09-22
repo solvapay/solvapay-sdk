@@ -1,0 +1,11 @@
+{
+  "suite": "mandate-legal",
+  "case": "solvapay-privacy-url",
+  "input": {
+    "fn": "solvapayPrivacyUrl",
+    "args": {}
+  },
+  "expect": {
+    "result": "https://solvapay.com/legal/privacy"
+  }
+}

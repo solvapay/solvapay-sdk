@@ -33,10 +33,11 @@ use solvapay_core::{
     plan_pricing_shape, postal_code_required_countries, project_topup_process_outcome,
     purchase_usage_is_metered, require_product_ref, resolve_account_state, resolve_buyer_country,
     resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_tax_treatment_note, resolve_usage_extra,
-    reverse_charge_note, select_active_plan_purchase, should_retry_usage_error,
-    should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
+    resolve_fallback_gate_limits, resolve_mandate_legal_docs, resolve_narrator_plan_shape,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
+    resolve_usage_extra, reverse_charge_note, select_active_plan_purchase,
+    should_retry_usage_error, should_show_tax_row, solvapay_privacy_url, solvapay_terms_url,
+    solvapay_website_url, state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
     trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
@@ -44,7 +45,8 @@ use solvapay_core::{
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, BusinessDetailsInput, FreeLimit, FreeLimitInput,
-    GateContent, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
+    GateContent, MandateLegalInput, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
+    ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -1077,6 +1079,12 @@ fn invoke_resolve_fallback_gate_limits(input: &FixtureInput) -> Result<Value, Bi
     to_value(&resolve_fallback_gate_limits(checkout_url.as_deref()))
 }
 
+fn invoke_resolve_mandate_legal_docs(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = require_typed::<MandateLegalInput>(&args, "input")?;
+    to_value(&resolve_mandate_legal_docs(&input))
+}
+
 fn invoke_resolve_plan_shape(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
@@ -1200,6 +1208,21 @@ fn invoke_should_show_tax_row(input: &FixtureInput) -> Result<Value, BindingErro
     let args = args_map(input);
     let treatment = optional_string(&args, "treatment")?;
     Ok(Value::Bool(should_show_tax_row(treatment.as_deref())))
+}
+
+fn invoke_solvapay_privacy_url(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(solvapay_privacy_url().to_owned()))
+}
+
+fn invoke_solvapay_terms_url(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(solvapay_terms_url().to_owned()))
+}
+
+fn invoke_solvapay_website_url(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(solvapay_website_url().to_owned()))
 }
 
 fn invoke_tier_bands(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1356,6 +1379,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "solvapayTermsUrl",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_solvapay_terms_url(&fixture.input)),
+        },
+    );
+    registry.register(
         "validateBusinessDetails",
         Binding {
             id: "core",
@@ -1388,6 +1418,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(|fixture| invoke_free_meter_name_pattern(&fixture.input)),
+        },
+    );
+    registry.register(
+        "solvapayPrivacyUrl",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_solvapay_privacy_url(&fixture.input)),
         },
     );
     registry.register(
@@ -1426,6 +1463,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "solvapayWebsiteUrl",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_solvapay_website_url(&fixture.input)),
+        },
+    );
+    registry.register(
         "extractBackendCustomerRef",
         Binding {
             id: "core",
@@ -1444,6 +1488,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(|fixture| invoke_get_tax_id_example(&fixture.input)),
+        },
+    );
+    registry.register(
+        "resolveMandateLegalDocs",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_resolve_mandate_legal_docs(&fixture.input)),
         },
     );
     registry.register(

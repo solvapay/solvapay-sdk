@@ -101,6 +101,11 @@ const _: fn(
     Option<&FreeLimit>,
 ) -> Result<CheckLimitsParams, HelperErrorResult> =
     solvapay_core::limits::resolve_check_limits_params;
+const _: fn(&MandateLegalInput) -> MandateLegalDocs =
+    solvapay_core::mandate_legal::resolve_mandate_legal_docs;
+const _: fn() -> &'static str = solvapay_core::mandate_legal::solvapay_privacy_url;
+const _: fn() -> &'static str = solvapay_core::mandate_legal::solvapay_terms_url;
+const _: fn() -> &'static str = solvapay_core::mandate_legal::solvapay_website_url;
 const _: fn(Option<&Value>) -> Result<String, HelperErrorResult> =
     solvapay_core::mcp::derive_default_view;
 const _: fn(Option<&Value>) -> String = solvapay_core::mcp::resolve_account_state;

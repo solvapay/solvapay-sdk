@@ -45,6 +45,12 @@ beforeEach(() => {
   merchantCache.clear()
 })
 
+const linkByHref = (href: string): HTMLElement => {
+  const match = screen.getAllByRole('link').find(link => link.getAttribute('href') === href)
+  if (!match) throw new Error(`expected a link to ${href}`)
+  return match
+}
+
 describe('MandateText', () => {
   it('renders recurring mandate with legal name, interval, price, and terms', async () => {
     primeMerchant()
@@ -67,11 +73,13 @@ describe('MandateText', () => {
     const node = screen.getByText(/Acme Inc\./)
     expect(node.textContent).toContain('$19.99')
     expect(node.textContent).toContain('every month')
-    expect(node.textContent).toContain('Terms')
-    expect(node.textContent).toContain('Privacy')
+    expect(node.textContent).toContain('Terms of Service')
+    expect(node.textContent).toContain('Privacy Policy')
+    expect(node.textContent).toContain("Acme's")
+    expect(node.textContent).toContain("SolvaPay's")
   })
 
-  it('linkifies merchant terms/privacy URLs as clickable <a> tags', async () => {
+  it('linkifies merchant and SolvaPay legal URLs when both merchant URLs are set', async () => {
     primeMerchant()
     render(
       <SolvaPayProvider config={{}}>
@@ -79,16 +87,23 @@ describe('MandateText', () => {
       </SolvaPayProvider>,
     )
 
-    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
-    const privacy = screen.getByRole('link', { name: 'Privacy' })
-    expect(terms.getAttribute('href')).toBe('https://acme.com/terms')
-    expect(privacy.getAttribute('href')).toBe('https://acme.com/privacy')
-    expect(terms.getAttribute('target')).toBe('_blank')
-    expect(terms.getAttribute('rel')).toBe('noopener noreferrer')
-    expect(terms.getAttribute('data-solvapay-mandate-link')).toBe('')
+    await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(4))
+    const merchantTerms = linkByHref('https://acme.com/terms')
+    const merchantPrivacy = linkByHref('https://acme.com/privacy')
+    const solvaTerms = linkByHref('https://solvapay.com/legal/terms')
+    const solvaPrivacy = linkByHref('https://solvapay.com/legal/privacy')
+    expect(merchantTerms.textContent).toBe('Terms of Service')
+    expect(merchantPrivacy.textContent).toBe('Privacy Policy')
+    expect(solvaTerms.textContent).toBe('Terms of Service')
+    expect(solvaPrivacy.textContent).toBe('Privacy Policy')
+    expect(merchantTerms.getAttribute('target')).toBe('_blank')
+    expect(merchantTerms.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(merchantTerms.getAttribute('data-solvapay-mandate-link')).toBe('')
+    expect(screen.getByText(/Acme Inc\./).textContent).toContain("Acme's")
+    expect(screen.getByText(/Acme Inc\./).textContent).toContain("SolvaPay's")
   })
 
-  it('uses merchant Terms but falls back to SolvaPay Privacy when only termsUrl is set', async () => {
+  it('names the merchant Terms of Service plus both SolvaPay links when only termsUrl is set', async () => {
     merchantCache.set('/api/merchant', {
       merchant: {
         displayName: 'Acme',
@@ -103,13 +118,19 @@ describe('MandateText', () => {
         <MandateText mode="topup" amountMinor={500} currency="usd" />
       </SolvaPayProvider>,
     )
-    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
-    const privacy = screen.getByRole('link', { name: 'Privacy' })
-    expect(terms.getAttribute('href')).toBe('https://acme.com/terms')
-    expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
+    await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(3))
+    expect(linkByHref('https://acme.com/terms').textContent).toBe('Terms of Service')
+    expect(linkByHref('https://solvapay.com/legal/terms').textContent).toBe('Terms of Service')
+    expect(linkByHref('https://solvapay.com/legal/privacy').textContent).toBe('Privacy Policy')
+    expect(
+      screen
+        .getAllByRole('link')
+        .some(link => link.getAttribute('href') === 'https://acme.com/privacy'),
+    ).toBe(false)
+    expect(screen.getByText(/Acme Inc\./).textContent).toContain("Acme's")
   })
 
-  it('falls back to SolvaPay-hosted Terms/Privacy when the merchant has neither URL', async () => {
+  it('names only SolvaPay legal pages when the merchant has neither URL', async () => {
     merchantCache.set('/api/merchant', {
       merchant: { displayName: 'Plain', legalName: 'Plain LLC' },
       promise: null,
@@ -120,10 +141,14 @@ describe('MandateText', () => {
         <MandateText mode="topup" amountMinor={500} currency="usd" />
       </SolvaPayProvider>,
     )
-    const terms = await waitFor(() => screen.getByRole('link', { name: 'Terms' }))
-    const privacy = screen.getByRole('link', { name: 'Privacy' })
-    expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
-    expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
+    await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(2))
+    expect(linkByHref('https://solvapay.com/legal/terms').textContent).toBe('Terms of Service')
+    expect(linkByHref('https://solvapay.com/legal/privacy').textContent).toBe('Privacy Policy')
+    const text = screen.getByText(/Plain LLC/).textContent
+    expect(text).toContain("SolvaPay's")
+    expect(text).not.toContain("Plain's")
+    expect(text).not.toContain("Plain LLC's")
+    expect(text).toContain('You agree to')
   })
 
   it('renders one-time mandate without interval', async () => {
@@ -187,7 +212,7 @@ describe('MandateText', () => {
     await waitFor(() => expect(screen.getByText('Custom mandate text')).toBeTruthy())
   })
 
-  it('renders SolvaPay-hosted terms sentence when merchant URLs are missing', async () => {
+  it('renders the SolvaPay consent tail on one-time checkout when merchant URLs are missing', async () => {
     merchantCache.set('/api/merchant', {
       merchant: { displayName: 'Plain', legalName: 'Plain LLC' },
       promise: null,
@@ -207,8 +232,10 @@ describe('MandateText', () => {
     )
     await waitFor(() => expect(screen.getByText(/Plain LLC/)).toBeTruthy())
     const node = screen.getByText(/Plain LLC/)
-    expect(node.textContent).toContain('See ')
-    const terms = screen.getByRole('link', { name: 'Terms' })
-    expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
+    expect(node.textContent).toContain('You agree to')
+    expect(node.textContent).toContain("SolvaPay's")
+    expect(node.textContent).not.toContain('See ')
+    expect(linkByHref('https://solvapay.com/legal/terms').textContent).toBe('Terms of Service')
+    expect(linkByHref('https://solvapay.com/legal/privacy').textContent).toBe('Privacy Policy')
   })
 })

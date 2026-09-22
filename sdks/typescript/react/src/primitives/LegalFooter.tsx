@@ -38,8 +38,8 @@ export type LegalFooterProps = {
 export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function LegalFooter(
   {
     attribution = 'provided',
-    termsUrl = SOLVAPAY_TERMS_URL,
-    privacyUrl = SOLVAPAY_PRIVACY_URL,
+    termsUrl = SOLVAPAY_TERMS_URL(),
+    privacyUrl = SOLVAPAY_PRIVACY_URL(),
     asChild,
     children,
     ...rest
@@ -84,7 +84,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function
           {attributionLabel ? (
             <a
               data-solvapay-legal-footer-attribution=""
-              href={SOLVAPAY_WEBSITE_URL}
+              href={SOLVAPAY_WEBSITE_URL()}
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleExternalClick}

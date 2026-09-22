@@ -33,6 +33,7 @@ mod hmac_util;
 pub mod invoke_payable;
 pub mod jwt_util;
 pub mod limits;
+pub mod mandate_legal;
 pub mod mcp;
 pub mod money_format;
 pub mod payment;
@@ -126,6 +127,10 @@ pub use jwt_util::{
     extract_bearer_token, extract_bearer_token_ref, DefaultMcpBearerExpectations,
 };
 pub use limits::{is_unlimited_remaining, resolve_check_limits_params, CheckLimitsParams};
+pub use mandate_legal::{
+    resolve_mandate_legal_docs, solvapay_privacy_url, solvapay_terms_url, solvapay_website_url,
+    MandateLegalDoc, MandateLegalDocKind, MandateLegalDocs, MandateLegalInput,
+};
 pub use mcp::{
     append_paid_tool_description, assert_response_result, auto_recharge_url_from,
     build_payable_tool_result, build_prompt_descriptor_metadata, build_prompt_user_message,

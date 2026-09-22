@@ -104,10 +104,14 @@ class SignatureParityGeneratedTest < Minitest::Test
     plan_pricing_shape
     postal_code_required_countries
     require_product_ref
+    resolve_mandate_legal_docs
     resolve_seller_identity_display
     resolve_tax_behavior
     resolve_tax_treatment_note
     should_show_tax_row
+    solvapay_privacy_url
+    solvapay_terms_url
+    solvapay_website_url
     state_required_countries
     tier_bands
     tier_meters

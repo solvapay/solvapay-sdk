@@ -447,6 +447,15 @@ module SolvaPay
     NativeDispatch.call_sync("require_product_ref", args)
   end
 
+  # Choose the legal documents a mandate names, and the order of the links.
+  # @param input Merchant legal URLs and names. SolvaPay URLs are not inputs.
+  # @return Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+  def self.resolve_mandate_legal_docs(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("resolve_mandate_legal_docs", args)
+  end
+
   # Resolve seller identity fields into a display projection.
   # @return Display projection for seller identity.
   def self.resolve_seller_identity_display(country: nil, vat_number: nil, tax_id: nil, company_number: nil)
@@ -481,6 +490,27 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["treatment"] = treatment unless treatment.nil?
     NativeDispatch.call_sync("should_show_tax_row", args)
+  end
+
+  # Hosted SolvaPay Privacy Policy URL.
+  # @return The SolvaPay privacy URL.
+  def self.solvapay_privacy_url
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("solvapay_privacy_url", args)
+  end
+
+  # Hosted SolvaPay Terms of Service URL.
+  # @return The SolvaPay terms URL.
+  def self.solvapay_terms_url
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("solvapay_terms_url", args)
+  end
+
+  # SolvaPay website URL used by the footer attribution link.
+  # @return The SolvaPay website URL.
+  def self.solvapay_website_url
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("solvapay_website_url", args)
   end
 
   # Return the tier bands a plan prices a meter with, ordered by floor.

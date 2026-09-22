@@ -43,6 +43,11 @@ browserSafe:
   - resolveSellerIdentityDisplay
   - getSellerTaxIdentifierDisplayLabel
   - SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+  # mandate-legal
+  - solvapayTermsUrl
+  - solvapayPrivacyUrl
+  - solvapayWebsiteUrl
+  - resolveMandateLegalDocs
   # plan-pricing readers
   - charges
   - headlineCharges

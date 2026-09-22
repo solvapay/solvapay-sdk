@@ -38,6 +38,10 @@
         "minorUnitsPerMajor",
         "resolveSellerIdentityDisplay",
         "getSellerTaxIdentifierDisplayLabel",
+        "solvapayTermsUrl",
+        "solvapayPrivacyUrl",
+        "solvapayWebsiteUrl",
+        "resolveMandateLegalDocs",
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         "shouldShowTaxRow",
         "formatSubtotalLabel",
@@ -144,7 +148,7 @@
       "postamble": "type NativeCoreApi = {\n  callNativeSync: (fn: NativeCoreSyncMethod, argsJson: string) => unknown\n}\n\nlet installed: NativeCoreApi | null = null\n\nexport function installNativeCoreApi(api: NativeCoreApi): void {\n  installed = api\n}\n\n/** @internal test helper */\nexport function resetNativeCoreApiForTests(): void {\n  installed = null\n}\n\n/**\n * Dispatches a sync core/helper method to the installed binding.\n * Browser installs via `@solvapay/core/browser-wasm`; Node via `@solvapay/server`.\n * Throws naming the method when no binding is installed.\n */\nexport function dispatchSync<T>(fn: NativeCoreSyncMethod, args: unknown): T {\n  if (installed === null) {\n    throw new SolvaPayError(`core sync API not installed (${fn})`)\n  }\n  return installed.callNativeSync(fn, JSON.stringify(args)) as T\n}\n"
     },
     "nativeCore": {
-      "preamble": "/**\n * Sync core pure-logic facade (Step 37R-d / Step 52).\n *\n * `business-details` / `credit-display` / `seller-identity` dispatch to napi\n * or browser WASM via an *installed* API so this module never statically\n * imports `node:module` or `@solvapay/server-native`.\n *\n * After Step 52 there is no TypeScript fallback — uninstalled throws\n * {@link SolvaPayError}.\n */\n\nimport type {\n  BusinessCountryOption,\n  BusinessDetailsInput,\n  SupportedBusinessCountry,\n  TaxBehavior,\n  TaxIdType,\n  ValidateBusinessDetailsResult,\n} from './business-details'\nimport type { SellerIdentityDisplay } from './seller-identity'\nimport {\n  dispatchSync,\n  installNativeCoreApi,\n  resetNativeCoreApiForTests,\n  type NativeCoreSyncMethod,\n} from './native-dispatch'\n\nexport type { NativeCoreSyncMethod }\nexport { installNativeCoreApi, resetNativeCoreApiForTests }\n\n",
+      "preamble": "/**\n * Sync core pure-logic facade (Step 37R-d / Step 52).\n *\n * `business-details` / `credit-display` / `seller-identity` / `mandate-legal` dispatch to napi\n * or browser WASM via an *installed* API so this module never statically\n * imports `node:module` or `@solvapay/server-native`.\n *\n * After Step 52 there is no TypeScript fallback — uninstalled throws\n * {@link SolvaPayError}.\n */\n\nimport type {\n  BusinessCountryOption,\n  BusinessDetailsInput,\n  SupportedBusinessCountry,\n  TaxBehavior,\n  TaxIdType,\n  ValidateBusinessDetailsResult,\n} from './business-details'\nimport type { SellerIdentityDisplay } from './seller-identity'\nimport type { MandateLegalDocs, MandateLegalInput } from './types/boundary.generated'\nimport {\n  dispatchSync,\n  installNativeCoreApi,\n  resetNativeCoreApiForTests,\n  type NativeCoreSyncMethod,\n} from './native-dispatch'\n\nexport type { NativeCoreSyncMethod }\nexport { installNativeCoreApi, resetNativeCoreApiForTests }\n\n",
       "symbolOrder": [
         "validateBusinessDetails",
         "resolveBuyerCountry",
@@ -179,6 +183,10 @@
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         "getSellerTaxIdentifierDisplayLabel",
         "resolveSellerIdentityDisplay",
+        "solvapayTermsUrl",
+        "solvapayPrivacyUrl",
+        "solvapayWebsiteUrl",
+        "resolveMandateLegalDocs",
         "shouldShowTaxRow",
         "formatSubtotalLabel",
         "formatVatSummaryLabel",
@@ -194,6 +202,7 @@
         "validateBusinessDetails": "// --- business-details ---",
         "minorUnitsPerMajor": "// --- credit-display ---",
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": "// --- seller-identity ---",
+        "solvapayTermsUrl": "// --- mandate-legal ---",
         "shouldShowTaxRow": "// --- tax-summary ---",
         "formatPrice": "// --- money-format ---",
         "TOPUP_BALANCE_POLL_DELAYS_MS": "// --- balance-poll ---"

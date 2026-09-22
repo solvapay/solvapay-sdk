@@ -140,12 +140,16 @@ use crate::payload_builders::minor_units_per_major_binding;
 use crate::payload_builders::paywall_tool_result_binding;
 use crate::payload_builders::postal_code_required_countries_binding;
 use crate::payload_builders::resolve_buyer_country_binding;
+use crate::payload_builders::resolve_mandate_legal_docs_binding;
 use crate::payload_builders::resolve_seller_identity_display_binding;
 use crate::payload_builders::resolve_tax_behavior_binding;
 use crate::payload_builders::resolve_tax_treatment_note_binding;
 use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
 use crate::payload_builders::should_show_tax_row_binding;
+use crate::payload_builders::solvapay_privacy_url_binding;
+use crate::payload_builders::solvapay_terms_url_binding;
+use crate::payload_builders::solvapay_website_url_binding;
 use crate::payload_builders::state_required_countries_binding;
 use crate::payload_builders::supported_business_countries_binding;
 use crate::payload_builders::tax_behaviors_binding;
@@ -482,6 +486,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(should_show_tax_row_binding, 1),
     )?;
     native.define_singleton_method(
+        "solvapay_terms_url",
+        function!(solvapay_terms_url_binding, 1),
+    )?;
+    native.define_singleton_method(
         "validate_business_details",
         function!(validate_business_details_binding, 1),
     )?;
@@ -493,6 +501,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "format_subtotal_label",
         function!(format_subtotal_label_binding, 1),
     )?;
+    native.define_singleton_method(
+        "solvapay_privacy_url",
+        function!(solvapay_privacy_url_binding, 1),
+    )?;
     native.define_singleton_method("to_major_units", function!(to_major_units_binding, 1))?;
     native.define_singleton_method(
         "format_vat_summary_label",
@@ -503,8 +515,16 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(resolve_tax_behavior_binding, 1),
     )?;
     native.define_singleton_method(
+        "solvapay_website_url",
+        function!(solvapay_website_url_binding, 1),
+    )?;
+    native.define_singleton_method(
         "get_tax_id_example",
         function!(get_tax_id_example_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "resolve_mandate_legal_docs",
+        function!(resolve_mandate_legal_docs_binding, 1),
     )?;
     native.define_singleton_method(
         "resolve_tax_treatment_note",

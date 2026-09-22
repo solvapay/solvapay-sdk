@@ -3826,6 +3826,90 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+  solvapayTermsUrl:
+    names:
+      ts: solvapayTermsUrl
+      py: solvapay_terms_url
+      rb: solvapay_terms_url
+      go: SolvapayTermsUrl
+      rust: solvapay_terms_url
+      c: solvapayTermsUrl
+    params: []
+    docs:
+      summary: 'Hosted SolvaPay Terms of Service URL.'
+      params: {}
+      returns: 'The SolvaPay terms URL.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  solvapayPrivacyUrl:
+    names:
+      ts: solvapayPrivacyUrl
+      py: solvapay_privacy_url
+      rb: solvapay_privacy_url
+      go: SolvapayPrivacyUrl
+      rust: solvapay_privacy_url
+      c: solvapayPrivacyUrl
+    params: []
+    docs:
+      summary: 'Hosted SolvaPay Privacy Policy URL.'
+      params: {}
+      returns: 'The SolvaPay privacy URL.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  solvapayWebsiteUrl:
+    names:
+      ts: solvapayWebsiteUrl
+      py: solvapay_website_url
+      rb: solvapay_website_url
+      go: SolvapayWebsiteUrl
+      rust: solvapay_website_url
+      c: solvapayWebsiteUrl
+    params: []
+    docs:
+      summary: 'SolvaPay website URL used by the footer attribution link.'
+      params: {}
+      returns: 'The SolvaPay website URL.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  resolveMandateLegalDocs:
+    names:
+      ts: resolveMandateLegalDocs
+      py: resolve_mandate_legal_docs
+      rb: resolve_mandate_legal_docs
+      go: ResolveMandateLegalDocs
+      rust: resolve_mandate_legal_docs
+      c: resolveMandateLegalDocs
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Choose the legal documents a mandate names, and the order of the links.'
+      params:
+        input: 'Merchant legal URLs and names. SolvaPay URLs are not inputs.'
+      returns: 'Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   resolveSellerIdentityDisplay:
     names:
       ts: resolveSellerIdentityDisplay

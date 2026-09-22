@@ -5,7 +5,7 @@
 /**
  * Sync core pure-logic facade (Step 37R-d / Step 52).
  *
- * `business-details` / `credit-display` / `seller-identity` dispatch to napi
+ * `business-details` / `credit-display` / `seller-identity` / `mandate-legal` dispatch to napi
  * or browser WASM via an *installed* API so this module never statically
  * imports `node:module` or `@solvapay/server-native`.
  *
@@ -22,6 +22,7 @@ import type {
   ValidateBusinessDetailsResult,
 } from './business-details'
 import type { SellerIdentityDisplay } from './seller-identity'
+import type { MandateLegalDocs, MandateLegalInput } from './types/boundary.generated'
 import {
   dispatchSync,
   installNativeCoreApi,
@@ -278,6 +279,35 @@ export function resolveSellerIdentityDisplay(input: {
     taxId: input.taxId ?? null,
     companyNumber: input.companyNumber ?? null,
   })
+}
+
+// --- mandate-legal ---
+
+/**
+ * Hosted SolvaPay Terms of Service URL.
+ * @returns The SolvaPay terms URL.
+ */
+export function solvapayTermsUrl(): string { return dispatchSync('solvapayTermsUrl', {}) }
+
+/**
+ * Hosted SolvaPay Privacy Policy URL.
+ * @returns The SolvaPay privacy URL.
+ */
+export function solvapayPrivacyUrl(): string { return dispatchSync('solvapayPrivacyUrl', {}) }
+
+/**
+ * SolvaPay website URL used by the footer attribution link.
+ * @returns The SolvaPay website URL.
+ */
+export function solvapayWebsiteUrl(): string { return dispatchSync('solvapayWebsiteUrl', {}) }
+
+/**
+ * Choose the legal documents a mandate names, and the order of the links.
+ * @param input Merchant legal URLs and names. SolvaPay URLs are not inputs.
+ * @returns Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+ */
+export function resolveMandateLegalDocs(input: MandateLegalInput): MandateLegalDocs {
+  return dispatchSync('resolveMandateLegalDocs', { input })
 }
 
 // --- tax-summary ---

@@ -17,12 +17,14 @@ use solvapay_core::{
     get_tax_id_field_label, get_tax_id_helper_text, is_customer_address_complete,
     is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
     is_zero_decimal_currency, minor_units_per_major, postal_code_required_countries,
-    resolve_buyer_country, resolve_seller_identity_display, resolve_tax_behavior,
-    resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
-    should_show_tax_row, state_required_countries, supported_business_countries, tax_behaviors,
-    tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
-    to_major_units, topup_balance_poll_delays_ms, validate_business_details, BusinessDetailsInput,
-    CreditsToDisplayInput, SdkError, SellerIdentityInput,
+    resolve_buyer_country, resolve_mandate_legal_docs, resolve_seller_identity_display,
+    resolve_tax_behavior, resolve_tax_treatment_note, reverse_charge_note,
+    seller_tax_identifier_display_label_by_type, should_show_tax_row, solvapay_privacy_url,
+    solvapay_terms_url, solvapay_website_url, state_required_countries,
+    supported_business_countries, tax_behaviors, tax_exclusive_currencies,
+    tax_id_example_by_country, tax_id_types, tax_not_collected_note, to_major_units,
+    topup_balance_poll_delays_ms, validate_business_details, BusinessDetailsInput,
+    CreditsToDisplayInput, MandateLegalInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
@@ -70,6 +72,17 @@ pub fn should_show_tax_row_binding(args_json: String) -> String {
     })
 }
 
+// --- mandate-legal (public-safe) ---
+
+/// Binding for `solvapayTermsUrl`.
+#[wasm_bindgen(js_name = "solvapayTermsUrl")]
+pub fn solvapay_terms_url_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(solvapay_terms_url().to_owned()))
+    })
+}
+
 // --- business-details (public-safe) ---
 
 /// Binding for `validateBusinessDetails`.
@@ -110,6 +123,17 @@ pub fn format_subtotal_label_binding(args_json: String) -> String {
         Ok(Value::String(
             format_subtotal_label(treatment.as_deref()).to_owned(),
         ))
+    })
+}
+
+// --- mandate-legal (public-safe) ---
+
+/// Binding for `solvapayPrivacyUrl`.
+#[wasm_bindgen(js_name = "solvapayPrivacyUrl")]
+pub fn solvapay_privacy_url_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(solvapay_privacy_url().to_owned()))
     })
 }
 
@@ -160,6 +184,19 @@ pub fn resolve_tax_behavior_binding(args_json: String) -> String {
     })
 }
 
+// --- mandate-legal (public-safe) ---
+
+/// Binding for `solvapayWebsiteUrl`.
+#[wasm_bindgen(js_name = "solvapayWebsiteUrl")]
+pub fn solvapay_website_url_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(solvapay_website_url().to_owned()))
+    })
+}
+
+// --- business-details (public-safe) ---
+
 /// Binding for `getTaxIdExample`.
 #[wasm_bindgen(js_name = "getTaxIdExample")]
 pub fn get_tax_id_example_binding(args_json: String) -> String {
@@ -173,6 +210,18 @@ pub fn get_tax_id_example_binding(args_json: String) -> String {
                 false,
             )),
         }
+    })
+}
+
+// --- mandate-legal (public-safe) ---
+
+/// Binding for `resolveMandateLegalDocs`.
+#[wasm_bindgen(js_name = "resolveMandateLegalDocs")]
+pub fn resolve_mandate_legal_docs_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<MandateLegalInput>(&args, "input")?;
+        to_value(&resolve_mandate_legal_docs(&input))
     })
 }
 

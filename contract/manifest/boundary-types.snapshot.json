@@ -4060,6 +4060,211 @@
         ]
       }
     },
+    "MandateLegalDoc": {
+      "module": "mandate_legal",
+      "rustdoc": "One legal document URL and the label kind a locale should use.",
+      "serde": "serialize",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "url",
+            "wireName": "url",
+            "rustdoc": "Absolute URL embedded in the mandate sentence.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "kind",
+            "wireName": "kind",
+            "rustdoc": "Document kind. The locale owns the visible label.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "MandateLegalDocKind"
+            }
+          }
+        ]
+      }
+    },
+    "MandateLegalDocKind": {
+      "module": "mandate_legal",
+      "rustdoc": "Which legal document a URL points at.",
+      "serde": "serialize",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Terms",
+            "wireName": "terms",
+            "rustdoc": "Terms of Service.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Privacy",
+            "wireName": "privacy",
+            "rustdoc": "Privacy Policy.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "MandateLegalDocs": {
+      "module": "mandate_legal",
+      "rustdoc": "Documents a mandate should name.\n\n`links` is merchant documents then SolvaPay documents, with duplicate\nURLs removed. `merchant_docs` and `solvapay_docs` are not de-duplicated\nagainst each other — the sentence names both parties even when they\nshare a URL.",
+      "serde": "serialize",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "merchant_brand",
+            "wireName": "merchantBrand",
+            "rustdoc": "`displayName`, or `legalName` when the display name is absent.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "merchant_docs",
+            "wireName": "merchantDocs",
+            "rustdoc": "Merchant Terms then Privacy, each only when the URL is non-empty.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "MandateLegalDoc"
+              }
+            }
+          },
+          {
+            "rustName": "solvapay_docs",
+            "wireName": "solvapayDocs",
+            "rustdoc": "SolvaPay Terms then Privacy. Always both.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "MandateLegalDoc"
+              }
+            }
+          },
+          {
+            "rustName": "links",
+            "wireName": "links",
+            "rustdoc": "Merchant docs then SolvaPay docs, first URL wins.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "vec",
+              "item": {
+                "kind": "named",
+                "name": "MandateLegalDoc"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "MandateLegalInput": {
+      "module": "mandate_legal",
+      "rustdoc": "Merchant legal fields. SolvaPay URLs are not inputs — core owns them.",
+      "serde": "deserialize",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "merchant_terms_url",
+            "wireName": "merchantTermsUrl",
+            "rustdoc": "Merchant Terms of Service URL.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "merchant_privacy_url",
+            "wireName": "merchantPrivacyUrl",
+            "rustdoc": "Merchant Privacy Policy URL.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "merchant_display_name",
+            "wireName": "merchantDisplayName",
+            "rustdoc": "Customer-facing merchant name.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "merchant_legal_name",
+            "wireName": "merchantLegalName",
+            "rustdoc": "Registered merchant name. Brand fallback.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
     "McpContainerDimensions": {
       "module": "mcp::display_mode",
       "rustdoc": "Host-reported container size.",
@@ -10603,6 +10808,69 @@
             "kind": "named",
             "name": "HelperErrorResult"
           }
+        }
+      }
+    },
+    "solvapay_core::mandate_legal::resolve_mandate_legal_docs": {
+      "name": "resolve_mandate_legal_docs",
+      "module": "mandate_legal",
+      "implTy": null,
+      "rustdoc": "Choose the legal documents a mandate names.\n\nMerchant documents are included only when their URL is non-empty.\nSolvaPay's Terms and Privacy are always present. The brand is the\ndisplay name, falling back to the legal name. `links` follows\nmerchant-then-SolvaPay order and keeps the first copy of a URL.\n\n# Arguments\n\n* `input` - Merchant URLs and names. SolvaPay URLs are not parameters.\n\n# Returns\n\nBrand, merchant documents, SolvaPay documents, and de-duplicated links.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "MandateLegalInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "MandateLegalDocs"
+        }
+      }
+    },
+    "solvapay_core::mandate_legal::solvapay_privacy_url": {
+      "name": "solvapay_privacy_url",
+      "module": "mandate_legal",
+      "implTy": null,
+      "rustdoc": "Hosted SolvaPay Privacy Policy URL.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::mandate_legal::solvapay_terms_url": {
+      "name": "solvapay_terms_url",
+      "module": "mandate_legal",
+      "implTy": null,
+      "rustdoc": "Hosted SolvaPay Terms of Service URL.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::mandate_legal::solvapay_website_url": {
+      "name": "solvapay_website_url",
+      "module": "mandate_legal",
+      "implTy": null,
+      "rustdoc": "SolvaPay website URL used by the footer attribution link.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
         }
       }
     },

@@ -2,7 +2,7 @@
  * Browser profile wrapper — public-safe pure logic only.
  *
  * Exposes `wasmVersion` plus the business-details / credit-display /
- * seller-identity / plan-pricing sync envelope functions, plus the
+ * seller-identity / mandate-legal / plan-pricing sync envelope functions, plus the
  * pure-compute decision exports that fit both §7.8 byte gates. Never
  * exports webhook verification, the transport `WasmClient`, or the MCP
  * engine — those stay on the edge profile. Exports are enumerated explicitly
@@ -50,6 +50,11 @@ import init, {
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  // mandate-legal (public-safe)
+  solvapayTermsUrl,
+  solvapayPrivacyUrl,
+  solvapayWebsiteUrl,
+  resolveMandateLegalDocs,
   // plan-pricing (public-safe)
   charges,
   headlineCharges,
@@ -140,6 +145,10 @@ export {
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  solvapayTermsUrl,
+  solvapayPrivacyUrl,
+  solvapayWebsiteUrl,
+  resolveMandateLegalDocs,
   charges,
   headlineCharges,
   perUnitCharge,

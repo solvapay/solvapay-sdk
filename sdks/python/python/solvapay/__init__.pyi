@@ -873,6 +873,12 @@ def require_product_ref(metadata_product: str | None = None, env_product: str | 
     @returns A product ref string, or throws when neither is set.
     """
     ...
+def resolve_mandate_legal_docs(input: object) -> object:
+    """Choose the legal documents a mandate names, and the order of the links.
+    @param input Merchant legal URLs and names. SolvaPay URLs are not inputs.
+    @returns Merchant brand, merchant documents, SolvaPay documents, and de-duplicated links.
+    """
+    ...
 def resolve_seller_identity_display(
     country: str | None = None,
     vat_number: str | None = None,
@@ -896,6 +902,21 @@ def resolve_tax_treatment_note(treatment: str | None = None) -> str | None:
 def should_show_tax_row(treatment: str | None = None) -> bool:
     """Return whether a VAT amount row should render for a tax treatment.
     @returns True when a VAT row should be shown.
+    """
+    ...
+def solvapay_privacy_url() -> str:
+    """Hosted SolvaPay Privacy Policy URL.
+    @returns The SolvaPay privacy URL.
+    """
+    ...
+def solvapay_terms_url() -> str:
+    """Hosted SolvaPay Terms of Service URL.
+    @returns The SolvaPay terms URL.
+    """
+    ...
+def solvapay_website_url() -> str:
+    """SolvaPay website URL used by the footer attribution link.
+    @returns The SolvaPay website URL.
     """
     ...
 def tier_bands(priced: object | None = None, meter: str | None = None) -> list[object]:

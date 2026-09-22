@@ -7834,6 +7834,55 @@
       "coreCall": "resolve_fallback_gate_limits",
       "clientCallArgs": []
     },
+    "resolveMandateLegalDocs": {
+      "core": "solvapay_core::mandate_legal::resolve_mandate_legal_docs",
+      "names": {
+        "ts": "resolveMandateLegalDocs",
+        "py": "resolve_mandate_legal_docs",
+        "rb": "resolve_mandate_legal_docs",
+        "go": "ResolveMandateLegalDocs",
+        "rust": "resolve_mandate_legal_docs",
+        "c": "resolveMandateLegalDocs"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "resolveMandateLegalDocs"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireTyped",
+          "typedAs": "MandateLegalInput",
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 3,
+      "section": "mandate-legal",
+      "doc": "Binding for `resolveMandateLegalDocs`.",
+      "docWasm": null,
+      "rustFnName": "resolve_mandate_legal_docs_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&input"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_mandate_legal_docs",
+      "clientCallArgs": []
+    },
     "resolvePlanShape": {
       "core": "solvapay_core::mcp::resolve_narrator_plan_shape",
       "names": {
@@ -8631,6 +8680,114 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "should_show_tax_row",
+      "clientCallArgs": []
+    },
+    "solvapayPrivacyUrl": {
+      "core": "solvapay_core::mandate_legal::solvapay_privacy_url",
+      "names": {
+        "ts": "solvapayPrivacyUrl",
+        "py": "solvapay_privacy_url",
+        "rb": "solvapay_privacy_url",
+        "go": "SolvapayPrivacyUrl",
+        "rust": "solvapay_privacy_url",
+        "c": "solvapayPrivacyUrl"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "solvapayPrivacyUrl"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 1,
+      "section": "mandate-legal",
+      "doc": "Binding for `solvapayPrivacyUrl`.",
+      "docWasm": null,
+      "rustFnName": "solvapay_privacy_url_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "solvapay_privacy_url",
+      "clientCallArgs": []
+    },
+    "solvapayTermsUrl": {
+      "core": "solvapay_core::mandate_legal::solvapay_terms_url",
+      "names": {
+        "ts": "solvapayTermsUrl",
+        "py": "solvapay_terms_url",
+        "rb": "solvapay_terms_url",
+        "go": "SolvapayTermsUrl",
+        "rust": "solvapay_terms_url",
+        "c": "solvapayTermsUrl"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "solvapayTermsUrl"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 0,
+      "section": "mandate-legal",
+      "doc": "Binding for `solvapayTermsUrl`.",
+      "docWasm": null,
+      "rustFnName": "solvapay_terms_url_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "solvapay_terms_url",
+      "clientCallArgs": []
+    },
+    "solvapayWebsiteUrl": {
+      "core": "solvapay_core::mandate_legal::solvapay_website_url",
+      "names": {
+        "ts": "solvapayWebsiteUrl",
+        "py": "solvapay_website_url",
+        "rb": "solvapay_website_url",
+        "go": "SolvapayWebsiteUrl",
+        "rust": "solvapay_website_url",
+        "c": "solvapayWebsiteUrl"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "solvapayWebsiteUrl"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 2,
+      "section": "mandate-legal",
+      "doc": "Binding for `solvapayWebsiteUrl`.",
+      "docWasm": null,
+      "rustFnName": "solvapay_website_url_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "solvapay_website_url",
       "clientCallArgs": []
     },
     "tierBands": {

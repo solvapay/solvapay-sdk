@@ -12,8 +12,24 @@ export type MandateContext = {
     legalName: string
     displayName?: string
     supportEmail?: string
+    /**
+     * Merchant-published Terms of Service URL. Omitted when the merchant
+     * has not set one — never a SolvaPay fallback.
+     */
     termsUrl?: string
+    /**
+     * Merchant-published Privacy Policy URL. Omitted when the merchant
+     * has not set one — never a SolvaPay fallback.
+     */
     privacyUrl?: string
+  }
+  /**
+   * SolvaPay's own legal pages. Always present — SolvaPay is the
+   * processor on every charge, so its terms always apply.
+   */
+  solvapay: {
+    termsUrl: string
+    privacyUrl: string
   }
   plan?: {
     name?: string
@@ -419,6 +435,16 @@ export interface SolvaPayCopy {
       paymentOneTime: string
       paymentPayg: string
     }
+  }
+  /**
+   * Full legal-document names used in the mandate consent tail
+   * ("Terms of Service" / "Privacy Policy"). Distinct from
+   * `legalFooter.terms` / `legalFooter.privacy`, which stay short
+   * for the footer strip.
+   */
+  legal: {
+    termsOfService: string
+    privacyPolicy: string
   }
   legalFooter: {
     terms: string

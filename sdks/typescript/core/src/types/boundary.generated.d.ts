@@ -830,6 +830,74 @@ export type InvokePayableTrack = {
 export type LookupErrorKind = 'expectedMissing' | 'unexpected'
 
 /**
+ * One legal document URL and the label kind a locale should use.
+ */
+export type MandateLegalDoc = {
+  /**
+   * Absolute URL embedded in the mandate sentence.
+   */
+  url: string
+  /**
+   * Document kind. The locale owns the visible label.
+   */
+  kind: MandateLegalDocKind
+}
+
+/**
+ * Which legal document a URL points at.
+ */
+export type MandateLegalDocKind = 'terms' | 'privacy'
+
+/**
+ * Documents a mandate should name.
+ * 
+ * `links` is merchant documents then SolvaPay documents, with duplicate
+ * URLs removed. `merchant_docs` and `solvapay_docs` are not de-duplicated
+ * against each other — the sentence names both parties even when they
+ * share a URL.
+ */
+export type MandateLegalDocs = {
+  /**
+   * `displayName`, or `legalName` when the display name is absent.
+   */
+  merchantBrand: string | null
+  /**
+   * Merchant Terms then Privacy, each only when the URL is non-empty.
+   */
+  merchantDocs: MandateLegalDoc[]
+  /**
+   * SolvaPay Terms then Privacy. Always both.
+   */
+  solvapayDocs: MandateLegalDoc[]
+  /**
+   * Merchant docs then SolvaPay docs, first URL wins.
+   */
+  links: MandateLegalDoc[]
+}
+
+/**
+ * Merchant legal fields. SolvaPay URLs are not inputs — core owns them.
+ */
+export type MandateLegalInput = {
+  /**
+   * Merchant Terms of Service URL.
+   */
+  merchantTermsUrl: string | null
+  /**
+   * Merchant Privacy Policy URL.
+   */
+  merchantPrivacyUrl: string | null
+  /**
+   * Customer-facing merchant name.
+   */
+  merchantDisplayName: string | null
+  /**
+   * Registered merchant name. Brand fallback.
+   */
+  merchantLegalName: string | null
+}
+
+/**
  * Host-reported container size.
  */
 export type McpContainerDimensions = {
