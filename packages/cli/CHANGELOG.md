@@ -1,5 +1,13 @@
 # solvapay
 
+## 1.3.1
+
+### Patch Changes
+
+- 4f5a484: `solvapay init` warns when it writes a live secret key, and a non-interactive re-run refuses to overwrite an existing key unless `--yes` is passed. Non-interactive runs without `--product` say that deploy fails until the product placeholder is replaced.
+- Updated dependencies [4f5a484]
+  - @solvapay/init@0.4.6
+
 ## 1.3.0
 
 ### Minor Changes
