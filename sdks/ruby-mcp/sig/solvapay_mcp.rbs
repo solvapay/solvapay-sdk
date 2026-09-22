@@ -35,6 +35,7 @@ module SolvaPay
       ?title: String?,
       ?description: String?,
       ?input_schema: untyped,
+      ?output_schema: untyped,
       ?get_customer_ref: (^(untyped) -> String)?,
       ?usage_type: String
     ) -> void
@@ -45,10 +46,45 @@ module SolvaPay
       handler: ^(untyped, ResponseContext) -> untyped,
       get_customer_ref: (^(untyped) -> String)?,
       args: untyped,
-      ?usage_type: String
+      ?usage_type: String,
+      ?server_context: untyped,
+      ?mcp_extra_customer_ref: String?
     ) -> Hash[String, untyped]
 
-    def self.resolve_customer_ref: (untyped args, (^(untyped) -> String)? get_customer_ref) -> String
+    def self.resolve_customer_ref: (
+      untyped args,
+      (^(untyped) -> String)? get_customer_ref,
+      untyped server_context,
+      String? mcp_extra_customer_ref
+    ) -> String
+    def resolve_customer_ref: (
+      untyped args,
+      (^(untyped) -> String)? get_customer_ref,
+      untyped server_context,
+      String? mcp_extra_customer_ref
+    ) -> String
+
+    FINISHED_SCHEMA_KEYS: Array[String]
+    def self.compile_input_schema: (untyped input_schema) -> untyped
+    def compile_input_schema: (untyped input_schema) -> untyped
+    def self.append_paid_description: (String? description) -> String
+    def append_paid_description: (String? description) -> String
+    def self.union_output_schema: (untyped schema) -> Hash[String, untyped]?
+    def union_output_schema: (untyped schema) -> Hash[String, untyped]?
+    def self.finished_json_schema?: (untyped schema) -> bool
+    def finished_json_schema?: (untyped schema) -> bool
+    def self.hash_lookup: (untyped value, Symbol key) -> String?
+    def hash_lookup: (untyped value, Symbol key) -> String?
+    def self.context_lookup: (untyped context, *Symbol names) -> untyped
+    def context_lookup: (untyped context, *Symbol names) -> untyped
+    def self.request_headers: (untyped context) -> untyped
+    def request_headers: (untyped context) -> untyped
+    def self.header_string: (untyped headers, String name) -> String?
+    def header_string: (untyped headers, String name) -> String?
+    def self.mcp_extra_from_context: (untyped context) -> String?
+    def mcp_extra_from_context: (untyped context) -> String?
+    def self.customer_ref_from_auth: (untyped auth_info) -> String?
+    def customer_ref_from_auth: (untyped auth_info) -> String?
     def self.format_gate: (String message, Hash[String, untyped] gate) -> Hash[String, untyped]
     def self.limits_from_decision: (untyped decision) -> Hash[String, untyped]
     def self.stringify_keys: (untyped value) -> untyped

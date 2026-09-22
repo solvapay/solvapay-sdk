@@ -41,7 +41,7 @@ module SolvaPay
           title: title,
           description: paid,
           input_schema: schema,
-        }
+        } #: Hash[Symbol, untyped]
         define_kwargs[:output_schema] = unioned unless unioned.nil?
         server.define_tool(**define_kwargs) do |server_context: nil, **args|
           mcp.send(
@@ -162,7 +162,9 @@ module SolvaPay
       end
 
       def append_paid_description(description)
-        paid = SolvaPay.append_paid_tool_description(description: description)
+        kwargs = {} #: Hash[Symbol, String]
+        kwargs[:description] = description if description.is_a?(String)
+        paid = SolvaPay.append_paid_tool_description(**kwargs)
         return paid if paid.is_a?(String)
 
         raise SolvaPay::SolvaPayError.new(
