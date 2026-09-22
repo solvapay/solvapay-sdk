@@ -347,7 +347,22 @@ export const runInitInDirectory = async ({
     )
   }
 
-  const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, { cwd })
+  if (exchange.environment === 'live') {
+    process.stdout.write(
+      [
+        '',
+        '⚠️  LIVE key. Real charges apply.',
+        '   Init follows the environment currently selected in the SolvaPay Console.',
+        '   Switch the Console to sandbox and re-run `npx solvapay init` if that was not intended.',
+        '',
+      ].join('\n'),
+    )
+  }
+
+  const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, {
+    cwd,
+    ...(options.yes ? { confirmOverwrite: async () => true } : {}),
+  })
   const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
   if (envWrite.action === 'created' || envWrite.action === 'appended' || envWrite.action === 'updated') {
     process.stdout.write(`📝 Secret key saved to .env${environmentLabel}\n`)
