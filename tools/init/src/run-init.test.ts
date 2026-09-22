@@ -13,14 +13,18 @@ vi.mock('./browser-auth', () => ({
   verifyMerchant: vi.fn(),
 }))
 
-vi.mock('./env', () => ({
-  writeSolvaPaySecretToEnv: vi.fn(),
-  writeSolvaPayApiBaseUrlToEnv: vi.fn(),
-  ensureEnvInGitignore: vi.fn(),
-  readSolvaPayProductRefFromEnv: vi.fn(),
-  writeSolvaPayProductRefToEnv: vi.fn(),
-  SOLVAPAY_PRODUCT_REF_PLACEHOLDER: '__SOLVAPAY_PRODUCT_REF__',
-}))
+vi.mock('./env', async () => {
+  const actual = await vi.importActual<typeof import('./env')>('./env')
+  return {
+    writeSolvaPaySecretToEnv: vi.fn(),
+    writeSolvaPayApiBaseUrlToEnv: vi.fn(),
+    ensureEnvInGitignore: vi.fn(),
+    readSolvaPayProductRefFromEnv: vi.fn(),
+    writeSolvaPayProductRefToEnv: vi.fn(),
+    SOLVAPAY_PRODUCT_REF_PLACEHOLDER: '__SOLVAPAY_PRODUCT_REF__',
+    classifySecretKey: actual.classifySecretKey,
+  }
+})
 
 vi.mock('./product-picker', () => ({
   pickProductInteractive: vi.fn(),
@@ -164,6 +168,45 @@ describe('runInitInDirectory', () => {
     vi.spyOn(process.stdout, 'write').mockImplementation(chunk => {
       output.push(String(chunk))
       return true
+    })
+  })
+
+  it('warns when the exchanged key is live and still writes it', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(waitForExchange).mockResolvedValue({
+      status: 'complete',
+      secretKey: 'sk_live_123',
+      email: 'dev@example.com',
+      environment: 'sandbox',
+    })
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD })
+
+    const text = output.join('')
+    expect(text).toContain('LIVE key. Real charges apply.')
+    expect(text).toContain('Switch the Console to sandbox')
+    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_live_123', {
+      cwd: TEST_CWD,
+      yes: false,
+    })
+  })
+
+  it('overwrites an existing key without prompting when --yes is set', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({
+      action: 'skipped',
+      reason: 'zero_products',
+    })
+
+    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
+
+    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', {
+      cwd: TEST_CWD,
+      yes: true,
     })
   })
 

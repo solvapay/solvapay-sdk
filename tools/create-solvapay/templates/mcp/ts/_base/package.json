@@ -7,7 +7,6 @@
     "build": "cross-env INPUT=mcp-app.html vite build && mkdir -p src/assets && cp dist/mcp-app.html src/assets/mcp-app.html",
     "dev": "npm run build && node scripts/dev.mjs",
     "dev:widget": "cross-env INPUT=mcp-app.html vite build --watch",
-    "predeploy": "npm run build",
     "deploy": "node scripts/deploy.mjs",
     "serve:local": "wrangler dev",
     "typecheck": "tsc --noEmit",

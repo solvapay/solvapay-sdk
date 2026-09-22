@@ -47,6 +47,29 @@ const TOOL_PACKAGES = new Set(['cli', 'create-solvapay', 'init'])
 
 const INTERNAL_PACKAGES = new Set(['demo-services', 'test-utils', 'tsconfig'])
 
+/**
+ * Dev paths this branch removed on purpose. They must not surface as drops:
+ * the replacement lives somewhere `rewriteDevPath` cannot point at.
+ */
+const DELIBERATELY_DELETED = new Set(['examples/cloudflare-workers-mcp/scripts/preflight-dev.mjs'])
+
+/**
+ * Dev hunks ported with an intentional rewrite. They must not surface as
+ * drops: the behavior is on this branch, the bytes are not.
+ *
+ * - `packages/init/src/env.ts` — non-TTY overwrite throws; dev calls `process.exit`.
+ * - `packages/init/src/run-init.test.ts` — tests assert `{ cwd, yes }` rather than
+ *   a `confirmOverwrite` closure.
+ */
+const ACCEPTED_REWRITES = new Set([
+  '4f5a484721b8:packages/init/src/env.ts',
+  '4f5a484721b8:packages/init/src/run-init.test.ts',
+])
+
+export function isAcceptedRewrite(commit: string, devPath: string): boolean {
+  return ACCEPTED_REWRITES.has(`${commit.slice(0, 12)}:${devPath}`)
+}
+
 export type AuditKind = 'present' | 'missing' | 'review'
 
 export type AuditFinding = {
@@ -75,6 +98,7 @@ type GitResult = {
  * Returns null for paths the remap does not own.
  */
 export function rewriteDevPath(devPath: string): string | null {
+  if (DELIBERATELY_DELETED.has(devPath)) return null
   const parts = devPath.split('/')
   const head = parts[0]
   if (head === 'packages' && parts.length >= 2) {
@@ -82,7 +106,13 @@ export function rewriteDevPath(devPath: string): string | null {
     const rest = parts.slice(2).join('/')
     const suffix = rest.length > 0 ? `/${rest}` : ''
     if (TS_PACKAGES.has(name)) return `sdks/typescript/${name}${suffix}`
-    if (TOOL_PACKAGES.has(name)) return `tools/${name}${suffix}`
+    if (TOOL_PACKAGES.has(name)) {
+      const rewritten = `tools/${name}${suffix}`
+      if (name === 'create-solvapay') {
+        return rewritten.replace('/templates/mcp/_base/', '/templates/mcp/ts/_base/')
+      }
+      return rewritten
+    }
     if (INTERNAL_PACKAGES.has(name)) return `internal/${name}${suffix}`
     return null
   }
@@ -505,7 +535,11 @@ export async function auditDevSync(options: {
         tipText,
         rewrittenPath: rewritten,
       })) {
-        findings.push({ ...base, kind: classified.kind, hunk: classified.hunk })
+        const kind =
+          classified.kind === 'missing' && isAcceptedRewrite(entry.commit, change.path)
+            ? 'review'
+            : classified.kind
+        findings.push({ ...base, kind, hunk: classified.hunk })
       }
     }
   }

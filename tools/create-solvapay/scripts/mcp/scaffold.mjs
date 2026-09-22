@@ -27,25 +27,13 @@
  *   }
  */
 
+import { spawnSync } from 'node:child_process'
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve, dirname, relative, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  loadSpec,
-  listOperations,
-  resolveSecuritySchemes,
-  getServerUrls,
-} from './lib/openapi.mjs'
-import {
-  collectPlanSelectionReminders,
-  validatePlanSelections,
-} from './lib/plan-selections.mjs'
-import {
-  PLACEHOLDERS,
-  applyOverlayDir,
-  assertTargetDirAbsent,
-  copyDir,
-} from './lib/template.mjs'
+import { loadSpec, listOperations, resolveSecuritySchemes, getServerUrls } from './lib/openapi.mjs'
+import { collectPlanSelectionReminders, validatePlanSelections } from './lib/plan-selections.mjs'
+import { PLACEHOLDERS, applyOverlayDir, assertTargetDirAbsent, copyDir } from './lib/template.mjs'
 
 // `fileURLToPath` is the Windows-safe way to convert `import.meta.url`
 // to a filesystem path — the previous `new URL(import.meta.url).pathname`
@@ -98,15 +86,12 @@ async function main() {
   // intent tools might hit show up when the agent authors the tool —
   // not at scaffold time.
   const selectedOps =
-    mode === 'intent-driven'
-      ? []
-      : matchSelectionsToOperations(selections.operations, operations)
+    mode === 'intent-driven' ? [] : matchSelectionsToOperations(selections.operations, operations)
   if (mode !== 'intent-driven') {
     enforceAuthSupport(selectedOps, schemes, selections.upstreamAuth)
   }
   const generatedOps = selectedOps.filter(({ selection }) => selection.tier !== 'skip')
-  const serverBaseUrl =
-    generatedOps.length > 0 ? resolveToolServerBaseUrl(spec, selections) : null
+  const serverBaseUrl = generatedOps.length > 0 ? resolveToolServerBaseUrl(spec, selections) : null
 
   const serverName =
     typeof selections.serverName === 'string' && selections.serverName.length > 0
@@ -151,6 +136,7 @@ async function main() {
   await writeIndexFile(target, toolFiles, selections.upstreamAuth.kind, mode)
   await ensureGitignoreCoversEnv(target)
   const envWritten = await writeDotEnv(target, selections)
+  installGeneratedScriptDeps(target)
 
   const planReminders = Array.isArray(selections.plans)
     ? collectPlanSelectionReminders(selections.plans)
@@ -162,12 +148,12 @@ async function main() {
     ...(mode === 'intent-driven'
       ? [
           'Intent-driven mode: author src/tools/*.ts files per intent-driven.md, then update src/tools/index.ts to import and call each register{IntentName}(ctx, env). The .env and project skeleton are ready.',
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
+          `Run \`npx -y solvapay@latest init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
           `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. \`node scripts/test.mjs\` will report intent tools as skipped (they aren't in the spec's operationIds) — exercise them manually per intent-driven.md.`,
         ]
       : [
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
-          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target}.`,
+          `Run \`npx -y solvapay@latest init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
+          `\`node scripts/verify.mjs <url>\` and \`node scripts/test.mjs\` run from ${target}. Scaffold already ran \`npm install\` inside ${target}/scripts.`,
         ]),
   ]
 
@@ -290,7 +276,9 @@ function validateSelections(selections) {
   }
   if (selections.upstreamBaseUrl !== undefined) {
     if (typeof selections.upstreamBaseUrl !== 'string' || selections.upstreamBaseUrl.length === 0) {
-      throw new Error('selections.json: `upstreamBaseUrl` must be a non-empty string when provided.')
+      throw new Error(
+        'selections.json: `upstreamBaseUrl` must be a non-empty string when provided.',
+      )
     }
     assertAbsoluteHttpUrl(selections.upstreamBaseUrl, 'upstreamBaseUrl')
   }
@@ -541,9 +529,7 @@ function matchSelectionsToOperations(selectionEntries, allOps) {
 
 function enforceAuthSupport(matched, schemes, upstreamAuth) {
   if (upstreamAuth.kind === 'none') return
-  const unsupportedByName = new Map(
-    schemes.filter(s => !s.supported).map(s => [s.name, s]),
-  )
+  const unsupportedByName = new Map(schemes.filter(s => !s.supported).map(s => [s.name, s]))
   if (unsupportedByName.size === 0) return
   for (const { selection, operation } of matched) {
     if (selection.tier === 'skip') continue
@@ -746,9 +732,8 @@ function renderFetchInit(operation, headerLines) {
     })
     .join('\n')
 
-  const headersBlock = headerLines.length > 0
-    ? `        headers: { ${headerLines.join(', ')} },\n`
-    : ''
+  const headersBlock =
+    headerLines.length > 0 ? `        headers: { ${headerLines.join(', ')} },\n` : ''
   const bodyBlock = hasBody ? '        body: JSON.stringify(input.body ?? {}),\n' : ''
   const methodBlock = `        method: '${method}',\n`
 
@@ -775,7 +760,7 @@ function renderHeaderLines(auth, schemes, operation) {
   // `const token = await getAccessToken(env)`.
   const headerEntries = []
   if (auth.kind === 'bearer') {
-    headerEntries.push("authorization: `Bearer ${env.UPSTREAM_API_KEY}`")
+    headerEntries.push('authorization: `Bearer ${env.UPSTREAM_API_KEY}`')
   } else if (auth.kind === 'apiKey') {
     headerEntries.push(`'${auth.name.toLowerCase()}': \`\${env.UPSTREAM_API_KEY}\``)
   } else if (auth.kind === 'oauth2-client-credentials') {
@@ -785,7 +770,9 @@ function renderHeaderLines(auth, schemes, operation) {
     // (`UPSTREAM_API_HEADERS`, keyed by header name → value). Spread it into
     // the request headers so the generated `Env` shape stays static no
     // matter how many headers the upstream needs.
-    headerEntries.push("...(JSON.parse(env.UPSTREAM_API_HEADERS ?? '{}') as Record<string, string>)")
+    headerEntries.push(
+      "...(JSON.parse(env.UPSTREAM_API_HEADERS ?? '{}') as Record<string, string>)",
+    )
   }
   if (operation.requestBody?.schema) {
     headerEntries.push("'content-type': 'application/json'")
@@ -802,13 +789,7 @@ function renderLimitLiteral(limit) {
   return `{ ${parts.join(', ')} }`
 }
 
-function renderFreeCappedBody({
-  operation,
-  urlTemplate,
-  fetchInit,
-  needsAccessToken,
-  freeLimit,
-}) {
+function renderFreeCappedBody({ operation, urlTemplate, fetchInit, needsAccessToken, freeLimit }) {
   const schemaFields = renderSchemaFields(operation, 6)
   const schemaBlock = schemaFields ? `\n${schemaFields}\n    ` : ''
   const annotations = renderAnnotations(annotationsFor(operation), 4)
@@ -881,7 +862,9 @@ ${fetchInit.methodBlock}${fetchInit.headersBlock}${fetchInit.bodyBlock}      })
 function renderAnnotations(annotations, indent) {
   const pad = ' '.repeat(indent)
   const innerPad = ' '.repeat(indent + 2)
-  const entries = Object.entries(annotations).map(([k, v]) => `${innerPad}${k}: ${JSON.stringify(v)}`)
+  const entries = Object.entries(annotations).map(
+    ([k, v]) => `${innerPad}${k}: ${JSON.stringify(v)}`,
+  )
   return `{\n${entries.join(',\n')},\n${pad}}`
 }
 
@@ -979,7 +962,7 @@ async function writeDotEnv(target, selections) {
       : PLACEHOLDERS.PRODUCT_REF
   const lines = [
     '# Generated by create-solvapay scaffold.',
-    '# SOLVAPAY_SECRET_KEY is populated by `npx solvapay init` (see the generated README).',
+    '# SOLVAPAY_SECRET_KEY is populated by `npx -y solvapay@latest init` (see the generated README).',
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${selections.mcpPublicBaseUrl}`,
   ]
@@ -1024,20 +1007,32 @@ function secretsSeededFor(auth) {
     out.push({ name: 'UPSTREAM_API_HEADERS', location: '.env' })
   }
   out.push({ name: 'SOLVAPAY_PRODUCT_REF', location: '.env' })
-  out.push({ name: 'MCP_PUBLIC_BASE_URL', location: '.env (localhost placeholder; auto-resolved on deploy)' })
+  out.push({
+    name: 'MCP_PUBLIC_BASE_URL',
+    location: '.env (localhost placeholder; auto-resolved on deploy)',
+  })
   return out
 }
 
 function collectWrittenPaths(target, toolFiles, envPath) {
-  const written = [
-    join(target, 'src', 'tools', 'index.ts'),
-    join(target, '.gitignore'),
-    envPath,
-  ]
+  const written = [join(target, 'src', 'tools', 'index.ts'), join(target, '.gitignore'), envPath]
   for (const id of toolFiles) {
     written.push(join(target, 'src', 'tools', `${id}.ts`))
   }
-  return written.map(p => relative(process.cwd(), p))
+  return written.map(p => resolve(p))
+}
+
+function installGeneratedScriptDeps(target) {
+  const scriptsDir = join(target, 'scripts')
+  const result = spawnSync('npm', ['install', '--no-audit', '--no-fund'], {
+    cwd: scriptsDir,
+    encoding: 'utf8',
+  })
+  if ((result.status ?? 1) !== 0) {
+    const detail = [result.stdout, result.stderr].filter(Boolean).join('\n')
+    console.error(`npm install inside ${scriptsDir} failed.\n${detail}`)
+    process.exit(result.status ?? 1)
+  }
 }
 
 function jsKey(name) {
@@ -1056,9 +1051,7 @@ function toPascalIdentifier(value) {
   const words = String(value)
     .split(/[^A-Za-z0-9_$]+/)
     .filter(Boolean)
-  let name = words.length > 0
-    ? words.map(word => capitalize(word)).join('')
-    : 'Tool'
+  let name = words.length > 0 ? words.map(word => capitalize(word)).join('') : 'Tool'
   name = name.replace(/^[^A-Za-z_$]+/, '')
   if (!name) name = 'Tool'
   if (/^[0-9]/.test(name)) name = `_${name}`

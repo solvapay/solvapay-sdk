@@ -3,10 +3,11 @@
  * Shared OpenAPI utilities for `create-solvapay/types/mcp/from-openapi`.
  *
  * Used by `describe.mjs`, `scaffold.mjs`, and `test.mjs`. Every script
- * re-parses the spec from disk; no cached state across modules.
+ * re-parses the spec from the given path or URL; no cached state across
+ * modules.
  *
  * Public surface:
- *   - loadSpec(specPath) -> { spec, format }
+ *   - loadSpec(specPath) -> { spec }
  *   - listOperations(spec) -> Operation[]
  *   - resolveSecuritySchemes(spec) -> ResolvedScheme[]
  *   - suggestTier(operation) -> 'free' | 'paid' | 'skip'
@@ -14,12 +15,14 @@
  *   - buildAdvisories(operations, schemes) -> Advisory[]
  *   - buildSpecShapeAdvisories({ servers, operations, schemes }) -> Advisory[]
  *
- * The only non-stdlib dependency is `@apidevtools/swagger-parser`,
- * pulled on demand via `npx --package @apidevtools/swagger-parser`.
+ * Non-stdlib dependencies live in `scripts/mcp/package.json`
+ * (`@apidevtools/swagger-parser`, `js-yaml`).
  */
 
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { access, readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import yaml from 'js-yaml'
 
 const SUPPORTED_AUTH_KINDS = new Set([
   'http-bearer',
@@ -30,28 +33,122 @@ const SUPPORTED_AUTH_KINDS = new Set([
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
+const OPENAPI_31_PATCH = /^3\.1\.\d+$/
+
+export function swaggerParserInstallHint() {
+  const scriptsDir = dirname(dirname(fileURLToPath(import.meta.url)))
+  return (
+    '`@apidevtools/swagger-parser` is not installed. Run `npm install` inside ' +
+    `${scriptsDir} (one-time setup), then re-run.`
+  )
+}
+
 /**
- * Load + parse an OpenAPI document from disk and run `$ref` resolution
- * through swagger-parser's `dereference`. Accepts JSON or YAML.
+ * Load + parse an OpenAPI document and run `$ref` resolution through
+ * swagger-parser's `dereference`. Accepts a local JSON/YAML path or an
+ * http(s) URL to the raw document (not a Swagger UI / docs page).
  *
  * Returns the fully-dereferenced spec so downstream callers never have
  * to think about `$ref` lookup.
  */
 export async function loadSpec(specPath) {
-  const absolute = resolve(specPath)
   const SwaggerParser = await loadSwaggerParser()
-  const raw = await readFile(absolute, 'utf8')
-  const format = absolute.endsWith('.yaml') || absolute.endsWith('.yml') ? 'yaml' : 'json'
-  const spec = await SwaggerParser.dereference(absolute)
-  return { spec, format, raw }
+  const document = normaliseOpenApiPatch(await readSpecDocument(specPath))
+  try {
+    const spec = await SwaggerParser.dereference(document)
+    return { spec }
+  } catch (err) {
+    throw wrapSpecLoadError(err, specPath)
+  }
+}
+
+async function readSpecDocument(specPath) {
+  if (/^https?:\/\//i.test(specPath)) {
+    let response
+    try {
+      response = await fetch(specPath)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `Could not load OpenAPI spec from ${specPath}: ${message}. ` +
+          'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+      )
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Could not load OpenAPI spec from ${specPath}: HTTP ${response.status}. ` +
+          'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+      )
+    }
+    return parseSpecText(await response.text(), specPath)
+  }
+
+  const absolute = resolve(specPath)
+  try {
+    await access(absolute)
+  } catch (err) {
+    if (err && typeof err === 'object' && err.code === 'ENOENT') {
+      throw new Error(`Spec file not found: ${absolute}`)
+    }
+    throw err
+  }
+  return parseSpecText(await readFile(absolute, 'utf8'), absolute)
+}
+
+function parseSpecText(text, source) {
+  const trimmed = text.trim()
+  try {
+    if (trimmed.startsWith('{')) return JSON.parse(text)
+    const document = yaml.load(text)
+    if (!document || typeof document !== 'object' || Array.isArray(document)) {
+      throw new Error('document is not an object')
+    }
+    return document
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      `Could not load OpenAPI spec from ${source}: ${message}. ` +
+        'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+    )
+  }
+}
+
+function normaliseOpenApiPatch(spec) {
+  if (
+    typeof spec?.openapi === 'string' &&
+    OPENAPI_31_PATCH.test(spec.openapi) &&
+    spec.openapi !== '3.1.0' &&
+    spec.openapi !== '3.1.1'
+  ) {
+    console.log('OpenAPI 3.1.x patch version normalised to 3.1.1 for parsing.')
+    spec.openapi = '3.1.1'
+  }
+  return spec
+}
+
+function wrapSpecLoadError(err, specPath) {
+  const message = err instanceof Error ? err.message : String(err)
+  if (message.includes('Unsupported OpenAPI version')) {
+    return new Error(
+      `Could not parse OpenAPI spec from ${specPath}: ${message} ` +
+        'OpenAPI 3.1.x patch versions are rewritten to 3.1.1 before parsing. ' +
+        'For any other unsupported version, set the openapi field to 3.1.1 in a local copy of the spec.',
+    )
+  }
+  if (/^https?:\/\//i.test(specPath)) {
+    return new Error(
+      `Could not load OpenAPI spec from ${specPath}: ${message}. ` +
+        'Point at the raw JSON/YAML document (e.g. .../swagger.json or .../openapi.yaml), not a docs/Swagger UI page.',
+    )
+  }
+  return err instanceof Error ? err : new Error(message)
 }
 
 /**
- * Lazy-load `@apidevtools/swagger-parser`. The skill ships a tiny
- * `scripts/package.json` declaring this single dep; the user runs
- * `npm install` inside `scripts/` once per checkout before invoking
- * `describe.mjs`, `scaffold.mjs`, or `test.mjs`. The error message
- * here exists for the case where someone skipped that step.
+ * Lazy-load `@apidevtools/swagger-parser`. `scripts/mcp/package.json`
+ * declares it; the user runs `npm install` inside `scripts/mcp` once
+ * before invoking `describe.mjs`, `scaffold.mjs`, or `test.mjs`. The
+ * error message here exists for the case where someone skipped that step.
  */
 async function loadSwaggerParser() {
   try {
@@ -59,10 +156,7 @@ async function loadSwaggerParser() {
     return mod.default ?? mod
   } catch (err) {
     if (err && typeof err === 'object' && err.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error(
-        '`@apidevtools/swagger-parser` is not installed. Run `npm install` inside the ' +
-          '`scripts/` directory of this skill (one-time setup), then re-run.',
-      )
+      throw new Error(swaggerParserInstallHint())
     }
     throw err
   }
@@ -84,7 +178,8 @@ export function getServerUrls(spec) {
   }
   if (typeof spec.host === 'string' && spec.host.length > 0) {
     const basePath = typeof spec.basePath === 'string' ? spec.basePath : ''
-    const schemes = Array.isArray(spec.schemes) && spec.schemes.length > 0 ? spec.schemes : ['https']
+    const schemes =
+      Array.isArray(spec.schemes) && spec.schemes.length > 0 ? spec.schemes : ['https']
     return schemes.map(scheme => `${scheme}://${spec.host}${basePath}`)
   }
   return []
@@ -265,9 +360,7 @@ export function synthesizeExamples(operation) {
  * `upstreamAuth.kind = "none"`.
  */
 export function buildAdvisories(operations, schemes) {
-  const unsupported = new Map(
-    schemes.filter(s => !s.supported).map(s => [s.name, s]),
-  )
+  const unsupported = new Map(schemes.filter(s => !s.supported).map(s => [s.name, s]))
   if (unsupported.size === 0) return []
   const advisories = []
   for (const op of operations) {
@@ -315,8 +408,7 @@ export function buildServerAdvisories(servers) {
     .map(server => ({
       kind: 'relativeServerUrl',
       serverUrl: server,
-      message:
-        `Spec server URL \`${server}\` is relative. Confirm the absolute upstream base URL and set \`upstreamBaseUrl\` in selections.json before scaffolding.`,
+      message: `Spec server URL \`${server}\` is relative. Confirm the absolute upstream base URL and set \`upstreamBaseUrl\` in selections.json before scaffolding.`,
     }))
 }
 
@@ -329,8 +421,9 @@ export function buildPathOutlierAdvisories(operations) {
   }
   if (firstSegmentCounts.size < 2) return []
 
-  const [dominantFirst, dominantCount] = Array.from(firstSegmentCounts.entries())
-    .sort((a, b) => b[1] - a[1])[0]
+  const [dominantFirst, dominantCount] = Array.from(firstSegmentCounts.entries()).sort(
+    (a, b) => b[1] - a[1],
+  )[0]
   if (dominantCount < 2 || dominantFirst.length < 2) return []
 
   const dominantPrefixSegments = dominantPathPrefixSegments(operations, dominantFirst)
@@ -384,7 +477,10 @@ export function buildMultiHeaderAuthAdvisories(operations, schemes) {
         .filter(scheme => scheme?.kind === 'apiKey-header' && scheme?.supported === true)
       if (headerSchemes.length < 2) continue
 
-      const key = headerSchemes.map(scheme => scheme.name).sort().join('|')
+      const key = headerSchemes
+        .map(scheme => scheme.name)
+        .sort()
+        .join('|')
       if (seen.has(key)) continue
       seen.add(key)
       advisories.push({
@@ -394,7 +490,10 @@ export function buildMultiHeaderAuthAdvisories(operations, schemes) {
         headerNames: headerSchemes.map(scheme => scheme.headerName),
         recommendedUpstreamAuth: {
           kind: 'apiKey-multi',
-          headers: headerSchemes.map(scheme => ({ name: scheme.headerName, value: '<user supplies>' })),
+          headers: headerSchemes.map(scheme => ({
+            name: scheme.headerName,
+            value: '<user supplies>',
+          })),
         },
         message:
           `Operation \`${op.operationId}\` requires multiple apiKey header schemes together. ` +
@@ -412,7 +511,9 @@ export function isSupportedAuthKind(kind) {
 // — helpers ————————————————————————————————————————————————————————————
 
 function pathSegments(path) {
-  return String(path ?? '').split('/').filter(Boolean)
+  return String(path ?? '')
+    .split('/')
+    .filter(Boolean)
 }
 
 function dominantPathPrefixSegments(operations, dominantFirst) {
@@ -430,7 +531,10 @@ function dominantPathPrefixSegments(operations, dominantFirst) {
 }
 
 function compactSegments(segments) {
-  return segments.join('').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return segments
+    .join('')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
 }
 
 function isNearMiss(a, b) {
@@ -513,7 +617,8 @@ function pickParamValue(param) {
     if (first && first.value !== undefined) return { value: first.value, source: 'examples' }
   }
   if (param.default !== undefined) return { value: param.default, source: 'default' }
-  if (param.schemaExample !== undefined) return { value: param.schemaExample, source: 'schema.example' }
+  if (param.schemaExample !== undefined)
+    return { value: param.schemaExample, source: 'schema.example' }
   if (param.enum && param.enum.length > 0) return { value: param.enum[0], source: 'enum' }
   return { value: typedPlaceholder(param.type, param.format), source: 'placeholder' }
 }

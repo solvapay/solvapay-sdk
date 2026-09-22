@@ -99,7 +99,7 @@ export const pickProductInteractive = async (
   const nonInteractive = options.yes || !process.stdin.isTTY || !process.stdout.isTTY
   if (nonInteractive) {
     process.stdout.write(
-      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...> when you are ready.\n',
+      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...> when you are ready. .env still has the placeholder and deploy will fail until it is set.\n',
     )
     return { action: 'skipped', reason: 'non_interactive_requires_product' }
   }

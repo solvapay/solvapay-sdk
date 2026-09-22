@@ -334,6 +334,24 @@ payable-path `metadata.action` drift is fixed — `payable-handler` posts the
 driver-rendered body, locked by `payable-handler.unit.test.ts`. New
 decisions still go through a JSON-in / JSON-out core function.
 
+Secret-key prefix classification is the same kind of deviation, owned by
+`@solvapay/init` (`classifySecretKey` in `tools/init/src/env.ts`). The only
+consumers are TypeScript repo tooling, so it is not a core helper: emitting
+it onto the six language surfaces, plus a Go guest rebuild, would add a
+symbol with no in-repo caller. `tools/example-deploy` cannot import
+`@solvapay/init` (that package resolves only through `dist/`, and the
+example preflight scripts run with no build step), so it mirrors the
+`sk_live_` / `sk_sandbox_` / `sk_test_` table and
+`tools/repo/secret-key-prefix-parity.test.ts` pins the copy.
+`isPlaceholder` stays narrower than example-deploy's `PLACEHOLDER` regex on
+purpose. Init checks the secret key alone for empty or
+`your_key_here` / `replace_me`. Preflight checks every required env value,
+including `prd_` product refs, with a broader `your_` match.
+`sk_test_your_dev_key_here` is a placeholder to preflight and not to init.
+The generated Worker `scripts/deploy.mjs` stays outside that gate. It runs
+under bare `node` in a project that is not part of this workspace, so it
+cannot import `@solvapay/init`. It does not classify secret-key prefixes.
+
 ## Design principles
 
 - Semantic logic lives in Rust once; facades stay thin (thin-facade rule).
@@ -383,7 +401,8 @@ These are known gaps left in place on purpose. They are not silent drift.
 
 - **`deriveVariant(plan, mode)`** in `sdks/typescript/react/src/primitives/MandateText.tsx` still picks the mandate variant from plan shape in TypeScript. `resolvePlanShape` / `planPricingShape` already exist in core. It is a JSON-in / JSON-out decision on the facade, and it predates the mandate-legal port.
 - **Example widget copies are older than canonical.** The four example/scaffold `mcp-app.html` copies (`3ecf9f25`) and `examples/typescript/mcp-time-app/mcp-app.html` (`91d2a0e4`) are older builds than the canonical widget (`b8f8b2fa`). `example-widget-parity.test.ts` compares the four copies to each other, not to canonical, so they can drift. Demo is not the SDK; the gap is recorded here so it stays visible.
-- **Historical dev-sync drops.** `pnpm sync:audit` still reports confirmed drops from `origin/dev` commits after the layout remap, outside the LegalFooter host-link repair and the mandate-legal port. Those hunks are intentional divergence on this branch (rust rewrite, deleted files, superseded copy). Do not replay them blindly. Re-run `pnpm sync:audit` before the next `origin/dev` merge and triage anything new.
+- **Historical dev-sync drops.** `df4537d1` is the recorded `origin/dev` baseline. `pnpm sync:audit` still reports confirmed drops from commits after the layout remap and before that baseline, outside the LegalFooter host-link repair, the mandate-legal port, and the tooling ported from `dad8ca6c..df4537d1`. Those older hunks are intentional divergence on this branch (rust rewrite, deleted files, superseded copy). Inside the ported range, two hunks from `4f5a4847` stay rewritten rather than byte-copied: non-TTY overwrite in `@solvapay/init` throws instead of calling `process.exit`, and the init tests assert `{ cwd, yes }` instead of a `confirmOverwrite` closure. Do not replay them blindly. Re-run `pnpm sync:audit` before the next `origin/dev` merge and triage anything new.
+- **`applyBrowserCors` is unpinned.** The function is copied in the TypeScript MCP template worker, `examples/typescript/cloudflare-workers-mcp`, and `examples/typescript/supabase-edge-mcp`. The three bodies are currently byte-identical. An earlier audit said the template and the Cloudflare example had already diverged; that claim is stale. Do not pin the copies in a change that must stay out of `contract/manifest/repo-paths.yaml` — matching `example-widget-parity.test.ts` needs three new lookup keys. The follow-up is those three keys plus one assertion in the existing widget parity test. Until then, an edit to one worker is mirrored into all three.
 
 ## Where to read next
 

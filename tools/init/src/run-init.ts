@@ -8,6 +8,7 @@ import {
   waitForExchange,
 } from './browser-auth'
 import {
+  classifySecretKey,
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
@@ -419,6 +420,18 @@ export const runInitInDirectory = async ({
   const gitignoreWrite = await ensureEnvInGitignore(cwd)
   if (gitignoreWrite.action === 'created' || gitignoreWrite.action === 'appended') {
     process.stdout.write('🔒 Added .env to .gitignore\n')
+  }
+
+  if (classifySecretKey(exchange.secretKey).isLive) {
+    process.stdout.write(
+      [
+        '',
+        '⚠️  LIVE key. Real charges apply.',
+        '   Init follows the environment currently selected in the SolvaPay Console.',
+        '   Switch the Console to sandbox and re-run `npx solvapay init` if that was not intended.',
+        '',
+      ].join('\n'),
+    )
   }
 
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, {

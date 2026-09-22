@@ -7,6 +7,7 @@ import {
   parseArgs,
   parseNameStatus,
   probePatch,
+  isAcceptedRewrite,
   rewriteDevPath,
   type AuditFinding,
 } from './check-dev-sync.js'
@@ -34,6 +35,20 @@ describe('rewriteDevPath', () => {
     expect(rewriteDevPath('examples/chat-checkout-demo/package.json')).toBe(
       'examples/typescript/chat-checkout-demo/package.json',
     )
+    expect(rewriteDevPath('packages/create-solvapay/templates/mcp/_base/scripts/deploy.mjs')).toBe(
+      'tools/create-solvapay/templates/mcp/ts/_base/scripts/deploy.mjs',
+    )
+  })
+
+  it('drops paths this branch deleted on purpose', () => {
+    expect(rewriteDevPath('examples/cloudflare-workers-mcp/scripts/preflight-dev.mjs')).toBeNull()
+  })
+
+  it('accepts the init overwrite rewrite and nothing else from that commit', () => {
+    const commit = '4f5a484721b87a852f774c13d37caaa757969990'
+    expect(isAcceptedRewrite(commit, 'packages/init/src/env.ts')).toBe(true)
+    expect(isAcceptedRewrite(commit, 'packages/init/src/run-init.test.ts')).toBe(true)
+    expect(isAcceptedRewrite(commit, 'packages/init/src/run-init.ts')).toBe(false)
   })
 
   it('leaves unmapped and already-rewritten paths alone', () => {

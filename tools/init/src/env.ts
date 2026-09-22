@@ -23,11 +23,45 @@ export type GitignoreEnvResult = {
   action: 'created' | 'appended' | 'unchanged'
 }
 
-export const isExampleSecretKey = (value: string): boolean => {
-  const trimmed = value.trim()
-  if (trimmed.length === 0) return true
-  return /your_key_here|replace_me/i.test(trimmed)
+const SECRET_KEY_ENVIRONMENTS = ['live', 'sandbox', 'test'] as const
+
+/** Prefix table. example-deploy mirrors this; the secret-key prefix parity test pins the copy. */
+export const SECRET_KEY_PREFIXES = {
+  live: 'sk_live_',
+  sandbox: 'sk_sandbox_',
+  test: 'sk_test_',
+} as const
+
+export type SecretKeyEnvironment = (typeof SECRET_KEY_ENVIRONMENTS)[number] | 'unknown'
+
+export type SecretKeyClassification = {
+  environment: SecretKeyEnvironment
+  /** Empty, or still a scaffolder placeholder. */
+  isPlaceholder: boolean
+  /** Real charges apply. */
+  isLive: boolean
 }
+
+const PLACEHOLDER_SECRET_KEY = /your_key_here|replace_me/i
+
+export const classifySecretKey = (value: string): SecretKeyClassification => {
+  const trimmed = value.trim()
+  let environment: SecretKeyEnvironment = 'unknown'
+  for (const name of SECRET_KEY_ENVIRONMENTS) {
+    if (trimmed.startsWith(SECRET_KEY_PREFIXES[name])) {
+      environment = name
+      break
+    }
+  }
+  const isPlaceholder = trimmed.length === 0 || PLACEHOLDER_SECRET_KEY.test(trimmed)
+  return {
+    environment,
+    isPlaceholder,
+    isLive: environment === 'live',
+  }
+}
+
+export const isExampleSecretKey = (value: string): boolean => classifySecretKey(value).isPlaceholder
 
 type EnvWriteOptions = {
   cwd?: string
@@ -144,9 +178,7 @@ export const writeSolvaPaySecretToEnv = async (
   } else if (!shouldOverwrite) {
     const interactive = options.isTty ?? Boolean(stdin.isTTY)
     if (!interactive) {
-      throw new Error(
-        'Cannot confirm overwrite of SOLVAPAY_SECRET_KEY on a non-TTY. Re-run with --yes.',
-      )
+      throw new Error('SOLVAPAY_SECRET_KEY already set in .env; re-run with --yes to overwrite')
     }
     shouldOverwrite = await askOverwrite()
   }

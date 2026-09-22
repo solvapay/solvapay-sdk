@@ -12,6 +12,7 @@ export type {
   VerifyProductRefResult,
 } from './browser-auth'
 export {
+  classifySecretKey,
   ensureEnvInGitignore,
   isExampleSecretKey,
   readSolvaPayApiBaseUrlFromEnv,
@@ -22,7 +23,12 @@ export {
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
-export type { EnvWriteResult, GitignoreEnvResult } from './env'
+export type {
+  EnvWriteResult,
+  GitignoreEnvResult,
+  SecretKeyClassification,
+  SecretKeyEnvironment,
+} from './env'
 
 export { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
 export type { InstallResult } from './install'

@@ -10,7 +10,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.spec.ts',
+      'scripts/**/*.test.mjs',
+      'templates/**/*.test.mjs',
+    ],
     testTimeout: 30000,
     globalSetup: ['./vitest.globalSetup.mjs'],
   },

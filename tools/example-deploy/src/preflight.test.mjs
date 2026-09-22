@@ -33,7 +33,8 @@ function okEnv() {
 
 function spawnOk(cmd, args) {
   if (args.includes('whoami')) return { status: 0, stdout: 'logged in' }
-  if (args.includes('list')) return { status: 0, stdout: '[\n  { "name": "SOLVAPAY_SECRET_KEY" }\n]' }
+  if (args.includes('list'))
+    return { status: 0, stdout: '[\n  { "name": "SOLVAPAY_SECRET_KEY" }\n]' }
   return { status: 0, stdout: '' }
 }
 
@@ -69,6 +70,8 @@ describe('runPreflight', () => {
       spawn: spawnOk,
     })
     expect(blocked.errors.some(e => e.includes('looks like live'))).toBe(true)
+    expect(blocked.errors.some(e => e.includes('expects sk_sandbox_'))).toBe(true)
+    expect(blocked.errors.some(e => e.includes('sk_test_'))).toBe(false)
     const warned = runPreflight(baseConfig, {
       allowLive: true,
       exists: () => true,
@@ -121,9 +124,7 @@ describe('runPreflight', () => {
         return { status: 0, stdout: '[]' }
       },
     })
-    expect(noSecret.errors.some(e => e.includes('SOLVAPAY_SECRET_KEY secret not found'))).toBe(
-      true,
-    )
+    expect(noSecret.errors.some(e => e.includes('SOLVAPAY_SECRET_KEY secret not found'))).toBe(true)
   })
 
   it('passes a complete dev dotenv with auth and secret present', () => {

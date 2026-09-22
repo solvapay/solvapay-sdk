@@ -5,6 +5,13 @@ import { parseDotEnv } from './parse-dotenv.mjs'
 
 const PLACEHOLDER = /your_|replace_me|sk_test_your|sk_live_your|prd_your/i
 
+/** Prefix table mirrored from @solvapay/init. Pinned by the secret-key prefix parity test. */
+export const SECRET_KEY_PREFIXES = {
+  live: 'sk_live_',
+  sandbox: 'sk_sandbox_',
+  test: 'sk_test_',
+}
+
 /**
  * @typedef {object} ArtifactCheck
  * @property {string} path
@@ -49,7 +56,11 @@ export function wranglerArgs(bin, args) {
  * @param {NodeJS.ProcessEnv} [fallbackEnv]
  */
 export function wranglerProcessEnv(envFile, fallbackEnv = process.env) {
-  const accountId = (envFile?.CLOUDFLARE_ACCOUNT_ID ?? fallbackEnv.CLOUDFLARE_ACCOUNT_ID ?? '').trim()
+  const accountId = (
+    envFile?.CLOUDFLARE_ACCOUNT_ID ??
+    fallbackEnv.CLOUDFLARE_ACCOUNT_ID ??
+    ''
+  ).trim()
   return accountId ? { ...fallbackEnv, CLOUDFLARE_ACCOUNT_ID: accountId } : fallbackEnv
 }
 
@@ -109,18 +120,17 @@ export function runPreflight(config, opts = {}) {
 
     const secretKey = env.SOLVAPAY_SECRET_KEY ?? ''
     const mode = config.secretKeyMode ?? 'dev'
-    if (mode === 'dev' && secretKey.startsWith('sk_live')) {
-      const msg =
-        'SOLVAPAY_SECRET_KEY looks like live — dev demo expects sk_test_… or sk_sandbox_…'
+    if (mode === 'dev' && secretKey.startsWith(SECRET_KEY_PREFIXES.live)) {
+      const msg = 'SOLVAPAY_SECRET_KEY looks like live — dev demo expects sk_sandbox_…'
       if (allowLive) warnings.push(msg)
       else errors.push(`${msg}. Pass --allow-live to proceed anyway.`)
     }
     if (
       mode === 'prod' &&
-      (secretKey.startsWith('sk_sandbox') || secretKey.startsWith('sk_test'))
+      (secretKey.startsWith(SECRET_KEY_PREFIXES.sandbox) ||
+        secretKey.startsWith(SECRET_KEY_PREFIXES.test))
     ) {
-      const msg =
-        'SOLVAPAY_SECRET_KEY looks like sandbox/test — prod demo expects sk_live_…'
+      const msg = 'SOLVAPAY_SECRET_KEY looks like sandbox/test — prod demo expects sk_live_…'
       if (allowSandbox) warnings.push(msg)
       else errors.push(`${msg}. Pass --allow-sandbox to proceed anyway.`)
     }
@@ -135,9 +145,7 @@ export function runPreflight(config, opts = {}) {
     const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? ''
     if (config.requireApiDev) {
       if (!apiBaseUrl.includes('api-dev')) {
-        errors.push(
-          `SOLVAPAY_API_BASE_URL must point at api-dev (got ${apiBaseUrl || '(empty)'})`,
-        )
+        errors.push(`SOLVAPAY_API_BASE_URL must point at api-dev (got ${apiBaseUrl || '(empty)'})`)
       }
       if (apiBaseUrl.includes('api.solvapay.com') && !apiBaseUrl.includes('api-dev')) {
         errors.push('SOLVAPAY_API_BASE_URL must not point at production api.solvapay.com')

@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  classifySecretKey,
   ensureEnvInGitignore,
   isExampleSecretKey,
   readSolvaPayProductRefFromEnv,
@@ -21,6 +22,26 @@ describe('isExampleSecretKey', () => {
     expect(isExampleSecretKey('replace_me')).toBe(true)
     expect(isExampleSecretKey('')).toBe(true)
     expect(isExampleSecretKey('sk_sandbox_abc123')).toBe(false)
+    expect(isExampleSecretKey('sk_test_your_dev_key_here')).toBe(false)
+  })
+})
+
+describe('classifySecretKey', () => {
+  it('classifies live, sandbox, legacy test, and unknown keys', () => {
+    expect(classifySecretKey('sk_live_abc').environment).toBe('live')
+    expect(classifySecretKey('sk_live_abc').isLive).toBe(true)
+    expect(classifySecretKey('sk_sandbox_abc').environment).toBe('sandbox')
+    expect(classifySecretKey('sk_sandbox_abc').isLive).toBe(false)
+    expect(classifySecretKey('sk_test_abc').environment).toBe('test')
+    expect(classifySecretKey('not-a-key').environment).toBe('unknown')
+  })
+
+  it('keeps placeholder detection narrower than a your_ prefix', () => {
+    expect(classifySecretKey('').isPlaceholder).toBe(true)
+    expect(classifySecretKey('sk_sandbox_your_key_here').isPlaceholder).toBe(true)
+    expect(classifySecretKey('replace_me').isPlaceholder).toBe(true)
+    expect(classifySecretKey('sk_test_your_dev_key_here').isPlaceholder).toBe(false)
+    expect(classifySecretKey('sk_live_your_key_here').isLive).toBe(true)
   })
 })
 
@@ -141,7 +162,7 @@ describe('writeSolvaPaySecretToEnv', () => {
       await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sandbox_real_old\n', 'utf8')
       await expect(
         writeSolvaPaySecretToEnv('sk_sandbox_real_new', { cwd, isTty: false }),
-      ).rejects.toThrow(/Cannot confirm overwrite of SOLVAPAY_SECRET_KEY on a non-TTY/)
+      ).rejects.toThrow('SOLVAPAY_SECRET_KEY already set in .env; re-run with --yes to overwrite')
       const content = await readFile(path.join(cwd, '.env'), 'utf8')
       expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sandbox_real_old\n')
     } finally {
