@@ -54,16 +54,16 @@ export async function runGeneratedWithRetryLoop<T>(host: RetryLoopHost<T>): Prom
 pub const PYTHON: &str = r#"
 
 def run_generated_with_retry_blocking(
-    invoke,
+    invoke: Callable[[], object],
     *,
     max_retries: int,
     initial_delay: int,
     backoff_strategy: str,
-    next_delay_ms,
-    sleep,
-    should_retry=None,
-    on_retry=None,
-):
+    next_delay_ms: Callable[[int, int, int, str], int | None],
+    sleep: Callable[[int], None],
+    should_retry: Callable[[Exception, int], bool] | None = None,
+    on_retry: Callable[[Exception, int, int], None] | None = None,
+) -> object:
     """Blocking host retry loop. `next_delay_ms` is the core delay function."""
     attempt = 0
     while True:
@@ -82,16 +82,16 @@ def run_generated_with_retry_blocking(
 
 
 async def run_generated_with_retry_async(
-    invoke,
+    invoke: Callable[[], object],
     *,
     max_retries: int,
     initial_delay: int,
     backoff_strategy: str,
-    next_delay_ms,
-    sleep,
-    should_retry=None,
-    on_retry=None,
-):
+    next_delay_ms: Callable[[int, int, int, str], int | None],
+    sleep: Callable[[int], object],
+    should_retry: Callable[[Exception, int], bool] | None = None,
+    on_retry: Callable[[Exception, int, int], None] | None = None,
+) -> object:
     """Async host retry loop. `sleep` and `invoke` may be coroutines."""
     import inspect
 
@@ -100,7 +100,7 @@ async def run_generated_with_retry_async(
         try:
             result = invoke()
             if inspect.isawaitable(result):
-                result = await result
+                result = await cast(Awaitable[object], result)
             return result
         except Exception as err:
             delay = next_delay_ms(attempt, max_retries, initial_delay, backoff_strategy)
@@ -112,7 +112,7 @@ async def run_generated_with_retry_async(
                 on_retry(err, attempt, delay)
             slept = sleep(delay)
             if inspect.isawaitable(slept):
-                await slept
+                await cast(Awaitable[object], slept)
             attempt += 1
 "#;
 

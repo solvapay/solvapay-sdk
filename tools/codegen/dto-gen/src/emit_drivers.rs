@@ -302,7 +302,7 @@ pub fn emit_drivers_py(ir: &Ir) -> GenResult<String> {
         "\n\"\"\"Generated gate driver loop. Host supplies I/O only.\"\"\"\n\n\
          from __future__ import annotations\n\n\
          from collections.abc import Awaitable, Callable\n\
-         from typing import Protocol\n\n\n\
+         from typing import Protocol, cast\n\n\n\
          def _as_map(value: object) -> dict[str, object]:\n\
          \x20   if not isinstance(value, dict):\n\
          \x20       raise RuntimeError(f\"expected map, got {type(value).__name__}\")\n\

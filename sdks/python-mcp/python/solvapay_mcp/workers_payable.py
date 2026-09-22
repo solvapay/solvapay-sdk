@@ -341,10 +341,8 @@ async def _workers_ensure_customer(
                 return {"ok": False, "errorMessage": str(err)}
             return {"ok": True, "customer": created if isinstance(created, dict) else {}}
 
-        async def update_customer(
-            self, customer_ref_arg: object, patch: object
-        ) -> dict[str, object]:
-            payload: dict[str, object] = {"customerRef": customer_ref_arg}
+        async def update_customer(self, customer_ref: object, patch: object) -> dict[str, object]:
+            payload: dict[str, object] = {"customerRef": customer_ref}
             if isinstance(patch, dict):
                 payload.update(patch)
             try:
