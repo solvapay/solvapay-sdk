@@ -1,0 +1,1 @@
+../../../../../sdks/python-mcp/python/solvapay_mcp/gate_copy.py
