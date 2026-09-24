@@ -1218,12 +1218,12 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
               onExceedPricingId?: string
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               /** @enum {string} */
-              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              uiHint?: 'upgrade_prompt'
               windowDays?: number
             }
           | {
@@ -1236,12 +1236,11 @@ export interface components {
             }
           | {
               days: number
-              downgradeToPricingId?: string
               /** @enum {string} */
               kind: 'trial'
               label?: string
               /** @enum {string} */
-              onEnd: 'convert' | 'cancel' | 'downgrade'
+              onEnd: 'convert' | 'cancel'
             }
           | {
               /** @enum {string} */
@@ -1425,12 +1424,12 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
             onExceedPricingId?: string
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             /** @enum {string} */
-            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            uiHint?: 'upgrade_prompt'
             windowDays?: number
           }
         | {
@@ -1443,12 +1442,11 @@ export interface components {
           }
         | {
             days: number
-            downgradeToPricingId?: string
             /** @enum {string} */
             kind: 'trial'
             label?: string
             /** @enum {string} */
-            onEnd: 'convert' | 'cancel' | 'downgrade'
+            onEnd: 'convert' | 'cancel'
           }
         | {
             /** @enum {string} */
@@ -1935,12 +1933,12 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
               onExceedPricingId?: string
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               /** @enum {string} */
-              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              uiHint?: 'upgrade_prompt'
               windowDays?: number
             }
           | {
@@ -1953,12 +1951,11 @@ export interface components {
             }
           | {
               days: number
-              downgradeToPricingId?: string
               /** @enum {string} */
               kind: 'trial'
               label?: string
               /** @enum {string} */
-              onEnd: 'convert' | 'cancel' | 'downgrade'
+              onEnd: 'convert' | 'cancel'
             }
           | {
               /** @enum {string} */
@@ -2892,12 +2889,12 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
             onExceedPricingId?: string
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             /** @enum {string} */
-            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            uiHint?: 'upgrade_prompt'
             windowDays?: number
           }
         | {
@@ -2910,12 +2907,11 @@ export interface components {
           }
         | {
             days: number
-            downgradeToPricingId?: string
             /** @enum {string} */
             kind: 'trial'
             label?: string
             /** @enum {string} */
-            onEnd: 'convert' | 'cancel' | 'downgrade'
+            onEnd: 'convert' | 'cancel'
           }
         | {
             /** @enum {string} */
