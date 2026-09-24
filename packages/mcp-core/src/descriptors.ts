@@ -34,10 +34,10 @@
  */
 
 import { assertValidProductRef, isTaxIdType, TAX_ID_TYPES } from '@solvapay/core'
+import { createMcpCheckoutSession } from './hosted-checkout'
 import {
   activatePlanCore,
   cancelPurchaseCore,
-  createCheckoutSessionCore,
   createCustomerSessionCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
@@ -523,7 +523,7 @@ export function buildSolvaPayDescriptors(
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
         const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
 
-        const result = await createCheckoutSessionCore(
+        const result = await createMcpCheckoutSession(
           buildRequest(extra, { method: 'POST' }),
           { productRef: effectiveProduct, planRef },
           { solvaPay },
@@ -855,9 +855,9 @@ export function buildSolvaPayDescriptors(
 
         let checkoutUrl = result.checkoutUrl
         if (result.status === 'payment_required' && !checkoutUrl) {
-          const session = await createCheckoutSessionCore(
+          const session = await createMcpCheckoutSession(
             buildRequest(extra, { method: 'POST' }),
-            { productRef: effectiveProduct, planRef, returnUrl: null },
+            { productRef: effectiveProduct, planRef },
             { solvaPay },
           )
           if (!isErrorResult(session)) checkoutUrl = session.checkoutUrl
