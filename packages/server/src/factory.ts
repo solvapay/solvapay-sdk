@@ -704,6 +704,47 @@ export interface SolvaPay {
   }>
 
   /**
+   * Mint a short-lived capture grant for the browser vault form.
+   *
+   * Optional: present only when the underlying API client supports the vault
+   * endpoints. Callers must check before invoking, and surface a 501 when the
+   * client cannot capture.
+   */
+  createCaptureSession?(params: {
+    customerRef: string
+    productRef?: string
+    planRef?: string
+    checkoutSessionId?: string
+  }): Promise<{
+    token: string
+    tenantId: string
+    environment: 'sandbox' | 'live'
+    expiresAt: number
+    captureSessionId: string
+  }>
+
+  /**
+   * Record an instrument the vault has already stored, against our customer.
+   *
+   * Takes the vault handle and non-sensitive descriptors only. Optional for the
+   * same reason as `createCaptureSession`.
+   */
+  createInstrument?(params: {
+    handle: string
+    captureSessionId: string
+    customerRef: string
+    setAsDefault?: boolean
+    descriptors?: {
+      brand?: string
+      last4?: string
+      expMonth?: number
+      expYear?: number
+      funding?: string
+      issuerCountry?: string
+    }
+  }): Promise<{ instrumentRef: string; existing: boolean }>
+
+  /**
    * Activate a plan for a customer (usage-based / free plans that don't require payment).
    *
    * Returns the activation result indicating whether the plan was activated,
@@ -995,6 +1036,17 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     createCustomerSession(params) {
       return apiClient.createCustomerSession(params)
     },
+
+    // Attached only when the API client carries the vault endpoints, so that
+    // `if (!solvaPay.createCaptureSession)` in the route helpers still answers
+    // 501 instead of throwing.
+    ...(apiClient.createCaptureSession && {
+      createCaptureSession: apiClient.createCaptureSession.bind(apiClient),
+    }),
+
+    ...(apiClient.createInstrument && {
+      createInstrument: apiClient.createInstrument.bind(apiClient),
+    }),
 
     activatePlan(params) {
       if (!apiClient.activatePlan) {
