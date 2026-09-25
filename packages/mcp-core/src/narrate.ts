@@ -771,7 +771,7 @@ function narrateAccountBody(input: {
     const used = usedOfTotal(usage)
     const usedBit = used ? `: ${used} used` : ''
     return (
-      `${product} is over its ${planName} allowance${usedBit}. Calls still work. ` +
+      `${product} is over its ${planName} allowance${usedBit}. Calls still work, paid from your credits. ` +
       `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' for a higher limit.`
     )
   }

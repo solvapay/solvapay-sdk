@@ -112,7 +112,7 @@ export interface UseLimitsReturn {
    * should treat `true` as "needs the activation flow", not "exhausted".
    */
   activationRequired: boolean | null
-  /** Access granted and usage past the cap accrues overage. `null` while loading. */
+  /** Access granted past the included cap, paid from prepaid credits. `null` while loading. */
   overage: boolean | null
   /** Access blocked pending a prepaid top-up. `null` while loading. */
   needsTopUp: boolean | null

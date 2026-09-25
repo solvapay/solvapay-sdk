@@ -582,8 +582,8 @@ export interface CustomerSnapshot {
   /** Whether the customer is within their usage limits at snapshot time. */
   readonly withinLimits: boolean
   /**
-   * True when this request is served under `onExceed: charge` past
-   * the included cap.
+   * True when this request is served past the included cap and paid
+   * from prepaid credits (`onExceed: top_up`).
    */
   readonly overage: boolean
   /**

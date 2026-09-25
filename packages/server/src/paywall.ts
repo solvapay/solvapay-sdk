@@ -417,8 +417,8 @@ export class SolvaPayPaywall {
           remaining = 0
         }
       } else {
-        // `withinLimits: true` with `remaining: 0` is throttle / overage —
-        // the backend granted access past the included cap. Do not gate.
+        // `withinLimits: true` with `remaining: 0` is overage — the backend
+        // granted access past the included cap. Do not gate.
         withinLimits = true
         remaining = limitsCheck.remaining
       }

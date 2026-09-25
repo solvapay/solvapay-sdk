@@ -68,7 +68,7 @@ export interface TransportLimitsResult {
    * auto-allocated.
    */
   activationRequired: boolean
-  /** Access granted and usage past the cap accrues overage. */
+  /** Access granted past the included cap, paid from prepaid credits. */
   overage?: boolean
   /** Access blocked pending a prepaid top-up. */
   needsTopUp?: boolean

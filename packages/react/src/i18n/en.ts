@@ -48,7 +48,7 @@ export const enCopy: SolvaPayCopy = {
       const trial = trialPhrase(ctx)
       const every = period ? ` every ${period}` : ''
       const savedCard = ctx.savesPaymentMethod
-        ? ` You also authorize ${ctx.merchant.legalName} to save your card for renewals, usage past your included allowance, and failed-payment retries.`
+        ? ` You also authorize ${ctx.merchant.legalName} to save your card for renewals and failed-payment retries.`
         : ''
       return `By subscribing, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${every}${trial} until you cancel. You can cancel any time.${savedCard} Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },

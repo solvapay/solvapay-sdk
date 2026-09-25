@@ -531,7 +531,7 @@ export interface paths {
     put?: never
     /**
      * Create a plan for a product
-     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
+     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
      */
     post: operations['PlanSdkController_createPlan']
     delete?: never
@@ -1218,7 +1218,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'charge' | 'top_up'
+              onExceed: 'block' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -1252,18 +1252,6 @@ export interface components {
               /** @enum {string} */
               mode: 'percentage' | 'fixed'
               value: number
-            }
-          | {
-              capUnits?: number
-              currency?: string
-              /** @enum {string} */
-              kind: 'rollover'
-              label?: string
-              maxCycles?: number
-              meter: string
-              rateMinor?: number
-              /** @enum {string} */
-              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
             }
           | {
               /** @enum {string} */
@@ -1421,7 +1409,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'charge' | 'top_up'
+            onExceed: 'block' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
@@ -1455,18 +1443,6 @@ export interface components {
             /** @enum {string} */
             mode: 'percentage' | 'fixed'
             value: number
-          }
-        | {
-            capUnits?: number
-            currency?: string
-            /** @enum {string} */
-            kind: 'rollover'
-            label?: string
-            maxCycles?: number
-            meter: string
-            rateMinor?: number
-            /** @enum {string} */
-            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
           }
         | {
             /** @enum {string} */
@@ -1578,7 +1554,8 @@ export interface components {
         | 'customer_not_found'
         | 'no_active_purchase'
         | 'plan_not_credit_based'
-        | 'plan_billed_at_period_end'
+        | 'not_credit_drawn'
+        | 'within_included'
     }
     CreditDebitSuccessResponse: {
       /**
@@ -1822,9 +1799,9 @@ export interface components {
        * @example requests
        */
       meterName?: string
-      /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
+      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: top_up`, or from the first unit on a recurring meter with no limit. */
       needsTopUp?: boolean
-      /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
+      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: top_up`. */
       overage?: boolean
       /**
        * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
@@ -1921,7 +1898,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'charge' | 'top_up'
+              onExceed: 'block' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -1955,18 +1932,6 @@ export interface components {
               /** @enum {string} */
               mode: 'percentage' | 'fixed'
               value: number
-            }
-          | {
-              capUnits?: number
-              currency?: string
-              /** @enum {string} */
-              kind: 'rollover'
-              label?: string
-              maxCycles?: number
-              meter: string
-              rateMinor?: number
-              /** @enum {string} */
-              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
             }
           | {
               /** @enum {string} */
@@ -2874,7 +2839,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'charge' | 'top_up'
+            onExceed: 'block' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
@@ -2908,18 +2873,6 @@ export interface components {
             /** @enum {string} */
             mode: 'percentage' | 'fixed'
             value: number
-          }
-        | {
-            capUnits?: number
-            currency?: string
-            /** @enum {string} */
-            kind: 'rollover'
-            label?: string
-            maxCycles?: number
-            meter: string
-            rateMinor?: number
-            /** @enum {string} */
-            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
           }
         | {
             /** @enum {string} */

@@ -65,9 +65,8 @@ describe('MandateText primitive', () => {
     await waitFor(() => {
       const text = screen.getByTestId('mandate').textContent
       expect(text).toContain('save your card')
-      expect(text).toContain(
-        'renewals, usage past your included allowance, and failed-payment retries',
-      )
+      expect(text).toContain('renewals and failed-payment retries')
+      expect(text).not.toContain('usage past your included allowance')
     })
   })
 
