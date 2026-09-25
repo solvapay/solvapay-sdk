@@ -20,9 +20,9 @@ export {
   type CaptureFieldStyle,
   type CaptureSession,
   type CaptureState,
-  type CapturedCredential,
+  type CapturedInstrument,
   type CardBrand,
-  type CredentialDescriptors,
+  type InstrumentDescriptors,
 } from './types'
 
 export {
@@ -36,7 +36,7 @@ export {
   CaptureForm,
   normaliseVendorState,
   toCaptureError,
-  toCredential,
+  toInstrument,
   type CaptureFormOptions,
   type MountFieldOptions,
 } from './captureForm'

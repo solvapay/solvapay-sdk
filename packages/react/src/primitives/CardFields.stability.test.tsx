@@ -72,7 +72,7 @@ async function mountAndCount(
                 mints += 1
                 return Promise.resolve(session)
               },
-              createCredential: vi.fn(),
+              createInstrument: vi.fn(),
             },
           } as never
         }
@@ -147,7 +147,7 @@ describe('CardFields render stability', () => {
             auth: { adapter },
             transport: {
               createCaptureSession: () => Promise.resolve(session),
-              createCredential: vi.fn(),
+              createInstrument: vi.fn(),
             },
           } as never
         }

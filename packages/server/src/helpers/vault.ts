@@ -26,21 +26,22 @@ export interface CaptureSessionResult {
   environment: 'sandbox' | 'live'
   /** Epoch milliseconds. */
   expiresAt: number
-  /** Send this back with the credential the capture produced. */
+  /** Send this back with the instrument the capture produced. */
   captureSessionId: string
 }
 
-export interface CredentialDescriptorsInput {
+export interface InstrumentDescriptorsInput {
   brand?: string
   last4?: string
   expMonth?: number
   expYear?: number
-  funding?: string
-  issuerCountry?: string
+  /** Nullable, because the browser contract is: the vault does not always say. */
+  funding?: string | null
+  issuerCountry?: string | null
 }
 
-export interface CredentialResult {
-  credentialRef: string
+export interface InstrumentResult {
+  instrumentRef: string
   /** True when this card was already on file. Not an error. */
   existing: boolean
 }
@@ -88,6 +89,11 @@ export async function createCaptureSessionCore(
 
     return await solvaPay.createCaptureSession({
       customerRef: customerResult,
+      // Refs are forwarded, not dropped. They were declared on this signature
+      // and silently discarded, so a host scoping the surface with a productRef
+      // got a grant with no product scope and no way to tell.
+      ...(body.productRef ? { productRef: body.productRef } : {}),
+      ...(body.planRef ? { planRef: body.planRef } : {}),
       ...(body.checkoutSessionId ? { checkoutSessionId: body.checkoutSessionId } : {}),
     })
   } catch (error) {
@@ -96,7 +102,7 @@ export async function createCaptureSessionCore(
 }
 
 /**
- * Records a credential the vault has already stored.
+ * Records a instrument the vault has already stored.
  *
  * Takes the vault's identifier for the card and the descriptors it reported.
  * Nothing here is card data: the longest value is four trailing digits.
@@ -105,12 +111,12 @@ export async function createCaptureSessionCore(
  * already had. That is the normal path for a returning customer re-entering the
  * same card, and callers should treat it as success, not as a conflict.
  */
-export async function createCredentialCore(
+export async function createInstrumentCore(
   request: Request,
   body: {
     handle: string
     captureSessionId: string
-    descriptors?: CredentialDescriptorsInput
+    descriptors?: InstrumentDescriptorsInput
     setAsDefault?: boolean
   },
   options: {
@@ -118,7 +124,7 @@ export async function createCredentialCore(
     includeEmail?: boolean
     includeName?: boolean
   } = {},
-): Promise<CredentialResult | ErrorResult> {
+): Promise<InstrumentResult | ErrorResult> {
   try {
     if (!body?.handle) {
       return { error: 'Missing required parameter: handle is required', status: 400 }
@@ -142,7 +148,7 @@ export async function createCredentialCore(
 
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    if (!solvaPay.createCredential) {
+    if (!solvaPay.createInstrument) {
       return {
         error: 'This SolvaPay client does not support vault capture',
         status: 501,
@@ -154,7 +160,7 @@ export async function createCredentialCore(
     // that must never reach the database here is anything off the card.
     const descriptors = body.descriptors ?? {}
 
-    return await solvaPay.createCredential({
+    return await solvaPay.createInstrument({
       handle: body.handle,
       captureSessionId: body.captureSessionId,
       customerRef: customerResult,
@@ -164,13 +170,14 @@ export async function createCredentialCore(
         ...(descriptors.last4 === undefined ? {} : { last4: descriptors.last4 }),
         ...(descriptors.expMonth === undefined ? {} : { expMonth: descriptors.expMonth }),
         ...(descriptors.expYear === undefined ? {} : { expYear: descriptors.expYear }),
-        ...(descriptors.funding === undefined ? {} : { funding: descriptors.funding }),
-        ...(descriptors.issuerCountry === undefined
-          ? {}
-          : { issuerCountry: descriptors.issuerCountry }),
+        // `== null` on purpose: the browser contract types these nullable and
+        // sends an explicit null when the vault did not report them, which the
+        // platform's schema does not accept as a string.
+        ...(descriptors.funding == null ? {} : { funding: descriptors.funding }),
+        ...(descriptors.issuerCountry == null ? {} : { issuerCountry: descriptors.issuerCountry }),
       },
     })
   } catch (error) {
-    return handleRouteError(error, 'Create credential', 'Credential creation failed')
+    return handleRouteError(error, 'Create instrument', 'Instrument creation failed')
   }
 }

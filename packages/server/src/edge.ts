@@ -115,7 +115,7 @@ export {
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createCaptureSessionCore,
-  createCredentialCore,
+  createInstrumentCore,
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,

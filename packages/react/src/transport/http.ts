@@ -10,7 +10,7 @@ import type {
   SolvaPayTransport,
   TransportBalanceResult,
   TransportCaptureSessionResult,
-  TransportCredentialResult,
+  TransportInstrumentResult,
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,
 } from './types'
@@ -71,7 +71,7 @@ export const DEFAULT_ROUTES = {
   getLimits: '/api/limits',
   getHistory: '/api/history',
   createCaptureSession: '/api/capture-session',
-  createCredential: '/api/credentials',
+  createInstrument: '/api/instruments',
 } as const
 
 function routeFor(config: SolvaPayConfig | undefined, key: keyof typeof DEFAULT_ROUTES): string {
@@ -148,11 +148,11 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         errorPrefix: 'Failed to start the card capture session',
       }),
 
-    createCredential: params =>
-      request<TransportCredentialResult>(config, routeFor(config, 'createCredential'), {
+    createInstrument: params =>
+      request<TransportInstrumentResult>(config, routeFor(config, 'createInstrument'), {
         method: 'POST',
         body: params,
-        onErrorContext: 'createCredential',
+        onErrorContext: 'createInstrument',
         errorPrefix: 'Failed to save the card',
       }),
 

@@ -228,7 +228,7 @@ export interface SolvaPayTransport {
   }) => Promise<TransportCaptureSessionResult>
 
   /**
-   * Records a credential the vault has already stored, against our customer.
+   * Records a instrument the vault has already stored, against our customer.
    *
    * Takes the vault handle and the non-sensitive descriptors. No card data
    * crosses this boundary, by construction: the browser sent it to the vault
@@ -240,17 +240,17 @@ export interface SolvaPayTransport {
    * to accept either. It reads the aliases from the vault itself when it needs
    * them.
    */
-  createCredential?: (params: {
+  createInstrument?: (params: {
     handle: string
     /**
      * The grant the card was captured under. Required: without it the server has
      * nothing tying this report to a grant it issued.
      */
     captureSessionId: string
-    descriptors: TransportCredentialDescriptors
+    descriptors: TransportInstrumentDescriptors
     customerRef?: string
     setAsDefault?: boolean
-  }) => Promise<TransportCredentialResult>
+  }) => Promise<TransportInstrumentResult>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 
@@ -284,11 +284,11 @@ export interface TransportCaptureSessionResult {
   environment: 'sandbox' | 'live'
   /** Epoch milliseconds. */
   expiresAt: number
-  /** Identifier for the grant, sent back with the credential it produced. */
+  /** Identifier for the grant, sent back with the instrument it produced. */
   captureSessionId: string
 }
 
-export interface TransportCredentialDescriptors {
+export interface TransportInstrumentDescriptors {
   brand: string
   last4: string
   expMonth: number
@@ -297,9 +297,9 @@ export interface TransportCredentialDescriptors {
   issuerCountry?: string | null
 }
 
-export interface TransportCredentialResult {
-  /** Our own credential reference, not the vault handle. */
-  credentialRef: string
+export interface TransportInstrumentResult {
+  /** Our own instrument reference, not the vault handle. */
+  instrumentRef: string
   /** True when this card was already stored for the customer. */
   existing: boolean
 }

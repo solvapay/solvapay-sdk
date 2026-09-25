@@ -94,6 +94,15 @@ export function loadVaultScript(config: VaultScriptConfig): Promise<VaultCollect
   inFlight = new Promise<VaultCollectGlobal>((resolve, reject) => {
     const fail = (reason: string) => {
       inFlight = null
+      // Drop the tag as well. Leaving a tag whose load/error already fired
+      // meant every later attempt attached listeners to a dead element, set no
+      // src, and sat through the full timeout before reporting a misleading
+      // "did not load in time" instead of the accurate blocked-host message.
+      try {
+        document.querySelector(`script[data-solvapay-vault-script="${config.version}"]`)?.remove()
+      } catch {
+        // Nothing to clean up.
+      }
       reject(new CaptureError('script_load_failed', reason))
     }
 

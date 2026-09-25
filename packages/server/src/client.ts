@@ -789,7 +789,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     },
 
     // POST: /v1/sdk/vault/credentials
-    async createCredential(params) {
+    async createInstrument(params) {
       const url = `${base}/v1/sdk/vault/credentials`
 
       const res = await fetch(url, {

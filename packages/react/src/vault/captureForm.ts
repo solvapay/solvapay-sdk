@@ -13,9 +13,9 @@ import {
   type CaptureFieldState,
   type CaptureSession,
   type CaptureState,
-  type CapturedCredential,
+  type CapturedInstrument,
   type CardBrand,
-  type CredentialDescriptors,
+  type InstrumentDescriptors,
   emptyCaptureState,
   isComplete,
   isReady,
@@ -146,7 +146,16 @@ export function normaliseVendorState(
 }
 
 export interface CaptureFormOptions {
-  session: CaptureSession
+  /**
+   * Reads the CURRENT grant, every time, rather than closing over one.
+   *
+   * A grant is short lived and gets replaced — after a save, and shortly before
+   * expiry. Holding the object meant a replacement had to rebuild the whole
+   * form, which destroys the vault iframes and everything typed into them. The
+   * tenant and environment are fixed for the life of the form; only the token
+   * changes, and only `submit` needs it.
+   */
+  getSession: () => CaptureSession
   script: VaultScriptConfig
   /** Called on every state change with the full normalised state. */
   onStateChange: (state: CaptureState) => void
@@ -183,14 +192,12 @@ export class CaptureForm {
     const global: VaultCollectGlobal = await loadVaultScript(options.script)
     if (instance.destroyed) return instance
 
-    instance.form = global.create(
-      options.session.tenantId,
-      options.session.environment,
-      vendorState => {
-        instance.state = normaliseVendorState(instance.state, vendorState)
-        options.onStateChange(instance.state)
-      },
-    )
+    const session = options.getSession()
+
+    instance.form = global.create(session.tenantId, session.environment, vendorState => {
+      instance.state = normaliseVendorState(instance.state, vendorState)
+      options.onStateChange(instance.state)
+    })
 
     if (options.onEnter && typeof instance.form.on === 'function') {
       // Cross-frame Enter does not submit natively, so it has to be wired.
@@ -244,16 +251,17 @@ export class CaptureForm {
   }
 
   /**
-   * Sends the captured card to the vault and returns a credential handle.
+   * Sends the captured card to the vault and returns a instrument handle.
    *
    * Nothing sensitive passes through this promise. The handle and descriptors
    * are safe to persist and to send to our own API.
    */
-  async submit(cardholder?: { name?: string; email?: string }): Promise<CapturedCredential> {
+  async submit(cardholder?: { name?: string; email?: string }): Promise<CapturedInstrument> {
     if (!this.form || this.destroyed) {
       throw new CaptureError('vault_error', 'The capture form is not mounted.')
     }
-    if (!isSessionUsable(this.options.session)) {
+    const session = this.options.getSession()
+    if (!isSessionUsable(session)) {
       throw new CaptureError(
         'session_expired',
         'The capture session expired. Start the checkout again to mint a fresh one.',
@@ -274,16 +282,12 @@ export class CaptureForm {
         : undefined
 
     const raw = await new Promise<unknown>((resolve, reject) => {
-      this.form!.createCard(
-        { auth: this.options.session.token, ...(data ? { data } : {}) },
-        resolve,
-        reject,
-      )
+      this.form!.createCard({ auth: session.token, ...(data ? { data } : {}) }, resolve, reject)
     }).catch((error: unknown) => {
       throw toCaptureError(error)
     })
 
-    return toCredential(raw)
+    return toInstrument(raw)
   }
 
   destroy(): void {
@@ -324,6 +328,15 @@ export function toCaptureError(error: unknown): CaptureError {
   if (status !== null && status >= 500) {
     return new CaptureError('vault_error', message, requestId)
   }
+  // 401/403 is the grant, not the card. Reporting it as a decline sends the
+  // cardholder away to find another card, which will be declined too.
+  if (status === 401 || status === 403) {
+    return new CaptureError(
+      'session_expired',
+      'The capture session is no longer valid. Refresh and try again.',
+      requestId,
+    )
+  }
   if (status !== null && status >= 400) {
     return new CaptureError('rejected', message, requestId)
   }
@@ -333,21 +346,28 @@ export function toCaptureError(error: unknown): CaptureError {
   return new CaptureError('vault_error', message, requestId)
 }
 
-/** Pulls our credential shape out of the vault's card object. */
+/** Pulls our instrument shape out of the vault's card object. */
 // No BIN, and no leading digits of any length, anywhere in this file. The vault
 // offers `bin` and `first8` and we read neither. Stripe's card object carries no
 // such field either. The brand comes from the vault directly, and recognising a
 // returning card is the vault card id's job, so leading digits would buy nothing
 // and would put ten or twelve digits of a sixteen digit card in our database.
 
-export function toCredential(raw: unknown): CapturedCredential {
+export function toInstrument(raw: unknown): CapturedInstrument {
   const root = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
   const data = (root.data ?? root) as Record<string, unknown>
   const attributes = (data.attributes ?? data) as Record<string, unknown>
 
   const handle = asString(data.id ?? root.id)
   if (!handle) {
-    throw new CaptureError('vault_error', 'The vault did not return a credential identifier.')
+    throw new CaptureError('vault_error', 'The vault did not return a instrument identifier.')
+  }
+
+  // Required, and thrown on rather than defaulted. An empty string here files
+  // a card nobody can identify in a list of saved cards, and nothing flags it.
+  const last4 = asString(attributes.last4)
+  if (!last4) {
+    throw new CaptureError('vault_error', 'The vault did not return the last four digits.')
   }
 
   const expMonth = asNumber(attributes.exp_month)
@@ -359,9 +379,9 @@ export function toCredential(raw: unknown): CapturedCredential {
   const enriched = (attributes.enriched_attributes ?? {}) as Record<string, unknown>
   const properties = (enriched.card_properties ?? {}) as Record<string, unknown>
 
-  const descriptors: CredentialDescriptors = {
+  const descriptors: InstrumentDescriptors = {
     brand: normaliseBrand(attributes.card_brand ?? properties.brand) ?? 'unknown',
-    last4: asString(attributes.last4) ?? '',
+    last4,
     expMonth,
     expYear,
     funding: asString(attributes.card_type ?? properties.funding),

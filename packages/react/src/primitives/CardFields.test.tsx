@@ -25,8 +25,8 @@ let vault: MockVault | null = null
 interface SetupOptions {
   vault?: MockVaultOptions
   createCaptureSession?: ReturnType<typeof vi.fn>
-  createCredential?: ReturnType<typeof vi.fn>
-  omitCreateCredential?: boolean
+  createInstrument?: ReturnType<typeof vi.fn>
+  omitCreateInstrument?: boolean
   children?: React.ReactNode
 }
 
@@ -36,12 +36,12 @@ function setup(opts: SetupOptions = {}) {
 
   const createCaptureSession =
     opts.createCaptureSession ?? vi.fn().mockResolvedValue(mockCaptureSession())
-  const createCredential =
-    opts.createCredential ?? vi.fn().mockResolvedValue({ credentialRef: 'cred_1', existing: false })
+  const createInstrument =
+    opts.createInstrument ?? vi.fn().mockResolvedValue({ instrumentRef: 'inst_1', existing: false })
 
   const transport = {
     createCaptureSession,
-    ...(opts.omitCreateCredential ? {} : { createCredential }),
+    ...(opts.omitCreateInstrument ? {} : { createInstrument }),
   }
 
   const probe: { current: CardFieldsContextValue | null } = { current: null }
@@ -76,7 +76,7 @@ function setup(opts: SetupOptions = {}) {
     view,
     vault: mock,
     createCaptureSession,
-    createCredential,
+    createInstrument,
     ctx: () => {
       if (!probe.current) throw new Error('CardFields context was never published')
       return probe.current
@@ -155,17 +155,17 @@ describe('CardFields', () => {
   })
 
   describe('save', () => {
-    it('captures the card and records the credential', async () => {
-      const { ctx, createCredential } = setup()
+    it('captures the card and records the instrument', async () => {
+      const { ctx, createInstrument } = setup()
       await waitForReady(ctx)
 
-      let result: { credentialRef: string; existing: boolean } | undefined
+      let result: { instrumentRef: string; existing: boolean } | undefined
       await act(async () => {
         result = await ctx().save()
       })
 
-      expect(result).toEqual({ credentialRef: 'cred_1', existing: false })
-      expect(createCredential).toHaveBeenCalledTimes(1)
+      expect(result).toEqual({ instrumentRef: 'inst_1', existing: false })
+      expect(createInstrument).toHaveBeenCalledTimes(1)
     })
 
     it('presents the capture grant token to the vault', async () => {
@@ -179,14 +179,14 @@ describe('CardFields', () => {
       expect(v.createCardCalls[0].auth).toBe('mock-vault-write-token')
     })
 
-    it('reports the credential under the grant it was captured with', async () => {
-      const { ctx, createCredential } = setup()
+    it('reports the instrument under the grant it was captured with', async () => {
+      const { ctx, createInstrument } = setup()
       await waitForReady(ctx)
       await act(async () => {
         await ctx().save()
       })
 
-      expect(createCredential).toHaveBeenCalledWith(
+      expect(createInstrument).toHaveBeenCalledWith(
         expect.objectContaining({
           handle: 'card_mock000000000001',
           captureSessionId: 'cap_mock00000000000000000000000000',
@@ -195,13 +195,13 @@ describe('CardFields', () => {
     })
 
     it('sends descriptors and nothing that could be card data', async () => {
-      const { ctx, createCredential } = setup()
+      const { ctx, createInstrument } = setup()
       await waitForReady(ctx)
       await act(async () => {
         await ctx().save()
       })
 
-      const sent = createCredential.mock.calls[0][0]
+      const sent = createInstrument.mock.calls[0][0]
       expect(Object.keys(sent.descriptors).sort()).toEqual([
         'brand',
         'expMonth',
@@ -216,26 +216,26 @@ describe('CardFields', () => {
 
     it('passes an already-stored card through as existing', async () => {
       const { ctx } = setup({
-        createCredential: vi.fn().mockResolvedValue({ credentialRef: 'cred_old', existing: true }),
+        createInstrument: vi.fn().mockResolvedValue({ instrumentRef: 'inst_old', existing: true }),
       })
       await waitForReady(ctx)
 
-      let result: { credentialRef: string; existing: boolean } | undefined
+      let result: { instrumentRef: string; existing: boolean } | undefined
       await act(async () => {
         result = await ctx().save()
       })
 
-      expect(result).toEqual({ credentialRef: 'cred_old', existing: true })
+      expect(result).toEqual({ instrumentRef: 'inst_old', existing: true })
     })
 
     it('forwards setAsDefault when asked', async () => {
-      const { ctx, createCredential } = setup()
+      const { ctx, createInstrument } = setup()
       await waitForReady(ctx)
       await act(async () => {
         await ctx().save({ setAsDefault: true })
       })
 
-      expect(createCredential).toHaveBeenCalledWith(expect.objectContaining({ setAsDefault: true }))
+      expect(createInstrument).toHaveBeenCalledWith(expect.objectContaining({ setAsDefault: true }))
     })
 
     it('re-mints the grant afterwards, because it is spent once used', async () => {
@@ -251,7 +251,7 @@ describe('CardFields', () => {
     })
 
     it('does not send the card when a field is invalid', async () => {
-      const { ctx, vault: v, createCredential } = setup()
+      const { ctx, vault: v, createInstrument } = setup()
       await waitForReady(ctx)
 
       act(() => {
@@ -261,17 +261,17 @@ describe('CardFields', () => {
 
       await expect(ctx().save()).rejects.toMatchObject({ code: 'incomplete' })
       expect(v.createCardCalls).toHaveLength(0)
-      expect(createCredential).not.toHaveBeenCalled()
+      expect(createInstrument).not.toHaveBeenCalled()
     })
 
     it('does not record anything when the vault rejects the card', async () => {
-      const { ctx, createCredential } = setup({
+      const { ctx, createInstrument } = setup({
         vault: { failCreateCard: { status: 402, message: 'Card declined' } },
       })
       await waitForReady(ctx)
 
       await expect(ctx().save()).rejects.toMatchObject({ code: 'rejected' })
-      expect(createCredential).not.toHaveBeenCalled()
+      expect(createInstrument).not.toHaveBeenCalled()
     })
 
     it('maps a vault outage to a vault error rather than a card rejection', async () => {
@@ -294,10 +294,10 @@ describe('CardFields', () => {
     it('refuses to send the card at all when the transport cannot record it', async () => {
       // Capturing with nowhere to report the result leaves a card in the vault
       // that we hold no reference to, which nobody can ever charge.
-      const { ctx, vault: v } = setup({ omitCreateCredential: true })
+      const { ctx, vault: v } = setup({ omitCreateInstrument: true })
       await waitForReady(ctx)
 
-      await expect(ctx().save()).rejects.toThrow(/createCredential/)
+      await expect(ctx().save()).rejects.toThrow(/createInstrument/)
       expect(v.createCardCalls).toHaveLength(0)
     })
 

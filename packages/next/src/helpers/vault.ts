@@ -1,6 +1,6 @@
 import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import { createCaptureSessionCore, createCredentialCore } from '@solvapay/server'
+import { createCaptureSessionCore, createInstrumentCore } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
 
 /**
@@ -44,7 +44,7 @@ export async function createCaptureSession(
 }
 
 /**
- * Next.js route wrapper for POST /api/credentials.
+ * Next.js route wrapper for POST /api/instruments.
  *
  * Records the card the vault has already stored. A card already on file comes
  * back with `existing: true` and the reference it already had, which is the
@@ -52,15 +52,15 @@ export async function createCaptureSession(
  *
  * @example
  * ```ts
- * // app/api/credentials/route.ts
- * import { createCredential } from '@solvapay/next/helpers'
+ * // app/api/instruments/route.ts
+ * import { createInstrument } from '@solvapay/next/helpers'
  *
  * export async function POST(request: Request) {
- *   return createCredential(request, await request.json())
+ *   return createInstrument(request, await request.json())
  * }
  * ```
  */
-export async function createCredential(
+export async function createInstrument(
   request: globalThis.Request,
   body: {
     handle: string
@@ -81,6 +81,6 @@ export async function createCredential(
     includeName?: boolean
   } = {},
 ): Promise<NextResponse> {
-  const result = await createCredentialCore(request, body, options)
+  const result = await createInstrumentCore(request, body, options)
   return toNextRouteResponse(result)
 }

@@ -65,9 +65,9 @@ export {
   type CaptureFieldStyle,
   type CaptureSession,
   type CaptureState,
-  type CapturedCredential,
+  type CapturedInstrument,
   type CardBrand,
-  type CredentialDescriptors,
+  type InstrumentDescriptors,
   type VaultScriptConfig,
 } from './vault'
 

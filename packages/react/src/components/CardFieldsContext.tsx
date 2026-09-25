@@ -7,8 +7,8 @@ import type {
   CaptureFieldOptions,
   CaptureSession,
   CaptureState,
-  CapturedCredential,
-  SavedCredential,
+  CapturedInstrument,
+  SavedInstrument,
 } from '../vault/types'
 
 /**
@@ -44,7 +44,7 @@ export interface CardFieldsContextValue {
    * narrower case than it sounds: a card the vault holds and we have no
    * reference to is a card nobody can ever charge.
    */
-  capture: () => Promise<CapturedCredential>
+  capture: () => Promise<CapturedInstrument>
   /** True while the captured card is being recorded. */
   saving: boolean
   /**
@@ -53,7 +53,7 @@ export interface CardFieldsContextValue {
    * This is what a submit button calls. The capture grant is single use, so a
    * fresh one is minted afterwards and the surface is ready for another card.
    */
-  save: (options?: { setAsDefault?: boolean }) => Promise<SavedCredential>
+  save: (options?: { setAsDefault?: boolean }) => Promise<SavedInstrument>
 }
 
 export const CardFieldsContext = createContext<CardFieldsContextValue | null>(null)

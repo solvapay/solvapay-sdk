@@ -6,7 +6,7 @@
  * travels from the browser to the vault and never reaches our servers or the
  * host page.
  *
- * Nothing here names a rail. A credential captured through this surface is
+ * Nothing here names a rail. A instrument captured through this surface is
  * connector-neutral: the bridge decides later how to present it. Nothing here
  * names the vault vendor either, so the React layer stays free of it.
  */
@@ -35,9 +35,9 @@ export type CardBrand =
   | 'unknown'
 
 /**
- * A short-lived grant to write one credential into the vault.
+ * A short-lived grant to write one instrument into the vault.
  *
- * Minted server side and scoped to credential creation only. It is not a
+ * Minted server side and scoped to instrument creation only. It is not a
  * secret in the sense of an API key: it is write-only, expires quickly, and is
  * bound to a checkout session. It still must not be minted by an
  * unauthenticated endpoint, or it becomes a free card-vaulting service for
@@ -50,11 +50,11 @@ export interface CaptureSession {
   /** Epoch milliseconds. The surface refuses to submit after this. */
   expiresAt: number
   /**
-   * Identifier for this grant, sent back with the captured credential.
+   * Identifier for this grant, sent back with the captured instrument.
    *
    * The vault has no notion of our checkout, so it cannot enforce "one card,
    * this customer, this session". The server enforces that against this id, and
-   * refuses a credential reported under a grant that is expired, already spent,
+   * refuses a instrument reported under a grant that is expired, already spent,
    * or was minted for someone else.
    */
   captureSessionId: string
@@ -87,7 +87,12 @@ export interface CaptureState {
   /** Every required field is valid. Gates submission. */
   complete: boolean
   brand: CardBrand | null
-  /** Leading digits, when the vault reports them. Never the full number. */
+  /**
+   * The last four digits, as the vault reports them while typing.
+   *
+   * Last four, never leading. Leading digits are exactly what this surface
+   * deliberately does not read, so do not "fix" this to read `bin`.
+   */
   last4: string | null
 }
 
@@ -100,12 +105,12 @@ export interface CaptureState {
  * persisting because they drive routing, fee and fraud decisions we would
  * otherwise learn late or not at all.
  */
-export interface CapturedCredential {
+export interface CapturedInstrument {
   handle: string
-  descriptors: CredentialDescriptors
+  descriptors: InstrumentDescriptors
 }
 
-export interface CredentialDescriptors {
+export interface InstrumentDescriptors {
   brand: CardBrand
   last4: string
   expMonth: number
@@ -122,8 +127,8 @@ export interface CredentialDescriptors {
  * own side and hands back the card it already held, so a returning customer
  * re-entering the same card gets the reference they already had.
  */
-export interface SavedCredential {
-  credentialRef: string
+export interface SavedInstrument {
+  instrumentRef: string
   existing: boolean
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normaliseVendorState, toCaptureError, toCredential } from './captureForm'
+import { normaliseVendorState, toCaptureError, toInstrument } from './captureForm'
 import { CaptureError, emptyCaptureState, isComplete, isReady, isSessionUsable } from './types'
 
 const vendorField = (over: Record<string, unknown> = {}) => ({
@@ -80,7 +80,7 @@ describe('normaliseVendorState', () => {
   })
 })
 
-describe('toCredential', () => {
+describe('toInstrument', () => {
   const card = {
     data: {
       id: 'crd_123',
@@ -99,7 +99,7 @@ describe('toCredential', () => {
   }
 
   it('returns a handle and descriptors, and no card data', () => {
-    const result = toCredential(card)
+    const result = toInstrument(card)
     expect(result.handle).toBe('crd_123')
     expect(result.descriptors).toEqual({
       brand: 'visa',
@@ -113,29 +113,29 @@ describe('toCredential', () => {
   })
 
   it('normalises a two digit expiry year to four', () => {
-    expect(toCredential(card).descriptors.expYear).toBe(2030)
+    expect(toInstrument(card).descriptors.expYear).toBe(2030)
   })
 
   it('leaves a four digit expiry year alone', () => {
     const four = { data: { ...card.data, attributes: { ...card.data.attributes, exp_year: 2031 } } }
-    expect(toCredential(four).descriptors.expYear).toBe(2031)
+    expect(toInstrument(four).descriptors.expYear).toBe(2031)
   })
 
   it('accepts a flat response shape as well as a nested one', () => {
     const flat = { id: 'crd_flat', exp_month: 1, exp_year: 2029, last4: '1111', card_brand: 'amex' }
-    const result = toCredential(flat)
+    const result = toInstrument(flat)
     expect(result.handle).toBe('crd_flat')
     expect(result.descriptors.brand).toBe('amex')
   })
 
-  it('throws rather than returning a credential with no identifier', () => {
-    expect(() => toCredential({ data: { attributes: { exp_month: 1, exp_year: 30 } } })).toThrow(
+  it('throws rather than returning a instrument with no identifier', () => {
+    expect(() => toInstrument({ data: { attributes: { exp_month: 1, exp_year: 30 } } })).toThrow(
       CaptureError,
     )
   })
 
-  it('throws rather than returning a credential with no usable expiry', () => {
-    expect(() => toCredential({ data: { id: 'crd_1', attributes: { last4: '4242' } } })).toThrow(
+  it('throws rather than returning a instrument with no usable expiry', () => {
+    expect(() => toInstrument({ data: { id: 'crd_1', attributes: { last4: '4242' } } })).toThrow(
       /expiry/i,
     )
   })
@@ -217,7 +217,7 @@ describe('session and field guards', () => {
   })
 })
 
-describe('toCredential: leading digits', () => {
+describe('toInstrument: leading digits', () => {
   const vaultResponse = (attributes: Record<string, unknown>) => ({
     data: {
       id: 'card_7f3a1c92b4d6',
@@ -226,22 +226,22 @@ describe('toCredential: leading digits', () => {
   })
 
   it('ignores the vault bin entirely', () => {
-    const credential = toCredential(vaultResponse({ bin: '424242' }))
-    expect(JSON.stringify(credential)).not.toContain('424242')
+    const instrument = toInstrument(vaultResponse({ bin: '424242' }))
+    expect(JSON.stringify(instrument)).not.toContain('424242')
   })
 
   it('ignores first8 entirely', () => {
-    const credential = toCredential(vaultResponse({ first8: '42424242' }))
-    expect(JSON.stringify(credential)).not.toContain('42424242')
+    const instrument = toInstrument(vaultResponse({ first8: '42424242' }))
+    expect(JSON.stringify(instrument)).not.toContain('42424242')
   })
 
   it('keeps nothing of the card but the last four', () => {
-    const credential = toCredential(
+    const instrument = toInstrument(
       vaultResponse({ bin: '424242', first8: '42424242', card_fingerprint: 'fp_1' }),
     )
-    expect(credential.descriptors.last4).toBe('4242')
-    expect(JSON.stringify(credential)).not.toContain('fp_1')
-    expect(Object.keys(credential.descriptors).sort()).toEqual([
+    expect(instrument.descriptors.last4).toBe('4242')
+    expect(JSON.stringify(instrument)).not.toContain('fp_1')
+    expect(Object.keys(instrument.descriptors).sort()).toEqual([
       'brand',
       'expMonth',
       'expYear',

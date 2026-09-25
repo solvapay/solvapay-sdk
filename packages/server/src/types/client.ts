@@ -436,7 +436,12 @@ export interface SolvaPayClient {
   // Hand-written rather than pulled from `components['schemas']`: the vault
   // controller is newer than the last OpenAPI generation. Move these to the
   // generated types the next time the spec is regenerated.
-  createCaptureSession?(params: { customerRef?: string; checkoutSessionId?: string }): Promise<{
+  createCaptureSession?(params: {
+    customerRef: string
+    productRef?: string
+    planRef?: string
+    checkoutSessionId?: string
+  }): Promise<{
     token: string
     tenantId: string
     environment: 'sandbox' | 'live'
@@ -444,11 +449,11 @@ export interface SolvaPayClient {
     captureSessionId: string
   }>
 
-  // POST: /v1/sdk/vault/credentials
-  createCredential?(params: {
+  // POST: /v1/sdk/vault/instruments
+  createInstrument?(params: {
     handle: string
     captureSessionId: string
-    customerRef?: string
+    customerRef: string
     setAsDefault?: boolean
     descriptors?: {
       brand?: string
@@ -458,7 +463,7 @@ export interface SolvaPayClient {
       funding?: string
       issuerCountry?: string
     }
-  }): Promise<{ credentialRef: string; existing: boolean }>
+  }): Promise<{ instrumentRef: string; existing: boolean }>
 
   // POST: /v1/sdk/customers/customer-sessions
   createCustomerSession(

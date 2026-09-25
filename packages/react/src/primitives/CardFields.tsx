@@ -23,20 +23,22 @@ import React, {
   useState,
 } from 'react'
 import { Slot } from './slot'
-import { composeRefs } from './composeRefs'
+import { setRef } from './composeRefs'
 import { CardFieldsProvider, useCardFields } from '../components/CardFieldsContext'
 import { useCaptureSession } from '../hooks/useCaptureSession'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { UnsupportedTransportMethodError } from '../transport'
 import { CaptureForm, type MountFieldOptions } from '../vault/captureForm'
+import { assertIntegrityForLive } from '../vault/loadVaultScript'
 import {
   CaptureError,
   emptyCaptureState,
   type CaptureFieldName,
   type CaptureFieldOptions,
+  type CaptureSession,
   type CaptureState,
-  type CapturedCredential,
-  type SavedCredential,
+  type CapturedInstrument,
+  type SavedInstrument,
 } from '../vault/types'
 import type { VaultScriptConfig } from '../vault/loadVaultScript'
 
@@ -81,7 +83,18 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
   const [saving, setSaving] = useState(false)
 
   const formRef = useRef<CaptureForm | null>(null)
-  const pending = useRef(new Map<CaptureFieldName, MountFieldOptions>())
+
+  // Every field whose container is currently in the DOM, kept for the life of
+  // the surface rather than drained on first mount.
+  //
+  // It used to be a one-shot `pending` map, cleared once the script resolved.
+  // That made a new session fatal: the form effect tears the old form down and
+  // builds a new one, but the field slots' ref callbacks do not fire again
+  // (their DOM nodes never changed), so nothing re-mounted the iframes. The
+  // surface went permanently blank while still reporting ready and complete —
+  // after every successful save, and again thirty seconds before expiry while
+  // the cardholder was still typing.
+  const mounted = useRef(new Map<CaptureFieldName, MountFieldOptions>())
 
   // Callbacks live in refs so nothing below depends on their identity. A host
   // writes `onStateChange={s => ...}` inline, which is a new function every
@@ -101,6 +114,18 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
     onErrorRef.current?.(err)
   }, [])
 
+  // The grant, by reference. A replacement swaps the token under the form
+  // rather than rebuilding it, so nothing the cardholder has typed is lost when
+  // the grant is renewed.
+  const sessionRef = useRef(session)
+  useEffect(() => {
+    sessionRef.current = session
+  })
+
+  // The form is bound to a tenant and an environment, not to a grant.
+  const tenantId = session?.tenantId
+  const environment = session?.environment
+
   // The script config by value, not by object identity. `script={{ version }}`
   // written inline is the obvious way to use this component and produces a new
   // object every render, so depending on the object is depending on the caller
@@ -113,11 +138,32 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
 
   // One form per session. A new session means a new form, never a reused one.
   useEffect(() => {
-    if (!session) return
+    if (!tenantId || !environment) return
     let cancelled = false
 
+    // The check this function exists for, actually wired in. It was exported
+    // and called from nowhere, so a Live surface with no integrity hash loaded
+    // and worked, silently, which is the one case it was written to prevent.
+    try {
+      assertIntegrityForLive(
+        {
+          version: scriptVersion,
+          ...(scriptIntegrity ? { integrity: scriptIntegrity } : {}),
+          ...(scriptHost ? { host: scriptHost } : {}),
+        },
+        environment,
+      )
+    } catch (err) {
+      raise(
+        err instanceof CaptureError
+          ? err
+          : new CaptureError('script_load_failed', 'The capture surface is misconfigured.'),
+      )
+      return
+    }
+
     CaptureForm.create({
-      session,
+      getSession: () => sessionRef.current as CaptureSession,
       script: {
         version: scriptVersion,
         ...(scriptIntegrity ? { integrity: scriptIntegrity } : {}),
@@ -136,11 +182,12 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
           return
         }
         formRef.current = form
-        // Mount anything whose container appeared before the script resolved.
-        for (const mount of pending.current.values()) {
+        // Mount every field we know about: the ones whose containers appeared
+        // before the script resolved, and, when this is a replacement form,
+        // the ones that were already mounted on its predecessor.
+        for (const mount of mounted.current.values()) {
           form.mountField(mount)
         }
-        pending.current.clear()
         setFormReady(true)
       })
       .catch((err: unknown) => {
@@ -155,28 +202,32 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
     return () => {
       cancelled = true
       setFormReady(false)
+      // The fields are gone with the form, so stop claiming they are valid.
+      // Leaving stale state behind is how the surface came to report ready and
+      // complete over three empty boxes.
+      setState(emptyCaptureState())
       formRef.current?.destroy()
       formRef.current = null
     }
-    // Deps are values, never objects or functions. One form per session, and a
-    // render on its own is not a reason to build a new one.
-  }, [session, scriptVersion, scriptIntegrity, scriptHost, raise])
+    // Values only, never objects or functions, and deliberately NOT the whole
+    // session: a renewed grant is a new token, not a new form.
+  }, [tenantId, environment, scriptVersion, scriptIntegrity, scriptHost, raise])
 
   const registerField = useCallback(
     (name: CaptureFieldName, element: HTMLElement | null, options?: CaptureFieldOptions) => {
       if (!element) {
         formRef.current?.unmountField(name)
-        pending.current.delete(name)
+        mounted.current.delete(name)
         return
       }
       const mount = { name, selector: `#${CSS.escape(element.id)}`, ...options }
-      if (formRef.current) formRef.current.mountField(mount)
-      else pending.current.set(name, mount)
+      mounted.current.set(name, mount)
+      formRef.current?.mountField(mount)
     },
     [],
   )
 
-  const capture = useCallback(async (): Promise<CapturedCredential> => {
+  const capture = useCallback(async (): Promise<CapturedInstrument> => {
     const form = formRef.current
     if (!form) {
       throw new CaptureError('vault_error', 'The capture surface is not ready yet.')
@@ -193,38 +244,52 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
     }
   }, [cardholder, raise])
 
+  const inFlight = useRef(false)
+
   const save = useCallback(
-    async (options: { setAsDefault?: boolean } = {}): Promise<SavedCredential> => {
+    async (options: { setAsDefault?: boolean } = {}): Promise<SavedInstrument> => {
+      // Claimed synchronously, before anything awaits. `saving` used to be set
+      // only after the vault round-trip, so a host doing the documented
+      // `disabled={!complete || saving}` still had a live button for the whole
+      // of it: a double click put two cards in the vault and orphaned one.
+      if (inFlight.current) {
+        throw new CaptureError('vault_error', 'A card is already being saved.')
+      }
+      inFlight.current = true
+      setSaving(true)
       // Read the grant id before the card goes anywhere. Capturing first and
       // then discovering there is nothing to report the result against would
       // leave a card in the vault that we hold no reference to, which is worse
       // than not capturing at all.
-      const captureSessionId = session?.captureSessionId
-      if (!captureSessionId) {
-        const err = new CaptureError('session_expired', 'The capture session is no longer valid.')
-        raise(err)
-        throw err
-      }
-
-      const create = solvaPay?._config?.transport?.createCredential
-      if (!create) {
-        throw new UnsupportedTransportMethodError('createCredential')
-      }
-
-      const credential = await capture()
-
-      setSaving(true)
       try {
+        const captureSessionId = sessionRef.current?.captureSessionId
+        if (!captureSessionId) {
+          const err = new CaptureError('session_expired', 'The capture session is no longer valid.')
+          raise(err)
+          throw err
+        }
+
+        const create = solvaPay?._config?.transport?.createInstrument
+        if (!create) {
+          throw new UnsupportedTransportMethodError('createInstrument')
+        }
+
+        const instrument = await capture()
+
         const saved = await create({
-          handle: credential.handle,
+          handle: instrument.handle,
           captureSessionId,
-          descriptors: credential.descriptors,
+          descriptors: instrument.descriptors,
           ...(options.setAsDefault === undefined ? {} : { setAsDefault: options.setAsDefault }),
         })
         // The grant is spent now, server side. Mint the next one so the surface
         // is usable again rather than failing on the second card with an error
-        // about a session the cardholder never knew existed.
+        // about a session the cardholder never knew existed. The form is not
+        // rebuilt for it: only the token changes.
         void refresh()
+        // A save that worked clears whatever failed before it. Without this a
+        // decline stayed on screen next to a card that had just been saved.
+        setError(null)
         return saved
       } catch (err) {
         const captureError =
@@ -237,10 +302,11 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
         raise(captureError)
         throw captureError
       } finally {
+        inFlight.current = false
         setSaving(false)
       }
     },
-    [session, solvaPay, capture, raise, refresh],
+    [solvaPay, capture, raise, refresh],
   )
 
   const value = useMemo(
@@ -262,7 +328,7 @@ const Root = forwardRef<HTMLElement, CardFieldsRootProps>(function CardFieldsRoo
   return (
     <CardFieldsProvider value={value}>
       <Comp
-        ref={composeRefs(forwardedRef)}
+        ref={forwardedRef}
         data-solvapay-card-fields=""
         data-state={error ? 'error' : value.ready ? 'ready' : 'loading'}
         {...rest}
@@ -342,6 +408,10 @@ function createFieldSlot(name: CaptureFieldName, attribute: string) {
       elementRef.current = node
       ctxRef.current.registerField(name, node, optionsRef.current ?? undefined)
     }, [])
+    const attachRef = useRef(attach)
+    useEffect(() => {
+      attachRef.current = attach
+    })
 
     // Unmount once, on teardown, and only then.
     useEffect(() => () => ctxRef.current.registerField(name, null), [])
@@ -352,7 +422,20 @@ function createFieldSlot(name: CaptureFieldName, attribute: string) {
     // reattaches. Each detach unmounts the vault field, which publishes state,
     // which renders, which composes a new ref. Memoising is what actually
     // stops it.
-    const composedRef = useMemo(() => composeRefs(forwardedRef, attach), [forwardedRef, attach])
+    // `forwardedRef` is in a ref too. A host writing the ordinary
+    // `<CardFields.Number ref={n => (nodes.current.number = n)} />` passes a new
+    // function every render; with it in the dependency array the composed ref
+    // churned, React detached and reattached, and the publish-remount-publish
+    // loop came straight back through the one prop the memo cannot stabilise.
+    const forwardedRefRef = useRef(forwardedRef)
+    useEffect(() => {
+      forwardedRefRef.current = forwardedRef
+    })
+
+    const composedRef = useCallback((node: HTMLDivElement | null) => {
+      setRef(forwardedRefRef.current, node)
+      attachRef.current(node)
+    }, [])
 
     const field = ctx.state.fields[name]
     const Comp = asChild ? Slot : 'div'

@@ -20,7 +20,7 @@
  */
 
 export interface MockVaultCard {
-  /** Vault card id, the value that becomes the credential handle. */
+  /** Vault card id, the value that becomes the instrument handle. */
   id: string
   brand: string
   last4: string
@@ -234,7 +234,7 @@ export function installMockVault(options: MockVaultOptions = {}): MockVault {
             return
           }
 
-          // The vault's own response envelope, so `toCredential` is exercised
+          // The vault's own response envelope, so `toInstrument` is exercised
           // rather than bypassed. Note there is no PAN and no alias here: the
           // real response does not hand those back either.
           setTimeout(

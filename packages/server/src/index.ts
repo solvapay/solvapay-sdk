@@ -240,7 +240,7 @@ export {
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createCaptureSessionCore,
-  createCredentialCore,
+  createInstrumentCore,
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
@@ -271,6 +271,6 @@ export type {
   GetUsageResult,
   UsageLimitsInput,
   CaptureSessionResult,
-  CredentialResult,
-  CredentialDescriptorsInput,
+  InstrumentResult,
+  InstrumentDescriptorsInput,
 } from './helpers'

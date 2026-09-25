@@ -53,6 +53,12 @@ export function useCaptureSession(options: UseCaptureSessionOptions = {}): UseCa
   const refresh = useCallback(async (): Promise<CaptureSession | null> => {
     if (inFlight.current) return inFlight.current
 
+    // Assigned BEFORE the body runs. Assigning after the IIFE meant a body that
+    // threw before its first await ran to completion synchronously, `finally`
+    // cleared the slot, and the already-settled promise was then stored — so
+    // every later refresh returned that stale result and no request was ever
+    // made again.
+    let settled = false
     const run = (async () => {
       setLoading(true)
       setError(null)
@@ -88,11 +94,12 @@ export function useCaptureSession(options: UseCaptureSessionOptions = {}): UseCa
         return null
       } finally {
         if (mounted.current) setLoading(false)
+        settled = true
         inFlight.current = null
       }
     })()
 
-    inFlight.current = run
+    if (!settled) inFlight.current = run
     return run
   }, [ctx, productRef, planRef])
 
@@ -103,7 +110,7 @@ export function useCaptureSession(options: UseCaptureSessionOptions = {}): UseCa
   // the effect mints, the new grant is stored, the effect runs again, and if
   // that grant is also unusable — clock skew, or a server TTL below our own
   // slack — it mints again, forever, hammering the endpoint that hands out
-  // write credentials. Renewal is a timer below, not a reaction to state.
+  // write instruments. Renewal is a timer below, not a reaction to state.
   useEffect(() => {
     if (!enabled) return
     if (session) return

@@ -33,8 +33,8 @@ export {
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'
 
 // Export vault capture helpers
-export { createCaptureSessionCore, createCredentialCore } from './vault'
-export type { CaptureSessionResult, CredentialResult, CredentialDescriptorsInput } from './vault'
+export { createCaptureSessionCore, createInstrumentCore } from './vault'
+export type { CaptureSessionResult, InstrumentResult, InstrumentDescriptorsInput } from './vault'
 
 // Export purchase cancellation & reactivation helpers
 export { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
