@@ -215,7 +215,7 @@ const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
 function trackUsageExtra(
   metadata: PaywallMetadata,
   outcome: 'success' | 'paywall' | 'fail',
-  consequence?: 'throttled' | 'overage',
+  consequence?: 'overage',
 ): { meterName?: string; usageClass?: 'included' | 'overage' } | undefined {
   if (metadata.freeLimit) {
     return { meterName: metadata.freeLimit.meter }
@@ -417,8 +417,8 @@ export class SolvaPayPaywall {
           remaining = 0
         }
       } else {
-        // `withinLimits: true` with `remaining: 0` is throttle / overage —
-        // the backend granted access past the included cap. Do not gate.
+        // `withinLimits: true` with `remaining: 0` is overage — the backend
+        // granted access past the included cap. Do not gate.
         withinLimits = true
         remaining = limitsCheck.remaining
       }
@@ -471,11 +471,7 @@ export class SolvaPayPaywall {
     // cache-miss branch assigns `limitsCheck` directly. The non-null
     // assertion keeps the `allow` payload's `limits` field strictly
     // typed.
-    const consequence = lastLimitsCheck!.throttled
-      ? 'throttled'
-      : lastLimitsCheck!.overage
-        ? 'overage'
-        : undefined
+    const consequence = lastLimitsCheck!.overage ? 'overage' : undefined
 
     return {
       outcome: 'allow',

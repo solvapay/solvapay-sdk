@@ -234,30 +234,6 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'topup_required' })
   })
 
-  it('prefers authoritative needsUpgrade over a usage-based zero-balance heuristic', () => {
-    // DEV-824: needsUpgrade beats the "usage-based + zero credits →
-    // topup" inference so an auto-upgrade deny is not mis-routed to
-    // the topup tool.
-    const state = classifyPaywallState(
-      limits({
-        plan: 'pln_usage',
-        plans: [
-          {
-            reference: 'pln_usage',
-            name: 'Usage',
-            type: 'usage-based',
-            price: 0,
-            currency: 'USD',
-            requiresPayment: true,
-          },
-        ],
-        balance: { creditBalance: 0, creditsPerUnit: 1, currency: 'USD' },
-        needsUpgrade: true,
-      }),
-    )
-    expect(state).toEqual({ kind: 'upgrade_required' })
-  })
-
   it('still prefers activationRequired over authoritative needsTopUp', () => {
     const state = classifyPaywallState(
       limits({
@@ -535,22 +511,21 @@ describe('scenario matrix', () => {
     expect(state).toEqual({ kind: 'limit_reached' })
   })
 
-  it('row 9 — failed auto-upgrade stays upgrade_required without the no-plan lie', () => {
+  it('row 9 — a blocked purchase at the cap is limit_reached', () => {
     const input = limits({
       planRef: 'pln_pro',
       planName: 'Pro',
       purchaseRef: 'pur_rec',
       remaining: 0,
-      needsUpgrade: true,
     })
     const state = classifyPaywallState(input)
-    expect(state).toEqual({ kind: 'upgrade_required' })
+    expect(state).toEqual({ kind: 'limit_reached' })
     const msg = buildGateMessage(
       state,
       gate({ planRef: 'pln_pro', planName: 'Pro', purchaseRef: 'pur_rec' }),
     )
     expect(msg).not.toMatch(NO_ACTIVE_PLAN)
-    expect(msg).toMatch(/automatic switch/)
+    expect(msg).not.toMatch(/automatic switch/)
   })
 
   it.each([

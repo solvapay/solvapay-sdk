@@ -203,7 +203,7 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
         cap,
         scope: 'billing_period',
         meter: USAGE_METER,
-        onExceed: amountMinor > 0 ? 'charge' : 'block',
+        onExceed: amountMinor > 0 ? 'top_up' : 'block',
       })
     }
   }

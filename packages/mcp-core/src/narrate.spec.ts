@@ -457,8 +457,6 @@ const runningLimits = {
   activationRequired: false,
   overage: false,
   needsTopUp: false,
-  needsUpgrade: false,
-  throttled: false,
 }
 
 const coolNow = new Date('2026-09-06T12:00:00.000Z')
@@ -843,7 +841,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
       }),
     )
     expect(text).toContain(
-      'Cool MCP is over its Starter allowance: 11,240 of 10,000 calls used. Calls still work.',
+      'Cool MCP is over its Starter allowance: 11,240 of 10,000 calls used. Calls still work, paid from your credits.',
     )
     expect(text).toContain("Call `account` with view: 'checkout' for a higher limit.")
     expect(text).not.toContain('$12.40')

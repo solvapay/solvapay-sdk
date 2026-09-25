@@ -56,6 +56,20 @@ describe('MandateText primitive', () => {
     })
   })
 
+  it('discloses card storage on a recurring confirm', async () => {
+    render(
+      <SolvaPayProvider config={{}}>
+        <MandateText planRef="pln" productRef="prd_x" savesPaymentMethod data-testid="mandate" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => {
+      const text = screen.getByTestId('mandate').textContent
+      expect(text).toContain('save your card')
+      expect(text).toContain('renewals and failed-payment retries')
+      expect(text).not.toContain('usage past your included allowance')
+    })
+  })
+
   it('asChild swaps <p> for consumer element and merges classes/refs', async () => {
     const ref = createRef<HTMLSpanElement>()
     render(

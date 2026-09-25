@@ -531,7 +531,7 @@ export interface paths {
     put?: never
     /**
      * Create a plan for a product
-     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
+     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
      */
     post: operations['PlanSdkController_createPlan']
     delete?: never
@@ -1218,12 +1218,9 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
-              onExceedPricingId?: string
+              onExceed: 'block' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
-              /** @enum {string} */
-              uiHint?: 'upgrade_prompt' | 'soft_warning'
               windowDays?: number
             }
           | {
@@ -1236,12 +1233,11 @@ export interface components {
             }
           | {
               days: number
-              downgradeToPricingId?: string
               /** @enum {string} */
               kind: 'trial'
               label?: string
               /** @enum {string} */
-              onEnd: 'convert' | 'cancel' | 'downgrade'
+              onEnd: 'convert' | 'cancel'
             }
           | {
               /** @enum {string} */
@@ -1256,18 +1252,6 @@ export interface components {
               /** @enum {string} */
               mode: 'percentage' | 'fixed'
               value: number
-            }
-          | {
-              capUnits?: number
-              currency?: string
-              /** @enum {string} */
-              kind: 'rollover'
-              label?: string
-              maxCycles?: number
-              meter: string
-              rateMinor?: number
-              /** @enum {string} */
-              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
             }
           | {
               /** @enum {string} */
@@ -1425,12 +1409,9 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
-            onExceedPricingId?: string
+            onExceed: 'block' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
-            /** @enum {string} */
-            uiHint?: 'upgrade_prompt' | 'soft_warning'
             windowDays?: number
           }
         | {
@@ -1443,12 +1424,11 @@ export interface components {
           }
         | {
             days: number
-            downgradeToPricingId?: string
             /** @enum {string} */
             kind: 'trial'
             label?: string
             /** @enum {string} */
-            onEnd: 'convert' | 'cancel' | 'downgrade'
+            onEnd: 'convert' | 'cancel'
           }
         | {
             /** @enum {string} */
@@ -1463,18 +1443,6 @@ export interface components {
             /** @enum {string} */
             mode: 'percentage' | 'fixed'
             value: number
-          }
-        | {
-            capUnits?: number
-            currency?: string
-            /** @enum {string} */
-            kind: 'rollover'
-            label?: string
-            maxCycles?: number
-            meter: string
-            rateMinor?: number
-            /** @enum {string} */
-            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
           }
         | {
             /** @enum {string} */
@@ -1586,7 +1554,8 @@ export interface components {
         | 'customer_not_found'
         | 'no_active_purchase'
         | 'plan_not_credit_based'
-        | 'plan_billed_at_period_end'
+        | 'not_credit_drawn'
+        | 'within_included'
     }
     CreditDebitSuccessResponse: {
       /**
@@ -1830,11 +1799,9 @@ export interface components {
        * @example requests
        */
       meterName?: string
-      /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
+      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: top_up`, or from the first unit on a recurring meter with no limit. */
       needsTopUp?: boolean
-      /** @description Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`. */
-      needsUpgrade?: boolean
-      /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
+      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: top_up`. */
       overage?: boolean
       /**
        * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
@@ -1860,10 +1827,6 @@ export interface components {
        * @example 997
        */
       remaining: number
-      /** @description Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`. */
-      throttled?: boolean
-      /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
-      upgraded?: boolean
       /** @description Consumed usage units this period. Present only when the backend measured a finite cap. */
       used?: number
       /**
@@ -1935,12 +1898,9 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
-              onExceedPricingId?: string
+              onExceed: 'block' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
-              /** @enum {string} */
-              uiHint?: 'upgrade_prompt' | 'soft_warning'
               windowDays?: number
             }
           | {
@@ -1953,12 +1913,11 @@ export interface components {
             }
           | {
               days: number
-              downgradeToPricingId?: string
               /** @enum {string} */
               kind: 'trial'
               label?: string
               /** @enum {string} */
-              onEnd: 'convert' | 'cancel' | 'downgrade'
+              onEnd: 'convert' | 'cancel'
             }
           | {
               /** @enum {string} */
@@ -1973,18 +1932,6 @@ export interface components {
               /** @enum {string} */
               mode: 'percentage' | 'fixed'
               value: number
-            }
-          | {
-              capUnits?: number
-              currency?: string
-              /** @enum {string} */
-              kind: 'rollover'
-              label?: string
-              maxCycles?: number
-              meter: string
-              rateMinor?: number
-              /** @enum {string} */
-              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
             }
           | {
               /** @enum {string} */
@@ -2892,12 +2839,9 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
-            onExceedPricingId?: string
+            onExceed: 'block' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
-            /** @enum {string} */
-            uiHint?: 'upgrade_prompt' | 'soft_warning'
             windowDays?: number
           }
         | {
@@ -2910,12 +2854,11 @@ export interface components {
           }
         | {
             days: number
-            downgradeToPricingId?: string
             /** @enum {string} */
             kind: 'trial'
             label?: string
             /** @enum {string} */
-            onEnd: 'convert' | 'cancel' | 'downgrade'
+            onEnd: 'convert' | 'cancel'
           }
         | {
             /** @enum {string} */
@@ -2930,18 +2873,6 @@ export interface components {
             /** @enum {string} */
             mode: 'percentage' | 'fixed'
             value: number
-          }
-        | {
-            capUnits?: number
-            currency?: string
-            /** @enum {string} */
-            kind: 'rollover'
-            label?: string
-            maxCycles?: number
-            meter: string
-            rateMinor?: number
-            /** @enum {string} */
-            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
           }
         | {
             /** @enum {string} */

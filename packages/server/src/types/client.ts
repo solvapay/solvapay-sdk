@@ -36,12 +36,11 @@ true satisfies FreeLimit extends GeneratedFreeAllowance ? true : never
 /**
  * `LimitResponse` plus a deprecated SDK-only `plan` alias.
  *
- * The backend `LimitResponse` now natively carries the `onExceed` outcome flags
- * (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` / `upgraded`, resolved
- * by `decideLimit`), so they flow through from `generated.ts`. `throttled` /
- * `overage` ride the allow path (`withinLimits: true`) so a protected handler
- * can read them from `decision.limits` and degrade service or note overage; the
- * others accompany a gate outcome.
+ * The backend `LimitResponse` carries the `onExceed` outcome flags
+ * (`overage` / `needsTopUp`, resolved by `decideLimit`), so they flow
+ * through from `generated.ts`. `overage` rides the allow path
+ * (`withinLimits: true`) so a protected handler can read it from
+ * `decision.limits`; `needsTopUp` accompanies a gate outcome.
  *
  * Read `planRef` for the active plan. `plan` is never populated by the
  * backend — it remains optional so older fixtures and callers still type-check.

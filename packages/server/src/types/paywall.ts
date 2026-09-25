@@ -227,13 +227,11 @@ export type PaywallDecision<T> =
       limits: LimitResponseWithPlan
       customerRef: string
       /**
-       * Set when access is granted with consequences. `throttled` is
-       * `onExceed: throttle` (legacy plans — the builder no longer
-       * offers it). `overage` is `onExceed: charge` past the included
-       * cap. Absent on a plain allow. Derived from `limits`; not new
-       * wire data.
+       * Set when access is granted past the included cap and the usage
+       * is paid from prepaid credits (`onExceed: top_up`). Absent on a
+       * plain allow. Derived from `limits`; not new wire data.
        */
-      consequence?: 'throttled' | 'overage'
+      consequence?: 'overage'
       /**
        * Id minted by `decide()` and reused by `runAllow()` so success /
        * fail tracking shares one idempotency key with the decision.

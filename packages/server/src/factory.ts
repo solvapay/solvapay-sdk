@@ -512,8 +512,7 @@ export interface SolvaPay {
    * @param params.customerRef - Customer reference
    * @param params.productRef - Product reference
    * @returns Full `LimitResponseWithPlan`, including the `onExceed` outcome
-   *   flags (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` /
-   *   `upgraded`) the backend already sends on `/v1/sdk/limits`
+   *   flags (`overage` / `needsTopUp`) the backend sends on `/v1/sdk/limits`
    *
    * @example
    * ```typescript
