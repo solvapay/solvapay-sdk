@@ -13,8 +13,9 @@
  *    error message names the method, URL, status, content-type, and
  *    a body snippet so the LLM has enough context to recover or stop.
  *
- * Both the free-tool path (`ctx.server.registerTool`) and the paid-
- * tool path (`ctx.registerPayable`) propagate this throw — the MCP
+ * The free-tool path (`ctx.server.registerTool`), the free-capped path
+ * (`ctx.registerFree`), and the paid-tool path (`ctx.registerPayable`)
+ * all propagate this throw — the MCP
  * SDK and SolvaPay's `formatError` respectively convert it into a
  * `{ isError: true, content[0].text: <message> }` envelope.
  *

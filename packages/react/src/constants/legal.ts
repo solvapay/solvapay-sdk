@@ -1,12 +1,11 @@
 /**
- * Hosted SolvaPay legal pages used as universal fallbacks.
+ * Hosted SolvaPay legal pages.
  *
- * The merchant record returned from `/api/merchant` is allowed to omit
- * `termsUrl` / `privacyUrl`. When that happens, primitives that surface
- * legal copy (`LegalFooter`, `MandateText`) link to these SolvaPay-hosted
- * pages so the customer always has a working terms / privacy reference at
- * the point of charge — SolvaPay is the underlying payment processor and
- * its terms always apply.
+ * `LegalFooter` always points here. `MandateText` always names these as
+ * SolvaPay's Terms of Service and Privacy Policy; merchant URLs from
+ * `/api/merchant` are added alongside them when set, never as a
+ * substitute. SolvaPay is the processor on every charge, so its terms
+ * always apply.
  */
 
 export const SOLVAPAY_TERMS_URL = 'https://solvapay.com/legal/terms'

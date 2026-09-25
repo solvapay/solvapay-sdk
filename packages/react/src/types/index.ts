@@ -310,14 +310,12 @@ export interface SolvaPayConfig {
      * @example
      * ```tsx
      * import { createSupabaseAuthAdapter } from '@solvapay/react-supabase';
+     * import { supabase } from './supabase'; // your existing client
      *
      * <SolvaPayProvider
      *   config={{
      *     auth: {
-     *       adapter: createSupabaseAuthAdapter({
-     *         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-     *         supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-     *       })
+     *       adapter: createSupabaseAuthAdapter({ client: supabase })
      *     }
      *   }}
      * >

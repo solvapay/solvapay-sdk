@@ -44,6 +44,16 @@ const parseEnvValue = (raw: string): string => {
 const normalizeTrailingNewline = (content: string): string =>
   content.endsWith('\n') ? content : `${content}\n`
 
+const confirmOverwriteOrExit = async (): Promise<boolean> => {
+  if (!stdin.isTTY) {
+    console.error(
+      'SOLVAPAY_SECRET_KEY already set in .env; re-run with --yes to overwrite',
+    )
+    process.exit(1)
+  }
+  return askOverwrite()
+}
+
 const askOverwrite = async (): Promise<boolean> => {
   const rl = readline.createInterface({ input: stdin, output: stdout })
   try {
@@ -113,7 +123,7 @@ export const writeSolvaPaySecretToEnv = async (
 
   const shouldOverwrite = options.confirmOverwrite
     ? await options.confirmOverwrite()
-    : await askOverwrite()
+    : await confirmOverwriteOrExit()
   if (!shouldOverwrite) {
     return { filePath: envPath, action: 'unchanged' }
   }

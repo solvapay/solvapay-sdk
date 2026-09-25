@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
@@ -54,6 +54,30 @@ describe('writeSolvaPaySecretToEnv', () => {
       expect(result.action).toBe('unchanged')
       expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_live_old\n')
     } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('exits when a non-TTY session would overwrite an existing key without --yes', async () => {
+    const cwd = await makeTempDir()
+    const originalIsTTY = process.stdin.isTTY
+    Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false })
+    const exit = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`exit ${code}`)
+    })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_sandbox_old\n', 'utf8')
+      await expect(writeSolvaPaySecretToEnv('sk_sandbox_new', { cwd })).rejects.toThrow('exit 1')
+      expect(error).toHaveBeenCalledWith(
+        'SOLVAPAY_SECRET_KEY already set in .env; re-run with --yes to overwrite',
+      )
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+      expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_sandbox_old\n')
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: originalIsTTY })
+      exit.mockRestore()
+      error.mockRestore()
       await rm(cwd, { recursive: true, force: true })
     }
   })

@@ -82,7 +82,31 @@ Type `/search_knowledge query: "hi"` a few times.
 - Each call runs silently — tool returns deterministic stub snippets.
 - Usage counter ticks up; `activePurchase.limit` (50) caps the month.
 - No iframe opens. The tool feels free because the handler runs and
-  only the Free-plan quota drains.
+  only the Free-plan included amount drains.
+
+### 2b. Shared free allowance — mix the preview tools
+
+The two preview tools share one `free-previews` bucket of five calls /
+30 days. Mix them on purpose so sharing is what you are testing, not
+a private per-tool cap.
+
+1. Call `/preview_market_quote symbol: "AAPL"` three times.
+2. Call `/preview_company_profile symbol: "AAPL"` twice. The second of
+   these is the fifth call overall and should carry the last-preview
+   **nudge**.
+3. Call either preview tool a sixth time.
+
+**Expect**:
+
+- The first five calls return preview data (`isError: false`).
+- The fifth call appends the upgrade nudge naming `get_market_quote`
+  and `` `account` `` with `view: "checkout"`.
+- The sixth call is a text-only gate: `paywallReason: 'limit_reached'`,
+  `used` / `limit` on the free meter, and a plan ladder. Same gate
+  shape as a paid tool — no iframe.
+- Call `/get_market_quote symbol: "AAPL"` once. It still runs under
+  the Free-plan included amount — free-preview usage must not shrink
+  the paid remaining.
 
 ### 3. Exhaust Free quota → paywall fires
 

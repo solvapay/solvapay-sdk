@@ -141,6 +141,35 @@ describe('runInitInDirectory', () => {
     })
   })
 
+  it('warns when the exchanged key is live and still writes it', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(waitForExchange).mockResolvedValue({
+      status: 'complete',
+      secretKey: 'sk_live_123',
+      email: 'dev@example.com',
+      environment: 'live',
+    })
+    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+
+    await runInitInDirectory({ cwd: TEST_CWD })
+
+    const text = output.join('')
+    expect(text).toContain('LIVE key. Real charges apply.')
+    expect(text).toContain('Switch the Console to sandbox')
+    expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_live_123', { cwd: TEST_CWD })
+  })
+
+  it('overwrites an existing key without prompting when --yes is set', async () => {
+    mockSuccessfulAuth()
+    vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
+
+    await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
+
+    const options = vi.mocked(writeSolvaPaySecretToEnv).mock.calls[0]?.[1]
+    expect(options?.cwd).toBe(TEST_CWD)
+    await expect(options?.confirmOverwrite?.()).resolves.toBe(true)
+  })
+
   it('threads cwd through ensureNodeProject and env writes', async () => {
     mockSuccessfulAuth()
     vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })

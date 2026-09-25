@@ -4,41 +4,22 @@
  * The from-openapi mode also reuses these for `_base/` copy + overlay
  * before delegating per-spec codegen to `scripts/mcp/scaffold.mjs`.
  *
- * Path resolution from the compiled `dist/cli.js` uses
- * `fileURLToPath(new URL("../templates/mcp/...", import.meta.url))` so
- * Windows (`file:///C:/...`) is handled correctly. Never use
- * `new URL(...).pathname` slicing — that returns `/C:/...` and breaks
- * downstream `fs` calls once published from npm.
+ * Path resolution from the compiled `dist/` chunks walks up to the
+ * `create-solvapay` package.json (`PACKAGE_ROOT`). Never resolve
+ * templates with a source-relative `new URL('../../../templates/...')`
+ * — tsup emits chunks at `dist/*.js`, so that path leaves the package.
  */
 
 import { spawn } from 'node:child_process'
-import { readFileSync } from 'node:fs'
 import { mkdir, readdir, readFile, writeFile, copyFile, stat } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { PackageManager } from '@solvapay/init'
+import { PACKAGE_ROOT } from '../../package-root'
 
-function resolvePackageRoot(startFile: string): string {
-  let dir = dirname(startFile)
-  while (true) {
-    const parent = dirname(dir)
-    if (parent === dir) break
-    try {
-      const raw = readFileSync(join(dir, 'package.json'), 'utf8')
-      const pkg = JSON.parse(raw) as { name?: string }
-      if (pkg.name === 'create-solvapay') return dir
-    } catch {
-      // keep walking up
-    }
-    dir = parent
-  }
-  throw new Error('Could not locate create-solvapay package root')
-}
-
-const PACKAGE_ROOT = resolvePackageRoot(fileURLToPath(import.meta.url))
 export const BASE_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_base')
 export const FROM_OPENAPI_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-openapi')
 export const FROM_SCRATCH_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-scratch')
+export const NEXT_AUTH0_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'next-auth0')
 export const SCAFFOLD_SCRIPT_PATH = join(PACKAGE_ROOT, 'scripts', 'mcp', 'scaffold.mjs')
 
 export const PLACEHOLDERS = Object.freeze({
@@ -352,7 +333,7 @@ type ConnectionSnippetsOptions = {
 /**
  * Print copy-paste connection snippets for the four common MCP clients
  * after a scaffold finishes. Native-scheme hosts (Cursor, Claude Desktop)
- * can point at `http://localhost:8787/` directly; remote / browser
+ * can point at `http://localhost:8787/mcp` directly; remote / browser
  * hosts (ChatGPT, Inspector web UI) need a reachable URL — we call that
  * out rather than pretending localhost works everywhere.
  */
@@ -368,7 +349,7 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out(`   Cursor — add to \`~/.cursor/mcp.json\` (or the workspace's \`.cursor/mcp.json\`):`)
   out('     {')
   out('       "mcpServers": {')
-  out(`         "${projectName}": { "url": "${workerUrl}/" }`)
+  out(`         "${projectName}": { "url": "${workerUrl}/mcp" }`)
   out('       }')
   out('     }')
   out('')
@@ -377,20 +358,20 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
   out('       "mcpServers": {')
   out(`         "${projectName}": {`)
   out('           "command": "npx",')
-  out(`           "args": ["mcp-remote", "${workerUrl}/"]`)
+  out(`           "args": ["mcp-remote", "${workerUrl}/mcp"]`)
   out('         }')
   out('       }')
   out('     }')
   out('')
   out('   ChatGPT (Custom Connectors) — add a Custom MCP Connector with:')
-  out(`     URL: ${workerUrl}/`)
+  out(`     URL: ${workerUrl}/mcp`)
   out('     Note: ChatGPT needs a reachable (deployed or tunneled) URL —')
   out('     localhost only works for native-scheme hosts. Use `npm run deploy`')
   out('     and point ChatGPT at the *.workers.dev URL once available.')
   out('')
   out('   MCP Inspector — explore tools locally:')
   out('     npx @modelcontextprotocol/inspector')
-  out(`     (set the server URL to ${workerUrl}/)`)
+  out(`     (set the server URL to ${workerUrl}/mcp)`)
   out('')
 }
 
@@ -405,9 +386,10 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
  */
 export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
   Object.freeze([
-    { name: '@solvapay/mcp', fallback: '0.3.0' },
-    { name: '@solvapay/server', fallback: '1.1.0' },
-    { name: '@solvapay/react', fallback: '1.2.0' },
+    { name: '@solvapay/mcp', fallback: '0.4.3' },
+    { name: '@solvapay/mcp-core', fallback: '0.4.4' },
+    { name: '@solvapay/server', fallback: '2.8.0' },
+    { name: '@solvapay/react', fallback: '2.3.1' },
   ])
 
 export type ResolveLatestVersionsOptions = {

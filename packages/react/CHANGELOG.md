@@ -1,5 +1,37 @@
 # @solvapay/react changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- b16c1b6: MandateText now always names SolvaPay's Terms of Service and Privacy Policy, and adds the merchant's own pair only when set.
+
+  `MandateContext` gains `solvapay: { termsUrl, privacyUrl }`. Mandate link labels live on `copy.legal.{termsOfService, privacyPolicy}`; `copy.legalFooter` stays the short footer strip. Custom `copy.mandate` templates no longer receive SolvaPay URLs on `ctx.merchant.termsUrl` / `privacyUrl` when the merchant has none — those fields are now merchant-only.
+
+## 2.3.1
+
+### Patch Changes
+
+- 389cffa: MCP hosted-checkout fallback now matches Add credits: a Change plan / Change amount back link, copy that the host blocked embedded payments, `Open SolvaPay checkout` as the CTA, and a single card instead of a nested one.
+
+## 2.3.0
+
+### Minor Changes
+
+- 227c25e: Drop Stripe's duplicate mandate line from the MCP payment surfaces. Enabling auto-recharge makes the backend set `setup_future_usage`, which made Stripe's `PaymentElement` render its own terms sentence ("you allow <merchant> to charge your card for future payments…") between the card fields and the country selector — a second authorization in Stripe's wording, directly above the `MandateText` that already states the charge. `McpTopupView` and the checkout PAYG step now pass `terms: { card: 'never' }` and own the full mandate.
+
+  `MandateText` takes a new `savesPaymentMethod` prop; the `topup` mandate template appends a saved-card sentence when it is set, so the card-storage disclosure moves into SolvaPay's copy rather than disappearing. `MandateContext` gains a matching optional `savesPaymentMethod` field for custom copy bundles. The default is unchanged for every other call site: `DEFAULT_PAYMENT_ELEMENT_OPTIONS` still leaves Stripe's terms on, so integrators composing `TopupForm` without `MandateText` keep Stripe's line.
+
+### Patch Changes
+
+- b3b5b72: Checkout PAYG amount step now collects the same inline auto-recharge toggle as top-up. The account tool no longer advertises `view: auto-recharge`; leftover stamps still open the account surface.
+- c3e5135: MCP checkout and top-up now always show plans and amounts. The Stripe CSP probe still starts at mount so Stripe.js can warm in the background, but a blocked or slow host only falls back to hosted checkout at the payment step — a cold Stripe.js load can no longer hide the plan picker. Passing `publishableKey={null}` keeps the same plan/amount steps and forces the hosted handoff only when the customer continues to pay.
+
+  A blocked host now costs one extra click (pick a plan or amount, then get the hosted handoff). The cancelled-purchase notice that lives inside the hosted fallback also appears at the payment step rather than immediately on the checkout surface.
+
+- 35da494: MCP account now shows real auto-recharge status and links out to the hosted portal form. Top-up `create_payment_intent` forwards `autoRecharge` so the inline toggle actually persists. `McpAutoRechargeView` and the `views.autoRecharge` override are removed — `view: 'auto-recharge'` renders the account surface.
+- b3b5b72: Top-up success is now a terminal receipt (matching checkout): no back link, "Add more credits", or portal CTA. The conversation continues via `notifySuccess` instead of routing back to a stale account snapshot.
+
 ## 2.2.2
 
 ### Patch Changes

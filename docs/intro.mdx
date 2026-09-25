@@ -58,7 +58,7 @@ function CheckoutPage() {
 ## Why teams use it
 
 - Single server API for Node and Edge runtimes
-- CLI setup with `npx solvapay init`
+- CLI setup with `npx solvapay@latest init`
 - Headless React components for checkout flows
 - Built-in auth adapters and Next.js helpers
 
@@ -66,15 +66,16 @@ function CheckoutPage() {
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `@solvapay/core` | 1.2.0 | Types, schemas, and shared utilities |
-| `@solvapay/server` | 2.0.0 | Paywall protection, purchase checks, and webhooks. `@solvapay/server/fetch` ships fetch-native handlers for Edge / Deno / Cloudflare / Supabase Edge Functions |
-| `@solvapay/react` | 1.6.0 | Provider, hooks, checkout, and account components |
-| `@solvapay/react-supabase` | 1.0.10 | Supabase adapter for React |
+| `@solvapay/core` | 1.7.1 | Types, schemas, and shared utilities |
+| `@solvapay/server` | 2.8.0 | Paywall protection, purchase checks, and webhooks. `@solvapay/server/fetch` ships fetch-native handlers for Edge / Deno / Cloudflare / Supabase Edge Functions |
+| `@solvapay/react` | 2.3.1 | Provider, hooks, checkout, and account components |
+| `@solvapay/react-supabase` | 1.0.12 | Supabase adapter for React |
 | `@solvapay/auth` | 1.1.0 | Auth adapters and server helpers |
-| `@solvapay/next` | 1.3.0 | Next.js route helpers |
-| `@solvapay/mcp` | 0.2.8 | MCP server adapter; `@solvapay/mcp/fetch` and `@solvapay/mcp/express` subpaths bridge OAuth by runtime |
-| `solvapay` | 1.2.0 | CLI — `npx solvapay init` adds SolvaPay to an existing project |
-| `create-solvapay` | 0.5.0 | Scaffolder — `npm create solvapay -- --type mcp \| next-auth0` |
+| `@solvapay/next` | 1.3.11 | Next.js route helpers |
+| `@solvapay/mcp` | 0.4.3 | MCP server adapter; `@solvapay/mcp/fetch` and `@solvapay/mcp/express` subpaths bridge OAuth by runtime |
+| `@solvapay/mcp-core` | 0.4.4 | Framework-neutral MCP contracts (tool names, paywall meta, OAuth discovery) |
+| `solvapay` | 1.3.0 | CLI — `npx solvapay@latest init` adds SolvaPay to an existing project |
+| `create-solvapay` | 0.7.0 | Scaffolder — `npm create solvapay@latest -- --type mcp \| next-auth0` |
 
 ## Next Steps
 
@@ -82,3 +83,4 @@ function CheckoutPage() {
 - [Quick start](./setup/quick-start) - Protect your first endpoint
 - [Installation](./setup/installation) - Manual setup path
 - [Core concepts](./setup/core-concepts) - Products, plans, purchases, and usage
+- [Add a free allowance to MCP tools](./guides/free-allowance) - Cap otherwise-free MCP tools per customer

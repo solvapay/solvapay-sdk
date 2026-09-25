@@ -1,5 +1,17 @@
 # @solvapay/server changelog
 
+## 2.8.0
+
+### Minor Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
+## 2.7.0
+
+### Minor Changes
+
+- 124d7e2: Declare `creditsPerMinorUnit` and `displayExchangeRate` on `PaywallStructuredContentSchema`. `buildPaywallGate` has been emitting both since the credit-peg work, but the Zod schema did not list them. `registerPayableTool` registers `z.union([outputSchema, PaywallStructuredContentSchema])` as a payable tool's `outputSchema`, and the MCP server publishes it with `io: 'output'`, which emits `additionalProperties: false`. Server-side validation uses Zod, which strips undeclared keys and passed; clients that validate `structuredContent` against the published JSON Schema rejected every gated call with "structured content does not match its output schema". Any paywalled tool whose customer hit a credit shortfall failed on those clients.
+
 ## 2.6.0
 
 ### Minor Changes

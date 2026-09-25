@@ -81,6 +81,9 @@ describe('pickProductInteractive', () => {
 
     expect(result).toEqual({ action: 'skipped', reason: 'non_interactive_requires_product' })
     expect(output.join('')).toContain('Skipped product auto-selection in non-interactive mode')
+    expect(output.join('')).toContain(
+      '.env still has the placeholder and deploy will fail until it is set.',
+    )
   })
 
   it('skips on network error', async () => {

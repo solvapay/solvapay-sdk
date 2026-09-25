@@ -83,7 +83,7 @@ See the runnable reference: [express-provider-linkage example](https://github.co
 For Next.js + Auth0, the SDK ships a ready reference that forwards `session.user.sub` as billing identity:
 
 - Example: [examples/nextjs-auth0](https://github.com/solvapay/solvapay-sdk/tree/main/examples/nextjs-auth0)
-- Scaffold: `npm create solvapay -- --type mcp --auth auth0` (or `--auth auth0` on the Next template)
+- Scaffold: `npm create solvapay@latest <name> -- --type next-auth0`
 - Adapter details: [Custom authentication adapters](./custom-auth)
 
 The Auth0 path is **one** linkage implementation. The same `externalRef` contract applies with any IdP.

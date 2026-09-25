@@ -103,7 +103,7 @@ prod and the public example. Config lives in the `[env.dev]` block of
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env dev
 
 # Copy .env.dev.example -> .env.dev and fill in dev values
-# (sk_test_… or sk_sandbox_…, dev prd_…, api-dev).
+# (sk_sandbox_…, dev prd_…, api-dev).
 cp .env.dev.example .env.dev
 $EDITOR .env.dev
 

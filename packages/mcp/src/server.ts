@@ -26,6 +26,13 @@ import {
   type InputSchemaOption,
   type RegisterPayableToolOptions,
 } from './registerPayableTool'
+import {
+  freeLimitsAgree,
+  normalizeFreeLimit,
+  registerFreeTool,
+  type RegisterFreeToolOptions,
+} from './registerFreeTool'
+import type { FreeLimit } from '@solvapay/server'
 
 /**
  * Callback fired from the `additionalTools` hook with helpers bound for
@@ -49,13 +56,25 @@ export interface AdditionalToolsContext {
       product?: string
     },
   ) => void
+  /**
+   * `registerFreeTool` bound with `solvaPay` already provided, and
+   * `product` defaulting to the server's `productRef`. Two tools that
+   * name the same free meter must declare the same cap / scope /
+   * windowDays — a mismatch throws at registration.
+   */
+  registerFree: <InputSchema extends InputSchemaOption = undefined, TData = unknown>(
+    name: string,
+    options: Omit<RegisterFreeToolOptions<InputSchema, TData>, 'solvaPay' | 'product'> & {
+      product?: string
+    },
+  ) => void
 }
 
 export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptorsOptions {
   /**
    * Integrator hook to register non-SolvaPay tools. The callback receives
-   * the built server plus a `registerPayable` helper bound for this
-   * instance.
+   * the built server plus `registerPayable` / `registerFree` helpers bound
+   * for this instance.
    */
   additionalTools?: (ctx: AdditionalToolsContext) => void
   /**
@@ -112,6 +131,57 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
   hideToolsByAudience?: HideToolsByAudienceConfig
 }
 
+export function bindAdditionalTools(
+  server: McpServer,
+  args: {
+    solvaPay: AdditionalToolsContext['solvaPay']
+    productRef: string
+    resourceUri: string
+    buildBootstrap: NonNullable<RegisterPayableToolOptions['buildBootstrap']>
+  },
+  additionalTools: (ctx: AdditionalToolsContext) => void,
+): void {
+  const { solvaPay, productRef, resourceUri, buildBootstrap } = args
+  const freeMeterOwners = new Map<string, { tools: string[]; limit: FreeLimit }>()
+  const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
+    // Spread `opts` *first* so an explicit `undefined` on
+    // `opts.product` / `opts.buildBootstrap` (shape allows it via
+    // `?:`) can't overwrite the defaults set below. `resourceUri` is
+    // no longer forwarded: merchant payable tools use text-only
+    // paywall / nudge responses per the SEP-1865 refactor.
+    registerPayableTool(server, name, {
+      solvaPay,
+      ...opts,
+      product: opts.product ?? productRef,
+      buildBootstrap: opts.buildBootstrap ?? buildBootstrap,
+    })
+  }
+  const registerFree: AdditionalToolsContext['registerFree'] = (name, opts) => {
+    const limit = normalizeFreeLimit(opts.limit)
+    const existing = freeMeterOwners.get(limit.meter)
+    if (existing && !freeLimitsAgree(existing.limit, limit)) {
+      throw new Error(
+        `Free tools '${existing.tools.join(', ')}' and '${name}' declare meter '${limit.meter}' with different caps`,
+      )
+    }
+    const sharedWith = existing?.tools ?? []
+    if (existing) {
+      existing.tools.push(name)
+    } else {
+      freeMeterOwners.set(limit.meter, { tools: [name], limit })
+    }
+    registerFreeTool(server, name, {
+      solvaPay,
+      ...opts,
+      limit,
+      sharedWith,
+      product: opts.product ?? productRef,
+      buildBootstrap: opts.buildBootstrap ?? buildBootstrap,
+    })
+  }
+  additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable, registerFree })
+}
+
 /**
  * Build the MCP server and register the full SolvaPay tool surface.
  */
@@ -136,20 +206,16 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
 
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
-    const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
-      // Spread `opts` *first* so an explicit `undefined` on
-      // `opts.product` / `opts.buildBootstrap` (shape allows it via
-      // `?:`) can't overwrite the defaults set below. `resourceUri` is
-      // no longer forwarded: merchant payable tools use text-only
-      // paywall / nudge responses per the SEP-1865 refactor.
-      registerPayableTool(server, name, {
+    bindAdditionalTools(
+      server,
+      {
         solvaPay,
-        ...opts,
-        product: opts.product ?? productRef,
-        buildBootstrap: opts.buildBootstrap ?? descriptors.buildBootstrapPayload,
-      })
-    }
-    additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
+        productRef,
+        resourceUri,
+        buildBootstrap: descriptors.buildBootstrapPayload,
+      },
+      additionalTools,
+    )
   }
 
   // Apply the tools/list audience filter last so it sees every tool

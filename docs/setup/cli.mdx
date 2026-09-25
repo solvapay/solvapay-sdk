@@ -5,8 +5,8 @@ description: "Set up SolvaPay SDK in an existing project, or scaffold a new one 
 
 Two CLIs cover the two starting points:
 
-- **`npx solvapay init`** — add SolvaPay to an **existing** project
-- **`npm create solvapay`** — scaffold a **new** project from a template
+- **`npx solvapay@latest init`** — add SolvaPay to an **existing** project
+- **`npm create solvapay@latest`** — scaffold a **new** project from a template (`npx create-solvapay@latest` is equivalent)
 
 ## Prerequisites
 
@@ -18,12 +18,12 @@ Two CLIs cover the two starting points:
 From your project root:
 
 ```bash
-npx solvapay init
+npx solvapay@latest init
 ```
 
 ## What this command does
 
-When you run `npx solvapay init`, the CLI:
+When you run `npx solvapay@latest init`, the CLI:
 
 1. Checks for `package.json` and offers to create one if missing
 2. Detects your package manager (`npm`, `yarn`, or `pnpm`)
@@ -59,13 +59,13 @@ To start from scratch, use the `create-solvapay` scaffolder instead of `init`:
 
 ```bash
 # Paid MCP server (Cloudflare Worker + embedded checkout widget)
-npm create solvapay my-mcp-app -- --type mcp
+npm create solvapay@latest my-mcp-app -- --type mcp
 
 # Generate MCP tools from an OpenAPI spec
-npm create solvapay my-api-mcp -- --type mcp --openapi ./openapi.yaml
+npm create solvapay@latest my-api-mcp -- --type mcp --openapi ./openapi.yaml
 
 # Next.js + Auth0 starter with SolvaPay customer linkage
-npm create solvapay my-app -- --type next-auth0
+npm create solvapay@latest my-app -- --type next-auth0
 ```
 
 ### Template types
@@ -77,11 +77,11 @@ npm create solvapay my-app -- --type next-auth0
 
 Useful flags: `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
 `--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
-skip it). Run `npm create solvapay -- --list-types` to see available templates.
+skip it). Run `npm create solvapay@latest -- --list-types` to see available templates.
 
 ## Re-run setup safely
 
-You can run `npx solvapay init` again at any time.
+You can run `npx solvapay@latest init` again at any time.
 
 If `SOLVAPAY_SECRET_KEY` already exists, the CLI asks whether to overwrite it:
 
@@ -93,6 +93,17 @@ If `SOLVAPAY_SECRET_KEY` already exists, the CLI asks whether to overwrite it:
 These commands are the recommended setup paths for SDK integration.
 
 If you are using Managed MCP, you do not need either CLI flow.
+
+## Stale scaffolder cache
+
+`@latest` is required, but `npx` can still reuse a cached `create-solvapay` tarball.
+Every run prints `create-solvapay vX.Y.Z` — check that banner against the
+[published version](https://www.npmjs.com/package/create-solvapay). If it lags:
+
+```bash
+npx clear-npx-cache
+npm create solvapay@latest my-mcp-app -- --type mcp
+```
 
 ## Next steps
 

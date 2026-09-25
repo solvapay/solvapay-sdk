@@ -27,6 +27,7 @@
  *   }
  */
 
+import { spawnSync } from 'node:child_process'
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve, dirname, relative, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -61,7 +62,9 @@ const VALID_AUTH_KINDS = new Set([
   'oauth2-client-credentials',
   'apiKey-multi',
 ])
-const VALID_TIERS = new Set(['free', 'paid', 'skip'])
+const VALID_TIERS = new Set(['free', 'free-capped', 'paid', 'skip'])
+const VALID_FREE_SCOPES = new Set(['rolling_window', 'lifetime'])
+const FREE_METER_NAME_PATTERN = /^free-[a-z0-9-]+$/
 const VALID_MODES = new Set(['one-to-one', 'intent-driven'])
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
@@ -133,6 +136,7 @@ async function main() {
       tier: selection.tier,
       auth: selections.upstreamAuth,
       serverBaseUrl,
+      freeLimit: selection.freeLimit,
     })
     await mkdir(dirname(filePath), { recursive: true })
     await writeFile(filePath, toolSource, 'utf8')
@@ -143,6 +147,7 @@ async function main() {
   await writeIndexFile(target, toolFiles, selections.upstreamAuth.kind, mode)
   await ensureGitignoreCoversEnv(target)
   const envWritten = await writeDotEnv(target, selections)
+  installGeneratedScriptDeps(target)
 
   const planReminders = Array.isArray(selections.plans)
     ? collectPlanSelectionReminders(selections.plans)
@@ -154,12 +159,12 @@ async function main() {
     ...(mode === 'intent-driven'
       ? [
           'Intent-driven mode: author src/tools/*.ts files per intent-driven.md, then update src/tools/index.ts to import and call each register{IntentName}(ctx, env). The .env and project skeleton are ready.',
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
+          `Run \`npx -y solvapay@latest init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
           `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. \`node scripts/test.mjs\` will report intent tools as skipped (they aren't in the spec's operationIds) — exercise them manually per intent-driven.md.`,
         ]
       : [
-          `Run \`npx solvapay init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
-          `\`node scripts/verify.mjs <url>\` runs from ${target} with no extra setup. Before \`node scripts/test.mjs\`, run \`( cd scripts && npm install )\` once inside ${target}.`,
+          `Run \`npx -y solvapay@latest init\` inside ${target} to populate SOLVAPAY_SECRET_KEY (see the generated README).`,
+          `\`node scripts/verify.mjs <url>\` and \`node scripts/test.mjs\` run from ${target}. Scaffold already ran \`npm install\` inside ${target}/scripts.`,
         ]),
   ]
 
@@ -349,6 +354,54 @@ function validateSelections(selections) {
       throw new Error(
         `selections.json: operation ${entry.operationId} has invalid tier \`${entry.tier}\`. ` +
           `Expected one of: ${[...VALID_TIERS].join(', ')}.`,
+      )
+    }
+    if (entry.tier === 'free-capped') {
+      validateFreeLimit(entry)
+    } else if (entry.freeLimit !== undefined) {
+      throw new Error(
+        `selections.json: operation ${entry.operationId} has \`freeLimit\` but tier is ` +
+          `\`${entry.tier}\`. \`freeLimit\` is only valid with tier \`free-capped\`.`,
+      )
+    }
+  }
+}
+
+function validateFreeLimit(entry) {
+  const limit = entry.freeLimit
+  if (!limit || typeof limit !== 'object') {
+    throw new Error(
+      `selections.json: operation ${entry.operationId} with tier \`free-capped\` requires \`freeLimit\`.`,
+    )
+  }
+  if (typeof limit.cap !== 'number' || !Number.isInteger(limit.cap) || limit.cap < 1) {
+    throw new Error(
+      `selections.json: operation ${entry.operationId} \`freeLimit.cap\` must be a positive integer.`,
+    )
+  }
+  if (!VALID_FREE_SCOPES.has(limit.scope)) {
+    throw new Error(
+      `selections.json: operation ${entry.operationId} \`freeLimit.scope\` must be ` +
+        `\`rolling_window\` or \`lifetime\`.`,
+    )
+  }
+  if (limit.scope === 'rolling_window') {
+    if (
+      typeof limit.windowDays !== 'number' ||
+      !Number.isInteger(limit.windowDays) ||
+      limit.windowDays < 1
+    ) {
+      throw new Error(
+        `selections.json: operation ${entry.operationId} \`freeLimit.windowDays\` is required ` +
+          `when scope is \`rolling_window\`.`,
+      )
+    }
+  }
+  if (limit.meter !== undefined) {
+    if (typeof limit.meter !== 'string' || !FREE_METER_NAME_PATTERN.test(limit.meter)) {
+      throw new Error(
+        `selections.json: operation ${entry.operationId} \`freeLimit.meter\` must match ` +
+          `${FREE_METER_NAME_PATTERN}.`,
       )
     }
   }
@@ -572,7 +625,7 @@ function deriveServerNameFromWorkerName(workerName) {
   return cleaned || 'solvapay-mcp-server'
 }
 
-function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
+function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLimit }) {
   const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
@@ -582,9 +635,18 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl }) {
     ? `${fnName}(ctx: AdditionalToolsContext, env: Env)`
     : `${fnName}(ctx: AdditionalToolsContext)`
   const fetchInit = renderFetchInit(operation, headerLines)
-  const body = tier === 'paid'
-    ? renderPayableBody({ operation, urlTemplate, fetchInit, needsAccessToken })
-    : renderFreeBody({ operation, urlTemplate, fetchInit, needsAccessToken })
+  const body =
+    tier === 'paid'
+      ? renderPayableBody({ operation, urlTemplate, fetchInit, needsAccessToken })
+      : tier === 'free-capped'
+        ? renderFreeCappedBody({
+            operation,
+            urlTemplate,
+            fetchInit,
+            needsAccessToken,
+            freeLimit,
+          })
+        : renderFreeBody({ operation, urlTemplate, fetchInit, needsAccessToken })
 
   // `upstreamFetchJson` is the template-shipped helper at
   // `src/lib/upstreamFetch.ts`. It sends `Accept: application/json`,
@@ -705,7 +767,8 @@ function renderHeaderLines(auth, schemes, operation) {
   //
   // The oauth2-client-credentials branch references a `token` variable
   // that the renderer injects right before URL construction in the
-  // handler body (see renderPayableBody / renderFreeBody) via
+  // handler body (see renderPayableBody / renderFreeCappedBody /
+  // renderFreeBody) via
   // `const token = await getAccessToken(env)`.
   const headerEntries = []
   if (auth.kind === 'bearer') {
@@ -725,6 +788,43 @@ function renderHeaderLines(auth, schemes, operation) {
     headerEntries.push("'content-type': 'application/json'")
   }
   return headerEntries
+}
+
+function renderLimitLiteral(limit) {
+  const parts = []
+  if (typeof limit.meter === 'string') parts.push(`meter: ${JSON.stringify(limit.meter)}`)
+  parts.push(`cap: ${limit.cap}`)
+  parts.push(`scope: ${JSON.stringify(limit.scope)}`)
+  if (limit.windowDays !== undefined) parts.push(`windowDays: ${limit.windowDays}`)
+  return `{ ${parts.join(', ')} }`
+}
+
+function renderFreeCappedBody({
+  operation,
+  urlTemplate,
+  fetchInit,
+  needsAccessToken,
+  freeLimit,
+}) {
+  const schemaFields = renderSchemaFields(operation, 6)
+  const schemaBlock = schemaFields ? `\n${schemaFields}\n    ` : ''
+  const annotations = renderAnnotations(annotationsFor(operation), 4)
+  const narration = JSON.stringify(`${operation.operationId} returned upstream data.`)
+  const tokenLine = needsAccessToken ? '      const token = await getAccessToken(env)\n' : ''
+  return `  ctx.registerFree('${operation.operationId}', {
+    title: ${JSON.stringify(operation.summary ?? operation.operationId)},
+    description: ${JSON.stringify(buildDescription(operation))},
+    schema: {${schemaBlock}},
+    annotations: ${annotations},
+    limit: ${renderLimitLiteral(freeLimit)},
+    handler: async (input, c) => {
+${tokenLine}      const url = new URL(${urlTemplate})
+${fetchInit.queryAssign}
+      const data = await upstreamFetchJson<Record<string, unknown>>(url, {
+${fetchInit.methodBlock}${fetchInit.headersBlock}${fetchInit.bodyBlock}      })
+      return c.respond(data, { text: ${narration} })
+    },
+  })`
 }
 
 function renderPayableBody({ operation, urlTemplate, fetchInit, needsAccessToken }) {
@@ -876,7 +976,7 @@ async function writeDotEnv(target, selections) {
       : PLACEHOLDERS.PRODUCT_REF
   const lines = [
     '# Generated by create-solvapay scaffold.',
-    '# SOLVAPAY_SECRET_KEY is populated by `npx solvapay init` (see the generated README).',
+    '# SOLVAPAY_SECRET_KEY is populated by `npx -y solvapay@latest init` (see the generated README).',
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
     `MCP_PUBLIC_BASE_URL=${selections.mcpPublicBaseUrl}`,
   ]
@@ -934,7 +1034,20 @@ function collectWrittenPaths(target, toolFiles, envPath) {
   for (const id of toolFiles) {
     written.push(join(target, 'src', 'tools', `${id}.ts`))
   }
-  return written.map(p => relative(process.cwd(), p))
+  return written.map(p => resolve(p))
+}
+
+function installGeneratedScriptDeps(target) {
+  const scriptsDir = join(target, 'scripts')
+  const result = spawnSync('npm', ['install', '--no-audit', '--no-fund'], {
+    cwd: scriptsDir,
+    encoding: 'utf8',
+  })
+  if ((result.status ?? 1) !== 0) {
+    const detail = [result.stdout, result.stderr].filter(Boolean).join('\n')
+    console.error(`npm install inside ${scriptsDir} failed.\n${detail}`)
+    process.exit(result.status ?? 1)
+  }
 }
 
 function jsKey(name) {

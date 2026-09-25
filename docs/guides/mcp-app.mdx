@@ -14,6 +14,16 @@ The TypeScript SDK ships a dedicated adapter for this environment. `createMcpApp
 - An MCP server that implements the SolvaPay tool surface — see [MCP Server integration](/sdks/typescript/guides/mcp) for the server-side paywall patterns
 - `@solvapay/react` and `@modelcontextprotocol/ext-apps` installed in your MCP App bundle
 
+## Scaffold a new MCP app
+
+For a new paid MCP server (Cloudflare Worker, paywall, and this widget), start with the scaffolder:
+
+```bash
+npm create solvapay@latest my-mcp-app -- --type mcp
+```
+
+Use the rest of this page when you already have an MCP server and want to mount the SolvaPay iframe yourself.
+
 ## Install
 
 ```bash

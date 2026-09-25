@@ -8,6 +8,7 @@ description: "Protect Model Context Protocol (MCP) tools with SolvaPay using cre
 - [Installation](#installation)
 - [Basic Setup](#basic-setup)
 - [Protecting Tools](#protecting-tools)
+- [Free tools with a usage cap](#free-tools-with-a-usage-cap)
 - [Authentication](#authentication)
 - [Response Format](#response-format)
 - [Plan Activation](#plan-activation)
@@ -106,6 +107,45 @@ registerPayable('submit_order', {
 
 - **The tool name is recorded on the event**, so consumption is attributable per tool in the Console rather than being one undifferentiated count.
 - **Retries do not double-count.** The paywall mints a request id during its pre-check and reuses it as the `idempotencyKey` on the usage event, so a retried tool call books once. Concurrent `checkLimits` calls for the same customer, product, and meter are coalesced into one backend round-trip, and each caller claims a distinct unit of the shared allowance.
+
+## Free tools with a usage cap
+
+`registerFree` is the SDK-only path for an otherwise-free tool with a per-customer cap declared in code. Exhaustion emits the same paywall gate as `registerPayable`. Managed MCP public tools stay unlimited.
+
+```typescript
+additionalTools: ({ registerPayable, registerFree }) => {
+  const PREVIEW_ALLOWANCE = {
+    meter: 'free-previews',
+    cap: 5,
+    scope: 'rolling_window' as const,
+    windowDays: 30,
+  }
+
+  registerFree('preview_market_quote', {
+    description: 'Price-only quote preview.',
+    schema: { symbol: z.string() },
+    limit: PREVIEW_ALLOWANCE,
+    handler: async ({ symbol }, ctx) => ctx.respond(await previewQuote(symbol)),
+  })
+
+  registerFree('preview_company_profile', {
+    description: 'Name and sector preview. Shares the free-previews allowance.',
+    schema: { symbol: z.string() },
+    limit: PREVIEW_ALLOWANCE,
+    handler: async ({ symbol }, ctx) => ctx.respond(await previewProfile(symbol)),
+  })
+
+  registerPayable('get_market_quote', {
+    description: 'Full market quote.',
+    schema: { symbol: z.string() },
+    handler: async ({ symbol }, ctx) => ctx.respond(await getQuote(symbol)),
+  })
+}
+```
+
+Naming the same `limit.meter` is what shares the allowance — five calls total across both preview tools, not five each. Omitting `meter` defaults to `free-requests`. Unidentified callers fail with `401`; there is no anonymous bucket. Reserve **included** for a plan’s included amount; a free allowance is the **Free** series on **Usage**.
+
+Full contract: [Add a free allowance to MCP tools](/sdks/typescript/guides/free-allowance). The [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app) example ships the two preview tools above.
 
 ## Authentication
 

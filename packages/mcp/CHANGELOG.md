@@ -1,5 +1,17 @@
 # @solvapay/mcp changelog
 
+## 0.4.4
+
+### Patch Changes
+
+- 87ddb16: Narrow the `@solvapay/server` peer to `^2.0.0`. The previous `^1.4.0 || ^2.0.0` branch matched nothing publishable — stable server 1.x stops at 1.3.0, and mcp-core imports `creditSignals` / `FreeLimit` that do not exist there.
+
+## 0.4.3
+
+### Patch Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
 ## 0.4.2
 
 ### Patch Changes

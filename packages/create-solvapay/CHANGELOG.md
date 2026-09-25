@@ -1,5 +1,23 @@
 # create-solvapay
 
+## 0.7.2
+
+### Patch Changes
+
+- c068fb5: The next-auth0 starter now finds its template from the published package. `--openapi` accepts http(s) URLs and relative local paths, and non-spec URLs fail with a clear error instead of a filesystem ENOENT.
+
+## 0.7.1
+
+### Patch Changes
+
+- 87ddb16: Fix the MCP scaffold so generated projects advertise `/mcp`, install `@solvapay/mcp-core`, and resolve offline fallbacks against current npm latest. Exact `@solvapay/*` pins stay exact — the failure that prompted this started when a caret floated onto a peer-widening patch.
+
+## 0.7.0
+
+### Minor Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
 ## 0.6.1
 
 ### Patch Changes

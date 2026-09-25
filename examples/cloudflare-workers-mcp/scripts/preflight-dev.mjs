@@ -77,7 +77,7 @@ if (!existsSync(dotEnvPath)) {
   const secretKey = env.SOLVAPAY_SECRET_KEY ?? ''
   if (secretKey.startsWith('sk_live')) {
     const msg =
-      'SOLVAPAY_SECRET_KEY looks like live — dev demo expects sk_test_… or sk_sandbox_… (see .env.dev.example)'
+      'SOLVAPAY_SECRET_KEY looks like live — dev demo expects sk_sandbox_… (see .env.dev.example)'
     if (allowLive) warnings.push(msg)
     else errors.push(`${msg}. Pass --allow-live to proceed anyway.`)
   }
