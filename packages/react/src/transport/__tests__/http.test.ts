@@ -151,11 +151,8 @@ describe('createHttpTransport — default routes', () => {
       plans: [{ reference: 'pln_pro' }],
       balance: { creditBalance: 0 },
       product: { name: 'API', reference: 'prd_api' },
-      throttled: true,
       overage: false,
       needsTopUp: true,
-      needsUpgrade: false,
-      upgraded: true,
       used: 3,
       limit: 3,
     })
@@ -168,11 +165,8 @@ describe('createHttpTransport — default routes', () => {
       remaining: 0,
       meterName: 'requests',
       activationRequired: false,
-      throttled: true,
       overage: false,
       needsTopUp: true,
-      needsUpgrade: false,
-      upgraded: true,
       used: 3,
       limit: 3,
     })

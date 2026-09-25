@@ -95,7 +95,7 @@ function activePlanRefOf(limits: LimitResponseWithPlan): string | undefined {
  *     (no purchaseRef / planRef) must not fall through to upgrade_required.
  *  3. `paywallReason === 'topup_required'` — backend stays authoritative
  *     for credit-based denials (same rule as Managed MCP).
- *  3. Authoritative `needsTopUp` / `needsUpgrade` flags from `decideLimit`.
+ *  3. Authoritative `needsTopUp` flag from `decideLimit`.
  *  4. Credit-field presence + a real shortfall (`balance < cost`).
  *  5. Active purchase / plan at included cap → `limit_reached`.
  *  6. Floor: never `upgrade_required` when credit fields or a purchase
@@ -122,10 +122,6 @@ export function classifyPaywallState(limits: LimitResponseWithPlan | null): Payw
 
   if (limits.needsTopUp === true) {
     return { kind: 'topup_required' }
-  }
-
-  if (limits.needsUpgrade === true) {
-    return { kind: 'upgrade_required' }
   }
 
   const signals = creditSignals(limits)
@@ -335,14 +331,6 @@ export function buildGateMessage(state: PaywallState, gate: PaywallStructuredCon
       return `${lead}${topup}${auto}${switchLine}`
     }
     case 'upgrade_required': {
-      if (hasActivePlan(gate)) {
-        const planName = gate.planName ?? 'This plan'
-        const lead = `${planName} is active but its included usage is exhausted, and the automatic switch to the next plan did not complete.`
-        if (ladder) {
-          return `${lead} Switch here: ${ladder}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
-        }
-        return `${lead}${recoverClause(url, 'switch plan', 'checkout')}`
-      }
       if (ladder) {
         return `You don't have an active plan for this tool. Pick a plan to use this tool: ${ladder} (links expire in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer('checkout')}. ${callViewer('account').replace(/^c/, 'C')} for usage and recovery.`
       }

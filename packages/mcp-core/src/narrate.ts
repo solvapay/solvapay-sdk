@@ -108,8 +108,6 @@ interface LimitsShape {
   activationRequired?: boolean | null
   overage?: boolean | null
   needsTopUp?: boolean | null
-  needsUpgrade?: boolean | null
-  throttled?: boolean | null
   planRef?: string | null
   planName?: string | null
   creditBalance?: number

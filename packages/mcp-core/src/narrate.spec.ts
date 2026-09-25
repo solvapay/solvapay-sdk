@@ -457,8 +457,6 @@ const runningLimits = {
   activationRequired: false,
   overage: false,
   needsTopUp: false,
-  needsUpgrade: false,
-  throttled: false,
 }
 
 const coolNow = new Date('2026-09-06T12:00:00.000Z')

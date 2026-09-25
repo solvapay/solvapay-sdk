@@ -1218,12 +1218,9 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
-              onExceedPricingId?: string
+              onExceed: 'block' | 'charge' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
-              /** @enum {string} */
-              uiHint?: 'upgrade_prompt'
               windowDays?: number
             }
           | {
@@ -1424,12 +1421,9 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
-            onExceedPricingId?: string
+            onExceed: 'block' | 'charge' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
-            /** @enum {string} */
-            uiHint?: 'upgrade_prompt'
             windowDays?: number
           }
         | {
@@ -1830,8 +1824,6 @@ export interface components {
       meterName?: string
       /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
       needsTopUp?: boolean
-      /** @description Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`. */
-      needsUpgrade?: boolean
       /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
       overage?: boolean
       /**
@@ -1858,10 +1850,6 @@ export interface components {
        * @example 997
        */
       remaining: number
-      /** @description Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`. */
-      throttled?: boolean
-      /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
-      upgraded?: boolean
       /** @description Consumed usage units this period. Present only when the backend measured a finite cap. */
       used?: number
       /**
@@ -1933,12 +1921,9 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
-              onExceedPricingId?: string
+              onExceed: 'block' | 'charge' | 'top_up'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
-              /** @enum {string} */
-              uiHint?: 'upgrade_prompt'
               windowDays?: number
             }
           | {
@@ -2889,12 +2874,9 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'throttle' | 'charge' | 'top_up' | 'auto_upgrade'
-            onExceedPricingId?: string
+            onExceed: 'block' | 'charge' | 'top_up'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
-            /** @enum {string} */
-            uiHint?: 'upgrade_prompt'
             windowDays?: number
           }
         | {

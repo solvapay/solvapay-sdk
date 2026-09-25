@@ -582,11 +582,6 @@ export interface CustomerSnapshot {
   /** Whether the customer is within their usage limits at snapshot time. */
   readonly withinLimits: boolean
   /**
-   * True when this request is served under `onExceed: throttle`
-   * (legacy plans — the builder no longer offers Throttle).
-   */
-  readonly throttled: boolean
-  /**
    * True when this request is served under `onExceed: charge` past
    * the included cap.
    */

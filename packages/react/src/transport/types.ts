@@ -68,16 +68,10 @@ export interface TransportLimitsResult {
    * auto-allocated.
    */
   activationRequired: boolean
-  /** Access granted under `onExceed: throttle` (legacy plans). */
-  throttled?: boolean
   /** Access granted and usage past the cap accrues overage. */
   overage?: boolean
   /** Access blocked pending a prepaid top-up. */
   needsTopUp?: boolean
-  /** Access blocked pending an auto-upgrade to the target plan. */
-  needsUpgrade?: boolean
-  /** The customer was auto-upgraded and access was restored. */
-  upgraded?: boolean
   /**
    * Consumed units this period. Present only when the backend measured
    * a finite cap. Authoritative — do not reconstruct from
