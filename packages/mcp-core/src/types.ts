@@ -583,7 +583,7 @@ export interface CustomerSnapshot {
   readonly withinLimits: boolean
   /**
    * True when this request is served past the included cap and paid
-   * from prepaid credits (`onExceed: top_up`).
+   * from prepaid credits (`onExceed: draw_credits`).
    */
   readonly overage: boolean
   /**

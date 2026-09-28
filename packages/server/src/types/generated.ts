@@ -1218,7 +1218,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'top_up'
+              onExceed: 'block' | 'draw_credits'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -1409,7 +1409,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'top_up'
+            onExceed: 'block' | 'draw_credits'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
@@ -1799,9 +1799,9 @@ export interface components {
        * @example requests
        */
       meterName?: string
-      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: top_up`, or from the first unit on a recurring meter with no limit. */
+      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit. */
       needsTopUp?: boolean
-      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: top_up`. */
+      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`. */
       overage?: boolean
       /**
        * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
@@ -1898,7 +1898,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'top_up'
+              onExceed: 'block' | 'draw_credits'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -2839,7 +2839,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'top_up'
+            onExceed: 'block' | 'draw_credits'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
