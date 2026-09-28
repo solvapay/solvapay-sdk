@@ -228,7 +228,7 @@ export type PaywallDecision<T> =
       customerRef: string
       /**
        * Set when access is granted past the included cap and the usage
-       * is paid from prepaid credits (`onExceed: top_up`). Absent on a
+       * is paid from prepaid credits (`onExceed: draw_credits`). Absent on a
        * plain allow. Derived from `limits`; not new wire data.
        */
       consequence?: 'overage'
