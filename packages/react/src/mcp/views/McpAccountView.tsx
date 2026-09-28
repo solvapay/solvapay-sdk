@@ -98,8 +98,6 @@ export function McpAccountView({
         activationRequired: limits.activationRequired,
         overage: limits.overage,
         needsTopUp: limits.needsTopUp,
-        needsUpgrade: limits.needsUpgrade,
-        throttled: limits.throttled,
       }
     : null
   const accountState = resolveAccountState({

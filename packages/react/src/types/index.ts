@@ -537,7 +537,7 @@ export interface Plan {
   measures?: string
   /** @deprecated Not sent by the API. Use the `limit` option's `cap`. */
   limit?: number
-  /** @deprecated Not sent by the API. Use the presence of a `rollover` option. */
+  /** @deprecated Not sent by the API. Rollover is not a plan option. */
   rolloverUnusedUnits?: boolean
   limits?: Record<string, unknown>
   features?: Record<string, unknown> | string[]

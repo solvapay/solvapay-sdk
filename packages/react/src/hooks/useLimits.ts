@@ -112,16 +112,10 @@ export interface UseLimitsReturn {
    * should treat `true` as "needs the activation flow", not "exhausted".
    */
   activationRequired: boolean | null
-  /** Access granted under `onExceed: throttle` (legacy plans). `null` while loading. */
-  throttled: boolean | null
-  /** Access granted and usage past the cap accrues overage. `null` while loading. */
+  /** Access granted past the included cap, paid from prepaid credits. `null` while loading. */
   overage: boolean | null
   /** Access blocked pending a prepaid top-up. `null` while loading. */
   needsTopUp: boolean | null
-  /** Access blocked pending an auto-upgrade. `null` while loading. */
-  needsUpgrade: boolean | null
-  /** The customer was auto-upgraded and access was restored. `null` while loading. */
-  upgraded: boolean | null
   /**
    * Consumed units this period. `null` while loading, when disabled, or
    * when the backend did not measure a finite cap.
@@ -368,11 +362,8 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
     withinLimits: data?.withinLimits ?? null,
     meterName: data?.meterName ?? null,
     activationRequired: data?.activationRequired ?? null,
-    throttled: data?.throttled ?? null,
     overage: data?.overage ?? null,
     needsTopUp: data?.needsTopUp ?? null,
-    needsUpgrade: data?.needsUpgrade ?? null,
-    upgraded: data?.upgraded ?? null,
     used: data?.used ?? null,
     limit: data?.limit ?? null,
     loading,

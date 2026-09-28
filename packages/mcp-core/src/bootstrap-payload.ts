@@ -14,7 +14,6 @@ import {
   checkLimitsCore,
   checkPurchaseCore,
   classifyPaywallState,
-  createCheckoutSessionCore,
   createCustomerSessionCore,
   creditSignals,
   deriveUsageSnapshot,
@@ -35,6 +34,7 @@ import {
 } from './helpers'
 import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
 import { selectActivePlanPurchase } from './active-purchase'
+import { createMcpCheckoutSession } from './hosted-checkout'
 import { autoRechargeUrlFrom } from './portal-links'
 
 export interface CreateBuildBootstrapPayloadOptions {
@@ -210,17 +210,18 @@ export function createBuildBootstrapPayload(
 
     const checkoutPurpose =
       view === 'topup' ||
-      (view !== 'checkout' && view !== 'auto-recharge' && limits?.paywallReason === 'topup_required')
+      (view !== 'checkout' &&
+        view !== 'auto-recharge' &&
+        limits?.paywallReason === 'topup_required')
         ? ('credit_topup' as const)
         : undefined
     const checkoutResult = await wrapError(
-      createCheckoutSessionCore(
+      createMcpCheckoutSession(
         buildSolvaPayRequest(extra, {
           getCustomerRef: () => customerRef ?? 'anonymous',
         }),
         {
           productRef,
-          returnUrl: null,
           ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}),
         },
         { solvaPay },

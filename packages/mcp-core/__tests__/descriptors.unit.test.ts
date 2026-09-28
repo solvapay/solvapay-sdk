@@ -507,6 +507,31 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(String(sc.error)).toMatch(/planRef/)
   })
 
+  it('create_hosted_session checkout omits returnUrl', async () => {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.createHostedSession)
+    if (!tool) throw new Error('create_hosted_session not registered')
+
+    await tool.handler(
+      { kind: 'checkout' },
+      { authInfo: { extra: { customer_ref: 'cus_existing' } } },
+    )
+
+    expect(solvaPay.apiClient.createCheckoutSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ returnUrl: expect.anything() }),
+    )
+    expect(
+      (solvaPay.apiClient.createCheckoutSession as ReturnType<typeof vi.fn>).mock.calls[0][0],
+    ).not.toHaveProperty('returnUrl')
+  })
+
   it('narrates payment_required and mints a checkout URL when the backend omitted one', async () => {
     const activatePlan = vi.fn().mockResolvedValue({ status: 'payment_required' })
     const solvaPay = makeSolvaPay({

@@ -26,8 +26,6 @@ export interface AccountLimitsLike {
   activationRequired: boolean | null
   overage: boolean | null
   needsTopUp: boolean | null
-  needsUpgrade: boolean | null
-  throttled: boolean | null
 }
 
 export interface AccountPurchaseLike {
@@ -58,7 +56,7 @@ export interface AccountStateInput {
  *   I `overage` (outranks `withinLimits` → not F)
  *   D `needsTopUp` or a usage-based plan that is out of limits
  *   F allowance plan at cap
- *   B / C / E running plan-shape (`throttled` / `needsUpgrade` land here)
+ *   B / C / E running plan-shape
  *   A no plan
  */
 export function resolveAccountState(input: AccountStateInput): AccountState {

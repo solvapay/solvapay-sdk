@@ -90,7 +90,6 @@ function snapshotFromLimits(params: {
     isCreditBased: signals.isCreditBased,
     remaining: limits?.remaining ?? null,
     withinLimits: limits?.withinLimits ?? true,
-    throttled: limits?.throttled ?? false,
     overage: limits?.overage ?? false,
     plan,
     fresh: refresh,
