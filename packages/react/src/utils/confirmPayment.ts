@@ -259,6 +259,9 @@ function mapConfirmedPayment(
       payment,
     }
   }
+  if (payment.status === 'requires_action') {
+    return { status: 'error', message: copy.errors.authenticationUnavailable }
+  }
   if (payment.status === 'succeeded') return { status: 'succeeded', payment }
   if (payment.status === 'processing' || payment.status === 'pending') {
     return { status: 'pending', message: copy.errors.paymentPending, payment }

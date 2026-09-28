@@ -102,7 +102,9 @@ function uiOf(field: CollectFieldState | undefined, copy: ReturnType<typeof useC
   let error: string | null = null
   if (touchedInvalid || requiredMissing) {
     const code = field.errors?.[0]?.code
-    const key = (code !== undefined ? ERROR_CODE_KEYS[code] : undefined) ?? (field.isEmpty ? 'required' : 'invalid')
+    const key = requiredMissing
+      ? 'required'
+      : ((code !== undefined ? ERROR_CODE_KEYS[code] : undefined) ?? 'invalid')
     error = copy.cardFields.errors[key]
   }
   const state: FieldUi['state'] = field.isFocused

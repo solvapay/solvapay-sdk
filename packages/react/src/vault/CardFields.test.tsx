@@ -239,6 +239,15 @@ describe('VaultCardFields', () => {
     act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [] }))
     expect(errorOf('cvc')).toBe('This field is required.')
 
+    // Touched-empty always wins over a known (or unknown) VGS code: empty is "required", never "invalid".
+    act(() => collect.setFieldState('card_number', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1011 }] }))
+    expect(errorOf('cardNumber')).toBe('This field is required.')
+    expect(field('cardNumber')).toHaveAttribute('data-state', 'invalid')
+    act(() => collect.setFieldState('card_exp', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1015 }] }))
+    expect(errorOf('expiry')).toBe('This field is required.')
+    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 9999 }] }))
+    expect(errorOf('cvc')).toBe('This field is required.')
+
     // Fixing the number clears its message and marks it valid.
     act(() => collect.setFieldState('card_number', { isTouched: true, isValid: true, isEmpty: false, errors: [] }))
     expect(errorOf('cardNumber')).toBeNull()

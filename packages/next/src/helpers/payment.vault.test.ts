@@ -127,14 +127,14 @@ describe('confirmPayment (Next route wrapper)', () => {
 
   it('maps a 400 validation error from the core helper', async () => {
     mockConfirmPaymentCore.mockResolvedValue({
-      error: 'Provide exactly one of cardId or paymentMethodId',
+      error: 'Provide cardId or paymentMethodId',
       status: 400,
     })
 
     const response = await confirmPayment(fakeRequest('/api/confirm-payment'), { paymentIntentId: 'pi_1' })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toStrictEqual({ error: 'Provide exactly one of cardId or paymentMethodId' })
+    expect(await response.json()).toStrictEqual({ error: 'Provide cardId or paymentMethodId' })
   })
 
   it('maps an auth error from the core helper to 401', async () => {

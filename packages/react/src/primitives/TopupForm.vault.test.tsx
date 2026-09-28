@@ -273,9 +273,51 @@ describe('TopupForm — vault checkout', () => {
     await fillAndArm()
     fireEvent.click(submit())
     await waitFor(() => expect(errorText()).toBe(enCopy.errors.paymentPending))
+    expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.')
     expect(h.processTopupPayment).not.toHaveBeenCalled()
     expect(h.onSuccess).not.toHaveBeenCalled()
-    expect(h.onError).not.toHaveBeenCalled()
+    expect(h.onError).toHaveBeenCalledTimes(1)
+    expect(h.onError).toHaveBeenCalledWith(
+      new Error('Your payment is being confirmed. You will be notified once it completes.'),
+    )
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+  })
+
+  it('reports an unknown confirm status through the status-prefix copy and onError', async () => {
+    const h = renderVaultTopup({
+      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'canceled' }),
+    })
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(errorText()).toBe('Payment status: canceled'))
+    expect(h.processTopupPayment).not.toHaveBeenCalled()
+    expect(h.onSuccess).not.toHaveBeenCalled()
+    expect(h.onError).toHaveBeenCalledTimes(1)
+    expect(h.onError).toHaveBeenCalledWith(new Error('Payment status: canceled'))
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+  })
+
+  it('fails the topup when the backend asks for a customer action without a redirect url', async () => {
+    const assign = vi.fn()
+    const restoreLocation = stubLocation({ assign })
+    try {
+      const h = renderVaultTopup({
+        confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'requires_action' }),
+      })
+      await fillAndArm()
+      fireEvent.click(submit())
+      await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
+      expect(h.onError).toHaveBeenCalledWith(new Error(enCopy.errors.authenticationUnavailable))
+      expect(errorText()).toBe(
+        'Your bank asked for additional authentication, but no authentication page was provided. Please try another card or contact support.',
+      )
+      expect(assign).not.toHaveBeenCalled()
+      expect(h.processTopupPayment).not.toHaveBeenCalled()
+      expect(h.onSuccess).not.toHaveBeenCalled()
+      await waitFor(() => expect(submit()).not.toBeDisabled())
+    } finally {
+      restoreLocation()
+    }
   })
 
   it('reports a failed or cancelled settle through onError and the unexpected-error copy', async () => {

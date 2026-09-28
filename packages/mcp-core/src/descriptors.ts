@@ -743,6 +743,13 @@ export function buildSolvaPayDescriptors(
         if (typeof auth !== 'string') return auth
         const paymentIntentId =
           typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        if (!paymentIntentId) {
+          return toolErrorResult({
+            error: 'create_capture_grant requires paymentIntentId',
+            status: 400,
+            details: 'Pass paymentIntentId as a non-empty string.',
+          })
+        }
         const result = await createCaptureGrantCore(
           buildRequest(extra, { method: 'POST' }),
           { paymentIntentId },
@@ -772,6 +779,23 @@ export function buildSolvaPayDescriptors(
         if (typeof auth !== 'string') return auth
         const paymentIntentId =
           typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        if (!paymentIntentId) {
+          return toolErrorResult({
+            error: 'confirm_payment requires paymentIntentId',
+            status: 400,
+            details: 'Pass paymentIntentId as a non-empty string.',
+          })
+        }
+        for (const key of ['cardId', 'paymentMethodId', 'returnUrl'] as const) {
+          const value = args[key]
+          if (value !== undefined && (typeof value !== 'string' || !value)) {
+            return toolErrorResult({
+              error: `confirm_payment ${key} must be a non-empty string`,
+              status: 400,
+              details: `Omit ${key} or pass it as a non-empty string.`,
+            })
+          }
+        }
         const cardId = typeof args.cardId === 'string' ? args.cardId : undefined
         const paymentMethodId =
           typeof args.paymentMethodId === 'string' ? args.paymentMethodId : undefined

@@ -414,6 +414,8 @@ export const enCopy: SolvaPayCopy = {
       'Payment requires additional authentication. Please complete the verification.',
     paymentProcessingTimeout: 'Payment processing timed out — webhooks may not be configured',
     paymentStatusPrefix: 'Payment status: {status}',
+    authenticationUnavailable:
+      'Your bank asked for additional authentication, but no authentication page was provided. Please try another card or contact support.',
     paywallInvalidContent: 'Paywall content is missing or malformed.',
     usageLoadFailed: 'Failed to load usage',
   },

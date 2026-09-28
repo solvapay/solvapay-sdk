@@ -700,6 +700,7 @@ const PaidBody: React.FC<PaidBodyProps> = ({
         }
         if (result.status === 'pending' || result.status === 'other') {
           setError(result.message)
+          onError?.(new Error(result.message))
           return
         }
         await finishSucceeded(result.payment, result.payment.processorPaymentId)

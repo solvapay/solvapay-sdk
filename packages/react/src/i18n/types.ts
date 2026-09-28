@@ -485,6 +485,8 @@ export interface SolvaPayCopy {
     paymentRequires3ds: string
     paymentProcessingTimeout: string
     paymentStatusPrefix: string
+    /** Vault mode: the rail returned `requires_action` without a `redirectUrl`. */
+    authenticationUnavailable: string
     paywallInvalidContent: string
     usageLoadFailed: string
   }

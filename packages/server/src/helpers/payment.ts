@@ -599,8 +599,13 @@ export async function confirmPaymentCore(
     if (!body.paymentIntentId) {
       return { error: 'paymentIntentId is required', status: 400 }
     }
-    if (Boolean(body.cardId) === Boolean(body.paymentMethodId)) {
-      return { error: 'Provide exactly one of cardId or paymentMethodId', status: 400 }
+    const hasCardId = Boolean(body.cardId)
+    const hasPaymentMethodId = Boolean(body.paymentMethodId)
+    if (!hasCardId && !hasPaymentMethodId) {
+      return { error: 'Provide cardId or paymentMethodId', status: 400 }
+    }
+    if (hasCardId && hasPaymentMethodId) {
+      return { error: 'Provide either cardId or paymentMethodId, not both', status: 400 }
     }
     const customerResult = await syncCustomerCore(request, { solvaPay: options.solvaPay })
     if (isErrorResult(customerResult)) return customerResult

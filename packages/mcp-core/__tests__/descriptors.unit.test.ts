@@ -1026,19 +1026,22 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(typeof onToolResult.mock.calls[0][2].durationMs).toBe('number')
   })
 
-  it('create_capture_grant coerces a non-string paymentIntentId to "" so the core helper returns its 400', async () => {
-    const coreSpy = (await spyCore('createCaptureGrantCore')).mockResolvedValue({
-      error: 'paymentIntentId is required',
-      status: 400,
-    })
+  it('create_capture_grant rejects a missing, empty or non-string paymentIntentId with 400 without calling the core helper', async () => {
+    const coreSpy = await spyCore('createCaptureGrantCore')
     const { grantTool } = build()
-    const result = await grantTool.handler({ paymentIntentId: 42 }, authed)
-    expect(coreSpy.mock.calls[0][1]).toStrictEqual({ paymentIntentId: '' })
-    expect(result).toStrictEqual({
+    const expected = {
       isError: true,
-      content: [{ type: 'text', text: 'paymentIntentId is required' }],
-      structuredContent: { error: 'paymentIntentId is required', status: 400 },
-    })
+      content: [{ type: 'text', text: 'Pass paymentIntentId as a non-empty string.' }],
+      structuredContent: {
+        error: 'create_capture_grant requires paymentIntentId',
+        status: 400,
+        details: 'Pass paymentIntentId as a non-empty string.',
+      },
+    }
+    expect(await grantTool.handler({ paymentIntentId: 42 }, authed)).toStrictEqual(expected)
+    expect(await grantTool.handler({ paymentIntentId: '' }, authed)).toStrictEqual(expected)
+    expect(await grantTool.handler({}, authed)).toStrictEqual(expected)
+    expect(coreSpy).not.toHaveBeenCalled()
   })
 
   it('create_capture_grant maps a thrown core error to an isError result with status 500', async () => {
@@ -1086,7 +1089,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     })
   })
 
-  it('confirm_payment forwards a saved payment method, drops non-string optionals, and passes a 3DS redirect through', async () => {
+  it('confirm_payment forwards a saved payment method without the optionals and passes a 3DS redirect through', async () => {
     const requiresAction = {
       id: 'pi_1',
       processorPaymentId: 'pi_stripe_1',
@@ -1096,10 +1099,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(requiresAction)
     const { confirmTool } = build()
 
-    const result = await confirmTool.handler(
-      { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', cardId: 7, returnUrl: null },
-      authed,
-    )
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved' }, authed)
 
     expect(coreSpy.mock.calls[0][1]).toStrictEqual({
       paymentIntentId: 'pi_1',
@@ -1113,9 +1113,57 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     })
   })
 
-  it('confirm_payment surfaces the core 400 for an ambiguous card / payment method body', async () => {
+  it('confirm_payment rejects a missing, empty or non-string paymentIntentId with 400 without calling the core helper', async () => {
+    const coreSpy = await spyCore('confirmPaymentCore')
+    const { confirmTool } = build()
+    const expected = {
+      isError: true,
+      content: [{ type: 'text', text: 'Pass paymentIntentId as a non-empty string.' }],
+      structuredContent: {
+        error: 'confirm_payment requires paymentIntentId',
+        status: 400,
+        details: 'Pass paymentIntentId as a non-empty string.',
+      },
+    }
+    expect(await confirmTool.handler({ paymentIntentId: 42, cardId: 'CRD1' }, authed)).toStrictEqual(expected)
+    expect(await confirmTool.handler({ paymentIntentId: '', cardId: 'CRD1' }, authed)).toStrictEqual(expected)
+    expect(await confirmTool.handler({ cardId: 'CRD1' }, authed)).toStrictEqual(expected)
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('confirm_payment rejects a non-string or empty cardId / paymentMethodId / returnUrl with 400 instead of dropping it', async () => {
+    const coreSpy = await spyCore('confirmPaymentCore')
+    const { confirmTool } = build()
+    const expected = (key: string) => ({
+      isError: true,
+      content: [{ type: 'text', text: `Omit ${key} or pass it as a non-empty string.` }],
+      structuredContent: {
+        error: `confirm_payment ${key} must be a non-empty string`,
+        status: 400,
+        details: `Omit ${key} or pass it as a non-empty string.`,
+      },
+    })
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 7 }, authed)).toStrictEqual(expected('cardId'))
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: '' }, authed)).toStrictEqual(expected('cardId'))
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 7 }, authed)).toStrictEqual(
+      expected('paymentMethodId'),
+    )
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', returnUrl: null }, authed)).toStrictEqual(
+      expected('returnUrl'),
+    )
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: '' }, authed)).toStrictEqual(
+      expected('returnUrl'),
+    )
+    // cardId is checked before paymentMethodId and returnUrl.
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 7, paymentMethodId: 7, returnUrl: null }, authed)).toStrictEqual(
+      expected('cardId'),
+    )
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('confirm_payment surfaces the core 400 for a body with neither cardId nor paymentMethodId', async () => {
     const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue({
-      error: 'Provide exactly one of cardId or paymentMethodId',
+      error: 'Provide cardId or paymentMethodId',
       status: 400,
     })
     const { confirmTool } = build()
@@ -1128,8 +1176,28 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     })
     expect(result).toStrictEqual({
       isError: true,
-      content: [{ type: 'text', text: 'Provide exactly one of cardId or paymentMethodId' }],
-      structuredContent: { error: 'Provide exactly one of cardId or paymentMethodId', status: 400 },
+      content: [{ type: 'text', text: 'Provide cardId or paymentMethodId' }],
+      structuredContent: { error: 'Provide cardId or paymentMethodId', status: 400 },
+    })
+  })
+
+  it('confirm_payment surfaces the core 400 for a body with both cardId and paymentMethodId', async () => {
+    const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue({
+      error: 'Provide either cardId or paymentMethodId, not both',
+      status: 400,
+    })
+    const { confirmTool } = build()
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_saved' }, authed)
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      paymentMethodId: 'pm_saved',
+      returnUrl: undefined,
+    })
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Provide either cardId or paymentMethodId, not both' }],
+      structuredContent: { error: 'Provide either cardId or paymentMethodId, not both', status: 400 },
     })
   })
 

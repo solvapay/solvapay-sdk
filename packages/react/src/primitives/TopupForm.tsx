@@ -614,6 +614,7 @@ const Inner: React.FC<InnerProps & { stripe: Stripe | null; elements: StripeElem
         }
         if (result.status === 'pending' || result.status === 'other') {
           setError(result.message)
+          onError?.(new Error(result.message))
           return
         }
         await finishVaultTopup(result.payment, result.payment.processorPaymentId)

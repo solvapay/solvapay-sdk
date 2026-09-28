@@ -793,18 +793,23 @@ describe('confirmPaymentCore', () => {
     expect(confirmPayment).not.toHaveBeenCalled()
   })
 
-  it('requires exactly one of cardId / paymentMethodId', async () => {
+  it('rejects a body with neither cardId nor paymentMethodId with a distinct 400', async () => {
     expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1' })).toStrictEqual({
-      error: 'Provide exactly one of cardId or paymentMethodId',
+      error: 'Provide cardId or paymentMethodId',
       status: 400,
     })
+    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: '', paymentMethodId: '' })).toStrictEqual({
+      error: 'Provide cardId or paymentMethodId',
+      status: 400,
+    })
+    expect(mockSyncCustomer).not.toHaveBeenCalled()
+    expect(confirmPayment).not.toHaveBeenCalled()
+  })
+
+  it('rejects a body with both cardId and paymentMethodId with a distinct 400', async () => {
     expect(
       await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c', paymentMethodId: 'pm' }),
-    ).toStrictEqual({ error: 'Provide exactly one of cardId or paymentMethodId', status: 400 })
-    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: '', paymentMethodId: '' })).toStrictEqual({
-      error: 'Provide exactly one of cardId or paymentMethodId',
-      status: 400,
-    })
+    ).toStrictEqual({ error: 'Provide either cardId or paymentMethodId, not both', status: 400 })
     expect(mockSyncCustomer).not.toHaveBeenCalled()
     expect(confirmPayment).not.toHaveBeenCalled()
   })

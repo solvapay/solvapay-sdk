@@ -81,10 +81,19 @@ describe('confirmVaultPayment', () => {
     })
   })
 
-  it('treats requires_action without a redirect url as an unknown status', async () => {
+  it('fails requires_action without a redirect url with the authentication-unavailable copy', async () => {
     const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' as const }
     const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
-    expect(result).toStrictEqual({ status: 'other', message: 'Payment status: requires_action', payment })
+    expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.authenticationUnavailable })
+    expect(enCopy.errors.authenticationUnavailable).toBe(
+      'Your bank asked for additional authentication, but no authentication page was provided. Please try another card or contact support.',
+    )
+  })
+
+  it('treats an empty redirect url on requires_action the same as a missing one', async () => {
+    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' as const, redirectUrl: '' }
+    const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
+    expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.authenticationUnavailable })
   })
 
   it('maps processing and pending to pending with the payment attached', async () => {

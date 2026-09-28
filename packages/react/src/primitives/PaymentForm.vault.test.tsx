@@ -378,12 +378,15 @@ describe('PaymentForm — vault checkout', () => {
     await waitFor(() => expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.'))
     expect(errorText()).toBe(enCopy.errors.paymentPending)
     expect(h.onSuccess).not.toHaveBeenCalled()
-    expect(h.onError).not.toHaveBeenCalled()
+    expect(h.onError).toHaveBeenCalledTimes(1)
+    expect(h.onError).toHaveBeenCalledWith(
+      new Error('Your payment is being confirmed. You will be notified once it completes.'),
+    )
     expect(reconcilePayment).not.toHaveBeenCalled()
     await waitFor(() => expect(submit()).not.toBeDisabled())
   })
 
-  it('reports an unknown confirm status through the status-prefix copy without failing the form', async () => {
+  it('reports an unknown confirm status through the status-prefix copy and onError', async () => {
     const h = renderVaultForm({
       confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'canceled' }),
     })
@@ -391,8 +394,33 @@ describe('PaymentForm — vault checkout', () => {
     fireEvent.click(submit())
     await waitFor(() => expect(errorText()).toBe('Payment status: canceled'))
     expect(h.onSuccess).not.toHaveBeenCalled()
-    expect(h.onError).not.toHaveBeenCalled()
+    expect(h.onError).toHaveBeenCalledTimes(1)
+    expect(h.onError).toHaveBeenCalledWith(new Error('Payment status: canceled'))
     expect(reconcilePayment).not.toHaveBeenCalled()
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+  })
+
+  it('fails the form when the backend asks for a customer action without a redirect url', async () => {
+    const assign = vi.fn()
+    const restoreLocation = stubLocation({ assign })
+    try {
+      const h = renderVaultForm({
+        confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' }),
+      })
+      await fillAndArm()
+      fireEvent.click(submit())
+      await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
+      expect(h.onError).toHaveBeenCalledWith(new Error(enCopy.errors.authenticationUnavailable))
+      expect(errorText()).toBe(
+        'Your bank asked for additional authentication, but no authentication page was provided. Please try another card or contact support.',
+      )
+      expect(assign).not.toHaveBeenCalled()
+      expect(reconcilePayment).not.toHaveBeenCalled()
+      expect(h.onSuccess).not.toHaveBeenCalled()
+      await waitFor(() => expect(submit()).not.toBeDisabled())
+    } finally {
+      restoreLocation()
+    }
   })
 
   it('reports a failed reconcile through onError with the processing-failed copy', async () => {
