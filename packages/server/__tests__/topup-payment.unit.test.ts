@@ -115,6 +115,7 @@ describe('createTopupPaymentIntentCore', () => {
 
     expect(isErrorResult(result)).toBe(false)
     expect(result).toEqual({
+      captureMode: 'processor_elements',
       processorPaymentId: 'pi_topup_abc',
       clientSecret: 'pi_topup_abc_secret',
       publishableKey: 'pk_test_xyz',

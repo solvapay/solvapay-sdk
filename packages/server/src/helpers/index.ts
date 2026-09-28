@@ -30,6 +30,7 @@ export {
   createCaptureGrantCore,
   confirmPaymentCore,
 } from './payment'
+export type { CreatedPaymentIntent } from './payment'
 
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'

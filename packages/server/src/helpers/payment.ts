@@ -17,6 +17,42 @@ import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
 import { pollBalanceUntilIncreased, TOPUP_BALANCE_POLL_DELAYS_MS } from './balance-poll'
+import type { components } from '../types/generated'
+
+/**
+ * What the browser gets back from `POST /api/create-payment-intent` and
+ * `POST /api/create-topup-payment-intent`. In `processor_elements` mode the
+ * SDK confirms through Stripe.js with `clientSecret` / `publishableKey`; in
+ * `vault` mode those are absent and the SDK captures the card into `vault`
+ * with a grant keyed on `id`, then confirms server-side.
+ */
+export interface CreatedPaymentIntent {
+  /** SolvaPay payment intent id. */
+  id?: string
+  captureMode: 'processor_elements' | 'vault'
+  vault?: { tenantId: string; environment: 'sandbox' | 'live' }
+  processorPaymentId?: string
+  clientSecret?: string
+  publishableKey?: string
+  accountId?: string
+  customerRef: string
+}
+
+function toCreatedPaymentIntent(
+  paymentIntent: components['schemas']['SdkPaymentIntentResponse'],
+  customerRef: string,
+): CreatedPaymentIntent {
+  return {
+    ...(paymentIntent.id ? { id: paymentIntent.id } : {}),
+    captureMode: paymentIntent.captureMode === 'vault' ? 'vault' : 'processor_elements',
+    ...(paymentIntent.vault ? { vault: paymentIntent.vault } : {}),
+    ...(paymentIntent.processorPaymentId ? { processorPaymentId: paymentIntent.processorPaymentId } : {}),
+    ...(paymentIntent.clientSecret ? { clientSecret: paymentIntent.clientSecret } : {}),
+    ...(paymentIntent.publishableKey ? { publishableKey: paymentIntent.publishableKey } : {}),
+    ...(paymentIntent.accountId ? { accountId: paymentIntent.accountId } : {}),
+    customerRef,
+  }
+}
 
 /**
  * Create a payment intent for a customer to purchase a plan.
@@ -70,16 +106,7 @@ export async function createPaymentIntentCore(
     includeEmail?: boolean
     includeName?: boolean
   } = {},
-): Promise<
-  | {
-      processorPaymentId: string
-      clientSecret: string
-      publishableKey: string
-      accountId?: string
-      customerRef: string
-    }
-  | ErrorResult
-> {
+): Promise<CreatedPaymentIntent | ErrorResult> {
   try {
     if (!body.planRef || !body.productRef) {
       return {
@@ -109,13 +136,7 @@ export async function createPaymentIntentCore(
       ...(body.currency && { currency: body.currency }),
     })
 
-    return {
-      processorPaymentId: paymentIntent.processorPaymentId,
-      clientSecret: paymentIntent.clientSecret,
-      publishableKey: paymentIntent.publishableKey,
-      accountId: paymentIntent.accountId,
-      customerRef,
-    }
+    return toCreatedPaymentIntent(paymentIntent, customerRef)
   } catch (error) {
     return handleRouteError(error, 'Create payment intent', 'Payment intent creation failed')
   }
@@ -149,16 +170,7 @@ export async function createTopupPaymentIntentCore(
     includeEmail?: boolean
     includeName?: boolean
   } = {},
-): Promise<
-  | {
-      processorPaymentId: string
-      clientSecret: string
-      publishableKey: string
-      accountId?: string
-      customerRef: string
-    }
-  | ErrorResult
-> {
+): Promise<CreatedPaymentIntent | ErrorResult> {
   try {
     if (!body.amount || body.amount <= 0) {
       return {
@@ -203,13 +215,7 @@ export async function createTopupPaymentIntentCore(
       ...(body.autoRecharge ? { autoRecharge: body.autoRecharge } : {}),
     })
 
-    return {
-      processorPaymentId: paymentIntent.processorPaymentId,
-      clientSecret: paymentIntent.clientSecret,
-      publishableKey: paymentIntent.publishableKey,
-      accountId: paymentIntent.accountId,
-      customerRef,
-    }
+    return toCreatedPaymentIntent(paymentIntent, customerRef)
   } catch (error) {
     return handleRouteError(
       error,

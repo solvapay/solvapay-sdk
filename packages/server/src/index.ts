@@ -271,6 +271,7 @@ export type {
   ErrorResult,
   AuthenticatedUser,
   CustomerBalanceResult,
+  CreatedPaymentIntent,
   PurchaseCheckResult,
   GetUsageResult,
   UsageLimitsInput,

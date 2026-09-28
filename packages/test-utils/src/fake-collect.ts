@@ -29,7 +29,7 @@ export interface FakeCollectHandle {
   loader: (options: {
     vaultId: string
     env: 'sandbox' | 'live'
-    stateCallback?: (state: Record<string, { isValid?: boolean }>) => void
+    stateCallback?: (state: Record<string, FakeCollectFieldState>) => void
   }) => Promise<FakeCollectForm>
   /** Every form created so far. */
   forms: FakeCollectForm[]
@@ -39,13 +39,31 @@ export interface FakeCollectHandle {
   enter(): void
   /** Simulate the payer clearing a field on the latest form. */
   clear(): void
+  /**
+   * Set one field's state on the latest form exactly as VGS Collect would
+   * report it (isValid / isTouched / isEmpty / isFocused / errors with VGS
+   * codes: 1001 required, 1011 card number, 1015 expiry, 1017 CVC).
+   */
+  setFieldState(name: string, state: FakeCollectFieldState): void
   options: FakeCollectOptions
+}
+
+export interface FakeCollectFieldState {
+  isValid?: boolean
+  isTouched?: boolean
+  isEmpty?: boolean
+  isFocused?: boolean
+  isDirty?: boolean
+  errors?: Array<{ code: number; message?: string }>
+  errorMessages?: string[]
 }
 
 export interface FakeCollectForm {
   vaultId: string
   env: 'sandbox' | 'live'
   mounted: string[]
+  /** Options each hosted field was created with, by Collect field name. */
+  fieldOptions: Record<string, Record<string, unknown>>
   unmounted: boolean
   cardNumberField(el: string | HTMLElement, options?: Record<string, unknown>): void
   cardExpirationDateField(el: string | HTMLElement, options?: Record<string, unknown>): void
@@ -66,22 +84,24 @@ export function createFakeCollect(options: FakeCollectOptions = {}): FakeCollect
     cards: [],
     options,
     loader: async ({ vaultId, env, stateCallback }) => {
-      const state: Record<string, { isValid?: boolean }> = {}
+      const state: Record<string, FakeCollectFieldState> = {}
       const emit = () => stateCallback?.({ ...state })
-      const mount = (name: string) => {
+      const mount = (name: string, options?: Record<string, unknown>) => {
         form.mounted.push(name)
-        state[name] = { isValid: false }
+        form.fieldOptions[name] = options ?? {}
+        state[name] = { isValid: false, isEmpty: true, isTouched: false }
         emit()
       }
       const form: FakeCollectForm = {
         vaultId,
         env,
         mounted: [],
+        fieldOptions: {},
         unmounted: false,
-        cardNumberField: () => mount('card_number'),
-        cardExpirationDateField: () => mount('card_exp'),
-        cardCVCField: () => mount('card_cvc'),
-        cardholderNameField: () => mount('cardholder_name'),
+        cardNumberField: (_el, options) => mount('card_number', options),
+        cardExpirationDateField: (_el, options) => mount('card_exp', options),
+        cardCVCField: (_el, options) => mount('card_cvc', options),
+        cardholderNameField: (_el, options) => mount('cardholder_name', options),
         createCard: ({ auth, data }, onResponse, onError) => {
           const fail = handle.options.failWithStatus
           if (fail) {
@@ -119,19 +139,30 @@ export function createFakeCollect(options: FakeCollectOptions = {}): FakeCollect
     },
     enter() {
       const form = handle.forms[handle.forms.length - 1] as
-        | (FakeCollectForm & { _state: Record<string, { isValid?: boolean }>; _emit: () => void })
+        | (FakeCollectForm & { _state: Record<string, FakeCollectFieldState>; _emit: () => void })
         | undefined
       if (!form) throw new Error('createFakeCollect: no form mounted yet')
-      for (const key of Object.keys(form._state)) form._state[key] = { isValid: true }
+      for (const key of Object.keys(form._state)) {
+        form._state[key] = { isValid: true, isEmpty: false, isTouched: true, isDirty: true }
+      }
       form._emit()
     },
     clear() {
       const form = handle.forms[handle.forms.length - 1] as
-        | (FakeCollectForm & { _state: Record<string, { isValid?: boolean }>; _emit: () => void })
+        | (FakeCollectForm & { _state: Record<string, FakeCollectFieldState>; _emit: () => void })
         | undefined
       if (!form) throw new Error('createFakeCollect: no form mounted yet')
       const first = Object.keys(form._state)[0]
-      if (first) form._state[first] = { isValid: false }
+      if (first) form._state[first] = { isValid: false, isEmpty: true, isTouched: true }
+      form._emit()
+    },
+    setFieldState(name, fieldState) {
+      const form = handle.forms[handle.forms.length - 1] as
+        | (FakeCollectForm & { _state: Record<string, FakeCollectFieldState>; _emit: () => void })
+        | undefined
+      if (!form) throw new Error('createFakeCollect: no form mounted yet')
+      if (!(name in form._state)) throw new Error(`createFakeCollect: field ${name} is not mounted`)
+      form._state[name] = { ...form._state[name], ...fieldState }
       form._emit()
     },
   }

@@ -22,6 +22,7 @@ import { createSolvaPay } from '../factory'
 import { syncCustomerCore } from './customer'
 import {
   createPaymentIntentCore,
+  createTopupPaymentIntentCore,
   processTopupPaymentIntentCore,
   attachBusinessDetailsCore,
   createCaptureGrantCore,
@@ -582,6 +583,60 @@ describe('attachBusinessDetailsCore', () => {
       customerCountry: 'SE',
       taxId: 'SE556677889901',
       taxIdType: 'eu_vat',
+    })
+  })
+})
+
+describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode passthrough', () => {
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const vaultResponse = {
+    id: '66f1c2d3e4f5a6b7c8d9e0f1',
+    captureMode: 'vault',
+    vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+    amount: 1999,
+    currency: 'USD',
+    status: 'pending',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSyncCustomer.mockResolvedValue('cus_ABC')
+  })
+
+  it('forwards id, captureMode and vault so the browser can capture into the vault (no client secret)', async () => {
+    const createPaymentIntent = vi.fn().mockResolvedValue(vaultResponse)
+    mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
+    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
+    expect(result).toEqual({
+      id: '66f1c2d3e4f5a6b7c8d9e0f1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+      customerRef: 'cus_ABC',
+    })
+  })
+
+  it('does the same for top-ups', async () => {
+    const createTopupPaymentIntent = vi.fn().mockResolvedValue(vaultResponse)
+    mockCreateSolvaPay.mockReturnValue({ createTopupPaymentIntent } as never)
+    const result = await createTopupPaymentIntentCore(fakeRequest(), { amount: 2500, currency: 'USD' })
+    expect(result).toMatchObject({ id: '66f1c2d3e4f5a6b7c8d9e0f1', captureMode: 'vault', vault: vaultResponse.vault })
+    expect(result).not.toHaveProperty('clientSecret')
+  })
+
+  it('defaults captureMode to processor_elements for backends that predate vault checkout', async () => {
+    const createPaymentIntent = vi.fn().mockResolvedValue({
+      processorPaymentId: 'pi_x',
+      clientSecret: 'cs_x',
+      publishableKey: 'pk_x',
+    })
+    mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
+    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
+    expect(result).toEqual({
+      captureMode: 'processor_elements',
+      processorPaymentId: 'pi_x',
+      clientSecret: 'cs_x',
+      publishableKey: 'pk_x',
+      customerRef: 'cus_ABC',
     })
   })
 })
