@@ -1,5 +1,15 @@
 # @solvapay/server changelog
 
+## 2.9.0
+
+### Minor Changes
+
+- bd029af: Limit checks no longer return `throttled`, `needsUpgrade`, or `upgraded`. `LimitOption.onExceed` is `block` or `draw_credits`; the API still accepts `top_up` and `charge` and stores both as `draw_credits`. Rollover options are gone from the plan types; the API drops them on input. Usage on a recurring plan is paid from prepaid credits, never billed to a card: `overage` (and `consequence: 'overage'`) now means access past the included cap paid from credits. The recurring checkout mandate no longer mentions usage past the included allowance.
+
+### Patch Changes
+
+- 3f7c713: Plan option types match the current pricing contract. `TrialOption.onEnd` is `convert` or `cancel`. `LimitOption.onExceed` no longer includes `notify`, and `uiHint` no longer includes `soft_warning`.
+
 ## 2.8.0
 
 ### Minor Changes
