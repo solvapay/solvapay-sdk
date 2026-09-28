@@ -15,6 +15,9 @@
 
 export const VGS_COLLECT_VERSION = '4.0.1'
 export const VGS_COLLECT_SCRIPT_URL = `https://js.verygoodvault.com/vgs-collect/${VGS_COLLECT_VERSION}/vgs-collect.js`
+/** Subresource Integrity of that exact file, as published on the VGS dashboard for 4.0.1. */
+export const VGS_COLLECT_SCRIPT_INTEGRITY =
+  'sha384-Sr5xwyR0H5rcDXa7/iDJDM3qBBvtHuR97A8ELbd+DFBDi32Caf72to9UVqvI8R95'
 
 export type CollectEnvironment = 'sandbox' | 'live'
 
@@ -77,7 +80,6 @@ export interface CollectSessionOptions {
 export type CollectLoader = (options: CollectSessionOptions) => Promise<CollectForm>
 
 interface VgsCollectGlobal {
-  session?: (options: CollectSessionOptions & { formId?: string }) => Promise<CollectForm> | CollectForm
   create?: (
     vaultId: string,
     env: CollectEnvironment,
@@ -120,6 +122,8 @@ function loadCollectScript(): Promise<VgsCollectGlobal> {
     })
     if (!existing) {
       script.src = VGS_COLLECT_SCRIPT_URL
+      script.setAttribute('integrity', VGS_COLLECT_SCRIPT_INTEGRITY)
+      script.setAttribute('crossorigin', 'anonymous')
       script.async = true
       document.head.appendChild(script)
     }
@@ -127,15 +131,18 @@ function loadCollectScript(): Promise<VgsCollectGlobal> {
   return scriptPromise
 }
 
+/**
+ * `create(vaultId, env, stateCallback)` is the initialisation VGS's dashboard
+ * gives for Collect 4.0.1. `session()` is not used: it loads a named form
+ * configuration that must exist in the VGS dashboard, and without one the
+ * form never mounts (403 on `session-configuration/<tenant>/<formId>.json`).
+ */
 const cdnLoader: CollectLoader = async options => {
   const vgs = await loadCollectScript()
-  if (vgs.session) {
-    return await vgs.session({ ...options, formId: 'solvapay' })
+  if (!vgs.create) {
+    throw new Error('Unsupported VGS Collect build: create() is not available')
   }
-  if (vgs.create) {
-    return vgs.create(options.vaultId, options.env, options.stateCallback)
-  }
-  throw new Error('Unsupported VGS Collect build: neither session() nor create() is available')
+  return vgs.create(options.vaultId, options.env, options.stateCallback)
 }
 
 let activeLoader: CollectLoader = cdnLoader
@@ -213,7 +220,9 @@ function parseCardResponse(body: unknown): CapturedCard | null {
     cardId: data.id,
     last4: typeof attributes.last4 === 'string' ? attributes.last4 : undefined,
     brand: typeof attributes.card_brand === 'string' ? attributes.card_brand : undefined,
-    expMonth: Number.isFinite(Number(attributes.exp_month)) ? Number(attributes.exp_month) : undefined,
+    expMonth: Number.isFinite(Number(attributes.exp_month))
+      ? Number(attributes.exp_month)
+      : undefined,
     expYear: Number.isFinite(year) ? (year < 100 ? 2000 + year : year) : undefined,
   }
 }

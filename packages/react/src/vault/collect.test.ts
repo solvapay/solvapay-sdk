@@ -31,28 +31,61 @@ describe('captureCard', () => {
         },
       })
     })
-    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' }, { paymentIntentId: 'pi_1' })
+    const card = await captureCard(
+      fakeForm({ createCard }),
+      { token: 'tok' },
+      { paymentIntentId: 'pi_1' },
+    )
     expect(createCard).toHaveBeenCalledTimes(1)
-    expect(createCard.mock.calls[0][0]).toEqual({ auth: 'tok', data: { meta: { paymentIntentId: 'pi_1' } } })
+    expect(createCard.mock.calls[0][0]).toEqual({
+      auth: 'tok',
+      data: { meta: { paymentIntentId: 'pi_1' } },
+    })
     expect(typeof createCard.mock.calls[0][1]).toBe('function')
     expect(typeof createCard.mock.calls[0][2]).toBe('function')
-    expect(card).toEqual({ cardId: 'CRD1', last4: '4242', brand: 'VISA', expMonth: 12, expYear: 2030 })
+    expect(card).toEqual({
+      cardId: 'CRD1',
+      last4: '4242',
+      brand: 'VISA',
+      expMonth: 12,
+      expYear: 2030,
+    })
   })
 
   it('keeps a four-digit exp_year as is and accepts string month/year', async () => {
     const createCard = vi.fn((_opts, onResponse) => {
       onResponse(200, {
-        data: { id: 'CRD2', attributes: { last4: '1111', card_brand: 'MASTERCARD', exp_month: '07', exp_year: '2031' } },
+        data: {
+          id: 'CRD2',
+          attributes: {
+            last4: '1111',
+            card_brand: 'MASTERCARD',
+            exp_month: '07',
+            exp_year: '2031',
+          },
+        },
       })
     })
     const card = await captureCard(fakeForm({ createCard }), { token: 'tok' }, {})
-    expect(card).toEqual({ cardId: 'CRD2', last4: '1111', brand: 'MASTERCARD', expMonth: 7, expYear: 2031 })
+    expect(card).toEqual({
+      cardId: 'CRD2',
+      last4: '1111',
+      brand: 'MASTERCARD',
+      expMonth: 7,
+      expYear: 2031,
+    })
   })
 
   it('leaves optional card fields undefined when the response carries no attributes', async () => {
     const createCard = vi.fn((_opts, onResponse) => onResponse(201, { data: { id: 'CRD3' } }))
     const card = await captureCard(fakeForm({ createCard }), { token: 'tok' }, {})
-    expect(card).toEqual({ cardId: 'CRD3', last4: undefined, brand: undefined, expMonth: undefined, expYear: undefined })
+    expect(card).toEqual({
+      cardId: 'CRD3',
+      last4: undefined,
+      brand: undefined,
+      expMonth: undefined,
+      expYear: undefined,
+    })
   })
 
   it('rejects with the status when the vault refuses the card', async () => {
@@ -123,38 +156,50 @@ describe('configureCollect / CDN loader', () => {
     restore()
 
     const viaCdn = fakeForm()
-    const session = vi.fn().mockResolvedValue(viaCdn)
-    ;(window as { VGSCollect?: unknown }).VGSCollect = { session }
-    const stateCallback = vi.fn()
-    await expect(createCollectForm({ vaultId: 'tnt', env: 'sandbox', stateCallback })).resolves.toBe(viaCdn)
-    expect(loader).toHaveBeenCalledTimes(1)
-    expect(session).toHaveBeenCalledTimes(1)
-    expect(session).toHaveBeenCalledWith({ vaultId: 'tnt', env: 'sandbox', stateCallback, formId: 'solvapay' })
-  })
-
-  it('falls back to the deprecated create() on older Collect builds', async () => {
-    const viaCreate = fakeForm()
-    const create = vi.fn().mockReturnValue(viaCreate)
+    const create = vi.fn().mockReturnValue(viaCdn)
     ;(window as { VGSCollect?: unknown }).VGSCollect = { create }
     const stateCallback = vi.fn()
-    await expect(createCollectForm({ vaultId: 'tnt', env: 'live', stateCallback })).resolves.toBe(viaCreate)
+    await expect(
+      createCollectForm({ vaultId: 'tnt', env: 'sandbox', stateCallback }),
+    ).resolves.toBe(viaCdn)
+    expect(loader).toHaveBeenCalledTimes(1)
     expect(create).toHaveBeenCalledTimes(1)
-    expect(create).toHaveBeenCalledWith('tnt', 'live', stateCallback)
+    expect(create).toHaveBeenCalledWith('tnt', 'sandbox', stateCallback)
   })
 
-  it('rejects a Collect build with neither session() nor create()', async () => {
+  it('uses create() even when the build offers session(), which needs a dashboard form config', async () => {
+    const viaCreate = fakeForm()
+    const create = vi.fn().mockReturnValue(viaCreate)
+    const session = vi.fn()
+    ;(window as { VGSCollect?: unknown }).VGSCollect = { create, session }
+    const stateCallback = vi.fn()
+    await expect(createCollectForm({ vaultId: 'tnt', env: 'live', stateCallback })).resolves.toBe(
+      viaCreate,
+    )
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledWith('tnt', 'live', stateCallback)
+    expect(session).not.toHaveBeenCalled()
+  })
+
+  it('rejects a Collect build without create()', async () => {
     ;(window as { VGSCollect?: unknown }).VGSCollect = {}
     await expect(createCollectForm({ vaultId: 'tnt', env: 'sandbox' })).rejects.toThrow(
-      'Unsupported VGS Collect build: neither session() nor create() is available',
+      'Unsupported VGS Collect build: create() is not available',
     )
   })
 
   it('injects the pinned CDN script once and rejects when it fails to load', async () => {
     const promise = createCollectForm({ vaultId: 'tnt', env: 'sandbox' })
-    const scripts = document.querySelectorAll<HTMLScriptElement>(`script[src="${VGS_COLLECT_SCRIPT_URL}"]`)
+    const scripts = document.querySelectorAll<HTMLScriptElement>(
+      `script[src="${VGS_COLLECT_SCRIPT_URL}"]`,
+    )
     expect(scripts).toHaveLength(1)
     expect(scripts[0].src).toBe('https://js.verygoodvault.com/vgs-collect/4.0.1/vgs-collect.js')
     expect(scripts[0].async).toBe(true)
+    expect(scripts[0].getAttribute('integrity')).toBe(
+      'sha384-Sr5xwyR0H5rcDXa7/iDJDM3qBBvtHuR97A8ELbd+DFBDi32Caf72to9UVqvI8R95',
+    )
+    expect(scripts[0].getAttribute('crossorigin')).toBe('anonymous')
     expect(scripts[0].parentElement).toBe(document.head)
 
     scripts[0].dispatchEvent(new Event('error'))
@@ -163,32 +208,38 @@ describe('configureCollect / CDN loader', () => {
 
   it('rejects when the script loads without window.VGSCollect, and the next call retries instead of replaying the rejection', async () => {
     const promise = createCollectForm({ vaultId: 'tnt', env: 'sandbox' })
-    const script = document.querySelector<HTMLScriptElement>(`script[src="${VGS_COLLECT_SCRIPT_URL}"]`)!
+    const script = document.querySelector<HTMLScriptElement>(
+      `script[src="${VGS_COLLECT_SCRIPT_URL}"]`,
+    )!
     script.dispatchEvent(new Event('load'))
-    await expect(promise).rejects.toThrow('VGS Collect script loaded but window.VGSCollect is missing')
+    await expect(promise).rejects.toThrow(
+      'VGS Collect script loaded but window.VGSCollect is missing',
+    )
 
     // The rejection is not cached: a later call re-attaches to the same script tag and succeeds once the global exists.
     const retry = createCollectForm({ vaultId: 'tnt', env: 'sandbox' })
     expect(document.querySelectorAll(`script[src="${VGS_COLLECT_SCRIPT_URL}"]`)).toHaveLength(1)
     const form = fakeForm()
-    const session = vi.fn().mockResolvedValue(form)
-    ;(window as { VGSCollect?: unknown }).VGSCollect = { session }
+    const create = vi.fn().mockReturnValue(form)
+    ;(window as { VGSCollect?: unknown }).VGSCollect = { create }
     script.dispatchEvent(new Event('load'))
     await expect(retry).resolves.toBe(form)
-    expect(session).toHaveBeenCalledWith({ vaultId: 'tnt', env: 'sandbox', formId: 'solvapay' })
+    expect(create).toHaveBeenCalledWith('tnt', 'sandbox', undefined)
     // Reset the module-level script cache for the tests that follow.
     script.dispatchEvent(new Event('error'))
   })
 
-  it('resolves through session() once the CDN script defines window.VGSCollect', async () => {
+  it('resolves through create() once the CDN script defines window.VGSCollect', async () => {
     const promise = createCollectForm({ vaultId: 'tnt', env: 'live' })
-    const script = document.querySelector<HTMLScriptElement>(`script[src="${VGS_COLLECT_SCRIPT_URL}"]`)!
+    const script = document.querySelector<HTMLScriptElement>(
+      `script[src="${VGS_COLLECT_SCRIPT_URL}"]`,
+    )!
     const form = fakeForm()
-    const session = vi.fn().mockResolvedValue(form)
-    ;(window as { VGSCollect?: unknown }).VGSCollect = { session }
+    const create = vi.fn().mockReturnValue(form)
+    ;(window as { VGSCollect?: unknown }).VGSCollect = { create }
     script.dispatchEvent(new Event('load'))
     await expect(promise).resolves.toBe(form)
-    expect(session).toHaveBeenCalledTimes(1)
-    expect(session).toHaveBeenCalledWith({ vaultId: 'tnt', env: 'live', formId: 'solvapay' })
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledWith('tnt', 'live', undefined)
   })
 })

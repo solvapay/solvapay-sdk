@@ -5,6 +5,7 @@ export {
   isCollectFormComplete,
   CardCaptureError,
   VGS_COLLECT_SCRIPT_URL,
+  VGS_COLLECT_SCRIPT_INTEGRITY,
   VGS_COLLECT_VERSION,
 } from './collect'
 export type {
