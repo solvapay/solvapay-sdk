@@ -104,23 +104,82 @@ describe('createMcpAppAdapter', () => {
     }
   })
 
-  it('routes the vault checkout calls to their tools with the payment id', async () => {
+  it('routes createCaptureGrant to create_capture_grant with only the payment id and returns the grant', async () => {
+    const grant = {
+      token: 'vgs-collect-token',
+      tenantId: 'tntr4ol0cbq',
+      environment: 'sandbox',
+      expiresAt: 1_800_000_000_000,
+      scope: { paymentIntentId: 'pi_1' },
+    }
+    const app = createMockApp(() => ({ structuredContent: grant }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.createCaptureGrant?.({ paymentIntentId: 'pi_1' })
+
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'create_capture_grant',
+      arguments: { paymentIntentId: 'pi_1' },
+    })
+    expect(MCP_TOOL_NAMES.createCaptureGrant).toBe('create_capture_grant')
+    expect(result).toStrictEqual(grant)
+  })
+
+  it('routes confirmPayment to confirm_payment with the card id, dropping an undefined returnUrl', async () => {
+    const payment = { id: 'pi_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' }
+    const app = createMockApp(() => ({ structuredContent: payment }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: undefined })
+
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'confirm_payment',
+      arguments: { paymentIntentId: 'pi_1', cardId: 'CRD1' },
+    })
+    expect(Object.keys(app.calls[0].args)).toStrictEqual(['paymentIntentId', 'cardId'])
+    expect(MCP_TOOL_NAMES.confirmPayment).toBe('confirm_payment')
+    expect(result).toStrictEqual(payment)
+  })
+
+  it('routes confirmPayment with a saved payment method and forwards returnUrl when given', async () => {
+    const payment = {
+      id: 'pi_1',
+      processorPaymentId: 'pi_stripe_1',
+      status: 'requires_action',
+      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+    }
+    const app = createMockApp(() => ({ structuredContent: payment }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.confirmPayment?.({
+      paymentIntentId: 'pi_1',
+      paymentMethodId: 'pm_saved',
+      returnUrl: 'https://app.example/return',
+    })
+
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'confirm_payment',
+      arguments: { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', returnUrl: 'https://app.example/return' },
+    })
+    expect(result).toStrictEqual(payment)
+  })
+
+  it('rejects vault calls with the tool error text when the server marks the result isError', async () => {
     const app = createMockApp(record => ({
-      structuredContent: { ok: true, tool: record.name },
+      isError: true,
+      content: [{ type: 'text', text: `${record.name}: Capture grant limit reached` }],
     }))
     const transport = createMcpAppAdapter(app)
 
-    await transport.createCaptureGrant?.({ paymentIntentId: 'pi_1' })
-    expect(app.callServerTool).toHaveBeenCalledWith({
-      name: MCP_TOOL_NAMES.createCaptureGrant,
-      arguments: { paymentIntentId: 'pi_1' },
-    })
-
-    await transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: undefined })
-    expect(app.callServerTool).toHaveBeenCalledWith({
-      name: MCP_TOOL_NAMES.confirmPayment,
-      arguments: { paymentIntentId: 'pi_1', cardId: 'CRD1' },
-    })
+    await expect(transport.createCaptureGrant?.({ paymentIntentId: 'pi_1' })).rejects.toThrow(
+      'create_capture_grant: Capture grant limit reached',
+    )
+    await expect(transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1' })).rejects.toThrow(
+      'confirm_payment: Capture grant limit reached',
+    )
+    expect(app.callServerTool).toHaveBeenCalledTimes(2)
   })
 
   it('omits the read tools now folded into the bootstrap payload', () => {

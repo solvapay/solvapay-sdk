@@ -11,16 +11,14 @@ const grant = {
   scope: { paymentIntentId: 'pi_sp_1' },
 }
 
+const succeededPayment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
+
 function deps(overrides: Partial<Parameters<typeof confirmVaultPayment>[0]> = {}) {
   return {
     paymentIntentId: 'pi_sp_1',
-    capture: vi.fn().mockResolvedValue({ cardId: 'CRD1' }),
+    capture: vi.fn().mockResolvedValue({ cardId: 'CRD1', last4: '4242', brand: 'VISA', expMonth: 12, expYear: 2030 }),
     createCaptureGrant: vi.fn().mockResolvedValue(grant),
-    confirmPayment: vi.fn().mockResolvedValue({
-      id: 'pi_sp_1',
-      processorPaymentId: 'pi_stripe_1',
-      status: 'succeeded',
-    }),
+    confirmPayment: vi.fn().mockResolvedValue(succeededPayment),
     returnUrl: 'https://app.example/return',
     copy: enCopy,
     ...overrides,
@@ -31,67 +29,118 @@ describe('confirmVaultPayment', () => {
   it('grants, captures into the vault, then confirms server-side with the card id', async () => {
     const d = deps()
     const result = await confirmVaultPayment(d)
+    expect(d.createCaptureGrant).toHaveBeenCalledTimes(1)
     expect(d.createCaptureGrant).toHaveBeenCalledWith({ paymentIntentId: 'pi_sp_1' })
+    expect(d.capture).toHaveBeenCalledTimes(1)
     expect(d.capture).toHaveBeenCalledWith(grant)
+    expect(d.confirmPayment).toHaveBeenCalledTimes(1)
     expect(d.confirmPayment).toHaveBeenCalledWith({
       paymentIntentId: 'pi_sp_1',
       cardId: 'CRD1',
       returnUrl: 'https://app.example/return',
     })
-    expect(result).toEqual({
-      status: 'succeeded',
-      payment: { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' },
-    })
+    expect(d.createCaptureGrant.mock.invocationCallOrder[0]).toBeLessThan(d.capture.mock.invocationCallOrder[0])
+    expect(d.capture.mock.invocationCallOrder[0]).toBeLessThan(d.confirmPayment.mock.invocationCallOrder[0])
+    expect(result).toStrictEqual({ status: 'succeeded', payment: succeededPayment })
   })
 
   it('pays with a saved payment method without touching the vault', async () => {
     const d = deps({ paymentMethodId: 'pm_saved' })
-    await confirmVaultPayment(d)
+    const result = await confirmVaultPayment(d)
     expect(d.createCaptureGrant).not.toHaveBeenCalled()
     expect(d.capture).not.toHaveBeenCalled()
-    expect(d.confirmPayment).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentMethodId: 'pm_saved' }),
-    )
-  })
-
-  it('surfaces a 3DS redirect', async () => {
-    const d = deps({
-      confirmPayment: vi.fn().mockResolvedValue({
-        id: 'pi_sp_1',
-        processorPaymentId: 'pi_stripe_1',
-        status: 'requires_action',
-        redirectUrl: 'https://hooks.stripe.com/3ds',
-      }),
+    expect(d.confirmPayment).toHaveBeenCalledTimes(1)
+    expect(d.confirmPayment).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_sp_1',
+      paymentMethodId: 'pm_saved',
+      returnUrl: 'https://app.example/return',
     })
-    const result = await confirmVaultPayment(d)
-    expect(result).toMatchObject({ status: 'requires_action', redirectUrl: 'https://hooks.stripe.com/3ds' })
+    expect(result).toStrictEqual({ status: 'succeeded', payment: succeededPayment })
   })
 
-  it('maps processing to pending and a decline to an error', async () => {
-    const processing = await confirmVaultPayment(
-      deps({
-        confirmPayment: vi.fn().mockResolvedValue({ id: 'a', processorPaymentId: 'b', status: 'processing' }),
-      }),
-    )
-    expect(processing).toMatchObject({ status: 'pending', message: enCopy.errors.paymentPending })
+  it('omits returnUrl from the confirm call when none is given', async () => {
+    const d = deps({ returnUrl: undefined })
+    await confirmVaultPayment(d)
+    expect(d.confirmPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_sp_1', cardId: 'CRD1', returnUrl: undefined })
+  })
 
-    const declined = await confirmVaultPayment(
-      deps({
-        confirmPayment: vi.fn().mockResolvedValue({ id: 'a', processorPaymentId: 'b', status: 'failed' }),
-      }),
-    )
-    expect(declined).toEqual({ status: 'error', message: enCopy.errors.paymentProcessingFailed })
+  it('surfaces a 3DS redirect with the payment and the 3DS copy', async () => {
+    const payment = {
+      id: 'pi_sp_1',
+      processorPaymentId: 'pi_stripe_1',
+      status: 'requires_action' as const,
+      redirectUrl: 'https://hooks.stripe.com/3ds',
+    }
+    const d = deps({ confirmPayment: vi.fn().mockResolvedValue(payment) })
+    const result = await confirmVaultPayment(d)
+    expect(result).toStrictEqual({
+      status: 'requires_action',
+      message: enCopy.errors.paymentRequires3ds,
+      redirectUrl: 'https://hooks.stripe.com/3ds',
+      payment,
+    })
+  })
+
+  it('treats requires_action without a redirect url as an unknown status', async () => {
+    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' as const }
+    const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
+    expect(result).toStrictEqual({ status: 'other', message: 'Payment status: requires_action', payment })
+  })
+
+  it('maps processing and pending to pending with the payment attached', async () => {
+    for (const status of ['processing', 'pending'] as const) {
+      const payment = { id: 'a', processorPaymentId: 'b', status }
+      const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
+      expect(result).toStrictEqual({ status: 'pending', message: enCopy.errors.paymentPending, payment })
+    }
+  })
+
+  it('maps failed and requires_payment_method to the processing-failed error', async () => {
+    for (const status of ['failed', 'requires_payment_method'] as const) {
+      const payment = { id: 'a', processorPaymentId: 'b', status }
+      const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
+      expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.paymentProcessingFailed })
+    }
+  })
+
+  it('reports any other status verbatim through the status-prefix copy', async () => {
+    const payment = { id: 'a', processorPaymentId: 'b', status: 'canceled' as never }
+    const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
+    expect(result).toStrictEqual({ status: 'other', message: 'Payment status: canceled', payment })
+  })
+
+  it('reports an unexpected error when the backend returns no payment or no processor id', async () => {
+    expect(await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(undefined) }))).toStrictEqual({
+      status: 'error',
+      message: enCopy.errors.paymentUnexpected,
+    })
+    expect(
+      await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue({ id: 'a', status: 'succeeded' }) })),
+    ).toStrictEqual({ status: 'error', message: enCopy.errors.paymentUnexpected })
   })
 
   it('reports a vault capture failure with the card copy, not the raw error', async () => {
     const d = deps({ capture: vi.fn().mockRejectedValue(new CardCaptureError('boom', 422)) })
     const result = await confirmVaultPayment(d)
-    expect(result).toEqual({ status: 'error', message: enCopy.errors.cardCaptureFailed })
+    expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.cardCaptureFailed })
+    expect(d.createCaptureGrant).toHaveBeenCalledTimes(1)
     expect(d.confirmPayment).not.toHaveBeenCalled()
   })
 
-  it('passes transport errors through as messages', async () => {
+  it('passes grant failures through as messages and never captures or confirms', async () => {
     const d = deps({ createCaptureGrant: vi.fn().mockRejectedValue(new Error('Grant limit reached')) })
-    expect(await confirmVaultPayment(d)).toEqual({ status: 'error', message: 'Grant limit reached' })
+    expect(await confirmVaultPayment(d)).toStrictEqual({ status: 'error', message: 'Grant limit reached' })
+    expect(d.capture).not.toHaveBeenCalled()
+    expect(d.confirmPayment).not.toHaveBeenCalled()
+  })
+
+  it('passes confirm transport errors through as messages', async () => {
+    const d = deps({ confirmPayment: vi.fn().mockRejectedValue(new Error('Failed to confirm payment: 502')) })
+    expect(await confirmVaultPayment(d)).toStrictEqual({ status: 'error', message: 'Failed to confirm payment: 502' })
+  })
+
+  it('falls back to the unexpected-error copy when a non-Error is thrown', async () => {
+    const d = deps({ confirmPayment: vi.fn().mockRejectedValue('nope') })
+    expect(await confirmVaultPayment(d)).toStrictEqual({ status: 'error', message: enCopy.errors.paymentUnexpected })
   })
 })

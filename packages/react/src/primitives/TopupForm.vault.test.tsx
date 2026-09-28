@@ -116,6 +116,7 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
         onSuccess={h.onSuccess}
         onError={h.onError}
       >
+        <TopupForm.Loading data-testid="loading" />
         <TopupForm.PaymentElement />
         <TopupForm.CardFields data-testid="card-fields" />
         <TopupForm.Error data-testid="topup-error" />
@@ -123,11 +124,32 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
       </TopupForm.Root>
     </SolvaPayContext.Provider>,
   )
-  return { ...h, ...utils }
+  return { ...h, ctx, ...utils }
+}
+
+const succeededPayment = { id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'succeeded' as const }
+const ready = () => waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
+const submit = () => screen.getByTestId('submit')
+const errorText = () => screen.queryByTestId('topup-error')?.textContent ?? null
+
+let collect: FakeCollectHandle
+
+async function fillAndArm() {
+  await ready()
+  act(() => collect.enter())
+  await waitFor(() => expect(submit()).not.toBeDisabled())
+}
+
+function stubLocation(overrides: Partial<Location> & { assign?: ReturnType<typeof vi.fn> }) {
+  const original = window.location
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { ...original, search: '', href: 'https://example.test/', ...overrides },
+  })
+  return () => Object.defineProperty(window, 'location', { configurable: true, value: original })
 }
 
 describe('TopupForm — vault checkout', () => {
-  let collect: FakeCollectHandle
   let restoreCollect: () => void
 
   beforeEach(() => {
@@ -138,70 +160,175 @@ describe('TopupForm — vault checkout', () => {
   afterEach(() => restoreCollect())
 
   it('mounts hosted card fields on the vault, never loads Stripe, and gates submit on validity', async () => {
-    renderVaultTopup()
-    await waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
+    const { ctx } = renderVaultTopup()
+    await ready()
+    expect(ctx.createTopupPayment).toHaveBeenCalledTimes(1)
+    expect(ctx.createTopupPayment).toHaveBeenCalledWith({ amount: 2500, currency: 'USD', autoRecharge: undefined })
+    expect(collect.forms).toHaveLength(1)
     expect(collect.forms[0].vaultId).toBe('tntr4ol0cbq')
+    expect(collect.forms[0].env).toBe('sandbox')
     expect(collect.forms[0].mounted).toEqual(['card_number', 'card_exp', 'card_cvc'])
     expect(loadStripe).not.toHaveBeenCalled()
     expect(screen.queryByTestId('payment-element')).toBeNull()
-    expect(screen.getByTestId('submit')).toBeDisabled()
+    expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeNull()
+    expect(screen.queryByTestId('loading')).toBeNull()
+    expect(document.querySelector('[data-solvapay-topup-form]')).toHaveAttribute('data-state', 'ready')
+    expect(screen.getByTestId('card-fields')).toHaveAttribute('data-solvapay-topup-form-card-fields', '')
+    expect(screen.getByText('Card number')).toHaveAttribute('data-solvapay-card-field-label', '')
+    expect(errorText()).toBeNull()
+
+    expect(submit()).toBeDisabled()
+    expect(submit()).toHaveAttribute('data-state', 'disabled')
+    expect(submit()).toHaveAttribute('aria-disabled', 'true')
+    expect(submit()).toHaveAttribute('aria-busy', 'false')
     act(() => collect.enter())
-    await waitFor(() => expect(screen.getByTestId('submit')).not.toBeDisabled())
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+    expect(submit()).toHaveAttribute('data-state', 'idle')
+    expect(submit()).toHaveAttribute('aria-disabled', 'false')
+    act(() => collect.clear())
+    await waitFor(() => expect(submit()).toBeDisabled())
+    expect(submit()).toHaveAttribute('data-state', 'disabled')
   })
 
   it('submits: grant → card stamped with the payment id → confirm → settle → onSuccess with credits', async () => {
     const h = renderVaultTopup()
-    await waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
-    act(() => collect.enter())
-    await waitFor(() => expect(screen.getByTestId('submit')).not.toBeDisabled())
+    await fillAndArm()
 
-    fireEvent.click(screen.getByTestId('submit'))
+    fireEvent.click(submit())
+    expect(submit()).toHaveAttribute('data-state', 'processing')
+    expect(submit()).toHaveAttribute('aria-busy', 'true')
+    expect(submit()).toBeDisabled()
+    expect(submit().textContent).toBe('Processing...')
 
     await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
+    expect(h.createCaptureGrant).toHaveBeenCalledTimes(1)
     expect(h.createCaptureGrant).toHaveBeenCalledWith({ paymentIntentId: 'pi_topup_1' })
-    expect(collect.cards[0]).toMatchObject({ auth: 'vgs-collect-token', meta: { paymentIntentId: 'pi_topup_1' } })
+    expect(collect.cards).toHaveLength(1)
+    expect(collect.cards[0]).toStrictEqual({
+      id: 'CRD_fake_1',
+      auth: 'vgs-collect-token',
+      meta: { paymentIntentId: 'pi_topup_1' },
+      attributes: { last4: '4242', card_brand: 'VISA', exp_month: 12, exp_year: 30 },
+    })
+    expect(h.confirmPayment).toHaveBeenCalledTimes(1)
     expect(h.confirmPayment).toHaveBeenCalledWith({
       paymentIntentId: 'pi_topup_1',
-      cardId: collect.cards[0].id,
+      cardId: 'CRD_fake_1',
       returnUrl: 'https://example.test/topup',
     })
+    expect(h.processTopupPayment).toHaveBeenCalledTimes(1)
     expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
-    expect(h.onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ processorPaymentId: 'pi_stripe_topup', status: 'succeeded' }),
-      { creditsAdded: 2500 },
-    )
+    expect(h.onSuccess).toHaveBeenCalledWith(succeededPayment, { creditsAdded: 2500 })
     expect(h.onError).not.toHaveBeenCalled()
+    expect(errorText()).toBeNull()
+    await waitFor(() => expect(submit()).toHaveAttribute('aria-busy', 'false'))
+    expect(submit()).toHaveAttribute('data-state', 'idle')
+  })
+
+  it('fires onSuccess without extras when the backend settles without a credits delta', async () => {
+    const h = renderVaultTopup({ processTopupPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }) })
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
+    expect(h.onSuccess).toHaveBeenCalledWith(succeededPayment, undefined)
+    expect(h.onError).not.toHaveBeenCalled()
+  })
+
+  it('ignores a second click while the first submit is still processing', async () => {
+    let resolveConfirm: (v: unknown) => void = () => {}
+    const h = renderVaultTopup({
+      confirmPayment: vi.fn().mockImplementation(() => new Promise(r => (resolveConfirm = r))),
+    })
+    await fillAndArm()
+    fireEvent.click(submit())
+    fireEvent.click(submit())
+    await waitFor(() => expect(h.confirmPayment).toHaveBeenCalledTimes(1))
+    expect(h.createCaptureGrant).toHaveBeenCalledTimes(1)
+    expect(collect.cards).toHaveLength(1)
+    resolveConfirm(succeededPayment)
+    await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
+    expect(h.confirmPayment).toHaveBeenCalledTimes(1)
+    expect(h.processTopupPayment).toHaveBeenCalledTimes(1)
   })
 
   it('holds onSuccess while the backend still reports processing', async () => {
     const h = renderVaultTopup({
       processTopupPayment: vi.fn().mockResolvedValue({ status: 'processing' }),
     })
-    await waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
-    act(() => collect.enter())
-    fireEvent.click(screen.getByTestId('submit'))
-    await waitFor(() => expect(screen.getByTestId('topup-error').textContent).toBe(enCopy.errors.paymentPending))
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.'))
+    expect(errorText()).toBe(enCopy.errors.paymentPending)
+    expect(h.confirmPayment).toHaveBeenCalledTimes(1)
+    expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
     expect(h.onSuccess).not.toHaveBeenCalled()
+    expect(h.onError).not.toHaveBeenCalled()
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+  })
+
+  it('holds the payer with the pending copy when the confirm itself is still processing', async () => {
+    const h = renderVaultTopup({
+      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'processing' }),
+    })
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(errorText()).toBe(enCopy.errors.paymentPending))
+    expect(h.processTopupPayment).not.toHaveBeenCalled()
+    expect(h.onSuccess).not.toHaveBeenCalled()
+    expect(h.onError).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed or cancelled settle through onError and the unexpected-error copy', async () => {
+    const h = renderVaultTopup({
+      processTopupPayment: vi.fn().mockResolvedValue({ status: 'failed' }),
+    })
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
+    expect(h.onError).toHaveBeenCalledWith(new Error('Topup failed'))
+    expect(errorText()).toBe('An unexpected error occurred.')
+    expect(errorText()).toBe(enCopy.errors.paymentUnexpected)
+    expect(h.onSuccess).not.toHaveBeenCalled()
+    await waitFor(() => expect(submit()).not.toBeDisabled())
   })
 
   it('shows a card error and does not confirm when the vault rejects the card', async () => {
     const h = renderVaultTopup()
-    await waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
-    act(() => collect.enter())
+    await fillAndArm()
     collect.options.failWithStatus = 422
-    fireEvent.click(screen.getByTestId('submit'))
+    fireEvent.click(submit())
     await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
-    expect(screen.getByTestId('topup-error').textContent).toBe(enCopy.errors.cardCaptureFailed)
+    expect(h.onError).toHaveBeenCalledWith(new Error('We could not save your card details. Please check them and try again.'))
+    expect(errorText()).toBe(enCopy.errors.cardCaptureFailed)
+    expect(screen.getByTestId('topup-error')).toHaveAttribute('role', 'alert')
+    expect(h.createCaptureGrant).toHaveBeenCalledTimes(1)
+    expect(collect.cards).toHaveLength(0)
     expect(h.confirmPayment).not.toHaveBeenCalled()
+    expect(h.processTopupPayment).not.toHaveBeenCalled()
+    expect(h.onSuccess).not.toHaveBeenCalled()
+    await waitFor(() => expect(submit()).not.toBeDisabled())
+    expect(submit()).toHaveAttribute('data-state', 'idle')
+    expect(submit()).toHaveAttribute('aria-busy', 'false')
   })
 
-  it('sends the payer to 3DS and resumes on return via the backend', async () => {
-    const assign = vi.fn()
-    const original = window.location
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { ...original, assign, search: '', href: 'https://example.test/' },
+  it('surfaces a grant failure verbatim and never touches the vault', async () => {
+    const h = renderVaultTopup({
+      createCaptureGrant: vi.fn().mockRejectedValue(new Error('Capture grant limit reached')),
     })
+    await fillAndArm()
+    fireEvent.click(submit())
+    await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
+    expect(h.onError).toHaveBeenCalledWith(new Error('Capture grant limit reached'))
+    expect(errorText()).toBe('Capture grant limit reached')
+    expect(collect.cards).toHaveLength(0)
+    expect(h.confirmPayment).not.toHaveBeenCalled()
+    expect(h.processTopupPayment).not.toHaveBeenCalled()
+    expect(h.onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('sends the payer to 3DS without settling', async () => {
+    const assign = vi.fn()
+    const restoreLocation = stubLocation({ assign })
     try {
       const h = renderVaultTopup({
         confirmPayment: vi.fn().mockResolvedValue({
@@ -211,29 +338,53 @@ describe('TopupForm — vault checkout', () => {
           redirectUrl: 'https://hooks.stripe.com/3ds/topup',
         }),
       })
-      await waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
-      act(() => collect.enter())
-      fireEvent.click(screen.getByTestId('submit'))
-      await waitFor(() => expect(assign).toHaveBeenCalledWith('https://hooks.stripe.com/3ds/topup'))
+      await fillAndArm()
+      fireEvent.click(submit())
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
+      expect(assign).toHaveBeenCalledWith('https://hooks.stripe.com/3ds/topup')
+      expect(h.confirmPayment).toHaveBeenCalledWith({
+        paymentIntentId: 'pi_topup_1',
+        cardId: 'CRD_fake_1',
+        returnUrl: 'https://example.test/topup',
+      })
       expect(h.processTopupPayment).not.toHaveBeenCalled()
+      expect(h.onSuccess).not.toHaveBeenCalled()
+      expect(h.onError).not.toHaveBeenCalled()
+      expect(errorText()).toBeNull()
     } finally {
-      Object.defineProperty(window, 'location', { configurable: true, value: original })
+      restoreLocation()
     }
+  })
 
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { ...original, search: '?payment_intent=pi_stripe_topup&redirect_status=succeeded', href: 'https://example.test/?payment_intent=pi_stripe_topup' },
+  it('resumes after a 3DS return on the payment_intent query param via the backend', async () => {
+    const assign = vi.fn()
+    const restoreLocation = stubLocation({
+      assign,
+      search: '?payment_intent=pi_stripe_topup&redirect_status=succeeded',
+      href: 'https://example.test/?payment_intent=pi_stripe_topup&redirect_status=succeeded',
     })
     const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
     try {
       const h = renderVaultTopup()
       await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
+      expect(h.onSuccess).toHaveBeenCalledWith(
+        { id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'succeeded' },
+        { creditsAdded: 2500 },
+      )
+      expect(h.processTopupPayment).toHaveBeenCalledTimes(1)
       expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
+      expect(replaceState).toHaveBeenCalledTimes(1)
+      expect(replaceState).toHaveBeenCalledWith({}, '', '/')
       expect(h.createCaptureGrant).not.toHaveBeenCalled()
+      expect(h.confirmPayment).not.toHaveBeenCalled()
+      expect(collect.cards).toHaveLength(0)
+      expect(assign).not.toHaveBeenCalled()
       expect(loadStripe).not.toHaveBeenCalled()
+      expect(h.onError).not.toHaveBeenCalled()
+      expect(errorText()).toBeNull()
     } finally {
       replaceState.mockRestore()
-      Object.defineProperty(window, 'location', { configurable: true, value: original })
+      restoreLocation()
     }
   })
 })

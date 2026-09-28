@@ -43,8 +43,12 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect((result as ErrorResult).status).toBe(400)
-    expect((result as ErrorResult).error).toMatch(/amount/)
+    expect(result).toStrictEqual({
+      error: 'Missing or invalid amount: must be a positive number',
+      status: 400,
+    })
+    expect(mockSyncCustomer).not.toHaveBeenCalled()
+    expect(mockCreateSolvaPay).not.toHaveBeenCalled()
   })
 
   it('returns error when amount is negative', async () => {
@@ -54,8 +58,11 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect((result as ErrorResult).status).toBe(400)
-    expect((result as ErrorResult).error).toMatch(/amount/)
+    expect(result).toStrictEqual({
+      error: 'Missing or invalid amount: must be a positive number',
+      status: 400,
+    })
+    expect(mockSyncCustomer).not.toHaveBeenCalled()
   })
 
   it('returns error when currency is missing', async () => {
@@ -65,8 +72,8 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect((result as ErrorResult).status).toBe(400)
-    expect((result as ErrorResult).error).toMatch(/currency/)
+    expect(result).toStrictEqual({ error: 'Missing required parameter: currency', status: 400 })
+    expect(mockSyncCustomer).not.toHaveBeenCalled()
   })
 
   it('returns 400 when currency is not uppercase ISO 4217', async () => {
@@ -76,21 +83,32 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect((result as ErrorResult).status).toBe(400)
-    expect((result as ErrorResult).error).toMatch(/uppercase/i)
+    expect(result).toStrictEqual({
+      error: 'Invalid currency "usd": must be an uppercase ISO 4217 code (e.g. "USD", "EUR")',
+      status: 400,
+    })
+    expect(mockSyncCustomer).not.toHaveBeenCalled()
   })
 
   it('returns syncCustomer error when customer sync fails', async () => {
     const syncError: ErrorResult = { error: 'Unauthorized', status: 401 }
     mockSyncCustomer.mockResolvedValueOnce(syncError)
 
+    const request = makeRequest()
     const result = await createTopupPaymentIntentCore(
-      makeRequest(),
+      request,
       { amount: 1000, currency: 'USD' },
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect(result).toEqual(syncError)
+    expect(result).toStrictEqual(syncError)
+    expect(mockSyncCustomer).toHaveBeenCalledTimes(1)
+    expect(mockSyncCustomer).toHaveBeenCalledWith(request, {
+      solvaPay: undefined,
+      includeEmail: undefined,
+      includeName: undefined,
+    })
+    expect(mockCreateSolvaPay).not.toHaveBeenCalled()
   })
 
   it('syncs customer then creates topup payment intent', async () => {
@@ -108,13 +126,14 @@ describe('createTopupPaymentIntentCore', () => {
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
+    const request = makeRequest()
     const result = await createTopupPaymentIntentCore(
-      makeRequest(),
+      request,
       { amount: 5000, currency: 'USD', description: 'Top up credits' },
     )
 
     expect(isErrorResult(result)).toBe(false)
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       captureMode: 'processor_elements',
       processorPaymentId: 'pi_topup_abc',
       clientSecret: 'pi_topup_abc_secret',
@@ -123,11 +142,46 @@ describe('createTopupPaymentIntentCore', () => {
       customerRef: 'cus_TOPUP1',
     })
 
+    expect(mockSyncCustomer).toHaveBeenCalledTimes(1)
+    expect(mockSyncCustomer).toHaveBeenCalledWith(request, {
+      solvaPay: undefined,
+      includeEmail: undefined,
+      includeName: undefined,
+    })
+    expect(mockCreateSolvaPay).toHaveBeenCalledTimes(1)
+    expect(mockCreateSolvaPay).toHaveBeenCalledWith()
+    expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledTimes(1)
     expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
       customerRef: 'cus_TOPUP1',
       amount: 5000,
       currency: 'USD',
       description: 'Top up credits',
+    })
+    expect(mockSolvaPay.createTopupPaymentIntent.mock.calls[0][0]).not.toHaveProperty('autoRecharge')
+  })
+
+  it('forwards includeEmail / includeName to the customer sync', async () => {
+    mockSyncCustomer.mockResolvedValueOnce('cus_TOPUP1')
+    const mockSolvaPay = {
+      createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
+        processorPaymentId: 'pi_1',
+        clientSecret: 'cs_1',
+        publishableKey: 'pk_1',
+      }),
+    }
+    mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
+
+    const request = makeRequest()
+    await createTopupPaymentIntentCore(
+      request,
+      { amount: 1000, currency: 'USD' },
+      { includeEmail: false, includeName: true },
+    )
+
+    expect(mockSyncCustomer).toHaveBeenCalledWith(request, {
+      solvaPay: undefined,
+      includeEmail: false,
+      includeName: true,
     })
   })
 
@@ -151,16 +205,25 @@ describe('createTopupPaymentIntentCore', () => {
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
 
-    await createTopupPaymentIntentCore(
+    const result = await createTopupPaymentIntentCore(
       makeRequest(),
       { amount: 5000, currency: 'USD', autoRecharge },
     )
 
+    expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledTimes(1)
     expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
       customerRef: 'cus_TOPUP1',
       amount: 5000,
       currency: 'USD',
+      description: undefined,
       autoRecharge,
+    })
+    expect(result).toStrictEqual({
+      captureMode: 'processor_elements',
+      processorPaymentId: 'pi_topup_auto',
+      clientSecret: 'cs_auto',
+      publishableKey: 'pk_test',
+      customerRef: 'cus_TOPUP1',
     })
   })
 
@@ -182,8 +245,43 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(false)
-    const success = result as { customerRef: string }
-    expect(success.customerRef).toBe('cus_REF_42')
+    expect(result).toStrictEqual({
+      captureMode: 'processor_elements',
+      processorPaymentId: 'pi_1',
+      clientSecret: 'cs_1',
+      publishableKey: 'pk_1',
+      customerRef: 'cus_REF_42',
+    })
+    expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
+      customerRef: 'cus_REF_42',
+      amount: 2000,
+      currency: 'EUR',
+      description: undefined,
+    })
+  })
+
+  it('passes vault-mode intents through with id and vault and no client secret', async () => {
+    mockSyncCustomer.mockResolvedValueOnce('cus_VAULT')
+    const mockSolvaPay = {
+      createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
+        id: '66f1c2d3e4f5a6b7c8d9e0f1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+        amount: 2500,
+        currency: 'USD',
+        status: 'pending',
+      }),
+    }
+    mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
+
+    const result = await createTopupPaymentIntentCore(makeRequest(), { amount: 2500, currency: 'USD' })
+
+    expect(result).toStrictEqual({
+      id: '66f1c2d3e4f5a6b7c8d9e0f1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+      customerRef: 'cus_VAULT',
+    })
   })
 
   it('handles API errors gracefully', async () => {
@@ -193,6 +291,7 @@ describe('createTopupPaymentIntentCore', () => {
       createTopupPaymentIntent: vi.fn().mockRejectedValueOnce(new Error('Internal server error')),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const result = await createTopupPaymentIntentCore(
       makeRequest(),
@@ -200,7 +299,14 @@ describe('createTopupPaymentIntentCore', () => {
     )
 
     expect(isErrorResult(result)).toBe(true)
-    expect((result as ErrorResult).status).toBe(500)
+    expect(result).toStrictEqual({
+      error: 'Topup payment intent creation failed',
+      status: 500,
+      details: 'Internal server error',
+    })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy).toHaveBeenCalledWith('[Create topup payment intent] Error:', new Error('Internal server error'))
+    errorSpy.mockRestore()
   })
 
   it('uses provided solvaPay instance instead of creating new one', async () => {
@@ -214,14 +320,33 @@ describe('createTopupPaymentIntentCore', () => {
       }),
     }
 
+    const request = makeRequest()
     const result = await createTopupPaymentIntentCore(
-      makeRequest(),
+      request,
       { amount: 3000, currency: 'GBP' },
       { solvaPay: providedSolvaPay as any },
     )
 
     expect(isErrorResult(result)).toBe(false)
-    expect(providedSolvaPay.createTopupPaymentIntent).toHaveBeenCalled()
+    expect(result).toStrictEqual({
+      captureMode: 'processor_elements',
+      processorPaymentId: 'pi_p',
+      clientSecret: 'cs_p',
+      publishableKey: 'pk_p',
+      customerRef: 'cus_PROVIDED',
+    })
+    expect(mockSyncCustomer).toHaveBeenCalledWith(request, {
+      solvaPay: providedSolvaPay,
+      includeEmail: undefined,
+      includeName: undefined,
+    })
+    expect(providedSolvaPay.createTopupPaymentIntent).toHaveBeenCalledTimes(1)
+    expect(providedSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
+      customerRef: 'cus_PROVIDED',
+      amount: 3000,
+      currency: 'GBP',
+      description: undefined,
+    })
     expect(mockCreateSolvaPay).not.toHaveBeenCalled()
   })
 })

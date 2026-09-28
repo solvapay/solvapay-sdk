@@ -106,8 +106,12 @@ function loadCollectScript(): Promise<VgsCollectGlobal> {
     )
     const script = existing ?? document.createElement('script')
     const done = () => {
-      if (window.VGSCollect) resolve(window.VGSCollect)
-      else reject(new Error('VGS Collect script loaded but window.VGSCollect is missing'))
+      if (window.VGSCollect) {
+        resolve(window.VGSCollect)
+        return
+      }
+      scriptPromise = null
+      reject(new Error('VGS Collect script loaded but window.VGSCollect is missing'))
     }
     script.addEventListener('load', done)
     script.addEventListener('error', () => {

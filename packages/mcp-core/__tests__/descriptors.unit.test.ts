@@ -4,7 +4,7 @@
  * doesn't silently drift between framework adapters.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
 import {
@@ -891,6 +891,265 @@ describe('attach_business_details descriptor', () => {
       expect.anything(),
     )
     coreSpy.mockRestore()
+  })
+})
+
+describe('create_capture_grant / confirm_payment descriptors (vault checkout)', () => {
+  const UI_ONLY_PREFIX = `UI-only; agents should prefer ${INTENT_TOOL_NAMES.map(name => `\`${name}\``).join(' / ')}. `
+  const grant = {
+    token: 'vgs-collect-token',
+    tenantId: 'tntr4ol0cbq',
+    environment: 'sandbox' as const,
+    expiresAt: 1_800_000_000_000,
+    scope: { paymentIntentId: 'pi_1' },
+  }
+  const confirmed = { id: 'pi_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
+  const authed = { authInfo: { extra: { customer_ref: 'cus_test' } } }
+  const unauthorizedResult = {
+    isError: true,
+    content: [{ type: 'text', text: 'customer_ref missing from MCP auth context' }],
+    structuredContent: {
+      error: 'Unauthorized',
+      status: 401,
+      details: 'customer_ref missing from MCP auth context',
+    },
+  }
+  const uiMeta = {
+    ui: { resourceUri: 'ui://test/view.html', visibility: ['app'] },
+    audience: 'ui',
+    'openai/widgetAccessible': true,
+    'openai/visibility': 'private',
+  }
+
+  function build(
+    options: Pick<Parameters<typeof buildSolvaPayDescriptors>[0], 'onToolCall' | 'onToolResult'> = {},
+  ) {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      ...options,
+    })
+    const grantTool = tools.find(t => t.name === MCP_TOOL_NAMES.createCaptureGrant)
+    const confirmTool = tools.find(t => t.name === MCP_TOOL_NAMES.confirmPayment)
+    if (!grantTool) throw new Error('create_capture_grant not registered')
+    if (!confirmTool) throw new Error('confirm_payment not registered')
+    return { solvaPay, grantTool, confirmTool }
+  }
+
+  async function spyCore<K extends 'createCaptureGrantCore' | 'confirmPaymentCore'>(name: K) {
+    const serverModule = await import('@solvapay/server')
+    return vi.spyOn(serverModule, name)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('advertises create_capture_grant as a UI-only, non-idempotent, non-destructive tool taking a paymentIntentId', () => {
+    const { grantTool } = build()
+    expect(grantTool.name).toBe('create_capture_grant')
+    expect(grantTool.description).toBe(
+      UI_ONLY_PREFIX +
+        'Vault checkout: grant the widget one short-lived card capture into the vault for a payment intent created with captureMode "vault".',
+    )
+    expect(grantTool.annotations).toStrictEqual({
+      openWorldHint: true,
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+    })
+    expect(grantTool.meta).toStrictEqual(uiMeta)
+    expect(Object.keys(grantTool.inputSchema)).toStrictEqual(['paymentIntentId'])
+    const schema = z.object(grantTool.inputSchema)
+    expect(schema.parse({ paymentIntentId: 'pi_1' })).toStrictEqual({ paymentIntentId: 'pi_1' })
+    expect(() => schema.parse({})).toThrow()
+    expect(() => schema.parse({ paymentIntentId: 42 })).toThrow()
+  })
+
+  it('advertises confirm_payment as a UI-only destructive tool with optional cardId / paymentMethodId / returnUrl', () => {
+    const { confirmTool } = build()
+    expect(confirmTool.name).toBe('confirm_payment')
+    expect(confirmTool.description).toBe(
+      UI_ONLY_PREFIX +
+        'Vault checkout: confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
+    )
+    expect(confirmTool.annotations).toStrictEqual({ openWorldHint: true, destructiveHint: true })
+    expect(confirmTool.meta).toStrictEqual(uiMeta)
+    expect(Object.keys(confirmTool.inputSchema)).toStrictEqual(['paymentIntentId', 'cardId', 'paymentMethodId', 'returnUrl'])
+    const schema = z.object(confirmTool.inputSchema)
+    expect(schema.parse({ paymentIntentId: 'pi_1' })).toStrictEqual({ paymentIntentId: 'pi_1' })
+    expect(
+      schema.parse({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_1', returnUrl: 'https://x/r' }),
+    ).toStrictEqual({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_1', returnUrl: 'https://x/r' })
+    expect(() => schema.parse({ cardId: 'CRD1' })).toThrow()
+    expect(() => schema.parse({ paymentIntentId: 'pi_1', cardId: 1 })).toThrow()
+  })
+
+  it('create_capture_grant refuses unauthenticated callers with 401 before calling the core helper', async () => {
+    const coreSpy = await spyCore('createCaptureGrantCore')
+    const { grantTool } = build()
+    const result = await grantTool.handler({ paymentIntentId: 'pi_1' }, {})
+    expect(result).toStrictEqual(unauthorizedResult)
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('create_capture_grant forwards the payment id with a POST request carrying the customer ref and returns the grant', async () => {
+    const coreSpy = (await spyCore('createCaptureGrantCore')).mockResolvedValue(grant)
+    const onToolCall = vi.fn()
+    const onToolResult = vi.fn()
+    const { solvaPay, grantTool } = build({ onToolCall, onToolResult })
+
+    const result = await grantTool.handler({ paymentIntentId: 'pi_1' }, authed)
+
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+    const [request, body, options] = coreSpy.mock.calls[0]
+    expect(request).toBeInstanceOf(Request)
+    expect(request.method).toBe('POST')
+    expect(request.url).toBe('http://solvapay-mcp-server.local/')
+    expect(request.headers.get('x-user-id')).toBe('cus_test')
+    expect(request.headers.get('content-type')).toBeNull()
+    expect(body).toStrictEqual({ paymentIntentId: 'pi_1' })
+    expect(options).toStrictEqual({ solvaPay })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(grant) }],
+      structuredContent: grant,
+    })
+    expect(onToolCall).toHaveBeenCalledTimes(1)
+    expect(onToolCall).toHaveBeenCalledWith('create_capture_grant', { paymentIntentId: 'pi_1' }, authed)
+    expect(onToolResult).toHaveBeenCalledTimes(1)
+    expect(onToolResult.mock.calls[0][0]).toBe('create_capture_grant')
+    expect(onToolResult.mock.calls[0][1]).toStrictEqual(result)
+    expect(typeof onToolResult.mock.calls[0][2].durationMs).toBe('number')
+  })
+
+  it('create_capture_grant coerces a non-string paymentIntentId to "" so the core helper returns its 400', async () => {
+    const coreSpy = (await spyCore('createCaptureGrantCore')).mockResolvedValue({
+      error: 'paymentIntentId is required',
+      status: 400,
+    })
+    const { grantTool } = build()
+    const result = await grantTool.handler({ paymentIntentId: 42 }, authed)
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({ paymentIntentId: '' })
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'paymentIntentId is required' }],
+      structuredContent: { error: 'paymentIntentId is required', status: 400 },
+    })
+  })
+
+  it('create_capture_grant maps a thrown core error to an isError result with status 500', async () => {
+    ;(await spyCore('createCaptureGrantCore')).mockRejectedValue(new Error('grant limit reached'))
+    const { grantTool } = build()
+    const result = await grantTool.handler({ paymentIntentId: 'pi_1' }, authed)
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'grant limit reached' }],
+      structuredContent: { error: 'grant limit reached', status: 500, details: 'grant limit reached' },
+    })
+  })
+
+  it('confirm_payment refuses unauthenticated callers with 401 before calling the core helper', async () => {
+    const coreSpy = await spyCore('confirmPaymentCore')
+    const { confirmTool } = build()
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1' }, {})
+    expect(result).toStrictEqual(unauthorizedResult)
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('confirm_payment forwards paymentIntentId, cardId and returnUrl and returns the confirmed payment', async () => {
+    const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(confirmed)
+    const { solvaPay, confirmTool } = build()
+
+    const result = await confirmTool.handler(
+      { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://app.example/return' },
+      authed,
+    )
+
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+    const [request, body, options] = coreSpy.mock.calls[0]
+    expect(request.method).toBe('POST')
+    expect(request.headers.get('x-user-id')).toBe('cus_test')
+    expect(body).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      paymentMethodId: undefined,
+      returnUrl: 'https://app.example/return',
+    })
+    expect(options).toStrictEqual({ solvaPay })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(confirmed) }],
+      structuredContent: confirmed,
+    })
+  })
+
+  it('confirm_payment forwards a saved payment method, drops non-string optionals, and passes a 3DS redirect through', async () => {
+    const requiresAction = {
+      id: 'pi_1',
+      processorPaymentId: 'pi_stripe_1',
+      status: 'requires_action' as const,
+      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+    }
+    const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(requiresAction)
+    const { confirmTool } = build()
+
+    const result = await confirmTool.handler(
+      { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', cardId: 7, returnUrl: null },
+      authed,
+    )
+
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: undefined,
+      paymentMethodId: 'pm_saved',
+      returnUrl: undefined,
+    })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(requiresAction) }],
+      structuredContent: requiresAction,
+    })
+  })
+
+  it('confirm_payment surfaces the core 400 for an ambiguous card / payment method body', async () => {
+    const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue({
+      error: 'Provide exactly one of cardId or paymentMethodId',
+      status: 400,
+    })
+    const { confirmTool } = build()
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1' }, authed)
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: undefined,
+      paymentMethodId: undefined,
+      returnUrl: undefined,
+    })
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Provide exactly one of cardId or paymentMethodId' }],
+      structuredContent: { error: 'Provide exactly one of cardId or paymentMethodId', status: 400 },
+    })
+  })
+
+  it('confirm_payment maps a thrown core error to an isError result, keeping an upstream status and details', async () => {
+    const upstream = Object.assign(new Error('Payment confirmation failed'), {
+      status: 402,
+      details: 'card_declined',
+    })
+    ;(await spyCore('confirmPaymentCore')).mockRejectedValue(upstream)
+    const onToolResult = vi.fn()
+    const { confirmTool } = build({ onToolResult })
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1' }, authed)
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'card_declined' }],
+      structuredContent: { error: 'Payment confirmation failed', status: 402, details: 'card_declined' },
+    })
+    expect(onToolResult).toHaveBeenCalledTimes(1)
+    expect(onToolResult.mock.calls[0][0]).toBe('confirm_payment')
+    expect(onToolResult.mock.calls[0][1]).toStrictEqual(result)
   })
 })
 
