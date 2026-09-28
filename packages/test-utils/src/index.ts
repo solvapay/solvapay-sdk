@@ -43,6 +43,7 @@ export { describeClientAuthAdapterContract } from './describeClientAuthAdapterCo
 export { createFakeCollect, VAULT_TEST_CARDS } from './fake-collect'
 export type {
   FakeCollectCard,
+  FakeCollectCreateCardOptions,
   FakeCollectFieldState,
   FakeCollectForm,
   FakeCollectHandle,

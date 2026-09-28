@@ -79,7 +79,10 @@ export type VaultCardFieldsProps = CardFieldsProps & {
 }
 
 /** VGS Collect error codes → copy keys. Unknown codes fall back to `invalid`. */
-const ERROR_CODE_KEYS: Record<number, 'required' | 'invalidNumber' | 'invalidExpiry' | 'invalidCvc'> = {
+const ERROR_CODE_KEYS: Record<
+  number,
+  'required' | 'invalidNumber' | 'invalidExpiry' | 'invalidCvc'
+> = {
   1001: 'required',
   1011: 'invalidNumber',
   1015: 'invalidExpiry',
@@ -87,17 +90,18 @@ const ERROR_CODE_KEYS: Record<number, 'required' | 'invalidNumber' | 'invalidExp
 }
 
 const COLLECT_NAMES: Record<CardFieldName, string> = {
-  cardholderName: 'cardholder_name',
-  cardNumber: 'card_number',
-  expiry: 'card_exp',
-  cvc: 'card_cvc',
+  cardholderName: 'cardholder',
+  cardNumber: 'pan',
+  expiry: 'exp-date',
+  cvc: 'cvc',
 }
 
 type FieldUi = { state: 'empty' | 'focused' | 'valid' | 'invalid'; error: string | null }
 
 function uiOf(field: CollectFieldState | undefined, copy: ReturnType<typeof useCopy>): FieldUi {
   if (!field) return { state: 'empty', error: null }
-  const touchedInvalid = field.isTouched === true && field.isValid === false && field.isEmpty !== true
+  const touchedInvalid =
+    field.isTouched === true && field.isValid === false && field.isEmpty !== true
   const requiredMissing = field.isTouched === true && field.isEmpty === true
   let error: string | null = null
   if (touchedInvalid || requiredMissing) {
@@ -138,7 +142,9 @@ export const VaultCardFields = forwardRef<HTMLElement, VaultCardFieldsProps>(
     ref,
   ) {
     const copy = useCopy()
-    const [containers, setContainers] = useState<Partial<Record<CardFieldName, HTMLDivElement | null>>>({})
+    const [containers, setContainers] = useState<
+      Partial<Record<CardFieldName, HTMLDivElement | null>>
+    >({})
     const [formState, setFormState] = useState<CollectFormState | null>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
@@ -250,7 +256,7 @@ export const VaultCardFields = forwardRef<HTMLElement, VaultCardFieldsProps>(
             inputMode: 'numeric',
             ariaLabel: copy.cardFields.labels.cvc,
           })
-          callbacksRef.current.onCapture(grant => captureCard(created, grant, { paymentIntentId }))
+          callbacksRef.current.onCapture(grant => captureCard(created, grant))
           setMounted(true)
         } catch (err) {
           if (cancelled) return
@@ -296,7 +302,11 @@ export const VaultCardFields = forwardRef<HTMLElement, VaultCardFieldsProps>(
           {labels ? (
             <span data-solvapay-card-field-label="">{copy.cardFields.labels[name]}</span>
           ) : null}
-          <div data-solvapay-card-field-input="" ref={refs[name]} aria-describedby={ui.error ? errorId : undefined} />
+          <div
+            data-solvapay-card-field-input=""
+            ref={refs[name]}
+            aria-describedby={ui.error ? errorId : undefined}
+          />
           {ui.error ? (
             <p id={errorId} role="alert" data-solvapay-card-field-error="">
               {ui.error}

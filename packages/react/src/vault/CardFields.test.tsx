@@ -9,7 +9,11 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import React from 'react'
-import { createFakeCollect, type FakeCollectForm, type FakeCollectHandle } from '../../../test-utils/src/fake-collect'
+import {
+  createFakeCollect,
+  type FakeCollectForm,
+  type FakeCollectHandle,
+} from '../../../test-utils/src/fake-collect'
 import { VaultCardFields } from './CardFields'
 import { configureCollect } from './collect'
 import { buildCollectFieldCss, mergeCollectCss } from './collectAppearance'
@@ -18,15 +22,25 @@ import { enCopy } from '../i18n/en'
 const vault = { tenantId: 'tntr4ol0cbq', environment: 'sandbox' as const }
 
 const STOCK_CSS = buildCollectFieldCss(undefined)
-const CLASSES = { invalid: 'invalid', valid: 'valid', empty: 'empty', focused: 'focused', dirty: 'dirty', touched: 'touched' }
+const CLASSES = {
+  invalid: 'invalid',
+  valid: 'valid',
+  empty: 'empty',
+  focused: 'focused',
+  dirty: 'dirty',
+  touched: 'touched',
+}
 
-function expectedOptions(css: Record<string, unknown> = STOCK_CSS, extra: Record<string, unknown> = {}) {
+function expectedOptions(
+  css: Record<string, unknown> = STOCK_CSS,
+  extra: Record<string, unknown> = {},
+) {
   return {
     cardholderName: {
       ...extra,
       css,
       classes: CLASSES,
-      name: 'cardholder_name',
+      name: 'cardholder',
       placeholder: 'Full name',
       validations: ['required'],
       autoComplete: 'cc-name',
@@ -36,7 +50,7 @@ function expectedOptions(css: Record<string, unknown> = STOCK_CSS, extra: Record
       ...extra,
       css,
       classes: CLASSES,
-      name: 'card_number',
+      name: 'pan',
       placeholder: '1234 1234 1234 1234',
       validations: ['required', 'validCardNumber'],
       autoComplete: 'cc-number',
@@ -48,7 +62,7 @@ function expectedOptions(css: Record<string, unknown> = STOCK_CSS, extra: Record
       ...extra,
       css,
       classes: CLASSES,
-      name: 'card_exp',
+      name: 'exp-date',
       placeholder: 'MM / YY',
       validations: ['required', 'validCardExpirationDate'],
       autoComplete: 'cc-exp',
@@ -60,7 +74,7 @@ function expectedOptions(css: Record<string, unknown> = STOCK_CSS, extra: Record
       ...extra,
       css,
       classes: CLASSES,
-      name: 'card_cvc',
+      name: 'cvc',
       placeholder: 'CVC',
       validations: ['required', 'validCardSecurityCode'],
       autoComplete: 'cc-csc',
@@ -89,10 +103,14 @@ function renderFields(props: Partial<React.ComponentProps<typeof VaultCardFields
 }
 
 const section = () => screen.getByTestId('fields')
-const field = (name: string) => document.querySelector(`[data-solvapay-card-field="${name}"]`) as HTMLElement
-const inputOf = (name: string) => field(name).querySelector('[data-solvapay-card-field-input]') as HTMLElement
-const labelOf = (name: string) => field(name).querySelector('[data-solvapay-card-field-label]')?.textContent ?? null
-const errorOf = (name: string) => field(name).querySelector('[data-solvapay-card-field-error]')?.textContent ?? null
+const field = (name: string) =>
+  document.querySelector(`[data-solvapay-card-field="${name}"]`) as HTMLElement
+const inputOf = (name: string) =>
+  field(name).querySelector('[data-solvapay-card-field-input]') as HTMLElement
+const labelOf = (name: string) =>
+  field(name).querySelector('[data-solvapay-card-field-label]')?.textContent ?? null
+const errorOf = (name: string) =>
+  field(name).querySelector('[data-solvapay-card-field-error]')?.textContent ?? null
 const alertOf = (name: string) => field(name).querySelector('[role="alert"]') as HTMLElement | null
 const spinner = () => section().querySelector('[data-solvapay-payment-form-loading]')
 const ready = () => waitFor(() => expect(section()).toHaveAttribute('data-state', 'ready'))
@@ -113,7 +131,12 @@ describe('VaultCardFields', () => {
     collect = createFakeCollect()
     loader = vi.fn(async (opts: Parameters<FakeCollectHandle['loader']>[0]) => {
       const form = await collect.loader(opts)
-      for (const method of ['cardNumberField', 'cardExpirationDateField', 'cardCVCField', 'cardholderNameField'] as const) {
+      for (const method of [
+        'cardNumberField',
+        'cardExpirationDateField',
+        'cardCVCField',
+        'cardholderNameField',
+      ] as const) {
         const original = form[method]
         form[method] = vi.fn((el, options) => original(el, options)) as never
       }
@@ -162,7 +185,7 @@ describe('VaultCardFields', () => {
     expect(Array.from(section().children)).toEqual([field('cardNumber'), row])
 
     const form = collect.forms[0] as SpiedForm
-    expect(form.mounted).toEqual(['card_number', 'card_exp', 'card_cvc'])
+    expect(form.mounted).toEqual(['pan', 'exp-date', 'cvc'])
     const expected = expectedOptions()
     expect(form.cardNumberField).toHaveBeenCalledTimes(1)
     expect(form.cardNumberField).toHaveBeenCalledWith(inputOf('cardNumber'), expected.cardNumber)
@@ -171,23 +194,34 @@ describe('VaultCardFields', () => {
     expect(form.cardCVCField).toHaveBeenCalledTimes(1)
     expect(form.cardCVCField).toHaveBeenCalledWith(inputOf('cvc'), expected.cvc)
     expect(form.cardholderNameField).not.toHaveBeenCalled()
-    expect(form.fieldOptions.card_number.css).toStrictEqual(STOCK_CSS)
+    expect(form.fieldOptions.pan.css).toStrictEqual(STOCK_CSS)
   })
 
   it('captures through the mounted form with the grant token and the payment id as meta', async () => {
     const { onCapture } = renderFields()
     await ready()
     const capture = onCapture.mock.calls[0][0] as (grant: { token: string }) => Promise<unknown>
-    const grant = { token: 'vgs-collect-token', tenantId: 'tntr4ol0cbq', environment: 'sandbox' as const, expiresAt: 1, scope: { paymentIntentId: 'pi_sp_1' } }
+    const grant = {
+      token: 'vgs-collect-token',
+      tenantId: 'tntr4ol0cbq',
+      environment: 'sandbox' as const,
+      expiresAt: 1,
+      scope: { paymentIntentId: 'pi_sp_1' },
+    }
     const card = await capture(grant)
     expect(collect.cards).toHaveLength(1)
     expect(collect.cards[0]).toStrictEqual({
       id: 'CRD_fake_1',
-      meta: { paymentIntentId: 'pi_sp_1' },
-      auth: 'vgs-collect-token',
+      options: { auth: 'vgs-collect-token', data: {} },
       attributes: { last4: '4242', card_brand: 'VISA', exp_month: 12, exp_year: 30 },
     })
-    expect(card).toStrictEqual({ cardId: 'CRD_fake_1', last4: '4242', brand: 'VISA', expMonth: 12, expYear: 2030 })
+    expect(card).toStrictEqual({
+      cardId: 'CRD_fake_1',
+      last4: '4242',
+      brand: 'VISA',
+      expMonth: 12,
+      expYear: 2030,
+    })
   })
 
   it('shows a validation message only once a field is touched and invalid, keyed on the VGS error code', async () => {
@@ -199,17 +233,32 @@ describe('VaultCardFields', () => {
     expect(field('cardNumber')).toHaveAttribute('data-state', 'empty')
 
     // Focused while still empty: focused, no error.
-    act(() => collect.setFieldState('card_number', { isFocused: true, isEmpty: true, isValid: false }))
+    act(() => collect.setFieldState('pan', { isFocused: true, isEmpty: true, isValid: false }))
     expect(field('cardNumber')).toHaveAttribute('data-state', 'focused')
     expect(errorOf('cardNumber')).toBeNull()
 
     // Typing an invalid number while focused: still no error (not touched).
-    act(() => collect.setFieldState('card_number', { isFocused: true, isEmpty: false, isValid: false, errors: [{ code: 1011 }] }))
+    act(() =>
+      collect.setFieldState('pan', {
+        isFocused: true,
+        isEmpty: false,
+        isValid: false,
+        errors: [{ code: 1011 }],
+      }),
+    )
     expect(errorOf('cardNumber')).toBeNull()
     expect(field('cardNumber')).toHaveAttribute('data-state', 'focused')
 
     // Blur: touched + invalid → our copy for 1011, not VGS's text.
-    act(() => collect.setFieldState('card_number', { isFocused: false, isTouched: true, isValid: false, isEmpty: false, errors: [{ code: 1011, message: 'is not a valid card number' }] }))
+    act(() =>
+      collect.setFieldState('pan', {
+        isFocused: false,
+        isTouched: true,
+        isValid: false,
+        isEmpty: false,
+        errors: [{ code: 1011, message: 'is not a valid card number' }],
+      }),
+    )
     expect(errorOf('cardNumber')).toBe('Your card number is invalid.')
     expect(errorOf('cardNumber')).toBe(enCopy.cardFields.errors.invalidNumber)
     expect(field('cardNumber')).toHaveAttribute('data-state', 'invalid')
@@ -217,12 +266,29 @@ describe('VaultCardFields', () => {
     expect(alert.tagName).toBe('P')
     expect(alert.id).toBe('solvapay-card-field-cardNumber-error')
     expect(alert).toHaveAttribute('data-solvapay-card-field-error', '')
-    expect(inputOf('cardNumber')).toHaveAttribute('aria-describedby', 'solvapay-card-field-cardNumber-error')
+    expect(inputOf('cardNumber')).toHaveAttribute(
+      'aria-describedby',
+      'solvapay-card-field-cardNumber-error',
+    )
     expect(screen.queryByText('is not a valid card number')).toBeNull()
 
     // Expiry and CVC codes map to their own messages; required when left empty.
-    act(() => collect.setFieldState('card_exp', { isTouched: true, isValid: false, isEmpty: false, errors: [{ code: 1015 }] }))
-    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1001 }] }))
+    act(() =>
+      collect.setFieldState('exp-date', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: false,
+        errors: [{ code: 1015 }],
+      }),
+    )
+    act(() =>
+      collect.setFieldState('cvc', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: true,
+        errors: [{ code: 1001 }],
+      }),
+    )
     expect(errorOf('expiry')).toBe("Your card's expiration date is invalid.")
     expect(field('expiry')).toHaveAttribute('data-state', 'invalid')
     expect(errorOf('cvc')).toBe('This field is required.')
@@ -230,26 +296,65 @@ describe('VaultCardFields', () => {
     expect(alertOf('expiry')!.id).toBe('solvapay-card-field-expiry-error')
     expect(alertOf('cvc')!.id).toBe('solvapay-card-field-cvc-error')
 
-    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: false, errors: [{ code: 1017 }] }))
+    act(() =>
+      collect.setFieldState('cvc', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: false,
+        errors: [{ code: 1017 }],
+      }),
+    )
     expect(errorOf('cvc')).toBe("Your card's security code is invalid.")
 
     // Unknown VGS code → generic invalid copy; touched-empty without a code → required.
-    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: false, errors: [{ code: 9999 }] }))
+    act(() =>
+      collect.setFieldState('cvc', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: false,
+        errors: [{ code: 9999 }],
+      }),
+    )
     expect(errorOf('cvc')).toBe('This value is invalid.')
-    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [] }))
+    act(() =>
+      collect.setFieldState('cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [] }),
+    )
     expect(errorOf('cvc')).toBe('This field is required.')
 
     // Touched-empty always wins over a known (or unknown) VGS code: empty is "required", never "invalid".
-    act(() => collect.setFieldState('card_number', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1011 }] }))
+    act(() =>
+      collect.setFieldState('pan', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: true,
+        errors: [{ code: 1011 }],
+      }),
+    )
     expect(errorOf('cardNumber')).toBe('This field is required.')
     expect(field('cardNumber')).toHaveAttribute('data-state', 'invalid')
-    act(() => collect.setFieldState('card_exp', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1015 }] }))
+    act(() =>
+      collect.setFieldState('exp-date', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: true,
+        errors: [{ code: 1015 }],
+      }),
+    )
     expect(errorOf('expiry')).toBe('This field is required.')
-    act(() => collect.setFieldState('card_cvc', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 9999 }] }))
+    act(() =>
+      collect.setFieldState('cvc', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: true,
+        errors: [{ code: 9999 }],
+      }),
+    )
     expect(errorOf('cvc')).toBe('This field is required.')
 
     // Fixing the number clears its message and marks it valid.
-    act(() => collect.setFieldState('card_number', { isTouched: true, isValid: true, isEmpty: false, errors: [] }))
+    act(() =>
+      collect.setFieldState('pan', { isTouched: true, isValid: true, isEmpty: false, errors: [] }),
+    )
     expect(errorOf('cardNumber')).toBeNull()
     expect(alertOf('cardNumber')).toBeNull()
     expect(inputOf('cardNumber').getAttribute('aria-describedby')).toBeNull()
@@ -274,14 +379,24 @@ describe('VaultCardFields', () => {
     renderFields({ cardholderName: true })
     await ready()
     const form = collect.forms[0] as SpiedForm
-    expect(form.mounted).toEqual(['cardholder_name', 'card_number', 'card_exp', 'card_cvc'])
+    expect(form.mounted).toEqual(['cardholder', 'pan', 'exp-date', 'cvc'])
     expect(form.cardholderNameField).toHaveBeenCalledTimes(1)
-    expect(form.cardholderNameField).toHaveBeenCalledWith(inputOf('cardholderName'), expectedOptions().cardholderName)
+    expect(form.cardholderNameField).toHaveBeenCalledWith(
+      inputOf('cardholderName'),
+      expectedOptions().cardholderName,
+    )
     expect(labelOf('cardholderName')).toBe('Name on card')
     expect(section().firstElementChild).toBe(field('cardholderName'))
     expect(field('cardholderName')).toHaveAttribute('data-state', 'empty')
 
-    act(() => collect.setFieldState('cardholder_name', { isTouched: true, isValid: false, isEmpty: true, errors: [{ code: 1001 }] }))
+    act(() =>
+      collect.setFieldState('cardholder', {
+        isTouched: true,
+        isValid: false,
+        isEmpty: true,
+        errors: [{ code: 1001 }],
+      }),
+    )
     expect(errorOf('cardholderName')).toBe('This field is required.')
     expect(field('cardholderName')).toHaveAttribute('data-state', 'invalid')
     expect(alertOf('cardholderName')!.id).toBe('solvapay-card-field-cardholderName-error')
@@ -325,7 +440,11 @@ describe('VaultCardFields', () => {
     })
     await ready()
     const css = mergeCollectCss(buildCollectFieldCss(appearance), fieldCss)
-    expect(css).toMatchObject({ color: 'rgb(1, 2, 3)', fontFamily: 'Georgia', '&:focus': { borderColor: 'lime', boxShadow: '0 0 0 1px #0570de' } })
+    expect(css).toMatchObject({
+      color: 'rgb(1, 2, 3)',
+      fontFamily: 'Georgia',
+      '&:focus': { borderColor: 'lime', boxShadow: '0 0 0 1px #0570de' },
+    })
 
     const form = collect.forms[0] as SpiedForm
     const expected = expectedOptions(css, { hideValue: true })
@@ -340,16 +459,31 @@ describe('VaultCardFields', () => {
 
   it('builds a dark-theme css from appearance variables and remounts the hosted fields only when the theme changes', async () => {
     const light = { variables: { colorBackground: '#ffffff', colorText: '#111111' } }
-    const dark = { theme: 'night' as const, variables: { colorBackground: '#000000', colorText: '#ffffff', colorBorder: '#333333' } }
-    const props = { vault, paymentIntentId: 'pi_sp_1', onCapture: vi.fn(), onComplete: vi.fn(), onActive: vi.fn(), 'data-testid': 'fields' }
+    const dark = {
+      theme: 'night' as const,
+      variables: { colorBackground: '#000000', colorText: '#ffffff', colorBorder: '#333333' },
+    }
+    const props = {
+      vault,
+      paymentIntentId: 'pi_sp_1',
+      onCapture: vi.fn(),
+      onComplete: vi.fn(),
+      onActive: vi.fn(),
+      'data-testid': 'fields',
+    }
     const { rerender } = render(<VaultCardFields {...props} appearance={light} />)
     await ready()
     expect(collect.forms).toHaveLength(1)
-    expect(collect.forms[0].fieldOptions.card_number.css).toStrictEqual(buildCollectFieldCss(light))
-    expect(collect.forms[0].fieldOptions.card_number.css).toMatchObject({ backgroundColor: '#ffffff', color: '#111111' })
+    expect(collect.forms[0].fieldOptions.pan.css).toStrictEqual(buildCollectFieldCss(light))
+    expect(collect.forms[0].fieldOptions.pan.css).toMatchObject({
+      backgroundColor: '#ffffff',
+      color: '#111111',
+    })
 
     // Same theme, new object identity: no remount.
-    rerender(<VaultCardFields {...props} appearance={{ ...light, variables: { ...light.variables } }} />)
+    rerender(
+      <VaultCardFields {...props} appearance={{ ...light, variables: { ...light.variables } }} />,
+    )
     await act(async () => {})
     expect(collect.forms).toHaveLength(1)
     expect(collect.forms[0].unmounted).toBe(false)
@@ -359,8 +493,8 @@ describe('VaultCardFields', () => {
     await ready()
     expect(collect.forms[0].unmounted).toBe(true)
     expect(collect.forms[1].unmounted).toBe(false)
-    expect(collect.forms[1].fieldOptions.card_number.css).toStrictEqual(buildCollectFieldCss(dark))
-    expect(collect.forms[1].fieldOptions.card_number.css).toMatchObject({
+    expect(collect.forms[1].fieldOptions.pan.css).toStrictEqual(buildCollectFieldCss(dark))
+    expect(collect.forms[1].fieldOptions.pan.css).toMatchObject({
       backgroundColor: '#000000',
       color: '#ffffff',
       border: '1px solid #333333',
@@ -375,7 +509,7 @@ describe('VaultCardFields', () => {
     await ready()
     expect(section().querySelectorAll('[data-solvapay-card-field-label]')).toHaveLength(0)
     expect(section().querySelectorAll('[data-solvapay-card-field-input]')).toHaveLength(3)
-    expect(collect.forms[0].fieldOptions.card_number.ariaLabel).toBe('Card number')
+    expect(collect.forms[0].fieldOptions.pan.ariaLabel).toBe('Card number')
   })
 
   it('renders nothing without a vault or payment id and unmounts the hosted form on unmount', async () => {

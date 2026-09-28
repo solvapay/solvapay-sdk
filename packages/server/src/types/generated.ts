@@ -335,7 +335,7 @@ export interface paths {
     put?: never
     /**
      * Grant the browser one card capture into the vault for this payment
-     * @description For a payment created with captureMode vault. The card must be stamped with the payment id (meta.paymentIntentId) and confirmed with POST :paymentIntentId/confirm.
+     * @description For a payment created with captureMode vault. Capture the card with the grant token and confirm it with POST :paymentIntentId/confirm while the grant is live; the card must be captured within the grant window of this payment and not used for another payment.
      */
     post: operations['PaymentIntentSdkController_captureGrant']
     delete?: never
@@ -2281,7 +2281,7 @@ export interface components {
        * @example 1759000000000
        */
       expiresAt: number
-      /** @description The payment this grant is bound to; the captured card must carry it in meta.paymentIntentId */
+      /** @description The payment this grant is bound to; a card captured with it confirms only this payment */
       scope: {
         paymentIntentId?: string
         sessionId?: string

@@ -127,8 +127,13 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
   return { ...h, ctx, ...utils }
 }
 
-const succeededPayment = { id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'succeeded' as const }
-const ready = () => waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
+const succeededPayment = {
+  id: 'pi_topup_1',
+  processorPaymentId: 'pi_stripe_topup',
+  status: 'succeeded' as const,
+}
+const ready = () =>
+  waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
 const submit = () => screen.getByTestId('submit')
 const errorText = () => screen.queryByTestId('topup-error')?.textContent ?? null
 
@@ -163,17 +168,27 @@ describe('TopupForm — vault checkout', () => {
     const { ctx } = renderVaultTopup()
     await ready()
     expect(ctx.createTopupPayment).toHaveBeenCalledTimes(1)
-    expect(ctx.createTopupPayment).toHaveBeenCalledWith({ amount: 2500, currency: 'USD', autoRecharge: undefined })
+    expect(ctx.createTopupPayment).toHaveBeenCalledWith({
+      amount: 2500,
+      currency: 'USD',
+      autoRecharge: undefined,
+    })
     expect(collect.forms).toHaveLength(1)
     expect(collect.forms[0].vaultId).toBe('tntr4ol0cbq')
     expect(collect.forms[0].env).toBe('sandbox')
-    expect(collect.forms[0].mounted).toEqual(['card_number', 'card_exp', 'card_cvc'])
+    expect(collect.forms[0].mounted).toEqual(['pan', 'exp-date', 'cvc'])
     expect(loadStripe).not.toHaveBeenCalled()
     expect(screen.queryByTestId('payment-element')).toBeNull()
     expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeNull()
     expect(screen.queryByTestId('loading')).toBeNull()
-    expect(document.querySelector('[data-solvapay-topup-form]')).toHaveAttribute('data-state', 'ready')
-    expect(screen.getByTestId('card-fields')).toHaveAttribute('data-solvapay-topup-form-card-fields', '')
+    expect(document.querySelector('[data-solvapay-topup-form]')).toHaveAttribute(
+      'data-state',
+      'ready',
+    )
+    expect(screen.getByTestId('card-fields')).toHaveAttribute(
+      'data-solvapay-topup-form-card-fields',
+      '',
+    )
     expect(screen.getByText('Card number')).toHaveAttribute('data-solvapay-card-field-label', '')
     expect(errorText()).toBeNull()
 
@@ -206,8 +221,7 @@ describe('TopupForm — vault checkout', () => {
     expect(collect.cards).toHaveLength(1)
     expect(collect.cards[0]).toStrictEqual({
       id: 'CRD_fake_1',
-      auth: 'vgs-collect-token',
-      meta: { paymentIntentId: 'pi_topup_1' },
+      options: { auth: 'vgs-collect-token', data: {} },
       attributes: { last4: '4242', card_brand: 'VISA', exp_month: 12, exp_year: 30 },
     })
     expect(h.confirmPayment).toHaveBeenCalledTimes(1)
@@ -226,7 +240,9 @@ describe('TopupForm — vault checkout', () => {
   })
 
   it('fires onSuccess without extras when the backend settles without a credits delta', async () => {
-    const h = renderVaultTopup({ processTopupPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }) })
+    const h = renderVaultTopup({
+      processTopupPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }),
+    })
     await fillAndArm()
     fireEvent.click(submit())
     await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
@@ -257,7 +273,11 @@ describe('TopupForm — vault checkout', () => {
     })
     await fillAndArm()
     fireEvent.click(submit())
-    await waitFor(() => expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.'))
+    await waitFor(() =>
+      expect(errorText()).toBe(
+        'Your payment is being confirmed. You will be notified once it completes.',
+      ),
+    )
     expect(errorText()).toBe(enCopy.errors.paymentPending)
     expect(h.confirmPayment).toHaveBeenCalledTimes(1)
     expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
@@ -268,12 +288,20 @@ describe('TopupForm — vault checkout', () => {
 
   it('holds the payer with the pending copy when the confirm itself is still processing', async () => {
     const h = renderVaultTopup({
-      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'processing' }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({
+          id: 'pi_topup_1',
+          processorPaymentId: 'pi_stripe_topup',
+          status: 'processing',
+        }),
     })
     await fillAndArm()
     fireEvent.click(submit())
     await waitFor(() => expect(errorText()).toBe(enCopy.errors.paymentPending))
-    expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.')
+    expect(errorText()).toBe(
+      'Your payment is being confirmed. You will be notified once it completes.',
+    )
     expect(h.processTopupPayment).not.toHaveBeenCalled()
     expect(h.onSuccess).not.toHaveBeenCalled()
     expect(h.onError).toHaveBeenCalledTimes(1)
@@ -285,7 +313,13 @@ describe('TopupForm — vault checkout', () => {
 
   it('reports an unknown confirm status through the status-prefix copy and onError', async () => {
     const h = renderVaultTopup({
-      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'canceled' }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({
+          id: 'pi_topup_1',
+          processorPaymentId: 'pi_stripe_topup',
+          status: 'canceled',
+        }),
     })
     await fillAndArm()
     fireEvent.click(submit())
@@ -302,7 +336,13 @@ describe('TopupForm — vault checkout', () => {
     const restoreLocation = stubLocation({ assign })
     try {
       const h = renderVaultTopup({
-        confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'requires_action' }),
+        confirmPayment: vi
+          .fn()
+          .mockResolvedValue({
+            id: 'pi_topup_1',
+            processorPaymentId: 'pi_stripe_topup',
+            status: 'requires_action',
+          }),
       })
       await fillAndArm()
       fireEvent.click(submit())
@@ -340,7 +380,9 @@ describe('TopupForm — vault checkout', () => {
     collect.options.failWithStatus = 422
     fireEvent.click(submit())
     await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
-    expect(h.onError).toHaveBeenCalledWith(new Error('We could not save your card details. Please check them and try again.'))
+    expect(h.onError).toHaveBeenCalledWith(
+      new Error('We could not save your card details. Please check them and try again.'),
+    )
     expect(errorText()).toBe(enCopy.errors.cardCaptureFailed)
     expect(screen.getByTestId('topup-error')).toHaveAttribute('role', 'alert')
     expect(h.createCaptureGrant).toHaveBeenCalledTimes(1)

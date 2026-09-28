@@ -180,18 +180,16 @@ export class CardCaptureError extends Error {
 }
 
 /**
- * Write the card in `form` into the vault under `grant` and stamp it with
- * `meta` (the payment it belongs to). The backend refuses to confirm with a
- * card whose `meta.paymentIntentId` does not match the payment.
+ * Write the card in `form` into the vault under `grant`. No `meta` is sent:
+ * Collect writes its own card meta, so the browser cannot stamp the payment on
+ * the card. The backend binds the card to the payment at confirm instead: it
+ * must have been captured inside the payment's grant window and not used for
+ * another payment.
  */
-export function captureCard(
-  form: CollectForm,
-  grant: { token: string },
-  meta: Record<string, string>,
-): Promise<CapturedCard> {
+export function captureCard(form: CollectForm, grant: { token: string }): Promise<CapturedCard> {
   return new Promise<CapturedCard>((resolve, reject) => {
     form.createCard(
-      { auth: grant.token, data: { meta } },
+      { auth: grant.token, data: {} },
       (status, body) => {
         const card = parseCardResponse(body)
         if (status >= 200 && status < 300 && card) {

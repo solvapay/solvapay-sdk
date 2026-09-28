@@ -84,7 +84,10 @@ type Harness = {
   onError: (error: Error) => void
 }
 
-function renderVaultForm(overrides: Partial<Harness> = {}, ctxOverrides: Partial<SolvaPayContextValue> = {}) {
+function renderVaultForm(
+  overrides: Partial<Harness> = {},
+  ctxOverrides: Partial<SolvaPayContextValue> = {},
+) {
   const h: Harness = {
     createCaptureGrant: vi.fn().mockResolvedValue(grant),
     confirmPayment: vi.fn().mockResolvedValue({
@@ -147,8 +150,13 @@ function renderVaultForm(overrides: Partial<Harness> = {}, ctxOverrides: Partial
   return { ...h, ctx, ...utils }
 }
 
-const succeededPayment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
-const ready = () => waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
+const succeededPayment = {
+  id: 'pi_sp_1',
+  processorPaymentId: 'pi_stripe_1',
+  status: 'succeeded' as const,
+}
+const ready = () =>
+  waitFor(() => expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'))
 const submit = () => screen.getByTestId('submit')
 const errorText = () => screen.queryByTestId('payment-error')?.textContent ?? null
 
@@ -174,7 +182,9 @@ describe('PaymentForm — vault checkout', () => {
 
   beforeEach(() => {
     seedCaches()
-    reconcilePayment.mockReset().mockResolvedValue({ status: 'success', result: { status: 'succeeded' } })
+    reconcilePayment
+      .mockReset()
+      .mockResolvedValue({ status: 'success', result: { status: 'succeeded' } })
     loadStripe.mockReset()
     collect = createFakeCollect()
     restoreCollect = configureCollect(collect.loader)
@@ -189,13 +199,17 @@ describe('PaymentForm — vault checkout', () => {
 
     await ready()
     expect(ctx.createPayment).toHaveBeenCalledTimes(1)
-    expect(ctx.createPayment).toHaveBeenCalledWith({ planRef: 'pln_paid', productRef: 'prd_paid', customer: undefined })
+    expect(ctx.createPayment).toHaveBeenCalledWith({
+      planRef: 'pln_paid',
+      productRef: 'prd_paid',
+      customer: undefined,
+    })
     expect(collect.forms).toHaveLength(1)
     expect(collect.forms[0].vaultId).toBe('tntr4ol0cbq')
     expect(collect.forms[0].env).toBe('sandbox')
-    expect(collect.forms[0].mounted).toEqual(['card_number', 'card_exp', 'card_cvc'])
-    expect(collect.forms[0].fieldOptions.card_number).toMatchObject({
-      name: 'card_number',
+    expect(collect.forms[0].mounted).toEqual(['pan', 'exp-date', 'cvc'])
+    expect(collect.forms[0].fieldOptions.pan).toMatchObject({
+      name: 'pan',
       validations: ['required', 'validCardNumber'],
       autoComplete: 'cc-number',
       showCardIcon: true,
@@ -208,9 +222,15 @@ describe('PaymentForm — vault checkout', () => {
     const root = document.querySelector('[data-solvapay-payment-form]') as HTMLElement
     expect(root).toHaveAttribute('data-state', 'ready')
     expect(root).toHaveAttribute('data-variant', 'paid')
-    expect(screen.getByTestId('card-fields')).toHaveAttribute('data-solvapay-payment-form-card-fields', '')
+    expect(screen.getByTestId('card-fields')).toHaveAttribute(
+      'data-solvapay-payment-form-card-fields',
+      '',
+    )
     expect(screen.getByText('Card number').tagName).toBe('SPAN')
-    expect(screen.getByText('Expiration date')).toHaveAttribute('data-solvapay-card-field-label', '')
+    expect(screen.getByText('Expiration date')).toHaveAttribute(
+      'data-solvapay-card-field-label',
+      '',
+    )
     expect(screen.getByText('Security code')).toHaveAttribute('data-solvapay-card-field-label', '')
     expect(errorText()).toBeNull()
   })
@@ -251,8 +271,7 @@ describe('PaymentForm — vault checkout', () => {
     expect(collect.cards).toHaveLength(1)
     expect(collect.cards[0]).toStrictEqual({
       id: 'CRD_fake_1',
-      auth: 'vgs-collect-token',
-      meta: { paymentIntentId: 'pi_sp_1' },
+      options: { auth: 'vgs-collect-token', data: {} },
       attributes: { last4: '4242', card_brand: 'VISA', exp_month: 12, exp_year: 30 },
     })
     expect(h.confirmPayment).toHaveBeenCalledTimes(1)
@@ -282,7 +301,10 @@ describe('PaymentForm — vault checkout', () => {
 
   it('merges a recurring purchase from reconcile into provider state instead of refetching', async () => {
     const purchase = { purchaseRef: 'pur_1', planRef: 'pln_paid', status: 'active' }
-    reconcilePayment.mockResolvedValue({ status: 'success', result: { status: 'succeeded', type: 'recurring', purchase } })
+    reconcilePayment.mockResolvedValue({
+      status: 'success',
+      result: { status: 'succeeded', type: 'recurring', purchase },
+    })
     const h = renderVaultForm()
     await fillAndArm()
     fireEvent.click(submit())
@@ -317,7 +339,9 @@ describe('PaymentForm — vault checkout', () => {
     fireEvent.click(submit())
 
     await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(1))
-    expect(h.onError).toHaveBeenCalledWith(new Error('We could not save your card details. Please check them and try again.'))
+    expect(h.onError).toHaveBeenCalledWith(
+      new Error('We could not save your card details. Please check them and try again.'),
+    )
     expect(errorText()).toBe(enCopy.errors.cardCaptureFailed)
     expect(screen.getByTestId('payment-error')).toHaveAttribute('role', 'alert')
     expect(h.createCaptureGrant).toHaveBeenCalledTimes(1)
@@ -357,7 +381,9 @@ describe('PaymentForm — vault checkout', () => {
 
   it('shows the processing-failed copy when the backend declines the confirmed payment', async () => {
     const h = renderVaultForm({
-      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'failed' }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'failed' }),
     })
     await fillAndArm()
     fireEvent.click(submit())
@@ -371,11 +397,21 @@ describe('PaymentForm — vault checkout', () => {
 
   it('holds the payer with the pending copy while the backend still reports processing', async () => {
     const h = renderVaultForm({
-      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'processing' }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({
+          id: 'pi_sp_1',
+          processorPaymentId: 'pi_stripe_1',
+          status: 'processing',
+        }),
     })
     await fillAndArm()
     fireEvent.click(submit())
-    await waitFor(() => expect(errorText()).toBe('Your payment is being confirmed. You will be notified once it completes.'))
+    await waitFor(() =>
+      expect(errorText()).toBe(
+        'Your payment is being confirmed. You will be notified once it completes.',
+      ),
+    )
     expect(errorText()).toBe(enCopy.errors.paymentPending)
     expect(h.onSuccess).not.toHaveBeenCalled()
     expect(h.onError).toHaveBeenCalledTimes(1)
@@ -388,7 +424,13 @@ describe('PaymentForm — vault checkout', () => {
 
   it('reports an unknown confirm status through the status-prefix copy and onError', async () => {
     const h = renderVaultForm({
-      confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'canceled' }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({
+          id: 'pi_sp_1',
+          processorPaymentId: 'pi_stripe_1',
+          status: 'canceled',
+        }),
     })
     await fillAndArm()
     fireEvent.click(submit())
@@ -405,7 +447,13 @@ describe('PaymentForm — vault checkout', () => {
     const restoreLocation = stubLocation({ assign })
     try {
       const h = renderVaultForm({
-        confirmPayment: vi.fn().mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' }),
+        confirmPayment: vi
+          .fn()
+          .mockResolvedValue({
+            id: 'pi_sp_1',
+            processorPaymentId: 'pi_stripe_1',
+            status: 'requires_action',
+          }),
       })
       await fillAndArm()
       fireEvent.click(submit())
@@ -435,7 +483,10 @@ describe('PaymentForm — vault checkout', () => {
     expect(h.confirmPayment).toHaveBeenCalledTimes(1)
     expect(h.onSuccess).not.toHaveBeenCalled()
 
-    reconcilePayment.mockResolvedValue({ status: 'timeout', error: new Error('Timed out waiting for webhook') })
+    reconcilePayment.mockResolvedValue({
+      status: 'timeout',
+      error: new Error('Timed out waiting for webhook'),
+    })
     fireEvent.click(submit())
     await waitFor(() => expect(h.onError).toHaveBeenCalledTimes(2))
     expect(errorText()).toBe('Timed out waiting for webhook')
@@ -483,7 +534,11 @@ describe('PaymentForm — vault checkout', () => {
     try {
       const h = renderVaultForm()
       await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
-      expect(h.onSuccess).toHaveBeenCalledWith({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' })
+      expect(h.onSuccess).toHaveBeenCalledWith({
+        id: 'pi_sp_1',
+        processorPaymentId: 'pi_stripe_1',
+        status: 'succeeded',
+      })
       expect(reconcilePayment).toHaveBeenCalledTimes(1)
       expect(reconcilePayment).toHaveBeenCalledWith({
         paymentIntentId: 'pi_stripe_1',

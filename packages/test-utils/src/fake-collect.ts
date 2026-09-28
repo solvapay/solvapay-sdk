@@ -4,14 +4,20 @@
  * `createFakeCollect()` returns a loader for `configureCollect` plus handles
  * to drive it: the fields "mount" into the given elements, `enter()` flips
  * the form to valid, and `createCard` resolves with a CMP-shaped card
- * object whose `meta` is what the SDK sent (so tests can assert the
- * payment binding). No network, no iframes.
+ * object and records the exact options the SDK passed (so tests can assert
+ * the request body; real Collect writes its own card `meta`, so the SDK
+ * sends none). No network, no iframes.
  */
+
+export interface FakeCollectCreateCardOptions {
+  auth: string
+  data?: Record<string, unknown>
+}
 
 export interface FakeCollectCard {
   id: string
-  meta: Record<string, string>
-  auth: string
+  /** The options `createCard` was called with, exactly as passed. */
+  options: FakeCollectCreateCardOptions
   attributes: { last4: string; card_brand: string; exp_month: number; exp_year: number }
 }
 
@@ -70,7 +76,7 @@ export interface FakeCollectForm {
   cardCVCField(el: string | HTMLElement, options?: Record<string, unknown>): void
   cardholderNameField(el: string | HTMLElement, options?: Record<string, unknown>): void
   createCard(
-    options: { auth: string; data?: Record<string, unknown> },
+    options: FakeCollectCreateCardOptions,
     onResponse: (status: number, body: unknown) => void,
     onError: (error: unknown) => void,
   ): void
@@ -98,26 +104,24 @@ export function createFakeCollect(options: FakeCollectOptions = {}): FakeCollect
         mounted: [],
         fieldOptions: {},
         unmounted: false,
-        cardNumberField: (_el, options) => mount('card_number', options),
-        cardExpirationDateField: (_el, options) => mount('card_exp', options),
-        cardCVCField: (_el, options) => mount('card_cvc', options),
-        cardholderNameField: (_el, options) => mount('cardholder_name', options),
-        createCard: ({ auth, data }, onResponse, onError) => {
+        cardNumberField: (_el, options) => mount('pan', options),
+        cardExpirationDateField: (_el, options) => mount('exp-date', options),
+        cardCVCField: (_el, options) => mount('cvc', options),
+        cardholderNameField: (_el, options) => mount('cardholder', options),
+        createCard: (createOptions, onResponse, onError) => {
           const fail = handle.options.failWithStatus
           if (fail) {
             onResponse(fail, { errors: [{ detail: 'fake failure' }] })
             return
           }
-          if (!auth) {
+          if (!createOptions.auth) {
             onError(new Error('missing auth'))
             return
           }
-          const meta = ((data?.meta as Record<string, string> | undefined) ?? {})
           const id = handle.options.nextCardId?.() ?? `CRD_fake_${++counter}`
           const card: FakeCollectCard = {
             id,
-            meta,
-            auth,
+            options: createOptions,
             attributes: {
               last4: handle.options.last4 ?? '4242',
               card_brand: handle.options.brand ?? 'VISA',
@@ -126,7 +130,7 @@ export function createFakeCollect(options: FakeCollectOptions = {}): FakeCollect
             },
           }
           handle.cards.push(card)
-          onResponse(201, { data: { id, attributes: card.attributes }, meta })
+          onResponse(201, { data: { id, attributes: card.attributes } })
         },
         unmount: () => {
           form.unmounted = true

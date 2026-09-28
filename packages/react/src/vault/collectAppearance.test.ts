@@ -45,7 +45,12 @@ describe('buildCollectFieldCss', () => {
         fontSizeBase: '15px',
       },
       rules: {
-        '.Input': { fontSize: '15px', lineHeight: '22px', padding: '7px 11px', border: '1px solid rgb(200, 200, 200)' },
+        '.Input': {
+          fontSize: '15px',
+          lineHeight: '22px',
+          padding: '7px 11px',
+          border: '1px solid rgb(200, 200, 200)',
+        },
         '.Input:focus': { borderColor: 'rgb(1, 2, 3)', boxShadow: '0 0 0 1px rgb(1, 2, 3)' },
       },
     })
@@ -68,7 +73,10 @@ describe('buildCollectFieldCss', () => {
       '&::placeholder': { color: 'rgb(9, 9, 9)' },
       '&:focus': { borderColor: 'rgb(1, 2, 3)', boxShadow: '0 0 0 1px rgb(1, 2, 3)' },
       '&.invalid.touched': { borderColor: 'rgb(255, 0, 0)' },
-      '&.invalid.touched:focus': { borderColor: 'rgb(255, 0, 0)', boxShadow: '0 0 0 1px rgb(255, 0, 0)' },
+      '&.invalid.touched:focus': {
+        borderColor: 'rgb(255, 0, 0)',
+        boxShadow: '0 0 0 1px rgb(255, 0, 0)',
+      },
     })
   })
 
@@ -87,7 +95,13 @@ describe('buildCollectFieldCss', () => {
         fontLineHeight: '20px',
       },
       rules: {
-        '.Input': { color: '#eeeeee', backgroundColor: '#111111', borderColor: '#444444', borderRadius: '2px', boxShadow: '0 1px 2px #000' },
+        '.Input': {
+          color: '#eeeeee',
+          backgroundColor: '#111111',
+          borderColor: '#444444',
+          borderRadius: '2px',
+          boxShadow: '0 1px 2px #000',
+        },
         '.Input:focus': { border: '2px dashed #abcdef', outline: '2px solid #abcdef' },
         '.Input--invalid': { border: '1px solid #cc0000', color: '#ffcccc' },
         '.Input::placeholder': { color: '#777777' },
@@ -109,7 +123,11 @@ describe('buildCollectFieldCss', () => {
       boxShadow: '0 1px 2px #000',
       transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
       '&::placeholder': { color: '#777777' },
-      '&:focus': { borderColor: '#abcdef', boxShadow: '0 0 0 1px #abcdef', outline: '2px solid #abcdef' },
+      '&:focus': {
+        borderColor: '#abcdef',
+        boxShadow: '0 0 0 1px #abcdef',
+        outline: '2px solid #abcdef',
+      },
       '&.invalid.touched': { borderColor: '#cc0000', color: '#ffcccc' },
       '&.invalid.touched:focus': { borderColor: '#cc0000', boxShadow: '0 0 0 1px #cc0000' },
     })
@@ -150,7 +168,13 @@ describe('buildCollectFieldCss', () => {
       ],
     } as never)
     expect(css['@font-face']).toStrictEqual([
-      { fontFamily: 'Inter', src: 'url(a.woff2)', fontWeight: '400', fontStyle: 'normal', fontDisplay: 'swap' },
+      {
+        fontFamily: 'Inter',
+        src: 'url(a.woff2)',
+        fontWeight: '400',
+        fontStyle: 'normal',
+        fontDisplay: 'swap',
+      },
       { fontFamily: 'Inter', src: 'url(b.woff2)', fontWeight: '700', fontStyle: 'italic' },
     ])
   })

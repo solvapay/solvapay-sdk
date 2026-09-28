@@ -22,7 +22,7 @@ function fakeForm(overrides: Partial<CollectForm> = {}): CollectForm {
 }
 
 describe('captureCard', () => {
-  it('sends the grant token and the meta, and maps the CMP card object', async () => {
+  it('sends the grant token with empty data (no meta), and maps the CMP card object', async () => {
     const createCard = vi.fn((opts, onResponse) => {
       onResponse(201, {
         data: {
@@ -31,16 +31,10 @@ describe('captureCard', () => {
         },
       })
     })
-    const card = await captureCard(
-      fakeForm({ createCard }),
-      { token: 'tok' },
-      { paymentIntentId: 'pi_1' },
-    )
+    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' })
     expect(createCard).toHaveBeenCalledTimes(1)
-    expect(createCard.mock.calls[0][0]).toEqual({
-      auth: 'tok',
-      data: { meta: { paymentIntentId: 'pi_1' } },
-    })
+    // Collect writes its own card meta; the SDK sends none.
+    expect(createCard.mock.calls[0][0]).toStrictEqual({ auth: 'tok', data: {} })
     expect(typeof createCard.mock.calls[0][1]).toBe('function')
     expect(typeof createCard.mock.calls[0][2]).toBe('function')
     expect(card).toEqual({
@@ -66,7 +60,7 @@ describe('captureCard', () => {
         },
       })
     })
-    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' }, {})
+    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' })
     expect(card).toEqual({
       cardId: 'CRD2',
       last4: '1111',
@@ -78,7 +72,7 @@ describe('captureCard', () => {
 
   it('leaves optional card fields undefined when the response carries no attributes', async () => {
     const createCard = vi.fn((_opts, onResponse) => onResponse(201, { data: { id: 'CRD3' } }))
-    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' }, {})
+    const card = await captureCard(fakeForm({ createCard }), { token: 'tok' })
     expect(card).toEqual({
       cardId: 'CRD3',
       last4: undefined,
@@ -90,7 +84,7 @@ describe('captureCard', () => {
 
   it('rejects with the status when the vault refuses the card', async () => {
     const createCard = vi.fn((_opts, onResponse) => onResponse(422, { errors: [] }))
-    const promise = captureCard(fakeForm({ createCard }), { token: 't' }, {})
+    const promise = captureCard(fakeForm({ createCard }), { token: 't' })
     await expect(promise).rejects.toBeInstanceOf(CardCaptureError)
     await expect(promise).rejects.toMatchObject({
       name: 'CardCaptureError',
@@ -101,7 +95,7 @@ describe('captureCard', () => {
 
   it('rejects when the response has no card id, even on a 2xx', async () => {
     const createCard = vi.fn((_opts, onResponse) => onResponse(201, { data: {} }))
-    const promise = captureCard(fakeForm({ createCard }), { token: 't' }, {})
+    const promise = captureCard(fakeForm({ createCard }), { token: 't' })
     await expect(promise).rejects.toBeInstanceOf(CardCaptureError)
     await expect(promise).rejects.toMatchObject({
       message: 'Card capture failed with status 201',
@@ -111,7 +105,7 @@ describe('captureCard', () => {
 
   it('rejects on a transport error with the error message and no status', async () => {
     const createCard = vi.fn((_opts, _ok, onError) => onError(new Error('network')))
-    const promise = captureCard(fakeForm({ createCard }), { token: 't' }, {})
+    const promise = captureCard(fakeForm({ createCard }), { token: 't' })
     await expect(promise).rejects.toBeInstanceOf(CardCaptureError)
     const err = (await promise.catch(e => e)) as CardCaptureError
     expect(err.message).toBe('network')
@@ -120,7 +114,7 @@ describe('captureCard', () => {
 
   it('rejects with the generic message when the transport error is not an Error', async () => {
     const createCard = vi.fn((_opts, _ok, onError) => onError('boom'))
-    await expect(captureCard(fakeForm({ createCard }), { token: 't' }, {})).rejects.toMatchObject({
+    await expect(captureCard(fakeForm({ createCard }), { token: 't' })).rejects.toMatchObject({
       name: 'CardCaptureError',
       message: 'Card capture failed',
       status: undefined,

@@ -55,7 +55,13 @@ function fontFaces(appearance: Appearance | undefined): CollectCss[] {
   const fonts = (appearance as { fonts?: unknown[] } | undefined)?.fonts ?? []
   const faces: CollectCss[] = []
   for (const font of fonts) {
-    const f = font as { family?: string; src?: string; weight?: string; style?: string; display?: string }
+    const f = font as {
+      family?: string
+      src?: string
+      weight?: string
+      style?: string
+      display?: string
+    }
     if (!f.family || !f.src) continue
     faces.push({
       fontFamily: f.family,
@@ -81,11 +87,32 @@ export function buildCollectFieldCss(appearance: Appearance | undefined): Collec
   const placeholder = rule(appearance, '.Input::placeholder')
 
   const color = pick(input.color, v.colorText, DEFAULTS.color)
-  const placeholderColor = pick(placeholder.color, v.colorTextPlaceholder, v.colorTextSecondary, DEFAULTS.placeholder)
+  const placeholderColor = pick(
+    placeholder.color,
+    v.colorTextPlaceholder,
+    v.colorTextSecondary,
+    DEFAULTS.placeholder,
+  )
   const background = pick(input.backgroundColor, v.colorBackground, DEFAULTS.background)
-  const borderColor = pick(borderColorOf(input.border), input.borderColor, v.colorBorder, DEFAULTS.border) as string
-  const focusColor = pick(focus.borderColor, borderColorOf(focus.border), v.colorPrimary, DEFAULTS.focus) as string
-  const danger = pick(invalid.borderColor, borderColorOf(invalid.border), invalid.color, v.colorDanger, DEFAULTS.danger) as string
+  const borderColor = pick(
+    borderColorOf(input.border),
+    input.borderColor,
+    v.colorBorder,
+    DEFAULTS.border,
+  ) as string
+  const focusColor = pick(
+    focus.borderColor,
+    borderColorOf(focus.border),
+    v.colorPrimary,
+    DEFAULTS.focus,
+  ) as string
+  const danger = pick(
+    invalid.borderColor,
+    borderColorOf(invalid.border),
+    invalid.color,
+    v.colorDanger,
+    DEFAULTS.danger,
+  ) as string
   const radius = pick(input.borderRadius, v.borderRadius, DEFAULTS.borderRadius)
   const fontFamily = pick(input.fontFamily, v.fontFamily)
   const fontSize = pick(input.fontSize, v.fontSizeBase, DEFAULTS.fontSize)
