@@ -18,6 +18,8 @@ export {
   processPaymentIntent,
   processTopupPaymentIntent,
   attachBusinessDetails,
+  createCaptureGrant,
+  confirmPayment,
 } from './payment'
 
 // Export checkout helpers

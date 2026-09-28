@@ -21,11 +21,11 @@ import { usePlans } from '../hooks/usePlans'
 import { defaultListPlans } from '../transport/list-plans'
 import { useCopy } from '../hooks/useCopy'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import type { PaymentIntent } from '@stripe/stripe-js'
 import type {
   CheckoutResult,
   Plan,
   PrefillCustomer,
+  SucceededPayment,
 } from '../types'
 
 export type CheckoutLayoutSize = 'chat' | 'mobile' | 'desktop' | 'auto'
@@ -51,7 +51,7 @@ export type CheckoutLayoutProps = {
    * Fires on paid completions only — preserved for backwards compatibility.
    * For a unified callback across paid + activated flows, use `onResult`.
    */
-  onSuccess?: (paymentIntent: PaymentIntent) => void
+  onSuccess?: (paymentIntent: SucceededPayment) => void
   /** Unified completion callback (paid + activated). */
   onResult?: (result: CheckoutResult) => void
   /** Override the default free-plan activation step. Forwarded to PaymentForm. */

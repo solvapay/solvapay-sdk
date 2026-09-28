@@ -20,7 +20,13 @@ vi.mock('./error', () => ({
 
 import { createSolvaPay } from '../factory'
 import { syncCustomerCore } from './customer'
-import { createPaymentIntentCore, processTopupPaymentIntentCore, attachBusinessDetailsCore } from './payment'
+import {
+  createPaymentIntentCore,
+  processTopupPaymentIntentCore,
+  attachBusinessDetailsCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
+} from './payment'
 
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
 
@@ -576,6 +582,97 @@ describe('attachBusinessDetailsCore', () => {
       customerCountry: 'SE',
       taxId: 'SE556677889901',
       taxIdType: 'eu_vat',
+    })
+  })
+})
+
+describe('createCaptureGrantCore', () => {
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const createCaptureGrant = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSyncCustomer.mockResolvedValue('cus_ABC')
+    createCaptureGrant.mockResolvedValue({
+      token: 't',
+      tenantId: 'tntr4ol0cbq',
+      environment: 'sandbox',
+      expiresAt: 1,
+      scope: { paymentIntentId: 'pi_1' },
+    })
+    mockCreateSolvaPay.mockReturnValue({ createCaptureGrant } as never)
+  })
+
+  it('rejects a missing paymentIntentId with 400', async () => {
+    expect(await createCaptureGrantCore(fakeRequest(), { paymentIntentId: '' })).toEqual({
+      error: 'paymentIntentId is required',
+      status: 400,
+    })
+    expect(createCaptureGrant).not.toHaveBeenCalled()
+  })
+
+  it('requires the authenticated customer, then returns the grant verbatim', async () => {
+    const result = await createCaptureGrantCore(fakeRequest(), { paymentIntentId: 'pi_1' })
+    expect(mockSyncCustomer).toHaveBeenCalled()
+    expect(createCaptureGrant).toHaveBeenCalledWith({ paymentIntentId: 'pi_1' })
+    expect(result).toMatchObject({ token: 't', scope: { paymentIntentId: 'pi_1' } })
+  })
+
+  it('propagates syncCustomerCore errors verbatim', async () => {
+    mockSyncCustomer.mockResolvedValue({ error: 'Unauthorized', status: 401 })
+    expect(await createCaptureGrantCore(fakeRequest(), { paymentIntentId: 'pi_1' })).toEqual({
+      error: 'Unauthorized',
+      status: 401,
+    })
+  })
+})
+
+describe('confirmPaymentCore', () => {
+  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const confirmPayment = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSyncCustomer.mockResolvedValue('cus_ABC')
+    confirmPayment.mockResolvedValue({ id: 'pi_1', processorPaymentId: 'pi_s', status: 'succeeded' })
+    mockCreateSolvaPay.mockReturnValue({ confirmPayment } as never)
+  })
+
+  it('requires exactly one of cardId / paymentMethodId', async () => {
+    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1' })).toEqual({
+      error: 'Provide exactly one of cardId or paymentMethodId',
+      status: 400,
+    })
+    expect(
+      await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c', paymentMethodId: 'pm' }),
+    ).toMatchObject({ status: 400 })
+    expect(confirmPayment).not.toHaveBeenCalled()
+  })
+
+  it('confirms with a captured card and forwards the return url', async () => {
+    const result = await confirmPaymentCore(fakeRequest(), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+    })
+    expect(confirmPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r' })
+    expect(result).toMatchObject({ processorPaymentId: 'pi_s', status: 'succeeded' })
+  })
+
+  it('confirms with a saved payment method', async () => {
+    await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', paymentMethodId: 'pm_1' })
+    expect(confirmPayment).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_1',
+      paymentMethodId: 'pm_1',
+      returnUrl: undefined,
+    })
+  })
+
+  it('maps thrown errors through handleRouteError', async () => {
+    confirmPayment.mockRejectedValue(new Error('rail down'))
+    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c' })).toEqual({
+      error: 'Payment confirmation failed',
+      status: 500,
     })
   })
 })

@@ -18,7 +18,6 @@
  */
 
 import React, { createContext, forwardRef, useContext, useMemo } from 'react'
-import type { PaymentIntent } from '@stripe/stripe-js'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { PlanSelector } from '../PlanSelector'
 import {
@@ -723,7 +722,7 @@ function RecurringPayment({ className }: { className?: string }) {
         productRef={productRef}
         returnUrl={returnUrl}
         requireTermsAcceptance={false}
-        onSuccess={(intent: PaymentIntent) => flow.notifyPaymentSuccess(intent)}
+        onSuccess={intent => flow.notifyPaymentSuccess(intent)}
       >
         <PaymentForm.Loading />
         <PaymentForm.BusinessDetails.Root className="solvapay-checkout-business-details">

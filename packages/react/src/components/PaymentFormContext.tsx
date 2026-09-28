@@ -1,10 +1,13 @@
 'use client'
 import React, { createContext, useContext } from 'react'
-import type { Stripe, StripeElements } from '@stripe/stripe-js'
+import type { Appearance, Stripe, StripeElements } from '@stripe/stripe-js'
 import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
-import type { Plan, PrefillCustomer } from '../types'
+import type { CaptureMode, Plan, PrefillCustomer, VaultInfo } from '../types'
+import type { CardCapture } from '../vault/CardFields'
 
-export type PaymentElementKind = 'payment-element' | 'card-element' | null
+export type PaymentElementKind = 'payment-element' | 'card-element' | 'card-fields' | null
+
+export type { CardCapture }
 
 export interface PaymentFormContextValue {
   planRef?: string
@@ -12,6 +15,13 @@ export interface PaymentFormContextValue {
   prefillCustomer?: PrefillCustomer
   resolvedPlanRef: string | null
   plan: Plan | null
+  /** `processor_elements` (Stripe Elements) or `vault` (SDK CardFields, server-side confirm). */
+  captureMode: CaptureMode
+  /** SolvaPay payment intent id. Set in both modes; the vault calls key on it. */
+  paymentIntentId: string | null
+  vault: VaultInfo | null
+  /** Resolved Elements appearance; vault `CardFields` derive their look from it. */
+  appearance?: Appearance
   clientSecret: string | null
   processorPaymentId: string | null
   stripe: Stripe | null
@@ -37,6 +47,8 @@ export interface PaymentFormContextValue {
   fieldErrors: Partial<Record<keyof BusinessDetailsInput, string>>
   setBusinessDetails: (patch: Partial<BusinessDetailsInput>) => void
   setElementKind: (k: PaymentElementKind) => void
+  /** Vault mode only: `CardFields` hands `Root` the capture function (null on unmount). */
+  setCardCapture: (capture: CardCapture | null) => void
   setPaymentInputComplete: (complete: boolean) => void
   setTermsAccepted: (accepted: boolean) => void
   submit: () => Promise<void>

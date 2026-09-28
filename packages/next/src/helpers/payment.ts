@@ -11,6 +11,8 @@ import {
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
   attachBusinessDetailsCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
   isErrorResult,
 } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
@@ -164,5 +166,50 @@ export async function attachBusinessDetails(
   } = {},
 ): Promise<NextResponse> {
   const result = await attachBusinessDetailsCore(request, body, options)
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/create-capture-grant (vault checkout).
+ *
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   const { paymentIntentId } = await request.json()
+ *   return createCaptureGrant(request, { paymentIntentId })
+ * }
+ * ```
+ */
+export async function createCaptureGrant(
+  request: globalThis.Request,
+  body: { paymentIntentId: string },
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<NextResponse> {
+  const result = await createCaptureGrantCore(request, body, options)
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/confirm-payment (vault checkout).
+ *
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   const { paymentIntentId, cardId, paymentMethodId, returnUrl } = await request.json()
+ *   return confirmPayment(request, { paymentIntentId, cardId, paymentMethodId, returnUrl })
+ * }
+ * ```
+ */
+export async function confirmPayment(
+  request: globalThis.Request,
+  body: {
+    paymentIntentId: string
+    cardId?: string
+    paymentMethodId?: string
+    returnUrl?: string
+  },
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<NextResponse> {
+  const result = await confirmPaymentCore(request, body, options)
   return toNextRouteResponse(result)
 }

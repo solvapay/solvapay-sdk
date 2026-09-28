@@ -122,6 +122,11 @@ export type {
   PurchaseInfo,
   CustomerPurchaseData,
   PaymentIntentResult,
+  CaptureMode,
+  VaultInfo,
+  CaptureGrant,
+  ConfirmedPayment,
+  SucceededPayment,
   PaymentFormProps,
   CheckoutResult,
   PaymentResult,
@@ -203,16 +208,20 @@ export { formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './utils/format
 export type { FormatPriceOptions } from './utils/format'
 export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
-export { confirmPayment } from './utils/confirmPayment'
+export { confirmPayment, confirmVaultPayment } from './utils/confirmPayment'
 export type {
   ConfirmPaymentInput,
   ConfirmPaymentResult,
   ConfirmPaymentMode,
+  ConfirmVaultPaymentInput,
+  ConfirmVaultPaymentResult,
 } from './utils/confirmPayment'
 export {
   readPaymentIntentClientSecret,
+  readPaymentIntentId,
   stripPaymentIntentParams,
 } from './primitives/paymentIntentReturn'
+export * from './vault'
 
 // Transport — unified data-access surface. Use with SolvaPayProvider via
 // `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.

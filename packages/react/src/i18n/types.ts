@@ -62,6 +62,19 @@ export interface SolvaPayCopy {
     usageMetered: MandateTemplate
     freeTier: MandateTemplate
   }
+  /** Vault-mode hosted card fields (`PaymentForm.CardFields`). */
+  cardFields: {
+    labels: { cardholderName: string; cardNumber: string; expiry: string; cvc: string }
+    placeholders: { cardholderName: string; cardNumber: string; expiry: string; cvc: string }
+    /** Shown under a field once it has been touched and is invalid. */
+    errors: {
+      required: string
+      invalid: string
+      invalidNumber: string
+      invalidExpiry: string
+      invalidCvc: string
+    }
+  }
   cta: {
     payNow: string
     topUp: string
@@ -460,6 +473,10 @@ export interface SolvaPayCopy {
     stripeUnavailable: string
     paymentIntentUnavailable: string
     paymentElementMissing: string
+    /** Vault mode: `PaymentForm.CardFields` is not mounted or Collect failed to load. */
+    cardFieldsMissing: string
+    /** Vault mode: the vault rejected the card (validation, expired grant). */
+    cardCaptureFailed: string
     /** @deprecated Use `paymentElementMissing`. Slated for removal in the next major. */
     cardElementMissing: string
     paymentUnexpected: string

@@ -612,6 +612,34 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return result
     },
 
+    // POST: /v1/sdk/payment-intents/{paymentIntentId}/capture-grant
+    async createCaptureGrant(params) {
+      const url = `${base}/v1/sdk/payment-intents/${encodeURIComponent(params.paymentIntentId)}/capture-grant`
+      const res = await fetch(url, { method: 'POST', headers })
+      if (!res.ok) {
+        await throwApiError('Create capture grant', res)
+      }
+      return await res.json()
+    },
+
+    // POST: /v1/sdk/payment-intents/{paymentIntentId}/confirm
+    async confirmPayment(params) {
+      const url = `${base}/v1/sdk/payment-intents/${encodeURIComponent(params.paymentIntentId)}/confirm`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...(params.cardId !== undefined && { cardId: params.cardId }),
+          ...(params.paymentMethodId !== undefined && { paymentMethodId: params.paymentMethodId }),
+          ...(params.returnUrl !== undefined && { returnUrl: params.returnUrl }),
+        }),
+      })
+      if (!res.ok) {
+        await throwApiError('Confirm payment', res)
+      }
+      return await res.json()
+    },
+
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
     async attachBusinessDetails(params) {
       const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/business-details`

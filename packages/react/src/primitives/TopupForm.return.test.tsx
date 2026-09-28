@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import React from 'react'
 import { TopupForm } from './TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import type { SolvaPayContextValue } from '../types'
+import type { SolvaPayContextValue, SucceededPayment } from '../types'
 import type { PaymentIntent } from '@stripe/stripe-js'
 
 const retrievePaymentIntent = vi.fn()
@@ -70,7 +70,7 @@ function mockBalance(): SolvaPayContextValue['balance'] {
 function ReturnHarness({
   onSuccess,
 }: {
-  onSuccess?: (intent: PaymentIntent, extras?: { creditsAdded?: number }) => void
+  onSuccess?: (intent: SucceededPayment, extras?: { creditsAdded?: number }) => void
 }) {
   const processTopupPayment = vi.fn()
 

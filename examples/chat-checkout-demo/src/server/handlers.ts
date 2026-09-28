@@ -3,6 +3,8 @@ import type { BusinessDetailsInput } from '@solvapay/core'
 import {
   activatePlanCore,
   attachBusinessDetailsCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
   cancelPurchaseCore,
   checkLimitsCore,
   checkPurchaseCore,
@@ -133,6 +135,23 @@ const HANDLERS: Record<string, Partial<Record<Method, Handler>>> = {
         customerRef?: string
       } & BusinessDetailsInput
       return attachBusinessDetailsCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/create-capture-grant': {
+    POST: async (req, deps) => {
+      const body = (await req.json()) as { paymentIntentId: string }
+      return createCaptureGrantCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/confirm-payment': {
+    POST: async (req, deps) => {
+      const body = (await req.json()) as {
+        paymentIntentId: string
+        cardId?: string
+        paymentMethodId?: string
+        returnUrl?: string
+      }
+      return confirmPaymentCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/create-checkout-session': {

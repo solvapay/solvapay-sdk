@@ -109,6 +109,11 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
     attachBusinessDetails: params =>
       callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
 
+    createCaptureGrant: params =>
+      callTool(MCP_TOOL_NAMES.createCaptureGrant, pickDefined({ ...params })),
+
+    confirmPayment: params => callTool(MCP_TOOL_NAMES.confirmPayment, pickDefined({ ...params })),
+
     cancelRenewal: params =>
       callTool(
         MCP_TOOL_NAMES.setRenewal,

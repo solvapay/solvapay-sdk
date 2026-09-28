@@ -16,6 +16,47 @@ export type AttachBusinessDetailsParams = {
 
 export type AttachBusinessDetailsResult = components['schemas']['AttachBusinessDetailsResponse']
 
+/**
+ * Vault checkout (`captureMode: 'vault'`). What the browser needs to write
+ * one card into the vault for one payment. `POST /v1/sdk/payment-intents/{id}/capture-grant`.
+ */
+export interface CaptureGrant {
+  /** Short-lived vault access token scoped to card capture only. */
+  token: string
+  tenantId: string
+  environment: 'sandbox' | 'live'
+  /** Epoch milliseconds. */
+  expiresAt: number
+  scope: { paymentIntentId: string } | { sessionId: string }
+}
+
+/** Confirm a vault payment with a captured card or a saved payment method. Exactly one of the two. */
+export type ConfirmPaymentParams = {
+  paymentIntentId: string
+  /** Where the rail sends the payer back after a customer action (3DS). */
+  returnUrl?: string
+} & ({ cardId: string; paymentMethodId?: undefined } | { paymentMethodId: string; cardId?: undefined })
+
+/** `POST /v1/sdk/payment-intents/{id}/confirm` */
+export interface ConfirmPaymentResult {
+  /** SolvaPay payment intent id. */
+  id: string
+  /** Rail payment reference (the Stripe PaymentIntent id). */
+  processorPaymentId: string
+  status:
+    | 'pending'
+    | 'processing'
+    | 'succeeded'
+    | 'cancelled'
+    | 'failed'
+    | 'requires_action'
+    | 'requires_payment_method'
+    | 'requires_confirmation'
+    | (string & {})
+  /** The payer must be sent here to finish a customer action (3DS). */
+  redirectUrl?: string
+}
+
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
@@ -427,6 +468,12 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
   attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/capture-grant
+  createCaptureGrant?(params: { paymentIntentId: string }): Promise<CaptureGrant>
+
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/confirm
+  confirmPayment?(params: ConfirmPaymentParams): Promise<ConfirmPaymentResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

@@ -160,6 +160,12 @@ export function buildStripeAppearance(root: Element): Appearance | undefined {
           }
         : {}),
     },
+    '.Input--invalid': {
+      ...(danger ? { borderColor: danger } : {}),
+    },
+    '.Input::placeholder': {
+      ...(muted ? { color: muted } : {}),
+    },
     '.Label': {
       fontSize: metrics.labelFontSize,
       fontWeight: '500',

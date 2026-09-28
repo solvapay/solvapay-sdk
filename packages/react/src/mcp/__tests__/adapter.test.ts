@@ -89,6 +89,8 @@ describe('createMcpAppAdapter', () => {
       'processPayment',
       'createTopupPayment',
       'attachBusinessDetails',
+      'createCaptureGrant',
+      'confirmPayment',
       'cancelRenewal',
       'reactivateRenewal',
       'activatePlan',
@@ -100,6 +102,25 @@ describe('createMcpAppAdapter', () => {
     for (const key of keys) {
       expect(typeof transport[key]).toBe('function')
     }
+  })
+
+  it('routes the vault checkout calls to their tools with the payment id', async () => {
+    const app = createMockApp(record => ({
+      structuredContent: { ok: true, tool: record.name },
+    }))
+    const transport = createMcpAppAdapter(app)
+
+    await transport.createCaptureGrant?.({ paymentIntentId: 'pi_1' })
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: MCP_TOOL_NAMES.createCaptureGrant,
+      arguments: { paymentIntentId: 'pi_1' },
+    })
+
+    await transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: undefined })
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: MCP_TOOL_NAMES.confirmPayment,
+      arguments: { paymentIntentId: 'pi_1', cardId: 'CRD1' },
+    })
   })
 
   it('omits the read tools now folded into the bootstrap payload', () => {

@@ -13,6 +13,17 @@ const PAYMENT_INTENT_PARAMS = [
   'redirect_status',
 ] as const
 
+/**
+ * Read the rail payment id (`payment_intent`) from a URL query string, if
+ * present. Vault checkout resumes on this id after a 3DS return: the SDK has
+ * no Stripe.js there, so it reconciles through the backend instead of
+ * retrieving the PaymentIntent in the browser.
+ */
+export function readPaymentIntentId(search: string): string | undefined {
+  const value = new URLSearchParams(search).get('payment_intent')
+  return value && value.length > 0 ? value : undefined
+}
+
 /** Read the PaymentIntent client secret from a URL query string, if present. */
 export function readPaymentIntentClientSecret(search: string): string | undefined {
   const value = new URLSearchParams(search).get('payment_intent_client_secret')

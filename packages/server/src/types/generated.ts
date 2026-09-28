@@ -324,6 +324,43 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/sdk/payment-intents/{paymentIntentId}/capture-grant': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Grant the browser one card capture into the vault for this payment
+     * @description For a payment created with captureMode vault. The card must be stamped with the payment id (meta.paymentIntentId) and confirmed with POST :paymentIntentId/confirm.
+     */
+    post: operations['PaymentIntentSdkController_captureGrant']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{paymentIntentId}/confirm': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Confirm a vault payment with a captured card or a saved payment method */
+    post: operations['PaymentIntentSdkController_confirm']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/sdk/payment-intents/{processorPaymentId}/business-details': {
     parameters: {
       query?: never
@@ -1282,6 +1319,12 @@ export interface components {
       /** @description Updated product */
       product: components['schemas']['SdkProductResponse']
     }
+    ConfirmVaultPaymentDto: {
+      cardId?: string
+      paymentMethodId?: string
+      /** Format: uri */
+      returnUrl?: string
+    }
     CreateCheckoutSessionRequest: {
       customerRef: string
       planRef?: string
@@ -2227,6 +2270,54 @@ export interface components {
       /** @description Connected Stripe account ID */
       stripeAccountId?: string
     }
+    SdkCaptureGrantResponse: {
+      /**
+       * @example sandbox
+       * @enum {string}
+       */
+      environment: 'sandbox' | 'live'
+      /**
+       * Grant expiry, epoch milliseconds
+       * @example 1759000000000
+       */
+      expiresAt: number
+      /** @description The payment this grant is bound to; the captured card must carry it in meta.paymentIntentId */
+      scope: {
+        paymentIntentId?: string
+        sessionId?: string
+      }
+      /**
+       * VGS vault (tenant) id
+       * @example tntr4ol0cbq
+       */
+      tenantId: string
+      /** @description Short-lived vault access token scoped to card capture only */
+      token: string
+    }
+    SdkConfirmPaymentResponse: {
+      /** @description SolvaPay payment intent id */
+      id: string
+      /**
+       * Rail payment reference, e.g. the Stripe PaymentIntent id
+       * @example pi_1a2b3c4d5e6f7g8h
+       */
+      processorPaymentId: string
+      /** @description Where to send the payer to complete a customer action (3DS) */
+      redirectUrl?: string
+      /**
+       * Payment status after confirm
+       * @enum {string}
+       */
+      status:
+        | 'pending'
+        | 'processing'
+        | 'succeeded'
+        | 'cancelled'
+        | 'failed'
+        | 'requires_action'
+        | 'requires_payment_method'
+        | 'requires_confirmation'
+    }
     SdkMerchantResponseDto: {
       /**
        * City from the legal entity address
@@ -2377,10 +2468,16 @@ export interface components {
        */
       amount: number
       /**
-       * Client secret used to confirm the payment on the client
+       * How the browser takes the card. `processor_elements`: Stripe Elements with `clientSecret`. `vault`: SDK CardFields (VGS Collect) with a capture grant, confirmed server-side; no `clientSecret`.
+       * @example processor_elements
+       * @enum {string}
+       */
+      captureMode: 'processor_elements' | 'vault'
+      /**
+       * Client secret used to confirm the payment on the client (processor_elements only)
        * @example pi_1a2b3c4d5e6f7g8h_secret_AbCdEf123456
        */
-      clientSecret: string
+      clientSecret?: string
       /**
        * Creation timestamp
        * @example 2025-10-18T10:30:00.000Z
@@ -2407,6 +2504,11 @@ export interface components {
        */
       expiresAt?: string
       /**
+       * SolvaPay payment intent id. Used for the vault capture-grant and confirm routes.
+       * @example 66f1c2d3e4f5a6b7c8d9e0f1
+       */
+      id: string
+      /**
        * Charge-currency amount in minor units (the currency the customer is billed in)
        * @example 4999
        */
@@ -2417,15 +2519,15 @@ export interface components {
        */
       planRef?: string
       /**
-       * Payment processor payment intent ID
+       * Payment processor payment intent ID. Absent in vault mode until confirm.
        * @example pi_1a2b3c4d5e6f7g8h
        */
-      processorPaymentId: string
+      processorPaymentId?: string
       /**
-       * Stripe publishable key for the environment
+       * Stripe publishable key for the environment (processor_elements only)
        * @example pk_test_...
        */
-      publishableKey: string
+      publishableKey?: string
       /**
        * Payment intent status
        * @example requires_payment_method
@@ -2445,6 +2547,8 @@ export interface components {
        * @example 507f1f77bcf86cd799439011
        */
       transactionId?: string
+      /** @description Present when captureMode is vault */
+      vault?: components['schemas']['SdkVaultInfo']
     }
     SdkPlanResponse: {
       /** @description Creation timestamp */
@@ -2735,6 +2839,19 @@ export interface components {
       status: string
       /** @description Usage billing state for usage-based plans */
       usage?: components['schemas']['UsageBillingDto']
+    }
+    SdkVaultInfo: {
+      /**
+       * Vault environment
+       * @example sandbox
+       * @enum {string}
+       */
+      environment: 'sandbox' | 'live'
+      /**
+       * VGS vault (tenant) id the browser captures the card into
+       * @example tntr4ol0cbq
+       */
+      tenantId: string
     }
     TaxBreakdownDto: {
       /** @description ISO 4217 currency code */
@@ -3847,6 +3964,54 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_captureGrant: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description SolvaPay payment intent id */
+        paymentIntentId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkCaptureGrantResponse']
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_confirm: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description SolvaPay payment intent id */
+        paymentIntentId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmVaultPaymentDto']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkConfirmPaymentResponse']
         }
       }
     }

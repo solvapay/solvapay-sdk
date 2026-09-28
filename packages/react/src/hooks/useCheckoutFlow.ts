@@ -34,7 +34,6 @@
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
 import { usePlanSelection } from '../components/PlanSelectionContext'
 import { useBalance } from './useBalance'
@@ -42,7 +41,7 @@ import { useMerchant } from './useMerchant'
 import { useSolvaPay } from './useSolvaPay'
 import { useTransport } from './useTransport'
 import { useLocale } from './useCopy'
-import type { Plan } from '../types'
+import type { Plan, SucceededPayment } from '../types'
 import {
   formatPaygRate,
   inferIncludedUnits,
@@ -167,7 +166,7 @@ export interface UseCheckoutFlowReturn {
    * locally-computed estimate and bumps `balance.adjustBalance` for
    * an instant UI update.
    */
-  notifyPaymentSuccess: (intent?: PaymentIntent, extras?: { creditsAdded?: number }) => void
+  notifyPaymentSuccess: (intent?: SucceededPayment, extras?: { creditsAdded?: number }) => void
 }
 
 export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowReturn {
@@ -528,7 +527,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   }, [branch, runActivate, status, step])
 
   const notifyPaymentSuccess = useCallback(
-    (_intent?: PaymentIntent, extras?: { creditsAdded?: number }) => {
+    (_intent?: SucceededPayment, extras?: { creditsAdded?: number }) => {
       if (branch === 'payg') {
         recordPaygSuccess(extras?.creditsAdded)
       } else if (branch === 'recurring') {

@@ -28,6 +28,9 @@ import type {
   AssignCreditsResponse,
   AttachBusinessDetailsParams,
   AttachBusinessDetailsResult,
+  CaptureGrant,
+  ConfirmPaymentParams,
+  ConfirmPaymentResult,
   CheckLimitsRequest,
 } from './types'
 import type { components } from './types/generated'
@@ -503,6 +506,19 @@ export interface SolvaPay {
   attachBusinessDetails(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   /**
+   * Vault checkout: grant the browser one short-lived card capture into the
+   * vault for a payment intent created with `captureMode: 'vault'`.
+   */
+  createCaptureGrant(params: { paymentIntentId: string }): Promise<CaptureGrant>
+
+  /**
+   * Vault checkout: confirm a payment server-side with a captured card
+   * (`cardId`) or a saved payment method (`paymentMethodId`). The rail
+   * charge happens here; `redirectUrl` is set when the payer must complete 3DS.
+   */
+  confirmPayment(params: ConfirmPaymentParams): Promise<ConfirmPaymentResult>
+
+  /**
    * Check if customer is within usage limits for a product.
    *
    * This method checks purchase status and usage limits without
@@ -933,6 +949,20 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('attachBusinessDetails is not available on this API client')
       }
       return apiClient.attachBusinessDetails(params)
+    },
+
+    createCaptureGrant(params) {
+      if (!apiClient.createCaptureGrant) {
+        throw new SolvaPayError('createCaptureGrant is not available on this API client')
+      }
+      return apiClient.createCaptureGrant(params)
+    },
+
+    confirmPayment(params) {
+      if (!apiClient.confirmPayment) {
+        throw new SolvaPayError('confirmPayment is not available on this API client')
+      }
+      return apiClient.confirmPayment(params)
     },
 
     checkLimits(params) {

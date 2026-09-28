@@ -54,6 +54,8 @@ export const DEFAULT_ROUTES = {
   createTopupPayment: '/api/create-topup-payment-intent',
   processTopupPayment: '/api/process-topup-payment',
   attachBusinessDetails: '/api/attach-business-details',
+  createCaptureGrant: '/api/create-capture-grant',
+  confirmPayment: '/api/confirm-payment',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -134,6 +136,22 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: params,
         onErrorContext: 'attachBusinessDetails',
         errorPrefix: 'Failed to attach business details',
+      }),
+
+    createCaptureGrant: params =>
+      request(config, routeFor(config, 'createCaptureGrant'), {
+        method: 'POST',
+        body: params,
+        onErrorContext: 'createCaptureGrant',
+        errorPrefix: 'Failed to create capture grant',
+      }),
+
+    confirmPayment: params =>
+      request(config, routeFor(config, 'confirmPayment'), {
+        method: 'POST',
+        body: params,
+        onErrorContext: 'confirmPayment',
+        errorPrefix: 'Failed to confirm payment',
       }),
 
     getBalance: () =>

@@ -29,12 +29,47 @@ export interface CustomerPurchaseData {
   purchases: PurchaseInfo[]
 }
 
+/** How the browser takes the card for a payment (mirrors the backend `captureMode`). */
+export type CaptureMode = 'processor_elements' | 'vault'
+
+/** The vault the browser writes a card into when `captureMode` is `'vault'`. */
+export interface VaultInfo {
+  tenantId: string
+  environment: 'sandbox' | 'live'
+}
+
 export interface PaymentIntentResult {
-  clientSecret: string
-  publishableKey: string
+  /** SolvaPay payment intent id. Drives the vault capture-grant and confirm calls. */
+  id?: string
+  /** Defaults to `'processor_elements'` for backends that predate vault checkout. */
+  captureMode?: CaptureMode
+  vault?: VaultInfo
+  /** Present in `processor_elements` mode only. */
+  clientSecret?: string
+  /** Present in `processor_elements` mode only. */
+  publishableKey?: string
   accountId?: string
   customerRef?: string // Backend customer reference
   processorPaymentId?: string
+}
+
+/** What the browser needs to write one card into the vault (one payment, short-lived). */
+export interface CaptureGrant {
+  token: string
+  tenantId: string
+  environment: 'sandbox' | 'live'
+  /** Epoch milliseconds. */
+  expiresAt: number
+  scope: { paymentIntentId: string } | { sessionId: string }
+}
+
+/** Outcome of a server-side vault confirm. */
+export interface ConfirmedPayment {
+  id: string
+  processorPaymentId: string
+  status: string
+  /** The payer must be sent here to finish a customer action (3DS). */
+  redirectUrl?: string
 }
 
 /**
@@ -97,13 +132,8 @@ export interface PrefillCustomer {
   email?: string
 }
 
-export interface TopupPaymentResult {
-  clientSecret: string
-  publishableKey: string
-  accountId?: string
-  customerRef?: string
-  processorPaymentId?: string
-}
+/** Same shape as `PaymentIntentResult`; a top-up is a payment intent with `purpose: 'credit_topup'`. */
+export type TopupPaymentResult = PaymentIntentResult
 
 export interface UseTopupOptions {
   amount: number
@@ -117,6 +147,10 @@ export interface UseTopupReturn {
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
   processorPaymentId: string | null
+  /** SolvaPay payment intent id (both capture modes). */
+  paymentIntentId: string | null
+  captureMode: CaptureMode | null
+  vault: VaultInfo | null
   startTopup: () => Promise<void>
   reset: () => void
 }
@@ -144,7 +178,7 @@ export interface TopupFormProps {
    * optional — legacy consumers ignoring it still compile cleanly.
    */
   onSuccess?: (
-    paymentIntent: PaymentIntent,
+    paymentIntent: SucceededPayment,
     extras?: TopupFormSuccessExtras,
   ) => void | Promise<void>
   onError?: (error: Error) => void
@@ -259,6 +293,8 @@ export interface SolvaPayConfig {
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     processTopupPayment?: string // Default: '/api/process-topup-payment'
     attachBusinessDetails?: string // Default: '/api/attach-business-details'
+    createCaptureGrant?: string // Default: '/api/create-capture-grant'
+    confirmPayment?: string // Default: '/api/confirm-payment'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -441,6 +477,15 @@ export interface SolvaPayContextValue {
     taxId?: string
     taxIdType?: import('@solvapay/core').TaxIdType
   }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  /** Vault checkout. Present when the transport implements `createCaptureGrant`. */
+  createCaptureGrant?: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
+  /** Vault checkout. Present when the transport implements `confirmPayment`. */
+  confirmPayment?: (params: {
+    paymentIntentId: string
+    cardId?: string
+    paymentMethodId?: string
+    returnUrl?: string
+  }) => Promise<ConfirmedPayment>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
   activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
@@ -660,7 +705,15 @@ export interface PurchaseStatusReturn {
  * both paid and free plans should use `onResult` to get a single typed
  * callback; paid-only integrators keep using `onSuccess(paymentIntent)`.
  */
-export type PaymentResult = { kind: 'paid'; paymentIntent: PaymentIntent }
+/**
+ * What `onSuccess` / `onResult` receive once a payment has succeeded. In
+ * `processor_elements` mode this is Stripe's `PaymentIntent`; in `vault`
+ * mode the SDK never talks to Stripe.js, so it is the backend's
+ * `ConfirmedPayment` (`id`, `processorPaymentId`, `status`). Both carry
+ * `id` and `status`.
+ */
+export type SucceededPayment = PaymentIntent | ConfirmedPayment
+export type PaymentResult = { kind: 'paid'; paymentIntent: SucceededPayment }
 export type ActivationResult = { kind: 'activated'; result: ActivatePlanResult }
 export type CheckoutResult = PaymentResult | ActivationResult
 
@@ -681,7 +734,7 @@ export interface PaymentFormProps {
    * exactly for backwards compatibility. Free/activation flows do NOT fire
    * `onSuccess`; use `onResult` to receive both paid and activated results.
    */
-  onSuccess?: (paymentIntent: PaymentIntent) => void
+  onSuccess?: (paymentIntent: SucceededPayment) => void
   /**
    * Unified callback fired on both paid and activated completions with a
    * discriminated result. Safe to provide alongside `onSuccess` — for paid

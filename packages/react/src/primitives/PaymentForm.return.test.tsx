@@ -12,7 +12,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
-import type { Plan, SolvaPayContextValue } from '../types'
+import type { Plan, SolvaPayContextValue, SucceededPayment } from '../types'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
@@ -93,7 +93,7 @@ function seedCaches() {
   })
 }
 
-function ReturnHarness({ onSuccess }: { onSuccess?: (intent: PaymentIntent) => void }) {
+function ReturnHarness({ onSuccess }: { onSuccess?: (intent: SucceededPayment) => void }) {
   const upsertPurchase = vi.fn()
   const refetchPurchase = vi.fn().mockResolvedValue(undefined)
   const processPayment = vi.fn()

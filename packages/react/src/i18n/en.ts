@@ -77,6 +77,27 @@ export const enCopy: SolvaPayCopy = {
       return `By confirming, you activate ${product}${planPhrase}. Payments are processed by SolvaPay.${legalSentence(ctx)}`
     },
   },
+  cardFields: {
+    labels: {
+      cardholderName: 'Name on card',
+      cardNumber: 'Card number',
+      expiry: 'Expiration date',
+      cvc: 'Security code',
+    },
+    placeholders: {
+      cardholderName: 'Full name',
+      cardNumber: '1234 1234 1234 1234',
+      expiry: 'MM / YY',
+      cvc: 'CVC',
+    },
+    errors: {
+      required: 'This field is required.',
+      invalid: 'This value is invalid.',
+      invalidNumber: 'Your card number is invalid.',
+      invalidExpiry: "Your card's expiration date is invalid.",
+      invalidCvc: "Your card's security code is invalid.",
+    },
+  },
   cta: {
     payNow: 'Pay Now',
     topUp: 'Top Up',
@@ -382,6 +403,8 @@ export const enCopy: SolvaPayCopy = {
     stripeUnavailable: 'Stripe is not available. Please refresh the page.',
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
     paymentElementMissing: 'Payment element not found',
+    cardFieldsMissing: 'Card fields are not ready. Please refresh the page.',
+    cardCaptureFailed: 'We could not save your card details. Please check them and try again.',
     /** @deprecated Use `paymentElementMissing`. Kept for Card Element compatibility. */
     cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',

@@ -98,6 +98,8 @@ describe('buildSolvaPayDescriptors', () => {
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.attachBusinessDetails,
+        MCP_TOOL_NAMES.confirmPayment,
+        MCP_TOOL_NAMES.createCaptureGrant,
         MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
         MCP_TOOL_NAMES.getHistory,
@@ -139,6 +141,8 @@ describe('buildSolvaPayDescriptors', () => {
     // UI-transport tools (state-change, no LLM use) all tag themselves.
     const uiOnlyTools = [
       MCP_TOOL_NAMES.attachBusinessDetails,
+      MCP_TOOL_NAMES.createCaptureGrant,
+      MCP_TOOL_NAMES.confirmPayment,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createHostedSession,

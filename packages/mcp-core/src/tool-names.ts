@@ -12,6 +12,8 @@ export const MCP_TOOL_NAMES = {
   setRenewal: 'set_renewal',
   activatePlan: 'activate_plan',
   attachBusinessDetails: 'attach_business_details',
+  createCaptureGrant: 'create_capture_grant',
+  confirmPayment: 'confirm_payment',
   getHistory: 'get_history',
   account: 'account',
 } as const

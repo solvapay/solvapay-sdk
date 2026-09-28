@@ -163,6 +163,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     transportRef.current = resolveTransport(config)
     setHasProcessTopupPayment(!!transportRef.current.processTopupPayment)
     setHasAttachBusinessDetails(!!transportRef.current.attachBusinessDetails)
+    setHasVaultCheckout(
+      !!transportRef.current.createCaptureGrant && !!transportRef.current.confirmPayment,
+    )
   }, [config])
 
   const fetchBalanceImpl = useCallback(async (): Promise<number | null> => {
@@ -404,6 +407,25 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
   const [hasAttachBusinessDetails, setHasAttachBusinessDetails] = useState<boolean>(
     () => !!transportRef.current.attachBusinessDetails,
+  )
+
+  // Vault checkout bridges. Feature-detected like `attachBusinessDetails` so
+  // `PaymentForm` knows whether `CardFields` can complete a payment.
+  const createCaptureGrant = useCallback(
+    (params: { paymentIntentId: string }) => transportRef.current.createCaptureGrant!(params),
+    [],
+  )
+  const confirmPayment = useCallback(
+    (params: {
+      paymentIntentId: string
+      cardId?: string
+      paymentMethodId?: string
+      returnUrl?: string
+    }) => transportRef.current.confirmPayment!(params),
+    [],
+  )
+  const [hasVaultCheckout, setHasVaultCheckout] = useState<boolean>(
+    () => !!transportRef.current.createCaptureGrant && !!transportRef.current.confirmPayment,
   )
   useEffect(() => {
     // MCP mode: identity already resolved by the OAuth bridge and carried
@@ -773,6 +795,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       attachBusinessDetails: hasAttachBusinessDetails
         ? attachBusinessDetails
         : undefined,
+      createCaptureGrant: hasVaultCheckout ? createCaptureGrant : undefined,
+      confirmPayment: hasVaultCheckout ? confirmPayment : undefined,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,
@@ -793,6 +817,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       hasProcessTopupPayment,
       attachBusinessDetails,
       hasAttachBusinessDetails,
+      createCaptureGrant,
+      confirmPayment,
+      hasVaultCheckout,
       cancelRenewal,
       reactivateRenewal,
       activatePlan,

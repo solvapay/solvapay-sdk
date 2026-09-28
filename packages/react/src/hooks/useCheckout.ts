@@ -4,7 +4,7 @@ import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
 import { readErrorMessage } from '../utils/readErrorMessage'
 import { usePlanSelection } from '../components/PlanSelectionContext'
-import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
+import type { CaptureMode, Plan, PrefillCustomer, SolvaPayConfig, VaultInfo } from '../types'
 
 export interface UseCheckoutReturn {
   loading: boolean
@@ -12,6 +12,12 @@ export interface UseCheckoutReturn {
   stripePromise: Promise<Stripe | null> | null
   clientSecret: string | null
   processorPaymentId: string | null
+  /** SolvaPay payment intent id (both capture modes). */
+  paymentIntentId: string | null
+  /** Set once `createPayment` resolves; `null` before that. */
+  captureMode: CaptureMode | null
+  /** The vault to capture into when `captureMode` is `'vault'`. */
+  vault: VaultInfo | null
   resolvedPlanRef: string | null
   startCheckout: () => Promise<void>
   reset: () => void
@@ -113,6 +119,9 @@ export function useCheckout(options: {
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
+  const [captureMode, setCaptureMode] = useState<CaptureMode | null>(null)
+  const [vault, setVault] = useState<VaultInfo | null>(null)
   const [resolvedPlanRef, setResolvedPlanRef] = useState<string | null>(planRef || null)
   const isStartingRef = useRef(false)
 
@@ -159,16 +168,38 @@ export function useCheckout(options: {
         throw new Error('Invalid payment intent response from server')
       }
 
+      const mode: CaptureMode = result.captureMode === 'vault' ? 'vault' : 'processor_elements'
+
+      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
+        updateCustomerRef(result.customerRef)
+      }
+
+      if (mode === 'vault') {
+        // The card is captured into the vault and confirmed server-side;
+        // Stripe.js is never loaded and there is no client secret.
+        if (!result.id || typeof result.id !== 'string') {
+          throw new Error('Invalid payment intent id in vault payment intent response')
+        }
+        if (!result.vault?.tenantId || !result.vault.environment) {
+          throw new Error('Invalid vault in payment intent response')
+        }
+        setCaptureMode('vault')
+        setVault({ tenantId: result.vault.tenantId, environment: result.vault.environment })
+        setPaymentIntentId(result.id)
+        setClientSecret(null)
+        setStripePromise(null)
+        if (result.processorPaymentId) {
+          setProcessorPaymentId(result.processorPaymentId)
+        }
+        return
+      }
+
       if (!result.clientSecret || typeof result.clientSecret !== 'string') {
         throw new Error('Invalid client secret in payment intent response')
       }
 
       if (!result.publishableKey || typeof result.publishableKey !== 'string') {
         throw new Error('Invalid publishable key in payment intent response')
-      }
-
-      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
-        updateCustomerRef(result.customerRef)
       }
 
       const stripeOptions: StripeConstructorOptions = {
@@ -186,6 +217,11 @@ export function useCheckout(options: {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      setCaptureMode('processor_elements')
+      setVault(null)
+      if (typeof result.id === 'string' && result.id) {
+        setPaymentIntentId(result.id)
+      }
       if (result.processorPaymentId) {
         setProcessorPaymentId(result.processorPaymentId)
       }
@@ -215,6 +251,9 @@ export function useCheckout(options: {
     setStripePromise(null)
     setClientSecret(null)
     setProcessorPaymentId(null)
+    setPaymentIntentId(null)
+    setCaptureMode(null)
+    setVault(null)
     setResolvedPlanRef(planRef || null)
   }, [planRef])
 
@@ -224,6 +263,9 @@ export function useCheckout(options: {
     stripePromise,
     clientSecret,
     processorPaymentId,
+    paymentIntentId,
+    captureMode,
+    vault,
     resolvedPlanRef,
     startCheckout,
     reset,

@@ -126,6 +126,8 @@ export {
   processPaymentIntent,
   processTopupPaymentIntent,
   attachBusinessDetails,
+  createCaptureGrant,
+  confirmPayment,
   createCheckoutSession,
   createCustomerSession,
   activatePlan,

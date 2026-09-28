@@ -42,6 +42,8 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   attachBusinessDetailsCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
   getHistoryCore,
   isErrorResult,
   listPlansCore,
@@ -718,6 +720,65 @@ export function buildSolvaPayDescriptors(
             ...(taxId !== undefined && { taxId }),
             ...(taxIdType !== undefined && { taxIdType }),
           },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.createCaptureGrant,
+    description:
+      UI_ONLY_PREFIX +
+      'Vault checkout: grant the widget one short-lived card capture into the vault for a payment intent created with captureMode "vault".',
+    inputSchema: {
+      paymentIntentId: z.string(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: false }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.createCaptureGrant, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        const paymentIntentId =
+          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const result = await createCaptureGrantCore(
+          buildRequest(extra, { method: 'POST' }),
+          { paymentIntentId },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.confirmPayment,
+    description:
+      UI_ONLY_PREFIX +
+      'Vault checkout: confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
+    inputSchema: {
+      paymentIntentId: z.string(),
+      cardId: z.string().optional(),
+      paymentMethodId: z.string().optional(),
+      returnUrl: z.string().optional(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: true }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.confirmPayment, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        const paymentIntentId =
+          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const cardId = typeof args.cardId === 'string' ? args.cardId : undefined
+        const paymentMethodId =
+          typeof args.paymentMethodId === 'string' ? args.paymentMethodId : undefined
+        const returnUrl = typeof args.returnUrl === 'string' ? args.returnUrl : undefined
+        const result = await confirmPaymentCore(
+          buildRequest(extra, { method: 'POST' }),
+          { paymentIntentId, cardId, paymentMethodId, returnUrl },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

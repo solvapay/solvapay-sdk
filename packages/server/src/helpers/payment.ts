@@ -12,7 +12,7 @@ import {
 } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
-import type { TopupProcessResult } from '../types/client'
+import type { CaptureGrant, ConfirmPaymentResult, TopupProcessResult } from '../types/client'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
@@ -539,5 +539,76 @@ export async function processTopupPaymentIntentCore(
       'Process topup payment intent',
       'Topup payment processing failed',
     )
+  }
+}
+
+/**
+ * Vault checkout: issue the browser one short-lived grant to write a card
+ * into the vault for `paymentIntentId`. Only meaningful for payment intents
+ * created with `captureMode: 'vault'`; the backend refuses grants once the
+ * payment is confirmed and after a handful of grants per payment.
+ *
+ * The caller must be the authenticated customer the payment belongs to —
+ * `syncCustomerCore` resolves them from the request exactly as the other
+ * payment helpers do.
+ */
+export async function createCaptureGrantCore(
+  request: Request,
+  body: { paymentIntentId: string },
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<CaptureGrant | ErrorResult> {
+  try {
+    if (!body.paymentIntentId) {
+      return { error: 'paymentIntentId is required', status: 400 }
+    }
+    const customerResult = await syncCustomerCore(request, { solvaPay: options.solvaPay })
+    if (isErrorResult(customerResult)) return customerResult
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+    return await solvaPay.createCaptureGrant({ paymentIntentId: body.paymentIntentId })
+  } catch (error) {
+    return handleRouteError(error, 'Create capture grant', 'Could not start card capture')
+  }
+}
+
+/**
+ * Vault checkout: confirm a payment server-side with the card the browser
+ * just captured (`cardId`) or with a saved payment method
+ * (`paymentMethodId`). The rail charge happens inside this call. A
+ * `redirectUrl` in the result means the payer must complete 3DS; send them
+ * there and let them return to `returnUrl`, then process the payment as
+ * usual with {@link processPaymentIntentCore}.
+ */
+export async function confirmPaymentCore(
+  request: Request,
+  body: {
+    paymentIntentId: string
+    cardId?: string
+    paymentMethodId?: string
+    returnUrl?: string
+  },
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<ConfirmPaymentResult | ErrorResult> {
+  try {
+    if (!body.paymentIntentId) {
+      return { error: 'paymentIntentId is required', status: 400 }
+    }
+    if (Boolean(body.cardId) === Boolean(body.paymentMethodId)) {
+      return { error: 'Provide exactly one of cardId or paymentMethodId', status: 400 }
+    }
+    const customerResult = await syncCustomerCore(request, { solvaPay: options.solvaPay })
+    if (isErrorResult(customerResult)) return customerResult
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+    const params = body.cardId
+      ? { paymentIntentId: body.paymentIntentId, cardId: body.cardId, returnUrl: body.returnUrl }
+      : {
+          paymentIntentId: body.paymentIntentId,
+          paymentMethodId: body.paymentMethodId as string,
+          returnUrl: body.returnUrl,
+        }
+    return await solvaPay.confirmPayment(params)
+  } catch (error) {
+    return handleRouteError(error, 'Confirm payment', 'Payment confirmation failed')
   }
 }

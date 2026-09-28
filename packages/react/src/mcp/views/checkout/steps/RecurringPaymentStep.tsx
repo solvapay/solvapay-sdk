@@ -13,8 +13,7 @@ import { PaymentForm } from '../../../../primitives/PaymentForm'
 import { usePlanSelection } from '../../../../components/PlanSelectionContext'
 import { formatPrice } from '../../../../utils/format'
 import { resolvePlanPricingOption } from '../../../../utils/planPricing'
-import type { PaymentIntent } from '@stripe/stripe-js'
-import type { Plan } from '../../../../types'
+import type { Plan, SucceededPayment } from '../../../../types'
 import { useDisplayMode } from '../../../hooks/useDisplayMode'
 import { useHostLocale } from '../../../useHostLocale'
 import { chargeAmountMinor } from '../../chargeAmount'
@@ -29,7 +28,7 @@ interface RecurringPaymentStepProps {
   productRef: string
   returnUrl: string
   onBack: () => void
-  onSuccess: (intent: PaymentIntent) => void
+  onSuccess: (intent: SucceededPayment) => void
   cx: Cx
 }
 

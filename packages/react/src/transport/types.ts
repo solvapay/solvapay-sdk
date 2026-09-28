@@ -10,6 +10,8 @@
  */
 
 import type {
+  CaptureGrant,
+  ConfirmedPayment,
   CustomerPurchaseData,
   PaymentIntentResult,
   TopupPaymentResult,
@@ -206,6 +208,26 @@ export interface SolvaPayTransport {
     taxId?: string
     taxIdType?: TaxIdType
   }) => Promise<{ taxBreakdown: TaxBreakdown }>
+
+  /**
+   * Vault checkout (`captureMode: 'vault'`): a short-lived grant the browser
+   * uses to write one card into the vault for this payment. HTTP:
+   * `POST /api/create-capture-grant`. MCP: `create_capture_grant`.
+   * Optional — transports without it cannot render `PaymentForm.CardFields`.
+   */
+  createCaptureGrant?: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
+  /**
+   * Vault checkout: confirm a payment server-side with the captured card
+   * (`cardId`) or a saved payment method (`paymentMethodId`). The rail
+   * charge happens here; a `redirectUrl` in the result means the payer
+   * must complete 3DS and returns to `returnUrl`.
+   */
+  confirmPayment?: (params: {
+    paymentIntentId: string
+    cardId?: string
+    paymentMethodId?: string
+    returnUrl?: string
+  }) => Promise<ConfirmedPayment>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

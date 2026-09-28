@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
-import type { UseTopupReturn, UseTopupOptions } from '../types'
+import type { CaptureMode, UseTopupReturn, UseTopupOptions, VaultInfo } from '../types'
 
 const stripePromiseCache = new Map<string, Promise<Stripe | null>>()
 
@@ -27,6 +27,9 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
+  const [captureMode, setCaptureMode] = useState<CaptureMode | null>(null)
+  const [vault, setVault] = useState<VaultInfo | null>(null)
   const isStartingRef = useRef(false)
 
   const startTopup = useCallback(async () => {
@@ -50,16 +53,36 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
         throw new Error('Invalid topup payment intent response from server')
       }
 
+      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
+        updateCustomerRef(result.customerRef)
+      }
+
+      if (result.captureMode === 'vault') {
+        // Vault mode: the card is captured by `TopupForm.CardFields` and the
+        // payment confirmed server-side. No Stripe.js, no client secret.
+        if (!result.id || typeof result.id !== 'string') {
+          throw new Error('Invalid payment intent id in vault topup payment intent response')
+        }
+        if (!result.vault?.tenantId || !result.vault.environment) {
+          throw new Error('Invalid vault in topup payment intent response')
+        }
+        setCaptureMode('vault')
+        setVault({ tenantId: result.vault.tenantId, environment: result.vault.environment })
+        setPaymentIntentId(result.id)
+        setClientSecret(null)
+        setStripePromise(null)
+        if (result.processorPaymentId) {
+          setProcessorPaymentId(result.processorPaymentId)
+        }
+        return
+      }
+
       if (!result.clientSecret || typeof result.clientSecret !== 'string') {
         throw new Error('Invalid client secret in topup payment intent response')
       }
 
       if (!result.publishableKey || typeof result.publishableKey !== 'string') {
         throw new Error('Invalid publishable key in topup payment intent response')
-      }
-
-      if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
-        updateCustomerRef(result.customerRef)
       }
 
       const stripeOptions: StripeConstructorOptions = {
@@ -77,6 +100,11 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      setCaptureMode('processor_elements')
+      setVault(null)
+      if (typeof result.id === 'string' && result.id) {
+        setPaymentIntentId(result.id)
+      }
       if (result.processorPaymentId) {
         setProcessorPaymentId(result.processorPaymentId)
       }
@@ -96,6 +124,9 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setStripePromise(null)
     setClientSecret(null)
     setProcessorPaymentId(null)
+    setPaymentIntentId(null)
+    setCaptureMode(null)
+    setVault(null)
   }, [])
 
   return {
@@ -104,6 +135,9 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     stripePromise,
     clientSecret,
     processorPaymentId,
+    paymentIntentId,
+    captureMode,
+    vault,
     startTopup,
     reset,
   }

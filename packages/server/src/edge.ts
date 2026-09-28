@@ -112,6 +112,8 @@ export {
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
   attachBusinessDetailsCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,

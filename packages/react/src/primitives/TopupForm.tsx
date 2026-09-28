@@ -30,7 +30,7 @@ import {
   useElements,
   PaymentElement as StripePaymentElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements } from '@stripe/stripe-js'
+import type { Appearance, Stripe, StripeElements } from '@stripe/stripe-js'
 import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
@@ -51,10 +51,16 @@ import {
   type TaxBreakdown,
 } from '@solvapay/core'
 import { useCustomer } from '../hooks/useCustomer'
-import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
-import type { TopupFormProps } from '../types'
+import {
+  buildConfirmBillingDetails,
+  confirmPayment,
+  confirmVaultPayment,
+} from '../utils/confirmPayment'
+import type { CaptureMode, SolvaPayContextValue, SucceededPayment, TopupFormProps, VaultInfo } from '../types'
+import { VaultCardFields, type CardCapture, type CardFieldsProps } from '../vault/CardFields'
 import {
   readPaymentIntentClientSecret,
+  readPaymentIntentId,
   stripPaymentIntentParams,
 } from './paymentIntentReturn'
 import {
@@ -73,6 +79,10 @@ type TopupFormContextValue = {
   amount: number
   currency?: string
   state: TopupFormState
+  captureMode: CaptureMode
+  paymentIntentId: string | null
+  vault: VaultInfo | null
+  appearance?: Appearance
   clientSecret: string | null
   processorPaymentId: string | null
   stripe: Stripe | null
@@ -91,6 +101,8 @@ type TopupFormContextValue = {
   fieldErrors: Partial<Record<keyof BusinessDetailsInput, string>>
   setBusinessDetails: (patch: Partial<BusinessDetailsInput>) => void
   setPaymentInputComplete: (complete: boolean) => void
+  /** Vault mode only: `CardFields` registers the capture function here. */
+  setCardCapture: (capture: CardCapture | null) => void
   submit: () => Promise<void>
 }
 
@@ -135,7 +147,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   // `onSuccess` on backend confirmation) lives next to the existing
   // provider-context read. Optional — transports that don't implement
   // it keep the legacy fire-on-confirm behaviour.
-  const { processTopupPayment, attachBusinessDetails, customerRef } = solva
+  const {
+    processTopupPayment,
+    attachBusinessDetails,
+    customerRef,
+    createCaptureGrant,
+    confirmPayment: confirmPaymentTransport,
+  } = solva
 
   const copy = useCopy()
   const locale = useLocale()
@@ -144,6 +162,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     error: topupError,
     clientSecret,
     processorPaymentId,
+    paymentIntentId,
+    captureMode,
+    vault,
     startTopup,
     stripePromise,
   } = useTopup({
@@ -156,15 +177,22 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   const hasAmount = amount > 0
 
   useEffect(() => {
-    if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !clientSecret) {
+    if (
+      !hasInitializedRef.current &&
+      hasAmount &&
+      !loading &&
+      !topupError &&
+      !clientSecret &&
+      !paymentIntentId
+    ) {
       hasInitializedRef.current = true
       startTopup().catch(error => {
         console.error('[TopupForm] startTopup failed', error)
         hasInitializedRef.current = false
       })
     }
-    if (hasAmount && clientSecret) hasInitializedRef.current = true
-  }, [hasAmount, loading, topupError, clientSecret, startTopup])
+    if (hasAmount && (clientSecret || paymentIntentId)) hasInitializedRef.current = true
+  }, [hasAmount, loading, topupError, clientSecret, paymentIntentId, startTopup])
 
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
@@ -190,9 +218,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       ? `${copy.errors.topupInitFailed} ${topupError.message || copy.errors.unknownError}`
       : null
 
+  const isVault = captureMode === 'vault' && !!paymentIntentId && !!vault
   const dataState: TopupFormState = outerError
     ? 'error'
-    : clientSecret && stripePromise
+    : (clientSecret && stripePromise) || isVault
       ? 'ready'
       : 'loading'
 
@@ -208,7 +237,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   // swap when the PaymentIntent arrives. OfflineInner used to no-op
   // `setBusinessDetails`, which dropped the buyer country before attach.
   const businessAttach = useBusinessDetailsAttach({
-    processorPaymentId,
+    // Vault mode has no rail payment yet; the backend resolves the SolvaPay id.
+    processorPaymentId: isVault ? paymentIntentId : processorPaymentId,
     attachBusinessDetails,
     customerRef,
     onTaxChange,
@@ -217,6 +247,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   const innerCommon = {
     amount,
     currency,
+    captureMode: (isVault ? 'vault' : 'processor_elements') as CaptureMode,
+    paymentIntentId,
+    vault: isVault ? vault : null,
+    appearance: resolvedAppearance,
     clientSecret,
     processorPaymentId,
     returnUrl: finalReturnUrl,
@@ -225,6 +259,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     onSuccess,
     onError,
     processTopupPayment,
+    createCaptureGrant,
+    confirmPaymentTransport,
     businessAttach,
   }
 
@@ -242,10 +278,17 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
         {children}
       </Slot>
     )
+    if (isVault) {
+      return (
+        <Inner {...innerCommon} stripe={null} elements={null}>
+          {slotted}
+        </Inner>
+      )
+    }
     if (canMountElements) {
       return (
         <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-          <Inner {...innerCommon}>{slotted}</Inner>
+          <ElementsInner {...innerCommon}>{slotted}</ElementsInner>
         </Elements>
       )
     }
@@ -260,9 +303,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       data-state={dataState}
       {...rest}
     >
-      {canMountElements ? (
+      {isVault ? (
+        <Inner {...innerCommon} stripe={null} elements={null}>
+          {children}
+        </Inner>
+      ) : canMountElements ? (
         <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-          <Inner {...innerCommon}>{children}</Inner>
+          <ElementsInner {...innerCommon}>{children}</ElementsInner>
         </Elements>
       ) : (
         <OfflineInner {...innerCommon}>{children}</OfflineInner>
@@ -274,6 +321,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 type InnerProps = {
   amount: number
   currency?: string
+  captureMode: CaptureMode
+  paymentIntentId: string | null
+  vault: VaultInfo | null
+  appearance?: Appearance
   clientSecret: string | null
   processorPaymentId: string | null
   returnUrl: string
@@ -302,13 +353,26 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
+  createCaptureGrant?: SolvaPayContextValue['createCaptureGrant']
+  confirmPaymentTransport?: SolvaPayContextValue['confirmPayment']
   businessAttach: UseBusinessDetailsAttachReturn
   children?: React.ReactNode
 }
 
-const Inner: React.FC<InnerProps> = ({
+/** `processor_elements` shell: reads Stripe from the surrounding `<Elements>`. */
+const ElementsInner: React.FC<InnerProps> = props => {
+  const stripe = useStripe()
+  const elements = useElements()
+  return <Inner {...props} stripe={stripe} elements={elements} />
+}
+
+const Inner: React.FC<InnerProps & { stripe: Stripe | null; elements: StripeElements | null }> = ({
   amount,
   currency,
+  captureMode,
+  paymentIntentId,
+  vault,
+  appearance,
   clientSecret,
   processorPaymentId,
   returnUrl,
@@ -317,17 +381,24 @@ const Inner: React.FC<InnerProps> = ({
   onSuccess,
   onError,
   processTopupPayment,
+  createCaptureGrant,
+  confirmPaymentTransport,
   businessAttach,
+  stripe,
+  elements,
   children,
 }) => {
-  const stripe = useStripe()
+  const isVault = captureMode === 'vault'
   const stripeAvailable = !!stripe
   const stripeRef = useRef(stripe)
-  const elements = useElements()
   const copy = useCopy()
   const customer = useCustomer()
 
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
+  const [cardCapture, setCardCapture] = useState<CardCapture | null>(null)
+  const setCardCaptureStable = useCallback((capture: CardCapture | null) => {
+    setCardCapture(() => capture)
+  }, [])
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const returnResumeStarted = useRef(false)
@@ -335,6 +406,64 @@ const Inner: React.FC<InnerProps> = ({
   useEffect(() => {
     stripeRef.current = stripe
   })
+
+  /** Vault mode: wait for the backend to book the credit, then fire `onSuccess`. */
+  const finishVaultTopup = useCallback(
+    async (payment: SucceededPayment, railPaymentId: string) => {
+      let creditsAdded: number | undefined
+      if (processTopupPayment) {
+        try {
+          const result = await processTopupPayment({ paymentIntentId: railPaymentId })
+          if (result.status === 'processing') {
+            setError(copy.errors.paymentPending)
+            return
+          }
+          if (result.status === 'failed' || result.status === 'cancelled') {
+            setError(copy.errors.paymentUnexpected)
+            onError?.(new Error(`Topup ${result.status}`))
+            return
+          }
+          if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
+            creditsAdded = result.creditsAdded
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setError(msg)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+      }
+      await onSuccess?.(payment, creditsAdded !== undefined ? { creditsAdded } : undefined)
+    },
+    [processTopupPayment, copy, onSuccess, onError],
+  )
+
+  // Vault return path: after 3DS the rail sends the payer back with
+  // `payment_intent` in the URL; there is no Stripe.js to resume with.
+  useEffect(() => {
+    if (!isVault || returnResumeStarted.current || typeof window === 'undefined') return
+    const railPaymentId = readPaymentIntentId(window.location.search)
+    if (!railPaymentId) return
+    returnResumeStarted.current = true
+    let cancelled = false
+    void (async () => {
+      setIsProcessing(true)
+      setError(null)
+      stripPaymentIntentParams()
+      try {
+        if (cancelled) return
+        await finishVaultTopup(
+          { id: paymentIntentId ?? railPaymentId, processorPaymentId: railPaymentId, status: 'succeeded' },
+          railPaymentId,
+        )
+      } finally {
+        if (!cancelled) setIsProcessing(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isVault, paymentIntentId, finishVaultTopup])
 
   useEffect(() => {
     const stripeApi = stripeRef.current
@@ -433,17 +562,67 @@ const Inner: React.FC<InnerProps> = ({
     runAttach,
   } = businessAttach
 
-  const isReady = !!(stripe && elements)
+  const isReady = isVault ? !!paymentIntentId : !!(stripe && elements)
+  const paymentSourceReady = isVault
+    ? !!cardCapture && !!createCaptureGrant && !!confirmPaymentTransport
+    : !!clientSecret
   const canSubmit =
     isReady &&
     paymentInputComplete &&
     !isProcessing &&
-    !!clientSecret &&
+    paymentSourceReady &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
     isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching
 
   const submit = useCallback(async () => {
+    if (isVault) {
+      if (!paymentIntentId || !cardCapture || !createCaptureGrant || !confirmPaymentTransport) {
+        const msg = !paymentIntentId ? copy.errors.paymentIntentUnavailable : copy.errors.cardFieldsMissing
+        setError(msg)
+        onError?.(new Error(msg))
+        return
+      }
+      if (requiresBusinessAttach && !businessDetailsAttached) {
+        const attached = await runAttach(businessDetails)
+        if (!attached) {
+          const msg = businessDetailsError ?? 'Complete business details before paying'
+          setError(msg)
+          onError?.(new Error(msg))
+          return
+        }
+      }
+      setError(null)
+      setIsProcessing(true)
+      try {
+        const result = await confirmVaultPayment({
+          paymentIntentId,
+          capture: cardCapture,
+          createCaptureGrant,
+          confirmPayment: confirmPaymentTransport,
+          returnUrl,
+          copy,
+        })
+        if (result.status === 'error') {
+          setError(result.message)
+          onError?.(new Error(result.message))
+          return
+        }
+        if (result.status === 'requires_action') {
+          window.location.assign(result.redirectUrl)
+          return
+        }
+        if (result.status === 'pending' || result.status === 'other') {
+          setError(result.message)
+          return
+        }
+        await finishVaultTopup(result.payment, result.payment.processorPaymentId)
+      } finally {
+        setIsProcessing(false)
+      }
+      return
+    }
+
     if (!stripe || !elements || !clientSecret) {
       const msg = copy.errors.stripeUnavailable
       setError(msg)
@@ -531,6 +710,12 @@ const Inner: React.FC<InnerProps> = ({
       )
     }
   }, [
+    isVault,
+    paymentIntentId,
+    cardCapture,
+    createCaptureGrant,
+    confirmPaymentTransport,
+    finishVaultTopup,
     stripe,
     elements,
     clientSecret,
@@ -554,6 +739,10 @@ const Inner: React.FC<InnerProps> = ({
       amount,
       currency,
       state,
+      captureMode,
+      paymentIntentId,
+      vault,
+      appearance,
       clientSecret,
       processorPaymentId,
       stripe,
@@ -572,12 +761,17 @@ const Inner: React.FC<InnerProps> = ({
       fieldErrors,
       setBusinessDetails,
       setPaymentInputComplete,
+      setCardCapture: setCardCaptureStable,
       submit,
     }),
     [
       amount,
       currency,
       state,
+      captureMode,
+      paymentIntentId,
+      vault,
+      appearance,
       clientSecret,
       processorPaymentId,
       stripe,
@@ -595,6 +789,7 @@ const Inner: React.FC<InnerProps> = ({
       businessDetailsError,
       fieldErrors,
       setBusinessDetails,
+      setCardCaptureStable,
       submit,
     ],
   )
@@ -606,6 +801,10 @@ const Inner: React.FC<InnerProps> = ({
 const OfflineInner: React.FC<InnerProps> = ({
   amount,
   currency,
+  captureMode,
+  paymentIntentId,
+  vault,
+  appearance,
   clientSecret,
   processorPaymentId,
   returnUrl,
@@ -621,6 +820,10 @@ const OfflineInner: React.FC<InnerProps> = ({
       amount,
       currency,
       state,
+      captureMode,
+      paymentIntentId,
+      vault,
+      appearance,
       clientSecret,
       processorPaymentId,
       stripe: null,
@@ -639,12 +842,17 @@ const OfflineInner: React.FC<InnerProps> = ({
       fieldErrors: businessAttach.fieldErrors,
       setBusinessDetails: businessAttach.setBusinessDetails,
       setPaymentInputComplete: noopSet,
+      setCardCapture: noopSet,
       submit: noopSubmit,
     }),
     [
       amount,
       currency,
       state,
+      captureMode,
+      paymentIntentId,
+      vault,
+      appearance,
       clientSecret,
       processorPaymentId,
       outerError,
@@ -836,7 +1044,27 @@ const BusinessDetails = createBusinessDetailsParts(useTopupBusinessCtx, 'topup-f
 const Summary = createTaxSummaryParts(useTopupSummaryCtx, 'topup-form')
 
 export const TopupFormRoot = Root
+/** Vault-mode card entry for top-ups; see `PaymentForm.CardFields`. Renders nothing in `processor_elements` mode. */
+const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(function TopupFormCardFields(props, ref) {
+  const { captureMode, vault, paymentIntentId, appearance, setCardCapture, setPaymentInputComplete } =
+    useTopupCtx('CardFields')
+  if (captureMode !== 'vault') return null
+  return (
+    <VaultCardFields
+      ref={ref}
+      data-solvapay-topup-form-card-fields=""
+      {...props}
+      vault={vault}
+      paymentIntentId={paymentIntentId}
+      appearance={appearance}
+      onCapture={setCardCapture}
+      onComplete={setPaymentInputComplete}
+    />
+  )
+})
+
 export const TopupFormPaymentElement = PaymentElementSlot
+export const TopupFormCardFields = CardFieldsSlot
 export const TopupFormSubmitButton = SubmitButton
 export const TopupFormLoading = Loading
 export const TopupFormError = ErrorSlot
@@ -848,6 +1076,7 @@ export const TopupForm = {
   Root,
   AmountPicker: AmountPickerPrimitive.Root,
   PaymentElement: PaymentElementSlot,
+  CardFields: CardFieldsSlot,
   BusinessDetails,
   Summary,
   SubmitButton,
