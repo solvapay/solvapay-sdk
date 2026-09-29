@@ -45,7 +45,7 @@ export { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
 export { activatePlanCore } from './activation'
 
 // Export payment-method helpers
-export { getPaymentMethodCore } from './payment-method'
+export { getPaymentMethodCore, removePaymentMethodCore } from './payment-method'
 
 // Export auto-recharge helpers
 export { disableAutoRechargeCore, getAutoRechargeCore, saveAutoRechargeCore } from './auto-recharge'

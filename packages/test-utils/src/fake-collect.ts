@@ -9,6 +9,8 @@
  * sends none). No network, no iframes.
  */
 
+import { testCards } from './test-cards'
+
 export interface FakeCollectCreateCardOptions {
   auth: string
   data?: Record<string, unknown>
@@ -174,13 +176,11 @@ export function createFakeCollect(options: FakeCollectOptions = {}): FakeCollect
 }
 
 /**
- * Canonical vault test cards (design doc, section 8). Numbers are the
- * SolvaPay `BIN6 + 000...` scheme; the backend's simulator maps each to one
- * scenario. Use with a real sandbox tenant only through the SDK — never
- * send a number to SolvaPay directly.
+ * SolvaPay test cards for fake Collect captures (design doc, section 8). The
+ * backend maps each to the rail's own test credential; see `test-cards.ts`.
  */
 export const VAULT_TEST_CARDS = {
-  visaSuccess: { number: '4242424242424242', expMonth: 12, expYear: 2030, cvc: '123' },
-  visaDeclined: { number: '4000000000000002', expMonth: 12, expYear: 2030, cvc: '123' },
-  visaRequires3ds: { number: '4000000000003220', expMonth: 12, expYear: 2030, cvc: '123' },
+  visaSuccess: { number: testCards.visa.success, expMonth: 12, expYear: 2030, cvc: '123' },
+  visaDeclined: { number: testCards.visa.declineGeneric, expMonth: 12, expYear: 2030, cvc: '123' },
+  visaRequires3ds: { number: testCards.visa.scaRequired, expMonth: 12, expYear: 2030, cvc: '123' },
 } as const

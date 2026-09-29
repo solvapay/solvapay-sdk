@@ -118,7 +118,7 @@ Open [http://localhost:3013](http://localhost:3013).
 1. Visit `/` — public landing page
 2. Click **Log in to dashboard** — Auth0 Universal Login
 3. After login, `/dashboard` shows the embedded Pay As You Go checkout
-4. Buy credits inline with a sandbox test card (e.g. `4242 4242 4242 4242`)
+4. Buy credits inline with a sandbox test card (e.g. `4111 5700 0000 0018`)
 5. Add tasks — each one deducts a credit; the remaining balance is shown
 6. Spend down to zero — the next add re-opens the embedded checkout to top up
 7. Log out / sign in as another user — separate board and balance

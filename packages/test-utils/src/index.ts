@@ -41,4 +41,15 @@ export type {
   FakeCollectOptions,
 } from './fake-collect'
 
+// SolvaPay canonical test cards
+export {
+  TEST_CARD_PRODUCTS,
+  TEST_CARD_SCENARIO_CODES,
+  luhnCheckDigit,
+  testCardNumber,
+  testCards,
+  testPaymentMethod,
+} from './test-cards'
+export type { TestCardProduct, TestCardScenario } from './test-cards'
+
 export const TEST_UTILS_VERSION = '0.0.0'

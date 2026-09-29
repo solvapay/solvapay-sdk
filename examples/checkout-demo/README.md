@@ -404,7 +404,7 @@ or email OAuth on `web-app-demo.solvapay.app`.
 
 1. **Home Page**: View locked premium content
 2. **Click Upgrade**: Trigger inline payment form
-3. **Complete Payment**: Use test card (4242 4242 4242 4242)
+3. **Complete Payment**: Use test card (4111 5700 0000 0018)
 4. **View Unlocked Content**: Premium features are instantly available
 5. **Persistence**: Purchase persists in localStorage across refreshes
 
@@ -414,9 +414,10 @@ Use these test card numbers in the checkout form:
 
 | Card Number         | Result             |
 | ------------------- | ------------------ |
-| 4242 4242 4242 4242 | Payment succeeds   |
-| 4000 0000 0000 0002 | Payment declined   |
-| 4000 0000 0000 9995 | Insufficient funds |
+| 4111 5700 0000 0018 | Payment succeeds   |
+| 4111 5700 0000 1016 | Payment declined   |
+| 4111 5700 0000 1024 | Insufficient funds |
+| 4111 5700 0000 3012 | Requires 3DS       |
 
 - Use any future expiry date
 - Use any 3-digit CVC
@@ -971,7 +972,7 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [Headless Components Pattern](https://www.patterns.dev/posts/headless-ui) - Headless UI patterns
-- Test card numbers: `4242 4242 4242 4242` (any future expiry, any CVC) in the sandbox vault
+- Test card numbers: `4111 5700 0000 0018` (any future expiry, any CVC), SolvaPay sandbox only
 - [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
 - [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
 

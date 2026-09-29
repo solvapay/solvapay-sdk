@@ -84,6 +84,7 @@ const REQUIRED_FUNCTIONS: ReadonlyArray<keyof typeof edgeEntry> = [
   'getMerchantCore',
   'getProductCore',
   'getPaymentMethodCore',
+  'removePaymentMethodCore',
   'getHistoryCore',
   'isErrorResult',
   'handleRouteError',

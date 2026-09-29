@@ -885,6 +885,19 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    async removePaymentMethod(params) {
+      const url = new URL(`${base}/v1/sdk/payment-method`)
+      url.searchParams.set('customerRef', params.customerRef)
+
+      const res = await fetch(url.toString(), { method: 'DELETE', headers })
+
+      if (!res.ok) {
+        await throwApiError('Remove payment method', res)
+      }
+
+      return await res.json()
+    },
+
     async getAutoRecharge(params) {
       const url = new URL(`${base}/v1/sdk/auto-recharge`)
       url.searchParams.set('customerRef', params.customerRef)

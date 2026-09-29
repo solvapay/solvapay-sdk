@@ -110,11 +110,12 @@ Sandbox test cards work in the vault card fields:
 
 | Card | Result |
 |---|---|
-| `4242 4242 4242 4242` | Succeeds |
-| `4000 0000 0000 0002` | Declined |
-| `4000 0025 0000 3155` | Requires 3DS |
+| `4111 5700 0000 0018` | Succeeds |
+| `4111 5700 0000 1016` | Declined |
+| `4111 5700 0000 1024` | Declined, insufficient funds |
+| `4111 5700 0000 3012` | Requires 3DS |
 
-Use any future expiry, any 3-digit CVC, any postcode.
+Use any future expiry, any 3-digit CVC, any postcode. These are SolvaPay test cards: they work in sandbox only, whatever payment rail runs behind SolvaPay.
 
 ## How the scenarios map to SolvaPay
 
@@ -191,7 +192,7 @@ The SolvaPay backend will dedupe the customer by `externalRef` (the JWT `sub`), 
 
 ## Deploy to Cloudflare Workers
 
-The `src/worker.ts` entrypoint pairs with `wrangler.jsonc` to deploy the demo as a single Worker that serves both the Vite SPA build (via the Workers Assets binding) and the `/api/*` routes. Mirrors the deploy ergonomics from `examples/cloudflare-workers-mcp` — public-safe placeholders in git, real values in a gitignored `.env` that `scripts/deploy.mjs` forwards as `--var` flags. The canonical SolvaPay-owned deploy runs at [chat-demo.solvapay.app](https://chat-demo.solvapay.app) (sandbox backend, anyone can poke at the paywall with `4242 4242 4242 4242`).
+The `src/worker.ts` entrypoint pairs with `wrangler.jsonc` to deploy the demo as a single Worker that serves both the Vite SPA build (via the Workers Assets binding) and the `/api/*` routes. Mirrors the deploy ergonomics from `examples/cloudflare-workers-mcp` — public-safe placeholders in git, real values in a gitignored `.env` that `scripts/deploy.mjs` forwards as `--var` flags. The canonical SolvaPay-owned deploy runs at [chat-demo.solvapay.app](https://chat-demo.solvapay.app) (sandbox backend, anyone can poke at the paywall with `4111 5700 0000 0018`).
 
 > **Two value paths, two different homes.** Build-time vars (anything `VITE_*`) get baked into the SPA at `vite build` time and are read from the root `.env`. Server-side credentials (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are Worker **secrets** — uploaded **once** via `wrangler secret put` and persisted on the Worker. `scripts/deploy.mjs` does NOT re-upload secrets on every deploy; that's by design (secrets out of deploy-time plaintext). If you skip the `wrangler secret put` step, every `/api/*` request returns 500 with `SOLVAPAY_SECRET_KEY is not set` and the page shows Cloudflare's `error code: 1101`.
 

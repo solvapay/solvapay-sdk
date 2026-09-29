@@ -37,7 +37,10 @@ export type ConfirmPaymentParams = {
   paymentIntentId: string
   /** Where the rail sends the payer back after a customer action (3DS). */
   returnUrl?: string
-} & ({ cardId: string; paymentMethodId?: undefined } | { paymentMethodId: string; cardId?: undefined })
+} & (
+  | { cardId: string; paymentMethodId?: undefined }
+  | { paymentMethodId: string; cardId?: undefined }
+)
 
 /** `POST /v1/sdk/payment-intents/{id}/confirm` */
 export interface ConfirmPaymentResult {
@@ -231,6 +234,15 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
  */
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
+
+/**
+ * Result of `DELETE /v1/sdk/payment-method?customerRef=...`: the removed card,
+ * and whether auto-recharge now waits for a new card.
+ */
+export interface RemovedPaymentMethodResult {
+  removed: { brand: string; last4: string; expMonth: number; expYear: number }
+  autoRechargePaused: boolean
+}
 
 export type AutoRechargeStatus = components['schemas']['AutoRechargeConfigDto']['status']
 
@@ -552,6 +564,9 @@ export interface SolvaPayClient {
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
+
+  // DELETE: /v1/sdk/payment-method?customerRef=...
+  removePaymentMethod?(params: { customerRef: string }): Promise<RemovedPaymentMethodResult>
 
   // GET: /v1/sdk/purchases?customerRef=&productRef=
   listPurchases?(params: {

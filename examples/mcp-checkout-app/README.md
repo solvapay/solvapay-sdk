@@ -72,7 +72,7 @@ pnpm --filter @example/mcp-checkout-app dev
 
 Point `basic-host` at `http://localhost:3030/mcp` and open the app from
 its tool list. On `basic-host` and ChatGPT the iframe renders the inline
-card fields; enter the test card `4242 4242 4242 4242` and pay without
+card fields; enter the test card `4111 5700 0000 0018` and pay without
 leaving the host. Returning from hosted checkout fires `refreshBootstrap()`
 (which calls `account` with `view: "account"` under the hood) and flips the
 card to **Manage purchase**.

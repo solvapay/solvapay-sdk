@@ -110,7 +110,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. **Home Page**: View locked premium content and purchase status
 2. **Click Upgrade**: Redirects to hosted checkout page
-3. **Complete Payment**: Use test card (4242 4242 4242 4242) on hosted page
+3. **Complete Payment**: Use test card (4111 5700 0000 0018) on hosted page
 4. **Return to App**: Automatically redirected back after successful checkout
 5. **View Unlocked Content**: Premium features are instantly available
 6. **Manage Purchase**: Click "Manage Purchase" to access hosted customer portal
@@ -121,9 +121,10 @@ The hosted checkout page accepts standard Stripe test cards:
 
 | Card Number         | Result             |
 | ------------------- | ------------------ |
-| 4242 4242 4242 4242 | Payment succeeds   |
-| 4000 0000 0000 0002 | Payment declined   |
-| 4000 0000 0000 9995 | Insufficient funds |
+| 4111 5700 0000 0018 | Payment succeeds   |
+| 4111 5700 0000 1016 | Payment declined   |
+| 4111 5700 0000 1024 | Insufficient funds |
+| 4111 5700 0000 3012 | Requires 3DS       |
 
 - Use any future expiry date
 - Use any 3-digit CVC
