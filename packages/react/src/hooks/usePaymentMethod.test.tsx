@@ -58,9 +58,7 @@ describe('usePaymentMethod', () => {
       }),
     })
 
-    await waitFor(() =>
-      expect(fetchFn).toHaveBeenCalledWith('/custom/card', expect.any(Object)),
-    )
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith('/custom/card', expect.any(Object)))
   })
 
   it('routes through a custom transport when provided', async () => {
@@ -145,5 +143,77 @@ describe('usePaymentMethod', () => {
     })
 
     expect(fetchFn).toHaveBeenCalledTimes(2)
+  })
+
+  it('remove deletes the card on file, then loads the new default', async () => {
+    const next: PaymentMethodInfo = { ...card, last4: '1099' }
+    const removed = {
+      removed: { brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: false,
+    }
+    const responses = [card, removed, next]
+    const fetchFn = vi.fn().mockImplementation(
+      async () =>
+        new Response(JSON.stringify(responses.shift()), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    )
+    const { result } = renderHook(() => usePaymentMethod(), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
+    await waitFor(() => expect(result.current.paymentMethod).toEqual(card))
+
+    let outcome: unknown
+    await act(async () => {
+      outcome = await result.current.remove()
+    })
+
+    expect(outcome).toStrictEqual(removed)
+    expect(fetchFn.mock.calls.map(call => [call[0], call[1].method])).toStrictEqual([
+      ['/api/payment-method', 'GET'],
+      ['/api/payment-method', 'DELETE'],
+      ['/api/payment-method', 'GET'],
+    ])
+    expect(result.current.paymentMethod).toEqual(next)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('remove clears the card on a transport without getPaymentMethod (MCP)', async () => {
+    const removed = {
+      removed: { brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: true,
+    }
+    const removePaymentMethod = vi.fn().mockResolvedValue(removed)
+    const transport = { removePaymentMethod } as never
+    const { result } = renderHook(() => usePaymentMethod(), {
+      wrapper: wrapper({ transport }),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let outcome: unknown
+    await act(async () => {
+      outcome = await result.current.remove()
+    })
+
+    expect(removePaymentMethod).toHaveBeenCalledTimes(1)
+    expect(outcome).toStrictEqual(removed)
+    expect(result.current.paymentMethod).toBeNull()
+    expect(paymentMethodCache.size).toBe(0)
+  })
+
+  it('remove rejects and keeps the card when the transport has no removePaymentMethod', async () => {
+    const transport = { getPaymentMethod: vi.fn().mockResolvedValue(card) } as never
+    const { result } = renderHook(() => usePaymentMethod(), {
+      wrapper: wrapper({ transport }),
+    })
+    await waitFor(() => expect(result.current.paymentMethod).toEqual(card))
+
+    await act(async () => {
+      await expect(result.current.remove()).rejects.toThrow(
+        'removePaymentMethod is not available on this transport',
+      )
+    })
+    expect(result.current.paymentMethod).toEqual(card)
   })
 })

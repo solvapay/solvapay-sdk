@@ -26,8 +26,9 @@ a sibling if you need less:
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes 2 intent tools
 (`account`, `activate_plan`) plus the UI-only tools (`create_hosted_session`,
 `create_payment_intent`, `create_capture_grant`, `confirm_payment`,
-`process_payment`, `create_card_setup_grant`, `save_card`, `set_renewal`,
-`attach_business_details`, `get_history`).
+`process_payment`, `create_card_setup_grant`, `save_card`,
+`remove_payment_method`, `set_renewal`, `attach_business_details`,
+`get_history`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
@@ -264,6 +265,7 @@ sequenceDiagram
 | `confirm_payment` | Confirms the payment server-side with the captured `cardId` (or a saved `paymentMethodId`); returns `redirectUrl` for 3DS |
 | `process_payment` | Records the purchase after `confirm_payment` succeeds |
 | `create_card_setup_grant` / `save_card` | Save a card without paying (auto-recharge card setup) on a customer session |
+| `remove_payment_method` | Removes the card on file; the next saved card becomes the default and `autoRechargePaused` says whether auto-recharge waits for a new card |
 | `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
 | `get_history` | Product charges + account-wide credit activity for the fullscreen history section |
 

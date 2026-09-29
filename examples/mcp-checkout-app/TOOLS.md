@@ -113,6 +113,7 @@ stay unlimited; this path is SDK-only.
 | `confirm_payment` | Server-side confirm with the captured card; `redirectUrl` for 3DS |
 | `process_payment` | Create the purchase after the confirm |
 | `create_card_setup_grant` / `save_card` | Save a card without paying (auto-recharge) |
+| `remove_payment_method` | Remove the card on file; the next saved card becomes the default |
 | `attach_business_details` | Tax computation on the Payment step |
 | `set_renewal` | Toggle auto-renewal (`enabled: true \| false`) |
 | `get_history` | Product charges + account-wide credit activity (fullscreen history) |

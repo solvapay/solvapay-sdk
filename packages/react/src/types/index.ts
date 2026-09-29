@@ -8,6 +8,7 @@ import type {
   TopupProcessResult,
   ActivatePlanResult,
   PaymentMethodInfo,
+  RemovedPaymentMethodResult,
   CustomerBalanceResult,
   GetUsageResult,
   LimitResponseWithPlan,
@@ -420,6 +421,12 @@ export interface UsePaymentMethodReturn {
   loading: boolean
   error: Error | null
   refetch: () => Promise<void>
+  /**
+   * Remove the card on file, then reload the new default (HTTP). Transports
+   * without `getPaymentMethod` (MCP) clear the card until the next bootstrap.
+   * Rejects when the transport has no `removePaymentMethod` or the call fails.
+   */
+  remove: () => Promise<RemovedPaymentMethodResult>
 }
 
 export interface SolvaPayContextValue {

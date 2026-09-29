@@ -182,7 +182,11 @@ describe('VaultCardFields', () => {
     // Expiry and CVC share a row; the number sits above it.
     const row = section().querySelector('[data-solvapay-card-field-row]') as HTMLElement
     expect(Array.from(row.children)).toEqual([field('expiry'), field('cvc')])
-    expect(Array.from(section().children)).toEqual([field('cardNumber'), row])
+    expect(Array.from(section().children)).toEqual([
+      field('cardNumber'),
+      row,
+      section().querySelector('[data-solvapay-test-cards]'),
+    ])
 
     const form = collect.forms[0] as SpiedForm
     expect(form.mounted).toEqual(['pan', 'exp-date', 'cvc'])
@@ -535,5 +539,35 @@ describe('VaultCardFields', () => {
     expect(mounted.onCapture).toHaveBeenLastCalledWith(null)
     expect(mounted.onComplete).toHaveBeenLastCalledWith(false)
     expect(mounted.onActive.mock.calls).toEqual([[true], [false]])
+  })
+  it('lists the SolvaPay test cards in sandbox only, and not when testCards is false', async () => {
+    const sandbox = renderFields()
+    await ready()
+    const list = screen.getByRole('complementary', { name: 'Test cards' })
+    expect(list.querySelector('[data-solvapay-test-cards-intro]')).toHaveTextContent(
+      'Test mode. Use a test card with any future date and any security code.',
+    )
+    const rows = Array.from(list.querySelectorAll('[data-solvapay-test-card]')).map(row => [
+      row.querySelector('[data-solvapay-test-card-number]')?.textContent,
+      row.querySelector('[data-solvapay-test-card-result]')?.textContent,
+    ])
+    expect(rows).toEqual([
+      ['4111 5700 0000 0018', 'Succeeds'],
+      ['4111 5700 0000 1016', 'Declined'],
+      ['4111 5700 0000 1024', 'Insufficient funds'],
+      ['4111 5700 0000 3012', '3-D Secure'],
+    ])
+    expect(section()).not.toHaveAttribute('testCards')
+    sandbox.unmount()
+
+    const live = renderFields({ vault: { tenantId: 'tntr4ol0cbq', environment: 'live' } })
+    await ready()
+    expect(section().querySelector('[data-solvapay-test-cards]')).toBeNull()
+    live.unmount()
+
+    const off = renderFields({ testCards: false })
+    await ready()
+    expect(section().querySelector('[data-solvapay-test-cards]')).toBeNull()
+    off.unmount()
   })
 })

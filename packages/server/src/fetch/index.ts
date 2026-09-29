@@ -36,6 +36,7 @@ export {
   listPlans,
   processPayment,
   reactivateRenewal,
+  removePaymentMethod,
   solvapayWebhook,
   syncCustomer,
   trackUsage,

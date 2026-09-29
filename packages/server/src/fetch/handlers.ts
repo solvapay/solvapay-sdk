@@ -46,6 +46,7 @@ import {
   getHistoryCore,
   getMerchantCore,
   getPaymentMethodCore,
+  removePaymentMethodCore,
   getProductCore,
   isErrorResult,
   listPlansCore,
@@ -203,6 +204,20 @@ export async function getPaymentMethod(req: Request): Promise<Response> {
   return jsonResponseWithCors(result, req)
 }
 
+/** `DELETE`: remove the authenticated customer's card on file. */
+export async function removePaymentMethod(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await removePaymentMethodCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
 export async function listPlans(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
@@ -311,7 +326,9 @@ export interface SolvapayWebhookOptions {
   onEvent: (event: WebhookEvent) => void | Promise<void>
 }
 
-export function solvapayWebhook(options: SolvapayWebhookOptions): (req: Request) => Promise<Response> {
+export function solvapayWebhook(
+  options: SolvapayWebhookOptions,
+): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const secret =
       options.secret ||

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getPaymentMethod } from '@solvapay/next'
+import { getPaymentMethod, removePaymentMethod } from '@solvapay/next'
 
 export const GET = (request: NextRequest) => getPaymentMethod(request)
+export const DELETE = (request: NextRequest) => removePaymentMethod(request)

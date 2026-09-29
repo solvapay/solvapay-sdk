@@ -18,6 +18,7 @@ vi.mock('../../src/helpers', () => ({
   reactivatePurchaseCore: vi.fn(),
   activatePlanCore: vi.fn(),
   getPaymentMethodCore: vi.fn(),
+  removePaymentMethodCore: vi.fn(),
   listPlansCore: vi.fn(),
   syncCustomerCore: vi.fn(),
   createCheckoutSessionCore: vi.fn(),
@@ -51,6 +52,7 @@ import {
   getMerchantCore,
   getProductCore,
   getHistoryCore,
+  removePaymentMethodCore,
 } from '../../src/helpers'
 import { verifyWebhook } from '../../src/edge'
 import {
@@ -70,6 +72,7 @@ import {
   getMerchant,
   getProduct,
   getHistory,
+  removePaymentMethod,
   solvapayWebhook,
 } from '../../src/fetch/handlers'
 import { configureCors } from '../../src/fetch/cors'
@@ -90,6 +93,7 @@ const mockCreateCustomerSessionCore = vi.mocked(createCustomerSessionCore)
 const mockGetMerchantCore = vi.mocked(getMerchantCore)
 const mockGetProductCore = vi.mocked(getProductCore)
 const mockGetHistoryCore = vi.mocked(getHistoryCore)
+const mockRemovePaymentMethodCore = vi.mocked(removePaymentMethodCore)
 const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
@@ -334,6 +338,43 @@ describe('getHistory', () => {
       charges: [],
       creditActivity: { entries: [], hasMore: false },
     })
+  })
+})
+
+describe('removePaymentMethod', () => {
+  it('returns CORS preflight for OPTIONS', async () => {
+    const res = await removePaymentMethod(fakeOptions())
+    expect(res.status).toBe(204)
+    expect(res.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, DELETE, OPTIONS')
+    expect(mockRemovePaymentMethodCore).not.toHaveBeenCalled()
+  })
+
+  it('returns the removed card', async () => {
+    mockRemovePaymentMethodCore.mockResolvedValue({
+      removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: true,
+    })
+    const req = new Request('http://localhost/api/payment-method', { method: 'DELETE' })
+
+    const res = await removePaymentMethod(req)
+
+    expect(res.status).toBe(200)
+    expect(mockRemovePaymentMethodCore).toHaveBeenCalledWith(req)
+    expect(await res.json()).toEqual({
+      removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: true,
+    })
+  })
+
+  it('returns 404 when no card is on file', async () => {
+    mockRemovePaymentMethodCore.mockResolvedValue({ error: 'No card on file', status: 404 })
+
+    const res = await removePaymentMethod(
+      new Request('http://localhost/api/payment-method', { method: 'DELETE' }),
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toMatchObject({ error: 'No card on file' })
   })
 })
 

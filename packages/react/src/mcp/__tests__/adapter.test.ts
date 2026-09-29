@@ -181,6 +181,25 @@ describe('createMcpAppAdapter', () => {
     expect(result).toStrictEqual(saved)
   })
 
+  it('routes removePaymentMethod to remove_payment_method with no arguments', async () => {
+    const removed = {
+      removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: false,
+    }
+    const app = createMockApp(() => ({ structuredContent: removed }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.removePaymentMethod?.()
+
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'remove_payment_method',
+      arguments: {},
+    })
+    expect(MCP_TOOL_NAMES.removePaymentMethod).toBe('remove_payment_method')
+    expect(result).toStrictEqual(removed)
+  })
+
   it('routes confirmPayment to confirm_payment with the card id, dropping an undefined returnUrl', async () => {
     const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' }
     const app = createMockApp(() => ({ structuredContent: payment }))

@@ -29,6 +29,7 @@ import type {
   ProcessPaymentResult,
   TopupProcessResult,
   PaymentMethodInfo,
+  RemovedPaymentMethodResult,
   SavedCardResult,
   AutoRechargeInput,
   SaveAutoRechargeInput,
@@ -132,6 +133,12 @@ export interface SolvaPayTransport {
    * adapters omit (the field is on the bootstrap customer snapshot).
    */
   getPaymentMethod?: () => Promise<PaymentMethodInfo>
+  /**
+   * Remove the customer's card on file. The next saved card becomes the
+   * default; `autoRechargePaused` says auto-recharge now waits for a new card.
+   * HTTP: `DELETE /api/payment-method`. MCP: `remove_payment_method`.
+   */
+  removePaymentMethod?: () => Promise<RemovedPaymentMethodResult>
   getAutoRecharge?: () => Promise<AutoRechargeResponse>
   saveAutoRecharge?: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
   disableAutoRecharge?: () => Promise<{ success: true }>

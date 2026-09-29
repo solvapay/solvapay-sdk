@@ -118,6 +118,8 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
 
     saveCard: params => callTool(MCP_TOOL_NAMES.saveCard, pickDefined({ ...params })),
 
+    removePaymentMethod: () => callTool(MCP_TOOL_NAMES.removePaymentMethod, {}),
+
     cancelRenewal: params =>
       callTool(
         MCP_TOOL_NAMES.setRenewal,

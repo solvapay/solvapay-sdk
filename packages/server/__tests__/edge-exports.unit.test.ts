@@ -52,6 +52,7 @@ describe('fetch subpath surface', () => {
     'listPlans',
     'processPayment',
     'reactivateRenewal',
+    'removePaymentMethod',
     'syncCustomer',
     'trackUsage',
   ] as const

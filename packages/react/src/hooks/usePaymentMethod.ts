@@ -3,7 +3,7 @@ import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
 import { createTransportCacheKey } from '../transport/cache-key'
 import type { SolvaPayConfig, UsePaymentMethodReturn } from '../types'
-import type { PaymentMethodInfo } from '@solvapay/server'
+import type { PaymentMethodInfo, RemovedPaymentMethodResult } from '@solvapay/server'
 
 type CacheEntry = {
   paymentMethod: PaymentMethodInfo | null
@@ -18,10 +18,7 @@ const CACHE_DURATION = 5 * 60 * 1000
 export { paymentMethodCache, CACHE_DURATION }
 
 function cacheKeyFor(config: SolvaPayConfig | undefined): string {
-  return createTransportCacheKey(
-    config,
-    config?.api?.getPaymentMethod || '/api/payment-method',
-  )
+  return createTransportCacheKey(config, config?.api?.getPaymentMethod || '/api/payment-method')
 }
 
 async function fetchPaymentMethod(
@@ -139,10 +136,27 @@ export function usePaymentMethod(): UsePaymentMethodReturn {
     load()
   }, [load])
 
+  const remove = useCallback(async (): Promise<RemovedPaymentMethodResult> => {
+    const transport = _config?.transport ?? createHttpTransport(_config)
+    if (!transport.removePaymentMethod) {
+      throw new Error('removePaymentMethod is not available on this transport')
+    }
+    const result = await transport.removePaymentMethod()
+    paymentMethodCache.delete(key)
+    if (transport.getPaymentMethod) {
+      await load(true)
+    } else {
+      setPaymentMethod(null)
+      setError(null)
+    }
+    return result
+  }, [_config, key, load])
+
   return {
     paymentMethod,
     loading,
     error,
     refetch: () => load(true),
+    remove,
   }
 }

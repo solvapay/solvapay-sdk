@@ -51,6 +51,7 @@ import {
   listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
+  removePaymentMethodCore,
   type AutoRechargeInput,
   type SolvaPay,
 } from '@solvapay/server'
@@ -874,6 +875,26 @@ export function buildSolvaPayDescriptors(
           },
           { solvaPay },
         )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.removePaymentMethod,
+    description:
+      UI_ONLY_PREFIX +
+      "Remove the customer's card on file. The next saved card becomes the default; auto-recharge on the removed card waits for a new one (autoRechargePaused). Returns the removed card's brand, last4 and expiry.",
+    inputSchema: {},
+    meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: true, idempotentHint: false }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.removePaymentMethod, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        const result = await removePaymentMethodCore(buildRequest(extra, { method: 'DELETE' }), {
+          solvaPay,
+        })
         if (isErrorResult(result)) return toolErrorResult(result)
         return toolResult(result)
       }),

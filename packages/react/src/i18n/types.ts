@@ -74,6 +74,14 @@ export interface SolvaPayCopy {
       invalidExpiry: string
       invalidCvc: string
     }
+    /** Sandbox only: the SolvaPay test cards listed under the fields. */
+    testCards: {
+      intro: string
+      succeeds: string
+      declined: string
+      insufficientFunds: string
+      threeDSecure: string
+    }
   }
   cta: {
     payNow: string

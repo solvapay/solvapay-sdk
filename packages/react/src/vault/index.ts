@@ -18,5 +18,5 @@ export type {
   CollectLoader,
   CollectSessionOptions,
 } from './collect'
-export { VaultCardFields } from './CardFields'
+export { VaultCardFields, SANDBOX_TEST_CARDS } from './CardFields'
 export type { CardCapture, CardFieldsProps, VaultCardFieldsProps } from './CardFields'

@@ -106,6 +106,7 @@ describe('buildSolvaPayDescriptors', () => {
         MCP_TOOL_NAMES.getHistory,
         VIEWER_TOOL_NAME,
         MCP_TOOL_NAMES.processPayment,
+        MCP_TOOL_NAMES.removePaymentMethod,
         MCP_TOOL_NAMES.saveCard,
         MCP_TOOL_NAMES.setRenewal,
       ].sort(),
@@ -147,6 +148,7 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.confirmPayment,
       MCP_TOOL_NAMES.createCardSetupGrant,
       MCP_TOOL_NAMES.saveCard,
+      MCP_TOOL_NAMES.removePaymentMethod,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createHostedSession,
@@ -1484,5 +1486,93 @@ describe('create_card_setup_grant / save_card descriptors (card setup without a 
       },
     })
     expect(coreSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('remove_payment_method descriptor (card on file)', () => {
+  const UI_ONLY_PREFIX = `UI-only; agents should prefer ${INTENT_TOOL_NAMES.map(name => `\`${name}\``).join(' / ')}. `
+  const authed = { authInfo: { extra: { customer_ref: 'cus_test' } } }
+  const removed = {
+    removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+    autoRechargePaused: true,
+  }
+
+  function build() {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === MCP_TOOL_NAMES.removePaymentMethod)
+    if (!tool) throw new Error('remove_payment_method not registered')
+    return { solvaPay, tool }
+  }
+
+  async function spyCore() {
+    const serverModule = await import('@solvapay/server')
+    return vi.spyOn(serverModule, 'removePaymentMethodCore')
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('advertises a UI-only destructive tool with no input', () => {
+    const { tool } = build()
+    expect(tool.name).toBe('remove_payment_method')
+    expect(tool.description).toBe(
+      UI_ONLY_PREFIX +
+        "Remove the customer's card on file. The next saved card becomes the default; auto-recharge on the removed card waits for a new one (autoRechargePaused). Returns the removed card's brand, last4 and expiry.",
+    )
+    expect(tool.meta).toStrictEqual({
+      ui: { resourceUri: 'ui://test/view.html', visibility: ['app'] },
+      audience: 'ui',
+      'openai/widgetAccessible': true,
+      'openai/visibility': 'private',
+    })
+    expect(Object.keys(tool.inputSchema)).toStrictEqual([])
+    expect(tool.annotations).toStrictEqual({
+      openWorldHint: true,
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    })
+  })
+
+  it('sends a DELETE as the authenticated customer and returns the removed card', async () => {
+    const coreSpy = (await spyCore()).mockResolvedValue(removed)
+    const { solvaPay, tool } = build()
+
+    const result = await tool.handler({}, authed)
+
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+    const [request, options] = coreSpy.mock.calls[0]
+    expect(request).toBeInstanceOf(Request)
+    expect(request.method).toBe('DELETE')
+    expect(request.headers.get('x-user-id')).toBe('cus_test')
+    expect(options).toStrictEqual({ solvaPay })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(removed) }],
+      structuredContent: removed,
+    })
+  })
+
+  it('refuses unauthenticated callers and surfaces core errors', async () => {
+    const coreSpy = await spyCore()
+    const { tool } = build()
+    expect(await tool.handler({}, {})).toMatchObject({
+      isError: true,
+      structuredContent: { status: 401 },
+    })
+    expect(coreSpy).not.toHaveBeenCalled()
+
+    coreSpy.mockResolvedValue({ error: 'No card on file', status: 404 })
+    expect(await tool.handler({}, authed)).toMatchObject({
+      isError: true,
+      structuredContent: { error: 'No card on file', status: 404 },
+    })
   })
 })

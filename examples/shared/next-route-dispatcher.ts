@@ -27,6 +27,7 @@ import {
   processPaymentIntent,
   processTopupPaymentIntent,
   reactivateRenewal,
+  removePaymentMethod,
   saveAutoRecharge,
   syncCustomer,
   attachBusinessDetails,
@@ -220,6 +221,7 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
 
   const deleteRoutes: Record<string, Handler> = {
     'auto-recharge': request => disableAutoRecharge(request, { solvaPay }),
+    'payment-method': request => removePaymentMethod(request, { solvaPay }),
   }
 
   async function GET(

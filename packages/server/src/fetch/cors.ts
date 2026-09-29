@@ -11,7 +11,7 @@ export function configureCors(config: CorsConfig): void {
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin')
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-solvapay-customer-ref',
     'Access-Control-Max-Age': '86400',
   }

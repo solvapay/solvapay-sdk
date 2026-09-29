@@ -59,7 +59,17 @@ export type CardFieldsProps = React.HTMLAttributes<HTMLElement> & {
   fieldCss?: CollectCss
   /** Extra options for every hosted field (extra validations, inputMode, ...). */
   fieldOptions?: Omit<CollectFieldOptions, 'css' | 'placeholder' | 'name' | 'validations'>
+  /** In sandbox, list the SolvaPay test cards under the fields. Default: true. Never shown in live. */
+  testCards?: boolean
 }
+
+/** SolvaPay test cards (design doc, section 8), shown on a sandbox card step. */
+export const SANDBOX_TEST_CARDS = [
+  { number: '4111 5700 0000 0018', result: 'succeeds' },
+  { number: '4111 5700 0000 1016', result: 'declined' },
+  { number: '4111 5700 0000 1024', result: 'insufficientFunds' },
+  { number: '4111 5700 0000 3012', result: 'threeDSecure' },
+] as const
 
 export type VaultCardFieldsProps = CardFieldsProps & {
   vault: VaultInfo | null
@@ -129,6 +139,7 @@ export const VaultCardFields = forwardRef<HTMLElement, VaultCardFieldsProps>(
       onComplete,
       onActive,
       cardholderName = false,
+      testCards = true,
       labels = true,
       cardIcon = true,
       placeholders,
@@ -336,6 +347,21 @@ export const VaultCardFields = forwardRef<HTMLElement, VaultCardFieldsProps>(
           <p role="alert" data-solvapay-payment-form-error="">
             {loadError}
           </p>
+        ) : null}
+        {testCards && vault?.environment === 'sandbox' ? (
+          <aside aria-label="Test cards" data-solvapay-test-cards="">
+            <p data-solvapay-test-cards-intro="">{copy.cardFields.testCards.intro}</p>
+            <ul>
+              {SANDBOX_TEST_CARDS.map(card => (
+                <li key={card.number} data-solvapay-test-card="">
+                  <span data-solvapay-test-card-number="">{card.number}</span>
+                  <span data-solvapay-test-card-result="">
+                    {copy.cardFields.testCards[card.result]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </aside>
         ) : null}
       </section>
     )

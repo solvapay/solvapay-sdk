@@ -97,6 +97,13 @@ export const enCopy: SolvaPayCopy = {
       invalidExpiry: "Your card's expiration date is invalid.",
       invalidCvc: "Your card's security code is invalid.",
     },
+    testCards: {
+      intro: 'Test mode. Use a test card with any future date and any security code.',
+      succeeds: 'Succeeds',
+      declined: 'Declined',
+      insufficientFunds: 'Insufficient funds',
+      threeDSecure: '3-D Secure',
+    },
   },
   cta: {
     payNow: 'Pay Now',

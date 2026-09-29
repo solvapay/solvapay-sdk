@@ -267,6 +267,13 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         errorPrefix: 'Failed to load payment method',
       }),
 
+    removePaymentMethod: () =>
+      request(config, routeFor(config, 'getPaymentMethod'), {
+        method: 'DELETE',
+        onErrorContext: 'removePaymentMethod',
+        errorPrefix: 'Failed to remove payment method',
+      }),
+
     getAutoRecharge: () =>
       request(config, routeFor(config, 'autoRecharge'), {
         method: 'GET',

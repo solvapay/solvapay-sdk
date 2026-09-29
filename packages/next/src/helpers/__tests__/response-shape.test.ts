@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 vi.mock('@solvapay/server', () => ({
   getMerchantCore: vi.fn(),
   getPaymentMethodCore: vi.fn(),
+  removePaymentMethodCore: vi.fn(),
   cancelPurchaseCore: vi.fn(),
   getAuthenticatedUserCore: vi.fn(),
   isErrorResult: vi.fn(
@@ -15,15 +16,17 @@ vi.mock('@solvapay/server', () => ({
 import {
   getMerchantCore,
   getPaymentMethodCore,
+  removePaymentMethodCore,
   cancelPurchaseCore,
 } from '@solvapay/server'
 import { toNextRouteResponse } from '../_response'
 import { getMerchant } from '../merchant'
-import { getPaymentMethod } from '../payment-method'
+import { getPaymentMethod, removePaymentMethod } from '../payment-method'
 import { cancelRenewal } from '../renewal'
 
 const mockGetMerchantCore = vi.mocked(getMerchantCore)
 const mockGetPaymentMethodCore = vi.mocked(getPaymentMethodCore)
+const mockRemovePaymentMethodCore = vi.mocked(removePaymentMethodCore)
 const mockCancelPurchaseCore = vi.mocked(cancelPurchaseCore)
 
 function fakeRequest(url = 'http://localhost/api', init?: RequestInit) {
@@ -197,5 +200,38 @@ describe('cancelRenewal (route-wrapper with side-effect)', () => {
 
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ error: 'Purchase not found' })
+  })
+})
+
+describe('removePaymentMethod (route-wrapper smoke test)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns the removed card with 200 and passes the options through', async () => {
+    mockRemovePaymentMethodCore.mockResolvedValue({
+      removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: false,
+    })
+    const request = fakeRequest('http://localhost/api/payment-method', { method: 'DELETE' })
+
+    const response = await removePaymentMethod(request, { includeEmail: true })
+
+    expect(mockRemovePaymentMethodCore).toHaveBeenCalledWith(request, { includeEmail: true })
+    expect(response).toBeInstanceOf(NextResponse)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      removed: { brand: 'visa', last4: '0018', expMonth: 12, expYear: 2030 },
+      autoRechargePaused: false,
+    })
+  })
+
+  it('surfaces a 404 when no card is on file', async () => {
+    mockRemovePaymentMethodCore.mockResolvedValue({ error: 'No card on file', status: 404 })
+
+    const response = await removePaymentMethod(fakeRequest())
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'No card on file' })
   })
 })

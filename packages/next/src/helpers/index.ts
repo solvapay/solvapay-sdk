@@ -31,7 +31,7 @@ export { createCheckoutSession, createCustomerSession } from './checkout'
 export { activatePlan } from './activation'
 
 // Export payment-method helpers
-export { getPaymentMethod } from './payment-method'
+export { getPaymentMethod, removePaymentMethod } from './payment-method'
 
 // Export auto-recharge helpers
 export { disableAutoRecharge, getAutoRecharge, saveAutoRecharge } from './auto-recharge'

@@ -139,6 +139,7 @@ export {
   getMerchant,
   getProduct,
   getPaymentMethod,
+  removePaymentMethod,
   getAutoRecharge,
   saveAutoRecharge,
   disableAutoRecharge,
