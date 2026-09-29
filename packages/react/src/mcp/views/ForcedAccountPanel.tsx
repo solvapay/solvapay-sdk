@@ -28,6 +28,7 @@ import { formatShortDate, formatSince, type ActiveProduct } from '../derive-acti
 import { resolvePlanShape, type PlanLike } from '../plan-actions'
 import { LineItem } from '../primitives'
 import { McpUsageMeter } from '../primitives/UsageMeter'
+import { AccountSignedInAs } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -61,6 +62,7 @@ export function ForcedAccountPanel({
       <div className="solvapay-mcp-account">
         <div className={cx.card} data-solvapay-mcp-account-skeleton="" aria-busy="true">
           <AccountSkeleton />
+          <AccountSignedInAs />
         </div>
       </div>
     )
@@ -200,6 +202,7 @@ function ActivateAccountPanel({
           </p>
         ) : null}
         {showPortalCta ? <PortalHint classNames={classNames} /> : null}
+        <AccountSignedInAs />
       </div>
     </div>
   )
@@ -278,6 +281,7 @@ function OverageAccountPanel({
           </button>
         ) : null}
         {showPortalCta ? <PortalHint classNames={classNames} /> : null}
+        <AccountSignedInAs />
       </div>
     </div>
   )
@@ -394,6 +398,7 @@ function CancelledAccountPanel({
           </CancelledPlanNotice.ReactivateButton>
         </CancelledPlanNotice.Root>
         {showPortalCta ? <PortalHint classNames={classNames} /> : null}
+        <AccountSignedInAs />
       </div>
     </div>
   )

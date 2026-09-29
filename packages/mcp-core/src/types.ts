@@ -52,6 +52,14 @@ export type BootstrapPlan = components['schemas']['Plan']
  */
 export interface BootstrapCustomer {
   ref: string
+  /**
+   * Signed-in identity from the customer record. Projected off the
+   * purchase-check result, which carries them only because that helper
+   * looks the customer up. Null when that sub-read returned none.
+   * The whole `customer` is null for an anonymous caller.
+   */
+  email: string | null
+  name: string | null
   purchase: PurchaseCheckResult | null
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null

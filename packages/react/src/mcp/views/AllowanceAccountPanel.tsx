@@ -41,7 +41,7 @@ import {
 } from '../plan-actions'
 import { FactBand, SplitRow, type FactBandItem } from '../primitives'
 import { McpUsageMeter } from '../primitives/UsageMeter'
-import { AccountIdentityFooter, ChargesSection } from './accountFullscreen'
+import { AccountIdentityFooter, AccountSignedInAs, ChargesSection } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -205,6 +205,7 @@ export function AllowanceAccountPanel({
             />
           </>
         ) : null}
+        {isFullscreen ? null : <AccountSignedInAs />}
       </div>
       {isFullscreen && productRef ? (
         <ChargesSection charges={history.charges} loading={history.loading} error={history.error} />

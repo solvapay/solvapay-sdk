@@ -286,6 +286,10 @@ body {
   font-size: 13px;
 }
 
+.solvapay-mcp-signed-in-ref {
+  font-family: var(--font-mono);
+}
+
 .solvapay-mcp-notice {
   padding: 12px;
   border-radius: var(--border-radius-md);

@@ -59,6 +59,7 @@ import {
   narratedToolResult,
   parseMode,
   previewJson,
+  signedInCustomerRefOnly,
   toolErrorResult,
   ToolErrorEnvelopeSchema,
   toolResult,
@@ -281,11 +282,13 @@ export function buildSolvaPayDescriptors(
     views = DEFAULT_VIEWS,
     csp,
     apiBaseUrl,
-    getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
     branding,
   } = options
+  const getCustomerRef = signedInCustomerRefOnly(
+    options.getCustomerRef ?? defaultGetCustomerRefHelper,
+  )
   const toolIcons = deriveIcons(branding)
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
