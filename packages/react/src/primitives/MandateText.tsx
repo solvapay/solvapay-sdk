@@ -18,9 +18,9 @@
  * commitment to the point of charge.
  *
  * `savesPaymentMethod` marks a confirm that also stores the card for
- * later off-session charges (auto-recharge). The MCP payment surfaces
- * turn Stripe's own `terms` line off, so this component is the only
- * place that discloses the storage — the topup template appends a
+ * later off-session charges (auto-recharge). The card fields carry no
+ * mandate line, so this component is the only place that discloses the
+ * storage — the topup template appends a
  * saved-card sentence when the flag is set.
  *
  * SolvaPay's Terms of Service and Privacy Policy are always named and

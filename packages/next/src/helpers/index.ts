@@ -20,6 +20,8 @@ export {
   attachBusinessDetails,
   createCaptureGrant,
   confirmPayment,
+  createCardSetupGrant,
+  saveCard,
 } from './payment'
 
 // Export checkout helpers

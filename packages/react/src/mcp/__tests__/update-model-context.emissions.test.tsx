@@ -17,7 +17,7 @@ import React from 'react'
 
 // ------------------------------------------------------------------
 // Primitive stubs — same approach as the checkout view tests so the
-// state machine can be exercised without Stripe iframes.
+// state machine can be exercised without the vault card fields.
 // ------------------------------------------------------------------
 
 vi.mock('../../primitives/TopupForm', () => {
@@ -37,7 +37,7 @@ vi.mock('../../primitives/TopupForm', () => {
     </div>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const CardFields: React.FC = () => null
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
@@ -59,7 +59,7 @@ vi.mock('../../primitives/TopupForm', () => {
     Rows: () => null,
   }
   return {
-    TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
+    TopupForm: { Root, Loading, CardFields, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
     useTopupForm: () => ({ taxBreakdown: null, amount: 0, currency: 'USD' }),
   }
 })
@@ -85,7 +85,7 @@ vi.mock('../../primitives/PaymentForm', () => {
     </div>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const CardFields: React.FC = () => null
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span>{children}</span>
@@ -111,7 +111,7 @@ vi.mock('../../primitives/PaymentForm', () => {
     PaymentForm: {
       Root,
       Loading,
-      PaymentElement,
+      CardFields,
       Error: ErrorSlot,
       SubmitButton,
       MandateText,
@@ -125,7 +125,6 @@ vi.mock('../../primitives/MandateText', () => ({
   MandateText: () => null,
 }))
 
-vi.mock('../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
 
 // ------------------------------------------------------------------
 
@@ -255,7 +254,6 @@ function renderCheckout(
       <McpBridgeProvider app={app as unknown as Parameters<typeof McpBridgeProvider>[0]['app']}>
         <McpCheckoutView
           productRef={productRef}
-          publishableKey="pk_test"
           returnUrl="https://example.test/r"
           plans={[
             { ...freePlan, planType: 'free' } as never,
@@ -347,7 +345,7 @@ describe('Phase 1 — McpTopupView emits on amount commit', () => {
         <McpBridgeProvider
           app={app as unknown as Parameters<typeof McpBridgeProvider>[0]['app']}
         >
-          <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
+          <McpTopupView returnUrl="https://example.test/r" />
         </McpBridgeProvider>
       </SolvaPayContext.Provider>,
     )

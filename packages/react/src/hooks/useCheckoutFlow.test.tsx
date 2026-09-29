@@ -21,7 +21,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
-import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
+import { readPaymentIntentId } from '../primitives/paymentIntentReturn'
 import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
@@ -35,7 +35,7 @@ vi.mock('../primitives/paymentIntentReturn', async importOriginal => {
   const actual = await importOriginal<typeof import('../primitives/paymentIntentReturn')>()
   return {
     ...actual,
-    readPaymentIntentClientSecret: vi.fn(actual.readPaymentIntentClientSecret),
+    readPaymentIntentId: vi.fn(actual.readPaymentIntentId),
   }
 })
 
@@ -194,8 +194,8 @@ function makeWrapper(opts: WrapperOptions = {}): {
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
-  vi.mocked(readPaymentIntentClientSecret).mockImplementation(search => {
-    const value = new URLSearchParams(search).get('payment_intent_client_secret')
+  vi.mocked(readPaymentIntentId).mockImplementation(search => {
+    const value = new URLSearchParams(search).get('payment_intent')
     return value && value.length > 0 ? value : undefined
   })
 })
@@ -230,9 +230,9 @@ describe('useCheckoutFlow — initial state', () => {
   })
 })
 
-describe('useCheckoutFlow — Stripe return resume', () => {
-  it('starts on the payment step when payment_intent_client_secret is in the URL', async () => {
-    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce('pi_return_secret')
+describe('useCheckoutFlow — 3DS return resume', () => {
+  it('starts on the payment step when payment_intent is in the URL', async () => {
+    vi.mocked(readPaymentIntentId).mockReturnValueOnce('pi_rail_return')
 
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
@@ -241,8 +241,8 @@ describe('useCheckoutFlow — Stripe return resume', () => {
     expect(result.current.step).toBe('payment')
   })
 
-  it('keeps the configured initialStep when no Stripe return params are present', () => {
-    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce(undefined)
+  it('keeps the configured initialStep when no return params are present', () => {
+    vi.mocked(readPaymentIntentId).mockReturnValueOnce(undefined)
 
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {

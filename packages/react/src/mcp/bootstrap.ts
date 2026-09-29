@@ -36,7 +36,6 @@ export type McpView = SolvaPayMcpViewKind
 export interface McpBootstrap {
   view: SolvaPayMcpViewKind
   productRef: string
-  stripePublishableKey: string | null
   returnUrl: string
   /** Product-scoped snapshot — always present. */
   merchant: BootstrapMerchant
@@ -285,12 +284,10 @@ export function parseBootstrapFromToolResult(
   }
   const ref = structured?.productRef
   if (!ref) throw new Error(`${toolName} did not return a productRef`)
-  // Stripe's confirmPayment validator requires `return_url` to be an http(s)
-  // URL with an explicit scheme. Inside the MCP host iframe
-  // `window.location.origin` is the literal string `"null"` (browsers
-  // return "null" for non-standard schemes like `ui://`), which Stripe
-  // rejects with "An explicit scheme (such as https) must be provided."
-  // So we require the server to supply a concrete http(s) origin and fail
+  // The 3DS `returnUrl` must be an http(s) URL with an explicit scheme.
+  // Inside the MCP host iframe `window.location.origin` is the literal
+  // string `"null"` (browsers return "null" for non-standard schemes like
+  // `ui://`), which is not a navigable return target. So we require the server to supply a concrete http(s) origin and fail
   // loudly if it doesn't — there's no safe fallback we can derive
   // client-side in this host.
   const raw = structured?.returnUrl
@@ -299,13 +296,11 @@ export function parseBootstrapFromToolResult(
       `${toolName} did not return a valid http(s) returnUrl. Set MCP_PUBLIC_BASE_URL on the MCP server.`,
     )
   }
-  const key = structured?.stripePublishableKey ?? null
   const requestedView = structured?.view ?? fallbackView
   const resolvedView: SolvaPayMcpViewKind = requestedView
   return {
     view: resolvedView,
     productRef: ref,
-    stripePublishableKey: typeof key === 'string' && key ? key : null,
     returnUrl: raw,
     merchant: (structured?.merchant ?? {}) as BootstrapMerchant,
     product: (structured?.product ?? { reference: ref }) as BootstrapProduct,

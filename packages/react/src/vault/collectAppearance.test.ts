@@ -23,7 +23,7 @@ const STOCK_CSS = {
 }
 
 describe('buildCollectFieldCss', () => {
-  it('mirrors Stripe defaults when no appearance is given', () => {
+  it('uses the stock field look when no appearance is given', () => {
     expect(buildCollectFieldCss(undefined)).toStrictEqual(STOCK_CSS)
   })
 
@@ -82,7 +82,6 @@ describe('buildCollectFieldCss', () => {
 
   it('lets .Input rules win over variables and derives focus/danger from variables (dark theme)', () => {
     const css = buildCollectFieldCss({
-      theme: 'night',
       variables: {
         colorText: '#ffffff',
         colorTextPlaceholder: '#888888',

@@ -14,8 +14,8 @@ The flow has three parts:
    `TopupForm.BusinessDetails`).
 2. **Attach** them to the payment intent (`attachBusinessDetails`), which triggers Stripe Tax and
    returns a `TaxBreakdown`.
-3. **Confirm** the payment — the forms refresh Stripe Elements after attaching so the tax-updated
-   amount applies before confirmation.
+3. **Confirm** the payment — the forms confirm server-side, so the tax-updated
+   amount applies at confirmation.
 
 ## Wire the backend route
 
@@ -114,7 +114,7 @@ function TopupCheckout() {
         <TopupForm.BusinessDetails.TaxId />
       </TopupForm.BusinessDetails.Root>
 
-      <TopupForm.PaymentElement />
+      <TopupForm.CardFields />
       <TopupForm.Error />
       <TopupForm.SubmitButton>Pay</TopupForm.SubmitButton>
     </TopupForm.Root>

@@ -1,22 +1,19 @@
 /**
- * Translate the SDK's Stripe Elements `appearance` into VGS Collect field
- * `css`, so vault-mode `CardFields` match `PaymentElement` on the same host
- * without a second theming system.
+ * Translate the SDK's `appearance` into VGS Collect field `css`, so
+ * `CardFields` match the host's `--solvapay-*` theme.
  *
  * Sources, in priority order (later wins):
  * 1. `appearance.variables` — colours, font, radius, base size.
  * 2. `appearance.rules['.Input']`, `['.Input:focus']`, `['.Input--invalid']`,
- *    `['.Input::placeholder']` — the same rules `buildStripeAppearance`
+ *    `['.Input::placeholder']` — the same rules `buildAppearance`
  *    derives from `--solvapay-*` tokens.
  * 3. `appearance.fonts` — `{ family, src, weight, style }` entries become
  *    `@font-face` inside the hosted iframe (Collect cannot see host fonts).
- *    `cssSrc` entries (a stylesheet URL) cannot be loaded into the iframe
- *    and are ignored; pass `src` for vault mode.
  *
  * The result is a plain CSS-in-JS object in Collect's dialect (camelCase
  * keys, `&:focus` / `&.invalid.touched` / `&::placeholder` selectors).
  */
-import type { Appearance } from '@stripe/stripe-js'
+import type { Appearance } from '../types/appearance'
 
 export type CollectCss = Record<string, unknown>
 
@@ -52,16 +49,9 @@ function borderColorOf(border: string | undefined): string | undefined {
 }
 
 function fontFaces(appearance: Appearance | undefined): CollectCss[] {
-  const fonts = (appearance as { fonts?: unknown[] } | undefined)?.fonts ?? []
+  const fonts = appearance?.fonts ?? []
   const faces: CollectCss[] = []
-  for (const font of fonts) {
-    const f = font as {
-      family?: string
-      src?: string
-      weight?: string
-      style?: string
-      display?: string
-    }
+  for (const f of fonts) {
     if (!f.family || !f.src) continue
     faces.push({
       fontFamily: f.family,
@@ -75,9 +65,8 @@ function fontFaces(appearance: Appearance | undefined): CollectCss[] {
 }
 
 /**
- * Build the Collect `css` for one hosted field from a Stripe appearance.
- * Pass `undefined` for Stripe's stock look; the defaults here mirror
- * Stripe's default Input so the two modes stay visually close.
+ * Build the Collect `css` for one hosted field from an `Appearance`.
+ * Pass `undefined` for the SDK's stock field look (`DEFAULTS`).
  */
 export function buildCollectFieldCss(appearance: Appearance | undefined): CollectCss {
   const v = (appearance?.variables ?? {}) as Record<string, string | undefined>

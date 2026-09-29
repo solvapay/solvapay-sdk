@@ -29,6 +29,7 @@ import type {
   ProcessPaymentResult,
   TopupProcessResult,
   PaymentMethodInfo,
+  SavedCardResult,
   AutoRechargeInput,
   SaveAutoRechargeInput,
   AutoRechargeResponse,
@@ -135,6 +136,23 @@ export interface SolvaPayTransport {
   saveAutoRecharge?: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
   disableAutoRecharge?: () => Promise<{ success: true }>
   /**
+   * Card setup without a payment (`AutoRecharge.CardSetup`): a vault grant
+   * on a fresh customer session (`scope.sessionId`). HTTP:
+   * `POST /api/create-card-setup-grant`. MCP: `create_card_setup_grant`.
+   */
+  createCardSetupGrant?: () => Promise<CaptureGrant>
+  /**
+   * Card setup: save the captured card (`cardId`) on the grant's customer
+   * session. `requires_action` carries the 3DS `redirectUrl`; the payer comes
+   * back to `returnUrl` and the same `cardId` is posted again to finish.
+   * HTTP: `POST /api/save-card`. MCP: `save_card`.
+   */
+  saveCard?: (params: {
+    sessionId: string
+    cardId: string
+    returnUrl?: string
+  }) => Promise<SavedCardResult>
+  /**
    * Optional: fetch the authenticated customer's usage snapshot for the
    * active usage-based plan. When omitted, `useUsage()` falls back to
    * reading the usage field out of `checkPurchase`.
@@ -176,15 +194,15 @@ export interface SolvaPayTransport {
   }) => Promise<TopupPaymentResult>
 
   /**
-   * Process a credit-topup payment intent after Stripe's `confirmPayment`
-   * resolves. Mirrors `processPayment` but for the topup branch — by the
+   * Process a credit-topup payment intent after the server-side confirm
+   * succeeds. Mirrors `processPayment` but for the topup branch — by the
    * time this resolves, the backend has observed the PI reach
    * `succeeded` AND the webhook handler has booked the credit transaction.
    *
    * Optional: transports that can't run the synchronous round-trip
    * (e.g. early MCP adapter builds, custom integrations) omit this and
-   * `TopupForm.onSuccess` fires immediately on Stripe confirm — the
-   * legacy behaviour. The HTTP transport always implements it; new
+   * `TopupForm.onSuccess` fires immediately on confirm — the legacy
+   * behaviour. The HTTP transport always implements it; new
    * transports SHOULD too.
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
@@ -210,19 +228,18 @@ export interface SolvaPayTransport {
   }) => Promise<{ taxBreakdown: TaxBreakdown }>
 
   /**
-   * Vault checkout (`captureMode: 'vault'`): a short-lived grant the browser
-   * uses to write one card into the vault for this payment. HTTP:
-   * `POST /api/create-capture-grant`. MCP: `create_capture_grant`.
-   * Optional — transports without it cannot render `PaymentForm.CardFields`.
+   * A short-lived grant the browser uses to write one card into the vault
+   * for this payment. HTTP: `POST /api/create-capture-grant`. MCP:
+   * `create_capture_grant`.
    */
-  createCaptureGrant?: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
+  createCaptureGrant: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
   /**
-   * Vault checkout: confirm a payment server-side with the captured card
+   * Confirm a payment server-side with the captured card
    * (`cardId`) or a saved payment method (`paymentMethodId`). The rail
    * charge happens here; a `redirectUrl` in the result means the payer
    * must complete 3DS and returns to `returnUrl`.
    */
-  confirmPayment?: (params: {
+  confirmPayment: (params: {
     paymentIntentId: string
     cardId?: string
     paymentMethodId?: string

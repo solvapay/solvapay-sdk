@@ -434,7 +434,7 @@ const HostedCheckoutLink = forwardRef<
 
 interface EmbeddedCheckoutProps {
   /**
-   * Return URL forwarded to Stripe's confirmPayment step.
+   * Return URL the payer comes back to after 3DS.
    */
   returnUrl: string
   /**

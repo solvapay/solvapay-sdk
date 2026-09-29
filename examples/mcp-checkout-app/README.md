@@ -1,14 +1,14 @@
 # MCP checkout app example
 
-An MCP App that runs a **hybrid checkout** inside an MCP host's sandboxed
-UI resource. On compliant hosts (hosts that honour the
+An MCP App that runs an **embedded checkout** inside an MCP host's sandboxed
+UI resource. The UI mounts the SolvaPay SDK's vault card fields (VGS Collect
+hosted inputs) inside `<PaymentForm>`, and the payment is confirmed
+server-side. On hosts that honour the
 [MCP Apps spec](https://modelcontextprotocol.io/docs/spec/app)'s
-`_meta.ui.csp` extension, e.g. `basic-host`, ChatGPT) the UI mounts
-Stripe Elements inline via the SolvaPay SDK's `<PaymentForm>` compound
-primitive. On non-compliant hosts (today: Claude, which hardcodes
-`frame-src 'self' blob: data:` and ignores `frameDomains`) the UI
-detects the block via a runtime probe and falls back to launching
-**SolvaPay hosted checkout** in a new browser tab.
+`_meta.ui.csp` extension (e.g. `basic-host`, ChatGPT) the card fields render
+inline. On hosts that refuse the declared frames (today: Claude, which
+hardcodes `frame-src 'self' blob: data:`) use **SolvaPay hosted checkout**
+through `create_hosted_session`.
 
 ## Choosing the right example
 
@@ -18,26 +18,20 @@ a sibling if you need less:
 
 | Example                        | Runtime           | What it shows                                                        | Use when                                                                                           |
 | ------------------------------ | ----------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `examples/mcp-checkout-app`    | Node + Express    | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall                  |
+| `examples/mcp-checkout-app`    | Node + Express    | Full 5-intent UI shell + embedded card fields + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall                  |
 | `examples/supabase-edge-mcp`   | Deno (Supabase)   | Same full toolbox as `mcp-checkout-app`, deployed to Supabase Edge   | You want the complete story running at the network edge with `createSolvaPayMcpFetchHandler`       |
 | `examples/mcp-oauth-bridge`    | Node + Express    | Paywall-only, no UI, virtual tools only                              | You just need to gate a text-only tool behind SolvaPay usage limits                                |
 | `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
 
-The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
-8-tool surface: 2 intent tools (`account`, `activate_plan`) plus 6
-UI-only tools (`create_hosted_session`, `create_payment_intent`,
-`process_payment`, `set_renewal`, `attach_business_details`, `get_history`).
+The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes 2 intent tools
+(`account`, `activate_plan`) plus the UI-only tools (`create_hosted_session`,
+`create_payment_intent`, `create_capture_grant`, `confirm_payment`,
+`process_payment`, `create_card_setup_grant`, `save_card`, `set_renewal`,
+`attach_business_details`, `get_history`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
 never fires per-view read calls.
-
-Earlier iterations gave up on the embedded path because older host
-versions blocked `js.stripe.com` unconditionally — see
-[`solvapay-sdk/.cursor/plans/mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md`](../../.cursor/plans/mcp-checkout-app_hosted-button-pivot_b3d9c1a2.plan.md)
-for the original rationale. The spec's new `_meta.ui.csp` extension
-makes that path viable again on hosts that implement it, and the
-runtime probe keeps us safe on hosts that don't.
 
 ## Prerequisites
 
@@ -57,9 +51,8 @@ cp ../.env.platform-local.example .env
 # Or: cp .env.example .env
 # Fill in SOLVAPAY_SECRET_KEY and SOLVAPAY_PRODUCT_REF. Keep
 # SOLVAPAY_API_BASE_URL=http://localhost:3010 and MCP_PORT=3030 (platform
-# owns 3001–3012). The Stripe publishable key used for embedded Elements is
-# fetched from the SolvaPay backend at boot (GET /sdk/platform-config) — no
-# local config needed.
+# owns 3001–3012). The vault the card fields write into comes back on each
+# payment intent — no local card config needed.
 ```
 
 ## Run
@@ -78,13 +71,11 @@ pnpm --filter @example/mcp-checkout-app dev
 ```
 
 Point `basic-host` at `http://localhost:3030/mcp` and open the app from
-its tool list. On `basic-host` and ChatGPT the iframe renders inline
-Stripe Elements; enter the test card `4242 4242 4242 4242` and pay
-without leaving the host. On Claude the probe detects that
-`js.stripe.com` cannot iframe and the UI falls back to an **Upgrade**
-button that opens hosted checkout in a new tab — returning to the host
-fires `refreshBootstrap()` (which calls `account` with
-`view: "account"` under the hood) and flips the card to **Manage purchase**.
+its tool list. On `basic-host` and ChatGPT the iframe renders the inline
+card fields; enter the test card `4242 4242 4242 4242` and pay without
+leaving the host. Returning from hosted checkout fires `refreshBootstrap()`
+(which calls `account` with `view: "account"` under the hood) and flips the
+card to **Manage purchase**.
 
 For a public URL, run `pnpm tunnel` / `pnpm mcp:checkout:tunnel` (cloudflared)
 or enable the platform `mcpapp` ngrok tunnel on `:3030`.
@@ -198,7 +189,7 @@ sequenceDiagram
   H->>S: resources/read ui://mcp-checkout-app/mcp-app.html
   S-->>H: HTML + _meta.ui.csp
   H-->>U: iframe mounts
-  U->>H: (React McpApp renders — provider seeded, probe runs)
+  U->>H: (React McpApp renders — provider seeded)
   Note over U,H: Tab nav is local state; no further tool call on switch
 ```
 
@@ -211,8 +202,12 @@ sequenceDiagram
   participant SP as SolvaPay backend
 
   U->>S: tools/call create_payment_intent
-  S-->>U: clientSecret + accountId
-  U->>U: Stripe.js confirmPayment (nested iframe)
+  S-->>U: id + vault
+  U->>S: tools/call create_capture_grant
+  S-->>U: short-lived grant
+  U->>U: CardFields write the card into the vault (VGS iframes)
+  U->>S: tools/call confirm_payment (cardId)
+  S->>SP: server-side confirm (3DS → redirectUrl)
   U->>S: tools/call process_payment
   S->>SP: confirm purchase
   SP-->>S: purchase created
@@ -222,9 +217,10 @@ sequenceDiagram
 ```
 
 1. Host loads `ui://mcp-checkout-app/mcp-app.html`. The resource
-   registration declares `_meta.ui.csp` with Stripe's required
-   `resourceDomains` / `connectDomains` / `frameDomains` — hosts that
-   implement the spec propagate these to the iframe's CSP.
+   registration declares `_meta.ui.csp` with the card fields' required
+   `resourceDomains` / `connectDomains` / `frameDomains`
+   (`js.verygoodvault.com`, `*.verygoodproxy.com`) — hosts that implement
+   the spec propagate these to the iframe's CSP.
 2. The bundle renders `<McpApp app={app} />` from
    [`@solvapay/react/mcp`](../../packages/react/src/mcp). `McpApp` runs
    `app.connect()`, calls `account` (landing screen from
@@ -237,24 +233,16 @@ sequenceDiagram
    etc.) no longer exist; their data arrives on the `BootstrapPayload`.
 3. On mount the UI calls `account`. The viewer parallel-loads
    merchant, product, plans, and (when authenticated) the full
-   customer snapshot, plus SolvaPay's platform Stripe pk from
-   `GET /sdk/platform-config`. A `useStripeProbe` hook races
-   `loadStripe(publishableKey)` against a 3 s timeout to classify the
-   host as `'ready'` (embedded), `'blocked'` (fallback) or `'loading'`
-   (spinner). If `/sdk/platform-config` is unreachable or the key is
-   unconfigured the tool returns `null` and the hosted fallback
-   renders.
-4. **Embedded branch (`probe === 'ready'`):** renders the SDK's
-   `<PaymentForm.Root>` compound (`Summary` / `PaymentElement` /
-   `Error` / `MandateText` / `SubmitButton`). Card entry happens in a
-   nested `js.stripe.com` iframe; confirmation goes through
-   `create_payment_intent` → Stripe.js `confirmPayment` →
-   `process_payment`. Post-purchase the shell calls
+   customer snapshot.
+4. **Embedded checkout:** renders the SDK's `<PaymentForm.Root>` compound
+   (`Summary` / `CardFields` / `Error` / `MandateText` / `SubmitButton`).
+   Card entry happens in the VGS Collect iframes; confirmation goes through
+   `create_payment_intent` → `create_capture_grant` → vault capture →
+   `confirm_payment` → `process_payment`. Post-purchase the shell calls
    `refreshBootstrap()` and the card switches to `<CurrentPlanCard>`.
-5. **Hosted branch (`probe === 'blocked'`):** the original hosted-button
-   experience — `create_hosted_session` with `kind: "checkout"` populates an
-   `<a target="_blank">` anchor, the user completes payment in a new
-   tab, and `focus`/`visibilitychange` listeners fire
+5. **Hosted checkout:** `create_hosted_session` with `kind: "checkout"`
+   populates an `<a target="_blank">` anchor, the user completes payment in
+   a new tab, and `focus`/`visibilitychange` listeners fire
    `refreshBootstrap()` to flip to **Manage purchase**.
 
 ## Tools
@@ -263,7 +251,7 @@ sequenceDiagram
 
 | Tool | Purpose |
 | --- | --- |
-| `account` | Single viewer. Pass `view: "checkout"` (upgrade / change plan), `view: "account"` (plan, balance, cancel), or `view: "topup"` (add credits). Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot, stripePublishableKey). Slash prompts `/upgrade`, `/manage_account`, `/topup` remap onto this tool. |
+| `account` | Single viewer. Pass `view: "checkout"` (upgrade / change plan), `view: "account"` (plan, balance, cancel), or `view: "topup"` (add credits). Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot). Slash prompts `/upgrade`, `/manage_account`, `/topup` remap onto this tool. |
 | `activate_plan` | With `planRef`: activates a free/usage-based plan or returns a checkout URL for paid plans. Without `planRef`: list plans via `account` with `view: "checkout"`. |
 
 **UI-only state-change tools (tagged `_meta.audience: 'ui'`):**
@@ -271,35 +259,17 @@ sequenceDiagram
 | Tool | Purpose |
 | --- | --- |
 | `create_hosted_session` | Returns `{ sessionId, checkoutUrl \| customerUrl }` for hosted checkout (`kind: "checkout"`) or customer portal (`kind: "portal"`) |
-| `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
-| `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
+| `create_payment_intent` | Creates the payment intent (`captureMode: "vault"`) for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
+| `create_capture_grant` | Short-lived grant for writing one card into the vault for a payment intent |
+| `confirm_payment` | Confirms the payment server-side with the captured `cardId` (or a saved `paymentMethodId`); returns `redirectUrl` for 3DS |
+| `process_payment` | Records the purchase after `confirm_payment` succeeds |
+| `create_card_setup_grant` / `save_card` | Save a card without paying (auto-recharge card setup) on a customer session |
 | `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
 | `get_history` | Product charges + account-wide credit activity for the fullscreen history section |
 
 `returnUrl` on hosted checkout is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the
 SolvaPay backend default is used.
-
-### A note on `stripePublishableKey`
-
-The publishable key every intent tool returns is **SolvaPay's platform
-key**, sourced from the SolvaPay backend via `GET /sdk/platform-config`
-(resolved sandbox/live against the authenticated provider's
-environment). It is not the connected merchant's own pk. SolvaPay uses
-Stripe Connect direct charges, so the browser-side pattern everywhere
-in the SDK is `loadStripe(platformPk, { stripeAccount: connectedAccountId })`
-— the merchant's own publishable key is never touched.
-
-The key is forwarded on `BootstrapPayload.stripePublishableKey` purely
-so `useStripeProbe` has a syntactically valid pk to pass to
-`loadStripe()` when testing whether the host's CSP `frameDomains` lets
-`js.stripe.com` mount. The real payment flow re-fetches the same pk
-(plus the `accountId` the probe never sees) from
-`create_payment_intent`, so the probe value is never fed into
-`confirmPayment`. If the backend doesn't have a platform pk
-configured for the provider's environment, or the
-`/sdk/platform-config` call fails for any reason, the payload carries
-`null` and every host falls back to the hosted-button branch.
 
 ## Trying the paywall
 
@@ -463,8 +433,8 @@ widget to mount on a data-tool call.
    fires `activate_plan` (topup-first — a zero-balance customer gets
    `topup_required` and no purchase yet) → amount picker (presets 500 / 2 000 / 10 000
    credits, `popular` on 2 000) → Continue (local transition only) →
-   payment step with inline Stripe Elements → `Pay $18.00` →
-   `create_payment_intent` with `purpose: "topup"` + `process_payment` → the SDK
+   payment step with inline card fields → `Pay $18.00` →
+   `create_payment_intent` with `purpose: "topup"` + `confirm_payment` + `process_payment` → the SDK
    re-activates the plan now that credits have landed, creating the
    active PAYG purchase → success surface with receipt grid (no CTA).
    The SDK auto-sends
@@ -526,15 +496,13 @@ sequenceDiagram
 - Post-purchase account management (update card / cancel) stays on the
   hosted customer portal in both branches. The portal isn't safe to
   embed.
-- The embedded branch depends on the host delivering `_meta.ui.csp.frameDomains`
-  to the widget document. The runtime probe handles non-compliant hosts (Claude)
-  and hosts where the declaration is read but the enforced policy still blocks
-  nested iframes (MCPJam Inspector currently reports a runtime mismatch between
-  its effective CSP model and the browser's enforced policy). When the probe
-  blocks, check the widget console for `[solvapay-mcp] host CSP refused the
-  Stripe iframe` — the logged `originalPolicy` names the policy that refused
-  the frame. Adding entries to `_meta.ui.csp` cannot help when the host's
-  sandbox proxy or iframe chain strips or overrides `frame-src`.
+- The embedded card fields depend on the host delivering
+  `_meta.ui.csp.frameDomains` to the widget document. Non-compliant hosts
+  (Claude) and hosts where the declaration is read but the enforced policy
+  still blocks nested iframes (MCPJam Inspector) refuse the VGS frames and
+  `CardFields` shows its load error; use hosted checkout there. Adding entries
+  to `_meta.ui.csp` cannot help when the host's sandbox proxy or iframe chain
+  strips or overrides `frame-src`.
 
 ## Endpoints
 

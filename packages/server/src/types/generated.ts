@@ -38,7 +38,7 @@ export interface paths {
     get: operations['AutoRechargeSdkController_getAutoRecharge']
     /**
      * Set or update auto-recharge config for a customer
-     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file, a Stripe SetupIntent client secret is returned so the caller can collect one.
+     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file the config stays `pending_setup` until a card is saved through a customer session (capture-grant + payment-methods).
      */
     put: operations['AutoRechargeSdkController_putAutoRecharge']
     post?: never
@@ -2263,12 +2263,8 @@ export interface components {
     SaveAutoRechargeResponse: {
       config: components['schemas']['AutoRechargeConfigDto']
       display?: components['schemas']['AutoRechargeDisplayDto']
-      /** @description Stripe publishable key for the resolved environment */
-      publishableKey?: string
-      /** @description Stripe SetupIntent client secret for card collection */
-      setupClientSecret?: string
-      /** @description Connected Stripe account ID */
-      stripeAccountId?: string
+      /** @description True when no reusable card is on file; collect one before the config can activate */
+      requiresPaymentMethod: boolean
     }
     SdkCaptureGrantResponse: {
       /**
@@ -2409,11 +2405,6 @@ export interface components {
        */
       amount: number
       /**
-       * Client secret used to confirm the payment on the client
-       * @example pi_1a2b3c4d5e6f7g8h_secret_xxx
-       */
-      clientSecret?: string
-      /**
        * Creation timestamp
        * @example 2025-10-11T10:30:00.000Z
        */
@@ -2458,26 +2449,16 @@ export interface components {
     }
     SdkPaymentIntentResponse: {
       /**
-       * Connected Stripe account ID (only present on create)
-       * @example acct_1A2B3C4D
-       */
-      accountId?: string
-      /**
        * Amount in USD minor units (ledger/normalised). The charge-currency amount is `originalAmount` paired with `currency`.
        * @example 4999
        */
       amount: number
       /**
-       * How the browser takes the card. `processor_elements`: Stripe Elements with `clientSecret`. `vault`: SDK CardFields (VGS Collect) with a capture grant, confirmed server-side; no `clientSecret`.
-       * @example processor_elements
+       * How the browser takes the card: SDK CardFields (VGS Collect) with a capture grant, confirmed server-side.
+       * @example vault
        * @enum {string}
        */
-      captureMode: 'processor_elements' | 'vault'
-      /**
-       * Client secret used to confirm the payment on the client (processor_elements only)
-       * @example pi_1a2b3c4d5e6f7g8h_secret_AbCdEf123456
-       */
-      clientSecret?: string
+      captureMode: 'vault'
       /**
        * Creation timestamp
        * @example 2025-10-18T10:30:00.000Z
@@ -2524,11 +2505,6 @@ export interface components {
        */
       processorPaymentId?: string
       /**
-       * Stripe publishable key for the environment (processor_elements only)
-       * @example pk_test_...
-       */
-      publishableKey?: string
-      /**
        * Payment intent status
        * @example requires_payment_method
        * @enum {string}
@@ -2547,8 +2523,8 @@ export interface components {
        * @example 507f1f77bcf86cd799439011
        */
       transactionId?: string
-      /** @description Present when captureMode is vault */
-      vault?: components['schemas']['SdkVaultInfo']
+      /** @description The vault the browser captures the card into */
+      vault: components['schemas']['SdkVaultInfo']
     }
     SdkPlanResponse: {
       /** @description Creation timestamp */

@@ -31,7 +31,7 @@ describe('createHttpTransport — default routes', () => {
   })
 
   it('POSTs createPayment body with only defined fields', async () => {
-    const fetchFn = makeFetch({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
+    const fetchFn = makeFetch({ id: 'pi_sp_1', captureMode: 'vault', vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' } })
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
     await transport.createPayment({ planRef: 'pln_pro', productRef: undefined, customer: {} })
@@ -41,7 +41,7 @@ describe('createHttpTransport — default routes', () => {
   })
 
   it('forwards optional currency on createPayment', async () => {
-    const fetchFn = makeFetch({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
+    const fetchFn = makeFetch({ id: 'pi_sp_1', captureMode: 'vault', vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' } })
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
     await transport.createPayment({

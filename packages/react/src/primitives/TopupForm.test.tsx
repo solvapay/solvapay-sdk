@@ -8,45 +8,43 @@ import { MissingProviderError } from '../utils/errors'
 import type { SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
-// Captures the last `options` prop received by the mocked Stripe
-// `PaymentElement` so integration tests can assert `TopupForm.PaymentElement`
-// forwards SolvaPay defaults (e.g. `wallets.link = 'never'`).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const lastPaymentElementOptions: { current: any } = { current: undefined }
-
-const stripeMocks = vi.hoisted(() => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  submit: vi.fn<(...args: any[]) => Promise<{ error?: { message: string } }>>(),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  confirmPayment: vi.fn<(...args: any[]) => Promise<unknown>>(),
-}))
-
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmPayment: stripeMocks.confirmPayment }),
-  useElements: () => ({
-    getElement: vi.fn().mockReturnValue({ __tag: 'payment' }),
-    submit: stripeMocks.submit,
-  }),
-  PaymentElement: (props: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options?: any
-    onChange?: (event: { complete: boolean }) => void
+// Stand-in for the vault card fields: renders once the intent exists and,
+// on click, registers a capture function and reports the entry complete so
+// the SubmitButton flips from `disabled` to `idle`.
+vi.mock('../vault/CardFields', () => ({
+  VaultCardFields: (props: {
+    vault: unknown
+    paymentIntentId: string | null
+    onCapture: (capture: unknown) => void
+    onComplete: (complete: boolean) => void
   }) => {
-    lastPaymentElementOptions.current = props.options
-    // Render as a button so tests can fire the `onChange({ complete: true })`
-    // signal that flips the SubmitButton from `disabled` to `idle`.
+    if (!props.vault || !props.paymentIntentId) return null
     return React.createElement('button', {
-      'data-testid': 'payment-element',
+      'data-testid': 'card-fields',
       type: 'button',
-      onClick: () => props.onChange?.({ complete: true }),
+      onClick: () => {
+        props.onCapture(async () => ({
+          cardId: 'CRD_test_1',
+          last4: '4242',
+          brand: 'VISA',
+          expMonth: 12,
+          expYear: 2030,
+        }))
+        props.onComplete(true)
+      },
     })
   },
 }))
 
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
+const vaultIntent = {
+  id: 'pi_test_123',
+  captureMode: 'vault' as const,
+  vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' as const },
+}
+
+const confirmMock = vi.hoisted(() => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  confirmPayment: vi.fn<(...args: any[]) => Promise<unknown>>(),
 }))
 
 function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
@@ -65,10 +63,15 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     refetchPurchase: vi.fn().mockResolvedValue(undefined),
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
-    createTopupPayment: vi.fn().mockResolvedValue({
-      clientSecret: 'pi_topup_secret',
-      publishableKey: 'pk_test_123',
+    createTopupPayment: vi.fn().mockResolvedValue(vaultIntent),
+    createCaptureGrant: vi.fn().mockResolvedValue({
+      token: 'vgs-collect-token',
+      tenantId: 'tntr4ol0cbq',
+      environment: 'sandbox',
+      expiresAt: Date.now() + 60_000,
+      scope: { paymentIntentId: 'pi_test_123' },
     }),
+    confirmPayment: confirmMock.confirmPayment as SolvaPayContextValue['confirmPayment'],
     // Default `processTopupPayment` impl resolves to `succeeded` so the
     // happy-path tests below get the production gating behaviour
     // without manually wiring it on every render. Tests covering the
@@ -100,19 +103,19 @@ async function selectBuyerCountry(value = 'SE') {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  lastPaymentElementOptions.current = undefined
-  stripeMocks.submit.mockResolvedValue({})
-  stripeMocks.confirmPayment.mockResolvedValue({
-    paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
+  confirmMock.confirmPayment.mockResolvedValue({
+    id: 'pi_test_123',
+    processorPaymentId: 'pi_test_123',
+    status: 'succeeded',
   })
 })
 
 describe('TopupForm primitive', () => {
-  it('renders children (SubmitButton disabled) during the pre-Elements load', () => {
+  it('renders children (SubmitButton disabled) while the payment intent loads', () => {
     render(
       <Wrap value={ctx()}>
         <TopupForm.Root amount={1000} data-testid="root">
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
           <TopupForm.Loading data-testid="loading" />
@@ -186,7 +189,7 @@ describe('TopupForm primitive', () => {
     const resolveConfirm: { current: ((value: unknown) => void) | null } = {
       current: null,
     }
-    stripeMocks.confirmPayment.mockImplementation(
+    confirmMock.confirmPayment.mockImplementation(
       () =>
         new Promise(resolve => {
           resolveConfirm.current = resolve
@@ -196,7 +199,7 @@ describe('TopupForm primitive', () => {
     render(
       <Wrap value={ctx()}>
         <TopupForm.Root amount={1000}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton asChild>
             <button data-testid="pay" className="pay-btn">
@@ -207,16 +210,16 @@ describe('TopupForm primitive', () => {
       </Wrap>,
     )
 
-    // `TopupForm.Root` swaps OfflineInner → <Elements>+Inner after
+    // `TopupForm.Root` swaps OfflineInner → Inner after
     // `createTopupPayment` resolves, which unmounts the initial button.
     // Wait for the post-switch render before grabbing a reference.
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
 
-    const pe = screen.getByTestId('payment-element')
+    const cardFields = screen.getByTestId('card-fields')
     await act(async () => {
-      fireEvent.click(pe)
+      fireEvent.click(cardFields)
     })
 
     await selectBuyerCountry()
@@ -246,8 +249,14 @@ describe('TopupForm primitive', () => {
     expect((processingButton as HTMLButtonElement).disabled).toBe(true)
     expect(processingButton.textContent).toMatch(/processing/i)
 
-    resolveConfirm.current?.({ paymentIntent: { id: 'pi_test_123', status: 'succeeded' } })
-    await waitFor(() => expect(stripeMocks.confirmPayment).toHaveBeenCalled())
+    resolveConfirm.current?.({ id: 'pi_test_123', processorPaymentId: 'pi_test_123', status: 'succeeded' })
+    await waitFor(() =>
+      expect(confirmMock.confirmPayment).toHaveBeenCalledWith({
+        paymentIntentId: 'pi_test_123',
+        cardId: 'CRD_test_1',
+        returnUrl: window.location.href,
+      }),
+    )
   })
 
   it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
@@ -263,20 +272,11 @@ describe('TopupForm primitive', () => {
   })
 })
 
-// ---------- PaymentElement default options (Stripe Link disabled) ----------
-//
-// Guards the centralized `withPaymentElementDefaults` wire-up inside
-// `TopupForm.PaymentElement`. The Link sign-in banner + "Save my
-// information for faster checkout" enrollment UI would duplicate the
-// SolvaPay-owned "Save card for future top-ups" affordance, so the
-// primitive must pass `wallets.link = 'never'` to Stripe by default
-// while still letting callers override via `options`.
-
 // ---------- Backend gate on onSuccess ----------
 //
 // Regression guard for the topup badge-stale / slow LLM reply bug:
-// `TopupForm.onSuccess` previously fired the instant Stripe's
-// `confirmPayment` resolved, racing the SolvaPay webhook that books
+// `TopupForm.onSuccess` previously fired the instant the payment
+// confirmed, racing the SolvaPay webhook that books
 // the credit. The fix gates `onSuccess` on `processTopupPayment`
 // completing, so by the time the drawer closes the customer is
 // fully credited.
@@ -289,7 +289,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -297,12 +297,12 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
 
     // Flip paymentInputComplete=true so the submit button enables.
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -331,7 +331,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
           <TopupForm.Error data-testid="error" />
@@ -340,10 +340,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -370,7 +370,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -378,10 +378,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -399,7 +399,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
 
   it('treats status: timeout as a soft success — fires onSuccess', async () => {
     // The backend confirms the PI hasn't been observed succeeded within
-    // its 10s poll window. Stripe already confirmed though, so the
+    // its 10s poll window. The rail already confirmed though, so the
     // credit will land via webhook shortly — fall through and let the
     // downstream `refetchPurchase` converge.
     const onSuccess = vi.fn()
@@ -412,7 +412,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -420,10 +420,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -446,7 +446,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -454,10 +454,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -483,7 +483,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -491,10 +491,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -523,7 +523,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     render(
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -531,10 +531,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -554,15 +554,14 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
 
   it('falls through to legacy fire-on-confirm when processTopupPayment is absent', async () => {
     // Legacy / partial transports without `processTopupPayment` keep
-    // the pre-fix behaviour: onSuccess fires immediately on Stripe
-    // confirm. Not the recommended path (the customer can be
+    // the pre-fix behaviour: onSuccess fires immediately on confirm. Not the recommended path (the customer can be
     // momentarily uncredited) but preserved for backwards compat.
     const onSuccess = vi.fn()
 
     render(
       <Wrap value={ctx({ processTopupPayment: undefined })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
@@ -570,10 +569,10 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     )
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
     await selectBuyerCountry()
     await waitFor(() =>
@@ -585,53 +584,6 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     })
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
-  })
-})
-
-describe('TopupForm.PaymentElement default options', () => {
-  it('disables Stripe Link by default when the caller passes no options', async () => {
-    render(
-      <Wrap value={ctx()}>
-        <TopupForm.Root amount={1000}>
-          <TopupForm.PaymentElement />
-        </TopupForm.Root>
-      </Wrap>,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('payment-element')).toBeTruthy()
-    })
-    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('never')
-  })
-
-  it('honours caller-supplied wallets.link override', async () => {
-    render(
-      <Wrap value={ctx()}>
-        <TopupForm.Root amount={1000}>
-          <TopupForm.PaymentElement options={{ wallets: { link: 'auto' } }} />
-        </TopupForm.Root>
-      </Wrap>,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('payment-element')).toBeTruthy()
-    })
-    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('auto')
-  })
-
-  it('composes caller-supplied wallet flags with the default link=never', async () => {
-    render(
-      <Wrap value={ctx()}>
-        <TopupForm.Root amount={1000}>
-          <TopupForm.PaymentElement options={{ wallets: { applePay: 'never' } }} />
-        </TopupForm.Root>
-      </Wrap>,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('payment-element')).toBeTruthy()
-    })
-    expect(lastPaymentElementOptions.current?.wallets).toEqual({
-      link: 'never',
-      applePay: 'never',
-    })
   })
 })
 
@@ -649,11 +601,7 @@ describe('TopupForm business details + summary', () => {
     overrides?: Partial<SolvaPayContextValue>,
   ): SolvaPayContextValue {
     return ctx({
-      createTopupPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'pi_topup_secret',
-        publishableKey: 'pk_test_123',
-        processorPaymentId: 'pi_test_123',
-      }),
+      createTopupPayment: vi.fn().mockResolvedValue(vaultIntent),
       attachBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
       ...overrides,
     })
@@ -661,18 +609,10 @@ describe('TopupForm business details + summary', () => {
 
   it('keeps a country chosen during load and attaches once the payment intent lands', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
-    let resolveTopup!: (value: {
-      clientSecret: string
-      publishableKey: string
-      processorPaymentId: string
-    }) => void
+    let resolveTopup!: (value: typeof vaultIntent) => void
     const createTopupPayment = vi.fn().mockImplementation(
       () =>
-        new Promise<{
-          clientSecret: string
-          publishableKey: string
-          processorPaymentId: string
-        }>(resolve => {
+        new Promise<typeof vaultIntent>(resolve => {
           resolveTopup = resolve
         }),
     )
@@ -692,11 +632,7 @@ describe('TopupForm business details + summary', () => {
     expect(country).toHaveValue('SE')
 
     await act(async () => {
-      resolveTopup({
-        clientSecret: 'pi_topup_secret',
-        publishableKey: 'pk_test_123',
-        processorPaymentId: 'pi_test_123',
-      })
+      resolveTopup(vaultIntent)
     })
 
     await waitFor(() =>
@@ -715,7 +651,7 @@ describe('TopupForm business details + summary', () => {
     render(
       <Wrap value={businessCtx({ attachBusinessDetails })}>
         <TopupForm.Root amount={1000} currency="USD" onTaxChange={onTaxChange}>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Country />
           <TopupForm.Summary.Root>
             <TopupForm.Summary.Total data-testid="total" />
@@ -735,11 +671,11 @@ describe('TopupForm business details + summary', () => {
     await waitFor(() => expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown))
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
 
     await waitFor(() =>
@@ -762,7 +698,7 @@ describe('TopupForm business details + summary', () => {
             <TopupForm.BusinessDetails.Country data-testid="business-country" />
             <TopupForm.BusinessDetails.TaxId data-testid="business-tax-id" />
           </TopupForm.BusinessDetails.Root>
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -772,11 +708,11 @@ describe('TopupForm business details + summary', () => {
     await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalledTimes(1))
 
     await waitFor(() =>
-      expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeTruthy(),
+      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
     )
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('payment-element'))
+      fireEvent.click(screen.getByTestId('card-fields'))
     })
 
     await act(async () => {

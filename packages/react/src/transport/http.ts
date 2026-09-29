@@ -56,6 +56,8 @@ export const DEFAULT_ROUTES = {
   attachBusinessDetails: '/api/attach-business-details',
   createCaptureGrant: '/api/create-capture-grant',
   confirmPayment: '/api/confirm-payment',
+  createCardSetupGrant: '/api/create-card-setup-grant',
+  saveCard: '/api/save-card',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -152,6 +154,21 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: params,
         onErrorContext: 'confirmPayment',
         errorPrefix: 'Failed to confirm payment',
+      }),
+
+    createCardSetupGrant: () =>
+      request(config, routeFor(config, 'createCardSetupGrant'), {
+        method: 'POST',
+        onErrorContext: 'createCardSetupGrant',
+        errorPrefix: 'Failed to start card setup',
+      }),
+
+    saveCard: params =>
+      request(config, routeFor(config, 'saveCard'), {
+        method: 'POST',
+        body: params,
+        onErrorContext: 'saveCard',
+        errorPrefix: 'Failed to save card',
       }),
 
     getBalance: () =>

@@ -15,7 +15,6 @@ export { TopupForm } from './TopupForm'
 export { ProductBadge, PlanBadge } from './components/ProductBadge'
 export { PurchaseGate } from './components/PurchaseGate'
 export { Spinner } from './components/Spinner'
-export { StripePaymentFormWrapper } from './components/StripePaymentFormWrapper'
 export { BalanceBadge } from './components/BalanceBadge'
 export { CheckoutSummary } from './components/CheckoutSummary'
 export { MandateText } from './components/MandateText'
@@ -122,6 +121,11 @@ export type {
   PurchaseInfo,
   CustomerPurchaseData,
   PaymentIntentResult,
+  Appearance,
+  AppearanceFont,
+  AppearanceRule,
+  AppearanceRules,
+  AppearanceVariables,
   CaptureMode,
   VaultInfo,
   CaptureGrant,
@@ -176,7 +180,6 @@ export type { CheckoutVariant } from './utils/checkoutVariant'
 export type { CurrentPlanCardProps, CurrentPlanCardClassNames } from './components/CurrentPlanCard'
 export type { AutoRechargeProps } from './components/AutoRecharge'
 export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
-export type { StripePaymentFormWrapperProps } from './components/StripePaymentFormWrapper'
 export type {
   UpdatePaymentMethodButtonProps,
   UpdatePaymentMethodButtonMode,
@@ -208,19 +211,12 @@ export { formatPrice, getMinorUnitsPerMajor, toMajorUnits } from './utils/format
 export type { FormatPriceOptions } from './utils/format'
 export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
-export { confirmPayment, confirmVaultPayment } from './utils/confirmPayment'
+export { confirmVaultPayment } from './utils/confirmPayment'
 export type {
-  ConfirmPaymentInput,
-  ConfirmPaymentResult,
-  ConfirmPaymentMode,
   ConfirmVaultPaymentInput,
   ConfirmVaultPaymentResult,
 } from './utils/confirmPayment'
-export {
-  readPaymentIntentClientSecret,
-  readPaymentIntentId,
-  stripPaymentIntentParams,
-} from './primitives/paymentIntentReturn'
+export { readPaymentIntentId, stripPaymentIntentParams } from './primitives/paymentIntentReturn'
 export * from './vault'
 
 // Transport — unified data-access surface. Use with SolvaPayProvider via

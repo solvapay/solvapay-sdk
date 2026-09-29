@@ -640,6 +640,44 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // GET: /v1/sdk/customers/customer-sessions/{sessionId}
+    async getCustomerSession(params) {
+      const url = `${base}/v1/sdk/customers/customer-sessions/${encodeURIComponent(params.sessionId)}`
+      const res = await fetch(url, { method: 'GET', headers })
+      if (!res.ok) {
+        await throwApiError('Get customer session', res)
+      }
+      return await res.json()
+    },
+
+    // POST: /v1/customer-sessions/{sessionId}/capture-grant
+    async createCustomerSessionCaptureGrant(params) {
+      const url = `${base}/v1/customer-sessions/${encodeURIComponent(params.sessionId)}/capture-grant`
+      const res = await fetch(url, { method: 'POST', headers })
+      if (!res.ok) {
+        await throwApiError('Create card setup grant', res)
+      }
+      return await res.json()
+    },
+
+    // POST: /v1/customer-sessions/{sessionId}/payment-methods
+    async saveCustomerSessionCard(params) {
+      const url = `${base}/v1/customer-sessions/${encodeURIComponent(params.sessionId)}/payment-methods`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          cardId: params.cardId,
+          ...(params.billingDetails !== undefined && { billingDetails: params.billingDetails }),
+          ...(params.returnUrl !== undefined && { returnUrl: params.returnUrl }),
+        }),
+      })
+      if (!res.ok) {
+        await throwApiError('Save card', res)
+      }
+      return await res.json()
+    },
+
     // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
     async attachBusinessDetails(params) {
       const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/business-details`

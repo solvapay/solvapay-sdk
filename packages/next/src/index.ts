@@ -128,6 +128,8 @@ export {
   attachBusinessDetails,
   createCaptureGrant,
   confirmPayment,
+  createCardSetupGrant,
+  saveCard,
   createCheckoutSession,
   createCustomerSession,
   activatePlan,

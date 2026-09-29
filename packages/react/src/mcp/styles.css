@@ -648,12 +648,10 @@ body {
  * they want; the MCP view always wants it centered above the
  * submit button.
  *
- * `min-height` reserves the vertical space the loaded Stripe
- * `<PaymentElement>` will occupy (~280px for the typical card +
- * Apple Pay + saved-method layout at our iframe widths). Without
- * it, swapping from `PlanStep` to the payment step paints a small
- * spinner first, then grows the card by ~300px when Stripe.js
- * finishes loading — visible jank in hosts that auto-size the
+ * `min-height` reserves the vertical space the loaded card fields
+ * will occupy (~280px at our iframe widths). Without it, swapping
+ * from `PlanStep` to the payment step paints a small spinner first,
+ * then grows the card when the hosted fields finish loading — visible jank in hosts that auto-size the
  * iframe to content height (MCP Jam, Claude Desktop, ChatGPT). */
 .solvapay-mcp-topup-form [data-solvapay-topup-form-loading],
 .solvapay-mcp-card [data-solvapay-payment-form-loading] {

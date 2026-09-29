@@ -1,28 +1,27 @@
 'use client'
 
 /**
- * Vault-mode card entry shared by `PaymentForm.CardFields` and
- * `TopupForm.CardFields`: VGS Collect hosted fields (number, expiry, CVC,
- * optional cardholder name) laid out and validated like Stripe's
- * PaymentElement card form.
+ * Card entry shared by `PaymentForm.CardFields`, `TopupForm.CardFields`
+ * and `AutoRecharge.CardSetup`: VGS Collect hosted fields (number, expiry,
+ * CVC, optional cardholder name) with labels and inline validation.
  *
  * What lives where:
  * - Inside the hosted iframes (VGS): the input text, placeholder, border,
  *   focus ring, invalid state. Styled through Collect `css`, which the SDK
- *   derives from the same `appearance` / `--solvapay-*` tokens that theme
- *   Stripe Elements (`buildCollectFieldCss`); `fieldCss` overrides last.
+ *   derives from the `appearance` / `--solvapay-*` tokens
+ *   (`buildCollectFieldCss`); `fieldCss` overrides last.
  * - In the host DOM (ours): labels, layout, the error line under each
  *   field, `data-state` on each wrapper. Style with the SDK stylesheet or
  *   plain CSS on `[data-solvapay-card-field]`.
  *
- * Validation mirrors Elements: fields validate as you type, an error shows
+ * Validation: fields validate as you type, an error shows
  * only once the field has been touched (blurred) and is invalid, and the
  * form reports complete only when every field is valid. Error text comes
  * from the SDK copy bundle keyed on VGS error codes, never from VGS.
  */
 
 import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Appearance } from '@stripe/stripe-js'
+import type { Appearance } from '../types/appearance'
 import { Spinner } from '../components/Spinner'
 import { useCopy } from '../hooks/useCopy'
 import type { CaptureGrant, VaultInfo } from '../types'
@@ -45,7 +44,7 @@ export type CardFieldName = 'cardholderName' | 'cardNumber' | 'expiry' | 'cvc'
 export type CardFieldsProps = React.HTMLAttributes<HTMLElement> & {
   /** Show a cardholder name field above the card number. Default: false. */
   cardholderName?: boolean
-  /** Render labels above the fields (Stripe PaymentElement style). Default: true. */
+  /** Render labels above the fields. Default: true. */
   labels?: boolean
   /** Show the detected card brand inside the number field. Default: true. */
   cardIcon?: boolean
@@ -66,9 +65,8 @@ export type VaultCardFieldsProps = CardFieldsProps & {
   vault: VaultInfo | null
   paymentIntentId: string | null
   /**
-   * The same appearance that themes Stripe Elements on this host. `undefined`
-   * gives Stripe's stock look; the form root usually passes the value it
-   * derived from `--solvapay-*` tokens.
+   * Field appearance. `undefined` gives the stock field look; the form
+   * root usually passes the value it derived from `--solvapay-*` tokens.
    */
   appearance?: Appearance
   /** Hand the form the capture function once the hosted fields are mounted; `null` on unmount. */

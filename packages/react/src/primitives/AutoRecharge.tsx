@@ -19,22 +19,24 @@ import React, {
   useState,
 } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  Elements,
-  PaymentElement as StripePaymentElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js'
-import { loadStripe, type Stripe, type StripeConstructorOptions } from '@stripe/stripe-js'
 import type { AutoRechargeConfig, SaveAutoRechargeResponse } from '@solvapay/server'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
-import { withPaymentElementDefaults } from './paymentElementDefaults'
+import { useAppearance } from './useAppearance'
 import { useAutoRecharge } from '../hooks/useAutoRecharge'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy } from '../hooks/useCopy'
 import { waitForAutoRechargeActivation } from './autoRechargeActivation'
-import { readSetupIntentClientSecret, stripSetupIntentParams } from './setupIntentReturn'
+import { useTransport } from '../hooks/useTransport'
+import { VaultCardFields, type CardCapture } from '../vault/CardFields'
+import { CardCaptureError } from '../vault/collect'
+import type { CaptureGrant } from '../types'
+import {
+  buildCardSetupReturnUrl,
+  readCardSetupReturn,
+  stripCardSetupReturnParams,
+  withoutCardSetupReturnParams,
+} from './cardSetupReturn'
 import { interpolate } from '../i18n/interpolate'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -86,6 +88,7 @@ type AutoRechargeContextValue = {
   save: () => Promise<void>
   disable: () => Promise<void>
   completeSetup: () => Promise<void>
+  pendingSetup: () => Promise<void>
   flipUnit: (
     valueKey: 'thresholdAmountMajor' | 'topupAmountMajor',
     unitKey: 'thresholdUnit' | 'topupUnit',
@@ -117,12 +120,6 @@ function getCurrencySymbol(currency: string): string {
   } catch {
     return currency.toUpperCase()
   }
-}
-
-const stripePromiseCache = new Map<string, Promise<Stripe | null>>()
-
-function getStripeCacheKey(publishableKey: string, accountId?: string): string {
-  return accountId ? `${publishableKey}:${accountId}` : publishableKey
 }
 
 type RootProps = {
@@ -333,7 +330,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     const saveInput = deferCardSetup ? { ...payload, deferSetupIntent: true } : payload
 
     const result = await autoRecharge.save(saveInput)
-    if (result.setupClientSecret) {
+    // No reusable card on file: collect one through `CardSetup` (vault,
+    // customer session). A deferred save arms the card on the top-up instead.
+    if (!deferCardSetup && result.requiresPaymentMethod === true) {
       setSetup(result)
       setStatusMessage(copy.autoRecharge.setupRequiredMessage)
       await onSetupRequired?.(result)
@@ -368,10 +367,10 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
   }, [autoRecharge, copy.autoRecharge, onDisabled])
 
   const completeSetup = useCallback(async () => {
-    // The client-side confirm only proves the SetupIntent was submitted; the
-    // server marks the config `active` once the SetupIntent-succeeded webhook
-    // lands. Poll until the server confirms before claiming "saved", otherwise
-    // a webhook race shows success over a still-`pending_setup` config.
+    // Saving the card does not flip the config synchronously; the server
+    // marks it `active` once the saved card is attached. Poll until the
+    // server confirms before claiming "saved", otherwise a race shows
+    // success over a still-`pending_setup` config.
     const activated = await waitForAutoRechargeActivation({
       refresh: autoRecharge.refresh,
       getStatus: () => latestConfigRef.current?.status,
@@ -385,6 +384,59 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       setStatusMessage(copy.autoRecharge.setupAwaitingConfirmation)
     }
   }, [autoRecharge, copy.autoRecharge, form.enabled, setOpen])
+
+  /** Card save answered `processing`: tell the payer and re-read the config. */
+  const pendingSetup = useCallback(async () => {
+    setStatusMessage(copy.autoRecharge.setupAwaitingConfirmation)
+    await autoRecharge.refresh(true)
+  }, [autoRecharge, copy.autoRecharge])
+
+  // 3DS return for card setup: `CardSetup` tagged `returnUrl` with the
+  // session and card id. Post the same card again to finish the pending
+  // setup, then re-read the config.
+  const transport = useTransport()
+  const setupReturnStarted = useRef(false)
+  useEffect(() => {
+    if (setupReturnStarted.current || typeof window === 'undefined') return
+    const resume = readCardSetupReturn(window.location.search)
+    if (!resume) return
+    setupReturnStarted.current = true
+    const returnUrl = withoutCardSetupReturnParams(window.location.href)
+    stripCardSetupReturnParams()
+    if (!transport.saveCard) {
+      setStatusMessage(copy.autoRecharge.setupAuthFailed)
+      return
+    }
+    const saveCard = transport.saveCard
+    void (async () => {
+      try {
+        const result = await saveCard({
+          sessionId: resume.sessionId,
+          cardId: resume.cardId,
+          returnUrl: buildCardSetupReturnUrl(returnUrl, resume),
+        })
+        if (result.status === 'succeeded') {
+          // The form may not reflect the config yet on a fresh page load, so
+          // report the activation outcome directly.
+          const activated = await waitForAutoRechargeActivation({
+            refresh: autoRecharge.refresh,
+            getStatus: () => latestConfigRef.current?.status,
+          })
+          setStatusMessage(
+            activated ? copy.autoRecharge.savedMessage : copy.autoRecharge.setupAwaitingConfirmation,
+          )
+        } else if (result.status === 'processing') {
+          await pendingSetup()
+        } else if (result.status === 'requires_action' && result.redirectUrl) {
+          window.location.assign(result.redirectUrl)
+        } else {
+          setStatusMessage(copy.autoRecharge.setupAuthFailed)
+        }
+      } catch {
+        setStatusMessage(copy.autoRecharge.setupAuthFailed)
+      }
+    })()
+  }, [transport, autoRecharge, copy.autoRecharge, pendingSetup])
 
   const dataState: AutoRechargeDataState = setup
     ? 'setup'
@@ -438,6 +490,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       save,
       disable,
       completeSetup,
+      pendingSetup,
       flipUnit,
     }),
     [
@@ -470,6 +523,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
       save,
       disable,
       completeSetup,
+      pendingSetup,
       flipUnit,
     ],
   )
@@ -908,7 +962,7 @@ const Fields = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTML
 const Setup = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   function AutoRechargeSetup({ className, children, ...rest }, forwardedRef) {
     const ctx = useAutoRechargeCtx('Setup')
-    if (!ctx.setup?.setupClientSecret) return null
+    if (!ctx.setup) return null
 
     return (
       <div
@@ -917,7 +971,9 @@ const Setup = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
         data-solvapay-auto-recharge-setup-panel=""
         {...rest}
       >
-        {children ?? <CardSetup setup={ctx.setup} onComplete={ctx.completeSetup} />}
+        {children ?? (
+          <CardSetup setup={ctx.setup} onComplete={ctx.completeSetup} onPending={ctx.pendingSetup} />
+        )}
       </div>
     )
   },
@@ -926,7 +982,7 @@ const Setup = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 const Body = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFieldSetElement>>(
   function AutoRechargeBody({ className, children, ...rest }, forwardedRef) {
     const ctx = useAutoRechargeCtx('Body')
-    if (ctx.setup?.setupClientSecret) {
+    if (ctx.setup) {
       return <Setup className={className} />
     }
     if (!ctx.form.enabled) return null
@@ -1449,99 +1505,136 @@ const Status = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 )
 
 type CardSetupProps = {
+  /** The save response that asked for a card. */
   setup: SaveAutoRechargeResponse
   onComplete: () => void | Promise<void>
+  /** Called when the save settles asynchronously (`processing`). */
+  onPending?: () => void | Promise<void>
 }
 
-function CardSetupInner({ onComplete }: { onComplete: () => void | Promise<void> }) {
+/**
+ * Collect a card for auto-recharge without paying: vault `CardFields`
+ * under a grant on a customer session, then `saveCard` on that session.
+ */
+function CardSetup({ onComplete, onPending }: CardSetupProps) {
   const copy = useCopy()
-  const stripe = useStripe()
-  const elements = useElements()
+  const transport = useTransport()
+  const [formEl, setFormEl] = useState<HTMLFormElement | null>(null)
+  const appearance = useAppearance(formEl)
+  const [grant, setGrant] = useState<CaptureGrant | null>(null)
+  // The hosted fields are keyed on the first session so refreshing an
+  // expired grant at submit does not remount them and drop the entry.
+  const [fieldsKey, setFieldsKey] = useState<string | null>(null)
+  const [capture, setCapture] = useState<CardCapture | null>(null)
+  const setCaptureStable = useCallback((next: CardCapture | null) => setCapture(() => next), [])
+  const [complete, setComplete] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
-  // Resume after a 3DS authentication redirect: Stripe sends the browser back to
-  // `return_url` with the SetupIntent client secret in the query string. Without
-  // this the user lands on a blank form and the config stays `pending_setup`.
+  const createGrant = transport.createCardSetupGrant
   useEffect(() => {
-    if (!stripe) return
-    const clientSecret = readSetupIntentClientSecret(window.location.search)
-    if (!clientSecret) return
-
+    if (!createGrant) {
+      setError(copy.errors.cardFieldsMissing)
+      return
+    }
     let cancelled = false
-    void (async () => {
-      setProcessing(true)
-      const { setupIntent, error: retrieveError } = await stripe.retrieveSetupIntent(clientSecret)
-      if (cancelled) return
-      stripSetupIntentParams()
-
-      if (retrieveError || !setupIntent) {
-        setError(copy.autoRecharge.setupAuthFailed)
-        setProcessing(false)
-        return
-      }
-
-      if (setupIntent.status === 'succeeded' || setupIntent.status === 'processing') {
-        await onComplete()
-      } else {
-        setError(copy.autoRecharge.setupAuthFailed)
-      }
-      if (!cancelled) setProcessing(false)
-    })()
-
+    createGrant()
+      .then(next => {
+        if (cancelled) return
+        setGrant(next)
+        setFieldsKey(prev => prev ?? sessionIdOf(next))
+      })
+      .catch(err => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : copy.autoRecharge.setupAuthFailed)
+      })
     return () => {
       cancelled = true
     }
-  }, [stripe, onComplete, copy.autoRecharge])
+  }, [createGrant, copy])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!stripe || !elements) {
-      setError('Stripe is still loading. Please wait.')
+    if (!grant || !capture || !transport.saveCard || !transport.createCardSetupGrant) {
+      setError(copy.errors.cardFieldsMissing)
       return
     }
-
     setProcessing(true)
     setError(null)
-
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      setError(submitError.message ?? 'Card authorization failed')
-      setProcessing(false)
-      return
+    setPending(false)
+    let redirecting = false
+    try {
+      let active = grant
+      if (active.expiresAt <= Date.now()) {
+        active = await transport.createCardSetupGrant()
+        setGrant(active)
+      }
+      const sessionId = sessionIdOf(active)
+      if (!sessionId) throw new Error(copy.autoRecharge.setupAuthFailed)
+      const card = await capture(active)
+      const resume = { sessionId, cardId: card.cardId }
+      const result = await transport.saveCard({
+        ...resume,
+        returnUrl: buildCardSetupReturnUrl(window.location.href, resume),
+      })
+      if (result.status === 'succeeded') {
+        await onComplete()
+      } else if (result.status === 'requires_action' && result.redirectUrl) {
+        // 3DS on the rail; the Root resumes on return and posts the same card again.
+        redirecting = true
+        window.location.assign(result.redirectUrl)
+      } else if (result.status === 'processing') {
+        setPending(true)
+        await onPending?.()
+      } else {
+        setError(copy.autoRecharge.setupAuthFailed)
+      }
+    } catch (err) {
+      setError(
+        err instanceof CardCaptureError
+          ? copy.errors.cardCaptureFailed
+          : err instanceof Error && err.message
+            ? err.message
+            : copy.autoRecharge.setupAuthFailed,
+      )
+    } finally {
+      if (!redirecting) setProcessing(false)
     }
-
-    const { error: confirmError } = await stripe.confirmSetup({
-      elements,
-      confirmParams: {
-        return_url: typeof window !== 'undefined' ? window.location.href : '/',
-      },
-      redirect: 'if_required',
-    })
-
-    if (confirmError) {
-      setError(confirmError.message ?? 'Card authorization failed')
-      setProcessing(false)
-      return
-    }
-
-    await onComplete()
-    setProcessing(false)
   }
 
+  const vault = grant ? { tenantId: grant.tenantId, environment: grant.environment } : null
+
   return (
-    <form onSubmit={handleSubmit} data-solvapay-auto-recharge-setup="">
+    <form ref={setFormEl} onSubmit={handleSubmit} data-solvapay-auto-recharge-setup="">
       <h4>{copy.autoRecharge.setupHeading}</h4>
       <p>{copy.autoRecharge.setupDescription}</p>
-      <StripePaymentElement options={withPaymentElementDefaults()} />
+      {grant ? (
+        <VaultCardFields
+          vault={vault}
+          paymentIntentId={fieldsKey}
+          appearance={appearance}
+          onCapture={setCaptureStable}
+          onComplete={setComplete}
+        />
+      ) : !error ? (
+        <p data-solvapay-auto-recharge-setup-loading="">
+          <Spinner size="sm" /> Loading card form…
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" aria-live="polite" data-solvapay-auto-recharge-setup-error="">
           {error}
         </p>
       ) : null}
+      {pending ? (
+        <p role="status" aria-live="polite" data-solvapay-auto-recharge-setup-pending="">
+          {copy.autoRecharge.setupAwaitingConfirmation}
+        </p>
+      ) : null}
       <button
         type="submit"
-        disabled={processing || !stripe}
+        disabled={processing || !capture || !complete}
         data-solvapay-auto-recharge-setup-submit=""
       >
         {processing ? copy.autoRecharge.setupProcessing : copy.autoRecharge.setupSubmit}
@@ -1550,38 +1643,8 @@ function CardSetupInner({ onComplete }: { onComplete: () => void | Promise<void>
   )
 }
 
-function CardSetup({ setup, onComplete }: CardSetupProps) {
-  const stripePromise = useMemo(() => {
-    if (!setup.publishableKey || !setup.setupClientSecret) return null
-    const options: StripeConstructorOptions = {
-      ...(setup.stripeAccountId ? { stripeAccount: setup.stripeAccountId } : {}),
-      developerTools: { assistant: { enabled: false } },
-    }
-    const cacheKey = getStripeCacheKey(setup.publishableKey, setup.stripeAccountId)
-    const cached = stripePromiseCache.get(cacheKey)
-    if (cached) return cached
-    const promise = loadStripe(setup.publishableKey, options)
-    stripePromiseCache.set(cacheKey, promise)
-    return promise
-  }, [setup.publishableKey, setup.setupClientSecret, setup.stripeAccountId])
-
-  if (!stripePromise || !setup.setupClientSecret) {
-    return (
-      <p data-solvapay-auto-recharge-setup-loading="">
-        <Spinner size="sm" /> Loading card form…
-      </p>
-    )
-  }
-
-  return (
-    <Elements
-      key={setup.setupClientSecret}
-      stripe={stripePromise}
-      options={{ clientSecret: setup.setupClientSecret }}
-    >
-      <CardSetupInner onComplete={onComplete} />
-    </Elements>
-  )
+function sessionIdOf(grant: CaptureGrant): string | null {
+  return 'sessionId' in grant.scope && grant.scope.sessionId ? grant.scope.sessionId : null
 }
 
 export const AutoRechargeRoot = Root

@@ -5,7 +5,8 @@
  *
  * Unstyled, accessible building blocks for running the paid OR free checkout
  * step inside a <SolvaPayProvider>. `Root` detects paid vs free plans via
- * `usePlan`, wires Stripe Elements for paid plans, or falls through to
+ * `usePlan`, creates the payment intent for paid plans (card entry through
+ * `PaymentForm.CardFields`, confirmed server-side), or falls through to
  * `useActivation` for free plans; both paths expose the same
  * `PaymentFormContext` so the same subcomponents compose identically in
  * either mode.
@@ -23,20 +24,11 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import {
-  Elements,
-  useStripe,
-  useElements,
-  PaymentElement as StripePaymentElement,
-  CardElement as StripeCardElement,
-} from '@stripe/react-stripe-js'
-import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeRefs } from './composeRefs'
 import { composeEventHandlers } from './composeEventHandlers'
 import { LegalFooter } from './LegalFooter'
-import { withPaymentElementDefaults } from './paymentElementDefaults'
-import { useStripeAppearance } from './useStripeAppearance'
+import { useAppearance } from './useAppearance'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import { useCheckout } from '../hooks/useCheckout'
@@ -58,17 +50,9 @@ import {
 import { CheckoutSummary as CheckoutSummaryShim } from '../components/CheckoutSummary'
 import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
-import {
-  buildConfirmBillingDetails,
-  confirmPayment,
-  confirmVaultPayment,
-} from '../utils/confirmPayment'
+import { confirmVaultPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
-import {
-  readPaymentIntentClientSecret,
-  readPaymentIntentId,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
+import { readPaymentIntentId, stripPaymentIntentParams } from './paymentIntentReturn'
 import { VaultCardFields, type CardFieldsProps } from '../vault/CardFields'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
@@ -84,16 +68,15 @@ import {
 } from '../components/businessCheckoutParts'
 import type {
   ActivationResult,
-  CaptureMode,
+  Appearance,
   PaymentFormProps,
   PaymentResult,
   PrefillCustomer,
   Plan,
   VaultInfo,
 } from '../types'
-import type { Appearance, Stripe, StripeElements } from '@stripe/stripe-js'
 import type { ActivatePlanResult } from '@solvapay/server'
-import { isCustomerAddressComplete, resolveBuyerCountry } from '@solvapay/core'
+import { isCustomerAddressComplete } from '@solvapay/core'
 
 // ---------- helpers ----------
 
@@ -145,7 +128,6 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const { attachBusinessDetails, customerRef } = solva
 
     const copy = useCopy()
-    const locale = useLocale()
     const planSelection = usePlanSelection()
     const effectivePlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
     const effectiveProductRef = productRef ?? planSelection?.productRef
@@ -159,13 +141,10 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const {
       loading: checkoutLoading,
       error: checkoutError,
-      clientSecret,
       processorPaymentId,
       paymentIntentId,
-      captureMode,
       vault,
       startCheckout,
-      stripePromise,
       resolvedPlanRef,
     } = useCheckout({
       planRef: effectivePlanRef,
@@ -183,7 +162,6 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
         hasPlanOrProduct &&
         !checkoutLoading &&
         !checkoutError &&
-        !clientSecret &&
         !paymentIntentId
       ) {
         hasInitializedRef.current = true
@@ -192,14 +170,13 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           hasInitializedRef.current = false
         })
       }
-      if (hasPlanOrProduct && (clientSecret || paymentIntentId)) {
+      if (hasPlanOrProduct && paymentIntentId) {
         hasInitializedRef.current = true
       }
     }, [
       hasPlanOrProduct,
       checkoutLoading,
       checkoutError,
-      clientSecret,
       paymentIntentId,
       startCheckout,
       isFreePlan,
@@ -213,23 +190,11 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       setRootEl(prev => (prev === node ? prev : node))
     }, [])
     const sectionRef = composeRefs(forwardedRef, attachRoot)
-    const resolvedAppearance = useStripeAppearance(rootEl, appearance)
+    const resolvedAppearance = useAppearance(rootEl, appearance)
 
-    const elementsOptions = useMemo(() => {
-      if (!clientSecret) return undefined
-      return {
-        clientSecret,
-        locale: toStripeElementLocale(locale),
-        ...(resolvedAppearance ? { appearance: resolvedAppearance } : {}),
-      }
-    }, [clientSecret, locale, resolvedAppearance])
-
-    const appearanceReady = appearance !== undefined || rootEl !== null
-    const shouldRenderElements = !!(stripePromise && clientSecret && appearanceReady)
-    // Vault mode: no Stripe.js, no Elements. The card goes into the vault
-    // through `PaymentForm.CardFields` and the payment is confirmed server-side.
-    const shouldRenderVault = captureMode === 'vault' && !!paymentIntentId && !!vault
-    const paidReady = shouldRenderElements || shouldRenderVault
+    // The card goes into the vault through `PaymentForm.CardFields` and the
+    // payment is confirmed server-side.
+    const paidReady = !!paymentIntentId && !!vault
 
     const dataState = !hasPlanOrProduct || checkoutError
       ? 'error'
@@ -288,20 +253,16 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           >
             {children}
           </FreeInner>
-        ) : shouldRenderVault && vault && paymentIntentId ? (
+        ) : paidReady && vault && paymentIntentId ? (
           <PaidBody
             planRef={effectivePlanRef}
             productRef={effectiveProductRef}
             prefillCustomer={prefillCustomer}
             resolvedPlanRef={resolvedPlanRef}
             plan={resolvedPlan ?? null}
-            captureMode="vault"
             paymentIntentId={paymentIntentId}
             vault={vault}
             appearance={resolvedAppearance}
-            stripe={null}
-            elements={null}
-            clientSecret={null}
             processorPaymentId={processorPaymentId}
             returnUrl={finalReturnUrl}
             submitButtonText={submitButtonText}
@@ -316,31 +277,6 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           >
             {children}
           </PaidBody>
-        ) : shouldRenderElements && elementsOptions && clientSecret ? (
-          <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-            <PaidInner
-              planRef={effectivePlanRef}
-              productRef={effectiveProductRef}
-              prefillCustomer={prefillCustomer}
-              resolvedPlanRef={resolvedPlanRef}
-              plan={resolvedPlan ?? null}
-              paymentIntentId={paymentIntentId}
-              clientSecret={clientSecret}
-              processorPaymentId={processorPaymentId}
-              returnUrl={finalReturnUrl}
-              submitButtonText={submitButtonText}
-              buttonClassName={buttonClassName}
-              requireTermsAcceptance={requireTermsAcceptance}
-              onSuccess={onSuccess}
-              onResult={onResult}
-              onError={onError}
-              onTaxChange={props.onTaxChange}
-              attachBusinessDetails={attachBusinessDetails}
-              customerRef={customerRef}
-            >
-              {children}
-            </PaidInner>
-          </Elements>
         ) : (
           pending
         )}
@@ -357,13 +293,9 @@ type PaidBodyProps = {
   prefillCustomer?: PrefillCustomer
   resolvedPlanRef: string | null
   plan: Plan | null
-  captureMode: CaptureMode
-  paymentIntentId: string | null
-  vault: VaultInfo | null
+  paymentIntentId: string
+  vault: VaultInfo
   appearance?: Appearance
-  stripe: Stripe | null
-  elements: StripeElements | null
-  clientSecret: string | null
   processorPaymentId: string | null
   returnUrl: string
   submitButtonText?: string
@@ -378,32 +310,15 @@ type PaidBodyProps = {
   children?: React.ReactNode
 }
 
-/** `processor_elements` shell: reads Stripe from the surrounding `<Elements>` and renders the shared body. */
-const PaidInner: React.FC<
-  Omit<PaidBodyProps, 'captureMode' | 'vault' | 'stripe' | 'elements' | 'clientSecret'> & {
-    clientSecret: string
-  }
-> = props => {
-  const stripe = useStripe()
-  const elements = useElements()
-  return (
-    <PaidBody {...props} captureMode="processor_elements" vault={null} stripe={stripe} elements={elements} />
-  )
-}
-
 const PaidBody: React.FC<PaidBodyProps> = ({
   planRef,
   productRef,
   prefillCustomer,
   resolvedPlanRef,
   plan,
-  captureMode,
   paymentIntentId,
   vault,
   appearance,
-  stripe,
-  elements,
-  clientSecret,
   processorPaymentId,
   returnUrl,
   submitButtonText,
@@ -417,11 +332,7 @@ const PaidBody: React.FC<PaidBodyProps> = ({
   customerRef,
   children,
 }) => {
-  const isVault = captureMode === 'vault'
-  const stripeAvailable = !!stripe
-  const stripeRef = useRef(stripe)
   const copy = useCopy()
-  const customer = useCustomer()
   const {
     processPayment,
     upsertPurchase,
@@ -429,12 +340,6 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     confirmPayment: confirmPaymentTransport,
   } = useSolvaPay()
   const { refetch } = usePurchase()
-
-  const refreshElements = useCallback(async () => {
-    if (elements) {
-      await elements.fetchUpdates()
-    }
-  }, [elements])
 
   const {
     businessDetails,
@@ -447,16 +352,15 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     requiresBusinessAttach,
     runAttach,
   } = useBusinessDetailsAttach({
-    // Vault mode has no rail payment yet; the backend resolves the SolvaPay id.
-    processorPaymentId: isVault ? paymentIntentId : processorPaymentId,
+    // No rail payment exists before confirm; the backend resolves the SolvaPay id.
+    processorPaymentId: paymentIntentId,
     attachBusinessDetails,
     customerRef,
     onTaxChange,
-    refreshElements,
   })
 
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
-    children ? null : isVault ? 'card-fields' : 'payment-element',
+    children ? null : 'card-fields',
   )
   const [cardCapture, setCardCapture] = useState<CardCapture | null>(null)
   const setCardCaptureStable = useCallback((capture: CardCapture | null) => {
@@ -468,10 +372,6 @@ const PaidBody: React.FC<PaidBodyProps> = ({
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const returnResumeStarted = useRef(false)
-
-  useEffect(() => {
-    stripeRef.current = stripe
-  })
 
   const finishSucceeded = useCallback(
     async (paymentIntent: Parameters<NonNullable<PaymentFormProps['onSuccess']>>[0], railPaymentId: string) => {
@@ -512,11 +412,10 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     [productRef, planRef, resolvedPlanRef, processPayment, refetch, copy, upsertPurchase, onSuccess, onResult, onError],
   )
 
-  // Vault return path: after 3DS the rail sends the payer back with
-  // `payment_intent` in the URL. There is no Stripe.js here, so resume by
-  // reconciling through the backend on that id.
+  // 3DS return path: the rail sends the payer back with `payment_intent`
+  // in the URL; resume by reconciling through the backend on that id.
   useEffect(() => {
-    if (!isVault || returnResumeStarted.current || typeof window === 'undefined') return
+    if (returnResumeStarted.current || typeof window === 'undefined') return
     const railPaymentId = readPaymentIntentId(window.location.search)
     if (!railPaymentId) return
     returnResumeStarted.current = true
@@ -538,115 +437,11 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     return () => {
       cancelled = true
     }
-  }, [isVault, paymentIntentId, finishSucceeded])
+  }, [paymentIntentId, finishSucceeded])
 
 
-  useEffect(() => {
-    const stripeApi = stripeRef.current
-    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
-      return
-    }
-    const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
-    if (!returnClientSecret) return
-    returnResumeStarted.current = true
-
-    let cancelled = false
-    void (async () => {
-      setIsProcessing(true)
-      setError(null)
-
-      const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
-      if (cancelled) return
-      stripPaymentIntentParams()
-
-      if (retrieved.error || !retrieved.paymentIntent) {
-        setError(copy.errors.paymentUnexpected)
-        setIsProcessing(false)
-        return
-      }
-
-      let paymentIntent = retrieved.paymentIntent
-      if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripeApi.handleNextAction({ clientSecret: returnClientSecret })
-        if (cancelled) return
-        if (actionResult.error || !actionResult.paymentIntent) {
-          setError(copy.errors.paymentRequires3ds)
-          setIsProcessing(false)
-          return
-        }
-        paymentIntent = actionResult.paymentIntent
-      }
-
-      if (paymentIntent.status === 'processing') {
-        setError(copy.errors.paymentPending)
-        setIsProcessing(false)
-        return
-      }
-
-      if (paymentIntent.status !== 'succeeded') {
-        setError(copy.errors.paymentProcessingFailed)
-        setIsProcessing(false)
-        return
-      }
-
-      const reconcileResult = await reconcilePayment({
-        paymentIntentId: paymentIntent.id,
-        productRef,
-        planRef: planRef || resolvedPlanRef || undefined,
-        processPayment,
-        refetchPurchase: refetch,
-        copy,
-      })
-
-      if (cancelled) return
-
-      if (reconcileResult.status === 'success') {
-        const r = reconcileResult.result
-        if (r && 'type' in r && r.type === 'recurring') {
-          upsertPurchase(r.purchase)
-        } else if (r && 'type' in r && r.type === 'one-time') {
-          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
-        } else {
-          try {
-            await refetch()
-          } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after return-path success', error)
-          }
-        }
-        onSuccess?.(paymentIntent)
-        onResult?.({ kind: 'paid', paymentIntent })
-        setIsProcessing(false)
-        return
-      }
-
-      const msg =
-        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
-          ? reconcileResult.error.message
-          : copy.errors.paymentProcessingFailed
-      setError(msg)
-      onError?.(reconcileResult.error)
-      setIsProcessing(false)
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    stripeAvailable,
-    copy,
-    productRef,
-    planRef,
-    resolvedPlanRef,
-    processPayment,
-    refetch,
-    upsertPurchase,
-    onSuccess,
-    onResult,
-    onError,
-  ])
-
-  const isReady = isVault ? !!paymentIntentId : !!(stripe && elements)
-  const paymentSourceReady = isVault ? !!cardCapture && !!createCaptureGrant && !!confirmPaymentTransport : !!clientSecret
+  const isReady = !!paymentIntentId
+  const paymentSourceReady = !!cardCapture
 
   const canSubmit =
     isReady &&
@@ -660,59 +455,8 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     !isProcessing
 
   const submit = useCallback(async () => {
-    if (isVault) {
-      if (!paymentIntentId || !cardCapture || !createCaptureGrant || !confirmPaymentTransport) {
-        const msg = !paymentIntentId ? copy.errors.paymentIntentUnavailable : copy.errors.cardFieldsMissing
-        setError(msg)
-        onError?.(new Error(msg))
-        return
-      }
-      if (requiresBusinessAttach && !businessDetailsAttached) {
-        const attached = await runAttach(businessDetails)
-        if (!attached) {
-          const msg = businessDetailsError ?? 'Complete business details before paying'
-          setError(msg)
-          onError?.(new Error(msg))
-          return
-        }
-      }
-      setError(null)
-      setIsProcessing(true)
-      try {
-        const result = await confirmVaultPayment({
-          paymentIntentId,
-          capture: cardCapture,
-          createCaptureGrant,
-          confirmPayment: confirmPaymentTransport,
-          returnUrl,
-          copy,
-        })
-        if (result.status === 'error') {
-          setError(result.message)
-          onError?.(new Error(result.message))
-          return
-        }
-        if (result.status === 'requires_action') {
-          // The rail needs the payer (3DS). Send them there; the return path
-          // above resumes on `payment_intent`.
-          window.location.assign(result.redirectUrl)
-          return
-        }
-        if (result.status === 'pending' || result.status === 'other') {
-          setError(result.message)
-          onError?.(new Error(result.message))
-          return
-        }
-        await finishSucceeded(result.payment, result.payment.processorPaymentId)
-      } finally {
-        setIsProcessing(false)
-      }
-      return
-    }
-
-    if (!stripe || !elements || !clientSecret || !elementKind) {
-      const msg =
-        !stripe || !elements ? copy.errors.stripeUnavailable : copy.errors.paymentIntentUnavailable
+    if (!cardCapture) {
+      const msg = copy.errors.cardFieldsMissing
       setError(msg)
       onError?.(new Error(msg))
       return
@@ -726,127 +470,48 @@ const PaidBody: React.FC<PaidBodyProps> = ({
         return
       }
     }
-
     setError(null)
     setIsProcessing(true)
-
-    const confirmedStripe = stripe
-    const confirmedElements = elements
-
-    // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
-    // any thrown error in confirmPayment, reconcilePayment, upsertPurchase,
-    // or onSuccess/onResult can't wedge the button in the processing state.
-    // The previous fire-and-forget submit() returned a rejected promise on
-    // an unexpected backend shape (e.g. bare `{ status: 'succeeded' }`
-    // hitting `normalizeOneTimePurchase(undefined)`) and the caller never
-    // re-enabled the button. The `try/finally` is the actual fix for the
-    // stuck button — the `'type' in r` guard below stops the specific
-    // current crash, but future contract drift can't wedge the form.
+    // try/finally so a throw anywhere after `setIsProcessing(true)` (confirm,
+    // reconcile, upsertPurchase, onSuccess/onResult) cannot wedge the button
+    // in the processing state.
     try {
-      const result = await confirmPayment({
-        stripe: confirmedStripe,
-        elements: confirmedElements,
-        clientSecret,
-        mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
+      const result = await confirmVaultPayment({
+        paymentIntentId,
+        capture: cardCapture,
+        createCaptureGrant,
+        confirmPayment: confirmPaymentTransport,
         returnUrl,
-        billingDetails: buildConfirmBillingDetails({
-          name: customerName.trim() || customer.name,
-          email: customer.email ?? prefillCustomer?.email,
-          country: resolveBuyerCountry(businessDetails),
-          state: businessDetails.customerState,
-          postalCode: businessDetails.customerPostalCode,
-        }),
         copy,
       })
-
       if (result.status === 'error') {
         setError(result.message)
         onError?.(new Error(result.message))
         return
       }
-
-      if (result.status === 'requires_action' || result.status === 'other') {
+      if (result.status === 'requires_action') {
+        // The rail needs the payer (3DS). Send them there; the return path
+        // above resumes on `payment_intent`.
+        window.location.assign(result.redirectUrl)
+        return
+      }
+      if (result.status === 'pending' || result.status === 'other') {
         setError(result.message)
+        onError?.(new Error(result.message))
         return
       }
-
-      if (result.status === 'pending') {
-        setError(result.message)
-        return
-      }
-
-      const reconcileResult = await reconcilePayment({
-        paymentIntentId: result.paymentIntent.id,
-        productRef,
-        planRef: planRef || resolvedPlanRef || undefined,
-        processPayment,
-        refetchPurchase: refetch,
-        copy,
-      })
-
-      if (reconcileResult.status === 'success') {
-        // Synchronously merge the authoritative purchase from
-        // `processPaymentIntent` into provider state so consumers that
-        // gate on `hasPaidPurchase` / `activePurchase` see the new row on
-        // the same render this form unmounts. No flicker, no post-confirm
-        // polling loop. The backend invariant (webhook handler finalizes
-        // BEFORE flipping PI.status to 'succeeded') makes the bare
-        // `{ status: 'succeeded' }` shape unreachable in normal operation —
-        // we keep this branch as belt-and-braces defensive refetch for
-        // resilience against backend invariant violations and for the
-        // legacy `!processPayment` compat path.
-        const r = reconcileResult.result
-        if (r && 'type' in r && r.type === 'recurring') {
-          upsertPurchase(r.purchase)
-        } else if (r && 'type' in r && r.type === 'one-time') {
-          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
-        } else {
-          try {
-            await refetch()
-          } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
-          }
-        }
-
-        onSuccess?.(result.paymentIntent)
-        const paid: PaymentResult = { kind: 'paid', paymentIntent: result.paymentIntent }
-        onResult?.(paid)
-        return
-      }
-
-      const msg =
-        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
-          ? reconcileResult.error.message
-          : copy.errors.paymentProcessingFailed
-      setError(msg)
-      onError?.(reconcileResult.error)
+      await finishSucceeded(result.payment, result.payment.processorPaymentId)
     } finally {
       setIsProcessing(false)
     }
   }, [
-    isVault,
     paymentIntentId,
     cardCapture,
     createCaptureGrant,
     confirmPaymentTransport,
     finishSucceeded,
-    stripe,
-    elements,
-    clientSecret,
-    elementKind,
     returnUrl,
-    customer,
-    customerName,
-    prefillCustomer,
     copy,
-    processPayment,
-    productRef,
-    planRef,
-    resolvedPlanRef,
-    refetch,
-    upsertPurchase,
-    onSuccess,
-    onResult,
     onError,
     requiresBusinessAttach,
     businessDetailsAttached,
@@ -864,14 +529,10 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       prefillCustomer,
       resolvedPlanRef,
       plan,
-      captureMode,
       paymentIntentId,
       vault,
       appearance,
-      clientSecret,
       processorPaymentId,
-      stripe,
-      elements,
       isProcessing,
       isReady,
       paymentInputComplete,
@@ -904,14 +565,10 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       prefillCustomer,
       resolvedPlanRef,
       plan,
-      captureMode,
       paymentIntentId,
       vault,
       appearance,
-      clientSecret,
       processorPaymentId,
-      stripe,
-      elements,
       isProcessing,
       isReady,
       paymentInputComplete,
@@ -1021,13 +678,9 @@ const FreeInner: React.FC<{
       prefillCustomer: undefined,
       resolvedPlanRef,
       plan,
-      captureMode: 'processor_elements',
       paymentIntentId: null,
       vault: null,
-      clientSecret: null,
       processorPaymentId: null,
-      stripe: null,
-      elements: null,
       isProcessing,
       isReady: true,
       paymentInputComplete: true,
@@ -1073,7 +726,7 @@ const FreeInner: React.FC<{
   return <PaymentFormProvider value={contextValue}>{children}</PaymentFormProvider>
 }
 
-/** Pre-Elements context so Loading / Error slots own chrome while Root stays mounted. */
+/** Pre-intent context so Loading / Error slots own chrome while Root stays mounted. */
 const PendingInner: React.FC<{
   planRef?: string
   productRef?: string
@@ -1102,13 +755,9 @@ const PendingInner: React.FC<{
       prefillCustomer: undefined,
       resolvedPlanRef,
       plan,
-      captureMode: 'processor_elements',
       paymentIntentId: null,
       vault: null,
-      clientSecret: null,
       processorPaymentId: null,
-      stripe: null,
-      elements: null,
       isProcessing: false,
       isReady: false,
       paymentInputComplete: false,
@@ -1237,44 +886,9 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
   },
 )
 
-type PaymentElementProps = {
-  options?: React.ComponentProps<typeof StripePaymentElement>['options']
-}
-
-const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
-  const { setElementKind, setPaymentInputComplete, isReady, stripe, elements } = usePaymentForm()
-  const locale = useLocale()
-
-  useEffect(() => {
-    if (stripe && elements) setElementKind('payment-element')
-  }, [setElementKind, stripe, elements])
-
-  if (!stripe || !elements) return null
-
-  if (!isReady) {
-    return (
-      <output data-solvapay-payment-form-loading="">
-        <Spinner size="sm" />
-      </output>
-    )
-  }
-
-  return (
-    <section data-solvapay-payment-form-payment-element="">
-      <StripePaymentElement
-        options={withPaymentElementDefaults(options)}
-        onChange={e => setPaymentInputComplete(e.complete)}
-        key={locale || 'default'}
-      />
-    </section>
-  )
-}
-
 /**
- * Vault-mode card entry: VGS Collect hosted fields for number, expiry and
- * CVC. Renders nothing in `processor_elements` mode, so integrators can
- * place `<PaymentForm.CardFields />` next to `<PaymentForm.PaymentElement />`
- * and let the backend's `captureMode` pick which one shows.
+ * Card entry: VGS Collect hosted fields for number, expiry and CVC.
+ * Renders nothing until the payment intent exists.
  *
  * On mount it registers a capture function with `Root`; `Root.submit` asks
  * the backend for a grant, writes the card into the vault and confirms
@@ -1284,20 +898,12 @@ const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(function Payment
   props,
   ref,
 ) {
-  const {
-    captureMode,
-    vault,
-    paymentIntentId,
-    appearance,
-    setElementKind,
-    setCardCapture,
-    setPaymentInputComplete,
-  } = usePaymentForm()
+  const { vault, paymentIntentId, appearance, setElementKind, setCardCapture, setPaymentInputComplete } =
+    usePaymentForm()
   const onActive = useCallback(
     (active: boolean) => setElementKind(active ? 'card-fields' : null),
     [setElementKind],
   )
-  if (captureMode !== 'vault') return null
   return (
     <VaultCardFields
       ref={ref}
@@ -1312,38 +918,6 @@ const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(function Payment
     />
   )
 })
-
-type CardElementProps = {
-  options?: React.ComponentProps<typeof StripeCardElement>['options']
-}
-
-/**
- * @deprecated Use `PaymentForm.PaymentElement` instead. Slated for removal in
- * the next major release.
- */
-const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
-  const { setElementKind, setPaymentInputComplete, isReady, stripe, elements } = usePaymentForm()
-
-  useEffect(() => {
-    if (stripe && elements) setElementKind('card-element')
-  }, [setElementKind, stripe, elements])
-
-  if (!stripe || !elements) return null
-
-  if (!isReady) {
-    return (
-      <output data-solvapay-payment-form-loading="">
-        <Spinner size="sm" />
-      </output>
-    )
-  }
-
-  return (
-    <section data-solvapay-payment-form-card-element="">
-      <StripeCardElement options={options} onChange={e => setPaymentInputComplete(e.complete)} />
-    </section>
-  )
-}
 
 type TermsCheckboxProps = React.LabelHTMLAttributes<HTMLLabelElement> & {
   asChild?: boolean
@@ -1482,7 +1056,7 @@ const Loading = forwardRef<HTMLOutputElement, LoadingProps>(function PaymentForm
   ref,
 ) {
   const ctx = usePaymentForm()
-  if (ctx.isReady && (ctx.clientSecret || ctx.captureMode === 'vault')) return null
+  if (ctx.isReady && ctx.paymentIntentId) return null
   if (asChild) {
     return (
       <Slot ref={ref as React.Ref<HTMLElement>} data-solvapay-payment-form-loading="" {...rest}>
@@ -1561,8 +1135,6 @@ const TaxSummary = createTaxSummaryParts(usePaymentSummaryCtx, 'payment-form')
 export const PaymentFormRoot = Root
 export const PaymentFormSummary = Summary
 export const PaymentFormCustomerFields = CustomerFields
-export const PaymentFormPaymentElement = PaymentElementSlot
-export const PaymentFormCardElement = CardElementSlot
 export const PaymentFormCardFields = CardFieldsSlot
 export const PaymentFormMandateText = MandateTextPrimitive
 export const PaymentFormTermsCheckbox = TermsCheckbox
@@ -1577,8 +1149,6 @@ export const PaymentForm = {
   Root,
   Summary,
   CustomerFields,
-  PaymentElement: PaymentElementSlot,
-  CardElement: CardElementSlot,
   CardFields: CardFieldsSlot,
   BusinessDetails,
   TaxSummary,

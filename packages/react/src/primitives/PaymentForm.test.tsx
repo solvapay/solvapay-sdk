@@ -7,7 +7,7 @@
  * `PaymentForm.freePlan.test.tsx`.
  */
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import React from 'react'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayProvider, SolvaPayContext } from '../SolvaPayProvider'
@@ -15,77 +15,19 @@ import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import { MissingProviderError } from '../utils/errors'
+import { configureCollect } from '../vault/collect'
+import { createFakeCollect, type FakeCollectHandle } from '../../../test-utils/src/fake-collect'
 import type { Plan, PurchaseInfo, SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 // ---------- Paid-plan success-branch mocks ----------
 //
-// The tests below drive the paid branch of <PaymentForm.Root>. They mock
-// Stripe Elements + the confirmPayment/reconcilePayment utilities so the
-// component hits the synchronous `upsertPurchase` merge that replaces
-// the post-reconcile polling loop (plan: fix-lifetime-badge-stale).
+// The paid-branch tests below drive <PaymentForm.Root> through the vault
+// card fields (fake VGS Collect) and mock `reconcilePayment` so the
+// component hits the synchronous `upsertPurchase` merge that replaces the
+// post-reconcile polling loop (plan: fix-lifetime-badge-stale).
 //
-// These mocks never execute for the free-plan tests above because
-// FreeInner doesn't touch Stripe or confirmPayment/reconcilePayment.
-
-// Captures the last `options` prop received by the mocked Stripe
-// `PaymentElement` so integration tests can assert the primitive forwards
-// SolvaPay defaults (e.g. `wallets.link = 'never'`).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const lastPaymentElementOptions: { current: any } = { current: undefined }
-
-vi.mock('@stripe/react-stripe-js', async () => {
-  const ReactMod = await import('react')
-  return {
-    Elements: ({ children }: { children: React.ReactNode }) =>
-      ReactMod.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-    useStripe: () => ({ confirmPayment: vi.fn() }),
-    useElements: () => ({ getElement: vi.fn(), submit: vi.fn() }),
-    PaymentElement: ({
-      onChange,
-      options,
-    }: {
-      onChange?: (e: { complete: boolean }) => void
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      options?: any
-    }) => {
-      lastPaymentElementOptions.current = options
-      // Auto-complete the payment element so `canSubmit` becomes true
-      // without driving Stripe's real change events.
-      ReactMod.useEffect(() => {
-        onChange?.({ complete: true })
-      }, [onChange])
-      return ReactMod.createElement('div', { 'data-testid': 'payment-element' })
-    },
-    CardElement: ({
-      onChange,
-    }: {
-      onChange?: (e: { complete: boolean }) => void
-    }) => {
-      ReactMod.useEffect(() => {
-        onChange?.({ complete: true })
-      }, [onChange])
-      return ReactMod.createElement('section', { 'data-testid': 'card-element' })
-    },
-  }
-})
-
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
-}))
-
-vi.mock('../utils/confirmPayment', async () => {
-  const actual = await vi.importActual<typeof import('../utils/confirmPayment')>(
-    '../utils/confirmPayment',
-  )
-  return {
-    ...actual,
-    confirmPayment: vi.fn().mockResolvedValue({
-      status: 'succeeded',
-      paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
-    }),
-  }
-})
+// FreeInner never touches the vault or reconcilePayment.
 
 vi.mock('../utils/processPaymentResult', () => ({
   reconcilePayment: vi.fn().mockResolvedValue({ status: 'success' }),
@@ -273,14 +215,7 @@ const PaidHarness: React.FC<{
   onSuccess?: (paymentIntent: unknown) => void
   initialPurchases?: PurchaseInfo[]
   children?: React.ReactNode
-  paymentSlot?: 'payment-element' | 'card-element' | 'none'
-}> = ({
-  onError,
-  onSuccess,
-  initialPurchases = [],
-  children,
-  paymentSlot = 'payment-element',
-}) => {
+}> = ({ onError, onSuccess, initialPurchases = [], children }) => {
   const [purchases, setPurchases] = React.useState<PurchaseInfo[]>(initialPurchases)
 
   const upsertPurchase = React.useMemo(
@@ -324,11 +259,25 @@ const PaidHarness: React.FC<{
       refetchPurchase,
       upsertPurchase,
       createPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'cs_test_123',
-        publishableKey: 'pk_test',
+        id: 'pi_sp_paid',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+        customerRef: 'cus_seed',
       }),
       processPayment: vi.fn(),
       createTopupPayment: vi.fn(),
+      createCaptureGrant: vi.fn().mockResolvedValue({
+        token: 'vgs-collect-token',
+        tenantId: 'tntr4ol0cbq',
+        environment: 'sandbox',
+        expiresAt: Date.now() + 60_000,
+        scope: { paymentIntentId: 'pi_sp_paid' },
+      }),
+      confirmPayment: vi.fn().mockResolvedValue({
+        id: 'pi_sp_paid',
+        processorPaymentId: 'pi_rail_paid',
+        status: 'succeeded',
+      }),
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
@@ -345,8 +294,7 @@ const PaidHarness: React.FC<{
         onError={onError}
         onSuccess={onSuccess}
       >
-        {paymentSlot === 'payment-element' && <PaymentForm.PaymentElement />}
-        {paymentSlot === 'card-element' && <PaymentForm.CardElement />}
+        <PaymentForm.CardFields data-testid="card-fields" />
         {children}
         <PaymentForm.SubmitButton data-testid="submit" />
         <PaymentForm.Error data-testid="err" />
@@ -356,7 +304,16 @@ const PaidHarness: React.FC<{
 }
 
 describe('PaymentForm post-success purchase merge', () => {
+  let collect: FakeCollectHandle
+  let restoreCollect: () => void
+
+  afterEach(() => {
+    restoreCollect()
+  })
+
   beforeEach(() => {
+    collect = createFakeCollect()
+    restoreCollect = configureCollect(collect.loader)
     plansCache.clear()
     productCache.clear()
     merchantCache.clear()
@@ -378,6 +335,10 @@ describe('PaymentForm post-success purchase merge', () => {
   })
 
   async function clickSubmitAndSettle() {
+    await waitFor(() =>
+      expect(screen.getByTestId('card-fields')).toHaveAttribute('data-state', 'ready'),
+    )
+    act(() => collect.enter())
     const button = await waitFor(() => {
       const next = screen.getByTestId('submit')
       expect(next.getAttribute('data-state')).toBe('idle')
@@ -560,154 +521,5 @@ describe('PaymentForm post-success purchase merge', () => {
     })
     // Started with 1 recurring row; one-time merge should bump it to 2.
     expect(paidHarnessRef.current?.currentPurchases().length).toBe(2)
-  })
-})
-
-describe('PaymentForm CardElement compatibility', () => {
-  const CardPaidHarness: React.FC = () => <PaidHarness paymentSlot="card-element" />
-
-  beforeEach(() => {
-    plansCache.clear()
-    productCache.clear()
-    merchantCache.clear()
-    plansCache.set('prd_paid', {
-      plans: [paidPlan],
-      timestamp: Date.now(),
-      promise: null,
-    })
-    productCache.set('prd_paid', {
-      product: { reference: 'prd_paid', name: 'Widget API' },
-      promise: null,
-      timestamp: Date.now(),
-    })
-    merchantCache.set('/api/merchant', {
-      merchant: { legalName: 'Acme', displayName: 'Acme' },
-      promise: null,
-      timestamp: Date.now(),
-    })
-  })
-
-  it('routes submit through confirmPayment with card-element mode', async () => {
-    const confirmPaymentMock = (await import('../utils/confirmPayment'))
-      .confirmPayment as ReturnType<typeof vi.fn>
-    confirmPaymentMock.mockClear()
-
-    render(<CardPaidHarness />)
-
-    expect(await screen.findByTestId('card-element')).toBeInTheDocument()
-    expect(screen.queryByTestId('payment-element')).not.toBeInTheDocument()
-
-    const button = await screen.findByTestId('submit')
-    await waitFor(() => {
-      expect(button.getAttribute('data-state')).toBe('idle')
-    })
-
-    await act(async () => {
-      fireEvent.click(button)
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    await waitFor(() => {
-      expect(confirmPaymentMock).toHaveBeenCalledWith(
-        expect.objectContaining({ mode: 'card-element' }),
-      )
-    })
-  })
-})
-
-// ---------- PaymentElement default options (Stripe Link disabled) ----------
-//
-// Guards the centralized `withPaymentElementDefaults` wire-up inside
-// `PaymentForm.PaymentElement`. The Link sign-in banner + "Save my
-// information for faster checkout" enrollment UI would duplicate the
-// SolvaPay-owned "Save card" affordance, so the primitive must pass
-// `wallets.link = 'never'` to Stripe by default, while still letting
-// callers override via `options`.
-
-const OptionsHarness: React.FC<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options?: any
-}> = ({ options }) => {
-  const ctx = React.useMemo<SolvaPayContextValue>(
-    () => ({
-      purchase: {
-        loading: false,
-        isRefetching: false,
-        error: null,
-        purchases: [],
-        hasProduct: () => false,
-        activePurchase: null,
-        hasPaidPurchase: false,
-        activePaidPurchase: null,
-        balanceTransactions: [],
-      },
-      refetchPurchase: vi.fn(),
-      upsertPurchase: vi.fn(),
-      createPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'cs_test_options',
-        publishableKey: 'pk_test',
-      }),
-      processPayment: vi.fn().mockResolvedValue({ status: 'succeeded' }),
-      createTopupPayment: vi.fn(),
-      cancelRenewal: vi.fn(),
-      reactivateRenewal: vi.fn(),
-      activatePlan: vi.fn(),
-      balance: mockBalanceStatus(),
-    }),
-    [],
-  )
-  return (
-    <SolvaPayContext.Provider value={ctx}>
-      <PaymentForm.Root planRef="pln_paid" productRef="prd_paid">
-        <PaymentForm.PaymentElement options={options} />
-        <PaymentForm.SubmitButton data-testid="submit" />
-      </PaymentForm.Root>
-    </SolvaPayContext.Provider>
-  )
-}
-
-describe('PaymentForm.PaymentElement default options', () => {
-  beforeEach(() => {
-    lastPaymentElementOptions.current = undefined
-    plansCache.clear()
-    productCache.clear()
-    merchantCache.clear()
-    plansCache.set('prd_paid', {
-      plans: [paidPlan],
-      timestamp: Date.now(),
-      promise: null,
-    })
-    productCache.set('prd_paid', {
-      product: { reference: 'prd_paid', name: 'Widget API' },
-      promise: null,
-      timestamp: Date.now(),
-    })
-    merchantCache.set('/api/merchant', {
-      merchant: { legalName: 'Acme', displayName: 'Acme' },
-      promise: null,
-      timestamp: Date.now(),
-    })
-  })
-
-  it('disables Stripe Link by default when the caller passes no options', async () => {
-    render(<OptionsHarness />)
-    await screen.findByTestId('payment-element')
-    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('never')
-  })
-
-  it('honours caller-supplied wallets.link override', async () => {
-    render(<OptionsHarness options={{ wallets: { link: 'auto' } }} />)
-    await screen.findByTestId('payment-element')
-    expect(lastPaymentElementOptions.current?.wallets?.link).toBe('auto')
-  })
-
-  it('composes caller-supplied wallet flags with the default link=never', async () => {
-    render(<OptionsHarness options={{ wallets: { applePay: 'never' } }} />)
-    await screen.findByTestId('payment-element')
-    expect(lastPaymentElementOptions.current?.wallets).toEqual({
-      link: 'never',
-      applePay: 'never',
-    })
   })
 })

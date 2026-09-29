@@ -76,7 +76,7 @@ Modal with checkbox opt-in, stacked fields (label / input / helper), and **Cance
 
 ## 3. First-time setup (`dataState === 'setup'`, no saved card)
 
-The Stripe `PaymentElement` mounts inline inside the dialog; the CTA becomes **Set up auto-recharge**.
+The vault `CardFields` mount inline inside the dialog; the CTA becomes **Set up auto-recharge**.
 
 <div style="max-width:460px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border:1px solid #e2e8f0;border-radius:12px;padding:20px;background:#ffffff;box-shadow:0 1px 3px rgba(15,23,42,.08)">
   <div style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Payment method</div>
@@ -87,7 +87,7 @@ The Stripe `PaymentElement` mounts inline inside the dialog; the CTA becomes **S
       <div style="flex:1;height:38px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;display:flex;align-items:center;padding:0 12px;color:#94a3b8;font-size:13px">CVC</div>
     </div>
   </div>
-  <div style="font-size:11px;color:#94a3b8;margin-bottom:16px">Secured by Stripe</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:16px">Card details stored in a secure vault</div>
   <button style="width:100%;border:none;background:#0f172a;color:#fff;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer">Set up auto-recharge</button>
 </div>
 
@@ -115,7 +115,7 @@ Shown on the summary card when auto-recharge is paused.
 | Enable checkbox | `enabled` | `enabled` | `false` (opt-in) | Off by default; threshold and amount fields stay hidden until checked |
 | Threshold | `thresholdAmountMajor` + `thresholdUnit` | `trigger.thresholdAmountMinor` | `5` | Stored in display-currency minor units; entered in $ or credits |
 | Fixed amount | `topupAmountMajor` + `topupUnit` | `topup.amountMinor` | `10` | ≥ minimum charge |
-| Payment method | Stripe `PaymentElement` | — | — | Required before enable |
+| Payment method | vault `CardFields` | — | — | Required before enable |
 | Summary | `summaryLine` (`buildSummaryLine`) | derived | — | Updates live |
 
 ## States
@@ -125,7 +125,7 @@ Shown on the summary card when auto-recharge is paused.
 | State | UI |
 | --- | --- |
 | `loading` | Skeleton / `Spinner` on summary card |
-| `setup` | First-time: PaymentElement inline in dialog, CTA "Set up auto-recharge" (mockup 3) |
+| `setup` | First-time: vault CardFields inline in dialog, CTA "Set up auto-recharge" (mockup 3) |
 | `idle` | Summary card + dialog for editing (mockup 2) |
 | `saving` | Save button → spinner, fields disabled |
 | `disabling` | Disable in progress |

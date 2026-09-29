@@ -1,32 +1,21 @@
 import { useState, useCallback, useRef } from 'react'
-import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
 import { readErrorMessage } from '../utils/readErrorMessage'
 import { usePlanSelection } from '../components/PlanSelectionContext'
-import type { CaptureMode, Plan, PrefillCustomer, SolvaPayConfig, VaultInfo } from '../types'
+import type { Plan, PrefillCustomer, SolvaPayConfig, VaultInfo } from '../types'
 
 export interface UseCheckoutReturn {
   loading: boolean
   error: Error | null
-  stripePromise: Promise<Stripe | null> | null
-  clientSecret: string | null
   processorPaymentId: string | null
-  /** SolvaPay payment intent id (both capture modes). */
+  /** SolvaPay payment intent id; `null` until `createPayment` resolves. */
   paymentIntentId: string | null
-  /** Set once `createPayment` resolves; `null` before that. */
-  captureMode: CaptureMode | null
-  /** The vault to capture into when `captureMode` is `'vault'`. */
+  /** The vault `PaymentForm.CardFields` write into; `null` until the intent exists. */
   vault: VaultInfo | null
   resolvedPlanRef: string | null
   startCheckout: () => Promise<void>
   reset: () => void
-}
-
-const stripePromiseCache = new Map<string, Promise<Stripe | null>>()
-
-function getStripeCacheKey(publishableKey: string, accountId?: string): string {
-  return accountId ? `${publishableKey}:${accountId}` : publishableKey
 }
 
 /**
@@ -87,7 +76,7 @@ async function resolvePlanRef(
 /**
  * Hook to manage checkout flow for payment processing.
  *
- * Handles payment intent creation and Stripe initialization. When `planRef`
+ * Handles payment intent creation. When `planRef`
  * is omitted but `productRef` is provided, the hook auto-resolves the plan
  * by fetching the product's plans and selecting the single/default one.
  *
@@ -116,11 +105,8 @@ export function useCheckout(options: {
   const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
-  const [captureMode, setCaptureMode] = useState<CaptureMode | null>(null)
   const [vault, setVault] = useState<VaultInfo | null>(null)
   const [resolvedPlanRef, setResolvedPlanRef] = useState<string | null>(planRef || null)
   const isStartingRef = useRef(false)
@@ -168,60 +154,20 @@ export function useCheckout(options: {
         throw new Error('Invalid payment intent response from server')
       }
 
-      const mode: CaptureMode = result.captureMode === 'vault' ? 'vault' : 'processor_elements'
-
       if (result.customerRef && result.customerRef !== customerRef && updateCustomerRef) {
         updateCustomerRef(result.customerRef)
       }
 
-      if (mode === 'vault') {
-        // The card is captured into the vault and confirmed server-side;
-        // Stripe.js is never loaded and there is no client secret.
-        if (!result.id || typeof result.id !== 'string') {
-          throw new Error('Invalid payment intent id in vault payment intent response')
-        }
-        if (!result.vault?.tenantId || !result.vault.environment) {
-          throw new Error('Invalid vault in payment intent response')
-        }
-        setCaptureMode('vault')
-        setVault({ tenantId: result.vault.tenantId, environment: result.vault.environment })
-        setPaymentIntentId(result.id)
-        setClientSecret(null)
-        setStripePromise(null)
-        if (result.processorPaymentId) {
-          setProcessorPaymentId(result.processorPaymentId)
-        }
-        return
+      // The card is captured into the vault by `PaymentForm.CardFields` and
+      // the payment is confirmed server-side.
+      if (!result.id || typeof result.id !== 'string') {
+        throw new Error('Invalid payment intent id in payment intent response')
       }
-
-      if (!result.clientSecret || typeof result.clientSecret !== 'string') {
-        throw new Error('Invalid client secret in payment intent response')
+      if (!result.vault?.tenantId || !result.vault.environment) {
+        throw new Error('Invalid vault in payment intent response')
       }
-
-      if (!result.publishableKey || typeof result.publishableKey !== 'string') {
-        throw new Error('Invalid publishable key in payment intent response')
-      }
-
-      const stripeOptions: StripeConstructorOptions = {
-        ...(result.accountId ? { stripeAccount: result.accountId } : {}),
-        developerTools: { assistant: { enabled: false } },
-      }
-
-      const cacheKey = getStripeCacheKey(result.publishableKey, result.accountId)
-      let stripe = stripePromiseCache.get(cacheKey)
-
-      if (!stripe) {
-        stripe = loadStripe(result.publishableKey, stripeOptions)
-        stripePromiseCache.set(cacheKey, stripe)
-      }
-
-      setStripePromise(stripe)
-      setClientSecret(result.clientSecret)
-      setCaptureMode('processor_elements')
-      setVault(null)
-      if (typeof result.id === 'string' && result.id) {
-        setPaymentIntentId(result.id)
-      }
+      setVault({ tenantId: result.vault.tenantId, environment: result.vault.environment })
+      setPaymentIntentId(result.id)
       if (result.processorPaymentId) {
         setProcessorPaymentId(result.processorPaymentId)
       }
@@ -248,11 +194,8 @@ export function useCheckout(options: {
     isStartingRef.current = false
     setLoading(false)
     setError(null)
-    setStripePromise(null)
-    setClientSecret(null)
     setProcessorPaymentId(null)
     setPaymentIntentId(null)
-    setCaptureMode(null)
     setVault(null)
     setResolvedPlanRef(planRef || null)
   }, [planRef])
@@ -260,11 +203,8 @@ export function useCheckout(options: {
   return {
     loading,
     error,
-    stripePromise,
-    clientSecret,
     processorPaymentId,
     paymentIntentId,
-    captureMode,
     vault,
     resolvedPlanRef,
     startCheckout,

@@ -1390,12 +1390,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(balance.credits).toBe(100)
     })
 
-    // NOTE: Credit-deduction-on-consumption tests are covered by the payment
-    // integration suite (packages/server/__tests__/payment-stripe.integration.test.ts)
-    // because they require a real top-up payment flow. Usage-based plans no
+    // NOTE: Credit-deduction-on-consumption needs a real top-up payment flow
+    // (vault card capture + server-side confirm). Usage-based plans no
     // longer auto-grant credits on activation, so there is no standalone
     // path to "initial credits -> deduct -> remaining decreased" without a
-    // Stripe sandbox payment confirmation.
+    // confirmed sandbox payment.
     it.skip(
       'should deduct credits and decrement remaining units on usage consumption (covered by payment suite)',
       async () => {},
@@ -1492,15 +1491,14 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         currency: creditPlan.currency,
       })
 
-      expect(result).toBeDefined()
-      expect(result.processorPaymentId).toBeDefined()
-      expect(typeof result.processorPaymentId).toBe('string')
-      expect(result.clientSecret).toBeDefined()
-      expect(typeof result.clientSecret).toBe('string')
-      expect(result.publishableKey).toBeDefined()
-      expect(typeof result.publishableKey).toBe('string')
+      // No rail payment exists until the server-side confirm.
+      expect(result.processorPaymentId).toBeUndefined()
+      expect(result.captureMode).toBe('vault')
+      expect(typeof result.id).toBe('string')
+      expect(typeof result.vault.tenantId).toBe('string')
+      expect(['sandbox', 'live']).toContain(result.vault.environment)
 
-      console.log(`✅ createTopupPaymentIntent: processorPaymentId=${result.processorPaymentId}, has clientSecret=${!!result.clientSecret}, has publishableKey=${!!result.publishableKey}`)
+      console.log(`✅ createTopupPaymentIntent: id=${result.id}, vault=${result.vault.tenantId}/${result.vault.environment}`)
     })
   })
 })

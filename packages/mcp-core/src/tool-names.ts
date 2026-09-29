@@ -14,6 +14,8 @@ export const MCP_TOOL_NAMES = {
   attachBusinessDetails: 'attach_business_details',
   createCaptureGrant: 'create_capture_grant',
   confirmPayment: 'confirm_payment',
+  createCardSetupGrant: 'create_card_setup_grant',
+  saveCard: 'save_card',
   getHistory: 'get_history',
   account: 'account',
 } as const

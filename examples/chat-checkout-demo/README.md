@@ -106,7 +106,7 @@ pnpm preview
 
 ## Test cards
 
-Stripe test cards work in sandbox mode:
+Sandbox test cards work in the vault card fields:
 
 | Card | Result |
 |---|---|

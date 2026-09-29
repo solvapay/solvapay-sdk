@@ -10,13 +10,13 @@
  *    (`usage-based` / `hybrid`) mounts `<AmountPicker>` → `<TopupForm>`
  *    rather than the recurring `<PaymentForm>`. The previous
  *    implementation always mounted `PaymentForm` and blew up with
- *    Stripe's minimum-charge error on PAYG plans.
+ *    the rail's minimum-charge error on PAYG plans.
  * 3. `Plans` and `EmbeddedCheckout` pass a Free-filtering `filter` prop
  *    to `<PlanSelector.Root>` so the paywall never renders a disabled
  *    Free card as decoration.
  *
  * Child primitives are mocked so we can assert on their received props
- * without setting up Stripe Elements / transport / provider scaffolding.
+ * without setting up card fields / transport / provider scaffolding.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -171,7 +171,7 @@ vi.mock('./TopupForm', () => {
 
 // Mock `<CheckoutSteps.*>` so we can capture `onPurchaseSuccess` and
 // fire it from the test (simulating a successful payment) without
-// standing up Stripe Elements / `useCheckoutFlow`. The mock still
+// standing up card fields / `useCheckoutFlow`. The mock still
 // exposes a stub `plan-selector-root` carrying the `filter` prop so
 // existing assertions on Free-hiding behaviour keep working.
 let capturedOnPurchaseSuccess: (() => void) | null = null
@@ -563,7 +563,7 @@ describe('PaywallNotice.EmbeddedCheckout', () => {
 // Auto-dismiss / `onResolved` semantics. Pre-fix, dismissal hung on
 // `usePaywallResolver` flipping `resolved=true`, which depends on the
 // backend reflecting the new purchase. Sandbox / dev webhook lag could
-// leave the success card stuck for 10s+ even though Stripe had already
+// leave the success card stuck for 10s+ even though the rail had already
 // confirmed payment. The fix routes both the resolver-driven path AND
 // `<EmbeddedCheckout>`'s `onPurchaseSuccess` through a dedupe so the
 // parent dismisses on the earlier of the two signals.

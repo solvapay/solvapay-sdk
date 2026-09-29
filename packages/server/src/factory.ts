@@ -31,6 +31,8 @@ import type {
   CaptureGrant,
   ConfirmPaymentParams,
   ConfirmPaymentResult,
+  SaveCustomerSessionCardParams,
+  SavedCardResult,
   CheckLimitsRequest,
 } from './types'
 import type { components } from './types/generated'
@@ -435,7 +437,7 @@ export interface SolvaPay {
    * @param params.planRef - Plan reference to purchase
    * @param params.customerRef - Customer reference
    * @param params.idempotencyKey - Optional idempotency key for retry safety
-   * @returns Payment intent with client secret and publishable key
+   * @returns Payment intent with its `id` and the `vault` to capture the card into
    *
    * @example
    * ```typescript
@@ -446,7 +448,7 @@ export interface SolvaPay {
    *   idempotencyKey: 'unique-key-123'
    * });
    *
-   * // Use intent.clientSecret on the client to confirm payment
+   * // Capture the card into intent.vault, then confirm with createCaptureGrant + confirmPayment
    * ```
    */
   createPaymentIntent(
@@ -506,8 +508,8 @@ export interface SolvaPay {
   attachBusinessDetails(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   /**
-   * Vault checkout: grant the browser one short-lived card capture into the
-   * vault for a payment intent created with `captureMode: 'vault'`.
+   * Grant the browser one short-lived card capture into the vault for a
+   * payment intent.
    */
   createCaptureGrant(params: { paymentIntentId: string }): Promise<CaptureGrant>
 
@@ -517,6 +519,20 @@ export interface SolvaPay {
    * charge happens here; `redirectUrl` is set when the payer must complete 3DS.
    */
   confirmPayment(params: ConfirmPaymentParams): Promise<ConfirmPaymentResult>
+
+  /** Read a customer session (owner check before saving a card on it). */
+  getCustomerSession(params: {
+    sessionId: string
+  }): Promise<components['schemas']['GetCustomerSessionResponse']>
+
+  /**
+   * Card setup without a payment: grant the browser one card capture into
+   * the vault on a customer session (`scope.sessionId`).
+   */
+  createCustomerSessionCaptureGrant(params: { sessionId: string }): Promise<CaptureGrant>
+
+  /** Card setup without a payment: save the captured card as the session customer's card. */
+  saveCustomerSessionCard(params: SaveCustomerSessionCardParams): Promise<SavedCardResult>
 
   /**
    * Check if customer is within usage limits for a product.
@@ -963,6 +979,29 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         throw new SolvaPayError('confirmPayment is not available on this API client')
       }
       return apiClient.confirmPayment(params)
+    },
+
+    getCustomerSession(params) {
+      if (!apiClient.getCustomerSession) {
+        throw new SolvaPayError('getCustomerSession is not available on this API client')
+      }
+      return apiClient.getCustomerSession(params)
+    },
+
+    createCustomerSessionCaptureGrant(params) {
+      if (!apiClient.createCustomerSessionCaptureGrant) {
+        throw new SolvaPayError(
+          'createCustomerSessionCaptureGrant is not available on this API client',
+        )
+      }
+      return apiClient.createCustomerSessionCaptureGrant(params)
+    },
+
+    saveCustomerSessionCard(params) {
+      if (!apiClient.saveCustomerSessionCard) {
+        throw new SolvaPayError('saveCustomerSessionCard is not available on this API client')
+      }
+      return apiClient.saveCustomerSessionCard(params)
     },
 
     checkLimits(params) {

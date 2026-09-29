@@ -636,7 +636,7 @@ function PaygPayment({ className }: { className?: string }) {
   const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
   const amountMinor = flow.selectedAmountMinor
   // Topup currency comes from the merchant (or explicit prop). If it
-  // hasn't resolved we cannot mount the Stripe form (it needs a
+  // hasn't resolved we cannot mount the payment form (it needs a
   // currency to create the topup PI), so render nothing — the
   // `<AmountPicker>` skeleton above keeps the surface non-empty.
   const currency = flow.topupCurrency
@@ -674,9 +674,9 @@ function PaygPayment({ className }: { className?: string }) {
         <TopupForm.Summary.Root className="solvapay-checkout-tax-summary">
           <TopupForm.Summary.Rows />
         </TopupForm.Summary.Root>
-        <TopupForm.PaymentElement />
+        <TopupForm.CardFields />
         <TopupForm.Error className="solvapay-checkout-error" />
-        <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
+        <span className="solvapay-secure-note">Secure payment</span>
         <TopupForm.SubmitButton className="solvapay-checkout-pay-button">
           Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>
@@ -694,7 +694,7 @@ function RecurringPayment({ className }: { className?: string }) {
   const selectedPlanShape = flow.selectedPlan as unknown as BootstrapPlanLike | null
   if (!selectedPlanShape || !flow.selectedPlanRef) return null
   // Recurring/one-time purchases settle in the *plan's* currency (the
-  // amount the merchant priced and Stripe charges). This is correct
+  // amount the merchant priced and the rail charges). This is correct
   // for plan purchases — distinct from credit topups, which settle
   // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
@@ -731,9 +731,9 @@ function RecurringPayment({ className }: { className?: string }) {
         <PaymentForm.TaxSummary.Root className="solvapay-checkout-tax-summary">
           <PaymentForm.TaxSummary.Rows />
         </PaymentForm.TaxSummary.Root>
-        <PaymentForm.PaymentElement />
+        <PaymentForm.CardFields />
         <PaymentForm.Error className="solvapay-checkout-error" />
-        <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
+        <span className="solvapay-secure-note">Secure payment</span>
         <PaymentForm.SubmitButton className="solvapay-checkout-pay-button">
           {isRecurring ? `Subscribe — ${priceLine}` : `Pay ${formattedAmount}`}
         </PaymentForm.SubmitButton>

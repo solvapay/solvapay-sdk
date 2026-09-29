@@ -35,7 +35,7 @@ function makeSolvaPay() {
     createCheckoutSession: vi
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/sess_1' }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
     getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
     getProduct: vi.fn().mockResolvedValue({ reference: productRef, name: 'Test product' }),
     listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),

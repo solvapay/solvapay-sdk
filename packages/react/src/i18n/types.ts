@@ -47,7 +47,7 @@ export type MandateContext = {
   /**
    * True when the confirm also stores the card for later off-session
    * charges (auto-recharge). The mandate has to disclose the storage,
-   * because SolvaPay surfaces hide Stripe's own `terms` line.
+   * because the card fields carry no mandate line of their own.
    */
   savesPaymentMethod?: boolean
 }
@@ -470,15 +470,11 @@ export interface SolvaPayCopy {
     configMissingPlanOrProduct: string
     configMissingAmount: string
     unknownError: string
-    stripeUnavailable: string
     paymentIntentUnavailable: string
-    paymentElementMissing: string
-    /** Vault mode: `PaymentForm.CardFields` is not mounted or Collect failed to load. */
+    /** `PaymentForm.CardFields` is not mounted or Collect failed to load. */
     cardFieldsMissing: string
-    /** Vault mode: the vault rejected the card (validation, expired grant). */
+    /** The vault rejected the card (validation, expired grant). */
     cardCaptureFailed: string
-    /** @deprecated Use `paymentElementMissing`. Slated for removal in the next major. */
-    cardElementMissing: string
     paymentUnexpected: string
     paymentPending: string
     paymentProcessingFailed: string

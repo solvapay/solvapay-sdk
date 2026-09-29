@@ -4,10 +4,10 @@
  *
  * Covers every row in the brief's §7 transition table plus the
  * branch-specific tool wiring (§6), banner gating (§6), CTA label
- * tracking (§3), and both dismissal paths (§4 / §7). Stripe Elements
+ * tracking (§3), and both dismissal paths (§4 / §7). The payment
  * primitives (`TopupForm.Root`, `PaymentForm.Root`) are stubbed so
- * the state machine can be exercised without mounting real Stripe
- * iframes — Stripe-integration tests live alongside those primitives.
+ * the state machine can be exercised without mounting the vault card
+ * fields — card-field tests live alongside those primitives.
  */
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -21,7 +21,7 @@ const taxState = vi.hoisted(() => ({
 
 // ------------------------------------------------------------------
 // Primitive stubs — keep the view's state machine testable without
-// mounting real Stripe Elements. The stubs simulate success when the
+// mounting the vault card fields. The stubs simulate success when the
 // user clicks the submit button.
 // ------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ vi.mock('../../../primitives/TopupForm', () => {
     </div>
   )
   const Loading: React.FC<{ children?: React.ReactNode }> = () => null
-  const PaymentElement: React.FC = () => <div data-testid="topup-payment-element" />
+  const CardFields: React.FC = () => <div data-testid="topup-card-fields" />
   const ErrorSlot: React.FC<{ children?: React.ReactNode }> = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
     children,
@@ -75,7 +75,7 @@ vi.mock('../../../primitives/TopupForm', () => {
     TopupForm: {
       Root,
       Loading,
-      PaymentElement,
+      CardFields,
       Error: ErrorSlot,
       SubmitButton,
       BusinessDetails,
@@ -109,7 +109,7 @@ vi.mock('../../../primitives/PaymentForm', () => {
     </div>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => <div data-testid="payment-element" />
+  const CardFields: React.FC = () => <div data-testid="card-fields" />
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
     children,
@@ -135,7 +135,7 @@ vi.mock('../../../primitives/PaymentForm', () => {
     PaymentForm: {
       Root,
       Loading,
-      PaymentElement,
+      CardFields,
       Error: ErrorSlot,
       SubmitButton,
       MandateText,
@@ -149,13 +149,6 @@ vi.mock('../../../primitives/MandateText', () => ({
   MandateText: () => <p data-testid="mandate-text" />,
 }))
 
-const stripeProbeState = vi.hoisted(() => ({
-  value: 'ready' as 'loading' | 'ready' | 'blocked',
-}))
-
-vi.mock('../../useStripeProbe', () => ({
-  useStripeProbe: () => stripeProbeState.value,
-}))
 
 // ------------------------------------------------------------------
 // Module imports — defer until after mocks are registered.
@@ -296,11 +289,7 @@ function renderView(
   props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
   options: { bridgeApp?: McpBridgeAppLike; displayMode?: 'inline' | 'fullscreen' } = {},
 ) {
-  const transport = props.publishableKey
-    ? makeTransport()
-    : makeTransport({
-        // default: resolved list for PlanSelector's fetch fallback
-      })
+  const transport = makeTransport()
   const config: SolvaPayConfig = { transport }
   const ctx = buildCtx(config)
   // Seed the plans cache so `PlanSelector` renders cards synchronously.
@@ -316,7 +305,6 @@ function renderView(
   const view = (
     <McpCheckoutView
       productRef={productRef}
-      publishableKey="pk_test"
       returnUrl="https://example.test/r"
       plans={bootstrapPlans}
       {...props}
@@ -352,7 +340,6 @@ beforeEach(() => {
   merchantCache.clear()
   taxState.payment = null
   taxState.topup = null
-  stripeProbeState.value = 'ready'
 })
 
 afterEach(() => {
@@ -420,7 +407,6 @@ describe('<McpCheckoutView> — plan step', () => {
       <SolvaPayContext.Provider value={ctx}>
         <McpCheckoutView
           productRef={productRef}
-          publishableKey="pk_test"
           returnUrl="https://example.test/r"
           plans={bootstrapPlans}
           fromPaywall
@@ -567,7 +553,6 @@ describe('<McpCheckoutView> — PAYG branch', () => {
   it('amount → payment does not re-fire activate_plan (activation already happened at plan step)', async () => {
     const { transport } = renderView({
       fromPaywall: true,
-      publishableKey: 'pk_test',
     })
 
     await waitFor(() => {
@@ -675,7 +660,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     })
     await waitFor(() => screen.getByTestId('topup-form-stub'))
 
-    // Simulate Stripe success via the stub.
+    // Simulate payment success via the stub.
     await act(async () => {
       fireEvent.click(screen.getByTestId('topup-form-submit'))
     })
@@ -898,7 +883,6 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
           <McpBridgeProvider app={{}}>
             <McpCheckoutView
               productRef={productRef}
-              publishableKey="pk_test"
               returnUrl="https://example.test/r"
               plans={[freePlan, paygPlan, multiProPlan] as never[]}
               fromPaywall
@@ -990,7 +974,6 @@ describe('<McpCheckoutView> — PAYG amount step currency labels', () => {
         <McpBridgeProvider app={bridgeApp}>
           <McpCheckoutView
             productRef={productRef}
-            publishableKey="pk_test"
             returnUrl="https://example.test/r"
             plans={bootstrapPlans}
             fromPaywall
@@ -1135,60 +1118,6 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length).toBeGreaterThan(
       0,
     )
-  })
-})
-
-describe('<McpCheckoutView> — blocked probe still shows plans', () => {
-  beforeEach(() => {
-    stripeProbeState.value = 'blocked'
-  })
-
-  it('renders the plan picker when the Stripe probe is blocked', async () => {
-    renderView({ fromPaywall: true })
-    await waitFor(() => {
-      expect(screen.getByText('Pay as you go')).toBeTruthy()
-      expect(screen.getByText('Pro')).toBeTruthy()
-    })
-    expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
-    expect(screen.queryByText('Upgrade your plan')).toBeNull()
-  })
-
-  it('renders the hosted handoff after the customer advances to payment', async () => {
-    renderView({ fromPaywall: true })
-    await waitFor(() => screen.getByText('Pro'))
-    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
-    act(() => {
-      fireEvent.click(proCard)
-    })
-    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro/ }))
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
-    })
-    await waitFor(() => {
-      expect(screen.getByText('Complete your Pro purchase')).toBeTruthy()
-    })
-    expect(screen.getByText(/doesn't allow embedded payments/)).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Change plan/i })).toBeTruthy()
-    expect(screen.queryByTestId('payment-form-stub')).toBeNull()
-  })
-
-  it('hosted PAYG handoff shows Change amount and returns to the amount step', async () => {
-    renderView({ fromPaywall: true })
-    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
-    })
-    await waitFor(() => screen.getByText(/How many credits/))
-    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
-    })
-    await waitFor(() => screen.getByText(/doesn't allow embedded payments/))
-    expect(screen.getByRole('button', { name: /Change amount/i })).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
-    await waitFor(() => screen.getByText(/How many credits/))
-    expect(screen.getByPlaceholderText('0.00')).toBeTruthy()
   })
 })
 

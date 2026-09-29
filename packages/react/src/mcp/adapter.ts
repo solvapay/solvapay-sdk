@@ -3,8 +3,8 @@
  * through `app.callServerTool` instead of HTTP.
  *
  * Use with `SolvaPayProvider` when the React tree is hosted inside an
- * MCP App (where Stripe.js and direct HTTP to your backend are both
- * blocked by the host sandbox):
+ * MCP App (where direct HTTP to your backend is blocked by the host
+ * sandbox):
  *
  * ```tsx
  * import { App } from '@modelcontextprotocol/ext-apps'
@@ -113,6 +113,10 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
       callTool(MCP_TOOL_NAMES.createCaptureGrant, pickDefined({ ...params })),
 
     confirmPayment: params => callTool(MCP_TOOL_NAMES.confirmPayment, pickDefined({ ...params })),
+
+    createCardSetupGrant: () => callTool(MCP_TOOL_NAMES.createCardSetupGrant, {}),
+
+    saveCard: params => callTool(MCP_TOOL_NAMES.saveCard, pickDefined({ ...params })),
 
     cancelRenewal: params =>
       callTool(

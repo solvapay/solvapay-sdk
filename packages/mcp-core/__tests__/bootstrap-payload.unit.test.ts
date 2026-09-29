@@ -27,7 +27,7 @@ function makeClient() {
         },
       ],
     }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
     getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
     getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Widget' }),
     listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_pro', name: 'Pro' }]),
@@ -51,6 +51,37 @@ function makeClient() {
 }
 
 describe('createBuildBootstrapPayload', () => {
+  it('does not read platform config: the card fields need no processor key', async () => {
+    const client = makeClient()
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://example.test',
+      getCustomerRef: () => 'cus_42',
+    })
+
+    const payload = await build('account', {
+      authInfo: { extra: { customer_ref: 'cus_42' } },
+    })
+
+    expect(client.getPlatformConfig).not.toHaveBeenCalled()
+    expect(Object.keys(payload).sort()).toStrictEqual(
+      [
+        'autoRechargeUrl',
+        'checkoutUrl',
+        'customer',
+        'merchant',
+        'plans',
+        'portalUrl',
+        'product',
+        'productRef',
+        'returnUrl',
+        'view',
+      ].sort(),
+    )
+  })
+
   it('always fetches limits once and derives usage from that result', async () => {
     const client = makeClient()
     const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })

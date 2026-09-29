@@ -29,8 +29,6 @@ export interface UseBusinessDetailsAttachOptions {
   attachBusinessDetails?: AttachBusinessDetailsFn
   customerRef?: string
   onTaxChange?: (breakdown: TaxBreakdown) => void
-  /** Called after a successful attach so PaymentForm can refresh Stripe Elements. */
-  refreshElements?: () => Promise<void> | void
 }
 
 export interface UseBusinessDetailsAttachReturn {
@@ -53,7 +51,6 @@ export function useBusinessDetailsAttach(
     attachBusinessDetails,
     customerRef,
     onTaxChange,
-    refreshElements,
   } = options
 
   const [businessDetails, setBusinessDetailsState] =
@@ -120,9 +117,6 @@ export function useBusinessDetailsAttach(
         setBusinessDetailsAttached(true)
         setBusinessDetailsError(null)
         onTaxChange?.(result.taxBreakdown)
-        if (refreshElements) {
-          await refreshElements()
-        }
         return true
       } catch (err) {
         if (requestId !== attachRequestIdRef.current) return false
@@ -136,7 +130,7 @@ export function useBusinessDetailsAttach(
         }
       }
     },
-    [processorPaymentId, attachBusinessDetails, customerRef, onTaxChange, refreshElements],
+    [processorPaymentId, attachBusinessDetails, customerRef, onTaxChange],
   )
 
   useEffect(() => {

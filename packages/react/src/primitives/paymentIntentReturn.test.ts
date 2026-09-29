@@ -2,21 +2,19 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  readPaymentIntentClientSecret,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
+import { readPaymentIntentId, stripPaymentIntentParams } from './paymentIntentReturn'
 
 describe('paymentIntentReturn', () => {
-  describe('readPaymentIntentClientSecret', () => {
-    it('reads payment_intent_client_secret from the query string', () => {
-      expect(
-        readPaymentIntentClientSecret('?payment_intent_client_secret=pi_secret_123'),
-      ).toBe('pi_secret_123')
+  describe('readPaymentIntentId', () => {
+    it('reads payment_intent from the query string', () => {
+      expect(readPaymentIntentId('?payment_intent=pi_rail_123&redirect_status=succeeded')).toBe(
+        'pi_rail_123',
+      )
     })
 
-    it('returns undefined when the param is absent', () => {
-      expect(readPaymentIntentClientSecret('?foo=bar')).toBeUndefined()
+    it('returns undefined when the param is absent or empty', () => {
+      expect(readPaymentIntentId('?foo=bar')).toBeUndefined()
+      expect(readPaymentIntentId('?payment_intent=')).toBeUndefined()
     })
   })
 
@@ -38,7 +36,7 @@ describe('paymentIntentReturn', () => {
       })
     })
 
-    it('removes Stripe return params and preserves unrelated query params', () => {
+    it('removes the return params and preserves unrelated query params', () => {
       stripPaymentIntentParams()
       expect(window.history.replaceState).toHaveBeenCalledWith(
         {},

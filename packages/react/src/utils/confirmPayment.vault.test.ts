@@ -11,7 +11,7 @@ const grant = {
   scope: { paymentIntentId: 'pi_sp_1' },
 }
 
-const succeededPayment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
+const succeededPayment = { id: 'pi_sp_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' as const }
 
 function deps(overrides: Partial<Parameters<typeof confirmVaultPayment>[0]> = {}) {
   return {
@@ -67,22 +67,22 @@ describe('confirmVaultPayment', () => {
   it('surfaces a 3DS redirect with the payment and the 3DS copy', async () => {
     const payment = {
       id: 'pi_sp_1',
-      processorPaymentId: 'pi_stripe_1',
+      processorPaymentId: 'pi_rail_1',
       status: 'requires_action' as const,
-      redirectUrl: 'https://hooks.stripe.com/3ds',
+      redirectUrl: 'https://acs.bank.test/3ds',
     }
     const d = deps({ confirmPayment: vi.fn().mockResolvedValue(payment) })
     const result = await confirmVaultPayment(d)
     expect(result).toStrictEqual({
       status: 'requires_action',
       message: enCopy.errors.paymentRequires3ds,
-      redirectUrl: 'https://hooks.stripe.com/3ds',
+      redirectUrl: 'https://acs.bank.test/3ds',
       payment,
     })
   })
 
   it('fails requires_action without a redirect url with the authentication-unavailable copy', async () => {
-    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' as const }
+    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_rail_1', status: 'requires_action' as const }
     const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
     expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.authenticationUnavailable })
     expect(enCopy.errors.authenticationUnavailable).toBe(
@@ -91,7 +91,7 @@ describe('confirmVaultPayment', () => {
   })
 
   it('treats an empty redirect url on requires_action the same as a missing one', async () => {
-    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'requires_action' as const, redirectUrl: '' }
+    const payment = { id: 'pi_sp_1', processorPaymentId: 'pi_rail_1', status: 'requires_action' as const, redirectUrl: '' }
     const result = await confirmVaultPayment(deps({ confirmPayment: vi.fn().mockResolvedValue(payment) }))
     expect(result).toStrictEqual({ status: 'error', message: enCopy.errors.authenticationUnavailable })
   })

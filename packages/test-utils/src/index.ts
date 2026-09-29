@@ -23,15 +23,6 @@ export type {
   TestPlanPricingOption,
 } from './integration-setup'
 
-// Stripe payment test helpers
-export {
-  createTestPaymentIntent,
-  confirmPaymentWithTestCard,
-  waitForWebhookProcessing,
-  waitForPaymentIntentStatus,
-  STRIPE_TEST_CARDS,
-} from './stripe-test-helpers'
-
 // Test logging utilities
 export { testLog, conditionalLog, alwaysLog } from './test-logger'
 

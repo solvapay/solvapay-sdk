@@ -5,7 +5,7 @@
  *
  * Consumers who just want a drop-in payment form use this component. It
  * renders the primitive's Root with a golden-path default tree composed of
- * `PaymentForm.Summary`, `CustomerFields`, `PaymentElement`, an optional
+ * `PaymentForm.Summary`, `CustomerFields`, `CardFields`, an optional
  * `TermsCheckbox`, `SubmitButton`, and `MandateText`. Free-plan activation
  * flows through the same composition — `FreeInner` in the primitive swaps
  * the submit handler so the default tree works identically for paid and
@@ -26,8 +26,7 @@ import {
   PaymentForm as Primitive,
   PaymentFormSummary,
   PaymentFormCustomerFields,
-  PaymentFormPaymentElement,
-  PaymentFormCardElement,
+  PaymentFormCardFields,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
   PaymentFormSubmitButton,
@@ -53,7 +52,7 @@ const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
     <Primitive.Summary />
     <PaidBusinessSlots />
     <Primitive.CustomerFields />
-    <Primitive.PaymentElement />
+    <Primitive.CardFields />
     <Primitive.Error />
     {requireTermsAcceptance && <Primitive.TermsCheckbox />}
     <Primitive.SubmitButton />
@@ -63,7 +62,7 @@ const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
 
 function PaidBusinessSlots() {
   const ctx = usePaymentForm()
-  if (!ctx.clientSecret) return null
+  if (!ctx.paymentIntentId) return null
   return (
     <>
       <Primitive.BusinessDetails.Root>
@@ -72,7 +71,7 @@ function PaidBusinessSlots() {
       <Primitive.TaxSummary.Root>
         <Primitive.TaxSummary.Rows />
       </Primitive.TaxSummary.Root>
-      <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
+      <span className="solvapay-secure-note">Secure payment</span>
     </>
   )
 }
@@ -89,9 +88,7 @@ const PaymentFormBase: React.FC<PaymentFormRootProps> = props => {
 export const PaymentForm: React.FC<PaymentFormRootProps> & {
   Summary: typeof PaymentFormSummary
   CustomerFields: typeof PaymentFormCustomerFields
-  PaymentElement: typeof PaymentFormPaymentElement
-  /** @deprecated Use `PaymentElement` instead. */
-  CardElement: typeof PaymentFormCardElement
+  CardFields: typeof PaymentFormCardFields
   MandateText: typeof PaymentFormMandateText
   TermsCheckbox: typeof PaymentFormTermsCheckbox
   SubmitButton: typeof PaymentFormSubmitButton
@@ -103,8 +100,7 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
 } = Object.assign(PaymentFormBase, {
   Summary: PaymentFormSummary,
   CustomerFields: PaymentFormCustomerFields,
-  PaymentElement: PaymentFormPaymentElement,
-  CardElement: PaymentFormCardElement,
+  CardFields: PaymentFormCardFields,
   MandateText: PaymentFormMandateText,
   TermsCheckbox: PaymentFormTermsCheckbox,
   SubmitButton: PaymentFormSubmitButton,

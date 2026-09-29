@@ -9,7 +9,7 @@
  * Surfaces rendered via `<McpViewRouter>`:
  *  - `checkout` — plan picker + activation dispatcher.
  *  - `account`  — current plan, balance, usage, payment method.
- *  - `topup`    — amount picker + Stripe.
+ *  - `topup`    — amount picker + card fields.
  *  - `auto-recharge` — same account surface; the status row links out
  *    to the hosted portal form. Kept as a wire view kind because the
  *    `account` tool and narrator still stamp it.
@@ -199,7 +199,7 @@ export function McpViewRouter({
   onRefreshBootstrap,
   onClose,
 }: McpViewRouterProps): React.ReactNode {
-  const { productRef, stripePublishableKey, returnUrl } = bootstrap
+  const { productRef, returnUrl } = bootstrap
   const CheckoutView = (views?.checkout ??
     McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
@@ -217,7 +217,6 @@ export function McpViewRouter({
       return (
         <CheckoutView
           productRef={productRef}
-          publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
           plans={bootstrap.plans}
@@ -246,7 +245,6 @@ export function McpViewRouter({
     case 'topup':
       return (
         <TopupView
-          publishableKey={stripePublishableKey}
           returnUrl={returnUrl}
           classNames={classNames}
           onBack={goAccount}

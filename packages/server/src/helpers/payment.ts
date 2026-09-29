@@ -21,20 +21,15 @@ import type { components } from '../types/generated'
 
 /**
  * What the browser gets back from `POST /api/create-payment-intent` and
- * `POST /api/create-topup-payment-intent`. In `processor_elements` mode the
- * SDK confirms through Stripe.js with `clientSecret` / `publishableKey`; in
- * `vault` mode those are absent and the SDK captures the card into `vault`
- * with a grant keyed on `id`, then confirms server-side.
+ * `POST /api/create-topup-payment-intent`. The SDK captures the card into
+ * `vault` with a grant keyed on `id`, then confirms server-side.
  */
 export interface CreatedPaymentIntent {
   /** SolvaPay payment intent id. */
-  id?: string
-  captureMode: 'processor_elements' | 'vault'
-  vault?: { tenantId: string; environment: 'sandbox' | 'live' }
+  id: string
+  captureMode: 'vault'
+  vault: { tenantId: string; environment: 'sandbox' | 'live' }
   processorPaymentId?: string
-  clientSecret?: string
-  publishableKey?: string
-  accountId?: string
   customerRef: string
 }
 
@@ -43,13 +38,10 @@ function toCreatedPaymentIntent(
   customerRef: string,
 ): CreatedPaymentIntent {
   return {
-    ...(paymentIntent.id ? { id: paymentIntent.id } : {}),
-    captureMode: paymentIntent.captureMode === 'vault' ? 'vault' : 'processor_elements',
-    ...(paymentIntent.vault ? { vault: paymentIntent.vault } : {}),
+    id: paymentIntent.id,
+    captureMode: 'vault',
+    vault: paymentIntent.vault,
     ...(paymentIntent.processorPaymentId ? { processorPaymentId: paymentIntent.processorPaymentId } : {}),
-    ...(paymentIntent.clientSecret ? { clientSecret: paymentIntent.clientSecret } : {}),
-    ...(paymentIntent.publishableKey ? { publishableKey: paymentIntent.publishableKey } : {}),
-    ...(paymentIntent.accountId ? { accountId: paymentIntent.accountId } : {}),
     customerRef,
   }
 }
@@ -314,15 +306,15 @@ export async function processPaymentIntentCore(
  * branches).
  *
  * Why this helper exists: `TopupForm.onSuccess` previously fired the
- * instant Stripe's `confirmPayment` resolved, racing the SolvaPay
- * webhook that books the credit. Symptom: the "X left" badge showed
+ * instant the payment confirmed, racing the SolvaPay webhook that books
+ * the credit. Symptom: the "X left" badge showed
  * `0` and the next chat send 402'd until the webhook caught up. This
  * helper routes through the backend's existing `/process` endpoint,
  * which polls the PI status server-side until `succeeded` (up to
  * ~10s).
  *
- * The Stripe webhook handler flips PI status BEFORE booking the credit
- * transaction (step 1 vs step 5 of `stripe-payment-webhook.handler.ts`).
+ * The rail webhook handler flips PI status BEFORE booking the credit
+ * transaction.
  * Processor-fee lookups can push the credit-booking tail past the
  * backend `/process` poll's 2s post-success buffer. To close that
  * sub-second race the helper additionally:
@@ -358,8 +350,8 @@ export async function processPaymentIntentCore(
  * @param request - Standard Web API Request object (used to extract the
  *   authenticated user / customer)
  * @param body - Topup processing parameters
- * @param body.paymentIntentId - Processor payment ID returned from the
- *   client `stripe.confirmPayment` call (required)
+ * @param body.paymentIntentId - Processor payment ID returned by the
+ *   server-side confirm (required)
  * @param options - Configuration options
  * @param options.solvaPay - Optional SolvaPay instance (creates new one
  *   if not provided)
@@ -549,10 +541,9 @@ export async function processTopupPaymentIntentCore(
 }
 
 /**
- * Vault checkout: issue the browser one short-lived grant to write a card
- * into the vault for `paymentIntentId`. Only meaningful for payment intents
- * created with `captureMode: 'vault'`; the backend refuses grants once the
- * payment is confirmed and after a handful of grants per payment.
+ * Issue the browser one short-lived grant to write a card into the vault
+ * for `paymentIntentId`. The backend refuses grants once the payment is
+ * confirmed and after a handful of grants per payment.
  *
  * The caller must be the authenticated customer the payment belongs to —
  * `syncCustomerCore` resolves them from the request exactly as the other

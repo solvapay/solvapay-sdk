@@ -53,7 +53,7 @@ const server = createSolvaPayMcpServer({
 })
 ```
 
-One call wires transport tools, UI resource (Stripe CSP baseline), payable tools, and optional capped free tools (`registerFree`).
+One call wires transport tools, UI resource (vault card field CSP baseline), payable tools, and optional capped free tools (`registerFree`).
 
 ## Subpath exports
 

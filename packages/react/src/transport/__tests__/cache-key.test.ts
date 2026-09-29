@@ -10,6 +10,8 @@ function fakeTransport(): SolvaPayTransport {
     processPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     getBalance: vi.fn(),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),

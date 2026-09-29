@@ -32,8 +32,8 @@ See [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-
 `account` returns a `BootstrapPayload` with:
 
 - `view` — which screen to mount (`checkout` / `account` / `topup`)
-- `productRef`, `stripePublishableKey`, `returnUrl` — provisioning for Stripe
-  Elements
+- `productRef`, `returnUrl` — provisioning for the card fields and the 3DS
+  return
 - `merchant`, `product`, `plans`, `customer` — seeded data so the iframe never
   re-fetches
 
@@ -52,8 +52,8 @@ Each `view` opens a **single-purpose surface** — no tab strip. The widget
 cross-navigates between checkout, account, and topup inside the shell without
 new tool calls.
 
-- **Checkout** — plan picker / upgrade flow (Stripe Elements or hosted
-  checkout fallback).
+- **Checkout** — plan picker / upgrade flow (vault card fields or hosted
+  checkout).
 - **Account** — current plan, balance, usage, payment method, customer portal
   CTA. Identity is `Paying as {email}` inside the payment form, not a
   sidebar.
@@ -108,8 +108,11 @@ stay unlimited; this path is SDK-only.
 | Tool | Purpose |
 | --- | --- |
 | `create_hosted_session` | Hosted checkout or customer portal URL (`kind: "checkout" \| "portal"`) |
-| `create_payment_intent` | Stripe PaymentIntent for plan checkout or top-up (`purpose: "plan" \| "topup"`) |
-| `process_payment` | Confirm payment + create purchase |
+| `create_payment_intent` | Payment intent (`captureMode: "vault"`) for plan checkout or top-up (`purpose: "plan" \| "topup"`) |
+| `create_capture_grant` | Short-lived grant for one vault card capture |
+| `confirm_payment` | Server-side confirm with the captured card; `redirectUrl` for 3DS |
+| `process_payment` | Create the purchase after the confirm |
+| `create_card_setup_grant` / `save_card` | Save a card without paying (auto-recharge) |
 | `attach_business_details` | Tax computation on the Payment step |
 | `set_renewal` | Toggle auto-renewal (`enabled: true \| false`) |
 | `get_history` | Product charges + account-wide credit activity (fullscreen history) |

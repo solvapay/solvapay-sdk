@@ -1,10 +1,11 @@
 /**
- * Helpers for resuming a Stripe payment after a 3DS or redirect return.
+ * Helpers for resuming a payment after a 3DS return.
  *
- * When `confirmPayment` needs authentication or a redirect method, Stripe
- * appends `payment_intent` + `payment_intent_client_secret` (+ `redirect_status`)
- * to the `return_url`. Read the client secret to retrieve the PaymentIntent,
- * then strip the params so a manual refresh does not re-trigger the resume.
+ * When the server-side confirm answers `requires_action`, the SDK sends the
+ * payer to `redirectUrl`; the rail brings them back to `returnUrl` with
+ * `payment_intent` (+ `payment_intent_client_secret`, `redirect_status`)
+ * appended. The SDK resumes on the `payment_intent` id through the backend,
+ * then strips all three so a manual refresh does not re-trigger the resume.
  */
 
 const PAYMENT_INTENT_PARAMS = [
@@ -15,23 +16,16 @@ const PAYMENT_INTENT_PARAMS = [
 
 /**
  * Read the rail payment id (`payment_intent`) from a URL query string, if
- * present. Vault checkout resumes on this id after a 3DS return: the SDK has
- * no Stripe.js there, so it reconciles through the backend instead of
- * retrieving the PaymentIntent in the browser.
+ * present. Checkout resumes on this id after a 3DS return and reconciles
+ * through the backend.
  */
 export function readPaymentIntentId(search: string): string | undefined {
   const value = new URLSearchParams(search).get('payment_intent')
   return value && value.length > 0 ? value : undefined
 }
 
-/** Read the PaymentIntent client secret from a URL query string, if present. */
-export function readPaymentIntentClientSecret(search: string): string | undefined {
-  const value = new URLSearchParams(search).get('payment_intent_client_secret')
-  return value && value.length > 0 ? value : undefined
-}
-
 /**
- * Remove the Stripe payment-return params from the current URL without reloading,
+ * Remove the payment-return params from the current URL without reloading,
  * preserving any unrelated query params. No-op outside the browser.
  */
 export function stripPaymentIntentParams(): void {

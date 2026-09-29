@@ -34,8 +34,8 @@ out of the plan-selection surface — it shows paid options only.
   `DEMO_TOOLS=true`.
 - `basic-host` running at `http://localhost:8080`, pointing at
   `http://localhost:3006/mcp`.
-- Stripe CLI listening on the webhook so balance updates reach the
-  backend.
+- The platform's rail webhook delivery running so balance updates reach
+  the backend.
 
 ```bash
 pnpm --filter @example/mcp-checkout-app dev
@@ -162,10 +162,11 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
 - Click Continue. Purely a local transition to `step: 'payment'` —
   the plan is not active yet, but no network call fires on this
   transition. BackLink reads `← Change amount`.
-  The order summary + Stripe Elements render inline; a
+  The order summary + vault card fields render inline; a
   `Save card for future top-ups` checkbox sits below.
 - Complete the card. SDK fires `create_payment_intent` with `purpose: "topup"`
-  (purpose: `credit_topup`) then `process_payment`, then re-fires
+  (purpose: `credit_topup`), `create_capture_grant`, `confirm_payment`, then
+  `process_payment`, then re-fires
   `activate_plan` to create the active PAYG purchase now that credits
   have landed. `step: 'success'`.
 - Success surface: green check, `Credits added` heading, receipt
@@ -187,10 +188,11 @@ Alternative path: select **Pro** in step 4 instead of PAYG.
 - BackLink reads `← Change plan`. Order summary shows
   `Pro · monthly` and `2 000 credits included`. No Save-card
   checkbox (the card is required to maintain the subscription).
-- Terms line under the Stripe Elements: _"By subscribing, you agree
+- Terms line under the card fields: _"By subscribing, you agree
   Pro renews at $18/month until you cancel."_
 - Click `Subscribe — $18.00 / monthly`. SDK fires
-  `create_payment_intent` (subscription flag) then `process_payment`.
+  `create_payment_intent` (subscription flag), `create_capture_grant`,
+  `confirm_payment`, then `process_payment`.
 - Success surface: green check, `Pro active` heading, receipt grid
   (Plan / Credits / Charged today / Next renewal), and a muted
   `Manage from /manage_account` pointer. No CTA.

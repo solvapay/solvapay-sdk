@@ -10,7 +10,6 @@ export const BootstrapPayloadSchema = z
   .object({
     view: z.string(),
     productRef: z.string(),
-    stripePublishableKey: z.string().nullable(),
     returnUrl: z.string(),
     merchant: z.record(z.string(), z.unknown()),
     product: z.record(z.string(), z.unknown()),

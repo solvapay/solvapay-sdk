@@ -129,18 +129,6 @@ export function createBuildBootstrapPayload(
     getCustomerRef = defaultGetCustomerRefHelper,
   } = options
 
-  const fetchPublishableKey = async (): Promise<string | null> => {
-    try {
-      const platform = await solvaPay.apiClient.getPlatformConfig?.()
-      return platform?.stripePublishableKey ?? null
-    } catch (err) {
-      console.warn('[solvapay] bootstrap: getPlatformConfig failed; stripePublishableKey omitted', {
-        error: err instanceof Error ? err.message : String(err),
-      })
-      return null
-    }
-  }
-
   const buildRequest = (extra: McpToolExtra | undefined) =>
     buildSolvaPayRequest(extra, { getCustomerRef })
 
@@ -163,7 +151,6 @@ export function createBuildBootstrapPayload(
       buildSolvaPayRequest(extra, { query: { productRef }, getCustomerRef })
 
     const [
-      stripePublishableKey,
       merchantResult,
       productResult,
       plansResult,
@@ -173,7 +160,6 @@ export function createBuildBootstrapPayload(
       limitsResult,
       portalResult,
     ] = await Promise.all([
-      fetchPublishableKey(),
       getMerchantCore(buildRequest(undefined), { solvaPay }),
       getProductCore(productQueryRequest(), { solvaPay }),
       wrapError(listPlansCore(productQueryRequest(), { solvaPay })),
@@ -298,7 +284,6 @@ export function createBuildBootstrapPayload(
     return {
       view,
       productRef,
-      stripePublishableKey,
       returnUrl: publicBaseUrl,
       merchant: merchantResult,
       product: productResult,

@@ -107,7 +107,7 @@
     <text x="48" y="118" class="ph">MM / YY</text>
     <rect x="226" y="98" width="178" height="32" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
     <text x="238" y="118" class="ph">CVC</text>
-    <text x="20" y="160" font-size="11" fill="#94a3b8">Secured by Stripe</text>
+    <text x="20" y="160" font-size="11" fill="#94a3b8">Card details stored in a secure vault</text>
     <rect x="20" y="172" width="400" height="42" rx="8" fill="#6366f1"/>
     <text x="220" y="198" class="btnptext">Set up auto-recharge</text>
   </g>

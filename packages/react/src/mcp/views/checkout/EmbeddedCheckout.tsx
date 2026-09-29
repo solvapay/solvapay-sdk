@@ -31,10 +31,8 @@ import { AmountStep } from './steps/AmountStep'
 import { PaygPaymentStep } from './steps/PaygPaymentStep'
 import { RecurringPaymentStep } from './steps/RecurringPaymentStep'
 import { SuccessStep } from './steps/SuccessStep'
-import type { StripeProbeState } from '../../useStripeProbe'
 import type { BootstrapPlanLike, Cx } from './shared'
 import { isPayg, planSortByPaygFirstThenAsc } from './shared'
-import { HostedCheckout } from './HostedCheckout'
 
 export interface EmbeddedCheckoutProps {
   productRef: string
@@ -71,11 +69,6 @@ export interface EmbeddedCheckoutProps {
    */
   initialPlanRef?: string
   autoAdvance?: boolean
-  /**
-   * Payment-capability check started by `<McpCheckoutView>`. The plan
-   * and amount steps ignore it; only the payment step branches.
-   */
-  stripeProbe: StripeProbeState
   cx: Cx
   /**
    * Accepted for API stability — earlier revisions rendered
@@ -98,7 +91,6 @@ export function EmbeddedCheckout({
   onBack,
   initialPlanRef,
   autoAdvance,
-  stripeProbe,
   cx,
   children,
 }: EmbeddedCheckoutProps) {
@@ -151,7 +143,6 @@ export function EmbeddedCheckout({
           onBack={onBack}
           initialPlanRef={initialPlanRef}
           autoAdvance={autoAdvance}
-          stripeProbe={stripeProbe}
           cx={cx}
         />
       </PlanSelector.Root>
@@ -171,7 +162,6 @@ interface McpCheckoutBodyProps {
   onBack?: () => void
   initialPlanRef?: string
   autoAdvance?: boolean
-  stripeProbe: StripeProbeState
   cx: Cx
 }
 
@@ -186,7 +176,6 @@ function McpCheckoutBody({
   onBack,
   initialPlanRef,
   autoAdvance,
-  stripeProbe,
   cx,
 }: McpCheckoutBodyProps) {
   const bridge = useMcpBridge()
@@ -307,23 +296,6 @@ function McpCheckoutBody({
   }
 
   if (flow.step === 'payment') {
-    if (stripeProbe === 'loading') {
-      return <p>Loading checkout…</p>
-    }
-    if (stripeProbe === 'blocked') {
-      const hostedBackLabel = flow.branch === 'payg' ? 'Change amount' : 'Change plan'
-      return (
-        <HostedCheckout
-          productRef={productRef}
-          planRef={flow.selectedPlanRef ?? undefined}
-          planName={selectedPlanShape?.name ?? undefined}
-          onPurchaseSuccess={onPurchaseSuccess}
-          onBack={() => flow.back()}
-          backLabel={hostedBackLabel}
-          cx={cx}
-        />
-      )
-    }
     if (flow.branch === 'payg' && selectedPlanShape && flow.selectedAmountMinor != null) {
       return (
         <PaygPaymentStep

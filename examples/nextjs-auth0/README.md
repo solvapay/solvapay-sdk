@@ -8,7 +8,7 @@ A Next.js App Router example with **Auth0** login, **shadcn/ui**, **Tailwind CSS
 
 - Auth0 v4 login/logout via `proxy.ts` (`/auth/login`, `/auth/callback`, `/auth/logout`)
 - Auth0 → SolvaPay identity bridge: `proxy.ts` forwards `session.user.sub` as the `x-user-id` header, so the SDK resolves the customer reference automatically
-- **Embedded checkout** for the Pay As You Go plan via the SDK's `CheckoutSteps` engine (plan → top-up amount → inline Stripe Elements → success) — no redirect to a hosted checkout page
+- **Embedded checkout** for the Pay As You Go plan via the SDK's `CheckoutSteps` engine (plan → top-up amount → inline vault card fields → success) — no redirect to a hosted checkout page
 - **Paywalled, metered** task creation: `POST /api/tasks` runs behind `payable.next`, returning **402** when the customer is out of credits and recording one usage event (`requests`) per task
 - shadcn/ui components with Tailwind theme tokens
 - In-memory task storage (resets when the dev server restarts)
@@ -21,7 +21,7 @@ Creating a task is the paid action. Each task costs **one request** against the 
 2. Lets them add tasks once they have credits (each deducts from the balance).
 3. Re-surfaces the checkout to top up when `POST /api/tasks` returns **402**.
 
-The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`. Payments are collected inline with Stripe Elements; the publishable key + client secret come from the payment-intent API responses.
+The `SOLVAPAY_SECRET_KEY` stays server-only. The browser only sees `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`. Payments are collected inline with the vault card fields; the vault comes from the payment-intent response and the payment is confirmed server-side.
 
 ## Identity bridge in depth
 
@@ -118,7 +118,7 @@ Open [http://localhost:3013](http://localhost:3013).
 1. Visit `/` — public landing page
 2. Click **Log in to dashboard** — Auth0 Universal Login
 3. After login, `/dashboard` shows the embedded Pay As You Go checkout
-4. Buy credits inline with a [Stripe test card](https://docs.stripe.com/testing) (e.g. `4242 4242 4242 4242`)
+4. Buy credits inline with a sandbox test card (e.g. `4242 4242 4242 4242`)
 5. Add tasks — each one deducts a credit; the remaining balance is shown
 6. Spend down to zero — the next add re-opens the embedded checkout to top up
 7. Log out / sign in as another user — separate board and balance
@@ -148,7 +148,7 @@ app/
 components/
   site-header.tsx       # Login / logout
   task-board.tsx        # Gates on purchase state; embeds checkout
-  checkout-panel.tsx    # Embedded CheckoutSteps (plan → amount → Stripe)
+  checkout-panel.tsx    # Embedded CheckoutSteps (plan → amount → card fields)
   solvapay-provider.tsx # SolvaPayProvider + Auth0 auth adapter (useUser)
 lib/
   auth0.ts              # Auth0Client instance

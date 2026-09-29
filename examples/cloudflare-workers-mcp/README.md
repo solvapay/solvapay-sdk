@@ -143,7 +143,7 @@ pnpm run deploy:prod   # builds + deploys to goldberg-demo.solvapay.app
 After deploy, **delete and re-add** any ChatGPT Custom Connector pointing at
 this worker — ChatGPT caches `tools/list` per org/connector and won't pick
 up the ChatGPT-aware `hideToolsByAudience` bypass until the cache is busted.
-Verify the top-up iframe flow end-to-end (`topup` → Stripe form mounts).
+Verify the top-up iframe flow end-to-end (`topup` → card fields mount).
 
 `pnpm run deploy:prod` runs `node scripts/deploy.mjs --prod`, which
 sources `.env.prod` instead of `.env` and passes `--env production`

@@ -2,7 +2,7 @@ import type { ProcessPaymentResult } from '@solvapay/server'
 import type { SolvaPayCopy } from '../i18n/types'
 
 /**
- * Post-Stripe-confirmation reconciliation with the SolvaPay backend.
+ * Post-confirm reconciliation with the SolvaPay backend.
  *
  * Invokes the provider's `processPayment`, retries purchase refetch on
  * timeout, and returns a discriminated result so the caller (PaymentForm,

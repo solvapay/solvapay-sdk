@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Vault checkout (`captureMode: 'vault'`): PaymentForm renders CardFields on
- * a fake VGS Collect, never loads Stripe, and on submit runs grant → capture
+ * a fake VGS Collect, and on submit runs grant → capture
  * (stamped with the payment id) → server-side confirm → reconcile.
  */
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
@@ -18,9 +18,6 @@ import { merchantCache } from '../hooks/useMerchant'
 import type { Plan, SolvaPayContextValue, SucceededPayment } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 import { enCopy } from '../i18n/en'
-
-const loadStripe = vi.fn()
-vi.mock('@stripe/stripe-js', () => ({ loadStripe: (...args: unknown[]) => loadStripe(...args) }))
 
 const reconcilePayment = vi.fn()
 vi.mock('../utils/processPaymentResult', () => ({
@@ -92,7 +89,7 @@ function renderVaultForm(
     createCaptureGrant: vi.fn().mockResolvedValue(grant),
     confirmPayment: vi.fn().mockResolvedValue({
       id: 'pi_sp_1',
-      processorPaymentId: 'pi_stripe_1',
+      processorPaymentId: 'pi_rail_1',
       status: 'succeeded',
     }),
     processPayment: vi.fn(),
@@ -140,7 +137,6 @@ function renderVaultForm(
         onError={h.onError}
       >
         <PaymentForm.Loading data-testid="loading" />
-        <PaymentForm.PaymentElement />
         <PaymentForm.CardFields data-testid="card-fields" />
         <PaymentForm.Error data-testid="payment-error" />
         <PaymentForm.SubmitButton data-testid="submit" />
@@ -152,7 +148,7 @@ function renderVaultForm(
 
 const succeededPayment = {
   id: 'pi_sp_1',
-  processorPaymentId: 'pi_stripe_1',
+  processorPaymentId: 'pi_rail_1',
   status: 'succeeded' as const,
 }
 const ready = () =>
@@ -185,7 +181,6 @@ describe('PaymentForm — vault checkout', () => {
     reconcilePayment
       .mockReset()
       .mockResolvedValue({ status: 'success', result: { status: 'succeeded' } })
-    loadStripe.mockReset()
     collect = createFakeCollect()
     restoreCollect = configureCollect(collect.loader)
   })
@@ -194,7 +189,7 @@ describe('PaymentForm — vault checkout', () => {
     restoreCollect()
   })
 
-  it('mounts hosted card fields on the vault and never loads Stripe', async () => {
+  it('mounts hosted card fields on the vault', async () => {
     const { ctx } = renderVaultForm()
 
     await ready()
@@ -214,10 +209,7 @@ describe('PaymentForm — vault checkout', () => {
       autoComplete: 'cc-number',
       showCardIcon: true,
     })
-    expect(loadStripe).not.toHaveBeenCalled()
-    expect(screen.queryByTestId('payment-element')).toBeNull()
-    expect(document.querySelector('[data-solvapay-payment-form-payment-element]')).toBeNull()
-    // The form-level Loading slot is hidden in vault mode (no client secret needed).
+    // The form-level Loading slot is hidden once the intent is ready.
     expect(screen.queryByTestId('loading')).toBeNull()
     const root = document.querySelector('[data-solvapay-payment-form]') as HTMLElement
     expect(root).toHaveAttribute('data-state', 'ready')
@@ -282,7 +274,7 @@ describe('PaymentForm — vault checkout', () => {
     })
     expect(reconcilePayment).toHaveBeenCalledTimes(1)
     expect(reconcilePayment).toHaveBeenCalledWith({
-      paymentIntentId: 'pi_stripe_1',
+      paymentIntentId: 'pi_rail_1',
       productRef: 'prd_paid',
       planRef: 'pln_paid',
       processPayment: h.processPayment,
@@ -383,7 +375,7 @@ describe('PaymentForm — vault checkout', () => {
     const h = renderVaultForm({
       confirmPayment: vi
         .fn()
-        .mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_stripe_1', status: 'failed' }),
+        .mockResolvedValue({ id: 'pi_sp_1', processorPaymentId: 'pi_rail_1', status: 'failed' }),
     })
     await fillAndArm()
     fireEvent.click(submit())
@@ -401,7 +393,7 @@ describe('PaymentForm — vault checkout', () => {
         .fn()
         .mockResolvedValue({
           id: 'pi_sp_1',
-          processorPaymentId: 'pi_stripe_1',
+          processorPaymentId: 'pi_rail_1',
           status: 'processing',
         }),
     })
@@ -428,7 +420,7 @@ describe('PaymentForm — vault checkout', () => {
         .fn()
         .mockResolvedValue({
           id: 'pi_sp_1',
-          processorPaymentId: 'pi_stripe_1',
+          processorPaymentId: 'pi_rail_1',
           status: 'canceled',
         }),
     })
@@ -451,7 +443,7 @@ describe('PaymentForm — vault checkout', () => {
           .fn()
           .mockResolvedValue({
             id: 'pi_sp_1',
-            processorPaymentId: 'pi_stripe_1',
+            processorPaymentId: 'pi_rail_1',
             status: 'requires_action',
           }),
       })
@@ -499,16 +491,16 @@ describe('PaymentForm — vault checkout', () => {
       const h = renderVaultForm({
         confirmPayment: vi.fn().mockResolvedValue({
           id: 'pi_sp_1',
-          processorPaymentId: 'pi_stripe_1',
+          processorPaymentId: 'pi_rail_1',
           status: 'requires_action',
-          redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+          redirectUrl: 'https://acs.bank.test/3ds/abc',
         }),
       })
       await fillAndArm()
       fireEvent.click(submit())
 
       await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
-      expect(assign).toHaveBeenCalledWith('https://hooks.stripe.com/3ds/abc')
+      expect(assign).toHaveBeenCalledWith('https://acs.bank.test/3ds/abc')
       expect(h.confirmPayment).toHaveBeenCalledWith({
         paymentIntentId: 'pi_sp_1',
         cardId: 'CRD_fake_1',
@@ -523,12 +515,12 @@ describe('PaymentForm — vault checkout', () => {
     }
   })
 
-  it('resumes after a 3DS return on the payment_intent query param without Stripe.js', async () => {
+  it('resumes after a 3DS return on the payment_intent query param through the backend', async () => {
     const assign = vi.fn()
     const restoreLocation = stubLocation({
       assign,
-      search: '?payment_intent=pi_stripe_1&redirect_status=succeeded',
-      href: 'https://app.example/?payment_intent=pi_stripe_1&redirect_status=succeeded',
+      search: '?payment_intent=pi_rail_1&redirect_status=succeeded',
+      href: 'https://app.example/?payment_intent=pi_rail_1&redirect_status=succeeded',
     })
     const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
     try {
@@ -536,12 +528,12 @@ describe('PaymentForm — vault checkout', () => {
       await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
       expect(h.onSuccess).toHaveBeenCalledWith({
         id: 'pi_sp_1',
-        processorPaymentId: 'pi_stripe_1',
+        processorPaymentId: 'pi_rail_1',
         status: 'succeeded',
       })
       expect(reconcilePayment).toHaveBeenCalledTimes(1)
       expect(reconcilePayment).toHaveBeenCalledWith({
-        paymentIntentId: 'pi_stripe_1',
+        paymentIntentId: 'pi_rail_1',
         productRef: 'prd_paid',
         planRef: 'pln_paid',
         processPayment: h.processPayment,
@@ -554,26 +546,11 @@ describe('PaymentForm — vault checkout', () => {
       expect(h.confirmPayment).not.toHaveBeenCalled()
       expect(collect.cards).toHaveLength(0)
       expect(assign).not.toHaveBeenCalled()
-      expect(loadStripe).not.toHaveBeenCalled()
       expect(h.onError).not.toHaveBeenCalled()
       expect(errorText()).toBeNull()
     } finally {
       replaceState.mockRestore()
       restoreLocation()
     }
-  })
-
-  it('keeps the submit disabled when the transport has no vault methods', async () => {
-    const h = renderVaultForm({}, { createCaptureGrant: undefined, confirmPayment: undefined })
-    await ready()
-    act(() => collect.enter())
-    await new Promise(r => setTimeout(r, 0))
-    expect(submit()).toBeDisabled()
-    expect(submit()).toHaveAttribute('data-state', 'disabled')
-    fireEvent.click(submit())
-    await new Promise(r => setTimeout(r, 0))
-    expect(collect.cards).toHaveLength(0)
-    expect(h.onError).not.toHaveBeenCalled()
-    expect(errorText()).toBeNull()
   })
 })

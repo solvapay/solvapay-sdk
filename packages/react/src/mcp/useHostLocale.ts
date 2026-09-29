@@ -7,8 +7,8 @@
  * locale section), the host writes the current locale into
  * `document.documentElement.lang` on every mount and updates it
  * whenever the user switches language mid-session. Widgets that want
- * locale-aware formatting (`Intl.NumberFormat`, `Intl.DateTimeFormat`,
- * Stripe Elements) read from there.
+ * locale-aware formatting (`Intl.NumberFormat`, `Intl.DateTimeFormat`)
+ * read from there.
  *
  * The hook:
  *   - returns `documentElement.lang` when set,

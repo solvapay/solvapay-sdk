@@ -44,7 +44,7 @@ function makeSolvaPay(overrides: { withinLimits?: boolean } = {}) {
     createCheckoutSession: vi
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/checkout' }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -197,7 +197,7 @@ function makeAccountSolvaPay(overrides: { checkLimits?: Record<string, unknown> 
       displayExchangeRate: 1,
     }),
     getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
     createCheckoutSession: vi
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/checkout' }),

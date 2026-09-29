@@ -32,6 +32,8 @@ function buildCtx(
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(async () => ({ success: true } as never)),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),

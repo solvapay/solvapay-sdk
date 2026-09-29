@@ -100,7 +100,7 @@ export function StyledTopupForm({
           onError={onError}
           className="space-y-4"
         >
-          <TopupForm.PaymentElement />
+          <TopupForm.CardFields />
           <TopupForm.BusinessDetails.Root>
             <TopupForm.BusinessDetails.Fields />
           </TopupForm.BusinessDetails.Root>
@@ -109,7 +109,7 @@ export function StyledTopupForm({
           </TopupForm.Summary.Root>
           <TopupForm.Loading />
           <TopupForm.Error className="text-sm text-red-600" />
-          <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
+          <span className="solvapay-secure-note">Secure payment</span>
           <TopupForm.SubmitButton asChild>
             <button className={actionButtonClassName}>
               Pay {formatAmount(amountCents, currency)}

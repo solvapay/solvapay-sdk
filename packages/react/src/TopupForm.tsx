@@ -3,7 +3,7 @@
 /**
  * Default-tree shim over the `TopupForm` primitive.
  *
- * Drops in a golden-path credit top-up form: Stripe `PaymentElement` +
+ * Drops in a golden-path credit top-up form: vault `CardFields` +
  * submit button + loading/error states. Full control is available by
  * composing the primitive at `@solvapay/react/primitives`.
  */
@@ -18,7 +18,7 @@ export const TopupForm: React.FC<TopupFormProps> = props => {
   const buttonClass = ['solvapay-topup-form-submit', buttonClassName].filter(Boolean).join(' ')
   return (
     <Primitive.Root {...rootProps} className={rootClass}>
-      <Primitive.PaymentElement />
+      <Primitive.CardFields />
       <Primitive.Error className="solvapay-topup-form-error" />
       <Primitive.Loading className="solvapay-topup-form-loading" />
       <Primitive.SubmitButton className={buttonClass}>

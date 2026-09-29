@@ -144,7 +144,7 @@ export function formatVatSummaryLabel(breakdown: {
  * including when it came out at zero (zero-rated, no tax due, reverse
  * charge). It is replaced by an explanatory note only when no tax was
  * assessed at all: the seller is not registered in the buyer's jurisdiction
- * (`not_collecting`) or Stripe does not support the jurisdiction/product
+ * (`not_collecting`) or the tax engine does not support the jurisdiction/product
  * (`not_supported`).
  */
 export function shouldShowTaxRow(treatment: TaxBreakdown['treatment'] | null): boolean {

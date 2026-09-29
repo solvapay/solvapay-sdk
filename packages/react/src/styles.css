@@ -754,12 +754,11 @@
   box-shadow: 0 0 0 1px var(--solvapay-accent);
 }
 
-/* ---------- Vault-mode card fields (VGS Collect hosted inputs) ----------
+/* ---------- Card fields (VGS Collect hosted inputs) ----------
  * The wrappers, labels and error lines live in the host DOM and use the
  * same tokens as the business-details inputs. The input itself is a hosted
  * iframe: its text, border and focus ring are styled from `appearance`
- * (see buildCollectFieldCss) so it matches the Stripe PaymentElement look
- * on the same tokens. The iframe fills its wrapper's width. */
+ * (see buildCollectFieldCss) from the same tokens. The iframe fills its wrapper's width. */
 [data-solvapay-card-fields] {
   display: flex;
   flex-direction: column;
@@ -1882,7 +1881,7 @@
   line-height: 1.5;
 }
 
-/* Mandate now follows the CTA (Stripe pattern). Pull it back against the
+/* Mandate now follows the CTA. Pull it back against the
  * container's flex gap so it reads as a caption on the button. */
 [data-solvapay-payment-form-submit] + [data-solvapay-mandate-text],
 [data-solvapay-topup-form-submit] + [data-solvapay-mandate-text] {

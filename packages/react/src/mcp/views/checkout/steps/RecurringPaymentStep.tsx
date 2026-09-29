@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Step 3b — Recurring payment. Uses `PaymentForm` to drive Stripe's
- * subscribe-style confirmation; the backend creates a payment intent
- * against the selected plan+product combo.
+ * Step 3b — Recurring payment. Uses `PaymentForm` (vault `CardFields`,
+ * server-side confirm); the backend creates a payment intent against
+ * the selected plan+product combo.
  */
 
 import React, { memo } from 'react'
@@ -98,7 +98,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
           />
 
           <PaymentForm.Loading />
-          <PaymentForm.PaymentElement />
+          <PaymentForm.CardFields />
           <PaymentForm.BusinessDetails.Root className={cx.businessDetails}>
             <PaymentForm.BusinessDetails.Fields />
           </PaymentForm.BusinessDetails.Root>

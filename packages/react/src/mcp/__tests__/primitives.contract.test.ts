@@ -325,7 +325,7 @@ describe('MCP payment form deboxing', () => {
     )
   })
 
-  it('locks the business-details input ratios the Stripe builder mirrors', () => {
+  it('locks the business-details input ratios the appearance builder mirrors', () => {
     expect(WEB_STYLES).toMatch(
       /\[data-solvapay-payment-form-business-details-name\][\s\S]*?height:\s*2\.5rem/,
     )

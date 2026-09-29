@@ -47,10 +47,10 @@ describe('createPaymentIntentCore', () => {
     vi.clearAllMocks()
     mockSyncCustomer.mockResolvedValue('cus_ABC')
     mockCreatePaymentIntent.mockResolvedValue({
+      id: 'pi_sp_test',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       processorPaymentId: 'pi_test',
-      clientSecret: 'cs_test',
-      publishableKey: 'pk_test',
-      accountId: 'acct_test',
     })
   })
 
@@ -87,10 +87,11 @@ describe('createPaymentIntentCore', () => {
       customerRef: 'cus_ABC',
       currency: 'EUR',
     })
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
+      id: 'pi_sp_test',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       processorPaymentId: 'pi_test',
-      clientSecret: 'cs_test',
-      publishableKey: 'pk_test',
       customerRef: 'cus_ABC',
     })
   })
@@ -257,9 +258,8 @@ describe('processTopupPaymentIntentCore', () => {
 // Post-success balance polling — backend-authoritative convergence.
 //
 // `/process` returning `status: 'succeeded'` means the PI is in a
-// terminal state, but the Stripe webhook handler may still be writing
-// the TOPUP credit transaction (step 5 of
-// stripe-payment-webhook.handler.ts). The helper captures a balance
+// terminal state, but the rail webhook handler may still be writing
+// the TOPUP credit transaction. The helper captures a balance
 // baseline before `processPaymentIntent` and polls post-success on a
 // backoff until the wallet observes the delta, then returns
 // `creditsAdded` so the React side can bump the in-memory balance
@@ -637,27 +637,9 @@ describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode 
     })
   })
 
-  it('defaults captureMode to processor_elements for backends that predate vault checkout', async () => {
+  it('drops legacy browser-confirm fields and backend-only fields from the response', async () => {
     const createPaymentIntent = vi.fn().mockResolvedValue({
-      processorPaymentId: 'pi_x',
-      clientSecret: 'cs_x',
-      publishableKey: 'pk_x',
-    })
-    mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
-    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
-    expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
-      processorPaymentId: 'pi_x',
-      clientSecret: 'cs_x',
-      publishableKey: 'pk_x',
-      customerRef: 'cus_ABC',
-    })
-  })
-
-  it('forwards every processor_elements field, including id and accountId, and drops backend-only fields', async () => {
-    const createPaymentIntent = vi.fn().mockResolvedValue({
-      id: '66f1c2d3e4f5a6b7c8d9e0f2',
-      captureMode: 'processor_elements',
+      ...vaultResponse,
       processorPaymentId: 'pi_y',
       clientSecret: 'cs_y',
       publishableKey: 'pk_y',
@@ -669,30 +651,10 @@ describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode 
     mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
     const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
     expect(result).toStrictEqual({
-      id: '66f1c2d3e4f5a6b7c8d9e0f2',
-      captureMode: 'processor_elements',
+      id: '66f1c2d3e4f5a6b7c8d9e0f1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       processorPaymentId: 'pi_y',
-      clientSecret: 'cs_y',
-      publishableKey: 'pk_y',
-      accountId: 'acct_y',
-      customerRef: 'cus_ABC',
-    })
-  })
-
-  it('maps an unknown captureMode to processor_elements and drops empty-string fields', async () => {
-    const createPaymentIntent = vi.fn().mockResolvedValue({
-      id: '',
-      captureMode: 'something_new',
-      processorPaymentId: 'pi_z',
-      clientSecret: '',
-      publishableKey: 'pk_z',
-    })
-    mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
-    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
-    expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
-      processorPaymentId: 'pi_z',
-      publishableKey: 'pk_z',
       customerRef: 'cus_ABC',
     })
   })
@@ -834,7 +796,7 @@ describe('confirmPaymentCore', () => {
       id: 'pi_1',
       processorPaymentId: 'pi_s',
       status: 'requires_action' as const,
-      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+      redirectUrl: 'https://acs.bank.test/3ds/abc',
     }
     confirmPayment.mockResolvedValue(requiresAction)
     const result = await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r' })

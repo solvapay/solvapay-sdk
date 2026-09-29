@@ -13,8 +13,11 @@ import {
   attachBusinessDetailsCore,
   createCaptureGrantCore,
   confirmPaymentCore,
+  createCardSetupGrantCore,
+  saveCardCore,
   isErrorResult,
 } from '@solvapay/server'
+import type { CardBillingDetails } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
 import { invalidatePurchaseCacheForRequest } from './_cache'
 
@@ -170,7 +173,7 @@ export async function attachBusinessDetails(
 }
 
 /**
- * Next.js route wrapper for POST /api/create-capture-grant (vault checkout).
+ * Next.js route wrapper for POST /api/create-capture-grant.
  *
  * @example
  * ```typescript
@@ -190,7 +193,7 @@ export async function createCaptureGrant(
 }
 
 /**
- * Next.js route wrapper for POST /api/confirm-payment (vault checkout).
+ * Next.js route wrapper for POST /api/confirm-payment.
  *
  * @example
  * ```typescript
@@ -211,5 +214,51 @@ export async function confirmPayment(
   options: { solvaPay?: SolvaPay } = {},
 ): Promise<NextResponse> {
   const result = await confirmPaymentCore(request, body, options)
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/create-card-setup-grant: a vault grant
+ * on a fresh customer session, for saving a card without paying
+ * (`AutoRecharge.CardSetup`).
+ *
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   return createCardSetupGrant(request)
+ * }
+ * ```
+ */
+export async function createCardSetupGrant(
+  request: globalThis.Request,
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<NextResponse> {
+  const result = await createCardSetupGrantCore(request, options)
+  return toNextRouteResponse(result)
+}
+
+/**
+ * Next.js route wrapper for POST /api/save-card: save the captured card on
+ * the grant's customer session.
+ *
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   const { sessionId, cardId, billingDetails, returnUrl } = await request.json()
+ *   return saveCard(request, { sessionId, cardId, billingDetails, returnUrl })
+ * }
+ * ```
+ */
+export async function saveCard(
+  request: globalThis.Request,
+  body: {
+    sessionId: string
+    cardId: string
+    billingDetails?: CardBillingDetails
+    returnUrl?: string
+  },
+  options: { solvaPay?: SolvaPay } = {},
+): Promise<NextResponse> {
+  const result = await saveCardCore(request, body, options)
   return toNextRouteResponse(result)
 }

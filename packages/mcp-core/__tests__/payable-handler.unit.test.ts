@@ -194,7 +194,6 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const buildBootstrap = vi.fn().mockResolvedValue({
         view: 'nudge',
         productRef: 'prd_test',
-        stripePublishableKey: null,
         returnUrl: 'https://example.com',
         merchant: { reference: 'mer', name: 'Test' },
         product: { reference: 'prd_test', name: 'Test Product' },
@@ -552,7 +551,6 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const buildBootstrap = vi.fn().mockResolvedValue({
         view: 'paywall',
         productRef: 'prd_test',
-        stripePublishableKey: null,
         returnUrl: 'https://example.com',
       })
 

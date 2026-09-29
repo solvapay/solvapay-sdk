@@ -113,10 +113,11 @@ describe('createTopupPaymentIntentCore', () => {
 
   it('syncs customer then creates topup payment intent', async () => {
     const mockPaymentIntent = {
+      id: 'pi_sp_topup_abc',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       processorPaymentId: 'pi_topup_abc',
-      clientSecret: 'pi_topup_abc_secret',
-      publishableKey: 'pk_test_xyz',
-      accountId: 'acct_123',
+      clientSecret: 'legacy_secret_dropped',
     }
 
     mockSyncCustomer.mockResolvedValueOnce('cus_TOPUP1')
@@ -134,11 +135,10 @@ describe('createTopupPaymentIntentCore', () => {
 
     expect(isErrorResult(result)).toBe(false)
     expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
+      id: 'pi_sp_topup_abc',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       processorPaymentId: 'pi_topup_abc',
-      clientSecret: 'pi_topup_abc_secret',
-      publishableKey: 'pk_test_xyz',
-      accountId: 'acct_123',
       customerRef: 'cus_TOPUP1',
     })
 
@@ -165,8 +165,9 @@ describe('createTopupPaymentIntentCore', () => {
     const mockSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
         processorPaymentId: 'pi_1',
-        clientSecret: 'cs_1',
-        publishableKey: 'pk_1',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       }),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
@@ -199,8 +200,9 @@ describe('createTopupPaymentIntentCore', () => {
     const mockSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
         processorPaymentId: 'pi_topup_auto',
-        clientSecret: 'cs_auto',
-        publishableKey: 'pk_test',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       }),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
@@ -219,10 +221,10 @@ describe('createTopupPaymentIntentCore', () => {
       autoRecharge,
     })
     expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
       processorPaymentId: 'pi_topup_auto',
-      clientSecret: 'cs_auto',
-      publishableKey: 'pk_test',
+      id: 'pi_sp_1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_TOPUP1',
     })
   })
@@ -233,8 +235,9 @@ describe('createTopupPaymentIntentCore', () => {
     const mockSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
         processorPaymentId: 'pi_1',
-        clientSecret: 'cs_1',
-        publishableKey: 'pk_1',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       }),
     }
     mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
@@ -246,10 +249,10 @@ describe('createTopupPaymentIntentCore', () => {
 
     expect(isErrorResult(result)).toBe(false)
     expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
       processorPaymentId: 'pi_1',
-      clientSecret: 'cs_1',
-      publishableKey: 'pk_1',
+      id: 'pi_sp_1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_REF_42',
     })
     expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
@@ -315,8 +318,9 @@ describe('createTopupPaymentIntentCore', () => {
     const providedSolvaPay = {
       createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
         processorPaymentId: 'pi_p',
-        clientSecret: 'cs_p',
-        publishableKey: 'pk_p',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       }),
     }
 
@@ -329,10 +333,10 @@ describe('createTopupPaymentIntentCore', () => {
 
     expect(isErrorResult(result)).toBe(false)
     expect(result).toStrictEqual({
-      captureMode: 'processor_elements',
       processorPaymentId: 'pi_p',
-      clientSecret: 'cs_p',
-      publishableKey: 'pk_p',
+      id: 'pi_sp_1',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_PROVIDED',
     })
     expect(mockSyncCustomer).toHaveBeenCalledWith(request, {

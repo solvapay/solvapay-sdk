@@ -104,7 +104,7 @@ describe('ActivationFlow selector sharing (phase 0.2)', () => {
     await waitFor(() => expect(screen.getByTestId('picked-amount').textContent).toBe('50'))
 
     // Continue triggers goToTopupPayment -> topupPayment step. We don't
-    // run the full retry path here (no Stripe), but the selector state
+    // run the full retry path here (no card fields), but the selector state
     // flowing through proves the fix.
     fireEvent.click(screen.getByTestId('continue'))
   })

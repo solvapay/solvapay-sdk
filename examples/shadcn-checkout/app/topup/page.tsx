@@ -66,7 +66,7 @@ export default function TopupPage() {
             currency={currency}
             className="mt-6 flex flex-col gap-4"
           >
-            <TopupForm.PaymentElement />
+            <TopupForm.CardFields />
             <TopupForm.BusinessDetails.Root className="flex flex-col gap-3 rounded-md border p-4">
               <label className="flex items-center gap-2 text-sm">
                 <TopupForm.BusinessDetails.Toggle />

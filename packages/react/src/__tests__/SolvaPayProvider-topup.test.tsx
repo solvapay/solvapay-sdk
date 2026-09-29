@@ -40,9 +40,9 @@ describe('SolvaPayProvider - createTopupPayment', () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          clientSecret: 'pi_topup_secret',
-          publishableKey: 'pk_test_123',
-          accountId: 'acct_456',
+          id: 'pi_topup_1',
+          captureMode: 'vault',
+          vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
           customerRef: 'cus_789',
         } satisfies TopupPaymentResult),
     })
@@ -191,8 +191,9 @@ describe('SolvaPayProvider - createTopupPayment', () => {
       createPayment: vi.fn(),
       processPayment: vi.fn(),
       createTopupPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'cs_x',
-        publishableKey: 'pk_x',
+        id: 'pi_topup_x',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       }),
       getBalance: vi.fn(),
       cancelRenewal: vi.fn(),
@@ -217,8 +218,9 @@ describe('SolvaPayProvider - createTopupPayment', () => {
 
   it('config.transport overrides the default topup implementation', async () => {
     const customFn = vi.fn().mockResolvedValue({
-      clientSecret: 'cs_custom',
-      publishableKey: 'pk_custom',
+      id: 'pi_topup_custom',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
     })
 
     // Partial transport: only override createTopupPayment. Any other method
@@ -251,7 +253,7 @@ describe('SolvaPayProvider - createTopupPayment', () => {
 
     await act(async () => {
       const res = await result.current.createTopupPayment({ amount: 7000, currency: 'gbp' })
-      expect(res.clientSecret).toBe('cs_custom')
+      expect(res.id).toBe('pi_topup_custom')
     })
 
     expect(customFn).toHaveBeenCalledWith({ amount: 7000, currency: 'gbp' })

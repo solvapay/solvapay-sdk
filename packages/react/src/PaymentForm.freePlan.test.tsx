@@ -1,6 +1,6 @@
 /**
  * Free-plan routing inside <PaymentForm>: when plan.requiresPayment === false
- * the form bypasses Stripe Elements and either calls onFreePlan or activates
+ * the form bypasses the card fields and either calls onFreePlan or activates
  * via useActivation. onResult fires with { kind: 'activated', ... }.
  */
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -82,7 +82,7 @@ function renderWith(
 }
 
 describe('PaymentForm — free plan routing', () => {
-  it('renders a summary + activation button instead of Stripe Elements', async () => {
+  it('renders a summary + activation button instead of the card fields', async () => {
     renderWith()
     await waitFor(() => expect(screen.getByText('Widget API')).toBeTruthy())
     // The default paid CTA "Pay Now" is NOT rendered; the free CTA uses startUsing.

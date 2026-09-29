@@ -38,7 +38,7 @@ copy) for the full lifecycle — see [`app/checkout/page.tsx`](app/checkout/page
 Need full layout control? Compose the SDK primitives directly:
 
 - `<PlanSelector>` — styled plan grid with selection state + `PlanSelectionContext`
-- `<PaymentForm>` — Stripe Elements with slot subcomponents (`.Summary`, `.CustomerFields`, `.PaymentElement`, `.MandateText`, `.TermsCheckbox`, `.SubmitButton`)
+- `<PaymentForm>` — vault card fields with slot subcomponents (`.Summary`, `.CustomerFields`, `.CardFields`, `.MandateText`, `.TermsCheckbox`, `.SubmitButton`)
 - `<ActivationFlow>` — styled usage-based activation state machine
 - `<AmountPicker>` — quick-amount pills + custom input + credit estimate
 
@@ -73,7 +73,7 @@ summary → top-up → retry → activated state machine for the common case.
 
 - **Headless Components**: Fully flexible, unstyled components with render props
 - **Content Gating**: Lock premium features behind purchases
-- **Secure Payments**: Stripe-powered payment processing
+- **Secure Payments**: card entry through vault-hosted fields, confirmed server-side
 - **Purchase Management**: Real-time purchase status checking
 - **Authentication**: Email/password and Google OAuth sign-in with Supabase
 - **Style Agnostic**: Works with any CSS framework or design system
@@ -911,9 +911,9 @@ SUPABASE_JWT_SECRET=your_secret_here
 **Solution**:
 
 1. Check that `createPayment` callback is provided to provider
-2. Verify callback returns proper format with `clientSecret`
+2. Verify callback returns `id`, `captureMode: 'vault'` and `vault`
 3. Check browser console for errors
-4. Ensure Stripe publishable key is available
+4. Ensure `/api/create-capture-grant` and `/api/confirm-payment` are routed
 5. Verify payment intent creation succeeds
 
 ### Google OAuth "redirect_uri_mismatch" Error (Error 400)
@@ -971,7 +971,7 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 - [SolvaPay Documentation](https://docs.solvapay.com) - Official documentation
 - [Headless Components Pattern](https://www.patterns.dev/posts/headless-ui) - Headless UI patterns
-- [Stripe Testing Documentation](https://stripe.com/docs/testing) - Test card numbers
+- Test card numbers: `4242 4242 4242 4242` (any future expiry, any CVC) in the sandbox vault
 - [Next.js Documentation](https://nextjs.org/docs) - Next.js framework docs
 - [GitHub Repository](https://github.com/solvapay/solvapay-sdk) - Source code and issues
 

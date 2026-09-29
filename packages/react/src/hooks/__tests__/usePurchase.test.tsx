@@ -46,6 +46,8 @@ const createMockContextValue = (
   upsertPurchase: vi.fn(),
   createPayment: vi.fn(),
   createTopupPayment: vi.fn(),
+  createCaptureGrant: vi.fn(),
+  confirmPayment: vi.fn(),
   cancelRenewal: vi.fn(),
   reactivateRenewal: vi.fn(),
   activatePlan: vi.fn(),

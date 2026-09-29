@@ -9,7 +9,7 @@ function makeSolvaPay(client: Partial<SolvaPayClient> = {}) {
       trackUsage: vi.fn().mockResolvedValue(undefined),
       createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_42' }),
       getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_42' }),
-      getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+      getPlatformConfig: vi.fn().mockResolvedValue({}),
       getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
       getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
       listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),

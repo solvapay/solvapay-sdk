@@ -107,7 +107,7 @@ consumer-facing rename, no behavioural change under the old defaults.
 ### Host integration stays in the example
 
 `createMcpAppAdapter` already lived in `@solvapay/react/mcp`.
-`fetchMcpBootstrap`, `createMcpFetch`, and `useStripeProbe` lifted. Server-
+`fetchMcpBootstrap` and `createMcpFetch` lifted. Server-
 side `open_*` tool registration (`examples/mcp-checkout-app/src/server.ts`)
 **stays put** — that's a host integration concern, not a SDK concern, and
 the plumbing differs enough per-host that a generic wrapper would obscure

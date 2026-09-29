@@ -82,7 +82,6 @@ function buildCtx(
 const baseBootstrap: McpBootstrap = {
   view: 'account',
   productRef: 'prd_x',
-  stripePublishableKey: null,
   returnUrl: 'https://example.test/r',
   merchant: { displayName: 'Acme', legalName: 'Acme Inc.' } as never,
   product: { reference: 'prd_x', name: 'Acme Knowledge Base' } as never,

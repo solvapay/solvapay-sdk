@@ -72,7 +72,7 @@ the one-liner route above is all you need.
 | `maxMonthlySpendMajor` | `number` | No | Monthly spend cap in display-currency major units. Omit for unlimited |
 | `currency` | `string` | Yes | ISO 4217 currency, must be a supported top-up currency |
 
-Validation enforces both amounts `<= 10,000` major units and a floor of the higher of Stripe's
+Validation enforces both amounts `<= 10,000` major units and a floor of the higher of the rail's
 per-currency minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP) and the
 provider's **minimum top-up** (`minTopUpMinor` in SolvaPay Console settings). Amounts below that
 floor are rejected.
@@ -119,8 +119,9 @@ function BillingSettings() {
 ```
 
 The component renders a summary card with a modal for threshold, top-up amount, and the monthly
-spend cap (under **Advanced**). It handles the Stripe SetupIntent and 3DS redirect return
-internally. For full layout control, compose the primitives from `@solvapay/react/primitives`.
+spend cap (under **Advanced**). When the config has no card on file it collects one with the vault
+card fields and saves it on a customer session (`POST /api/create-card-setup-grant`, then
+`POST /api/save-card`). For full layout control, compose the primitives from `@solvapay/react/primitives`.
 
 See [Credit Top-Ups & Auto-Recharge](./react#credit-top-ups--auto-recharge) in the React guide for
 component props, `useAutoRecharge` return values, and custom-UI patterns.
@@ -132,7 +133,7 @@ separate card-setup step:
 
 1. Render `<AutoRecharge deferCardSetup onPendingConfig={...}>` alongside your top-up amount step.
 2. Saving the form sends `deferSetupIntent: true` — the config is staged as `pending_setup`
-   without creating a Stripe SetupIntent, and `onPendingConfig` receives the `AutoRechargeInput`.
+   without asking for a card, and `onPendingConfig` receives the `AutoRechargeInput`.
 3. Pass that payload into `TopupForm.Root` (or `createTopupPaymentIntent`) as `autoRecharge`.
 4. The backend creates the payment intent with `setup_future_usage: 'off_session'`, saves the card
    on that same charge, and flips the config from `pending_setup` to `active` when the
@@ -159,7 +160,7 @@ function TopupWithAutoRecharge({ amount, currency = 'USD' }: { amount: number; c
 
       <TopupForm.Root amount={amount} currency={currency} autoRecharge={autoRecharge}>
         <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
-        <TopupForm.PaymentElement />
+        <TopupForm.CardFields />
         <TopupForm.Error />
         <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
       </TopupForm.Root>

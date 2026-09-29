@@ -31,7 +31,7 @@ function makeSolvaPay() {
     createCheckoutSession: vi
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/sess_1' }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }

@@ -25,8 +25,9 @@ describe('multi-currency client transport', () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
         processorPaymentId: 'pi_test',
-        clientSecret: 'cs_test',
-        publishableKey: 'pk_test',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
         amount: 2200,
         currency: 'EUR',
       }),
@@ -56,8 +57,9 @@ describe('multi-currency client transport', () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
         processorPaymentId: 'pi_test',
-        clientSecret: 'cs_test',
-        publishableKey: 'pk_test',
+        id: 'pi_sp_1',
+        captureMode: 'vault',
+        vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
         amount: 2500,
         currency: 'USD',
       }),

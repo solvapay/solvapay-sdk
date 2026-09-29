@@ -7,10 +7,6 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve(null)),
-}))
-
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   return {
     purchase: {
@@ -28,6 +24,8 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),

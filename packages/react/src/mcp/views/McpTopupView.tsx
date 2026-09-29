@@ -8,7 +8,7 @@
  *  1. `<AmountPicker emit="minor">` — quick-pick pills + custom input.
  *     Has a `← Back to my account` BackLink when `onBack` is wired.
  *  2. `TopupForm.Root` — mounts only once the amount is committed so
- *     we don't create a Stripe PaymentIntent per keystroke. Has a
+ *     we don't create a payment intent per keystroke. Has a
  *     single `← Change amount` BackLink at the top of the card; the
  *     outer "Back to my account" is intentionally dropped on this
  *     step so users don't have two competing back affordances on the
@@ -20,11 +20,6 @@
  *     continues the flow on its own — same pattern as checkout's
  *     `<SuccessStep>`.
  *
- * `useStripeProbe` starts at mount so Stripe.js can warm while the
- * customer picks an amount. The probe only gates the payment step —
- * a blocked host still sees the amount picker, then the hosted
- * customer-portal handoff.
- *
  * When called from the paywall's secondary "Top up" button, the shell
  * doesn't have an Account tab to route back to (the paywall is a
  * take-over); the shell passes `onBack={undefined}` and the view
@@ -33,7 +28,6 @@
 
 import React, { useRef, useState } from 'react'
 import type { AutoRechargeInput } from '@solvapay/server'
-import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useBalance } from '../../hooks/useBalance'
 import { useMerchant } from '../../hooks/useMerchant'
 import { useTopupAmountSelector } from '../../hooks/useTopupAmountSelector'
@@ -46,7 +40,6 @@ import { formatCompactCredits } from '../format-compact-credits'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
-import { useStripeProbe, type StripeProbeState } from '../useStripeProbe'
 import { chargeAmountMinor } from './chargeAmount'
 import { AmountLadder, Eyebrow } from '../primitives'
 import { BackLink } from './BackLink'
@@ -56,21 +49,14 @@ import {
 } from './autoRecharge/McpInlineAutoRecharge'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { McpPaymentHeader } from './McpPaymentHeader'
-import { MCP_PAYMENT_ELEMENT_OPTIONS } from './paymentElementOptions'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
 
 export interface McpTopupViewProps {
-  /**
-   * Stripe publishable key used by `useStripeProbe`. Pass `null` to skip
-   * the probe: the amount step still renders, and the hosted portal
-   * handoff is forced only at the payment step.
-   */
-  publishableKey?: string | null
   returnUrl: string
   /**
-   * Called when the Stripe confirm succeeds. Receives the topped-up amount
+   * Called when the top-up payment succeeds. Receives the topped-up amount
    * in minor units (respects zero-decimal currencies — yen not yen×100).
    */
   onTopupSuccess?: (amountMinor: number) => void
@@ -120,14 +106,12 @@ function estimateTopupCredits(
 }
 
 export function McpTopupView({
-  publishableKey = null,
   returnUrl,
   onTopupSuccess,
   onBack,
   classNames,
 }: McpTopupViewProps) {
   const cx = resolveMcpClassNames(classNames)
-  const probe = useStripeProbe(publishableKey)
   const { merchant, loading: merchantLoading } = useMerchant()
 
   if (merchantLoading) {
@@ -154,7 +138,6 @@ export function McpTopupView({
       topupCurrencies={topupCurrencies}
       onTopupSuccess={onTopupSuccess}
       onBack={onBack}
-      stripeProbe={probe}
       cx={cx}
     />
   )
@@ -168,7 +151,6 @@ function EmbeddedTopup({
   topupCurrencies,
   onTopupSuccess,
   onBack,
-  stripeProbe,
   cx,
 }: {
   returnUrl: string
@@ -176,7 +158,6 @@ function EmbeddedTopup({
   topupCurrencies: string[]
   onTopupSuccess?: (amountMinor: number) => void
   onBack?: () => void
-  stripeProbe: StripeProbeState
   cx: Cx
 }) {
   const [screen, setScreen] = useState<TopupScreen>({ step: 'amount' })
@@ -229,19 +210,6 @@ function EmbeddedTopup({
   }
 
   if (screen.step === 'payment') {
-    if (stripeProbe === 'loading') {
-      return (
-        <section className={cx.card} aria-label="Loading top-up">
-          <p>Loading top-up…</p>
-        </section>
-      )
-    }
-    if (stripeProbe === 'blocked') {
-      return (
-        <HostedTopupFallback cx={cx} onChangeAmount={() => setScreen({ step: 'amount' })} />
-      )
-    }
-
     const committedAmountMinor = screen.amountMinor
     // Auto-recharge is what makes the backend set `setup_future_usage`, so it
     // is also what the mandate has to disclose.
@@ -312,7 +280,7 @@ function EmbeddedTopup({
               />
               <div className={cx.topupForm}>
                 <TopupForm.Loading />
-                <TopupForm.PaymentElement options={MCP_PAYMENT_ELEMENT_OPTIONS} />
+                <TopupForm.CardFields />
                 <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
                   <TopupForm.BusinessDetails.Fields />
                 </TopupForm.BusinessDetails.Root>
@@ -563,32 +531,5 @@ function CustomAmountRow({
       <span className="solvapay-mcp-amount-currency-symbol">{prefix}</span>
       <AmountPicker.Custom className="solvapay-mcp-amount-custom-input" placeholder="0.00" />
     </label>
-  )
-}
-
-function HostedTopupFallback({
-  cx,
-  onChangeAmount,
-}: {
-  cx: Cx
-  onChangeAmount: () => void
-}) {
-  return (
-    <section className={cx.card} aria-label="Add credits">
-      <BackLink label="Change amount" onClick={onChangeAmount} />
-      <h2 className={cx.heading}>Add credits</h2>
-      <p className={cx.muted}>
-        {
-          "This host doesn't allow embedded payments. Open the SolvaPay portal in a new tab to complete your top-up there."
-        }
-      </p>
-      <LaunchCustomerPortalButton
-        className={cx.button}
-        loadingClassName={cx.button}
-        errorClassName={cx.button}
-      >
-        Open SolvaPay portal
-      </LaunchCustomerPortalButton>
-    </section>
   )
 }

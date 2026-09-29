@@ -266,7 +266,7 @@ accept an `AutoRechargeInput`:
 `SaveAutoRechargeInput` also accepts `deferSetupIntent?: boolean` — set it to
 stage the config without creating a SetupIntent (used by the combined top-up +
 auto-recharge flow). Validation enforces both amounts `<= 10,000` major units and
-a per-currency Stripe minimum on the top-up amount.
+a per-currency rail minimum on the top-up amount.
 
 ### Routes to wire
 
@@ -274,7 +274,7 @@ a per-currency Stripe minimum on the top-up amount.
 |---|---|---|
 | `GET/PUT/DELETE /api/auto-recharge` | `getAutoRecharge` / `saveAutoRecharge` / `disableAutoRecharge` | Read, set, and disable the config |
 | `POST /api/create-topup-payment-intent` | `createTopupPaymentIntent` | Create the top-up payment intent (optionally arming auto-recharge) |
-| `POST /api/process-topup-payment` | `processTopupPaymentIntent` | Confirm the credit landed after Stripe confirmation |
+| `POST /api/process-topup-payment` | `processTopupPaymentIntent` | Confirm the credit landed after the server-side confirm |
 
 ### Behavior notes
 

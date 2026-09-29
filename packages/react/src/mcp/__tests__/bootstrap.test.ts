@@ -33,7 +33,6 @@ describe('fetchMcpBootstrap', () => {
     const app = mockApp({
       structuredContent: {
         productRef: 'prod_123',
-        stripePublishableKey: 'pk_test_abc',
         returnUrl: 'https://example.test/return',
       },
     })
@@ -47,7 +46,6 @@ describe('fetchMcpBootstrap', () => {
     expect(result).toEqual({
       view: 'checkout',
       productRef: 'prod_123',
-      stripePublishableKey: 'pk_test_abc',
       returnUrl: 'https://example.test/return',
       merchant: {},
       product: { reference: 'prod_123' },
@@ -73,7 +71,7 @@ describe('fetchMcpBootstrap', () => {
       arguments: {},
     })
     expect(result.view).toBe('topup')
-    expect(result.stripePublishableKey).toBeNull()
+    expect(result.productRef).toBe('prod_123')
   })
 
   it('falls back to checkout when the host invoked activate_plan (transport tool)', async () => {
@@ -112,7 +110,6 @@ describe('fetchMcpBootstrap', () => {
     const app = mockApp({
       structuredContent: {
         productRef: 'prod_123',
-        stripePublishableKey: 'pk_test_abc',
         returnUrl: 'https://example.test/return',
         merchant: { displayName: 'Acme', legalName: 'Acme Inc' },
         product: { reference: 'prod_123', name: 'Widget' },

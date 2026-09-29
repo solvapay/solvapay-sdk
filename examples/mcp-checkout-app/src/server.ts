@@ -101,7 +101,7 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
  * Canonical "hello world" SolvaPay MCP server.
  *
  * `createSolvaPayMcpServer` handles every transport + bootstrap tool, the
- * UI resource, and the Stripe CSP baseline. Integrators who want extra
+ * UI resource, and the vault card field CSP baseline. Integrators who want extra
  * paywall-protected tools drop into `additionalTools` — everything else
  * stays declarative.
  *

@@ -57,7 +57,7 @@ export default function CheckoutPage() {
           >
             <PaymentForm.Summary />
             <PaymentForm.CustomerFields />
-            <PaymentForm.PaymentElement />
+            <PaymentForm.CardFields />
             <PaymentForm.TermsCheckbox />
             <PaymentForm.Error className="text-sm text-red-600" />
             <PaymentForm.Loading className="text-sm text-slate-500" />

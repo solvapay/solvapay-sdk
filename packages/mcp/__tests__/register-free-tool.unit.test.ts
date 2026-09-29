@@ -52,7 +52,7 @@ function makeSolvaPay(overrides: { withinLimits?: boolean } = {}) {
     createCheckoutSession: vi
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/checkout' }),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
   } as unknown as SolvaPayClient
   return { solvaPay: createSolvaPay({ apiClient: client }), client }
 }

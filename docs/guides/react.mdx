@@ -35,8 +35,10 @@ SolvaPay React requires:
 
 - `react` ^18.2.0 || ^19.0.0
 - `react-dom` ^18.2.0 || ^19.0.0
-- `@stripe/react-stripe-js` (for payment forms)
-- `@stripe/stripe-js` (for Stripe integration)
+
+Card entry uses the SDK's own vault card fields (VGS Collect hosted inputs,
+loaded from a pinned, SRI-checked CDN script). There is no payment-processor
+browser SDK to install.
 
 ## Basic Setup
 
@@ -157,7 +159,7 @@ function App() {
 
 ### PaymentForm
 
-A complete payment form component with Stripe integration:
+A complete payment form component. Card entry is `PaymentForm.CardFields`; the payment is confirmed server-side:
 
 ```tsx
 import { PaymentForm } from '@solvapay/react'
@@ -272,8 +274,8 @@ function UserProfile() {
 
 ### TopupForm
 
-A compound component for one-off credit top-ups. It wraps `useTopup` and
-Stripe Elements, so you compose the parts you need instead of accepting a
+A compound component for one-off credit top-ups. It wraps `useTopup` and the
+vault card fields, so you compose the parts you need instead of accepting a
 fixed layout:
 
 ```tsx
@@ -291,7 +293,7 @@ function TopUpCredits() {
       onError={error => console.error('Top-up failed:', error)}
     >
       <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
-      <TopupForm.PaymentElement />
+      <TopupForm.CardFields />
       <TopupForm.Error />
       <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
       <TopupForm.LegalFooter />
@@ -303,9 +305,9 @@ function TopUpCredits() {
 #### Compound parts
 
 - `TopupForm.Root` — provides context and drives the top-up. Accepts the props below.
-- `TopupForm.PaymentElement` — renders the Stripe Payment Element.
+- `TopupForm.CardFields` — renders the vault card fields (number, expiry, CVC).
 - `TopupForm.SubmitButton` — confirms the payment; disabled until the card input is complete.
-- `TopupForm.Loading` — shown while the payment intent and Stripe are initializing.
+- `TopupForm.Loading` — shown while the payment intent is being created.
 - `TopupForm.Error` — renders the current error, if any.
 - `TopupForm.AmountPicker` — optional in-place amount picker (re-exported from `AmountPicker`).
 - `TopupForm.LegalFooter` — mandate / legal copy footer.
@@ -317,14 +319,14 @@ function TopUpCredits() {
 - `autoRecharge` — optional `AutoRechargeInput` to enable auto-recharge in the **same** payment (see [Credit Top-Ups & Auto-Recharge](#credit-top-ups--auto-recharge)).
 - `onSuccess(paymentIntent, extras?)` — fires once the customer is fully credited. `extras.creditsAdded` carries the wallet delta when the backend reports it.
 - `onError(error)` — called when the payment fails.
-- `returnUrl` — return URL used for redirect-based payment methods (defaults to the current URL).
+- `returnUrl` — where the payer comes back after 3DS (defaults to the current URL).
 - `className` / `buttonClassName` — styling hooks.
 
 Credits mint when the charge succeeds. The webhook is an idempotent backstop, not
 the primary booking path. When your backend implements the
 `/api/process-topup-payment` route, `TopupForm` waits for that round-trip so
 `onSuccess` only fires once the credit has actually landed. Transports without
-that route fall back to firing on Stripe confirmation.
+that route fall back to firing on the server-side confirm.
 
 ### AutoRecharge
 
@@ -354,15 +356,18 @@ function AutoRechargeSettings() {
 - `currency` — ISO 4217 currency code (default: `USD`).
 - `defaultThresholdAmountMajor` — pre-fills the threshold field (form default: `5`).
 - `defaultTopupAmountMajor` — pre-fills the top-up field (form default: `10`).
-- `deferCardSetup` — when `true`, saving stages the config **without** creating a Stripe SetupIntent and fires `onPendingConfig` instead. Use this to arm auto-recharge inside a top-up payment (see below).
+- `deferCardSetup` — when `true`, saving stages the config **without** asking for a card and fires `onPendingConfig` instead. Use this to arm auto-recharge inside a top-up payment (see below).
 - `onPendingConfig(payload)` — receives the `AutoRechargeInput` to forward into `TopupForm` when `deferCardSetup` is set.
 - `onSetupRequired(result)` — called when a separate card-setup step is required (non-deferred flow).
 - `onSaved(result)` / `onDisabled()` — lifecycle callbacks.
 - `className` — styling hook.
 
 The form is opt-in (`enabled: false` by default). Amounts can be entered in
-either display currency or credits; the component handles the Stripe SetupIntent
-and the 3DS redirect return internally. Set an optional `maxMonthlySpendMajor` cap
+either display currency or credits. When the saved config has no card on file
+(`status: 'pending_setup'`), `AutoRecharge.CardSetup` collects one with the vault
+card fields and saves it on a customer session (`createCardSetupGrant` +
+`saveCard` transport methods, `POST /api/create-card-setup-grant` and
+`POST /api/save-card`), then waits for the config to turn active. Set an optional `maxMonthlySpendMajor` cap
 (blank = unlimited) in the form. The summary card shows current-period
 spend when a cap is configured, and a **Monthly spend limit reached** status when
 the next recharge would exceed the cap. If a series of off-session charges keeps
@@ -427,10 +432,10 @@ Programmatic checkout flow:
 import { useCheckout } from '@solvapay/react'
 
 function CustomCheckout() {
-  const { startCheckout, loading, error, stripePromise, clientSecret, reset } = useCheckout(
-    'pln_premium',
-    'prd_myapi',
-  )
+  const { startCheckout, loading, error, paymentIntentId, vault, reset } = useCheckout({
+    planRef: 'pln_premium',
+    productRef: 'prd_myapi',
+  })
 
   const handleCheckout = async () => {
     try {
@@ -530,13 +535,13 @@ function CustomComponent() {
 ### useTopup
 
 Manage a credit top-up flow programmatically. Handles payment-intent creation
-and Stripe initialization — the top-up analogue of `useCheckout`:
+— the top-up analogue of `useCheckout`:
 
 ```tsx
 import { useTopup } from '@solvapay/react'
 
 function CustomTopup() {
-  const { startTopup, loading, error, stripePromise, clientSecret, reset } = useTopup({
+  const { startTopup, loading, error, paymentIntentId, vault, reset } = useTopup({
     amount: 1000, // minor units
     currency: 'USD',
   })
@@ -559,9 +564,9 @@ function CustomTopup() {
 
 - `loading` — `true` while the payment intent is being created.
 - `error` — the last error, or `null`.
-- `stripePromise` — the resolved Stripe instance for mounting Elements.
-- `clientSecret` — the payment-intent client secret.
-- `startTopup()` — creates the payment intent and initializes Stripe.
+- `paymentIntentId` — the SolvaPay payment intent id (keys the capture grant and confirm).
+- `vault` — `{ tenantId, environment }` the card fields write into.
+- `startTopup()` — creates the payment intent.
 - `reset()` — clears state to start over.
 
 ### useAutoRecharge
@@ -638,10 +643,12 @@ Build a custom payment flow with hooks:
 
 ```tsx
 import { useCheckout, usePurchase } from '@solvapay/react'
-import { loadStripe } from '@stripe/stripe-js'
 
 function CustomCheckoutPage() {
-  const { startCheckout, loading, stripePromise, clientSecret, reset } = useCheckout('pln_premium', 'prd_myapi')
+  const { startCheckout, loading, paymentIntentId, vault, reset } = useCheckout({
+    planRef: 'pln_premium',
+    productRef: 'prd_myapi',
+  })
   const { refetch } = usePurchase()
 
   const handleCheckout = async () => {
@@ -669,66 +676,60 @@ function CustomCheckoutPage() {
 
 ## Payment Confirmation
 
-Payment success is gated on real confirmation from Stripe — a form only reports success once the
-payment intent actually succeeded (and, where the backend route is wired, once SolvaPay has
-processed it). Two pieces make this work: the `confirmPayment` utility and the built-in
-return-path resume.
+Payment success is gated on real confirmation — a form only reports success once the payment
+actually succeeded (and, where the backend route is wired, once SolvaPay has processed it).
 
-### Payment Element is the default
+### Card fields are the only card entry
 
-`PaymentForm` and `TopupForm` render the Stripe **Payment Element** by default, which supports
-cards plus redirect- and async-based payment methods (SEPA, iDEAL, and others).
+`PaymentForm.CardFields` and `TopupForm.CardFields` render VGS Collect hosted inputs. The card
+number never touches your DOM. On submit the form asks your backend for a short-lived capture
+grant (`POST /api/create-capture-grant`), writes the card into the vault, and confirms the
+payment server-side (`POST /api/confirm-payment`). Theme the fields with the `appearance` prop
+(the SDK's own `Appearance` type) or the `--solvapay-*` tokens.
 
-<Warning>
-The Card Element surface is **deprecated**: `PaymentForm.CardElement`,
-`ConfirmPaymentMode: 'card-element'`, and `StripePaymentFormWrapper` remain as
-backwards-compatible shims (since `@solvapay/react` 1.5.0) and will be removed in the next major
-version. Migrate to the default Payment Element rendering.
-</Warning>
+### confirmVaultPayment
 
-### confirmPayment
-
-If you build your own submit handler, use `confirmPayment` instead of calling Stripe directly. It
-wraps Elements submission and confirmation, and returns a discriminated result:
+If you build your own submit handler, use `confirmVaultPayment`. It runs grant → capture →
+confirm and returns a discriminated result:
 
 ```tsx
-import { confirmPayment } from '@solvapay/react'
+import { confirmVaultPayment } from '@solvapay/react'
 
-const result = await confirmPayment({
-  stripe,
-  elements,
-  clientSecret,
+const result = await confirmVaultPayment({
+  paymentIntentId,
+  capture, // registered by CardFields through the form context
+  createCaptureGrant,
+  confirmPayment,
   returnUrl: window.location.href,
   copy,
 })
 
 switch (result.status) {
   case 'succeeded':
-    // result.paymentIntent — safe to unlock / redirect
-    break
-  case 'pending':
-    // Async payment method still processing (e.g. SEPA) — show
-    // result.message and wait; do NOT treat as success
+    // result.payment — safe to unlock / redirect
     break
   case 'requires_action':
+    // 3DS: send the payer to result.redirectUrl
+    break
+  case 'pending':
   case 'other':
   case 'error':
-    // Show result.message
+    // Show result.message; do NOT treat as success
     break
 }
 ```
 
-`pending` maps to Stripe's `processing` state. The built-in forms surface it as a message and keep
-the customer on the form — `onSuccess` never fires from a pending payment.
+The built-in forms surface `pending` as a message and keep the customer on the form —
+`onSuccess` never fires from a pending payment. Pay with a saved card by passing
+`paymentMethodId` instead of a capture.
 
-### Return-path resume
+### 3DS return
 
-Redirect-based payment methods send the customer away and back. `PaymentForm` and `TopupForm`
-handle the return automatically: on mount they read the `payment_intent_client_secret` query
-parameters Stripe appends to the `returnUrl`, retrieve the intent, strip the parameters from the
-URL, and resume — running `handleNextAction` if 3DS is still required, showing the pending message
-while processing, and firing `onSuccess` once the intent succeeded and the payment was processed.
-You only need to make sure `returnUrl` points at the page that renders the form.
+When the confirm answers `requires_action`, the forms send the payer to `redirectUrl`. The rail
+brings them back to `returnUrl` with `payment_intent` in the query; `PaymentForm` and `TopupForm`
+read it on mount, strip the return parameters from the URL, and reconcile through the backend,
+firing `onSuccess` once the payment was processed. Make sure `returnUrl` points at the page that
+renders the form.
 
 ## Multi-Currency Plans & Top-Ups
 
@@ -830,7 +831,7 @@ function TopUpCredits() {
       onError={error => console.error(error)}
     >
       <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
-      <TopupForm.PaymentElement />
+      <TopupForm.CardFields />
       <TopupForm.Error />
       <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
     </TopupForm.Root>
@@ -866,7 +867,7 @@ function TopupWithAutoRecharge({ amount, currency = 'USD' }: { amount: number; c
 
       <TopupForm.Root amount={amount} currency={currency} autoRecharge={autoRecharge}>
         <TopupForm.Loading>Preparing payment…</TopupForm.Loading>
-        <TopupForm.PaymentElement />
+        <TopupForm.CardFields />
         <TopupForm.Error />
         <TopupForm.SubmitButton>Add credits</TopupForm.SubmitButton>
       </TopupForm.Root>
@@ -937,7 +938,7 @@ function UsageAction() {
 **Configuration, limits, and pricing.** Auto-recharge uses a balance
 **threshold** plus a **fixed top-up amount**. When enabled, both must be greater
 than zero, the top-up must be at least the threshold, and both must be at most
-`10,000` major units. The top-up amount must also clear the higher of Stripe's
+`10,000` major units. The top-up amount must also clear the higher of the rail's
 per-currency minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP,
 `30 kr` for SEK/NOK, `2.50 kr` for DKK) and the provider's **minimum top-up**.
 The currency must be one of the provider's supported top-up currencies.

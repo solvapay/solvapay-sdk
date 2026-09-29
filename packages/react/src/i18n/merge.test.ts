@@ -36,17 +36,14 @@ describe('mergeCopy', () => {
     })).toBe(snapshot)
   })
 
-  it('exposes deprecated cardElementMissing alongside paymentElementMissing', () => {
-    expect(enCopy.errors.cardElementMissing).toBe('Card element not found')
-    expect(enCopy.errors.paymentElementMissing).toBe('Payment element not found')
-  })
-
-  it('merges deprecated cardElementMissing overrides via PartialSolvaPayCopy', () => {
+  it('merges card field error overrides via PartialSolvaPayCopy', () => {
     const merged = mergeCopy(enCopy, {
-      errors: { cardElementMissing: 'Custom card element message' },
+      errors: { cardFieldsMissing: 'Custom card fields message' },
     })
-    expect(merged.errors.cardElementMissing).toBe('Custom card element message')
-    expect(merged.errors.paymentElementMissing).toBe(enCopy.errors.paymentElementMissing)
+    expect(merged.errors.cardFieldsMissing).toBe('Custom card fields message')
+    expect(merged.errors.cardCaptureFailed).toBe(
+      'We could not save your card details. Please check them and try again.',
+    )
   })
 
   it('keeps legal document labels when other sections are overridden', () => {

@@ -88,11 +88,11 @@
   .btn-block { width: 100%; padding: 11px; }
 
   .field-label-sm { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-  .stripe-box { border: 1px dashed var(--field-border); background: var(--field-bg); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
-  .stripe-line { height: 38px; border: 1px solid var(--border); border-radius: 6px; background: #fff; display: flex; align-items: center; padding: 0 12px; color: var(--faint); font-size: 13px; }
-  .stripe-line + .stripe-row { margin-top: 10px; }
-  .stripe-row { display: flex; gap: 10px; }
-  .stripe-row .stripe-line { flex: 1; }
+  .card-box { border: 1px dashed var(--field-border); background: var(--field-bg); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
+  .card-line { height: 38px; border: 1px solid var(--border); border-radius: 6px; background: #fff; display: flex; align-items: center; padding: 0 12px; color: var(--faint); font-size: 13px; }
+  .card-line + .card-row { margin-top: 10px; }
+  .card-row { display: flex; gap: 10px; }
+  .card-row .card-line { flex: 1; }
   .secured { font-size: 11px; color: var(--faint); margin-bottom: 16px; }
 
   .banner { max-width: 460px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
@@ -155,14 +155,14 @@
       <div class="label">3 · First-time setup (no saved card)</div>
       <div class="card">
         <div class="field-label-sm">Payment method</div>
-        <div class="stripe-box">
-          <div class="stripe-line">Card number</div>
-          <div class="stripe-row">
-            <div class="stripe-line">MM / YY</div>
-            <div class="stripe-line">CVC</div>
+        <div class="card-box">
+          <div class="card-line">Card number</div>
+          <div class="card-row">
+            <div class="card-line">MM / YY</div>
+            <div class="card-line">CVC</div>
           </div>
         </div>
-        <div class="secured">Secured by Stripe</div>
+        <div class="secured">Card details stored in a secure vault</div>
         <button class="btn-primary btn-block">Set up auto-recharge</button>
       </div>
     </div>

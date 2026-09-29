@@ -141,8 +141,8 @@ import { SolvaPayProvider } from '@solvapay/react'
 ;<SolvaPayProvider>{children}</SolvaPayProvider>
 ```
 
-**Note**: Stripe Elements flows (`createPayment` / `processPayment`) are not
-exercised in hosted checkout — users are redirected to hosted pages instead.
+**Note**: embedded card-field flows (`createPayment` / `confirmPayment` /
+`processPayment`) are not exercised in hosted checkout — users are redirected to hosted pages instead.
 To customise routing, pass `config.transport` on the provider.
 
 ### 2. Authentication Setup

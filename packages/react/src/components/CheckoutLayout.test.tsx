@@ -8,22 +8,6 @@ import { productCache } from '../hooks/useProduct'
 import { merchantCache } from '../hooks/useMerchant'
 import type { Plan } from '../types'
 
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmPayment: vi.fn() }),
-  useElements: () => ({ getElement: vi.fn() }),
-  PaymentElement: () => React.createElement('div', { 'data-testid': 'payment-element' }),
-}))
-
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() =>
-    Promise.resolve({
-      confirmPayment: vi.fn(),
-    }),
-  ),
-}))
-
 const plan: Plan = {
   reference: 'pln_1',
   name: 'Monthly',
@@ -82,8 +66,9 @@ const mockFetch = vi.fn().mockImplementation((url: string) => {
     return Promise.resolve(
       new Response(
         JSON.stringify({
-          clientSecret: 'cs_123',
-          publishableKey: 'pk_test',
+          id: 'pi_sp_123',
+          captureMode: 'vault',
+          vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),

@@ -38,7 +38,7 @@ interface InlineCheckoutProps {
    * gate any future entry points without duplicating state here.
    */
   onUnlock: () => void
-  /** Optional return URL forwarded to Stripe's confirmPayment step. */
+  /** Optional return URL the payer comes back to after 3DS. */
   returnUrl?: string
 }
 

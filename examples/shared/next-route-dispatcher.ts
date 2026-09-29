@@ -32,6 +32,8 @@ import {
   attachBusinessDetails,
   createCaptureGrant,
   confirmPayment,
+  createCardSetupGrant,
+  saveCard,
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
@@ -158,8 +160,8 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
         { solvaPay },
       )
     },
-    // Vault checkout (captureMode: 'vault'): the SDK's CardFields call these
-    // instead of confirming through Stripe.js.
+    // Card capture: the SDK's CardFields write the card into the vault under
+    // this grant, then the payment is confirmed server-side.
     'create-capture-grant': async request => {
       const body = await bodyJson(request)
       return createCaptureGrant(request, { paymentIntentId: String(body.paymentIntentId) }, { solvaPay })
@@ -174,6 +176,16 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
           ...(body.paymentMethodId ? { paymentMethodId: String(body.paymentMethodId) } : {}),
           ...(body.returnUrl ? { returnUrl: String(body.returnUrl) } : {}),
         },
+        { solvaPay },
+      )
+    },
+    // Card setup without a payment (AutoRecharge.CardSetup).
+    'create-card-setup-grant': async request => createCardSetupGrant(request, { solvaPay }),
+    'save-card': async request => {
+      const body = await bodyJson(request)
+      return saveCard(
+        request,
+        { sessionId: String(body.sessionId), cardId: String(body.cardId) },
         { solvaPay },
       )
     },

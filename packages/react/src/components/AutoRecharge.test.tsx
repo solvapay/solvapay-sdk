@@ -26,17 +26,6 @@ vi.mock('../hooks/useBalance', () => ({
   }),
 }))
 
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useStripe: () => null,
-  useElements: () => null,
-  PaymentElement: () => null,
-}))
-
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve(null)),
-}))
-
 function renderShim(props: Partial<React.ComponentProps<typeof AutoRecharge>> = {}) {
   return render(
     <SolvaPayProvider config={{}}>

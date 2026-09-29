@@ -7,8 +7,8 @@ what `createSolvaPayMcpServer` and `<McpApp>` hide.
 ## `src/config.ts`
 
 Loads env, constructs the `SolvaPay` server-SDK instance used by every
-tool, and exposes the Stripe-permissive connect origin to the CSP
-builder in `server.ts`.
+tool, and exposes the extra asset origins to the CSP builder in
+`server.ts`.
 
 ```ts
 export const solvaPay = createSolvaPay({
@@ -53,7 +53,7 @@ What that line hides (from `@solvapay/mcp`):
   "start here" text the agent can `resources/read` before trying a
   tool. Opt out with `registerDocsResources: false`.
 - **1 UI resource registered** (`ui://mcp-checkout-app/mcp-app.html`)
-  with the merged Stripe + consumer CSP on its `_meta.ui.csp`.
+  with the merged vault card field + consumer CSP on its `_meta.ui.csp`.
 - **Bootstrap payload builder wired** — every intent tool reuses the
   same parallelised merchant/product/plans/customer snapshot so the
   iframe never has to fetch again on mount.

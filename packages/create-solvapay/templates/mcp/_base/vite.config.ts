@@ -34,9 +34,8 @@ function stripZodEvalCheck(): Plugin {
   }
 }
 
-// Stripe.js MUST be loaded from https://js.stripe.com/v3 at runtime.
-// Stripe forbids bundling it. `@solvapay/react/mcp` externalises the
-// script via `loadStripe`, so nothing extra is needed here.
+// The VGS Collect card field script is loaded from its pinned CDN URL
+// (with SRI) at runtime by `@solvapay/react`, so nothing extra is needed here.
 export default defineConfig({
   plugins: [stripZodEvalCheck(), react(), viteSingleFile()],
   define: {

@@ -30,6 +30,12 @@ function stubContext(email: string | undefined): SolvaPayContextValue {
     createTopupPayment: async () => {
       throw new Error('unused')
     },
+    createCaptureGrant: async () => {
+      throw new Error('unused')
+    },
+    confirmPayment: async () => {
+      throw new Error('unused')
+    },
     cancelRenewal: async () => {
       throw new Error('unused')
     },

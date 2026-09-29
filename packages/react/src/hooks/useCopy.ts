@@ -12,7 +12,7 @@ export function useCopy(): SolvaPayCopy {
 
 /**
  * Current locale string (e.g. `'en'`, `'sv-SE'`). Used to thread the locale
- * through `Intl.NumberFormat`, `Intl.DateTimeFormat`, and Stripe Elements.
+ * through `Intl.NumberFormat`, `Intl.DateTimeFormat`, and the card fields.
  * `undefined` means "runtime default".
  */
 export function useLocale(): string | undefined {

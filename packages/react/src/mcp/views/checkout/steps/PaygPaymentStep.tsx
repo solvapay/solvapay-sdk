@@ -2,9 +2,8 @@
 
 /**
  * Step 3a — PAYG payment (after `activate_plan` fired in the amount
- * step). Uses `TopupForm` for a one-shot credit purchase; credits land
- * via the Stripe webhook so `onSuccess` fires immediately after
- * confirmation.
+ * step). Uses `TopupForm` for a one-shot credit purchase, confirmed
+ * server-side; `onSuccess` fires once the backend books the credit.
  */
 
 import React, { memo } from 'react'
@@ -18,7 +17,6 @@ import { useHostLocale } from '../../../useHostLocale'
 import { chargeAmountMinor } from '../../chargeAmount'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import { McpPaymentHeader } from '../../McpPaymentHeader'
-import { MCP_PAYMENT_ELEMENT_OPTIONS } from '../../paymentElementOptions'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -104,7 +102,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
 
           <div className={cx.topupForm}>
             <TopupForm.Loading />
-            <TopupForm.PaymentElement options={MCP_PAYMENT_ELEMENT_OPTIONS} />
+            <TopupForm.CardFields />
             <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
               <TopupForm.BusinessDetails.Fields />
             </TopupForm.BusinessDetails.Root>

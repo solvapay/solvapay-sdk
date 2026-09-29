@@ -48,8 +48,6 @@ export {
   PaymentFormRoot,
   PaymentFormSummary,
   PaymentFormCustomerFields,
-  PaymentFormPaymentElement,
-  PaymentFormCardElement,
   PaymentFormCardFields,
   PaymentFormMandateText,
   PaymentFormTermsCheckbox,
@@ -127,7 +125,6 @@ export {
 export {
   TopupForm,
   TopupFormRoot,
-  TopupFormPaymentElement,
   TopupFormCardFields,
   TopupFormSubmitButton,
   TopupFormLoading,

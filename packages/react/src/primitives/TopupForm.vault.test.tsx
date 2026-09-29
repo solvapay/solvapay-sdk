@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Vault checkout for credit top-ups: TopupForm renders CardFields on a fake
- * VGS Collect, never loads Stripe, and on submit runs grant → capture →
+ * VGS Collect, and on submit runs grant → capture →
  * server-side confirm → backend settle (processTopupPayment) → onSuccess
  * with the credits delta.
  */
@@ -15,9 +15,6 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import { configureCollect } from '../vault/collect'
 import type { SolvaPayContextValue, SucceededPayment } from '../types'
 import { enCopy } from '../i18n/en'
-
-const loadStripe = vi.fn()
-vi.mock('@stripe/stripe-js', () => ({ loadStripe: (...args: unknown[]) => loadStripe(...args) }))
 
 vi.mock('../hooks/useBusinessDetailsAttach', () => ({
   defaultBusinessDetails: { isBusiness: false },
@@ -70,7 +67,7 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
     createCaptureGrant: vi.fn().mockResolvedValue(grant),
     confirmPayment: vi.fn().mockResolvedValue({
       id: 'pi_topup_1',
-      processorPaymentId: 'pi_stripe_topup',
+      processorPaymentId: 'pi_rail_topup',
       status: 'succeeded',
     }),
     processTopupPayment: vi.fn().mockResolvedValue({ status: 'succeeded', creditsAdded: 2500 }),
@@ -117,7 +114,6 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
         onError={h.onError}
       >
         <TopupForm.Loading data-testid="loading" />
-        <TopupForm.PaymentElement />
         <TopupForm.CardFields data-testid="card-fields" />
         <TopupForm.Error data-testid="topup-error" />
         <TopupForm.SubmitButton data-testid="submit" />
@@ -129,7 +125,7 @@ function renderVaultTopup(overrides: Partial<Harness> = {}) {
 
 const succeededPayment = {
   id: 'pi_topup_1',
-  processorPaymentId: 'pi_stripe_topup',
+  processorPaymentId: 'pi_rail_topup',
   status: 'succeeded' as const,
 }
 const ready = () =>
@@ -158,13 +154,12 @@ describe('TopupForm — vault checkout', () => {
   let restoreCollect: () => void
 
   beforeEach(() => {
-    loadStripe.mockReset()
     collect = createFakeCollect()
     restoreCollect = configureCollect(collect.loader)
   })
   afterEach(() => restoreCollect())
 
-  it('mounts hosted card fields on the vault, never loads Stripe, and gates submit on validity', async () => {
+  it('mounts hosted card fields on the vault and gates submit on validity', async () => {
     const { ctx } = renderVaultTopup()
     await ready()
     expect(ctx.createTopupPayment).toHaveBeenCalledTimes(1)
@@ -177,7 +172,6 @@ describe('TopupForm — vault checkout', () => {
     expect(collect.forms[0].vaultId).toBe('tntr4ol0cbq')
     expect(collect.forms[0].env).toBe('sandbox')
     expect(collect.forms[0].mounted).toEqual(['pan', 'exp-date', 'cvc'])
-    expect(loadStripe).not.toHaveBeenCalled()
     expect(screen.queryByTestId('payment-element')).toBeNull()
     expect(document.querySelector('[data-solvapay-topup-form-payment-element]')).toBeNull()
     expect(screen.queryByTestId('loading')).toBeNull()
@@ -231,7 +225,7 @@ describe('TopupForm — vault checkout', () => {
       returnUrl: 'https://example.test/topup',
     })
     expect(h.processTopupPayment).toHaveBeenCalledTimes(1)
-    expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
+    expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_rail_topup' })
     expect(h.onSuccess).toHaveBeenCalledWith(succeededPayment, { creditsAdded: 2500 })
     expect(h.onError).not.toHaveBeenCalled()
     expect(errorText()).toBeNull()
@@ -280,7 +274,7 @@ describe('TopupForm — vault checkout', () => {
     )
     expect(errorText()).toBe(enCopy.errors.paymentPending)
     expect(h.confirmPayment).toHaveBeenCalledTimes(1)
-    expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
+    expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_rail_topup' })
     expect(h.onSuccess).not.toHaveBeenCalled()
     expect(h.onError).not.toHaveBeenCalled()
     await waitFor(() => expect(submit()).not.toBeDisabled())
@@ -292,7 +286,7 @@ describe('TopupForm — vault checkout', () => {
         .fn()
         .mockResolvedValue({
           id: 'pi_topup_1',
-          processorPaymentId: 'pi_stripe_topup',
+          processorPaymentId: 'pi_rail_topup',
           status: 'processing',
         }),
     })
@@ -317,7 +311,7 @@ describe('TopupForm — vault checkout', () => {
         .fn()
         .mockResolvedValue({
           id: 'pi_topup_1',
-          processorPaymentId: 'pi_stripe_topup',
+          processorPaymentId: 'pi_rail_topup',
           status: 'canceled',
         }),
     })
@@ -340,7 +334,7 @@ describe('TopupForm — vault checkout', () => {
           .fn()
           .mockResolvedValue({
             id: 'pi_topup_1',
-            processorPaymentId: 'pi_stripe_topup',
+            processorPaymentId: 'pi_rail_topup',
             status: 'requires_action',
           }),
       })
@@ -417,15 +411,15 @@ describe('TopupForm — vault checkout', () => {
       const h = renderVaultTopup({
         confirmPayment: vi.fn().mockResolvedValue({
           id: 'pi_topup_1',
-          processorPaymentId: 'pi_stripe_topup',
+          processorPaymentId: 'pi_rail_topup',
           status: 'requires_action',
-          redirectUrl: 'https://hooks.stripe.com/3ds/topup',
+          redirectUrl: 'https://acs.bank.test/3ds/topup',
         }),
       })
       await fillAndArm()
       fireEvent.click(submit())
       await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
-      expect(assign).toHaveBeenCalledWith('https://hooks.stripe.com/3ds/topup')
+      expect(assign).toHaveBeenCalledWith('https://acs.bank.test/3ds/topup')
       expect(h.confirmPayment).toHaveBeenCalledWith({
         paymentIntentId: 'pi_topup_1',
         cardId: 'CRD_fake_1',
@@ -444,26 +438,25 @@ describe('TopupForm — vault checkout', () => {
     const assign = vi.fn()
     const restoreLocation = stubLocation({
       assign,
-      search: '?payment_intent=pi_stripe_topup&redirect_status=succeeded',
-      href: 'https://example.test/?payment_intent=pi_stripe_topup&redirect_status=succeeded',
+      search: '?payment_intent=pi_rail_topup&redirect_status=succeeded',
+      href: 'https://example.test/?payment_intent=pi_rail_topup&redirect_status=succeeded',
     })
     const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
     try {
       const h = renderVaultTopup()
       await waitFor(() => expect(h.onSuccess).toHaveBeenCalledTimes(1))
       expect(h.onSuccess).toHaveBeenCalledWith(
-        { id: 'pi_topup_1', processorPaymentId: 'pi_stripe_topup', status: 'succeeded' },
+        { id: 'pi_topup_1', processorPaymentId: 'pi_rail_topup', status: 'succeeded' },
         { creditsAdded: 2500 },
       )
       expect(h.processTopupPayment).toHaveBeenCalledTimes(1)
-      expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_stripe_topup' })
+      expect(h.processTopupPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_rail_topup' })
       expect(replaceState).toHaveBeenCalledTimes(1)
       expect(replaceState).toHaveBeenCalledWith({}, '', '/')
       expect(h.createCaptureGrant).not.toHaveBeenCalled()
       expect(h.confirmPayment).not.toHaveBeenCalled()
       expect(collect.cards).toHaveLength(0)
       expect(assign).not.toHaveBeenCalled()
-      expect(loadStripe).not.toHaveBeenCalled()
       expect(h.onError).not.toHaveBeenCalled()
       expect(errorText()).toBeNull()
     } finally {

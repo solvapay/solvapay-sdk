@@ -13,9 +13,8 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
   it('sends correct body with purpose: credit_topup to /v1/sdk/payment-intents', async () => {
     const mockResponse = {
       id: 'pi_topup_123',
-      clientSecret: 'pi_topup_123_secret',
-      publishableKey: 'pk_test_456',
-      accountId: 'acct_789',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
     }
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -49,7 +48,7 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
 
   it('generates an idempotency key when none is provided', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pi_1', clientSecret: 'cs', publishableKey: 'pk' }), {
+      new Response(JSON.stringify({ id: 'pi_1', captureMode: 'vault', vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' } }), {
         status: 200,
       }),
     )
@@ -67,7 +66,7 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
 
   it('forwards a caller-provided idempotency key', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pi_1', clientSecret: 'cs', publishableKey: 'pk' }), {
+      new Response(JSON.stringify({ id: 'pi_1', captureMode: 'vault', vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' } }), {
         status: 200,
       }),
     )
@@ -110,7 +109,7 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
 
   it('omits description when not provided', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pi_1', clientSecret: 'cs', publishableKey: 'pk' }), {
+      new Response(JSON.stringify({ id: 'pi_1', captureMode: 'vault', vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' } }), {
         status: 200,
       }),
     )

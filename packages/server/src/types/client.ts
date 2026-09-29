@@ -17,8 +17,10 @@ export type AttachBusinessDetailsParams = {
 export type AttachBusinessDetailsResult = components['schemas']['AttachBusinessDetailsResponse']
 
 /**
- * Vault checkout (`captureMode: 'vault'`). What the browser needs to write
- * one card into the vault for one payment. `POST /v1/sdk/payment-intents/{id}/capture-grant`.
+ * What the browser needs to write one card into the vault: for one payment
+ * (`POST /v1/sdk/payment-intents/{id}/capture-grant`, `scope.paymentIntentId`)
+ * or for saving a card on a customer session without paying
+ * (`POST /v1/customer-sessions/{sessionId}/capture-grant`, `scope.sessionId`).
  */
 export interface CaptureGrant {
   /** Short-lived vault access token scoped to card capture only. */
@@ -41,7 +43,7 @@ export type ConfirmPaymentParams = {
 export interface ConfirmPaymentResult {
   /** SolvaPay payment intent id. */
   id: string
-  /** Rail payment reference (the Stripe PaymentIntent id). */
+  /** Rail payment reference. */
   processorPaymentId: string
   status:
     | 'pending'
@@ -54,6 +56,49 @@ export interface ConfirmPaymentResult {
     | 'requires_confirmation'
     | (string & {})
   /** The payer must be sent here to finish a customer action (3DS). */
+  redirectUrl?: string
+}
+
+/** Billing details stored with a card saved outside a payment. */
+export interface CardBillingDetails {
+  name?: string
+  email?: string
+  address?: {
+    line1?: string
+    line2?: string
+    city?: string
+    state?: string
+    postalCode?: string
+    country?: string
+  }
+}
+
+/** Save a vault-captured card on a customer session (no payment). */
+export interface SaveCustomerSessionCardParams {
+  sessionId: string
+  cardId: string
+  billingDetails?: CardBillingDetails
+  /** Where the rail sends the payer back after 3DS; post the same `cardId` again to finish. */
+  returnUrl?: string
+}
+
+/** The card saved on a customer session. */
+export interface SavedCardPaymentMethod {
+  id: string
+  brand: string
+  last4: string
+  expMonth: number
+  expYear: number
+}
+
+/**
+ * `POST /v1/customer-sessions/{sessionId}/payment-methods`.
+ * `requires_action`: send the payer to `redirectUrl`, then post the same
+ * `cardId` again to finish. `processing`: the setup settles asynchronously.
+ */
+export interface SavedCardResult {
+  status: 'succeeded' | 'requires_action' | 'processing'
+  paymentMethod?: SavedCardPaymentMethod
   redirectUrl?: string
 }
 
@@ -128,7 +173,7 @@ export type OneTimePurchaseInfo = components['schemas']['OneTimePurchaseInfo']
  * response with the created purchase — callers should fall back to
  * refetching.
  *
- * `failed` and `cancelled` are returned when the Stripe PaymentIntent is
+ * `failed` and `cancelled` are returned when the rail payment is
  * in a terminal non-success state and are routed to `onError` by
  * `reconcilePayment`. `timeout` carries a retry hint and is routed to
  * the timeout branch.
@@ -153,9 +198,8 @@ true satisfies AssertEqual<
  * are what the SDK's `processTopupPayment` exposes to `TopupForm`.
  *
  * `succeeded` means the backend observed the PI reach succeeded AND
- * the credit transaction has been booked (see step 5 of
- * `stripe-payment-webhook.handler.ts` — credit booking happens in the
- * same handler invocation that flips PI status). `timeout` carries a
+ * the credit transaction has been booked (credit booking happens in
+ * the same webhook handler invocation that flips PI status). `timeout` carries a
  * soft retry hint; `failed` / `cancelled` route to the error branch.
  *
  * `creditsAdded` is the wallet delta observed by the backend helper's
@@ -227,9 +271,7 @@ export type SdkMerchantResponse = components['schemas']['SdkMerchantResponseDto'
  * SDK-facing platform config (source: GET /v1/sdk/platform-config).
  *
  * Environment-aware platform values resolved against the authenticated
- * provider. Primary consumer today is the MCP checkout app, which uses
- * `stripePublishableKey` to boot Stripe.js for a CSP probe before a
- * PaymentIntent exists.
+ * provider. The SDK's card entry does not read it.
  */
 export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfigResponseDto']
 
@@ -364,9 +406,7 @@ export interface SolvaPayClient {
   /**
    * SDK-facing platform config (GET /v1/sdk/platform-config).
    * Returns environment-aware browser-safe values (resolved sandbox/live
-   * against the authenticated provider). Primary consumer today is the
-   * MCP checkout app, which uses `stripePublishableKey` to boot Stripe.js
-   * for a CSP probe before a PaymentIntent exists.
+   * against the authenticated provider).
    */
   getPlatformConfig?(): Promise<SdkPlatformConfigResponse>
 
@@ -474,6 +514,17 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/confirm
   confirmPayment?(params: ConfirmPaymentParams): Promise<ConfirmPaymentResult>
+
+  // GET: /v1/sdk/customers/customer-sessions/{sessionId}
+  getCustomerSession?(params: {
+    sessionId: string
+  }): Promise<components['schemas']['GetCustomerSessionResponse']>
+
+  // POST: /v1/customer-sessions/{sessionId}/capture-grant
+  createCustomerSessionCaptureGrant?(params: { sessionId: string }): Promise<CaptureGrant>
+
+  // POST: /v1/customer-sessions/{sessionId}/payment-methods
+  saveCustomerSessionCard?(params: SaveCustomerSessionCardParams): Promise<SavedCardResult>
 
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {

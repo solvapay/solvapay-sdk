@@ -42,14 +42,12 @@ describe('useBusinessDetailsAttach', () => {
   it('debounces auto-attach for consumer details and sends customerCountry', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
     const onTaxChange = vi.fn()
-    const refreshElements = vi.fn().mockResolvedValue(undefined)
 
     const { result } = renderHook(() =>
       useBusinessDetailsAttach({
         processorPaymentId: 'pi_test_123',
         attachBusinessDetails,
         onTaxChange,
-        refreshElements,
       }),
     )
 
@@ -70,7 +68,6 @@ describe('useBusinessDetailsAttach', () => {
       customerCountry: 'SE',
     })
     expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown)
-    expect(refreshElements).toHaveBeenCalled()
   })
 
   it('sends customerCountry on the business attach payload', async () => {
@@ -129,7 +126,7 @@ describe('useBusinessDetailsAttach', () => {
     })
   })
 
-  it('does not call refreshElements when not provided', async () => {
+  it('attaches when no onTaxChange is provided', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
 
     const { result } = renderHook(() =>

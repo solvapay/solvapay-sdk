@@ -15,9 +15,9 @@ import type {
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
     checkPurchase: async () => ({ purchases: [] }),
-    createPayment: async () => ({ clientSecret: '', paymentIntentId: '' }),
+    createPayment: async () => ({ id: '', captureMode: 'vault' as const, vault: { tenantId: '', environment: 'sandbox' as const } }),
     processPayment: async () => ({ success: true }),
-    createTopupPayment: async () => ({ clientSecret: '', paymentIntentId: '' }),
+    createTopupPayment: async () => ({ id: '', captureMode: 'vault' as const, vault: { tenantId: '', environment: 'sandbox' as const } }),
     getBalance: async () => ({
       credits: 0,
       displayCurrency: 'USD',

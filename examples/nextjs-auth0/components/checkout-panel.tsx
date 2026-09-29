@@ -12,7 +12,7 @@ const backLinkClassName = 'mb-4 inline-block text-sm text-muted-foreground hover
  * Embedded (not hosted) checkout for the Pay As You Go plan.
  *
  * Built on the SDK's `CheckoutSteps` engine: plan → amount (PAYG credit
- * top-up) → embedded Stripe payment element → success. Everything renders
+ * top-up) → embedded vault card fields → success. Everything renders
  * inline — there is no redirect to a hosted SolvaPay checkout page. The
  * `productRef` comes from `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF`; the publishable
  * key and client secret are returned by `/api/create-payment-intent`.

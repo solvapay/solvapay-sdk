@@ -61,7 +61,7 @@ Hosted pages and the MCP widget share one custom-property vocabulary. Use the MC
 --solvapay-danger
 ```
 
-Do not invent a parallel `--sp-*` namespace or a second hardcoded palette. Stripe `appearance` reads live values off `document.documentElement` via `getComputedStyle` (`buildStripeAppearance`).
+Do not invent a parallel `--sp-*` namespace or a second hardcoded palette. The card-field `appearance` reads live values off the form root via `getComputedStyle` (`buildAppearance`).
 
 **Frame owner sets the font.** `--font-sans` is owned by the frame that mounts the UI:
 
@@ -124,7 +124,7 @@ Grounded in the [MCP 2026-07-28 tools spec](https://modelcontextprotocol.io/spec
 - **Never render a bare `<a target="_blank">` or call `window.open()`.** Claude's iframe sandbox omits `allow-popups`, so both are dropped silently — the control looks alive and does nothing, and the only trace is a line in the iframe's own console. Every outbound link goes through `useExternalLinkClick()` (anchors) or `useOpenExternal()` (post-`await` flows), which prefer the host's `ui/open-link` when it declares the `openLinks` capability and fall back to native navigation everywhere else. Keep the real `href` on the anchor so the link role, "copy link address" and middle-click survive on permissive hosts. The capability is read at click time, not render time — the bridge can mount before `connect()` populates it.
 - **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import it — along with `registerAppTool` / `registerAppResource` — from `@solvapay/mcp`, which vendors the server-side ext-apps helpers because `@modelcontextprotocol/ext-apps` has no SDK v2 build. The client-side `@modelcontextprotocol/ext-apps` entrypoint that runs inside the iframe is unaffected and stays a direct dependency.
 - **`_meta.ui.resourceUri` lives only on the `account` viewer descriptor.** Merchant payable tools deliberately do NOT advertise it. Paywall / nudge responses ship as plain-text narrations naming `` `account` `` + `view` or `` `activate_plan` `` with `structuredContent = gate`. `` `activate_plan` `` is a mutator only — no `resourceUri`, no bootstrap payload.
-- **Stripe.js is loaded from `js.stripe.com/v3` at runtime.** Never bundled. The default CSP baseline permits Stripe origins and host-injected font origins (for example `assets.claude.ai` via `hostContext.styles.css.fonts`).
+- **The VGS Collect card field script is loaded from its pinned `js.verygoodvault.com` URL (with SRI) at runtime.** Never bundled. The default CSP baseline permits the card field origins (`js.verygoodvault.com`, `*.verygoodproxy.com`) and host-injected font origins (for example `assets.claude.ai` via `hostContext.styles.css.fonts`).
 
 ### Developer experience
 

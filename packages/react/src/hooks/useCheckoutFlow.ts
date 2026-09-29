@@ -16,11 +16,11 @@
  * After PAYG activate, the wallet decides the next step: empty → amount
  * picker (`credit_topup`); funded → success with no card.
  *
- * Stripe 3DS / redirect returns: when `payment_intent_client_secret` is
- * present in the URL on mount, the hook starts on the `payment` step so
- * `<CheckoutSteps.Payment>` (or a mounted `PaymentForm` / `TopupForm`) can
- * resume verification. Return-path resume itself lives in those form
- * primitives — see `readPaymentIntentClientSecret` / `stripPaymentIntentParams`.
+ * 3DS returns: when `payment_intent` is present in the URL on mount, the
+ * hook starts on the `payment` step so `<CheckoutSteps.Payment>` (or a
+ * mounted `PaymentForm` / `TopupForm`) can resume. Return-path resume
+ * itself lives in those form primitives — see `readPaymentIntentId` /
+ * `stripPaymentIntentParams`.
  *
  * Lifecycle hooks fire at well-defined points:
  *  - `onPlanSelect(planRef, plan)` — every selectPlan() call
@@ -52,11 +52,11 @@ import {
   type SuccessMeta,
 } from '../primitives/checkout/shared'
 import { resolvePlanPricingOption } from '../utils/planPricing'
-import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
+import { readPaymentIntentId } from '../primitives/paymentIntentReturn'
 
 function resolveInitialCheckoutStep(initialStep: CheckoutStep): CheckoutStep {
   if (typeof window === 'undefined') return initialStep
-  return readPaymentIntentClientSecret(window.location.search) ? 'payment' : initialStep
+  return readPaymentIntentId(window.location.search) ? 'payment' : initialStep
 }
 
 export type CheckoutStatus = 'idle' | 'activating' | 'paying' | 'error'
@@ -157,7 +157,7 @@ export interface UseCheckoutFlowReturn {
   retry: () => Promise<void>
   /**
    * Commit a completed payment. Useful when integrators wire the
-   * Stripe form directly (bypassing `<CheckoutSteps.Payment>`); the
+   * payment form directly (bypassing `<CheckoutSteps.Payment>`); the
    * default parts call this internally on the form's `onSuccess`.
    *
    * `extras.creditsAdded` (PAYG only) is the wallet delta observed by

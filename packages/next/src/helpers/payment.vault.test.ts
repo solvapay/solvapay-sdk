@@ -92,7 +92,7 @@ describe('confirmPayment (Next route wrapper)', () => {
   })
 
   it('forwards the card confirm body verbatim and returns the confirmed payment as JSON 200', async () => {
-    const payment = { id: 'pi_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
+    const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' as const }
     mockConfirmPaymentCore.mockResolvedValue(payment)
     const request = fakeRequest('/api/confirm-payment')
     const body = { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://app.example/return' }
@@ -109,9 +109,9 @@ describe('confirmPayment (Next route wrapper)', () => {
   it('forwards a saved-payment-method body and the solvaPay option, returning a 3DS redirect untouched', async () => {
     const payment = {
       id: 'pi_1',
-      processorPaymentId: 'pi_stripe_1',
+      processorPaymentId: 'pi_rail_1',
       status: 'requires_action' as const,
-      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+      redirectUrl: 'https://acs.bank.test/3ds/abc',
     }
     mockConfirmPaymentCore.mockResolvedValue(payment)
     const request = fakeRequest('/api/confirm-payment')

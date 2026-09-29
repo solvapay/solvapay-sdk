@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { config } from 'dotenv'
 import { resolve } from 'path'
 
@@ -26,6 +26,8 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+    // Emptied test file (`// Removed: ...`) awaiting deletion; it holds no suites.
+    exclude: [...configDefaults.exclude, '__tests__/payment-stripe.integration.test.ts'],
     // Increase timeout for integration tests (default is 5000ms)
     // Integration tests make multiple slow API calls to real backend
     testTimeout: 120000, // 120 seconds — exhaustion tests burn through many units

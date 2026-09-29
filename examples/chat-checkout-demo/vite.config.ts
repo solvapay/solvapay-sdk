@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
-      dedupe: ['react', 'react-dom', '@stripe/react-stripe-js'],
+      dedupe: ['react', 'react-dom'],
     },
     // Forward SOLVAPAY_PRODUCT_REF as a fallback for each scenario's
     // VITE_*_PRODUCT_REF so a minimal .env (as written by `solvapay init`)

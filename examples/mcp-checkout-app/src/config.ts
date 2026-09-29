@@ -37,11 +37,11 @@ export const solvapayApiOrigin = new URL(solvapayApiBaseUrl).origin
  * The backend admin serves provider-uploaded logos over
  * `http://localhost:<port>/ui/files/download/...` in dev, so the
  * merchant logo from `BootstrapPayload.merchant.logoUrl` would be
- * blocked by the CSP's default (Stripe-only) `img-src` without this
+ * blocked by the CSP's default (card-fields-only) `img-src` without this
  * opt-in.
  *
  * Leave unset in production — the default CSP is tight on purpose so
- * you don't accidentally widen it beyond Stripe.
+ * you don't accidentally widen it beyond the card field origins.
  */
 export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
   .split(',')

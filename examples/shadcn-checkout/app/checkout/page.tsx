@@ -61,7 +61,7 @@ export default function CheckoutPage() {
           <PaymentForm.Root requireTermsAcceptance className="flex flex-col gap-4">
             <PaymentForm.Summary />
             <PaymentForm.CustomerFields />
-            <PaymentForm.PaymentElement />
+            <PaymentForm.CardFields />
             <PaymentForm.TermsCheckbox />
             <PaymentForm.Error className="text-sm text-destructive" />
             <PaymentForm.Loading className="text-sm text-muted-foreground" />

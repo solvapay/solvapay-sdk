@@ -624,7 +624,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }
 
   /**
-   * Create a topup payment intent (stub returns mock Stripe data)
+   * Create a topup payment intent (stub returns a mock vault intent)
    */
   async createTopupPaymentIntent(params: {
     customerRef: string
@@ -645,9 +645,10 @@ export class StubSolvaPayClient implements SolvaPayClient {
     await this.addCredits(params.customerRef, params.amount)
 
     return {
+      id: `spi_${processorPaymentId}`,
+      captureMode: 'vault',
+      vault: { tenantId: 'tnt_stub_demo', environment: 'sandbox' },
       processorPaymentId,
-      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
-      publishableKey: 'pk_test_stub_demo_key',
       amount: params.amount,
       currency: params.currency,
       status: 'succeeded',
@@ -656,13 +657,11 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }
 
   /**
-   * Create a plan-purchase payment intent (stub returns mock Stripe data).
+   * Create a plan-purchase payment intent (stub returns a mock vault intent).
    *
-   * The returned `clientSecret` is deliberately unusable against Stripe — it
-   * exists so `next build` and initial UI rendering succeed. Runtime
-   * `confirmPayment` calls will fail unless the consumer swaps the stub for a
-   * real `createSolvaPay({ apiKey })` or wires `STRIPE_TEST_PK` into a
-   * bespoke variant.
+   * The returned vault tenant is deliberately fake — it exists so
+   * `next build` and initial UI rendering succeed. Card capture and the
+   * server-side confirm need a real `createSolvaPay({ apiKey })`.
    */
   async createPaymentIntent(params: {
     productRef: string
@@ -680,9 +679,10 @@ export class StubSolvaPayClient implements SolvaPayClient {
     const processorPaymentId = `pi_stub_${Math.random().toString(36).slice(2, 15)}`
 
     return {
+      id: `spi_${processorPaymentId}`,
+      captureMode: 'vault',
+      vault: { tenantId: 'tnt_stub_demo', environment: 'sandbox' },
       processorPaymentId,
-      clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
-      publishableKey: 'pk_test_stub_demo_key',
       amount: 2900,
       currency: 'USD',
       status: 'requires_payment_method',
@@ -694,7 +694,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Process a plan-purchase payment intent (stub returns a synthetic purchase).
    *
-   * The stub does not verify the payment intent against Stripe. It marks the
+   * The stub does not verify the payment intent against the rail. It marks the
    * customer as holding the paid plan and returns a well-formed
    * `ProcessPaymentResult` suitable for driving the UI.
    */

@@ -221,7 +221,6 @@ export const SOLVAPAY_MCP_VIEW_KINDS = [
 export interface BootstrapPayload {
   view: SolvaPayMcpViewKind
   productRef: string
-  stripePublishableKey: string | null
   returnUrl: string
   merchant: BootstrapMerchant
   product: BootstrapProduct
@@ -240,8 +239,8 @@ export interface BootstrapPayload {
 }
 
 /**
- * Content Security Policy allow-list inputs merged with the Stripe
- * baseline by `SOLVAPAY_DEFAULT_CSP` / `mergeCsp`.
+ * Content Security Policy allow-list inputs merged with the vault card
+ * field baseline by `SOLVAPAY_DEFAULT_CSP` / `mergeCsp`.
  */
 export interface SolvaPayMcpCsp {
   resourceDomains?: string[]

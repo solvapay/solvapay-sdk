@@ -6,9 +6,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
-}))
+const vault = { tenantId: 'tntr4ol0cbq', environment: 'sandbox' as const }
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   return {
@@ -27,11 +25,13 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn().mockResolvedValue({
-      clientSecret: 'pi_topup_secret',
-      publishableKey: 'pk_test_123',
-      accountId: 'acct_456',
+      id: 'pi_topup_1',
+      captureMode: 'vault',
+      vault,
       customerRef: 'cus_789',
     }),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
@@ -58,8 +58,9 @@ describe('useTopup', () => {
 
     expect(result.current.loading).toBe(false)
     expect(result.current.error).toBeNull()
-    expect(result.current.stripePromise).toBeNull()
-    expect(result.current.clientSecret).toBeNull()
+    expect(result.current.paymentIntentId).toBeNull()
+    expect(result.current.vault).toBeNull()
+    expect(result.current.processorPaymentId).toBeNull()
   })
 
   it('startTopup sets loading state and then resolves', async () => {
@@ -73,14 +74,16 @@ describe('useTopup', () => {
     })
 
     expect(result.current.loading).toBe(false)
-    expect(result.current.clientSecret).toBe('pi_topup_secret')
-    expect(result.current.stripePromise).not.toBeNull()
+    expect(result.current.error).toBeNull()
+    expect(result.current.paymentIntentId).toBe('pi_topup_1')
+    expect(result.current.vault).toStrictEqual(vault)
   })
 
   it('calls createTopupPayment with correct amount and currency', async () => {
     const createTopupPayment = vi.fn().mockResolvedValue({
-      clientSecret: 'cs_1',
-      publishableKey: 'pk_1',
+      id: 'pi_topup_1',
+      captureMode: 'vault',
+      vault,
     })
     const ctx = createMockContext({ createTopupPayment })
 
@@ -97,8 +100,9 @@ describe('useTopup', () => {
 
   it('forwards autoRecharge to createTopupPayment', async () => {
     const createTopupPayment = vi.fn().mockResolvedValue({
-      clientSecret: 'cs_1',
-      publishableKey: 'pk_1',
+      id: 'pi_topup_1',
+      captureMode: 'vault',
+      vault,
     })
     const autoRecharge = {
       enabled: true,
@@ -121,11 +125,13 @@ describe('useTopup', () => {
     expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'usd', autoRecharge })
   })
 
-  it('sets clientSecret from response', async () => {
+  it('sets the payment intent id, vault and processor id from the response', async () => {
     const ctx = createMockContext({
       createTopupPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'pi_custom_secret',
-        publishableKey: 'pk_custom',
+        id: 'pi_custom_1',
+        captureMode: 'vault',
+        vault,
+        processorPaymentId: 'pi_rail_custom',
       }),
     })
 
@@ -137,7 +143,10 @@ describe('useTopup', () => {
       await result.current.startTopup()
     })
 
-    expect(result.current.clientSecret).toBe('pi_custom_secret')
+    expect(result.current.paymentIntentId).toBe('pi_custom_1')
+    expect(result.current.vault).toStrictEqual(vault)
+    expect(result.current.processorPaymentId).toBe('pi_rail_custom')
+    expect(result.current.error).toBeNull()
   })
 
   it('updates customerRef if returned by backend', async () => {
@@ -146,8 +155,9 @@ describe('useTopup', () => {
       updateCustomerRef,
       customerRef: undefined,
       createTopupPayment: vi.fn().mockResolvedValue({
-        clientSecret: 'cs',
-        publishableKey: 'pk',
+        id: 'pi_topup_1',
+        captureMode: 'vault',
+        vault,
         customerRef: 'cus_new_ref',
       }),
     })
@@ -161,6 +171,23 @@ describe('useTopup', () => {
     })
 
     expect(updateCustomerRef).toHaveBeenCalledWith('cus_new_ref')
+  })
+
+  it('rejects a response without a vault as an invalid intent', async () => {
+    const ctx = createMockContext({
+      createTopupPayment: vi.fn().mockResolvedValue({ id: 'pi_topup_1', captureMode: 'vault' }),
+    })
+
+    const { result } = renderHook(() => useTopup({ amount: 1000 }), {
+      wrapper: createWrapper(ctx),
+    })
+
+    await act(async () => {
+      await result.current.startTopup()
+    })
+
+    expect(result.current.error?.message).toBe('Invalid vault in topup payment intent response')
+    expect(result.current.paymentIntentId).toBeNull()
   })
 
   it('sets error state on failure', async () => {
@@ -190,8 +217,9 @@ describe('useTopup', () => {
     const createTopupPayment = vi.fn().mockImplementation(
       () =>
         hangingPromise.then(() => ({
-          clientSecret: 'cs',
-          publishableKey: 'pk',
+          id: 'pi_topup_1',
+          captureMode: 'vault',
+          vault,
         })),
     )
     const ctx = createMockContext({ createTopupPayment })
@@ -241,7 +269,7 @@ describe('useTopup', () => {
       await result.current.startTopup()
     })
 
-    expect(result.current.clientSecret).toBe('pi_topup_secret')
+    expect(result.current.paymentIntentId).toBe('pi_topup_1')
 
     act(() => {
       result.current.reset()
@@ -249,7 +277,7 @@ describe('useTopup', () => {
 
     expect(result.current.loading).toBe(false)
     expect(result.current.error).toBeNull()
-    expect(result.current.stripePromise).toBeNull()
-    expect(result.current.clientSecret).toBeNull()
+    expect(result.current.paymentIntentId).toBeNull()
+    expect(result.current.vault).toBeNull()
   })
 })

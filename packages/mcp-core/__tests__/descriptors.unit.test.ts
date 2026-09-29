@@ -49,7 +49,7 @@ function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
     trackUsage: vi.fn().mockResolvedValue(undefined),
     createCustomer: vi.fn().mockResolvedValue({ customerRef: customer.customerRef }),
     getCustomer: vi.fn().mockResolvedValue(customer),
-    getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getPlatformConfig: vi.fn().mockResolvedValue({}),
     getMerchant: vi
       .fn()
       .mockResolvedValue(overrides.merchant ?? { displayName: 'Acme', legalName: 'Acme Inc' }),
@@ -100,11 +100,13 @@ describe('buildSolvaPayDescriptors', () => {
         MCP_TOOL_NAMES.attachBusinessDetails,
         MCP_TOOL_NAMES.confirmPayment,
         MCP_TOOL_NAMES.createCaptureGrant,
+        MCP_TOOL_NAMES.createCardSetupGrant,
         MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
         MCP_TOOL_NAMES.getHistory,
         VIEWER_TOOL_NAME,
         MCP_TOOL_NAMES.processPayment,
+        MCP_TOOL_NAMES.saveCard,
         MCP_TOOL_NAMES.setRenewal,
       ].sort(),
     )
@@ -143,6 +145,8 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createCaptureGrant,
       MCP_TOOL_NAMES.confirmPayment,
+      MCP_TOOL_NAMES.createCardSetupGrant,
+      MCP_TOOL_NAMES.saveCard,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createHostedSession,
@@ -167,8 +171,11 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.uri).toBe('ui://test/view.html')
     expect(resource.mimeType).toBe('text/html;profile=mcp-app')
     expect(resource.readHtml).toBeTypeOf('function')
-    expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
-    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
+    expect(resource.csp).toStrictEqual({
+      resourceDomains: ['https://js.verygoodvault.com', 'https://assets.claude.ai'],
+      connectDomains: ['https://*.verygoodproxy.com'],
+      frameDomains: ['https://js.verygoodvault.com'],
+    })
   })
 
   it('marks the viewer intent tool as read-only', () => {
@@ -354,10 +361,17 @@ describe('buildSolvaPayDescriptors', () => {
     })
     expect(resource.csp.resourceDomains).toContain('https://api-dev.solvapay.com')
     expect(resource.csp.connectDomains).toContain('https://api-dev.solvapay.com')
-    // Baseline Stripe origins stay intact.
-    expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
-    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
-    expect(resource.csp.connectDomains).toContain('https://api.stripe.com')
+    // Baseline vault card field origins stay intact.
+    expect(resource.csp.resourceDomains).toStrictEqual([
+      'https://js.verygoodvault.com',
+      'https://assets.claude.ai',
+      'https://api-dev.solvapay.com',
+    ])
+    expect(resource.csp.connectDomains).toStrictEqual([
+      'https://*.verygoodproxy.com',
+      'https://api-dev.solvapay.com',
+    ])
+    expect(resource.csp.frameDomains).toStrictEqual(['https://js.verygoodvault.com'])
   })
 
   it('apiBaseUrl is normalised to origin (strips path + trailing slash)', () => {
@@ -486,7 +500,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
           trackUsage: vi.fn(),
           createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
           getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
-          getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: null }),
+          getPlatformConfig: vi.fn().mockResolvedValue({}),
           getMerchant: vi.fn().mockResolvedValue({ displayName: 'M', legalName: 'L' }),
           getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test' }),
           listPlans: vi.fn().mockRejectedValue(new Error('boom')),
@@ -601,7 +615,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
           trackUsage: vi.fn(),
           createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
           getCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus' }),
-          getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: null }),
+          getPlatformConfig: vi.fn().mockResolvedValue({}),
           // Mimic the live SDK: getMerchant throws a SolvaPayError with status: 404
           getMerchant: vi.fn().mockImplementation(async () => {
             const { SolvaPayError } = await import('@solvapay/core')
@@ -703,8 +717,9 @@ describe('create_payment_intent descriptor', () => {
   it('forwards optional currency to createPaymentIntentCore', async () => {
     const serverModule = await import('@solvapay/server')
     const coreSpy = vi.spyOn(serverModule, 'createPaymentIntentCore').mockResolvedValue({
-      clientSecret: 'cs_test',
-      publishableKey: 'pk_test',
+      id: 'pi_sp_test',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_test',
     })
 
@@ -739,8 +754,9 @@ describe('create_payment_intent descriptor', () => {
   it('forwards autoRecharge on a topup to createTopupPaymentIntentCore', async () => {
     const serverModule = await import('@solvapay/server')
     const coreSpy = vi.spyOn(serverModule, 'createTopupPaymentIntentCore').mockResolvedValue({
-      clientSecret: 'cs_topup',
-      publishableKey: 'pk_test',
+      id: 'pi_sp_test',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_test',
     })
 
@@ -788,8 +804,9 @@ describe('create_payment_intent descriptor', () => {
   it('rejects autoRecharge on a plan purpose with 400', async () => {
     const serverModule = await import('@solvapay/server')
     const coreSpy = vi.spyOn(serverModule, 'createPaymentIntentCore').mockResolvedValue({
-      clientSecret: 'cs_test',
-      publishableKey: 'pk_test',
+      id: 'pi_sp_test',
+      captureMode: 'vault',
+      vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
       customerRef: 'cus_test',
     })
 
@@ -903,7 +920,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expiresAt: 1_800_000_000_000,
     scope: { paymentIntentId: 'pi_1' },
   }
-  const confirmed = { id: 'pi_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' as const }
+  const confirmed = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' as const }
   const authed = { authInfo: { extra: { customer_ref: 'cus_test' } } }
   const unauthorizedResult = {
     isError: true,
@@ -954,7 +971,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(grantTool.name).toBe('create_capture_grant')
     expect(grantTool.description).toBe(
       UI_ONLY_PREFIX +
-        'Vault checkout: grant the widget one short-lived card capture into the vault for a payment intent created with captureMode "vault".',
+        'Grant the widget one short-lived card capture into the vault for a payment intent.',
     )
     expect(grantTool.annotations).toStrictEqual({
       openWorldHint: true,
@@ -975,7 +992,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(confirmTool.name).toBe('confirm_payment')
     expect(confirmTool.description).toBe(
       UI_ONLY_PREFIX +
-        'Vault checkout: confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
+        'Confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
     )
     expect(confirmTool.annotations).toStrictEqual({ openWorldHint: true, destructiveHint: true })
     expect(confirmTool.meta).toStrictEqual(uiMeta)
@@ -1092,9 +1109,9 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
   it('confirm_payment forwards a saved payment method without the optionals and passes a 3DS redirect through', async () => {
     const requiresAction = {
       id: 'pi_1',
-      processorPaymentId: 'pi_stripe_1',
+      processorPaymentId: 'pi_rail_1',
       status: 'requires_action' as const,
-      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+      redirectUrl: 'https://acs.bank.test/3ds/abc',
     }
     const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(requiresAction)
     const { confirmTool } = build()
@@ -1297,5 +1314,175 @@ describe('buildSolvaPayDescriptors → intent-tool description contract', () => 
     const overview = docsResources?.find(r => r.uri === 'docs://solvapay/overview.md')
     expect(overview?.description).toMatch(/two intent tools/)
     expect(overview?.description).not.toMatch(/five intent tools/)
+  })
+})
+
+describe('create_card_setup_grant / save_card descriptors (card setup without a payment)', () => {
+  const UI_ONLY_PREFIX = `UI-only; agents should prefer ${INTENT_TOOL_NAMES.map(name => `\`${name}\``).join(' / ')}. `
+  const grant = {
+    token: 'vgs-collect-token',
+    tenantId: 'tntr4ol0cbq',
+    environment: 'sandbox' as const,
+    expiresAt: 1_800_000_000_000,
+    scope: { sessionId: 'cs_sess_1' },
+  }
+  const saved = {
+    status: 'succeeded',
+    paymentMethod: { id: 'pm_1', brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030 },
+  }
+  const authed = { authInfo: { extra: { customer_ref: 'cus_test' } } }
+  const uiMeta = {
+    ui: { resourceUri: 'ui://test/view.html', visibility: ['app'] },
+    audience: 'ui',
+    'openai/widgetAccessible': true,
+    'openai/visibility': 'private',
+  }
+
+  function build() {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const setupTool = tools.find(t => t.name === MCP_TOOL_NAMES.createCardSetupGrant)
+    const saveTool = tools.find(t => t.name === MCP_TOOL_NAMES.saveCard)
+    if (!setupTool) throw new Error('create_card_setup_grant not registered')
+    if (!saveTool) throw new Error('save_card not registered')
+    return { solvaPay, setupTool, saveTool }
+  }
+
+  async function spyCore<K extends 'createCardSetupGrantCore' | 'saveCardCore'>(name: K) {
+    const serverModule = await import('@solvapay/server')
+    return vi.spyOn(serverModule, name)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('advertises both tools as UI-only with their input schemas', () => {
+    const { setupTool, saveTool } = build()
+    expect(setupTool.name).toBe('create_card_setup_grant')
+    expect(setupTool.description).toBe(
+      UI_ONLY_PREFIX +
+        'Card setup without a payment (auto-recharge): open a customer session and grant the widget one short-lived card capture into the vault on it. The grant scope carries the sessionId for save_card.',
+    )
+    expect(setupTool.meta).toStrictEqual(uiMeta)
+    expect(Object.keys(setupTool.inputSchema)).toStrictEqual([])
+    expect(saveTool.name).toBe('save_card')
+    expect(saveTool.meta).toStrictEqual(uiMeta)
+    expect(saveTool.description).toBe(
+      UI_ONLY_PREFIX +
+        'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId) on its customer session (sessionId). Returns status succeeded | requires_action (with redirectUrl for 3DS; post the same cardId again after the return) | processing.',
+    )
+    expect(Object.keys(saveTool.inputSchema)).toStrictEqual(['sessionId', 'cardId', 'returnUrl'])
+    const schema = z.object(saveTool.inputSchema)
+    expect(schema.parse({ sessionId: 'cs_sess_1', cardId: 'CRD1' })).toStrictEqual({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+    })
+    expect(() => schema.parse({ sessionId: 'cs_sess_1' })).toThrow()
+  })
+
+  it('create_card_setup_grant posts as the authenticated customer and returns the session grant', async () => {
+    const coreSpy = (await spyCore('createCardSetupGrantCore')).mockResolvedValue(grant)
+    const { solvaPay, setupTool } = build()
+
+    const result = await setupTool.handler({}, authed)
+
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+    const [request, options] = coreSpy.mock.calls[0]
+    expect(request).toBeInstanceOf(Request)
+    expect(request.method).toBe('POST')
+    expect(request.headers.get('x-user-id')).toBe('cus_test')
+    expect(options).toStrictEqual({ solvaPay })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(grant) }],
+      structuredContent: grant,
+    })
+  })
+
+  it('create_card_setup_grant refuses unauthenticated callers before calling the core helper', async () => {
+    const coreSpy = await spyCore('createCardSetupGrantCore')
+    const { setupTool } = build()
+    const result = await setupTool.handler({}, {})
+    expect(result).toMatchObject({ isError: true, structuredContent: { status: 401 } })
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('save_card forwards the session and card ids and returns the saved card', async () => {
+    const coreSpy = (await spyCore('saveCardCore')).mockResolvedValue(saved as never)
+    const { solvaPay, saveTool } = build()
+
+    const result = await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 'CRD1' }, authed)
+
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+    const [request, body, options] = coreSpy.mock.calls[0]
+    expect(request.method).toBe('POST')
+    expect(body).toStrictEqual({ sessionId: 'cs_sess_1', cardId: 'CRD1' })
+    expect(options).toStrictEqual({ solvaPay })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(saved) }],
+      structuredContent: saved,
+    })
+  })
+
+  it('save_card forwards returnUrl and returns a requires_action outcome', async () => {
+    const outcome = { status: 'requires_action', redirectUrl: 'https://acs.bank.test/3ds/setup' }
+    const coreSpy = (await spyCore('saveCardCore')).mockResolvedValue(outcome as never)
+    const { saveTool } = build()
+
+    const result = await saveTool.handler(
+      { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
+      authed,
+    )
+
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
+    })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(outcome) }],
+      structuredContent: outcome,
+    })
+  })
+
+  it('save_card rejects a missing or non-string id with 400 without calling the core helper', async () => {
+    const coreSpy = await spyCore('saveCardCore')
+    const { saveTool } = build()
+    expect(await saveTool.handler({ cardId: 'CRD1' }, authed)).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Pass sessionId as a non-empty string.' }],
+      structuredContent: {
+        error: 'save_card requires sessionId',
+        status: 400,
+        details: 'Pass sessionId as a non-empty string.',
+      },
+    })
+    expect(
+      await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: '' }, authed),
+    ).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Omit returnUrl or pass it as a non-empty string.' }],
+      structuredContent: {
+        error: 'save_card returnUrl must be a non-empty string',
+        status: 400,
+        details: 'Omit returnUrl or pass it as a non-empty string.',
+      },
+    })
+    expect(await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 7 }, authed)).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Pass cardId as a non-empty string.' }],
+      structuredContent: {
+        error: 'save_card requires cardId',
+        status: 400,
+        details: 'Pass cardId as a non-empty string.',
+      },
+    })
+    expect(coreSpy).not.toHaveBeenCalled()
   })
 })

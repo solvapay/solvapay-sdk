@@ -400,13 +400,9 @@ export const enCopy: SolvaPayCopy = {
     configMissingPlanOrProduct: 'PaymentForm: either planRef or productRef is required',
     configMissingAmount: 'TopupForm: amount must be a positive number',
     unknownError: 'Unknown error',
-    stripeUnavailable: 'Stripe is not available. Please refresh the page.',
     paymentIntentUnavailable: 'Payment intent not available. Please refresh the page.',
-    paymentElementMissing: 'Payment element not found',
     cardFieldsMissing: 'Card fields are not ready. Please refresh the page.',
     cardCaptureFailed: 'We could not save your card details. Please check them and try again.',
-    /** @deprecated Use `paymentElementMissing`. Kept for Card Element compatibility. */
-    cardElementMissing: 'Card element not found',
     paymentUnexpected: 'An unexpected error occurred.',
     paymentProcessingFailed: 'Payment processing failed. Please try again or contact support.',
     paymentPending: 'Your payment is being confirmed. You will be notified once it completes.',

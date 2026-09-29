@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
-import type { PaymentIntentResult } from '@stripe/stripe-js'
 import type { TaxBreakdown } from '@solvapay/core'
 import { PaymentForm } from './PaymentForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -39,34 +38,8 @@ const mockTaxBreakdown: TaxBreakdown = {
   inclusive: false,
 }
 
-const stripeMocks = vi.hoisted(() => ({
-  submit: vi.fn<() => Promise<{ error?: { message: string } }>>(),
-  confirmPayment: vi.fn<
-    () => Promise<PaymentIntentResult>
-  >(),
-  fetchUpdates: vi.fn<() => Promise<{ error?: { message: string } }>>(),
-}))
-
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmPayment: stripeMocks.confirmPayment }),
-  useElements: () => ({
-    getElement: vi.fn(),
-    submit: stripeMocks.submit,
-    fetchUpdates: stripeMocks.fetchUpdates,
-  }),
-  CardElement: () => React.createElement('div', { 'data-testid': 'card-element' }),
-  PaymentElement: (props: { onChange?: (event: { complete: boolean }) => void }) =>
-    React.createElement('button', {
-      'data-testid': 'payment-element',
-      type: 'button',
-      onClick: () => props.onChange?.({ complete: true }),
-    }),
-}))
-
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({})),
+vi.mock('../vault/CardFields', () => ({
+  VaultCardFields: () => React.createElement('div', { 'data-testid': 'card-fields' }),
 }))
 
 vi.mock('../hooks/usePlan', () => ({
@@ -89,9 +62,9 @@ vi.mock('../hooks/useCheckout', () => ({
   useCheckout: () => ({
     loading: false,
     error: null,
-    stripePromise: Promise.resolve({}),
-    clientSecret: 'pi_secret',
-    processorPaymentId: 'pi_test_123',
+    paymentIntentId: 'pi_sp_test',
+    vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' },
+    processorPaymentId: null,
     resolvedPlanRef: 'pln_test',
     startCheckout: vi.fn(),
     reset: vi.fn(),
@@ -128,6 +101,8 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     processPayment: vi.fn().mockResolvedValue({ status: 'succeeded', type: 'recurring' }),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
@@ -150,11 +125,6 @@ function Wrap({
 describe('PaymentForm business details + tax summary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    stripeMocks.submit.mockResolvedValue({})
-    stripeMocks.confirmPayment.mockResolvedValue({
-      error: undefined,
-      paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
-    } as PaymentIntentResult)
     attachHookMock.runAttach.mockResolvedValue(true)
   })
 
@@ -165,7 +135,7 @@ describe('PaymentForm business details + tax summary', () => {
     render(
       <Wrap value={ctx({ attachBusinessDetails })}>
         <PaymentForm.Root planRef="pln_test" productRef="prd_test">
-          <PaymentForm.PaymentElement />
+          <PaymentForm.CardFields />
           <PaymentForm.SubmitButton data-testid="submit" />
         </PaymentForm.Root>
       </Wrap>,
@@ -174,7 +144,7 @@ describe('PaymentForm business details + tax summary', () => {
     await waitFor(() => expect(useBusinessDetailsAttach).toHaveBeenCalled())
     expect(useBusinessDetailsAttach).toHaveBeenCalledWith(
       expect.objectContaining({
-        processorPaymentId: 'pi_test_123',
+        processorPaymentId: 'pi_sp_test',
         attachBusinessDetails,
       }),
     )
@@ -194,26 +164,6 @@ describe('PaymentForm business details + tax summary', () => {
     await waitFor(() => expect(screen.getByTestId('business-root')).toBeTruthy())
     expect(screen.getByTestId('business-root').tagName).toBe('SECTION')
     expect(screen.getByTestId('business-toggle')).toBeTruthy()
-  })
-
-  it('passes refreshElements callback to useBusinessDetailsAttach', async () => {
-    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown: mockTaxBreakdown })
-    const { useBusinessDetailsAttach } = await import('../hooks/useBusinessDetailsAttach')
-
-    render(
-      <Wrap value={ctx({ attachBusinessDetails })}>
-        <PaymentForm.Root planRef="pln_test" productRef="prd_test">
-          <PaymentForm.PaymentElement />
-        </PaymentForm.Root>
-      </Wrap>,
-    )
-
-    await waitFor(() => expect(useBusinessDetailsAttach).toHaveBeenCalled())
-    expect(useBusinessDetailsAttach).toHaveBeenCalledWith(
-      expect.objectContaining({
-        refreshElements: expect.any(Function),
-      }),
-    )
   })
 
   it('exposes BusinessDetails.Fields with labeled business inputs when toggled on', async () => {

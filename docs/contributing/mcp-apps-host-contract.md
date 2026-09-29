@@ -66,7 +66,7 @@ The resolution is not to go back to a placeholder. The short line must be **self
 Verified against the platform, not assumed:
 
 - **TTL is 15 minutes**, set in `payment-service/src/handlers/checkout-command.handler.ts:131`, enforced on read in `checkout-hydrated-session.flow.ts:73-78` and by a 5-minute cron sweep. `expired` is terminal.
-- **Nothing external forces this.** The platform never creates Stripe Checkout Sessions — it uses PaymentIntents with Elements. The 15 minutes is entirely our own choice.
+- **Nothing external forces this.** The platform never creates processor-hosted checkout sessions — it uses payment intents confirmed server-side with vault-captured cards. The 15 minutes is entirely our own choice.
 - **Price is not the reason.** `selectPlanForCheckoutSessionFlow` re-resolves the plan and overwrites the frozen `amount`/`metadata.plan` on selection, and the customer-app triggers that on page load. A stale link would not sell at a stale price.
 - **The session id is an unauthenticated bearer capability.** `CheckoutSessionPublicController` (`checkout-session.ui.controller.ts:112-137`) carries no guard, where its siblings have `JwtAuthGuard` and `SecretKeyAuthGuard`. Possession of the 32-hex id alone exposes the customer's name, email and `externalRef`, and permits `select-plan`, `select-topup-amount`, `business-details` and payment.
 - **There is no stable entry point.** `createCustomerSession` produces `/customer/manage?id=<id>` on the identical bearer design, also defaulting to 15 minutes. No URL keyed by `productRef` + `customerRef` exists anywhere.

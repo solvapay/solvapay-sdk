@@ -44,6 +44,8 @@ import {
   attachBusinessDetailsCore,
   createCaptureGrantCore,
   confirmPaymentCore,
+  createCardSetupGrantCore,
+  saveCardCore,
   getHistoryCore,
   isErrorResult,
   listPlansCore,
@@ -172,14 +174,14 @@ export interface BuildSolvaPayDescriptorsOptions {
    */
   readHtml?: () => Promise<string>
   /**
-   * Public `https://` origin used as `return_url` for Stripe confirmations.
+   * Public `https://` origin used as the `returnUrl` for 3DS redirects.
    * Required because MCP hosts set `window.location.origin` to `"null"`,
-   * which Stripe's `confirmPayment` validator rejects.
+   * which is not a navigable return target.
    */
   publicBaseUrl: string
   /** Which viewer surfaces the `account` tool may open. Defaults to every known view. */
   views?: SolvaPayMcpViewKind[]
-  /** Additional CSP allow-lists merged with the Stripe baseline. */
+  /** Additional CSP allow-lists merged with the vault card field baseline. */
   csp?: SolvaPayMcpCsp
   /**
    * Configured SolvaPay API origin (e.g. `'https://api.solvapay.com'`
@@ -292,7 +294,7 @@ export function buildSolvaPayDescriptors(
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
     throw new Error(
-      'buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`).',
+      'buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (a `ui://` origin cannot be a 3DS return URL).',
     )
   }
 
@@ -489,7 +491,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createHostedSession,
     description:
       UI_ONLY_PREFIX +
-      'Create a SolvaPay hosted session and return its URL. Pass kind: "checkout" for a hosted checkout URL (fallback when Stripe Elements is blocked) or kind: "portal" for the customer portal URL.',
+      'Create a SolvaPay hosted session and return its URL. Pass kind: "checkout" for a hosted checkout URL (fallback when the embedded card fields cannot load) or kind: "portal" for the customer portal URL.',
     inputSchema: {
       kind: z
         .enum(['checkout', 'portal'])
@@ -539,7 +541,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.',
+      'Create a payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { id, captureMode: "vault", vault, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation). A topup may carry autoRecharge so the card entered for the top-up is saved as the auto-recharge funding source.',
     inputSchema: {
       purpose: z
         .enum(['plan', 'topup'])
@@ -636,7 +638,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.processPayment,
     description:
       UI_ONLY_PREFIX +
-      'Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.',
+      'Process a payment intent after the server-side confirm and create the SolvaPay purchase. Call after confirm_payment succeeds to short-circuit webhook latency.',
     inputSchema: {
       paymentIntentId: z.string(),
       productRef: z.string(),
@@ -731,7 +733,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createCaptureGrant,
     description:
       UI_ONLY_PREFIX +
-      'Vault checkout: grant the widget one short-lived card capture into the vault for a payment intent created with captureMode "vault".',
+      'Grant the widget one short-lived card capture into the vault for a payment intent.',
     inputSchema: {
       paymentIntentId: z.string(),
     },
@@ -764,7 +766,7 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.confirmPayment,
     description:
       UI_ONLY_PREFIX +
-      'Vault checkout: confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
+      'Confirm a payment server-side with a captured card (cardId) or a saved payment method (paymentMethodId). Returns redirectUrl when the payer must complete 3DS.',
     inputSchema: {
       paymentIntentId: z.string(),
       cardId: z.string().optional(),
@@ -803,6 +805,73 @@ export function buildSolvaPayDescriptors(
         const result = await confirmPaymentCore(
           buildRequest(extra, { method: 'POST' }),
           { paymentIntentId, cardId, paymentMethodId, returnUrl },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.createCardSetupGrant,
+    description:
+      UI_ONLY_PREFIX +
+      'Card setup without a payment (auto-recharge): open a customer session and grant the widget one short-lived card capture into the vault on it. The grant scope carries the sessionId for save_card.',
+    inputSchema: {},
+    meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: false }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.createCardSetupGrant, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        const result = await createCardSetupGrantCore(buildRequest(extra, { method: 'POST' }), {
+          solvaPay,
+        })
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.saveCard,
+    description:
+      UI_ONLY_PREFIX +
+      'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId) on its customer session (sessionId). Returns status succeeded | requires_action (with redirectUrl for 3DS; post the same cardId again after the return) | processing.',
+    inputSchema: {
+      sessionId: z.string(),
+      cardId: z.string(),
+      returnUrl: z.string().optional(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({ destructiveHint: false }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.saveCard, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+        for (const key of ['sessionId', 'cardId'] as const) {
+          const value = args[key]
+          if (typeof value !== 'string' || !value) {
+            return toolErrorResult({
+              error: `save_card requires ${key}`,
+              status: 400,
+              details: `Pass ${key} as a non-empty string.`,
+            })
+          }
+        }
+        if (args.returnUrl !== undefined && (typeof args.returnUrl !== 'string' || !args.returnUrl)) {
+          return toolErrorResult({
+            error: 'save_card returnUrl must be a non-empty string',
+            status: 400,
+            details: 'Omit returnUrl or pass it as a non-empty string.',
+          })
+        }
+        const result = await saveCardCore(
+          buildRequest(extra, { method: 'POST' }),
+          {
+            sessionId: args.sessionId as string,
+            cardId: args.cardId as string,
+            ...(typeof args.returnUrl === 'string' ? { returnUrl: args.returnUrl } : {}),
+          },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

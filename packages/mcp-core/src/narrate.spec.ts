@@ -18,7 +18,6 @@ function basePayload(overrides: Partial<BootstrapPayload> = {}): BootstrapPayloa
   return {
     view: 'account',
     productRef: 'prd_x',
-    stripePublishableKey: null,
     returnUrl: 'https://example.test/r',
     merchant: { displayName: 'Acme', legalName: 'Acme Inc.' } as never,
     product: { reference: 'prd_x', name: 'Acme Knowledge Base' } as never,

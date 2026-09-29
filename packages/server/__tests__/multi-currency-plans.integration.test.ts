@@ -101,8 +101,9 @@ describeIntegration('Paid plan payment intents — Real Backend', () => {
     expect(intent.currency?.toUpperCase()).toBe(providerCurrency)
     expect(presentmentAmount(intent)).toBe(planPrice)
     expect(intent.amount).toBeGreaterThan(0)
-    expect(intent.clientSecret).toBeDefined()
-    expect(intent.processorPaymentId).toBeDefined()
+    expect(intent.captureMode).toBe('vault')
+    expect(typeof intent.id).toBe('string')
+    expect(typeof intent.vault.tenantId).toBe('string')
   })
 
   it('factory createPaymentIntent charges the plan price', async () => {

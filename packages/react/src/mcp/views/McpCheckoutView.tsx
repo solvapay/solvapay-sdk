@@ -3,20 +3,9 @@
 /**
  * `<McpCheckoutView>` — the paid-plan activation surface for MCP hosts.
  *
- * Always renders `<EmbeddedCheckout>` so the plan picker (and the PAYG
- * amount step) stay visible while `useStripeProbe` warms Stripe.js.
- * The probe is a payment-capability check: `EmbeddedCheckout` only
- * branches on it at the payment step.
- *
- *  - `useStripeProbe === 'ready'`   → Payment Element
- *    (`PaygPaymentStep` / `RecurringPaymentStep`).
- *  - `useStripeProbe === 'blocked'` → `<HostedCheckout>` (new-tab
- *    fallback with `check_purchase` polling) after a plan is chosen.
- *  - `useStripeProbe === 'loading'` → interstitial spinner on the
- *    payment step only, if the customer outruns the probe.
- *
- * Pass `publishableKey={null}` to skip the probe. Plans still render;
- * the hosted handoff is forced only at payment.
+ * Renders `<EmbeddedCheckout>`: plan picker, the PAYG amount step, then
+ * the payment step with the vault `CardFields`
+ * (`PaygPaymentStep` / `RecurringPaymentStep`).
  *
  * The MCP-specific bits (bridge wiring, "Stay on Free" affordance,
  * banner copy) live in this file. The state engine and step layout
@@ -25,19 +14,12 @@
  */
 
 import React from 'react'
-import { useStripeProbe } from '../useStripeProbe'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 import { EmbeddedCheckout } from './checkout'
 import type { BootstrapPlanLike } from './checkout'
 
 export interface McpCheckoutViewProps {
   productRef: string
-  /**
-   * Stripe publishable key used by `useStripeProbe` to detect CSP-blocked
-   * hosts. Pass `null` to skip the probe: the plan picker still renders,
-   * and the hosted handoff is forced only at the payment step.
-   */
-  publishableKey?: string | null
   returnUrl: string
   onPurchaseSuccess?: () => void
   /**
@@ -87,7 +69,6 @@ export interface McpCheckoutViewProps {
 
 export function McpCheckoutView({
   productRef,
-  publishableKey = null,
   returnUrl,
   onPurchaseSuccess,
   onRequestTopup: _onRequestTopup,
@@ -102,7 +83,6 @@ export function McpCheckoutView({
   children,
 }: McpCheckoutViewProps) {
   const cx = resolveMcpClassNames(classNames)
-  const probe = useStripeProbe(publishableKey)
 
   return (
     <EmbeddedCheckout
@@ -116,7 +96,6 @@ export function McpCheckoutView({
       onBack={onBack}
       initialPlanRef={initialPlanRef}
       autoAdvance={autoAdvance}
-      stripeProbe={probe}
       cx={cx}
       classNames={classNames}
     >

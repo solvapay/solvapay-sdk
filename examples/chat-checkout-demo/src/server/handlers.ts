@@ -5,6 +5,8 @@ import {
   attachBusinessDetailsCore,
   createCaptureGrantCore,
   confirmPaymentCore,
+  createCardSetupGrantCore,
+  saveCardCore,
   cancelPurchaseCore,
   checkLimitsCore,
   checkPurchaseCore,
@@ -152,6 +154,15 @@ const HANDLERS: Record<string, Partial<Record<Method, Handler>>> = {
         returnUrl?: string
       }
       return confirmPaymentCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/create-card-setup-grant': {
+    POST: async (req, deps) => createCardSetupGrantCore(req, { solvaPay: deps.solvaPay }),
+  },
+  '/api/save-card': {
+    POST: async (req, deps) => {
+      const body = (await req.json()) as { sessionId: string; cardId: string }
+      return saveCardCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/create-checkout-session': {

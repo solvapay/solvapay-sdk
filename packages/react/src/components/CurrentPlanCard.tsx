@@ -6,7 +6,7 @@
  * Pure projection of existing provider state (`usePurchase`,
  * `usePurchaseStatus`, `useBalance`, `usePaymentMethod`) plus Phase 1
  * action components (`<CancelPlanButton>`, Phase 2's
- * `<UpdatePaymentMethodButton>`). No Stripe Elements dependency, so the
+ * `<UpdatePaymentMethodButton>`). No card-entry dependency, so the
  * default tree renders identically inside an MCP host sandbox and a
  * standalone HTTP app.
  *

@@ -28,7 +28,7 @@ vi.mock('../TopupForm', () => {
     </div>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const CardFields: React.FC = () => null
   const ErrorSlot: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
     children,
@@ -52,7 +52,7 @@ vi.mock('../TopupForm', () => {
     TopupForm: {
       Root,
       Loading,
-      PaymentElement,
+      CardFields,
       Error: ErrorSlot,
       SubmitButton,
       BusinessDetails,
@@ -80,7 +80,7 @@ vi.mock('../PaymentForm', () => {
     </div>
   )
   const Loading: React.FC = () => null
-  const PaymentElement: React.FC = () => null
+  const CardFields: React.FC = () => null
   const ErrorSlot: React.FC = () => null
   const MandateText: React.FC = () => null
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
@@ -106,7 +106,7 @@ vi.mock('../PaymentForm', () => {
     PaymentForm: {
       Root,
       Loading,
-      PaymentElement,
+      CardFields,
       Error: ErrorSlot,
       SubmitButton,
       MandateText,

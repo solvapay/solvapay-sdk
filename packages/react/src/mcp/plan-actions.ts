@@ -39,7 +39,7 @@ export type PlanShape =
  *  - `topup-first` — usage-based: ActivationFlow's `AmountPicker`
  *    branch.
  *  - `paid-checkout` — recurring with a non-zero price: mount
- *    `PaymentFormGate` + `PaymentForm.*` for inline Stripe Elements.
+ *    `PaymentFormGate` + `PaymentForm.*` for inline card entry.
  */
 export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
 
@@ -115,7 +115,7 @@ export function resolvePlanShape(plan: PlanLike | null | undefined): PlanShape |
  * Pick the activation strategy for a plan the user just clicked.
  *
  * Free and trial plans activate instantly, usage-based always tops up
- * first, and everything else goes to Stripe checkout. A zero-priced
+ * first, and everything else goes to paid checkout. A zero-priced
  * plan needs no separate branch: it resolves to `'free'`, because
  * charging nothing is what makes a plan free.
  */

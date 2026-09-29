@@ -2,7 +2,7 @@
  * TypeScript type definitions for @solvapay/react
  */
 
-import type { Appearance, PaymentIntent } from '@stripe/stripe-js'
+import type { Appearance } from './appearance'
 import type {
   ProcessPaymentResult,
   TopupProcessResult,
@@ -17,6 +17,13 @@ import type {
 } from '@solvapay/server'
 
 export type { PurchaseInfo }
+export type {
+  Appearance,
+  AppearanceFont,
+  AppearanceRule,
+  AppearanceRules,
+  AppearanceVariables,
+} from './appearance'
 import type { AuthAdapter } from '../adapters/auth'
 import type { PricingOptionLike, TaxBehavior } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
@@ -29,26 +36,21 @@ export interface CustomerPurchaseData {
   purchases: PurchaseInfo[]
 }
 
-/** How the browser takes the card for a payment (mirrors the backend `captureMode`). */
-export type CaptureMode = 'processor_elements' | 'vault'
+/** How the browser takes the card for a payment. The backend only issues `'vault'`. */
+export type CaptureMode = 'vault'
 
-/** The vault the browser writes a card into when `captureMode` is `'vault'`. */
+/** The vault the browser writes a card into (VGS Collect tenant + environment). */
 export interface VaultInfo {
   tenantId: string
   environment: 'sandbox' | 'live'
 }
 
 export interface PaymentIntentResult {
-  /** SolvaPay payment intent id. Drives the vault capture-grant and confirm calls. */
-  id?: string
-  /** Defaults to `'processor_elements'` for backends that predate vault checkout. */
-  captureMode?: CaptureMode
-  vault?: VaultInfo
-  /** Present in `processor_elements` mode only. */
-  clientSecret?: string
-  /** Present in `processor_elements` mode only. */
-  publishableKey?: string
-  accountId?: string
+  /** SolvaPay payment intent id. Drives the capture-grant and confirm calls. */
+  id: string
+  captureMode: CaptureMode
+  /** The vault `CardFields` write the card into. */
+  vault: VaultInfo
   customerRef?: string // Backend customer reference
   processorPaymentId?: string
 }
@@ -144,12 +146,10 @@ export interface UseTopupOptions {
 export interface UseTopupReturn {
   loading: boolean
   error: Error | null
-  stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
-  clientSecret: string | null
   processorPaymentId: string | null
-  /** SolvaPay payment intent id (both capture modes). */
+  /** SolvaPay payment intent id. */
   paymentIntentId: string | null
-  captureMode: CaptureMode | null
+  /** The vault `TopupForm.CardFields` write into; `null` until the intent exists. */
   vault: VaultInfo | null
   startTopup: () => Promise<void>
   reset: () => void
@@ -189,9 +189,9 @@ export interface TopupFormProps {
   className?: string
   buttonClassName?: string
   /**
-   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * Card-field appearance. When omitted, the form reads `--solvapay-*`
    * tokens from the form root and builds a host-matched appearance. Pass
-   * `null` to restore Stripe's default theme.
+   * `null` for the SDK's stock field look.
    */
   appearance?: Appearance | null
 }
@@ -295,6 +295,8 @@ export interface SolvaPayConfig {
     attachBusinessDetails?: string // Default: '/api/attach-business-details'
     createCaptureGrant?: string // Default: '/api/create-capture-grant'
     confirmPayment?: string // Default: '/api/confirm-payment'
+    createCardSetupGrant?: string // Default: '/api/create-card-setup-grant'
+    saveCard?: string // Default: '/api/save-card'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -321,7 +323,7 @@ export interface SolvaPayConfig {
 
   /**
    * BCP-47 locale tag (e.g. 'en', 'sv-SE'). Threaded through every SDK
-   * component, `Intl.NumberFormat`, and Stripe Elements. Defaults to the
+   * component, `Intl.NumberFormat`, and the card fields. Defaults to the
    * runtime default (typically 'en').
    */
   locale?: string
@@ -451,16 +453,16 @@ export interface SolvaPayContextValue {
     autoRecharge?: import('@solvapay/server').AutoRechargeInput
   }) => Promise<TopupPaymentResult>
   /**
-   * Process a credit-topup payment intent after Stripe's `confirmPayment`
-   * resolves. Resolves once the backend observes the PI reach
+   * Process a credit-topup payment intent after the server-side confirm
+   * succeeds. Resolves once the backend observes the PI reach
    * `succeeded` AND the webhook handler has booked the credit
    * transaction — eliminates the confirm-to-webhook race that left the
    * customer momentarily uncredited at the moment `TopupForm.onSuccess`
    * fired.
    *
    * Optional: transports that can't run the synchronous round-trip
-   * omit this, and `TopupForm.onSuccess` fires immediately on Stripe
-   * confirm (legacy behaviour). The default HTTP transport always
+   * omit this, and `TopupForm.onSuccess` fires immediately on confirm
+   * (legacy behaviour). The default HTTP transport always
    * implements it.
    */
   processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
@@ -477,10 +479,10 @@ export interface SolvaPayContextValue {
     taxId?: string
     taxIdType?: import('@solvapay/core').TaxIdType
   }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
-  /** Vault checkout. Present when the transport implements `createCaptureGrant`. */
-  createCaptureGrant?: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
-  /** Vault checkout. Present when the transport implements `confirmPayment`. */
-  confirmPayment?: (params: {
+  /** Grant for writing one card into the vault for a payment intent. */
+  createCaptureGrant: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
+  /** Confirm a payment server-side with a captured card or a saved payment method. */
+  confirmPayment: (params: {
     paymentIntentId: string
     cardId?: string
     paymentMethodId?: string
@@ -706,13 +708,10 @@ export interface PurchaseStatusReturn {
  * callback; paid-only integrators keep using `onSuccess(paymentIntent)`.
  */
 /**
- * What `onSuccess` / `onResult` receive once a payment has succeeded. In
- * `processor_elements` mode this is Stripe's `PaymentIntent`; in `vault`
- * mode the SDK never talks to Stripe.js, so it is the backend's
- * `ConfirmedPayment` (`id`, `processorPaymentId`, `status`). Both carry
- * `id` and `status`.
+ * What `onSuccess` / `onResult` receive once a payment has succeeded: the
+ * backend's `ConfirmedPayment` (`id`, `processorPaymentId`, `status`).
  */
-export type SucceededPayment = PaymentIntent | ConfirmedPayment
+export type SucceededPayment = ConfirmedPayment
 export type PaymentResult = { kind: 'paid'; paymentIntent: SucceededPayment }
 export type ActivationResult = { kind: 'activated'; result: ActivatePlanResult }
 export type CheckoutResult = PaymentResult | ActivationResult
@@ -782,9 +781,9 @@ export interface PaymentFormProps {
   /** Fired when business-details attach returns an updated tax breakdown. */
   onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
   /**
-   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * Card-field appearance. When omitted, the form reads `--solvapay-*`
    * tokens from the form root and builds a host-matched appearance. Pass
-   * `null` to restore Stripe's default theme.
+   * `null` for the SDK's stock field look.
    */
   appearance?: Appearance | null
 }

@@ -48,8 +48,8 @@ function getFractionDigits(currency: string): number {
 /**
  * Number of minor units per one major unit of `currency`. 1 for zero-decimal
  * currencies (JPY, KRW, …), 100 for everything else. Use this to convert
- * between the units a user types (major, e.g. dollars) and the units Stripe
- * and the SolvaPay API consume (minor, e.g. cents).
+ * between the units a user types (major, e.g. dollars) and the units the
+ * SolvaPay API consumes (minor, e.g. cents).
  */
 export function getMinorUnitsPerMajor(currency: string): number {
   return getFractionDigits(currency) === 0 ? 1 : 100

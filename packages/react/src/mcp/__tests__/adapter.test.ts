@@ -91,6 +91,8 @@ describe('createMcpAppAdapter', () => {
       'attachBusinessDetails',
       'createCaptureGrant',
       'confirmPayment',
+      'createCardSetupGrant',
+      'saveCard',
       'cancelRenewal',
       'reactivateRenewal',
       'activatePlan',
@@ -126,8 +128,61 @@ describe('createMcpAppAdapter', () => {
     expect(result).toStrictEqual(grant)
   })
 
+  it('routes createCardSetupGrant to create_card_setup_grant with no arguments and returns the session grant', async () => {
+    const grant = {
+      token: 'vgs-collect-token',
+      tenantId: 'tntr4ol0cbq',
+      environment: 'sandbox',
+      expiresAt: 1_800_000_000_000,
+      scope: { sessionId: 'cs_sess_1' },
+    }
+    const app = createMockApp(() => ({ structuredContent: grant }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.createCardSetupGrant?.()
+
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({ name: 'create_card_setup_grant', arguments: {} })
+    expect(MCP_TOOL_NAMES.createCardSetupGrant).toBe('create_card_setup_grant')
+    expect(result).toStrictEqual(grant)
+  })
+
+  it('routes saveCard to save_card with the session and card ids, dropping an undefined returnUrl', async () => {
+    const saved = { status: 'processing' }
+    const app = createMockApp(() => ({ structuredContent: saved }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.saveCard?.({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: undefined })
+
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'save_card',
+      arguments: { sessionId: 'cs_sess_1', cardId: 'CRD1' },
+    })
+    expect(Object.keys(app.calls[0].args)).toStrictEqual(['sessionId', 'cardId'])
+    expect(MCP_TOOL_NAMES.saveCard).toBe('save_card')
+    expect(result).toStrictEqual(saved)
+  })
+
+  it('forwards returnUrl to save_card and returns the 3DS redirect', async () => {
+    const saved = { status: 'requires_action', redirectUrl: 'https://acs.bank.test/3ds/setup' }
+    const app = createMockApp(() => ({ structuredContent: saved }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.saveCard?.({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
+    })
+
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'save_card',
+      arguments: { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
+    })
+    expect(result).toStrictEqual(saved)
+  })
+
   it('routes confirmPayment to confirm_payment with the card id, dropping an undefined returnUrl', async () => {
-    const payment = { id: 'pi_1', processorPaymentId: 'pi_stripe_1', status: 'succeeded' }
+    const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' }
     const app = createMockApp(() => ({ structuredContent: payment }))
     const transport = createMcpAppAdapter(app)
 
@@ -146,9 +201,9 @@ describe('createMcpAppAdapter', () => {
   it('routes confirmPayment with a saved payment method and forwards returnUrl when given', async () => {
     const payment = {
       id: 'pi_1',
-      processorPaymentId: 'pi_stripe_1',
+      processorPaymentId: 'pi_rail_1',
       status: 'requires_action',
-      redirectUrl: 'https://hooks.stripe.com/3ds/abc',
+      redirectUrl: 'https://acs.bank.test/3ds/abc',
     }
     const app = createMockApp(() => ({ structuredContent: payment }))
     const transport = createMcpAppAdapter(app)

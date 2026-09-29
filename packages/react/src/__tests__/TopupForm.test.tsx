@@ -7,18 +7,21 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
-// Mock Stripe modules
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
-  useStripe: () => ({ confirmPayment: vi.fn() }),
-  useElements: () => ({ getElement: vi.fn() }),
-  PaymentElement: () => React.createElement('div', { 'data-testid': 'payment-element' }),
+vi.mock('../vault/CardFields', () => ({
+  VaultCardFields: (props: { vault: unknown; paymentIntentId: string | null }) =>
+    props.vault && props.paymentIntentId
+      ? React.createElement('div', {
+          'data-testid': 'card-fields',
+          'data-payment-intent': props.paymentIntentId,
+        })
+      : null,
 }))
 
-vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
-}))
+const vaultIntent = {
+  id: 'pi_topup_1',
+  captureMode: 'vault' as const,
+  vault: { tenantId: 'tntr4ol0cbq', environment: 'sandbox' as const },
+}
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   return {
@@ -36,10 +39,9 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     refetchPurchase: vi.fn(),
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
-    createTopupPayment: vi.fn().mockResolvedValue({
-      clientSecret: 'pi_topup_secret',
-      publishableKey: 'pk_test_123',
-    }),
+    createTopupPayment: vi.fn().mockResolvedValue(vaultIntent),
+    createCaptureGrant: vi.fn(),
+    confirmPayment: vi.fn(),
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
@@ -74,10 +76,7 @@ describe('TopupForm', () => {
   })
 
   it('auto-starts topup on mount when amount is provided', async () => {
-    const createTopupPayment = vi.fn().mockResolvedValue({
-      clientSecret: 'cs_1',
-      publishableKey: 'pk_1',
-    })
+    const createTopupPayment = vi.fn().mockResolvedValue(vaultIntent)
     renderWithProvider(React.createElement(TopupForm, { amount: 2000 }), { createTopupPayment })
 
     await vi.waitFor(() => {
@@ -99,25 +98,19 @@ describe('TopupForm', () => {
     expect(container.firstChild).toHaveClass('custom-class')
   })
 
-  it('renders Stripe Elements when clientSecret is available', async () => {
-    const createTopupPayment = vi.fn().mockResolvedValue({
-      clientSecret: 'pi_test_secret',
-      publishableKey: 'pk_test',
-    })
+  it('renders the vault card fields once the payment intent exists', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue(vaultIntent)
 
     renderWithProvider(React.createElement(TopupForm, { amount: 1000 }), { createTopupPayment })
 
     await vi.waitFor(() => {
-      expect(screen.getByTestId('stripe-elements')).toBeTruthy()
+      expect(screen.getByTestId('card-fields')).toHaveAttribute('data-payment-intent', 'pi_topup_1')
     })
   })
 
   it('does not call processPayment (verifies it is NOT called)', async () => {
     const processPayment = vi.fn()
-    const createTopupPayment = vi.fn().mockResolvedValue({
-      clientSecret: 'pi_test_secret',
-      publishableKey: 'pk_test',
-    })
+    const createTopupPayment = vi.fn().mockResolvedValue(vaultIntent)
 
     renderWithProvider(React.createElement(TopupForm, { amount: 1000 }), {
       processPayment,
@@ -125,7 +118,7 @@ describe('TopupForm', () => {
     })
 
     await vi.waitFor(() => {
-      expect(screen.getByTestId('stripe-elements')).toBeTruthy()
+      expect(screen.getByTestId('card-fields')).toHaveAttribute('data-payment-intent', 'pi_topup_1')
     })
 
     expect(processPayment).not.toHaveBeenCalled()

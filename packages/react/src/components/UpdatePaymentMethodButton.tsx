@@ -6,8 +6,8 @@
  *
  * This MCP-first slice ships `mode="portal"` only (thin wrapper around
  * `<LaunchCustomerPortalButton>`). A future Lovable-focused PR will add
- * `mode="inline"` — a drawer containing `<PaymentMethodForm>` (Stripe
- * Elements + SetupIntent). The `mode` prop is defined now so the API
+ * `mode="inline"` — a drawer with the vault `CardFields` saving the card
+ * on a customer session. The `mode` prop is defined now so the API
  * stays stable across both PRs.
  */
 
@@ -25,7 +25,7 @@ export interface UpdatePaymentMethodButtonProps
   /**
    * How card updates are collected. `"portal"` (default, only value shipped
    * today) opens the SolvaPay hosted customer portal in a new tab. A
-   * future PR adds `"inline"` for Stripe Elements; keep the prop stable so
+   * future PR adds `"inline"` (vault card fields); keep the prop stable so
    * callers don't need to migrate when that lands.
    */
   mode?: UpdatePaymentMethodButtonMode

@@ -199,7 +199,7 @@ That advertises `inline` and `fullscreen` only — `pip` is excluded because che
 
 The widget blends into the host canvas rather than painting its own surface. It reads the MCP Apps spec token names the host publishes (`--color-*`, `--font-*`, `--border-radius-*`) and uses `--solvapay-*` only for branding extras — apply the host context with `applyDocumentTheme` / `applyHostStyleVariables` / `applyHostFonts` and the rest follows.
 
-The Stripe Payment Element is themed from those same live CSS variables, so card fields match the host's type and colour without a Stripe `appearance` object of your own. Set `color-scheme` on the widget document so native controls and the Stripe iframe agree on light or dark.
+The vault card fields are themed from those same live CSS variables, so they match the host's type and colour without an `appearance` object of your own. Set `color-scheme` on the widget document so native controls and the hosted card field iframes agree on light or dark.
 
 ## Outbound links
 
@@ -295,7 +295,7 @@ A full working example — server, client, OAuth bridge, polling, and the five-s
 ## Known boundaries
 
 - **`trackUsage` stays on the server.** Usage metering belongs on your backend, not the client — continue to call `solvaPay.trackUsage(...)` from `@solvapay/server` inside your tool handlers.
-- **Inline card entry on restricted hosts.** Any MCP host whose sandbox chain does not deliver the declared `_meta.ui.csp.frameDomains` to the widget document cannot mount Stripe's Payment Element inline — Stripe's card surfaces load in a nested iframe and require both `frame-src` and (via inherited sandbox flags) `allow-same-origin` on the whole chain. Claude is the named example: it hardcodes `frame-src 'self' blob: data:` and ignores `frameDomains`. MCPJam reads the declaration but its double-iframe sandbox can still report a runtime mismatch between the effective CSP model and the browser's enforced policy. The SDK detects this at runtime (`useStripeProbe`) and falls back to SolvaPay-hosted checkout in a new tab (see [Hosted checkout from inside the iframe](#hosted-checkout-from-inside-the-iframe)), so checkout still completes and the payment stays on SolvaPay's rail. When the probe blocks, check the widget console for `[solvapay-mcp] host CSP refused the Stripe iframe` — the logged `originalPolicy` names the policy that refused the frame. On hosts that honour the spec end-to-end (e.g. `basic-host`, ChatGPT), the inline Payment Element renders directly — no configuration needed.
+- **Inline card entry on restricted hosts.** The card fields are VGS Collect iframes from `js.verygoodvault.com`, which the default `_meta.ui.csp` declares in `resourceDomains` and `frameDomains`. A host whose sandbox chain does not deliver the declared `frameDomains` to the widget document (Claude hardcodes `frame-src 'self' blob: data:`) refuses those frames, and `CardFields` shows its load error. Offer hosted SolvaPay checkout there (`create_hosted_session`, see [Hosted checkout from inside the iframe](#hosted-checkout-from-inside-the-iframe)); the payment stays on SolvaPay's rail. On hosts that honour the spec end-to-end (e.g. `basic-host`, ChatGPT), the card fields render inline with no configuration.
 
 ## Next steps
 

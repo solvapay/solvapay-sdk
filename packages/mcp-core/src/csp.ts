@@ -1,8 +1,10 @@
 /**
  * Default Content Security Policy allow-list for SolvaPay MCP Apps.
  *
- * The Stripe baseline covers `js.stripe.com`, `api.stripe.com`, and the
- * `hooks.stripe.com` 3DS frame. `assets.claude.ai` is included because
+ * The baseline covers the vault card fields: the pinned VGS Collect
+ * script and its hosted field iframes (`js.verygoodvault.com`) and the
+ * vault endpoints the fields post to (`*.verygoodproxy.com`). 3DS runs on
+ * the rail's page via `redirectUrl`, outside the widget. `assets.claude.ai` is included because
  * MCP hosts (notably Claude) inject Anthropic Sans `@font-face` CSS via
  * `hostContext.styles.css.fonts`; under the declared-CSP model the widget
  * must permit that origin in `resourceDomains` (which hosts map to
@@ -13,20 +15,9 @@
 import type { SolvaPayMcpCsp } from './types'
 
 export const SOLVAPAY_DEFAULT_CSP: Required<SolvaPayMcpCsp> = {
-  resourceDomains: [
-    'https://js.stripe.com',
-    'https://*.stripe.com',
-    'https://b.stripecdn.com',
-    'https://assets.claude.ai',
-  ],
-  connectDomains: [
-    'https://api.stripe.com',
-    'https://m.stripe.com',
-    'https://r.stripe.com',
-    'https://q.stripe.com',
-    'https://errors.stripe.com',
-  ],
-  frameDomains: ['https://js.stripe.com', 'https://hooks.stripe.com'],
+  resourceDomains: ['https://js.verygoodvault.com', 'https://assets.claude.ai'],
+  connectDomains: ['https://*.verygoodproxy.com'],
+  frameDomains: ['https://js.verygoodvault.com'],
 }
 
 /**
