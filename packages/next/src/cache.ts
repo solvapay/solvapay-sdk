@@ -44,8 +44,6 @@ export interface PurchaseCheckResult {
     planSnapshot?: Record<string, unknown>
     usage?: {
       used?: number
-      overageUnits?: number
-      overageCost?: number
       periodStart?: string
       periodEnd?: string
     }

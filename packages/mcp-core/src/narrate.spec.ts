@@ -718,6 +718,32 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
   })
 
+  it('F · allowance used up: anti-trap even when the wallet is empty', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [coolPlans.free3] as never,
+        customer: coolCustomer({
+          balance: { ...usdBalance, credits: 0 },
+          purchase: coolPurchase({
+            name: 'Free',
+            reference: 'pln_free',
+            requiresPayment: false,
+            options: [cycle(), limitOpt(3)],
+          }),
+          usage: {
+            used: 3,
+            total: 3,
+            remaining: 0,
+            periodEnd: '2026-10-01T00:00:00.000Z',
+            meterRef: 'requests',
+          },
+          limits: { ...runningLimits, remaining: 0, withinLimits: false },
+        }),
+      }),
+    )
+    expect(text).toContain('Adding credits will not help, because Free does not spend them')
+  })
+
   it('C · one-time: once qualifier and no renewal wording', () => {
     const { text } = narrateManageAccount(
       coolPayload({

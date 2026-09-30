@@ -7,6 +7,7 @@ function customer(overrides: {
   credits?: number | null
   purpose?: string
   productRef?: string
+  nextAction?: BootstrapCustomer['nextAction']
 }): BootstrapCustomer {
   const purchases = overrides.hasPlan
     ? [
@@ -34,6 +35,7 @@ function customer(overrides: {
           },
     usage: null,
     limits: null,
+    ...(overrides.nextAction ? { nextAction: overrides.nextAction } : {}),
   } as BootstrapCustomer
 }
 
@@ -59,8 +61,14 @@ describe('deriveDefaultView', () => {
     ).toBe('checkout')
   })
 
-  it('returns topup when the customer has a plan and zero credits', () => {
-    expect(deriveDefaultView(payload(customer({ hasPlan: true, credits: 0 })))).toBe('topup')
+  it('returns account when a plan customer has zero credits and is not blocked', () => {
+    expect(deriveDefaultView(payload(customer({ hasPlan: true, credits: 0 })))).toBe('account')
+  })
+
+  it('returns topup when the latest limits check blocked on a top-up gate', () => {
+    expect(
+      deriveDefaultView(payload(customer({ hasPlan: true, credits: 0, nextAction: 'topup' }))),
+    ).toBe('topup')
   })
 
   it('returns account when the customer has a plan and a positive balance', () => {
@@ -73,9 +81,12 @@ describe('deriveDefaultView', () => {
 
   it('falls through to the first enabled view when the preferred one is disabled', () => {
     expect(deriveDefaultView(payload(null), new Set(['account']))).toBe('account')
-    expect(deriveDefaultView(payload(customer({ hasPlan: true, credits: 0 })), new Set(['checkout']))).toBe(
-      'checkout',
-    )
+    expect(
+      deriveDefaultView(
+        payload(customer({ hasPlan: true, credits: 0, nextAction: 'topup' })),
+        new Set(['checkout']),
+      ),
+    ).toBe('checkout')
   })
 
   it('throws when no views are enabled', () => {

@@ -71,9 +71,14 @@ export interface BootstrapCustomer {
   creditsPerCall?: number
   /** `max(0, creditsPerCall - balance)` when both are known. */
   shortfallCredits?: number
+  /**
+   * True when the limits response carries credit-balance fields.
+   * False means the plan does not spend credits.
+   */
+  isCreditBased?: boolean
   /** Per-provider auto-recharge snapshot from the limits response. */
   autoRecharge?: LimitAutoRechargeDto
-  /** Same next action the gate would name for this limits result. */
+  /** Present only when the latest `checkLimits` blocked the call. */
   nextAction?: PaywallNextAction
 }
 

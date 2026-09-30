@@ -80,7 +80,7 @@ function meteredPurchase(overrides: Record<string, unknown> = {}) {
     currency: 'USD',
     isRecurring: true,
     planSnapshot: { currency: 'USD', price: 0, isMetered: true },
-    usage: { used: 750 },
+    usage: {},
     ...overrides,
   }
 }
@@ -93,7 +93,7 @@ describe('useUsage', () => {
   it('prefers a bootstrap-seeded snapshot over the purchase-derived one', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 1 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: null, unlimited: null, meterName: null })
@@ -140,7 +140,7 @@ describe('useUsage', () => {
   it('flips isApproachingLimit at >= 80%', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 850 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: 150, used: 850, limit: 1000 })
@@ -152,7 +152,7 @@ describe('useUsage', () => {
   it('flips isAtLimit at >= 100%', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 1000 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: 0, used: 1000, limit: 1000 })
@@ -163,7 +163,7 @@ describe('useUsage', () => {
   it('reports the meter name resolved by the backend', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 100 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: 900, used: 100, limit: 1000 })
@@ -176,14 +176,14 @@ describe('useUsage', () => {
   it('leaves the cap null while the allowance is still unresolved', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 40 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: null, unlimited: null, meterName: null, loading: true })
     const { result } = renderHook(() => useUsage())
 
     // Cap unknown is not cap absent: no total, and crucially not "unlimited".
-    expect(result.current.usage?.used).toBe(40)
+    expect(result.current.usage?.used).toBeNull()
     expect(result.current.usage?.total).toBeNull()
     expect(result.current.percentUsed).toBeNull()
     expect(result.current.isUnlimited).toBe(false)
@@ -192,7 +192,7 @@ describe('useUsage', () => {
   it('reports an uncapped meter as unlimited', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 5000 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: -1, unlimited: true })
@@ -216,7 +216,7 @@ describe('useUsage', () => {
             { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
           ],
         },
-        usage: { used: 1 },
+        usage: {},
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
     })
@@ -269,7 +269,7 @@ describe('useUsage', () => {
           name: 'Pay as you go',
           isMetered: true,
         },
-        usage: { used: 0 },
+        usage: {},
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
     })
@@ -286,14 +286,14 @@ describe('useUsage', () => {
   it('leaves the cap unknown when useLimits has no measured used/limit', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      activePurchase: meteredPurchase({ usage: { used: 0 } }) as any,
+      activePurchase: meteredPurchase({ usage: {} }) as any,
     })
     setTransport()
     setLimits({ remaining: 1 })
     const { result } = renderHook(() => useUsage())
 
     expect(result.current.usage?.total).toBeNull()
-    expect(result.current.usage?.used).toBe(0)
+    expect(result.current.usage?.used).toBeNull()
     expect(result.current.usage?.remaining).toBe(1)
     expect(result.current.percentUsed).toBeNull()
   })

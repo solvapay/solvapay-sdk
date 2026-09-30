@@ -201,9 +201,6 @@ const freePurchase: PurchaseInfo = {
     isMetered: true,
   },
   usage: {
-    used: 2,
-    overageCost: 0,
-    overageUnits: 0,
     periodEnd: '2026-10-01T00:00:00Z',
   },
 }
@@ -228,9 +225,6 @@ const starterPurchase: PurchaseInfo = {
     isMetered: true,
   },
   usage: {
-    used: 6200,
-    overageCost: 0,
-    overageUnits: 0,
     periodEnd: '2026-09-12T00:00:00Z',
   },
 }
@@ -922,7 +916,7 @@ describe('McpAccountView', () => {
     seedLimits({ remaining: 10000, withinLimits: true })
     const firstRun: PurchaseInfo = {
       ...starterPurchase,
-      usage: { used: 0, overageCost: 0, overageUnits: 0 },
+      usage: {},
     }
     const ctx = buildCtx({}, [firstRun], 0)
     renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
@@ -1022,14 +1016,17 @@ describe('McpAccountView', () => {
   })
 
   it('shows used-of-allowance and a 100% meter on state I without overage money', () => {
-    seedLimits({ remaining: 0, withinLimits: true, overage: true })
+    seedLimits({
+      remaining: 0,
+      withinLimits: true,
+      overage: true,
+      used: 11240,
+      limit: 10000,
+    })
     const onChangePlan = vi.fn()
     const overagePurchase: PurchaseInfo = {
       ...starterPurchase,
       usage: {
-        used: 11240,
-        overageCost: 0,
-        overageUnits: 0,
         periodEnd: '2026-09-12T00:00:00Z',
       },
     }

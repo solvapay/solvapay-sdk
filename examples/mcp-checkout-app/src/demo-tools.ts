@@ -210,7 +210,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   // as a chart — the narration asks the model to draw the artifact.
   // Paywall exhaustion ships a text-only narration; the LLM calls
   // `${VIEWER_TOOL_NAME}` with the right `view` to mount the widget.
-  const USAGE_BILLING_SUFFIX = `Usage-based billing: each call debits credits per your active plan. Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see balance and cost per call; paywall opens when out of balance.`
+  const USAGE_BILLING_SUFFIX = `Usage-based billing: each call counts one request against your active plan (included requests or credits, depending on the plan). Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see what is left; when you run out, the response says how to continue.`
 
   const priceChartOutputSchema = z.object({
     symbol: z.string(),
