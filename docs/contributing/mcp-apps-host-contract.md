@@ -174,6 +174,28 @@ Relevant to §3a: Claude Code triggers MCP Tool Search once a server's tool desc
 - **`outputSchema`** on merchant `registerPayable` tools — opt-in only; the viewer and gate already declare theirs.
 - **Price annotation in payable tool metadata** (§8).
 - **View-local tools** and **host-push to the view** — upcoming spec changes that would retire most of our eight UI transport tools and the polling pattern.
+- **Same-authority raster icons** (§10) — VS Code drops SVG and any HTTP icon whose authority differs from the MCP URL. Serving a PNG from the MCP origin is the remaining host gap; an origin favicon route is not.
+
+## 10. Icons
+
+[SEP-973](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/973) `serverInfo.icons` and `Tool.icons` are the protocol path. The Workers example looks the merchant up once per isolate and passes `brandName`, `iconUrl`, and `logoUrl` into `createSolvaPayMcpFetch` (`examples/cloudflare-workers-mcp/src/worker.ts`). A failed lookup throws and is not cached, so the isolate retries on the next request. Without that lookup the server advertises no icons, tool icons, or widget branding.
+
+`/favicon.ico` and `/favicon.svg` on the MCP origin are not part of that path. No host below requests them.
+
+| Host | Observed | Date |
+| --- | --- | --- |
+| **claude.ai** | Requests `google.com/s2/favicons?domain=<last two labels of the host>` and ignores `serverInfo.icons`, origin favicons, and `logo_uri` ([claude-ai-mcp#152](https://github.com/anthropics/claude-ai-mcp/issues/152), [#838](https://github.com/anthropics/claude-ai-mcp/issues/838)). An ngrok capture of `server/discover` carried our icon; Claude never requested `/favicon.ico`. | 2026-09 |
+| **ChatGPT** | Uses the 128×128 icon uploaded in the developer-mode app dialog. Documents no server-side source. | 2026-09 |
+| **VS Code** | Reads `serverInfo.icons` and `Tool.icons`, limited to PNG, JPEG, WebP, or GIF. An HTTP icon must have exactly the same authority as the MCP URL, or be a `data:` URI ([mcpIcons.ts](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/mcp/common/mcpIcons.ts)). An SVG served from `api.solvapay.com` is dropped. | 2026-09 |
+| **MCPJam** | Reads `serverInfo.icons[0].src` from any origin. | 2026-09 |
+
+Claude's lookup is the last two labels of the host:
+
+- An ngrok hostname resolves to the ngrok logo.
+- `goldberg-demo.solvapay.app` looks up `solvapay.app`, which has no DNS record, so Claude shows a placeholder.
+- `*.mcp.solvapay.com` resolves to the SolvaPay mark.
+
+`Icon.mimeType` is an override for when the served type is missing or generic. The SolvaPay file endpoint sends the correct `Content-Type`, and the URLs keep their extension, so the advertised icon leaves `mimeType` unset.
 
 ## Sources
 
@@ -188,6 +210,9 @@ Specification and SEPs:
 - [Tools, spec 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) — `outputSchema` MUST-when-declared; serialized-JSON-in-text SHOULD
 - [Claude Code custom tools](https://code.claude.com/docs/en/agent-sdk/custom-tools) — when `structuredContent` is set, text blocks in `content` are not forwarded
 - [Lifecycle, spec 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) — capability negotiation at `initialize`
+- [SEP-973: Expose additional metadata for Implementations, Resources, Tools and Prompts](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/973) — `icons` on `Implementation` and `Tool`; `mimeType` is an override when the served type is missing or generic
+- [VS Code `mcpIcons.ts`](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/mcp/common/mcpIcons.ts) — raster-only, same-authority or `data:` URIs
+- [claude-ai-mcp#152](https://github.com/anthropics/claude-ai-mcp/issues/152) and [#838](https://github.com/anthropics/claude-ai-mcp/issues/838) — Claude fetches a Google favicon for the host's last two labels and ignores `serverInfo.icons`
 
 Implementation references:
 
