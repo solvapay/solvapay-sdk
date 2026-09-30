@@ -1172,6 +1172,26 @@ describe('<McpCheckoutView> — blocked probe still shows plans', () => {
     expect(screen.queryByTestId('payment-form-stub')).toBeNull()
   })
 
+  it('hosted handoff stacks its back-link, heading, copy and CTA with the shared stack gap', async () => {
+    const { container } = renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    const heading = await screen.findByText('Complete your Pro purchase')
+    const stack = heading.parentElement
+    expect(stack?.classList.contains('solvapay-mcp-stack')).toBe(true)
+    expect(stack?.querySelector('.solvapay-mcp-back-link')).toBeTruthy()
+    expect(stack?.querySelector('.solvapay-mcp-muted')).toBeTruthy()
+    expect(stack?.querySelector('.solvapay-mcp-button')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-card [data-refreshing]')).toBeNull()
+  })
+
   it('hosted PAYG handoff shows Change amount and returns to the amount step', async () => {
     renderView({ fromPaywall: true })
     await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
