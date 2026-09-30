@@ -43,7 +43,6 @@ export interface PurchaseCheckResult {
     startDate?: string
     planSnapshot?: Record<string, unknown>
     usage?: {
-      used?: number
       periodStart?: string
       periodEnd?: string
     }

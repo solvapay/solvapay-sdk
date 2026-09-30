@@ -23,7 +23,7 @@ function makeClient() {
           productRef: 'prd_test',
           reference: 'pur_1',
           planSnapshot: { isMetered: true, name: 'Pro' },
-          usage: { used: 6200 },
+          usage: { periodStart: '2026-09-01T00:00:00.000Z' },
         },
       ],
     }),

@@ -304,6 +304,8 @@ describe('getUsageCore', () => {
           productRef: 'prd_1',
           reference: 'pur_1',
           planSnapshot: { isMetered: true },
+          // A backend that still emits the retired counter must not turn
+          // "unmeasured" into 12.
           usage: { used: 12, periodStart: '2026-09-01T00:00:00.000Z' },
         },
       ],
