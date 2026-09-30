@@ -17,6 +17,8 @@ function makeClient() {
     getCustomer: vi.fn().mockResolvedValue({
       customerRef: 'cus_42',
       externalRef: 'cus_42',
+      email: 'ada@acme.test',
+      name: 'Ada',
       purchases: [
         {
           status: 'active',
@@ -71,6 +73,8 @@ describe('createBuildBootstrapPayload', () => {
       withinLimits: true,
       meterName: 'requests',
     })
+    expect(payload.customer?.email).toBe('ada@acme.test')
+    expect(payload.customer?.name).toBe('Ada')
     expect(payload.customer?.canCall).toBe(true)
     expect(payload.customer?.remainingCalls).toBe(3800)
     expect(payload.customer?.nextAction).toBeDefined()
@@ -308,5 +312,40 @@ describe('createBuildBootstrapPayload', () => {
       expect.arrayContaining([expect.objectContaining({ reference: 'pur_enrolled' })]),
     )
     expect(client.getCustomer.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('leaves the customer null for an anonymous caller', async () => {
+    const client = makeClient()
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://example.test',
+      getCustomerRef: () => 'anonymous',
+    })
+
+    const payload = await build('account', undefined)
+
+    expect(payload.customer).toBeNull()
+    expect(payload.checkoutUrl).toBeNull()
+    expect(client.checkLimits).not.toHaveBeenCalled()
+    expect(client.getCustomer).not.toHaveBeenCalled()
+    expect(client.createCheckoutSession).not.toHaveBeenCalled()
+  })
+
+  it('leaves the customer null when no customer ref is present', async () => {
+    const client = makeClient()
+    const solvaPay = createSolvaPay({ apiClient: client as unknown as SolvaPayClient })
+    const build = createBuildBootstrapPayload({
+      solvaPay,
+      productRef: 'prd_test',
+      publicBaseUrl: 'https://example.test',
+      getCustomerRef: () => null,
+    })
+
+    const payload = await build('account', undefined)
+
+    expect(payload.customer).toBeNull()
+    expect(client.checkLimits).not.toHaveBeenCalled()
   })
 })

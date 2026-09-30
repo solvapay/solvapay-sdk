@@ -317,6 +317,8 @@ export interface SolvaPayCopy {
     fullHistory: string
     /** Portal text link. The button adds the external-link glyph. */
     fullAccount: string
+    /** Inline account identity. Email and customer ref follow the label. */
+    signedInAs: string
     creditActivityEyebrow: string
     chargesEyebrow: string
     creditActivityCaption: string

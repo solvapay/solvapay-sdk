@@ -120,7 +120,9 @@ interface LimitsShape {
 }
 
 interface CustomerShape {
-  ref?: string
+  ref?: string | null
+  email?: string | null
+  name?: string | null
   balance?: {
     credits?: number | null
     displayCurrency?: string
@@ -224,6 +226,18 @@ export function balanceSummary(customer: CustomerShape | null | undefined): stri
   const row = balanceRow(customer)
   if (!row) return null
   return row.replace(/^Balance:\s*/, '')
+}
+
+/**
+ * Who is signed in, for hosts that only read `content[].text`. The
+ * bootstrap already leaves `customer` null for anonymous callers, so a
+ * present ref is a signed-in customer. Null email leaves the ref alone.
+ */
+function identityRow(customer: CustomerShape | null | undefined): string | null {
+  const ref = customer?.ref?.trim()
+  if (!ref) return null
+  const email = customer?.email?.trim()
+  return email ? `Signed in as: ${email} · ${ref}` : `Signed in as: ${ref}`
 }
 
 function balanceRow(customer: CustomerShape | null | undefined): string | null {
@@ -895,6 +909,9 @@ export function narrateManageAccount(
       now,
     }),
   )
+
+  const identity = identityRow(customer)
+  if (identity) lines.push(identity)
 
   if (state === 'A' || state === 'H') {
     const bal = balanceRow(customer)

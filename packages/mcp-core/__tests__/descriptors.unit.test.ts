@@ -428,14 +428,45 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.plans).toEqual([{ reference: 'pln_basic', name: 'Basic' }])
   })
 
-  it('omits customer snapshot when unauthenticated', async () => {
-    const result = await invokeOpen(VIEWER_TOOL_NAME, {}, undefined, { view: 'checkout' })
+  it('omits customer snapshot and every customer-scoped session when unauthenticated', async () => {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    if (!tool) throw new Error('viewer not registered')
+    const result = await tool.handler({ view: 'checkout' }, undefined)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.customer).toBeNull()
-    // Text hosts still need a pasteable checkout URL without a signed-in
-    // customer — mint against the anonymous ref, same as the paywall.
-    expect(sc.checkoutUrl).toBe('https://customer.solvapay.com/demo?session=sess_test')
+    // A checkout session belongs to a customer record, so there is none
+    // to mint for an anonymous caller. The backend would reject the ref.
+    expect(sc.checkoutUrl).toBeNull()
     expect(sc.portalUrl).toBeNull()
+    expect(solvaPay.apiClient.createCheckoutSession).not.toHaveBeenCalled()
+  })
+
+  it('treats the anonymous sentinel from a custom getCustomerRef as unauthenticated', async () => {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      getCustomerRef: () => 'anonymous',
+    })
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    if (!tool) throw new Error('viewer not registered')
+    const result = await tool.handler({ view: 'account' }, undefined)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.customer).toBeNull()
+    expect(sc.checkoutUrl).toBeNull()
+    expect(solvaPay.apiClient.createCheckoutSession).not.toHaveBeenCalled()
+    expect(solvaPay.apiClient.checkLimits).not.toHaveBeenCalled()
   })
 
   it('includes customer snapshot when customer_ref is on authInfo', async () => {

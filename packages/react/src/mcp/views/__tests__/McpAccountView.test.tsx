@@ -387,6 +387,31 @@ describe('McpAccountView', () => {
     ).toBeTruthy()
   })
 
+  it('prints the signed-in email and customer ref on inline state A', () => {
+    const ctx = buildCtx({}, [], 0)
+    ctx.purchase.email = 'tommy@solvapay.com'
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    const line = screen.getByText(/Signed in as/)
+    expect(line.textContent).toContain('tommy@solvapay.com')
+    expect(line.querySelector('.solvapay-mcp-signed-in-ref')?.textContent).toBe('cus_abc')
+  })
+
+  it('omits the signed-in line when there is no customer ref', () => {
+    const ctx = buildCtx({}, [], 0)
+    ctx.customerRef = undefined
+    ctx.purchase.customerRef = undefined
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    expect(screen.queryByText(/Signed in as/)).toBeNull()
+  })
+
   it('renders an action-button ladder on state A and emphasizes PAYG', () => {
     const onChangePlan = vi.fn()
     const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
@@ -1369,6 +1394,8 @@ describe('McpAccountView', () => {
     expect(website.textContent).not.toMatch('↗')
     expect(screen.getByText('Tommy Berglind')).toBeTruthy()
     expect(screen.getByText('tommy@solvapay.com')).toBeTruthy()
+    expect(screen.getByText('cus_abc')).toHaveClass('solvapay-mcp-signed-in-ref')
+    expect(screen.queryByText(/Signed in as/)).toBeNull()
     expect(screen.getByRole('link', { name: /full account/i })).toBeTruthy()
     expect(screen.queryByText(/verified/i)).toBeNull()
     expect(screen.queryByText(/Identity checked by Stripe/)).toBeNull()

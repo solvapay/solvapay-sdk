@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Fullscreen-only account additions: credit activity (B/D), charges (C),
- * and the merchant/buyer identity footer (A–D).
+ * Account identity (inline line and fullscreen footer) plus fullscreen-only
+ * history: credit activity (B/D) and charges (C).
  */
 
 import React from 'react'
@@ -151,10 +151,36 @@ function ChargesTable({ charges }: { charges: PurchaseInfo[] }): React.ReactElem
   )
 }
 
+/**
+ * Inline identity line. The bootstrap leaves the customer null for an
+ * anonymous caller, so a present ref is a signed-in customer.
+ */
+export function AccountSignedInAs(): React.ReactElement | null {
+  const copy = useCopy()
+  const { email, customerRef } = useCustomer()
+  const resolvedRef = customerRef?.trim()
+  const resolvedEmail = email?.trim()
+  if (!resolvedRef) return null
+
+  return (
+    <p className="solvapay-mcp-muted solvapay-mcp-signed-in">
+      {copy.account.signedInAs}{' '}
+      {resolvedEmail ? (
+        <>
+          <span>{resolvedEmail}</span>
+          {' · '}
+        </>
+      ) : null}
+      <span className="solvapay-mcp-signed-in-ref">{resolvedRef}</span>
+    </p>
+  )
+}
+
 export function AccountIdentityFooter(): React.ReactElement {
   const copy = useCopy()
   const { merchant } = useMerchant()
-  const { name, email } = useCustomer()
+  const { name, email, customerRef } = useCustomer()
+  const signedInRef = customerRef?.trim()
   const handleExternalClick = useExternalLinkClick()
   const place = merchant ? formatMerchantPlace(merchant) : null
   const websiteUrl = merchant?.websiteUrl
@@ -184,6 +210,9 @@ export function AccountIdentityFooter(): React.ReactElement {
       <div className="solvapay-mcp-account-footer-buyer">
         {name ? <span>{name}</span> : null}
         {email ? <span className="solvapay-mcp-muted">{email}</span> : null}
+        {signedInRef ? (
+          <span className="solvapay-mcp-muted solvapay-mcp-signed-in-ref">{signedInRef}</span>
+        ) : null}
         <PortalTextLink>{copy.account.fullAccount}</PortalTextLink>
       </div>
     </footer>
