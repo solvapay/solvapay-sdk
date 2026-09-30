@@ -296,7 +296,7 @@ export function HostedCheckout({
   cx,
   children,
 }: HostedCheckoutProps) {
-  const { loading, isRefetching, refetch, hasPaidPurchase, activePurchase } = usePurchase()
+  const { loading, refetch, hasPaidPurchase, activePurchase } = usePurchase()
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
   const transport = useTransport()
@@ -467,8 +467,13 @@ export function HostedCheckout({
     return <p>Loading purchase…</p>
   }
 
+  // `cx.stack` gives the back-link / heading / copy / CTA the same vertical
+  // rhythm as the sibling checkout steps, which render as fragments straight
+  // into the plan-selector column. A bare wrapper here collapsed them into a
+  // zero-gap block. `data-refreshing` belongs to the card in
+  // `EmbeddedCheckout`; the stylesheet only targets it there.
   return (
-    <div data-refreshing={isRefetching ? 'true' : undefined}>
+    <div className={cx.stack}>
       {inner}
       {children}
     </div>
