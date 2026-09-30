@@ -95,7 +95,7 @@ interface PurchaseShape {
 }
 
 interface UsageShape {
-  used?: number
+  used?: number | null
   total?: number | null
   remaining?: number | null
   periodEnd?: string
@@ -201,6 +201,11 @@ function activePurchase(data: BootstrapPayload): PurchaseShape | null {
 function limitsAsSignals(limits: LimitsShape | null | undefined): LimitResponseWithPlan | null {
   if (!limits) return null
   return limits as LimitResponseWithPlan
+}
+
+/** True when the latest limits response says this plan does not spend credits. */
+function creditsUnused(customer: CustomerShape | null | undefined): boolean {
+  return !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
 }
 
 function preferLimitsPlan(
@@ -728,10 +733,9 @@ function narrateAccountBody(input: {
     } else {
       position = 'After your first call'
     }
-    const creditsUnused = !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
     return (
       `${product} is on ${planName}${priceBit}. ${position}. ` +
-      (creditsUnused
+      (creditsUnused(customer)
         ? `Credits are not used on this plan. Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`
         : `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`)
     )
@@ -770,10 +774,9 @@ function narrateAccountBody(input: {
     })
     const carryOn =
       others.length > 0 ? ` ${joinOr(others.map(item => carryOnFragment(item, customer)))}.` : ''
-    const antiTrap =
-      credits > 0 && planShape !== 'usage-based'
-        ? ` Adding credits will not help, because ${planName} does not spend them.`
-        : ''
+    const antiTrap = creditsUnused(customer)
+      ? ` Adding credits will not help, because ${planName} does not spend them.`
+      : ''
     const priceBit = planPriceBit(plan)
     return (
       `${product} is on ${planName}${priceBit}. ${capBit}.${consequence}.${antiTrap}${carryOn} ` +

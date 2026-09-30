@@ -497,7 +497,7 @@ describe('CurrentPlanCard', () => {
         currency: 'USD',
         isMetered: true,
       },
-      usage: { used: 0, overageUnits: 0, overageCost: 0 },
+      usage: {},
     }
     const ctx = buildCtx(paygPurchase, {
       config: { transport: makeTransport() },

@@ -258,10 +258,6 @@ export function createBuildBootstrapPayload(
     const activePurchase = selectActivePlanPurchase(enrichedPurchase?.purchases, productRef)
     const usage = customerRef
       ? deriveUsageSnapshot({
-          // Consumption comes from `limits.used` (or `limit - remaining`)
-          // inside `deriveUsageSnapshot`. `purchase.usage.used` is only
-          // ever reset to zero by the backend and must not be the source.
-          used: 0,
           periodStart: activePurchase?.usage?.periodStart,
           periodEnd: activePurchase?.usage?.periodEnd,
           purchaseRef: activePurchase?.reference,
@@ -270,7 +266,6 @@ export function createBuildBootstrapPayload(
       : null
 
     const signals = limits ? creditSignals(limits) : null
-    const state = limits ? classifyPaywallState(limits) : null
     const customer: BootstrapPayload['customer'] = customerRef
       ? {
           ref: customerRef,
@@ -291,8 +286,11 @@ export function createBuildBootstrapPayload(
           ...(signals?.shortfallCredits !== undefined
             ? { shortfallCredits: signals.shortfallCredits }
             : {}),
+          ...(signals ? { isCreditBased: signals.isCreditBased } : {}),
           ...(limits?.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
-          ...(state ? { nextAction: nextActionFor(state) } : {}),
+          ...(limits?.withinLimits === false
+            ? { nextAction: nextActionFor(classifyPaywallState(limits)) }
+            : {}),
         }
       : null
 

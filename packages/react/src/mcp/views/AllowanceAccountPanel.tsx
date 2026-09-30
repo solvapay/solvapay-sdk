@@ -129,9 +129,7 @@ export function AllowanceAccountPanel({
   const showMeter = remaining.kind === 'finite' && usage != null && total != null && total > 0
   const used =
     remaining.kind === 'finite' && total != null
-      ? usage?.total != null
-        ? usage.used
-        : Math.max(0, total - remaining.remaining)
+      ? (usage?.used ?? Math.max(0, total - remaining.remaining))
       : (usage?.used ?? 0)
   const percent =
     usage?.percentUsed ??

@@ -182,7 +182,6 @@ describe('deriveUsageSnapshot', () => {
   it('takes total from limits.limit and used from limits.used when the cap is finite', () => {
     expect(
       deriveUsageSnapshot({
-        used: 0,
         purchaseRef: 'pur_1',
         periodStart: '2026-09-01T00:00:00.000Z',
         limits: { remaining: 3800, meterName: 'requests', used: 6200, limit: 10000 },
@@ -201,7 +200,6 @@ describe('deriveUsageSnapshot', () => {
   it('derives used as limit - remaining when used is omitted', () => {
     expect(
       deriveUsageSnapshot({
-        used: 0,
         limits: { remaining: 1, limit: 3 },
       }),
     ).toEqual({
@@ -213,36 +211,49 @@ describe('deriveUsageSnapshot', () => {
     })
   })
 
-  it('leaves the cap unknown when the backend supplied neither used nor limit', () => {
+  it('leaves used null when the backend supplied neither used nor limit', () => {
     expect(
       deriveUsageSnapshot({
-        used: 6200,
         limits: { remaining: 3800, meterName: 'requests' },
       }),
     ).toEqual({
       meterRef: 'requests',
       total: null,
-      used: 6200,
+      used: null,
       remaining: 3800,
       percentUsed: null,
     })
   })
 
-  it('treats remaining -1 as uncapped rather than a real count', () => {
-    expect(deriveUsageSnapshot({ used: 10, limits: { remaining: -1 } })).toEqual({
+  it('leaves used null on a credit response that did not measure a cap', () => {
+    expect(
+      deriveUsageSnapshot({
+        limits: { remaining: 15132 },
+      }),
+    ).toEqual({
       meterRef: null,
       total: null,
-      used: 10,
+      used: null,
+      remaining: 15132,
+      percentUsed: null,
+    })
+  })
+
+  it('treats remaining -1 as uncapped rather than a real count', () => {
+    expect(deriveUsageSnapshot({ limits: { remaining: -1 } })).toEqual({
+      meterRef: null,
+      total: null,
+      used: null,
       remaining: null,
       percentUsed: null,
     })
   })
 
   it('leaves the cap unknown when limits are null — never fakes unlimited', () => {
-    expect(deriveUsageSnapshot({ used: 4, limits: null })).toEqual({
+    expect(deriveUsageSnapshot({ limits: null })).toEqual({
       meterRef: null,
       total: null,
-      used: 4,
+      used: null,
       remaining: null,
       percentUsed: null,
     })
@@ -263,7 +274,7 @@ describe('getUsageCore', () => {
           productRef: 'prd_1',
           reference: 'pur_1',
           planSnapshot: { isMetered: true },
-          usage: { used: 6200 },
+          usage: { periodStart: '2026-09-01T00:00:00.000Z' },
         },
       ],
     } as never)
@@ -293,7 +304,9 @@ describe('getUsageCore', () => {
           productRef: 'prd_1',
           reference: 'pur_1',
           planSnapshot: { isMetered: true },
-          usage: { used: 12 },
+          // A backend that still emits the retired counter must not turn
+          // "unmeasured" into 12.
+          usage: { used: 12, periodStart: '2026-09-01T00:00:00.000Z' },
         },
       ],
     } as never)
@@ -305,6 +318,12 @@ describe('getUsageCore', () => {
     })
 
     expect(checkLimits).not.toHaveBeenCalled()
-    expect(result).toMatchObject({ used: 12, remaining: null, total: null })
+    expect(result).toMatchObject({
+      used: null,
+      remaining: null,
+      total: null,
+      periodStart: '2026-09-01T00:00:00.000Z',
+      purchaseRef: 'pur_1',
+    })
   })
 })

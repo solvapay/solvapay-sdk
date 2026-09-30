@@ -330,9 +330,7 @@ function CancelledAccountPanel({
   const showMeter = remaining != null && total != null && total > 0
   const used =
     remaining != null && total != null
-      ? usage?.total != null
-        ? usage.used
-        : Math.max(0, total - remaining)
+      ? (usage?.used ?? Math.max(0, total - remaining))
       : (usage?.used ?? 0)
   const percent =
     usage?.percentUsed ??

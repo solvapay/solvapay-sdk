@@ -363,7 +363,6 @@ describe('SolvaPayProvider - purchase state management', () => {
               creditsPerUnit: 4,
               meterRef: 'requests',
             },
-            usage: { used: 0 },
           },
         ],
       }
