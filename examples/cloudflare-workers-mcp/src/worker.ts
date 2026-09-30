@@ -8,14 +8,17 @@
  * iframe still works), and `responseMode: 'json'` (correct shape for
  * Workers isolates, which don't pin across requests).
  *
- * The only extra plumbing on top of the SDK handler is **browser-origin
- * CORS** — native-scheme clients (Cursor / VS Code / Claude Desktop)
- * are handled by the SDK; we additionally mirror `Origin` back +
- * expose `WWW-Authenticate` + `Mcp-Session-Id` for browser MCP clients
- * (ChatGPT Custom Connectors, MCP Inspector web UI).
+ * Two pieces of plumbing sit on top of the SDK handler. A merchant
+ * branding lookup feeds SEP-973 `serverInfo.icons`, tool icons, and
+ * widget branding; a failed lookup throws and is not cached. Browser-
+ * origin CORS mirrors `Origin` and exposes `WWW-Authenticate` plus
+ * `Mcp-Session-Id` for browser MCP clients (ChatGPT Custom Connectors,
+ * MCP Inspector web UI). Native-scheme clients (Cursor / VS Code /
+ * Claude Desktop) are handled by the SDK.
  */
 
-import { createSolvaPay } from '@solvapay/server'
+import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
+import { createSolvaPay, type SolvaPay } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '@solvapay/mcp/fetch'
 import { demoToolsEnabled, registerDemoTools } from './demo-tools'
 import mcpAppHtml from './assets/mcp-app.html'
@@ -69,22 +72,38 @@ function browserCorsPreflight(req: Request): Response {
   return applyBrowserCors(req, new Response(null, { status: 204, headers }))
 }
 
-// Cache the `createSolvaPayMcpFetch` handler at isolate scope so the
-// `McpServer`, OAuth router, tool registrations, and internal caches
-// only build once per Workers isolate (not once per request). Secret
-// or var rotations trigger a new worker version, which spins up a
-// fresh isolate and a fresh cache — so invalidation is free.
+// Cache the handler at isolate scope so the `McpServer`, OAuth router,
+// tool registrations, and merchant branding only build once per Workers
+// isolate. A failed branding lookup is not cached, so the next request
+// retries instead of pinning an unbranded server until the isolate dies.
+// Secret or var rotations trigger a new worker version, which spins up
+// a fresh isolate and a fresh cache.
 let cachedHandler: ((req: Request) => Promise<Response>) | undefined
 
-function getHandler(env: Env): (req: Request) => Promise<Response> {
+async function fetchBranding(solvaPay: SolvaPay): Promise<SolvaPayMerchantBranding> {
+  if (!solvaPay.apiClient.getMerchant) {
+    throw new Error('[cloudflare-workers-mcp] SolvaPay client cannot fetch the merchant')
+  }
+  const merchant = await solvaPay.apiClient.getMerchant()
+  return {
+    brandName: merchant.displayName,
+    ...(merchant.iconUrl ? { iconUrl: merchant.iconUrl } : {}),
+    ...(merchant.logoUrl ? { logoUrl: merchant.logoUrl } : {}),
+  }
+}
+
+async function getHandler(env: Env): Promise<(req: Request) => Promise<Response>> {
   if (cachedHandler) return cachedHandler
 
   const apiBaseUrl = env.SOLVAPAY_API_BASE_URL ?? 'https://api.solvapay.com'
-  cachedHandler = createSolvaPayMcpFetch({
-    solvaPay: createSolvaPay({
-      apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),
-      apiBaseUrl,
-    }),
+  const solvaPay = createSolvaPay({
+    apiKey: requireEnv(env, 'SOLVAPAY_SECRET_KEY'),
+    apiBaseUrl,
+  })
+  const branding = await fetchBranding(solvaPay)
+  const handler = createSolvaPayMcpFetch({
+    solvaPay,
+    branding,
     productRef: requireEnv(env, 'SOLVAPAY_PRODUCT_REF'),
     resourceUri: 'ui://cloudflare-workers-mcp/mcp-app.html',
     readHtml: async () => mcpAppHtml,
@@ -104,13 +123,14 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
       ? { additionalTools: registerDemoTools }
       : {}),
   })
-  return cachedHandler
+  cachedHandler = handler
+  return handler
 }
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === 'OPTIONS') return browserCorsPreflight(req)
-    const response = await getHandler(env)(req)
-    return applyBrowserCors(req, response)
+    const handler = await getHandler(env)
+    return applyBrowserCors(req, await handler(req))
   },
 } satisfies ExportedHandler<Env>
