@@ -212,7 +212,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
 // used for the confidence CDF.
 
 const ORACLE_HISTORY_DAYS = 30
-const ORACLE_AS_OF = '2026-04-24T00:00:00.000Z'
+const ORACLE_AS_OF = '2026-09-29T00:00:00.000Z'
 // One-sided 80% confidence band multiplier (~1.2816 standard normal).
 const ORACLE_Z80 = 1.2816
 
