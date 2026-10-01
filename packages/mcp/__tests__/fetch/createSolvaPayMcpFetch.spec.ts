@@ -277,9 +277,14 @@ describe('createSolvaPayMcpFetch', () => {
     const entry = read.json.result?.contents?.[0]
     expect(entry?.uri).toBe(SOLVAPAY_BOOTSTRAP_URI)
     expect(entry?.mimeType).toBe('application/json')
-    const payload = JSON.parse(entry?.text ?? '{}') as { productRef?: string; returnUrl?: string }
+    const payload = JSON.parse(entry?.text ?? '{}') as {
+      productRef?: string
+      returnUrl?: string
+      view?: string
+    }
     expect(payload.productRef).toBe(productRef)
     expect(payload.returnUrl).toBe(publicBaseUrl)
+    expect(payload.view).toBe('checkout')
   })
 
   it('tools/call reaches the account viewer with default mode', async () => {

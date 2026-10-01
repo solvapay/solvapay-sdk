@@ -1,10 +1,10 @@
 /**
  * Bootstrap helper for SolvaPay MCP Apps.
  *
- * `fetchMcpBootstrap(app)` — kicks off the MCP session by invoking the
- * `open_*` tool matching the host's invocation context and returns the
+ * `fetchMcpBootstrap(app)` — replays the account viewer and returns the
  * view discriminator + bootstrap payload every view needs (merchant,
- * product, plans, and customer snapshot).
+ * product, plans, and customer snapshot). The payload's `view` is the
+ * surface; `fallbackViewFromHost` applies only when a payload omits it.
  */
 
 import type {
@@ -15,7 +15,13 @@ import type {
   BootstrapProduct,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
-import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import {
+  MCP_TOOL_NAMES,
+  TOOL_FOR_VIEW,
+  VIEW_FOR_TOOL,
+  VIEWER_TOOL_NAME,
+  SOLVAPAY_BOOTSTRAP_URI,
+} from '@solvapay/mcp-core'
 import type { McpAppLike } from './adapter'
 
 /**
@@ -171,43 +177,34 @@ export function classifyHostEntry(app: McpAppBootstrapLike): HostEntryClassifica
 }
 
 /**
- * Infer which landing view to request for a fresh bootstrap. The
- * viewer is one tool, so the host tool name no longer distinguishes
- * surfaces — return the mapped default (`account`) when the host
- * invoked the viewer, else `'checkout'` (unauthenticated / other).
- *
- * Used by `fetchMcpBootstrap` for both the initial intent-tool mount
- * path and `refreshBootstrap`. For data-tool iframe entries,
- * `<McpApp>` skips `fetchMcpBootstrap` entirely and waits on the
- * initial tool-result notification — re-calling the paywalled merchant
- * tool would consume another unit of usage.
+ * View passed to `parseBootstrapFromToolResult` when a payload omits
+ * `view`. Intent entries keep their mapped view; every other entry
+ * uses `'account'`, matching `resolveSurface`'s default. The viewer
+ * always stamps `view`, so this is only a parse fallback.
  */
-function inferViewFromHost(app: McpAppBootstrapLike): keyof typeof TOOL_FOR_VIEW {
+export function fallbackViewFromHost(app: McpAppBootstrapLike): SolvaPayMcpViewKind {
   const classification = classifyHostEntry(app)
   if (classification.kind === 'intent') return classification.view
-  return 'checkout'
+  return 'account'
 }
 
 /**
- * Kick off the MCP session by calling the `open_*` tool that matches the
- * host's invocation context. Returns the bootstrap payload every view
- * needs (product ref, publishable key, return url) along with the view
- * discriminator so the top-level router can pick the right screen.
+ * Replay the account viewer for a fresh bootstrap snapshot. Returns the
+ * payload every view needs (product ref, publishable key, return url)
+ * along with the view discriminator so the top-level router can pick
+ * the right screen.
  *
- * Used for intent-tool iframe entries and for `refreshInitial` after a
- * committed action (purchase, topup, etc.). Data-tool iframe entries
- * (paywall/nudge) bypass this helper; `<McpApp>` consumes the initial
- * `ui/notifications/tool-result` directly via
- * `parseBootstrapFromToolResult` so the merchant tool is not re-called.
+ * Used for transport-tool iframe entries and for `refreshInitial` after
+ * a committed action (purchase, topup, etc.). The payload's `view` is
+ * the surface; `fallbackViewFromHost` applies only when it is omitted.
  */
 export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBootstrap> {
-  const view = inferViewFromHost(app)
-  const toolName = TOOL_FOR_VIEW[view]
+  const view = fallbackViewFromHost(app)
   const result = (await app.callServerTool({
-    name: toolName,
+    name: VIEWER_TOOL_NAME,
     arguments: {},
   })) as CallToolResultLike
-  return parseBootstrapFromToolResult(result, toolName, view)
+  return parseBootstrapFromToolResult(result, VIEWER_TOOL_NAME, view)
 }
 
 /**
@@ -215,8 +212,9 @@ export async function fetchMcpBootstrap(app: McpAppBootstrapLike): Promise<McpBo
  *
  * Used when the host scrubs `structuredContent` from the opening
  * `toolresult` notification (e.g. MCPJam) so the widget can recover
- * without replaying the intent tool. The view is resolved locally from
- * host context — the resource body is view-agnostic.
+ * without replaying the viewer. The payload's `view` is the surface —
+ * the server stamps the same default the viewer picks when `view` is
+ * omitted.
  *
  * Throws when `readServerResource` is unavailable, the resource body is
  * missing, or parsing fails. Callers fall back to `fetchMcpBootstrap`.
@@ -227,7 +225,7 @@ export async function fetchMcpBootstrapViaResource(
   if (typeof app.readServerResource !== 'function') {
     throw new Error('Host does not support readServerResource')
   }
-  const view = inferViewFromHost(app)
+  const view = fallbackViewFromHost(app)
   const result = await app.readServerResource({ uri: SOLVAPAY_BOOTSTRAP_URI })
   const text = result.contents?.[0]?.text
   if (typeof text !== 'string' || !text) {
@@ -239,14 +237,11 @@ export async function fetchMcpBootstrapViaResource(
   } catch {
     throw new Error('Bootstrap resource returned invalid JSON')
   }
-  const bootstrap = parseBootstrapFromToolResult(
+  return parseBootstrapFromToolResult(
     { structuredContent: payload },
     SOLVAPAY_BOOTSTRAP_URI,
     view,
   )
-  // Force the view from host context — the resource echoes a placeholder
-  // view label that must not override the iframe entry tool.
-  return { ...bootstrap, view }
 }
 
 /**

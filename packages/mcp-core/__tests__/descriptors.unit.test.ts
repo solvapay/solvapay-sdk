@@ -620,6 +620,48 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.view).toBe('checkout')
   })
 
+  it('bootstrap resource stamps checkout when there is no active plan and matches the viewer', async () => {
+    const { tools, bootstrapResource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const payload = await bootstrapResource.readPayload()
+    const result = await viewer.handler({}, undefined)
+    expect(payload.view).toBe('checkout')
+    expect((result.structuredContent as { view?: string }).view).toBe(payload.view)
+  })
+
+  it('bootstrap resource stamps account when the customer has an active plan and matches the viewer', async () => {
+    const extra = { authInfo: { extra: { customer_ref: 'cus_42' } } }
+    const { tools, bootstrapResource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay({
+        customer: {
+          customerRef: 'cus_42',
+          purchases: [
+            {
+              status: 'active',
+              productRef: 'prd_test',
+              planSnapshot: { name: 'Pro' },
+            },
+          ],
+        },
+      }),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const payload = await bootstrapResource.readPayload(extra)
+    const result = await viewer.handler({}, extra)
+    expect(payload.view).toBe('account')
+    expect((result.structuredContent as { view?: string }).view).toBe(payload.view)
+  })
+
   it('returns a recovery-oriented tool error when getMerchant 404s', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: createSolvaPay({
