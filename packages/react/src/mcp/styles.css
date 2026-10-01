@@ -808,6 +808,11 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   display: contents;
 }
 
+/* The shared footer sizes in `rem`; the widget root is 14px, not 16px. */
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
+  font-size: inherit;
+}
+
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer-separator] {
   display: none;
 }
