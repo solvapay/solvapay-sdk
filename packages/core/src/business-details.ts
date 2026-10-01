@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import {
-  STRIPE_TAX_BUYER_COUNTRIES,
+  TAX_BUYER_COUNTRIES,
   TAX_ID_TYPES,
   deriveTaxIdType,
-  isStripeTaxBuyerCountry,
+  isTaxBuyerCountry,
   isValidTaxIdForCountry,
   normalizeTaxId,
   type SupportedBusinessCountry,
@@ -31,7 +31,7 @@ export type BusinessCountryOption = {
   label: string
 }
 
-export const BUSINESS_COUNTRY_OPTIONS: BusinessCountryOption[] = STRIPE_TAX_BUYER_COUNTRIES.map(
+export const BUSINESS_COUNTRY_OPTIONS: BusinessCountryOption[] = TAX_BUYER_COUNTRIES.map(
   country => ({
     value: country.code,
     label: country.name,
@@ -153,7 +153,7 @@ export const BusinessDetailsSchema = z
     if (!data.isBusiness) {
       if (data.customerCountry?.trim()) {
         const customerCountryUpper = data.customerCountry.trim().toUpperCase()
-        if (!isStripeTaxBuyerCountry(customerCountryUpper)) {
+        if (!isTaxBuyerCountry(customerCountryUpper)) {
           ctx.addIssue({
             code: 'custom',
             message: 'Billing country is not supported for tax calculation',
@@ -174,7 +174,7 @@ export const BusinessDetailsSchema = z
     }
 
     const countryUpper = data.country.trim().toUpperCase()
-    if (!isStripeTaxBuyerCountry(countryUpper)) {
+    if (!isTaxBuyerCountry(countryUpper)) {
       ctx.addIssue({
         code: 'custom',
         message: 'Country is not supported for business purchases',
@@ -197,7 +197,7 @@ export const BusinessDetailsSchema = z
 
     if (!data.isBusiness) {
       const customerCountry = data.customerCountry?.trim().toUpperCase()
-      if (customerCountry && isStripeTaxBuyerCountry(customerCountry)) {
+      if (customerCountry && isTaxBuyerCountry(customerCountry)) {
         return {
           isBusiness: false as const,
           customerCountry,
@@ -214,7 +214,7 @@ export const BusinessDetailsSchema = z
     const country = data.country!.trim().toUpperCase() as SupportedBusinessCountry
     const customerCountryRaw = data.customerCountry?.trim().toUpperCase()
     const customerCountry =
-      customerCountryRaw && isStripeTaxBuyerCountry(customerCountryRaw)
+      customerCountryRaw && isTaxBuyerCountry(customerCountryRaw)
         ? customerCountryRaw
         : country
     const businessName = data.businessName?.trim()

@@ -1,6 +1,6 @@
 ---
 title: "Business checkout (B2B)"
-description: "Collect company name, country, and tax ID at checkout, calculate tax with Stripe Tax, and show the seller's VAT number on receipts."
+description: "Collect company name, country, and tax ID at checkout, calculate tax, and show the seller's VAT number on receipts."
 ---
 
 Business buyers can purchase plans and credit top-ups with correct tax treatment. The SDK collects
@@ -12,7 +12,7 @@ The flow has three parts:
 
 1. **Collect** business details in the checkout or top-up form (`PaymentForm.BusinessDetails` /
    `TopupForm.BusinessDetails`).
-2. **Attach** them to the payment intent (`attachBusinessDetails`), which triggers Stripe Tax and
+2. **Attach** them to the payment intent (`attachBusinessDetails`), which triggers the tax calculation and
    returns a `TaxBreakdown`.
 3. **Confirm** the payment — the forms confirm server-side, so the tax-updated
    amount applies at confirmation.

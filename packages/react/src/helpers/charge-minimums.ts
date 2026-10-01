@@ -6,7 +6,7 @@
  * two tables in sync — the SDK validates client-side so users get an accurate,
  * currency-correct minimum before the request reaches the server.
  */
-const STRIPE_MINIMUM_MINOR: Record<string, number> = {
+const CHARGE_MINIMUM_MINOR: Record<string, number> = {
   USD: 50,
   EUR: 50,
   GBP: 30,
@@ -22,6 +22,6 @@ const STRIPE_MINIMUM_MINOR: Record<string, number> = {
 
 const DEFAULT_MINIMUM_MINOR = 50
 
-export function getStripeMinimumMinor(currency: string): number {
-  return STRIPE_MINIMUM_MINOR[currency.toUpperCase()] ?? DEFAULT_MINIMUM_MINOR
+export function getChargeMinimumMinor(currency: string): number {
+  return CHARGE_MINIMUM_MINOR[currency.toUpperCase()] ?? DEFAULT_MINIMUM_MINOR
 }

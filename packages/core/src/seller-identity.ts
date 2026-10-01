@@ -7,7 +7,7 @@ import {
   DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   deriveTaxIdType,
-  isStripeTaxBuyerCountry,
+  isTaxBuyerCountry,
 } from './tax-jurisdictions'
 
 export {
@@ -32,7 +32,7 @@ function normalizeOptionalString(value: string | null | undefined): string | und
 
 export function getSellerTaxIdentifierDisplayLabel(country: string | null | undefined): string {
   const normalized = normalizeOptionalString(country)?.toUpperCase()
-  if (normalized && isStripeTaxBuyerCountry(normalized)) {
+  if (normalized && isTaxBuyerCountry(normalized)) {
     const type = deriveTaxIdType(normalized)
     if (type) {
       return SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE[type] ?? DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL
@@ -49,7 +49,7 @@ export function resolveSellerIdentityDisplay(input: {
 }): SellerIdentityDisplay {
   const country = normalizeOptionalString(input.country)
   const supportedCountry =
-    country && isStripeTaxBuyerCountry(country.toUpperCase()) ? country.toUpperCase() : undefined
+    country && isTaxBuyerCountry(country.toUpperCase()) ? country.toUpperCase() : undefined
   const vatNumber = normalizeOptionalString(input.vatNumber)
   const taxId = normalizeOptionalString(input.taxId)
   const companyNumber = normalizeOptionalString(input.companyNumber)

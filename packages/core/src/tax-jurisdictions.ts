@@ -149,27 +149,27 @@ const BUYER_COUNTRY_ROWS = [
   ['ZW', 'Zimbabwe'],
 ] as const
 
-export type StripeTaxBuyerCountry = (typeof BUYER_COUNTRY_ROWS)[number][0]
+export type TaxBuyerCountry = (typeof BUYER_COUNTRY_ROWS)[number][0]
 
-export const STRIPE_TAX_BUYER_COUNTRIES: ReadonlyArray<{
-  code: StripeTaxBuyerCountry
+export const TAX_BUYER_COUNTRIES: ReadonlyArray<{
+  code: TaxBuyerCountry
   name: string
 }> = BUYER_COUNTRY_ROWS.map(([code, name]) => ({ code, name }))
 
-export const SUPPORTED_BUSINESS_COUNTRIES: readonly StripeTaxBuyerCountry[] =
-  STRIPE_TAX_BUYER_COUNTRIES.map(country => country.code)
+export const SUPPORTED_BUSINESS_COUNTRIES: readonly TaxBuyerCountry[] =
+  TAX_BUYER_COUNTRIES.map(country => country.code)
 
-export type SupportedBusinessCountry = StripeTaxBuyerCountry
+export type SupportedBusinessCountry = TaxBuyerCountry
 
-export const BUSINESS_COUNTRY_DISPLAY_NAMES: Record<StripeTaxBuyerCountry, string> =
-  Object.fromEntries(STRIPE_TAX_BUYER_COUNTRIES.map(country => [country.code, country.name])) as Record<
-    StripeTaxBuyerCountry,
+export const BUSINESS_COUNTRY_DISPLAY_NAMES: Record<TaxBuyerCountry, string> =
+  Object.fromEntries(TAX_BUYER_COUNTRIES.map(country => [country.code, country.name])) as Record<
+    TaxBuyerCountry,
     string
   >
 
 const BUYER_COUNTRY_SET: ReadonlySet<string> = new Set(SUPPORTED_BUSINESS_COUNTRIES)
 
-export function isStripeTaxBuyerCountry(value: string): value is StripeTaxBuyerCountry {
+export function isTaxBuyerCountry(value: string): value is TaxBuyerCountry {
   return BUYER_COUNTRY_SET.has(value.trim().toUpperCase())
 }
 
@@ -372,7 +372,7 @@ export const COUNTRY_TO_TAX_ID_TYPE = {
   ZA: 'za_vat',
   ZM: 'zm_tin',
   ZW: 'zw_tin',
-} as const satisfies Record<StripeTaxBuyerCountry, TaxIdType>
+} as const satisfies Record<TaxBuyerCountry, TaxIdType>
 
 export type MappedTaxIdCountry = keyof typeof COUNTRY_TO_TAX_ID_TYPE
 
@@ -492,7 +492,7 @@ export function normalizeTaxId(taxId: string): string {
   return taxId.trim().toUpperCase().replace(/\s+/g, '')
 }
 
-export function deriveTaxIdType(country: StripeTaxBuyerCountry): TaxIdType | undefined {
+export function deriveTaxIdType(country: TaxBuyerCountry): TaxIdType | undefined {
   return COUNTRY_TO_TAX_ID_TYPE[country as MappedTaxIdCountry]
 }
 
@@ -500,7 +500,7 @@ export function isValidTaxIdForType(type: TaxIdType, taxId: string): boolean {
   return TAX_ID_FORMAT_BY_TYPE[type].test(normalizeTaxId(taxId))
 }
 
-export function isValidTaxIdForCountry(country: StripeTaxBuyerCountry, taxId: string): boolean {
+export function isValidTaxIdForCountry(country: TaxBuyerCountry, taxId: string): boolean {
   const type = deriveTaxIdType(country)
   if (!type) {
     return false
@@ -512,7 +512,7 @@ export function isValidTaxIdForCountry(country: StripeTaxBuyerCountry, taxId: st
   return TAX_ID_FORMAT_BY_TYPE[type].test(normalized)
 }
 
-export const TAX_ID_EXAMPLE_BY_COUNTRY: Partial<Record<StripeTaxBuyerCountry, string>> = {
+export const TAX_ID_EXAMPLE_BY_COUNTRY: Partial<Record<TaxBuyerCountry, string>> = {
   AE: '123456789012345',
   AL: 'J12345678N',
   AM: '02538904',
@@ -650,7 +650,7 @@ export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Partial<Record<TaxIdTy
 
 export const DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL = 'Tax ID'
 
-export function getTaxIdFieldLabel(country: StripeTaxBuyerCountry): string {
+export function getTaxIdFieldLabel(country: TaxBuyerCountry): string {
   const type = deriveTaxIdType(country)
   if (!type) {
     return DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL
@@ -658,11 +658,11 @@ export function getTaxIdFieldLabel(country: StripeTaxBuyerCountry): string {
   return TAX_ID_FIELD_LABEL_BY_TYPE[type] ?? DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL
 }
 
-export function getTaxIdExample(country: StripeTaxBuyerCountry): string {
+export function getTaxIdExample(country: TaxBuyerCountry): string {
   return TAX_ID_EXAMPLE_BY_COUNTRY[country] ?? 'Enter tax ID'
 }
 
-export function getTaxIdHelperText(country: StripeTaxBuyerCountry): string {
+export function getTaxIdHelperText(country: TaxBuyerCountry): string {
   const example = getTaxIdExample(country)
   const type = deriveTaxIdType(country)
   if (type === 'us_ein') {
@@ -674,13 +674,13 @@ export function getTaxIdHelperText(country: StripeTaxBuyerCountry): string {
   return `Enter your tax ID, e.g. ${example}`
 }
 
-export type StripeTaxDomesticScheme = 'standard' | 'simplified'
+export type TaxDomesticScheme = 'standard' | 'simplified'
 
 /**
  * Stripe accepts exactly one of standard / simplified per country.
  * Remote-seller digital VAT jurisdictions are simplified-only.
  */
-export const STRIPE_TAX_DOMESTIC_SCHEME_BY_COUNTRY: Record<string, StripeTaxDomesticScheme> = {
+export const TAX_DOMESTIC_SCHEME_BY_COUNTRY: Record<string, TaxDomesticScheme> = {
   AE: 'standard',
   AT: 'standard',
   AU: 'standard',
@@ -786,10 +786,10 @@ export const STRIPE_TAX_DOMESTIC_SCHEME_BY_COUNTRY: Record<string, StripeTaxDome
   ZW: 'simplified',
 }
 
-export function stripeTaxDomesticSchemeForCountry(country: string): StripeTaxDomesticScheme {
-  const scheme = STRIPE_TAX_DOMESTIC_SCHEME_BY_COUNTRY[country.toUpperCase()]
+export function taxDomesticSchemeForCountry(country: string): TaxDomesticScheme {
+  const scheme = TAX_DOMESTIC_SCHEME_BY_COUNTRY[country.toUpperCase()]
   if (!scheme) {
-    throw new Error(`No Stripe Tax domestic registration scheme mapped for ${country}`)
+    throw new Error(`No domestic tax registration scheme mapped for ${country}`)
   }
   return scheme
 }

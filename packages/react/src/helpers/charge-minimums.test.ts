@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { getStripeMinimumMinor } from './stripe-minimums'
+import { getChargeMinimumMinor } from './charge-minimums'
 
-describe('getStripeMinimumMinor', () => {
+describe('getChargeMinimumMinor', () => {
   // Values mirror the backend source of truth
   // (solvapay-backend/src/billing/credits/lib/stripe-minimum-charge.ts). If the
   // backend table changes, update both in lockstep — this test guards drift.
@@ -18,14 +18,14 @@ describe('getStripeMinimumMinor', () => {
     ['JPY', 50],
     ['KRW', 500],
   ])('returns the Stripe minimum for %s', (currency, expected) => {
-    expect(getStripeMinimumMinor(currency)).toBe(expected)
+    expect(getChargeMinimumMinor(currency)).toBe(expected)
   })
 
   it('is case-insensitive', () => {
-    expect(getStripeMinimumMinor('sek')).toBe(300)
+    expect(getChargeMinimumMinor('sek')).toBe(300)
   })
 
   it('falls back to the default minimum for an unknown currency', () => {
-    expect(getStripeMinimumMinor('XYZ')).toBe(50)
+    expect(getChargeMinimumMinor('XYZ')).toBe(50)
   })
 })

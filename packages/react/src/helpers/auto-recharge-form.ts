@@ -5,7 +5,7 @@ import type {
 } from '@solvapay/server'
 import { formatPrice, getMinorUnitsPerMajor } from '../utils/format'
 import { estimateCredits, estimateCurrencyMajorFromCredits } from '../utils/credit-estimation'
-import { getStripeMinimumMinor } from './stripe-minimums'
+import { getChargeMinimumMinor } from './charge-minimums'
 import { interpolate } from '../i18n/interpolate'
 
 /**
@@ -185,7 +185,7 @@ export function validateAutoRechargeForm(
   }
 
   const minorPerMajor = getMinorUnitsPerMajor(currency)
-  const minMinor = getStripeMinimumMinor(currency)
+  const minMinor = getChargeMinimumMinor(currency)
 
   const thresholdRaw = parseNonNegativeNumber(form.thresholdAmountMajor)
   if (thresholdRaw == null) {

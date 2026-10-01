@@ -430,7 +430,7 @@ export interface paths {
     }
     /**
      * Get the default payment method for a customer
-     * @description Returns the customer's default card for the authenticated provider. Sourced from stored payment-method records (no Stripe round-trip). Returns `{ kind: 'none' }` when no card is on file.
+     * @description Returns the customer's default card for the authenticated provider. Sourced from stored payment-method records (no payment-rail round-trip). Returns `{ kind: 'none' }` when no card is on file.
      */
     get: operations['PaymentMethodSdkController_getPaymentMethod']
     put?: never
@@ -450,7 +450,7 @@ export interface paths {
     }
     /**
      * Get environment-aware platform config for the authenticated provider
-     * @description Returns browser-safe platform values resolved against the provider environment. Today: the SolvaPay platform Stripe publishable key. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
+     * @description Returns browser-safe platform values resolved against the provider environment. Today it carries none: no rail configuration reaches the browser. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
      */
     get: operations['getPlatformConfig']
     put?: never
@@ -1017,13 +1017,13 @@ export interface components {
        */
       maxAmountMajor: number
       /**
-       * Stripe minimum charge in minor units, keyed by ISO 4217 currency
+       * Minimum charge in minor units, keyed by ISO 4217 currency
        * @example {
        *       "GBP": 30,
        *       "USD": 50
        *     }
        */
-      stripeMinimumMinorByCurrency: {
+      minimumChargeMinorByCurrency: {
         [key: string]: number
       }
     }
@@ -1087,7 +1087,7 @@ export interface components {
       customerLine2?: string
       /** @description Customer full name */
       customerName?: string
-      /** @description Billing postal code (required by Stripe Tax for US) */
+      /** @description Billing postal code (required for US tax calculation) */
       customerPostalCode?: string
       /** @description Customer reference to persist business tax details on the customer record. Only honored by the payment-intent business-details endpoint; ignored on the checkout-session endpoint. */
       customerRef?: string
@@ -2294,7 +2294,7 @@ export interface components {
       /** @description SolvaPay payment intent id */
       id: string
       /**
-       * Rail payment reference, e.g. the Stripe PaymentIntent id
+       * Payment reference on the payment rail
        * @example pi_1a2b3c4d5e6f7g8h
        */
       processorPaymentId: string
@@ -2828,7 +2828,7 @@ export interface components {
       currency: string
       /** @description Whether tax is included in the listed price */
       inclusive: boolean
-      /** @description True when Stripe reports taxability_reason not_collecting (no registration) */
+      /** @description True when the tax engine reports no registration in the buyer jurisdiction */
       notRegistered?: boolean
       /** @description Pre-tax amount in minor units */
       subtotal: number
@@ -2837,7 +2837,7 @@ export interface components {
       /** @description Tax rate as a decimal (e.g. 0.25 for 25%) */
       taxRate: number
       /**
-       * Stripe tax type (e.g. vat, sales_tax, gst)
+       * Tax type (e.g. vat, sales_tax, gst)
        * @enum {string}
        */
       taxType?:
@@ -3315,7 +3315,7 @@ export interface operations {
       }
     }
     responses: {
-      /** @description Saved auto-recharge config and optional SetupIntent details. */
+      /** @description Saved auto-recharge config, and whether it still needs a card. */
       200: {
         headers: {
           [name: string]: unknown
@@ -3991,7 +3991,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Stripe payment intent ID (pi_…) */
+        /** @description Payment reference on the payment rail */
         processorPaymentId: string
       }
       cookie?: never
