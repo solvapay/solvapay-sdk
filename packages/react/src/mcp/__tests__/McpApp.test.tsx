@@ -425,7 +425,8 @@ describe('<McpApp>', () => {
     expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
     expect(container.querySelector('.solvapay-mcp-close')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('applies hostContext.safeAreaInsets as padding on the root container', async () => {

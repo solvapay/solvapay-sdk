@@ -78,7 +78,7 @@ describe('MCP fullscreen hosted geometry', () => {
       /html:has\(\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\)[\s\S]*?#root\s*\{[^}]*height:\s*100%/,
     )
     expect(STYLES).toMatch(
-      /html:has\(\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\)\s+#root\s*\{[^}]*padding:\s*0/,
+      /html:has\(\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\)\s+#root\s*\{[^}]*overflow:\s*hidden/,
     )
     expect(STYLES).toMatch(
       /\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\s*\{[^}]*align-items:\s*center/,

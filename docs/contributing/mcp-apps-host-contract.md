@@ -197,6 +197,23 @@ Claude's lookup is the last two labels of the host:
 
 `Icon.mimeType` is an override for when the served type is missing or generic. The SolvaPay file endpoint sends the correct `Content-Type`, and the URLs keep their extension, so the advertised icon leaves `mimeType` unset.
 
+## 11. Widget frame — `prefersBorder`
+
+The MCP Apps spec defines `_meta.ui.prefersBorder` as whether a visible border and background is provided by the **host**. Servers should set it explicitly, and hosts read it from `resources/list` and the `resources/read` content item. Anthropic and OpenAI agree on the outcome: one frame, owned by the host, with a transparent widget root and no side margins.
+
+| Host | Observed | Date |
+| --- | --- | --- |
+| **Claude Desktop** | Paints a bordered card around the iframe even with `prefersBorder: false`. First-hand: with our own `.solvapay-mcp-card` hairline and 16px root gutter, this rendered a double frame. | 2026-10-01 |
+| **Claude (docs)** | Default is borderless on web, bordered on mobile. Anthropic's `build-mcp-app` skill notes that `prefersBorder: false` affects mobile only. | 2026-10 |
+| **ChatGPT** | Always wraps the inline widget in its own container and app label. Widgets must not duplicate host chrome and should respect host corner radii. | 2026-10 |
+| **Goose** | Honours the flag (default `true`). | 2026-10 |
+
+So we advertise `prefersBorder: true` and paint no outer frame. Hosts that frame anyway draw the one frame. Hosts that honour the flag draw it on request. A host that ignores the flag and defaults to borderless renders us blended into the canvas, which is what Anthropic recommends.
+
+### Root scrollbar
+
+Inline hosts size the iframe to the content from `ui/notifications/size-changed` (Claude Desktop: outer iframe height = min(reported height, 5000), transparent, borderless, served through the `*.claudemcpcontent.com/mcp_apps` sandbox proxy as an opaque-origin `srcdoc` frame). The root therefore never has anything to scroll once the host has caught up. The window between a view growing in place and the host applying the new height is enough for a classic vertical scrollbar to appear on the root, and Chromium in Claude Desktop has been observed keeping it afterwards: a 15px thumbless track that still reserves layout width, so the content laid out 15px narrower than the frame (observed 2026-10-01, account → plan chooser, 415 → 553px). The widget root declares `scrollbar-width: none`. Scrolling still works on hosts that cap the frame height; fullscreen scrolls on `.solvapay-mcp-main`, which keeps its own bar.
+
 ## Sources
 
 Specification and SEPs:
@@ -217,6 +234,8 @@ Specification and SEPs:
 Implementation references:
 
 - [`getUiCapability` API reference](https://apps.extensions.modelcontextprotocol.io/api/functions/server-helpers.getUiCapability.html) and [`McpUiClientCapabilities`](https://apps.extensions.modelcontextprotocol.io/api/interfaces/app.McpUiClientCapabilities.html)
+- [Claude MCP Apps design guidelines](https://claude.com/docs/connectors/building/mcp-apps/design-guidelines) and [transparent theming](https://claude.com/docs/connectors/building/mcp-apps/transparent-theming) — set `prefersBorder` explicitly, keep `html`/`body` transparent, full-width layouts without side margins
+- [OpenAI Apps SDK design guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines) — ChatGPT frames inline widgets; do not duplicate host chrome
 - [Anthropic `mcp-server-dev` plugin — iframe sandbox constraints](https://github.com/anthropics/claude-plugins-official/blob/66799ffb/plugins/mcp-server-dev/skills/build-mcp-app/references/iframe-sandbox.md) and [Apps SDK messages](https://github.com/anthropics/claude-plugins-official/blob/66799ffb/plugins/mcp-server-dev/skills/build-mcp-app/references/apps-sdk-messages.md) — `window.open()` / `<a target="_blank">` both blocked, `app.openLink({ url })` required for outbound navigation
 - [MCP Python SDK — `client_supports_apps`](https://py.sdk.modelcontextprotocol.io/v2/api/mcp/server/apps/)
 - [MCP Ruby SDK — MCP Apps extension](https://ruby.sdk.modelcontextprotocol.io/extensions/mcp-apps/) — "always return a meaningful text result"
