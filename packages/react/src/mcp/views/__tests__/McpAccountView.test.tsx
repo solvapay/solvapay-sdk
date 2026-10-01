@@ -708,10 +708,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Turn on/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
     expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
   })
 
@@ -735,10 +732,7 @@ describe('McpAccountView', () => {
       autoRechargeUrl: AUTO_RECHARGE_URL,
     })
     expect(screen.getByText('Auto-recharge on')).toBeTruthy()
-    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
   it('shows the pending-setup line after a top-up that enabled auto-recharge', () => {
@@ -751,10 +745,7 @@ describe('McpAccountView', () => {
     })
     expect(screen.getByText('Auto-recharge starts once this payment clears')).toBeTruthy()
     expect(screen.queryByText('Auto-recharge on')).toBeNull()
-    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute(
-      'href',
-      AUTO_RECHARGE_URL,
-    )
+    expect(screen.getByRole('link', { name: /Manage/ })).toHaveAttribute('href', AUTO_RECHARGE_URL)
   })
 
   it('shows the failed-card line and Fix card link', () => {
@@ -920,7 +911,9 @@ describe('McpAccountView', () => {
     expect(screen.getByText('1 call')).toBeTruthy()
     expect(screen.getByText('Of 3 this period.')).toBeTruthy()
     expect(screen.getByText('Resets')).toBeTruthy()
-    expect(screen.getByText('Oct 1, 2026')).toBeTruthy()
+    // The compact cell repeats the date once the reset day has arrived
+    // (`daysUntil` is 0), so this is not a unique node.
+    expect(screen.getAllByText('Oct 1, 2026').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
     expect(screen.getByText('Balance is untouched.')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'warning')
