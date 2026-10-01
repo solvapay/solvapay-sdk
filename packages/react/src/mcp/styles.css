@@ -6,7 +6,9 @@
  * once on `:root` with `light-dark()` so hosts that publish nothing
  * still get a WCAG-compliant palette, and hosts that publish tokens
  * win. `html`/`body` stay transparent so the host canvas shows
- * through; the card is a hairline frame, not a filled sheet.
+ * through. The host owns the outer frame (`prefersBorder: true`):
+ * the widget root and the surface card paint no border, fill, or
+ * radius, so a framing host never nests a second card around ours.
  *
  * All classes start with `solvapay-mcp-` so they don't collide with the
  * core `@solvapay/react` styles or with integrator-supplied classes.
@@ -69,17 +71,31 @@ body {
   line-height: 1.5;
 }
 
+/* Inline frames are sized to the content by the host (`size-changed`),
+ * so the root never legitimately scrolls. When a view grows in place
+ * the document overflows for one frame, the root gains a classic
+ * vertical scrollbar, and Chromium (Claude Desktop) can keep that
+ * scrollbar after the host has grown the frame: a thumbless 15px track
+ * that still steals layout width. No root scrollbar, ever; wheel and
+ * touch scrolling still work on hosts that cap the frame height.
+ * Fullscreen scrolls on `.solvapay-mcp-main`, which keeps its own bar. */
+html {
+  scrollbar-width: none;
+}
+
+/* No gutter: root padding comes only from `hostContext.safeAreaInsets`,
+ * applied to `.solvapay-mcp-main` by the display-mode hook. */
 #root {
   min-height: 100%;
-  padding: 16px;
 }
 
 /* Fill the host container. Anthropic: "Apps always fill the
  * container width — there are no fixed breakpoints." `main` stays
  * `width: 100%` so `@container mcp (min-width: 760px)` sees the
- * host. The visual widget — chrome, loading card, shell — is one
- * centered 760px block (no-op below that width). Fullscreen lifts
- * the cap and becomes a centered 1000px hosted column. */
+ * host. Chrome, loading card and shell fill it too: the host draws
+ * its frame at the full column width, so any inline cap on our side
+ * shows up as dead margins inside that frame (seen on Claude Desktop
+ * past 760px). Fullscreen becomes a centered 1000px hosted column. */
 .solvapay-mcp-main {
   --solvapay-surface: var(--color-background-primary);
   --solvapay-muted: var(--color-background-secondary);
@@ -128,8 +144,6 @@ body {
 .solvapay-mcp-main > .solvapay-mcp-card,
 .solvapay-mcp-shell {
   width: 100%;
-  max-inline-size: 760px;
-  margin-inline: auto;
 }
 
 .solvapay-mcp-chrome-row {
@@ -149,9 +163,7 @@ body {
   flex-direction: column;
   gap: var(--solvapay-section-gap);
   padding: var(--solvapay-card-padding);
-  /* Hairline frame only — no fill, no shadow. Host tokens win. */
-  border-radius: var(--border-radius-xl);
-  border: 1px solid var(--color-border-primary);
+  /* A padded section, not a frame — the host card is the frame. */
   transition: opacity 180ms ease;
 }
 
@@ -227,7 +239,7 @@ body {
 
 /*
  * Subtle feedback while a background `check_purchase` poll is in flight.
- * The card frame stays mounted — we just dim it so the user sees activity
+ * The card stays mounted — we just dim it so the user sees activity
  * without any layout shift or content swap.
  */
 .solvapay-mcp-card[data-refreshing='true'] {
@@ -393,12 +405,11 @@ body {
 /* Account view */
 
 /* `<CurrentPlanCard>` ships its own card frame for standalone web
- * surfaces. Inside the MCP account view the surrounding
- * `.solvapay-mcp-card` already IS the frame, so the default chrome
- * nested a second bordered box and doubled the inset (16px card
- * padding + 16px card padding). Flatten it: the plan facts then align
- * to the same left edge and 16px gutter as the heading, the CTA, and
- * every other MCP surface (checkout, topup, success). */
+ * surfaces. Inside the MCP account view the host card is the frame,
+ * so the default chrome would nest a second bordered box and double
+ * the inset. Flatten it: the plan facts then align to the same left
+ * edge as the heading, the CTA, and every other MCP surface
+ * (checkout, topup, success). */
 .solvapay-mcp-account [data-solvapay-current-plan-card] {
   padding: 0;
   border: 0;
@@ -675,10 +686,11 @@ body {
  * There is no sidebar grid.
  */
 
+/* No gap: the card's own bottom padding is the only space between the
+ * last control and the legal footer. */
 .solvapay-mcp-shell {
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
 
 /* Body column carrying every step of every surface (account card,
@@ -732,14 +744,9 @@ body {
   display: none;
 }
 
-.solvapay-mcp-main[data-display-mode='fullscreen'] > .solvapay-mcp-card {
-  max-inline-size: none;
-}
-
 .solvapay-mcp-main[data-display-mode='fullscreen']
   .solvapay-mcp-card:has(.solvapay-mcp-hosted-layout) {
   padding: 0;
-  border: none;
 }
 
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']),
@@ -750,7 +757,6 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 }
 
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
-  padding: 0;
   overflow: hidden;
 }
 
@@ -761,7 +767,6 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   /* 1000px column + the 72px gutter on each side. */
   max-inline-size: 1144px;
   padding: 56px 72px 40px;
-  margin-inline: 0;
 }
 
 .solvapay-mcp-hosted-layout {
@@ -815,9 +820,9 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
  * Shell-level legal footer.
  *
  * Lays the `<LegalFooter>` primitive out as one centered line:
- * `Provided by SolvaPay · Terms · Privacy`. The parent
- * `.solvapay-mcp-shell` already supplies a `gap: 16px` between
- * children, so the row needs no extra `padding-top` of its own.
+ * `Provided by SolvaPay · Terms · Privacy`. The card's bottom padding
+ * is the only space above it; the footer carries its own bottom inset
+ * so it does not sit flush against the host frame.
  *
  * Scoped to the shell context so the primitive's default centred
  * column layout, font size, and muted slate-500 ink keep working for
@@ -825,6 +830,13 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
  */
 .solvapay-mcp-shell-footer {
   font-size: 12px;
+  padding: 0 var(--solvapay-card-padding) 16px;
+}
+
+/* Fullscreen zeroes the card padding, so the footer supplies its own
+ * gap above; the shell's 40px bottom padding handles the space below. */
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell-footer {
+  padding: 16px 0 0;
 }
 
 .solvapay-mcp-shell-footer [data-solvapay-legal-footer] {

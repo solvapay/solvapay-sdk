@@ -246,7 +246,7 @@ describe('createSolvaPayMcpFetch', () => {
     }
   })
 
-  it('resources/read returns the registered UI HTML with prefersBorder: false', async () => {
+  it('resources/read returns the registered UI HTML with prefersBorder: true', async () => {
     const handler = buildHandler()
     await initialize(handler)
 
@@ -260,7 +260,7 @@ describe('createSolvaPayMcpFetch', () => {
     const entry = read.json.result?.contents?.[0]
     expect(entry?.uri).toBe(resourceUri)
     expect(entry?.text).toContain('<html><body>test</body></html>')
-    expect(entry?._meta?.ui?.prefersBorder).toBe(false)
+    expect(entry?._meta?.ui?.prefersBorder).toBe(true)
   })
 
   it('resources/read returns bootstrap JSON at solvapay://bootstrap.json', async () => {
