@@ -920,7 +920,9 @@ describe('McpAccountView', () => {
     expect(screen.getByText('1 call')).toBeTruthy()
     expect(screen.getByText('Of 3 this period.')).toBeTruthy()
     expect(screen.getByText('Resets')).toBeTruthy()
-    expect(screen.getByText('Oct 1, 2026')).toBeTruthy()
+    // On and after the reset instant the narrow copy falls back to the same
+    // date string as the wide copy, so both fact-band spans match.
+    expect(screen.getAllByText('Oct 1, 2026').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
     expect(screen.getByText('Balance is untouched.')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'warning')
