@@ -41,8 +41,7 @@ import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { MandateText } from '../../primitives/MandateText'
 import { TopupForm, useTopupForm } from '../../primitives/TopupForm'
-import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
-import { formatCompactCredits } from '../format-compact-credits'
+import { formatPrice } from '../../utils/format'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
@@ -57,6 +56,7 @@ import {
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { McpPaymentHeader } from './McpPaymentHeader'
 import { MCP_PAYMENT_ELEMENT_OPTIONS } from './paymentElementOptions'
+import { estimateTopupCredits, PresetAmountGrid } from './PresetAmountGrid'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
@@ -88,35 +88,11 @@ type TopupScreen =
   | { step: 'payment'; amountMinor: number; autoRecharge?: AutoRechargeInput }
   | { step: 'success'; amountMinor: number }
 
-type CreditEstimate = { kind: 'available'; credits: number } | { kind: 'unavailable' }
-
 function resolveDefaultCurrency(merchant: { defaultCurrency?: string } | undefined): string {
   if (merchant?.defaultCurrency) {
     return merchant.defaultCurrency.toUpperCase()
   }
   return FALLBACK_TOPUP_CURRENCY
-}
-
-function estimateTopupCredits(
-  amountMinor: number,
-  payCurrency: string,
-  displayCurrency: string | null | undefined,
-  creditsPerMinorUnit: number | null | undefined,
-  displayExchangeRate: number | null | undefined,
-): CreditEstimate {
-  const rateAppliesToCurrency =
-    displayCurrency != null && payCurrency.toUpperCase() === displayCurrency.toUpperCase()
-  if (
-    !rateAppliesToCurrency ||
-    creditsPerMinorUnit == null ||
-    creditsPerMinorUnit <= 0 ||
-    displayExchangeRate == null ||
-    displayExchangeRate <= 0
-  ) {
-    return { kind: 'unavailable' }
-  }
-  const credits = Math.floor((amountMinor / displayExchangeRate) * creditsPerMinorUnit)
-  return { kind: 'available', credits }
 }
 
 export function McpTopupView({
@@ -353,7 +329,7 @@ function EmbeddedTopup({
           onCurrencyChange={handleCurrencyChange}
         />
       )}
-      <PresetAmountGrid currencyDisplay={currencyDisplay} locale={locale} />
+      <PresetAmountGrid currencyDisplay={currencyDisplay} />
       <CustomAmountRow
         rowClassName={cx.amountCustom}
         currencyDisplay={currencyDisplay}
@@ -487,47 +463,6 @@ function AmountStepHeader({
         </label>
       ) : null}
     </header>
-  )
-}
-
-function PresetAmountGrid({
-  currencyDisplay,
-  locale,
-}: {
-  currencyDisplay: 'symbol' | 'code'
-  locale: string
-}) {
-  const { quickAmounts, currency, creditsPerMinorUnit, displayExchangeRate } =
-    useAmountPicker()
-  const { displayCurrency } = useBalance()
-  return (
-    <div className="solvapay-mcp-preset-grid" aria-label="Quick amounts">
-      {quickAmounts.map(amount => {
-        const minor = amount * getMinorUnitsPerMajor(currency)
-        const label = formatPrice(minor, currency, {
-          locale,
-          free: '',
-          currencyDisplay,
-        })
-        const estimate = estimateTopupCredits(
-          minor,
-          currency,
-          displayCurrency,
-          creditsPerMinorUnit,
-          displayExchangeRate,
-        )
-        return (
-          <AmountPicker.Option key={amount} amount={amount} className="solvapay-mcp-preset-tile">
-            <span className="solvapay-mcp-preset-tile-amount">{label}</span>
-            <span className="solvapay-mcp-preset-tile-credits">
-              {estimate.kind === 'available'
-                ? formatCompactCredits(estimate.credits, locale)
-                : ''}
-            </span>
-          </AmountPicker.Option>
-        )
-      })}
-    </div>
   )
 }
 
