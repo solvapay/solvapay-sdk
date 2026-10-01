@@ -2626,13 +2626,7 @@ export interface components {
        */
       reference?: string
     }
-    SdkPlatformConfigResponseDto: {
-      /**
-       * SolvaPay's platform Stripe publishable key for the authenticated provider's environment. Safe to expose browser-side; paired with the connected `accountId` returned from `create-payment-intent` for Stripe Connect direct charges. Omitted when not configured so callers can fall back cleanly to a hosted flow.
-       * @example pk_test_...
-       */
-      stripePublishableKey?: string
-    }
+    SdkPlatformConfigResponseDto: Record<string, never>
     SdkProductResponse: {
       /**
        * Product balance in cents
