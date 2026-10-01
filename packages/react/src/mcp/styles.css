@@ -819,16 +819,22 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 /*
  * Shell-level legal footer.
  *
- * Lays the `<LegalFooter>` primitive out as one centered line:
- * `Provided by SolvaPay · Terms · Privacy`. The card's bottom padding
- * is the only space above it; the footer carries its own bottom inset
- * so it does not sit flush against the host frame.
+ * One centered, muted line: `Provided by SolvaPay   Terms   Privacy`.
+ * The attribution is plain text, not a link. The `<LegalFooter>`
+ * wrappers flatten via `display: contents` so the attribution and both
+ * links share one flex gap, and the primitive's `·` separators are
+ * hidden. The card's bottom padding is the only space above it; the
+ * footer carries its own bottom inset so it does not sit flush against
+ * the host frame.
  *
- * Scoped to the shell context so the primitive's default centred
- * column layout, font size, and muted slate-500 ink keep working for
- * any other consumer who drops the primitive in.
+ * Scoped to the shell context so the primitive's default layout keeps
+ * working for any other consumer who drops it in.
  */
 .solvapay-mcp-shell-footer {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 1rem;
   font-size: 12px;
   padding: 0 var(--solvapay-card-padding) 16px;
 }
@@ -839,29 +845,13 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   padding: 16px 0 0;
 }
 
-.solvapay-mcp-shell-footer [data-solvapay-legal-footer] {
-  flex-direction: row-reverse;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0;
-  width: 100%;
-  /* Step the ink up from slate-500 (the primitive default) to
-   * slate-600 so the footer reads cleanly against white without
-   * fading into the card border. Matches the rest of the MCP
-   * chrome (`AppHeader`, muted body copy). */
-  color: var(--color-text-secondary);
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer],
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer-links] {
+  display: contents;
 }
 
-/* Match the visual spacing of the inner `Terms · Privacy` separator.
- * That span sits inside an `inline-flex` with `gap: 0.5rem`, so each
- * side of its `·` reads as `0.5rem` flex-gap + the literal space in
- * the span text. We mirror that by adding `0.5rem` of padding to each
- * side of the `::after`-rendered bullet — the existing `' · '` text
- * already contributes the matching literal spaces. */
-.solvapay-mcp-shell-footer [data-solvapay-legal-footer-attribution]::after {
-  content: ' · ';
-  padding: 0 0.5rem;
-  font-weight: 400;
+.solvapay-mcp-shell-footer [data-solvapay-legal-footer-separator] {
+  display: none;
 }
 
 .solvapay-mcp-account {

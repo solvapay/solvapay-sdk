@@ -75,7 +75,9 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
               >
                 {copy.legalFooter.terms}
               </a>
-              <span aria-hidden="true"> · </span>
+              <span data-solvapay-legal-footer-separator="" aria-hidden="true">
+                {' · '}
+              </span>
               <a
                 data-solvapay-legal-footer-link=""
                 href={privacyUrl}

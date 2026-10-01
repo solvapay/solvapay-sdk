@@ -37,6 +37,7 @@ import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
+import { useCopy } from '../hooks/useCopy'
 
 // Merchant branding is rendered once by `<McpApp>` as a chrome row
 // above the shell (see `packages/react/src/mcp/views/AppHeader.tsx`);
@@ -144,9 +145,11 @@ export function McpAppShell({
 
 function ShellFooter({ classNames }: { classNames?: McpViewClassNames }) {
   const cx = resolveMcpClassNames(classNames)
+  const copy = useCopy()
   return (
     <footer className={`solvapay-mcp-shell-footer ${cx.muted}`.trim()}>
-      <LegalFooter attribution="provided" />
+      <span>{copy.legalFooter.providedBy}</span>
+      <LegalFooter attribution={false} />
     </footer>
   )
 }
