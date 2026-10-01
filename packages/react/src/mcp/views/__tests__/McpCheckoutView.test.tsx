@@ -1010,7 +1010,7 @@ describe('<McpCheckoutView> — PAYG amount step currency labels', () => {
     const { container } = await advanceToAmountStepWithMerchant(multiCurrencyMerchant)
     await screen.findByLabelText('Topup currency')
     const pill = container.querySelector('[data-amount="10"]')
-    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toBe('USD 10')
+    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toMatch(/^USD 10/)
     expect(pill?.textContent).not.toMatch(/^\$/)
   })
 
@@ -1018,8 +1018,9 @@ describe('<McpCheckoutView> — PAYG amount step currency labels', () => {
     await advanceToAmountStepWithMerchant(singleCurrencyMerchant)
     await screen.findByText(/How many credits/)
     expect(screen.queryByLabelText('Topup currency')).toBeNull()
-    expect(screen.getByRole('button', { name: '$10' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'USD 10' })).toBeNull()
+    const ten = document.querySelector('[data-amount="10"]')
+    expect(ten?.textContent?.replace(/\u00A0/g, ' ')).toMatch(/\$10/)
+    expect(ten?.textContent).not.toMatch(/USD 10/)
   })
 })
 
@@ -1063,16 +1064,10 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     return utils
   }
 
-  it('AmountStep renders exactly 4 preset chips (currency-aware quick amounts)', async () => {
+  it('AmountStep renders exactly 4 preset tiles (currency-aware quick amounts)', async () => {
     const { container } = await advanceToAmountStep()
-    const options = container.querySelectorAll('.solvapay-mcp-amount-option')
+    const options = container.querySelectorAll('.solvapay-mcp-preset-grid .solvapay-mcp-preset-tile')
     expect(options).toHaveLength(4)
-  })
-
-  it('AmountStep marks the recommended preset with data-popular', async () => {
-    const { container } = await advanceToAmountStep()
-    const popular = container.querySelectorAll('.solvapay-mcp-amount-option[data-popular]')
-    expect(popular).toHaveLength(1)
   })
 
   it('PaygPaymentStep renders order-summary CSS hooks', async () => {

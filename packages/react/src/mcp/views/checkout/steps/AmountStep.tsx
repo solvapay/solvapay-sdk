@@ -14,9 +14,10 @@ import React, { memo, useRef, useState } from 'react'
 import type { AutoRechargeInput } from '@solvapay/server'
 import { useBalance } from '../../../../hooks/useBalance'
 import { AmountPicker, useAmountPicker } from '../../../../primitives/AmountPicker'
-import { formatPrice, getMinorUnitsPerMajor } from '../../../../utils/format'
+import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
+import { PresetAmountGrid } from '../../PresetAmountGrid'
 import {
   McpInlineAutoRecharge,
   type McpInlineAutoRechargeHandle,
@@ -93,7 +94,7 @@ export const AmountStep = memo(function AmountStep({
         className={cx.amountPicker}
         onChange={value => setStagedAmountMinor(value)}
       >
-        <PresetAmountRow cx={cx} currencyDisplay={currencyDisplay} />
+        <PresetAmountGrid currencyDisplay={currencyDisplay} />
         <CustomAmountRow rowClassName={cx.amountCustom} currencyDisplay={currencyDisplay} />
         <McpInlineAutoRecharge
           ref={autoRechargeRef}
@@ -120,42 +121,6 @@ export const AmountStep = memo(function AmountStep({
     </>
   )
 })
-
-function PresetAmountRow({
-  cx,
-  currencyDisplay,
-}: {
-  cx: Cx
-  currencyDisplay: 'symbol' | 'code'
-}) {
-  const { quickAmounts, currency } = useAmountPicker()
-  const locale = useHostLocale()
-  // Recommended preset: the second option (index 1) when available —
-  // matches the pre-refactor wireframe's "middle chip" treatment.
-  const popularIndex = Math.min(1, quickAmounts.length - 1)
-  return (
-    <div className={cx.amountOptions}>
-      {quickAmounts.map((amount, i) => {
-        const label = formatPrice(amount * getMinorUnitsPerMajor(currency), currency, {
-          locale,
-          free: '',
-          currencyDisplay,
-        })
-        return (
-          <AmountPicker.Option
-            key={amount}
-            amount={amount}
-            className={cx.amountOption}
-            data-popular={i === popularIndex ? '' : undefined}
-            aria-label={`${label}${i === popularIndex ? ' (popular)' : ''}`}
-          >
-            {label}
-          </AmountPicker.Option>
-        )
-      })}
-    </div>
-  )
-}
 
 // Bordered "$ 0.00" row mirroring the hosted topup page. `cx.amountCustom`
 // styles the row wrapper now (post-pill-refactor); the inner span carries the
