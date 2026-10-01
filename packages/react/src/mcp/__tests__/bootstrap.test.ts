@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   classifyHostEntry,
+  fallbackViewFromHost,
   fetchMcpBootstrap,
   fetchMcpBootstrapViaResource,
   isTransportToolName,
@@ -45,7 +46,7 @@ describe('fetchMcpBootstrap', () => {
       arguments: {},
     })
     expect(result).toEqual({
-      view: 'checkout',
+      view: 'account',
       productRef: 'prod_123',
       stripePublishableKey: 'pk_test_abc',
       returnUrl: 'https://example.test/return',
@@ -76,7 +77,7 @@ describe('fetchMcpBootstrap', () => {
     expect(result.stripePublishableKey).toBeNull()
   })
 
-  it('falls back to checkout when the host invoked activate_plan (transport tool)', async () => {
+  it('falls back to account when the host invoked activate_plan (transport tool)', async () => {
     const app = mockApp({
       toolName: 'activate_plan',
       structuredContent: {
@@ -86,7 +87,7 @@ describe('fetchMcpBootstrap', () => {
     })
 
     const result = await fetchMcpBootstrap(app)
-    expect(result.view).toBe('checkout')
+    expect(result.view).toBe('account')
   })
 
   it('throws when the tool response has no productRef', async () => {
@@ -167,11 +168,18 @@ describe('fetchMcpBootstrapViaResource', () => {
     }
   }
 
-  it('parses bootstrap JSON and forces view from host context', async () => {
-    const app = mockResourceApp({ toolName: VIEWER_TOOL_NAME })
+  it('returns the payload view even when host context names the viewer', async () => {
+    const app = mockResourceApp({
+      toolName: VIEWER_TOOL_NAME,
+      resourceText: JSON.stringify({
+        view: 'topup',
+        productRef: 'prod_123',
+        returnUrl: 'https://example.test/return',
+      }),
+    })
     const result = await fetchMcpBootstrapViaResource(app)
     expect(app.readServerResource).toHaveBeenCalledWith({ uri: SOLVAPAY_BOOTSTRAP_URI })
-    expect(result.view).toBe('account')
+    expect(result.view).toBe('topup')
     expect(result.productRef).toBe('prod_123')
   })
 
@@ -238,6 +246,23 @@ describe('parseBootstrapFromToolResult', () => {
         'checkout',
       ),
     ).toThrow('customer_ref missing')
+  })
+})
+
+describe('fallbackViewFromHost', () => {
+  it('returns the intent view when the host opened the viewer', () => {
+    const app = mockApp({ toolName: VIEWER_TOOL_NAME })
+    expect(fallbackViewFromHost(app)).toBe('account')
+  })
+
+  it('returns account when the host named no tool', () => {
+    const app = mockApp({})
+    expect(fallbackViewFromHost(app)).toBe('account')
+  })
+
+  it('returns account when the host opened a transport tool', () => {
+    const app = mockApp({ toolName: 'activate_plan' })
+    expect(fallbackViewFromHost(app)).toBe('account')
   })
 })
 
