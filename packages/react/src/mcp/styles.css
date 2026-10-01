@@ -476,48 +476,6 @@ html {
   gap: 12px;
 }
 
-/* Rounded-rectangle quick-amount chips. Mirrors the `.solvapay-amount-picker-pill`
- * shape used by the web SDK and the hosted topup page so the topup look is
- * consistent across surfaces. Colors come from host theme tokens
- * (`--color-*`) so Claude Desktop / ChatGPT / VSCode dark themes adapt
- * automatically. */
-.solvapay-mcp-amount-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.solvapay-mcp-amount-option {
-  padding: 6px 14px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--color-border-primary);
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
-}
-
-/* Recommended chip: a subtly heavier border on the default state. No
- * color — stays within the pre-refactor black/white/gray palette. The
- * selected state below still wins and fills the chip with the accent. */
-.solvapay-mcp-amount-option[data-popular]:not([data-state='selected']) {
-  border-color: var(--color-text-primary);
-}
-
-.solvapay-mcp-amount-option:hover:not([data-state='selected']):not(:disabled) {
-  background: var(--solvapay-control-hover);
-}
-
-.solvapay-mcp-amount-option[data-state='selected'] {
-  border-color: var(--color-background-inverse);
-  background: var(--color-background-inverse);
-  color: var(--color-text-inverse);
-}
-
 /* `.solvapay-mcp-amount-custom` now wraps the bordered row — currency
  * prefix + input — instead of being applied directly to the `<input>`.
  * Lets us prefix the merchant currency symbol the same way the hosted
