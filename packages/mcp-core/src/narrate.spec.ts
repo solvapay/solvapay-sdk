@@ -446,6 +446,94 @@ describe('narrateManageAccount', () => {
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout".`)
     expect(text).not.toMatch(/Commands:\s*`\//)
   })
+
+  it('names the signed-in email and customer ref when there is no plan', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: 'demo@acme.test',
+          purchase: { customerRef: 'cus_1', purchases: [] },
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: demo@acme.test · cus_1')
+  })
+
+  it('names the signed-in email and customer ref on an active plan', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: 'demo@acme.test',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                planSnapshot: {
+                  name: 'Unlimited',
+                  isMetered: false,
+                  price: 50000,
+                  currency: 'USD',
+                  options: [cycle(), flat(50000)],
+                },
+                billingCycle: 'monthly',
+                endDate: '2026-05-01T00:00:00Z',
+              },
+            ],
+          },
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 100 },
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: demo@acme.test · cus_1')
+  })
+
+  it('names the customer ref alone when the purchase snapshot has no email', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: cus_1')
+    expect(text).not.toContain('·')
+  })
+
+  it('omits the identity row when there is no customer', () => {
+    const { text } = narrateManageAccount(basePayload())
+    expect(text).not.toContain('Signed in as')
+  })
+
+  it('names the customer ref when the email is null', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: null,
+          name: null,
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: cus_1')
+    expect(text).not.toContain('null')
+  })
 })
 
 const limitOpt = (cap: number, meter = 'requests') => ({ kind: 'limit', cap, meter })
@@ -587,7 +675,7 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain(
       'Cool MCP is on Pay as you go, 200 credits per call. Balance 599,800 credits, about 2,999 calls.',
     )
-    expect(text).toContain('Call `account` with view: \'topup\' to add credits.')
+    expect(text).toContain("Call `account` with view: 'topup' to add credits.")
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
     expect(text).not.toContain('Auto-recharge')
   })
@@ -715,6 +803,32 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain("Call `account` with view: 'checkout' to switch plan.")
     expect(text).toContain('planRef: pln_payg')
     expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
+  })
+
+  it('F · allowance used up: anti-trap even when the wallet is empty', () => {
+    const { text } = narrateManageAccount(
+      coolPayload({
+        plans: [coolPlans.free3] as never,
+        customer: coolCustomer({
+          balance: { ...usdBalance, credits: 0 },
+          purchase: coolPurchase({
+            name: 'Free',
+            reference: 'pln_free',
+            requiresPayment: false,
+            options: [cycle(), limitOpt(3)],
+          }),
+          usage: {
+            used: 3,
+            total: 3,
+            remaining: 0,
+            periodEnd: '2026-10-01T00:00:00.000Z',
+            meterRef: 'requests',
+          },
+          limits: { ...runningLimits, remaining: 0, withinLimits: false },
+        }),
+      }),
+    )
+    expect(text).toContain('Adding credits will not help, because Free does not spend them')
   })
 
   it('C · one-time: once qualifier and no renewal wording', () => {
@@ -1342,7 +1456,7 @@ describe('narrateAutoRecharge', () => {
     )
     expect(text).toContain('Auto-recharge is off')
     expect(text).toContain('Turn it on from the link below')
-    expect(text).toContain("`account` with view: \"account\"")
+    expect(text).toContain('`account` with view: "account"')
     expect(
       links?.some(
         link =>

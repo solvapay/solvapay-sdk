@@ -210,7 +210,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   // as a chart — the narration asks the model to draw the artifact.
   // Paywall exhaustion ships a text-only narration; the LLM calls
   // `${VIEWER_TOOL_NAME}` with the right `view` to mount the widget.
-  const USAGE_BILLING_SUFFIX = `Usage-based billing: each call debits credits per your active plan. Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see balance and cost per call; paywall opens when out of balance.`
+  const USAGE_BILLING_SUFFIX = `Usage-based billing: each call counts one request against your active plan (included requests or credits, depending on the plan). Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see what is left; when you run out, the response says how to continue.`
 
   const priceChartOutputSchema = z.object({
     symbol: z.string(),
@@ -343,19 +343,20 @@ function buildDeterministicRows(range: string): Array<{
 //
 // Self-contained — no external PRNG / stats deps. `xmur3` + `mulberry32`
 // are standard small-footprint hash/PRNG pair; `randn` is a Box-Muller
-// standard-normal sampler; `erf` is the Abramowitz & Stegun approximation
-// used for the confidence CDF.
+// standard-normal sampler.
 
 const ORACLE_HISTORY_DAYS = 30
-const ORACLE_AS_OF = '2026-04-24T00:00:00.000Z'
+const ORACLE_AS_OF = '2026-09-29T00:00:00.000Z'
 // One-sided 80% confidence band multiplier (~1.2816 standard normal).
 const ORACLE_Z80 = 1.2816
+// Verdict confidence range — the oracle always commits to a side.
+const ORACLE_MIN_CONFIDENCE = 0.8
+const ORACLE_MAX_CONFIDENCE = 0.9
 
 interface SimulatedPath {
   history: { t: number[]; price: number[] }
   forecast: { t: number[]; price: number[]; lower: number[]; upper: number[] }
   sigma: number
-  drift: number
 }
 
 function xmur3(str: string): () => number {
@@ -389,33 +390,21 @@ function randn(rng: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
 }
 
-function erf(x: number): number {
-  const sign = x < 0 ? -1 : 1
-  const ax = Math.abs(x)
-  const a1 = 0.254829592
-  const a2 = -0.284496736
-  const a3 = 1.421413741
-  const a4 = -1.453152027
-  const a5 = 1.061405429
-  const p = 0.3275911
-  const t = 1 / (1 + p * ax)
-  const y = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-ax * ax)
-  return sign * y
-}
-
 function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-function clip(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x))
-}
-
 /**
- * Seeded geometric-Brownian-motion walk covering 30 days of history
- * and `days` days of forecast. Seed depends only on `symbol`, so the
- * same symbol yields the same history across every call and the
- * forecast extends deterministically as `days` grows.
+ * Seeded simulation covering 30 days of history and `days` days of
+ * forecast. Seed depends only on `symbol`, so the same symbol yields
+ * the same history across every call and the forecast extends
+ * deterministically as `days` grows.
+ *
+ * History alternates rally / sell-off regimes, includes one
+ * earnings-style gap, and ends on a regime that leans into the
+ * forecast direction. The forecast trends hard in that direction with
+ * pullbacks along the way, but never crosses back over today's price —
+ * so the chart and the `predict_direction` verdict always agree.
  *
  * Returns parallel numeric arrays (`t[]`, `price[]`, `lower[]`,
  * `upper[]`) so every field in the tool's `structuredContent` is a
@@ -424,19 +413,30 @@ function clip(x: number, lo: number, hi: number): number {
 function simulatePricePath(symbol: string, days: number): SimulatedPath {
   const rng = mulberry32(xmur3(symbol.toUpperCase())())
 
+  const direction = rng() < 0.5 ? -1 : 1
   // Base price in [$20, $1000) so the axis range is readable across
   // symbols without needing per-ticker tuning.
   const basePrice = 20 + rng() * 980
-  // Daily drift in [-0.2%, +0.2%] — enough to bias the forecast
-  // direction without dominating the noise term.
-  const drift = (rng() - 0.5) * 0.004
-  // Daily volatility in [1%, 3%].
-  const sigma = 0.01 + rng() * 0.02
+  // Daily volatility in [1.5%, 3.5%].
+  const sigma = 0.015 + rng() * 0.02
+
+  // Regimes of 5–9 days, counted back from today. Regime 0 (the most
+  // recent) leans into the forecast direction; earlier ones alternate.
+  const regimeLength = 5 + Math.floor(rng() * 5)
+  const regimeCount = Math.ceil(ORACLE_HISTORY_DAYS / regimeLength)
+  const regimeDrift: number[] = []
+  for (let r = 0; r < regimeCount; r++) {
+    const sign = r % 2 === 0 ? direction : -direction
+    regimeDrift.push(sign * (0.006 + rng() * 0.014))
+  }
+  const gapDay = 5 + Math.floor(rng() * (ORACLE_HISTORY_DAYS - 10))
+  const gap = (rng() < 0.5 ? -1 : 1) * (0.05 + rng() * 0.07)
 
   const historyPrices: number[] = [basePrice]
   for (let i = 1; i <= ORACLE_HISTORY_DAYS; i++) {
-    const prev = historyPrices[i - 1]
-    historyPrices.push(prev * Math.exp(drift + sigma * randn(rng)))
+    const drift = regimeDrift[Math.floor((ORACLE_HISTORY_DAYS - i) / regimeLength)]
+    const shock = i === gapDay ? gap : 0
+    historyPrices.push(historyPrices[i - 1] * Math.exp(drift + shock + sigma * randn(rng)))
   }
 
   const historyT: number[] = []
@@ -446,13 +446,22 @@ function simulatePricePath(symbol: string, days: number): SimulatedPath {
     historyPriceRounded.push(round2(historyPrices[i]))
   }
 
+  // Forecast trend of 0.5%–1.2% per day in `direction`, modulated by a
+  // seeded swing + jitter. The modulation factor stays in [0.4, 1.6],
+  // so the forecast never retraces past today's close.
+  const trend = direction * (0.005 + rng() * 0.007)
+  const swingPeriod = 4 + rng() * 6
+  const swingPhase = rng() * 2 * Math.PI
+
   const last = historyPrices[historyPrices.length - 1]
   const forecastT: number[] = []
   const forecastPrice: number[] = []
   const forecastLower: number[] = []
   const forecastUpper: number[] = []
   for (let i = 1; i <= days; i++) {
-    const mean = last * Math.exp(drift * i)
+    const swing = 0.45 * Math.sin((2 * Math.PI * i) / swingPeriod + swingPhase)
+    const jitter = 0.15 * (rng() * 2 - 1)
+    const mean = last * Math.exp(trend * i * (1 + swing + jitter))
     // Confidence band widens with sqrt(t) — classic GBM band shape.
     const stdev = sigma * Math.sqrt(i)
     forecastT.push(i)
@@ -470,14 +479,14 @@ function simulatePricePath(symbol: string, days: number): SimulatedPath {
       upper: forecastUpper,
     },
     sigma,
-    drift,
   }
 }
 
 /**
- * Convert a simulated path into the `predict_direction` verdict. Uses
- * the one-sided normal CDF of the forecast's net log-return to map the
- * signal strength onto a confidence in `[0.5, 0.95]`.
+ * Convert a simulated path into the `predict_direction` verdict. Signal
+ * strength (net forecast log-return over the horizon's volatility)
+ * maps onto a confidence in `[0.80, 0.90]` — stronger moves read as
+ * more confident, and the oracle never sits on the fence.
  */
 function deriveVerdict(path: SimulatedPath): {
   direction: 'up' | 'down'
@@ -487,13 +496,10 @@ function deriveVerdict(path: SimulatedPath): {
   const forecastLast = path.forecast.price[path.forecast.price.length - 1]
   const horizon = path.forecast.t.length
   const netLogReturn = Math.log(forecastLast / historyLast)
-  const totalStdev = path.sigma * Math.sqrt(horizon)
-  const z = totalStdev > 0 ? Math.abs(netLogReturn) / totalStdev : 0
-  // Φ(z) gives the one-sided probability the true mean is on this side
-  // of zero under a normal prior; clipped to [0.5, 0.95] so the card
-  // never over-promises.
-  const raw = 0.5 + 0.5 * erf(z / Math.SQRT2)
-  const confidence = Math.round(clip(raw, 0.5, 0.95) * 100) / 100
+  const z = Math.abs(netLogReturn) / (path.sigma * Math.sqrt(horizon))
+  const strength = 1 - Math.exp(-z)
+  const raw = ORACLE_MIN_CONFIDENCE + (ORACLE_MAX_CONFIDENCE - ORACLE_MIN_CONFIDENCE) * strength
+  const confidence = Math.round(raw * 100) / 100
   const direction: 'up' | 'down' = netLogReturn >= 0 ? 'up' : 'down'
   return { direction, confidence }
 }

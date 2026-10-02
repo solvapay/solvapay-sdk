@@ -448,14 +448,45 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(sc.plans).toEqual([{ reference: 'pln_basic', name: 'Basic' }])
   })
 
-  it('omits customer snapshot when unauthenticated', async () => {
-    const result = await invokeOpen(VIEWER_TOOL_NAME, {}, undefined, { view: 'checkout' })
+  it('omits customer snapshot and every customer-scoped session when unauthenticated', async () => {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    if (!tool) throw new Error('viewer not registered')
+    const result = await tool.handler({ view: 'checkout' }, undefined)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.customer).toBeNull()
-    // Text hosts still need a pasteable checkout URL without a signed-in
-    // customer — mint against the anonymous ref, same as the paywall.
-    expect(sc.checkoutUrl).toBe('https://customer.solvapay.com/demo?session=sess_test')
+    // A checkout session belongs to a customer record, so there is none
+    // to mint for an anonymous caller. The backend would reject the ref.
+    expect(sc.checkoutUrl).toBeNull()
     expect(sc.portalUrl).toBeNull()
+    expect(solvaPay.apiClient.createCheckoutSession).not.toHaveBeenCalled()
+  })
+
+  it('treats the anonymous sentinel from a custom getCustomerRef as unauthenticated', async () => {
+    const solvaPay = makeSolvaPay()
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      getCustomerRef: () => 'anonymous',
+    })
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    if (!tool) throw new Error('viewer not registered')
+    const result = await tool.handler({ view: 'account' }, undefined)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.customer).toBeNull()
+    expect(sc.checkoutUrl).toBeNull()
+    expect(solvaPay.apiClient.createCheckoutSession).not.toHaveBeenCalled()
+    expect(solvaPay.apiClient.checkLimits).not.toHaveBeenCalled()
   })
 
   it('includes customer snapshot when customer_ref is on authInfo', async () => {
@@ -607,6 +638,48 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const result = await invokeOpen(VIEWER_TOOL_NAME)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.view).toBe('checkout')
+  })
+
+  it('bootstrap resource stamps checkout when there is no active plan and matches the viewer', async () => {
+    const { tools, bootstrapResource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const payload = await bootstrapResource.readPayload()
+    const result = await viewer.handler({}, undefined)
+    expect(payload.view).toBe('checkout')
+    expect((result.structuredContent as { view?: string }).view).toBe(payload.view)
+  })
+
+  it('bootstrap resource stamps account when the customer has an active plan and matches the viewer', async () => {
+    const extra = { authInfo: { extra: { customer_ref: 'cus_42' } } }
+    const { tools, bootstrapResource } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay({
+        customer: {
+          customerRef: 'cus_42',
+          purchases: [
+            {
+              status: 'active',
+              productRef: 'prd_test',
+              planSnapshot: { name: 'Pro' },
+            },
+          ],
+        },
+      }),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const payload = await bootstrapResource.readPayload(extra)
+    const result = await viewer.handler({}, extra)
+    expect(payload.view).toBe('account')
+    expect((result.structuredContent as { view?: string }).view).toBe(payload.view)
   })
 
   it('returns a recovery-oriented tool error when getMerchant 404s', async () => {

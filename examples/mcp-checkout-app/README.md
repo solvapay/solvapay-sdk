@@ -286,7 +286,7 @@ retry — without hand-rolling a gated tool.
 | `get_market_quote` | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`. |
 | `query_sales_trends` | Returns deterministic sales rows for a date range. When the customer is low on credits, appends a **plain-text `low-balance` nudge** to `content[0].text` that names `account` with `view: "topup"` — the data still rides on `structuredContent` and a trailing JSON text block. Exercises the text-only nudge suffix on `ctx.respond(options.nudge)`. |
 | `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart. |
-| `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0, 1]` for a ticker over N days. Same seeded model as `predict_price_chart`. Declares an `outputSchema`. |
+| `predict_direction` | Oracle demo — returns an up/down verdict + confidence score `∈ [0.8, 0.9]` for a ticker over N days. Same seeded model as `predict_price_chart`. Declares an `outputSchema`. |
 
 All five paid tools plus two free preview tools
 (`preview_market_quote`, `preview_company_profile`) are gated behind

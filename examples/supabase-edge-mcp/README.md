@@ -210,7 +210,7 @@ See [`packages/mcp-fetch/src/handler.ts`](../../packages/mcp-fetch/src/handler.t
 Once deployed, any MCP client can list the tools. The demo toolbox is the Goldberg stock-predictor Oracle — two paywalled tools that share a single seeded simulation so their outputs agree for the same ticker:
 
 - `predict_price_chart` — paywalled Oracle: 30 days of history + an N-day forecast with an 80% confidence band as parallel numeric arrays. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart.
-- `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.5, 0.95]` for the same horizon. Same seeded model. Declares an `outputSchema`.
+- `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.8, 0.9]` for the same horizon. Same seeded model. Declares an `outputSchema`.
 
 Both charge 1 credit per call. When the customer runs out, `content[0].text`
 narrates the current limit, the reason, and `account` with the right `view`

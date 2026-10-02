@@ -78,8 +78,7 @@ export interface TransportLimitsResult {
   needsTopUp?: boolean
   /**
    * Consumed units this period. Present only when the backend measured
-   * a finite cap. Authoritative — do not reconstruct from
-   * `purchase.usage.used`.
+   * a finite cap. The purchase wire does not carry a count.
    */
   used?: number
   /**

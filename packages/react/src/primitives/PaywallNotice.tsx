@@ -245,7 +245,7 @@ export type PaywallMessageCopy = {
 /**
  * Discriminate the topup variant of an activation gate from a
  * subscription/lifetime activation. PAYG-only gates (every available
- * plan has `type: 'usage-based' | 'hybrid'`) get topup-flavored copy
+ * plan has `type: 'usage-based'`) get topup-flavored copy
  * ("Add credits", "You're out of credits…"); anything else gets the
  * generic "Activate a plan" framing.
  *

@@ -1255,7 +1255,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'top_up'
+              onExceed: 'block' | 'draw_credits'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -1452,7 +1452,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'top_up'
+            onExceed: 'block' | 'draw_credits'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
@@ -1842,9 +1842,9 @@ export interface components {
        * @example requests
        */
       meterName?: string
-      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: top_up`, or from the first unit on a recurring meter with no limit. */
+      /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit. */
       needsTopUp?: boolean
-      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: top_up`. */
+      /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`. */
       overage?: boolean
       /**
        * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
@@ -1941,7 +1941,7 @@ export interface components {
               label?: string
               meter: string
               /** @enum {string} */
-              onExceed: 'block' | 'top_up'
+              onExceed: 'block' | 'draw_credits'
               /** @enum {string} */
               scope: 'billing_period' | 'lifetime' | 'rolling_window'
               windowDays?: number
@@ -2807,8 +2807,20 @@ export interface components {
        * @example active
        */
       status: string
-      /** @description Usage billing state for usage-based plans */
-      usage?: components['schemas']['UsageBillingDto']
+      /** @description Billing period of the active usage window; counts come from `/v1/sdk/limits` */
+      usage?: components['schemas']['SdkUsagePeriodDto']
+    }
+    SdkUsagePeriodDto: {
+      /**
+       * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+       * @example 2025-11-01T00:00:00Z
+       */
+      periodEnd?: string
+      /**
+       * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+       * @example 2025-10-01T00:00:00Z
+       */
+      periodStart?: string
     }
     SdkVaultInfo: {
       /**
@@ -2926,7 +2938,7 @@ export interface components {
             label?: string
             meter: string
             /** @enum {string} */
-            onExceed: 'block' | 'top_up'
+            onExceed: 'block' | 'draw_credits'
             /** @enum {string} */
             scope: 'billing_period' | 'lifetime' | 'rolling_window'
             windowDays?: number
@@ -2992,33 +3004,6 @@ export interface components {
       productType?: string
       /** @enum {string} */
       taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    UsageBillingDto: {
-      /**
-       * Overage cost in cents
-       * @example 0
-       */
-      overageCost: number
-      /**
-       * Units exceeding the plan included amount
-       * @example 0
-       */
-      overageUnits: number
-      /**
-       * Period end date
-       * @example 2025-11-01T00:00:00Z
-       */
-      periodEnd?: string
-      /**
-       * Period start date
-       * @example 2025-10-01T00:00:00Z
-       */
-      periodStart?: string
-      /**
-       * Units consumed in current period
-       * @example 150
-       */
-      used: number
     }
     UsageRecordResponse: {
       creditDebit?:

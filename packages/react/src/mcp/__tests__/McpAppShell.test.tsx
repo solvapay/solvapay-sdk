@@ -381,7 +381,8 @@ describe('<McpAppShell>', () => {
     const privacy = screen.getByRole('link', { name: 'Privacy' })
     expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
     expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('renders the SolvaPay legal footer even when the merchant has no terms/privacy URLs', () => {
@@ -394,7 +395,8 @@ describe('<McpAppShell>', () => {
     expect(screen.getByRole('link', { name: 'Privacy' }).getAttribute('href')).toBe(
       'https://solvapay.com/legal/privacy',
     )
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('does not auto-refresh bootstrap on mount (opening tool result is authoritative)', async () => {

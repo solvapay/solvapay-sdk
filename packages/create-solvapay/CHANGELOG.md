@@ -1,5 +1,13 @@
 # create-solvapay
 
+## 0.7.3
+
+### Patch Changes
+
+- 4f5a484: OpenAPI 3.1 patch versions parse during describe and scaffold, and the generated Worker deploy script uses the Wrangler config for the account you logged into. A first deploy uploads secrets after the Worker exists, and auth is checked before the widget build.
+- Updated dependencies [4f5a484]
+  - @solvapay/init@0.4.6
+
 ## 0.7.2
 
 ### Patch Changes

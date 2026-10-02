@@ -142,7 +142,7 @@ function resolvePlanCurrency(opts: CreateTestPlanOptions): string {
  * Mirrors platform QA `buildPlanOptions` / domain `legacyPlanToOptions`:
  *   recurring   -> billingCycle + flat charge (amount 0 = free)
  *   one-time    -> flat charge, no billingCycle
- *   usage-based -> per-unit charge on `requests` (+ included-unit limit)
+ *   usage-based -> per-unit charge on `requests` (no included cap on a paid rate, R31)
  *   hybrid      -> billingCycle + flat base + per-unit (+ limit)
  *
  * A recurring plan authored with freeUnits > 0 (the old free-tier fixture shape)
@@ -166,7 +166,9 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
 
   const recurring = planType === 'recurring' || planType === 'hybrid'
   if (recurring) {
-    options.push(BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly)
+    options.push(
+      BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly,
+    )
   }
 
   if (planType === 'recurring' || planType === 'one-time') {
@@ -197,13 +199,20 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
       meter: USAGE_METER,
     })
     const cap = opts.limit ?? opts.freeUnits
-    if (cap != null && cap > 0) {
+    // R31: a paid per-unit plan with no billing cycle cannot carry included
+    // usage. A zero rate is a free metered fixture and may still be capped.
+    if (planType === 'usage-based' && amountMinor > 0 && cap != null && cap > 0) {
+      throw new Error(
+        "Included usage needs a billing cycle (R31): use type 'hybrid' for a capped per-unit plan",
+      )
+    }
+    if (cap != null && cap > 0 && (planType === 'hybrid' || amountMinor === 0)) {
       options.push({
         kind: 'limit',
         cap,
         scope: 'billing_period',
         meter: USAGE_METER,
-        onExceed: amountMinor > 0 ? 'top_up' : 'block',
+        onExceed: amountMinor > 0 ? 'draw_credits' : 'block',
       })
     }
   }
@@ -242,9 +251,7 @@ export async function createTestPlan(
   freeUnitsOrOptions: number | CreateTestPlanOptions = 5,
 ): Promise<TestPlanSetup> {
   const opts: CreateTestPlanOptions =
-    typeof freeUnitsOrOptions === 'number'
-      ? { freeUnits: freeUnitsOrOptions }
-      : freeUnitsOrOptions
+    typeof freeUnitsOrOptions === 'number' ? { freeUnits: freeUnitsOrOptions } : freeUnitsOrOptions
 
   const freeUnits = opts.freeUnits ?? 5
   const price = opts.price ?? 0

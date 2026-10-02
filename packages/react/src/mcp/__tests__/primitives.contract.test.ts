@@ -230,7 +230,10 @@ describe('MCP inline density contract', () => {
     )
   })
 
-  it('centers the inline chrome, card and shell as one block without capping main', () => {
+  it('fills the host frame: no inline cap on main, chrome, card or shell', () => {
+    // The host draws its frame at the full column width, so a cap on
+    // our side shows as dead margins inside that frame once the column
+    // is wider than the cap.
     const main = firstRule(STYLES, /\.solvapay-mcp-main\s*\{([^}]+)\}/)
     expect(main).toMatch(/width:\s*100%/)
     expect(main).not.toMatch(/max-inline-size/)
@@ -240,21 +243,11 @@ describe('MCP inline density contract', () => {
       /\.solvapay-mcp-chrome-row,\s*\.solvapay-mcp-main\s*>\s*\.solvapay-mcp-card,\s*\.solvapay-mcp-shell\s*\{([^}]+)\}/,
     )
     expect(block).toMatch(/width:\s*100%/)
-    expect(block).toMatch(/max-inline-size:\s*760px/)
-    expect(block).toMatch(/margin-inline:\s*auto/)
+    expect(block).not.toMatch(/max-inline-size/)
+    expect(block).not.toMatch(/margin-inline/)
 
     const body = firstRule(STYLES, /\.solvapay-mcp-shell-body\s*\{([^}]+)\}/)
     expect(body).not.toMatch(/max-inline-size/)
-  })
-
-  it('keeps the inline cap equal to the mcp density threshold so the split cannot fire in a card too narrow to hold it', () => {
-    const block = firstRule(
-      STYLES,
-      /\.solvapay-mcp-chrome-row,\s*\.solvapay-mcp-main\s*>\s*\.solvapay-mcp-card,\s*\.solvapay-mcp-shell\s*\{([^}]+)\}/,
-    )
-    const capMatch = block.match(/max-inline-size:\s*(\d+)px/)
-    const thresholdMatch = STYLES.match(/@container\s+mcp\s*\(min-width:\s*(\d+)px\)/)
-    expect(capMatch?.[1]).toBe(thresholdMatch?.[1])
   })
 })
 

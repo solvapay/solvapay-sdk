@@ -338,6 +338,8 @@ export interface SolvaPayCopy {
     fullHistory: string
     /** Portal text link. The button adds the external-link glyph. */
     fullAccount: string
+    /** Inline account identity. Email and customer ref follow the label. */
+    signedInAs: string
     creditActivityEyebrow: string
     chargesEyebrow: string
     creditActivityCaption: string
@@ -505,7 +507,7 @@ export interface SolvaPayCopy {
     activationRequiredHeading: string
     /**
      * Heading for `kind: 'activation_required'` when every available
-     * plan is PAYG (`type: 'usage-based' | 'hybrid'`). Displayed as the
+     * plan is PAYG (`type: 'usage-based'`). Displayed as the
      * topup variant of the activation gate so the user sees "Add
      * credits" framing rather than generic "Activate a plan".
      */
@@ -533,7 +535,7 @@ export interface SolvaPayCopy {
      * Web-friendly copy for the topup variant of an activation gate —
      * `kind: 'activation_required'` where every available plan is
      * PAYG. `<PaywallNotice.Message>` resolves this when the gate's
-     * `plans` are all `type: 'usage-based' | 'hybrid'`.
+     * `plans` are all `type: 'usage-based'`.
      */
     topupRequiredMessage: string
     paymentRequiredProductSuffix: string

@@ -41,7 +41,7 @@ import {
 } from '../plan-actions'
 import { FactBand, SplitRow, type FactBandItem } from '../primitives'
 import { McpUsageMeter } from '../primitives/UsageMeter'
-import { AccountIdentityFooter, ChargesSection } from './accountFullscreen'
+import { AccountIdentityFooter, AccountSignedInAs, ChargesSection } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -129,9 +129,7 @@ export function AllowanceAccountPanel({
   const showMeter = remaining.kind === 'finite' && usage != null && total != null && total > 0
   const used =
     remaining.kind === 'finite' && total != null
-      ? usage?.total != null
-        ? usage.used
-        : Math.max(0, total - remaining.remaining)
+      ? (usage?.used ?? Math.max(0, total - remaining.remaining))
       : (usage?.used ?? 0)
   const percent =
     usage?.percentUsed ??
@@ -205,6 +203,7 @@ export function AllowanceAccountPanel({
             />
           </>
         ) : null}
+        {isFullscreen ? null : <AccountSignedInAs />}
       </div>
       {isFullscreen && productRef ? (
         <ChargesSection charges={history.charges} loading={history.loading} error={history.error} />

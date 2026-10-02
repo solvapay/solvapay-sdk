@@ -514,12 +514,11 @@ describe('createSolvaPayMcpServer', () => {
       expect(ui?.resourceUri).toBe('ui://test/view.html')
     })
 
-    it('advertises prefersBorder: false on the app UI resource (widget paints its own frame)', () => {
-      // The SolvaPay widget renders its own `.solvapay-mcp-card` frame
-      // plus `<AppHeader>` merchant strip; a host-painted outer card
-      // (prefersBorder: true) nested the two containers on MCP Jam.
-      // Hosts that honour the preference now render us flush inside
-      // their conversation surface.
+    it('advertises prefersBorder: true on the app UI resource (host owns the frame)', () => {
+      // Claude Desktop and ChatGPT frame the iframe regardless of the
+      // flag, so the widget paints no outer frame of its own. Asking
+      // compliant hosts for their border keeps exactly one frame
+      // everywhere instead of a host card nested around ours.
       const { server } = buildTestServer()
       // @ts-expect-error — private registry used for coverage only
       const resources = server._registeredResources ?? {}
@@ -527,7 +526,7 @@ describe('createSolvaPayMcpServer', () => {
       const metaUi = (
         entry?.metadata?._meta as { ui?: { prefersBorder?: boolean } } | undefined
       )?.ui
-      expect(metaUi?.prefersBorder).toBe(false)
+      expect(metaUi?.prefersBorder).toBe(true)
     })
 
   })

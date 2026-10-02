@@ -95,7 +95,7 @@ interface PurchaseShape {
 }
 
 interface UsageShape {
-  used?: number
+  used?: number | null
   total?: number | null
   remaining?: number | null
   periodEnd?: string
@@ -120,7 +120,9 @@ interface LimitsShape {
 }
 
 interface CustomerShape {
-  ref?: string
+  ref?: string | null
+  email?: string | null
+  name?: string | null
   balance?: {
     credits?: number | null
     displayCurrency?: string
@@ -201,6 +203,11 @@ function limitsAsSignals(limits: LimitsShape | null | undefined): LimitResponseW
   return limits as LimitResponseWithPlan
 }
 
+/** True when the latest limits response says this plan does not spend credits. */
+function creditsUnused(customer: CustomerShape | null | undefined): boolean {
+  return !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
+}
+
 function preferLimitsPlan(
   purchase: PurchaseShape | null,
   limits: LimitsShape | null | undefined,
@@ -224,6 +231,18 @@ export function balanceSummary(customer: CustomerShape | null | undefined): stri
   const row = balanceRow(customer)
   if (!row) return null
   return row.replace(/^Balance:\s*/, '')
+}
+
+/**
+ * Who is signed in, for hosts that only read `content[].text`. The
+ * bootstrap already leaves `customer` null for anonymous callers, so a
+ * present ref is a signed-in customer. Null email leaves the ref alone.
+ */
+function identityRow(customer: CustomerShape | null | undefined): string | null {
+  const ref = customer?.ref?.trim()
+  if (!ref) return null
+  const email = customer?.email?.trim()
+  return email ? `Signed in as: ${email} · ${ref}` : `Signed in as: ${ref}`
 }
 
 function balanceRow(customer: CustomerShape | null | undefined): string | null {
@@ -714,10 +733,9 @@ function narrateAccountBody(input: {
     } else {
       position = 'After your first call'
     }
-    const creditsUnused = !creditSignals(limitsAsSignals(customer?.limits)).isCreditBased
     return (
       `${product} is on ${planName}${priceBit}. ${position}. ` +
-      (creditsUnused
+      (creditsUnused(customer)
         ? `Credits are not used on this plan. Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`
         : `Call \`${VIEWER_TOOL_NAME}\` with view: 'checkout' to switch.`)
     )
@@ -756,10 +774,9 @@ function narrateAccountBody(input: {
     })
     const carryOn =
       others.length > 0 ? ` ${joinOr(others.map(item => carryOnFragment(item, customer)))}.` : ''
-    const antiTrap =
-      credits > 0 && planShape !== 'usage-based'
-        ? ` Adding credits will not help, because ${planName} does not spend them.`
-        : ''
+    const antiTrap = creditsUnused(customer)
+      ? ` Adding credits will not help, because ${planName} does not spend them.`
+      : ''
     const priceBit = planPriceBit(plan)
     return (
       `${product} is on ${planName}${priceBit}. ${capBit}.${consequence}.${antiTrap}${carryOn} ` +
@@ -895,6 +912,9 @@ export function narrateManageAccount(
       now,
     }),
   )
+
+  const identity = identityRow(customer)
+  if (identity) lines.push(identity)
 
   if (state === 'A' || state === 'H') {
     const bal = balanceRow(customer)

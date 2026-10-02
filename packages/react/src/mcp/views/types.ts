@@ -26,7 +26,15 @@ export interface McpViewClassNames {
   awaitingHeader?: string
   balanceRow?: string
   amountPicker?: string
+  /**
+   * @deprecated Quick amounts render as `.solvapay-mcp-preset-tile`s.
+   * Slot retained for integrator overrides that still target it.
+   */
   amountOptions?: string
+  /**
+   * @deprecated Quick amounts render as `.solvapay-mcp-preset-tile`s.
+   * Slot retained for integrator overrides that still target it.
+   */
   amountOption?: string
   amountCustom?: string
   topupForm?: string

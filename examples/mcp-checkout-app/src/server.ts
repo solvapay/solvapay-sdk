@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
@@ -16,7 +18,14 @@ const DIST_DIR = import.meta.filename.endsWith('.ts')
   ? path.join(import.meta.dirname, '../dist')
   : import.meta.dirname
 
-const RESOURCE_URI = 'ui://mcp-checkout-app/mcp-app.html'
+const HTML_PATH = path.join(DIST_DIR, 'mcp-app.html')
+
+// Hosts (Claude) cache widget HTML by resource URI across reconnects, so the
+// URI carries a content hash to make every rebuilt bundle a fresh resource.
+const RESOURCE_URI = `ui://mcp-checkout-app/mcp-app.html?v=${createHash('sha256')
+  .update(readFileSync(HTML_PATH))
+  .digest('hex')
+  .slice(0, 12)}`
 
 /**
  * UI transport tools the embedded checkout auto-invokes. `attach_business_details`
@@ -125,7 +134,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
     solvaPay,
     productRef: solvapayProductRef,
     resourceUri: RESOURCE_URI,
-    htmlPath: path.join(DIST_DIR, 'mcp-app.html'),
+    htmlPath: HTML_PATH,
     publicBaseUrl: mcpPublicBaseUrl,
     csp: {
       connectDomains: [solvapayApiOrigin],

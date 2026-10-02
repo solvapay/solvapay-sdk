@@ -31,7 +31,7 @@ import {
   type PlanShape,
 } from '../plan-actions'
 import { Eyebrow, Section } from '../primitives'
-import { AccountIdentityFooter } from './accountFullscreen'
+import { AccountIdentityFooter, AccountSignedInAs } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { LadderPlanRow } from './checkout/LadderPlanRow'
 import type { LadderPlan } from './checkout/CheckoutPlanRow'
@@ -212,6 +212,7 @@ export function LadderAccountPanel({
             />
           </>
         ) : null}
+        {isFullscreen ? null : <AccountSignedInAs />}
       </div>
       {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
