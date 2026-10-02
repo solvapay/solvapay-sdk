@@ -119,6 +119,25 @@ export function enrichPurchase(purchase: Record<string, unknown>): Record<string
  * third-party adapters. Reading only the flat location silently
  * de-authenticated every tool call under SDK v2.
  */
+/**
+ * Wrap an integrator-supplied `getCustomerRef` so the rest of the MCP
+ * surface only ever sees a signed-in customer or `null`. `'anonymous'`
+ * is the sentinel the `payable()` adapters use when no identity was
+ * supplied; the backend has no such customer, so it must not reach any
+ * customer-scoped read or a checkout session.
+ */
+export function signedInCustomerRefOnly(
+  getCustomerRef: (extra?: McpToolExtra) => string | null,
+): (extra?: McpToolExtra) => string | null {
+  return extra => {
+    const ref = getCustomerRef(extra)
+    if (typeof ref !== 'string') return null
+    const trimmed = ref.trim()
+    if (!trimmed || trimmed === 'anonymous') return null
+    return trimmed
+  }
+}
+
 export function defaultGetCustomerRef(extra?: McpToolExtra): string | null {
   const candidates = [
     extra?.http?.authInfo?.extra?.customer_ref,

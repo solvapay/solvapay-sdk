@@ -328,6 +328,7 @@ export const enCopy: SolvaPayCopy = {
     soldBy: 'Sold by {merchant}',
     fullHistory: 'Full history',
     fullAccount: 'Full account',
+    signedInAs: 'Signed in as',
     creditActivityEyebrow: 'Credit activity',
     chargesEyebrow: 'Charges for this product',
     creditActivityCaption:

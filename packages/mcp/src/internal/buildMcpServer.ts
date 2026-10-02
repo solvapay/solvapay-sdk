@@ -205,7 +205,8 @@ export function buildSolvaPayMcpServer(
       _meta: {
         ui: {
           csp: resource.csp,
-          prefersBorder: false,
+          // The host owns the outer frame; the widget paints none.
+          prefersBorder: true,
         },
       },
     },
@@ -218,7 +219,7 @@ export function buildSolvaPayMcpServer(
           _meta: {
             ui: {
               csp: resource.csp,
-              prefersBorder: false,
+              prefersBorder: true,
             },
           },
         },

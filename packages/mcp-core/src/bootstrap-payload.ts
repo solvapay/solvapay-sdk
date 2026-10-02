@@ -31,6 +31,7 @@ import {
   buildSolvaPayRequest,
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
   enrichPurchase,
+  signedInCustomerRefOnly,
 } from './helpers'
 import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
 import { selectActivePlanPurchase } from './active-purchase'
@@ -122,12 +123,10 @@ const createBootstrapProductError = (productResult: ErrorResult): Error => {
 export function createBuildBootstrapPayload(
   options: CreateBuildBootstrapPayloadOptions,
 ): BuildBootstrapPayloadFn {
-  const {
-    solvaPay,
-    productRef,
-    publicBaseUrl,
-    getCustomerRef = defaultGetCustomerRefHelper,
-  } = options
+  const { solvaPay, productRef, publicBaseUrl } = options
+  const getCustomerRef = signedInCustomerRefOnly(
+    options.getCustomerRef ?? defaultGetCustomerRefHelper,
+  )
 
   const fetchPublishableKey = async (): Promise<string | null> => {
     try {
@@ -215,18 +214,21 @@ export function createBuildBootstrapPayload(
         limits?.paywallReason === 'topup_required')
         ? ('credit_topup' as const)
         : undefined
-    const checkoutResult = await wrapError(
-      createMcpCheckoutSession(
-        buildSolvaPayRequest(extra, {
-          getCustomerRef: () => customerRef ?? 'anonymous',
-        }),
-        {
-          productRef,
-          ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}),
-        },
-        { solvaPay },
-      ),
-    )
+    // A hosted checkout session belongs to a customer record; the backend
+    // rejects any ref it cannot find. Without a signed-in customer there
+    // is no session to mint.
+    const checkoutResult = customerRef
+      ? await wrapError(
+          createMcpCheckoutSession(
+            buildRequest(extra),
+            {
+              productRef,
+              ...(checkoutPurpose ? { purpose: checkoutPurpose } : {}),
+            },
+            { solvaPay },
+          ),
+        )
+      : await unauthenticated()
 
     if (isErrorResult(merchantResult)) {
       throw createBootstrapMerchantError(merchantResult)
@@ -256,10 +258,6 @@ export function createBuildBootstrapPayload(
     const activePurchase = selectActivePlanPurchase(enrichedPurchase?.purchases, productRef)
     const usage = customerRef
       ? deriveUsageSnapshot({
-          // Consumption comes from `limits.used` (or `limit - remaining`)
-          // inside `deriveUsageSnapshot`. `purchase.usage.used` is only
-          // ever reset to zero by the backend and must not be the source.
-          used: 0,
           periodStart: activePurchase?.usage?.periodStart,
           periodEnd: activePurchase?.usage?.periodEnd,
           purchaseRef: activePurchase?.reference,
@@ -268,10 +266,11 @@ export function createBuildBootstrapPayload(
       : null
 
     const signals = limits ? creditSignals(limits) : null
-    const state = limits ? classifyPaywallState(limits) : null
     const customer: BootstrapPayload['customer'] = customerRef
       ? {
           ref: customerRef,
+          email: purchase?.email?.trim() ? purchase.email.trim() : null,
+          name: purchase?.name?.trim() ? purchase.name.trim() : null,
           purchase: enrichedPurchase,
           paymentMethod: okOrNull(paymentMethodResult),
           balance: okOrNull(balanceResult),
@@ -287,8 +286,11 @@ export function createBuildBootstrapPayload(
           ...(signals?.shortfallCredits !== undefined
             ? { shortfallCredits: signals.shortfallCredits }
             : {}),
+          ...(signals ? { isCreditBased: signals.isCreditBased } : {}),
           ...(limits?.autoRecharge !== undefined ? { autoRecharge: limits.autoRecharge } : {}),
-          ...(state ? { nextAction: nextActionFor(state) } : {}),
+          ...(limits?.withinLimits === false
+            ? { nextAction: nextActionFor(classifyPaywallState(limits)) }
+            : {}),
         }
       : null
 

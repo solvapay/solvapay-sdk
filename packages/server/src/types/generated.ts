@@ -2733,8 +2733,20 @@ export interface components {
        * @example active
        */
       status: string
-      /** @description Usage billing state for usage-based plans */
-      usage?: components['schemas']['UsageBillingDto']
+      /** @description Billing period of the active usage window; counts come from `/v1/sdk/limits` */
+      usage?: components['schemas']['SdkUsagePeriodDto']
+    }
+    SdkUsagePeriodDto: {
+      /**
+       * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+       * @example 2025-11-01T00:00:00Z
+       */
+      periodEnd?: string
+      /**
+       * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+       * @example 2025-10-01T00:00:00Z
+       */
+      periodStart?: string
     }
     TaxBreakdownDto: {
       /** @description ISO 4217 currency code */
@@ -2905,33 +2917,6 @@ export interface components {
       productType?: string
       /** @enum {string} */
       taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    UsageBillingDto: {
-      /**
-       * Overage cost in cents
-       * @example 0
-       */
-      overageCost: number
-      /**
-       * Units exceeding the plan included amount
-       * @example 0
-       */
-      overageUnits: number
-      /**
-       * Period end date
-       * @example 2025-11-01T00:00:00Z
-       */
-      periodEnd?: string
-      /**
-       * Period start date
-       * @example 2025-10-01T00:00:00Z
-       */
-      periodStart?: string
-      /**
-       * Units consumed in current period
-       * @example 150
-       */
-      used: number
     }
     UsageRecordResponse: {
       creditDebit?:

@@ -35,7 +35,6 @@ const PAYG_ACTIVATION_RESPONSE = {
         price: 0,
         isMetered: true,
       },
-      usage: { used: 0 },
     },
   ],
 }

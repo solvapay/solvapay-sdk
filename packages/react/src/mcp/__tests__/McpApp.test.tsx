@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
-import { McpApp, type McpAppFull } from '../McpApp'
+import { McpApp, OPENING_RESULT_GRACE_MS, type McpAppFull } from '../McpApp'
 import type { CallToolResultLike } from '../bootstrap'
 
 beforeEach(() => {
@@ -114,8 +114,9 @@ function makeApp(opts: {
 
 describe('<McpApp>', () => {
   it('shows a loading card after `connect()` resolves, while bootstrap is in-flight', async () => {
-    // `other` entries (no tool info) fetch bootstrap client-side — the
-    // loading card appears while that call is in flight.
+    // No tool info waits out the opening-result grace window, then
+    // fetches. The loading card stays up while that call is in flight.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     let resolveCall: (value: CallToolResultLike) => void = () => {}
     const app = makeApp({
       emitInitialToolResult: false,
@@ -130,9 +131,13 @@ describe('<McpApp>', () => {
     )
     try {
       render(<McpApp app={app} />)
-      await waitFor(() => {
-        expect(screen.getByText('Loading…')).toBeTruthy()
+      expect(screen.getByText('Loading…')).toBeTruthy()
+      expect(app.callServerTool).not.toHaveBeenCalled()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(OPENING_RESULT_GRACE_MS)
       })
+      expect(screen.getByText('Loading…')).toBeTruthy()
+      expect(app.callServerTool).toHaveBeenCalledTimes(1)
     } finally {
       resolveCall({
         structuredContent: {
@@ -140,6 +145,7 @@ describe('<McpApp>', () => {
           returnUrl: 'https://example.test/r',
         },
       })
+      vi.useRealTimers()
     }
   })
 
@@ -273,20 +279,23 @@ describe('<McpApp>', () => {
   })
 
   it('surfaces tool errors via onInitError', async () => {
-    const app = makeApp({
-      isError: true,
-      text: 'customer_ref missing',
-      readServerResourceFails: true,
-    })
-    const onInitError = vi.fn()
-    render(<McpApp app={app} onInitError={onInitError} />)
-    await waitFor(
-      () => {
-        expect(screen.getByText('customer_ref missing')).toBeTruthy()
-      },
-      { timeout: 5000 },
-    )
-    expect(onInitError.mock.calls[0][0].message).toBe('customer_ref missing')
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const app = makeApp({
+        isError: true,
+        text: 'customer_ref missing',
+        readServerResourceFails: true,
+      })
+      const onInitError = vi.fn()
+      render(<McpApp app={app} onInitError={onInitError} />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(OPENING_RESULT_GRACE_MS)
+      })
+      expect(screen.getByText('customer_ref missing')).toBeTruthy()
+      expect(onInitError.mock.calls[0][0].message).toBe('customer_ref missing')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('default onClose routes to app.requestTeardown', async () => {
@@ -425,7 +434,8 @@ describe('<McpApp>', () => {
     expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
     expect(container.querySelector('.solvapay-mcp-close')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('applies hostContext.safeAreaInsets as padding on the root container', async () => {

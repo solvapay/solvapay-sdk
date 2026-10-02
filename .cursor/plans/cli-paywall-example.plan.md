@@ -300,7 +300,7 @@ Two walkthroughs:
 
 2. **No changes to protected payment files** ([protected-files.mdc](.cursor/rules/protected-files.mdc)).
 
-3. **Skills routing.** Add a brief mention in [skills/skills/solvapay/sdk-integration/](skills/skills/solvapay/sdk-integration/) once shipped; full new domain guide can wait until adoption is observable.
+3. **Skills routing.** Add a brief mention in `solvapay/app-integration` (`skills/app-integration/` in the skills repo) once shipped; full new domain guide can wait until adoption is observable.
 
 4. **SDK README.** Add a line in [Packages](README.md) referring to the new example.
 

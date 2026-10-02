@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildDefaultCheckoutPlanFilter, formatPaygRate, formatPlanPriceLabel, planMeterName } from './shared'
+import {
+  buildDefaultCheckoutPlanFilter,
+  formatPaygRate,
+  formatPlanPriceLabel,
+  isPayg,
+  planMeterName,
+} from './shared'
 import type { Plan } from '../../types'
 
 /**
@@ -89,6 +95,25 @@ function visible(plans: Plan[]): string[] {
   const filter = buildDefaultCheckoutPlanFilter(plans)
   return plans.filter(filter).map(p => p.reference!)
 }
+
+describe('isPayg', () => {
+  it('is true only for a usage-based plan', () => {
+    expect(isPayg(payg)).toBe(true)
+  })
+
+  it('is false for a hybrid plan, which has an upfront recurring charge', () => {
+    const hybrid: Plan = {
+      reference: 'pln_basic',
+      name: 'Basic',
+      price: 1900,
+      currency: 'usd',
+      requiresPayment: true,
+      type: 'hybrid',
+      options: [cycle(), flat(1900), perUnit(2)],
+    }
+    expect(isPayg(hybrid)).toBe(false)
+  })
+})
 
 describe('buildDefaultCheckoutPlanFilter', () => {
   it('always hides Free plans', () => {

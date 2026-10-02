@@ -16,7 +16,13 @@ import { checkPurchaseCore } from './purchase'
 export interface GetUsageResult {
   meterRef: string | null
   total: number | null
-  used: number
+  /**
+   * Consumed units this period. `limits.used` when the backend measured a
+   * finite cap, otherwise `total - remaining` when both are finite.
+   * `null` means this response did not measure consumption (`limits` null,
+   * unlimited, or credit-based).
+   */
+  used: number | null
   remaining: number | null
   /** 0–100, rounded to 2dp. `null` when `total` is unknown. */
   percentUsed: number | null
@@ -46,7 +52,6 @@ export interface UsageLimitsInput {
  * `remaining === -1` on a real limits object.
  */
 export function deriveUsageSnapshot(input: {
-  used: number
   periodStart?: string
   periodEnd?: string
   purchaseRef?: string
@@ -62,7 +67,7 @@ export function deriveUsageSnapshot(input: {
     return {
       meterRef: null,
       total: null,
-      used: input.used,
+      used: null,
       remaining: null,
       percentUsed: null,
       ...period,
@@ -87,9 +92,9 @@ export function deriveUsageSnapshot(input: {
       ? input.limits.used
       : total !== null && remaining !== null
         ? Math.max(0, total - remaining)
-        : input.used
+        : null
   const percentUsed =
-    total !== null && total > 0
+    total !== null && total > 0 && used !== null
       ? Math.min(100, Math.round((used / total) * 10000) / 100)
       : null
 
@@ -107,10 +112,9 @@ export function deriveUsageSnapshot(input: {
 /**
  * Fetch the authenticated customer's usage snapshot for the active purchase.
  *
- * Consumption (`used`, period window) comes from `checkPurchaseCore`. The cap
- * (`total`, `remaining`, `meterRef`) comes from `checkLimits` — the plan
- * snapshot no longer carries `limit` or `meterRef` on the wire, so a metered
- * plan costs one extra backend call unless the caller already has a
+ * The period window and `purchaseRef` come from the active purchase. Consumption
+ * and the cap (`used`, `total`, `remaining`, `meterRef`) come from `checkLimits`.
+ * A metered plan costs one extra backend call unless the caller already has a
  * `LimitResponse` (`options.limits`).
  *
  * Pass `limits` (including `null` for a failed fetch) to skip the
@@ -132,11 +136,10 @@ export async function getUsageCore(
 
   const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
   if (!activePurchase) {
-    return deriveUsageSnapshot({ used: 0, limits: options.limits ?? null })
+    return deriveUsageSnapshot({ limits: options.limits ?? null })
   }
 
   const usage = activePurchase.usage
-  const used = typeof usage?.used === 'number' ? usage.used : 0
   const period = {
     periodStart: usage?.periodStart,
     periodEnd: usage?.periodEnd,
@@ -144,13 +147,13 @@ export async function getUsageCore(
   }
 
   if ('limits' in options) {
-    return deriveUsageSnapshot({ used, ...period, limits: options.limits ?? null })
+    return deriveUsageSnapshot({ ...period, limits: options.limits ?? null })
   }
 
   const usageCounted =
     countsUsage(activePurchase.planSnapshot) || activePurchase.planSnapshot?.isMetered === true
   if (!usageCounted || !activePurchase.productRef) {
-    return deriveUsageSnapshot({ used, ...period, limits: null })
+    return deriveUsageSnapshot({ ...period, limits: null })
   }
 
   const solvaPay = options.solvaPay || createSolvaPay()
@@ -159,7 +162,7 @@ export async function getUsageCore(
     productRef: activePurchase.productRef,
   })
 
-  return deriveUsageSnapshot({ used, ...period, limits })
+  return deriveUsageSnapshot({ ...period, limits })
 }
 
 export async function trackUsageCore(

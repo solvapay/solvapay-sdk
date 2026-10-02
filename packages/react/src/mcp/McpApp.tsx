@@ -7,7 +7,9 @@
  * `@modelcontextprotocol/ext-apps`:
  *   1. `app.connect()`
  *   2. apply host theme / fonts / style variables / safe-area insets
- *   3. `fetchMcpBootstrap(app)` → view + productRef + publishableKey + returnUrl
+ *   3. opening `toolresult`, or a fallback bootstrap read when the host
+ *      opened the iframe without a usable tool result
+ *      → view + productRef + publishableKey + returnUrl
  *   4. mount `<SolvaPayProvider transport=createMcpAppAdapter(app)>`
  *   5. mount `<McpAppShell>`, which routes `bootstrap.view` into the
  *      exported `<McpViewRouter>`.
@@ -20,12 +22,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SolvaPayProvider } from '../SolvaPayProvider'
-import type { SolvaPayMcpViewKind } from '@solvapay/mcp-core'
-import { VIEW_FOR_TOOL } from '@solvapay/mcp-core'
 import { McpBridgeProvider, type McpBridgeAppLike, type McpMessageOnSuccess } from './bridge'
 import { createMcpAppAdapter, type McpAppLike } from './adapter'
 import {
   classifyHostEntry,
+  fallbackViewFromHost,
   fetchMcpBootstrap,
   fetchMcpBootstrapViaResource,
   isTransportToolName,
@@ -195,6 +196,13 @@ interface ToolResultNotificationParams {
   _meta?: any
 }
 
+/**
+ * How long to wait for the host's opening `toolresult` before reading
+ * the bootstrap resource, when the iframe opened without a known tool.
+ * Exported so tests can advance fake timers past the window.
+ */
+export const OPENING_RESULT_GRACE_MS = 1500
+
 export function McpApp({
   app,
   productRef: productRefOverride,
@@ -219,10 +227,10 @@ export function McpApp({
   const [displayModeState, setDisplayModeState] = useState<McpDisplayModeState>(
     DEFAULT_DISPLAY_MODE_STATE,
   )
-  // Counter tracking client-initiated bootstrap fetches (mount +
-  // `refreshBootstrap`). The tool-result subscription consults it so
-  // it doesn't double-apply the same payload a fetch is about to
-  // deliver via its own `setBootstrap`.
+  // Counter tracking `refreshBootstrap` only. A tool-result that lands
+  // during a refresh is skipped — that fetch applies the same payload.
+  // The opening fallback fetch uses `initialFetchInFlight` inside the
+  // effect, so an opening toolresult that arrives mid-fetch is applied.
   const pendingBootstrapFetchRef = useRef(0)
 
   // Capture `applyContext` / `onInitError` in refs so the persistent
@@ -255,20 +263,35 @@ export function McpApp({
     // distinguish initial-intent failures from post-mount stray
     // notifications.
     let hasBootstrap = false
+    // Set by `toolinput` / `toolinputpartial`. Either means the host is
+    // mid-call and a `toolresult` is coming, so the grace timer must not
+    // start a competing fetch.
+    let toolCallInFlight = false
+    // Guards `loadBootstrap` against double entry. Distinct from
+    // `pendingBootstrapFetchRef`, which is reserved for refresh dedupe.
+    let initialFetchInFlight = false
+    let graceTimer: ReturnType<typeof setTimeout> | null = null
+
+    const clearGrace = () => {
+      if (graceTimer !== null) {
+        clearTimeout(graceTimer)
+        graceTimer = null
+      }
+    }
 
     // Explicit bootstrap fetch when the opening notification can't be
-    // parsed or no intent tool is in host context. Tries
+    // parsed, was cancelled, or no known tool is in host context. Tries
     // `fetchMcpBootstrapViaResource` first (idempotent, no chat card);
-    // falls back to `fetchMcpBootstrap` (intent-tool replay) when the host
+    // falls back to `fetchMcpBootstrap` (viewer replay) when the host
     // lacks resource support. Some hosts (notably MCPJam) scrub
     // `structuredContent` from MCP App tool outputs before delivering the
     // notification — the AI-SDK `toModelOutput` path strips it — so the
-    // payload can't be parsed. Compliant hosts (ChatGPT, Claude) send
-    // `structuredContent`, so their opening notification parses and this
-    // fetch never runs (no duplicate intent-tool call).
+    // payload can't be parsed. An opening toolresult that arrives while
+    // this fetch is in flight wins: the result is discarded once
+    // `hasBootstrap` is set.
     const loadBootstrap = async () => {
-      if (cancelled || hasBootstrap || pendingBootstrapFetchRef.current > 0) return
-      pendingBootstrapFetchRef.current += 1
+      if (cancelled || hasBootstrap || initialFetchInFlight) return
+      initialFetchInFlight = true
       try {
         let resolved: McpBootstrap
         try {
@@ -276,17 +299,16 @@ export function McpApp({
         } catch {
           resolved = await fetchMcpBootstrap(app)
         }
-        if (!cancelled) {
-          hasBootstrap = true
-          setBootstrap(resolved)
-        }
+        if (cancelled || hasBootstrap) return
+        hasBootstrap = true
+        setBootstrap(resolved)
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
         setInitError(message)
         onInitErrorRef.current?.(err instanceof Error ? err : new Error(message))
       } finally {
-        pendingBootstrapFetchRef.current = Math.max(0, pendingBootstrapFetchRef.current - 1)
+        initialFetchInFlight = false
       }
     }
 
@@ -317,56 +339,72 @@ export function McpApp({
     // for a paywall / nudge response. If a notification arrives for a
     // non-intent tool anyway (legacy opt-in server), we accept it only
     // when `structuredContent` parses as a valid `BootstrapPayload`.
-    // On a parse failure: for the initial intent entry we fall back to an
-    // explicit `fetchMcpBootstrap` (some hosts scrub `structuredContent`);
-    // post-mount we log and leave the mounted view untouched.
+    // On a parse failure before bootstrap is applied, fetch a snapshot
+    // (some hosts scrub `structuredContent`). Post-mount failures leave
+    // the mounted view untouched.
+    const onToolInput = () => {
+      if (cancelled) return
+      toolCallInFlight = true
+      clearGrace()
+    }
+
+    const onToolCancelled = () => {
+      if (cancelled) return
+      toolCallInFlight = false
+      clearGrace()
+      if (!hasBootstrap) void loadBootstrap()
+    }
+
     const onToolResult = (params: ToolResultNotificationParams) => {
       if (cancelled) return
       const toolName = app.getHostContext?.()?.toolInfo?.tool?.name ?? null
       if (toolName && isTransportToolName(toolName)) return
-      // Dedupe: skip notifications that land during an in-flight
-      // client-initiated bootstrap fetch — the fetch's own `setBootstrap`
-      // already applies the same structuredContent.
+      // Refresh dedupe only. The opening fallback fetch does not take
+      // this ref, so a notification that lands mid-fetch is applied and
+      // the fetch result is discarded.
       if (pendingBootstrapFetchRef.current) return
       try {
-        const intentView = toolName ? VIEW_FOR_TOOL[toolName] : undefined
-        const fallbackView: SolvaPayMcpViewKind = intentView ?? 'checkout'
         const fresh = parseBootstrapFromToolResult(
           params as unknown as CallToolResultLike,
           toolName ?? '(unknown tool)',
-          fallbackView,
+          fallbackViewFromHost(app),
         )
+        toolCallInFlight = false
         hasBootstrap = true
+        clearGrace()
         setBootstrap(fresh)
       } catch {
-        if (!hasBootstrap && classifyHostEntry(app).kind === 'intent') {
-          // Intent entry whose opening notification didn't carry a
-          // parseable bootstrap (e.g. MCPJam scrubs `structuredContent`
-          // from app-tool outputs). Replay the intent tool to fetch a
-          // clean bootstrap instead of stranding the loading card.
+        toolCallInFlight = false
+        clearGrace()
+        if (!hasBootstrap) {
+          // Opening notification had no parseable bootstrap (error, or a
+          // host that scrubbed `structuredContent`). Fetch a snapshot
+          // instead of stranding the loading card. Post-mount failures
+          // leave the mounted view untouched.
           void loadBootstrap()
-          return
         }
-        // Post-mount non-bootstrap or errored payload — ignore silently.
-        // The mounted view survives.
       }
     }
 
     let unsubscribe: (() => void) | undefined
 
-    // Hosts (MCPJam, ChatGPT Apps, Claude Desktop) fire
-    // `ui/notifications/tool-result` with the invoking intent tool's
-    // payload immediately after `connect()`. Subscribe before connect so
-    // the opening notification is handled by the same live handler used
-    // for post-mount re-invocations — no timer race and no duplicate
-    // `fetchMcpBootstrap` call for intent entries.
+    // ext-apps treats `toolinput`, `toolinputpartial`, `toolresult`, and
+    // `toolcancelled` as one-shot events and does not buffer them.
+    // Register before `connect()` or the opening signal is missed.
+    // Hosts or mocks that only expose the legacy `ontoolresult` setter
+    // fall through to the grace timer for the other three events.
     if (typeof app.addEventListener === 'function') {
       app.addEventListener('toolresult', onToolResult)
+      app.addEventListener('toolinput', onToolInput)
+      app.addEventListener('toolinputpartial', onToolInput)
+      app.addEventListener('toolcancelled', onToolCancelled)
       unsubscribe = () => {
         app.removeEventListener?.('toolresult', onToolResult)
+        app.removeEventListener?.('toolinput', onToolInput)
+        app.removeEventListener?.('toolinputpartial', onToolInput)
+        app.removeEventListener?.('toolcancelled', onToolCancelled)
       }
     } else {
-      // Fallback for hosts / mocks exposing only the legacy DOM-style setter.
       const prior = app.ontoolresult
       const chainedHandler = (params: ToolResultNotificationParams) => {
         prior?.(params)
@@ -391,16 +429,30 @@ export function McpApp({
         setHostName(app.getHostVersion?.()?.name ?? null)
 
         const hostEntry = classifyHostEntry(app)
-        if (hostEntry.kind === 'other') {
-          // No intent tool in host context, or a transport tool opened the
-          // iframe — `fetchMcpBootstrap` is the only bootstrap source.
+        if (
+          hostEntry.kind === 'other' &&
+          hostEntry.toolName &&
+          isTransportToolName(hostEntry.toolName)
+        ) {
+          // `onToolResult` ignores transport results, so waiting for one
+          // would hang the loading card.
           await loadBootstrap()
+        } else if (hostEntry.kind === 'other' && !toolCallInFlight) {
+          // No tool name, or a name this widget does not know. Wait
+          // briefly for the opening notification. A `toolinput` that
+          // lands in the window clears the timer. Dev hosts that open
+          // the resource with no tool call pay the grace delay, then
+          // read the bootstrap resource.
+          graceTimer = setTimeout(() => {
+            graceTimer = null
+            if (!cancelled && !hasBootstrap && !toolCallInFlight) void loadBootstrap()
+          }, OPENING_RESULT_GRACE_MS)
         }
-        // Intent entry: the pre-registered `toolresult` handler applies the
-        // host's one-shot opening notification. If that payload can't be
-        // parsed (host scrubbed `structuredContent`), the handler triggers
-        // `loadBootstrapViaFetch`. If the host never sends a notification at
-        // all, the shell stays on the loading card (spec-violating host).
+        // Intent entry: the pre-registered `toolresult` handler applies
+        // the host's opening notification. An unparseable or cancelled
+        // opening call falls back to `loadBootstrap`. If the host never
+        // sends a notification at all, the shell stays on the loading
+        // card (spec-violating host).
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : 'Failed to initialize SolvaPay'
@@ -411,6 +463,7 @@ export function McpApp({
 
     return () => {
       cancelled = true
+      clearGrace()
       unsubscribe?.()
     }
   }, [app])

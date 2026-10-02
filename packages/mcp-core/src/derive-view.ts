@@ -4,7 +4,7 @@
  * The three surfaces share one payload; omitting `view` must still land
  * somewhere useful instead of failing. Rule:
  *   - no active plan → checkout (plans)
- *   - active plan and zero credits → topup
+ *   - active plan and blocked by a top-up gate → topup
  *   - otherwise → account
  *
  * When the preferred view is disabled on this server, fall through the
@@ -25,11 +25,6 @@ function hasActivePlan(
   return selectActivePlanPurchase(customer?.purchase?.purchases, productRef) !== null
 }
 
-function isOutOfCredits(customer: BootstrapCustomer | null | undefined): boolean {
-  const credits = customer?.balance?.credits
-  return credits === 0
-}
-
 /**
  * Pick the landing view from a bootstrap snapshot. Pure — does not
  * fetch. Call after `buildBootstrapPayload` (the view argument there
@@ -42,7 +37,7 @@ export function deriveDefaultView(
   const customer = data.customer
   const preferred: SolvaPayMcpViewKind = !hasActivePlan(customer, data.productRef)
     ? 'checkout'
-    : isOutOfCredits(customer)
+    : customer?.nextAction === 'topup'
       ? 'topup'
       : 'account'
 

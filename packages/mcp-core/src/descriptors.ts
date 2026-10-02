@@ -59,6 +59,7 @@ import {
   narratedToolResult,
   parseMode,
   previewJson,
+  signedInCustomerRefOnly,
   toolErrorResult,
   ToolErrorEnvelopeSchema,
   toolResult,
@@ -281,11 +282,13 @@ export function buildSolvaPayDescriptors(
     views = DEFAULT_VIEWS,
     csp,
     apiBaseUrl,
-    getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
     branding,
   } = options
+  const getCustomerRef = signedInCustomerRefOnly(
+    options.getCustomerRef ?? defaultGetCustomerRefHelper,
+  )
   const toolIcons = deriveIcons(branding)
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
@@ -411,6 +414,17 @@ export function buildSolvaPayDescriptors(
     getCustomerRef,
   })
 
+  // Same snapshot the viewer returns when `view` is omitted. The build
+  // argument stays `'account'`: it steers `checkoutPurpose`, so the
+  // no-view tool path and the resource must pass the same value to
+  // produce the same `checkoutUrl`. `deriveDefaultView` then stamps
+  // the surface.
+  const buildDefaultBootstrapPayload = async (extra?: McpToolExtra) => {
+    const data = await buildBootstrapPayload('account', extra)
+    data.view = deriveDefaultView(data, enabledViews)
+    return data
+  }
+
   const advertisedViewList = SOLVAPAY_MCP_ADVERTISED_VIEW_KINDS.filter(view =>
     enabledViews.has(view),
   )
@@ -462,10 +476,12 @@ export function buildSolvaPayDescriptors(
             })
           }
           const mode = parseMode(args.mode)
-          const data = await buildBootstrapPayload(requested ?? 'account', extra)
-          const view = requested ?? deriveDefaultView(data, enabledViews)
-          data.view = view
-          return narratedToolResult(view, data, mode, {
+          const data =
+            requested === undefined
+              ? await buildDefaultBootstrapPayload(extra)
+              : await buildBootstrapPayload(requested, extra)
+          if (requested !== undefined) data.view = requested
+          return narratedToolResult(data.view, data, mode, {
             ...toolMeta,
             'openai/widgetSessionId': crypto.randomUUID(),
           })
@@ -922,10 +938,11 @@ export function buildSolvaPayDescriptors(
     description:
       'Current merchant/product/plans/customer snapshot for the embedded UI. Widgets read this idempotently when the host scrubs structuredContent from tool results.',
     mimeType: SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-    // View is an echoed routing label — the widget resolves the actual
-    // surface from host context (`inferViewFromHost`), so any view kind
-    // produces identical merchant/product/plans/customer data.
-    readPayload: extra => buildBootstrapPayload('account', extra),
+    // View is the server's default for this customer (checkout with no
+    // active plan, topup on a top-up gate, account otherwise) — the same
+    // choice the viewer makes when `view` is omitted. The widget trusts
+    // this field; it does not resolve the surface from host context.
+    readPayload: extra => buildDefaultBootstrapPayload(extra),
   }
 
   return { tools, resource, prompts, docsResources, bootstrapResource, buildBootstrapPayload }
