@@ -1,5 +1,16 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.7
+
+### Patch Changes
+
+- 07ca69e: Account bootstrap stamps `nextAction` only when `checkLimits` blocked the call, and adds `isCreditBased`. The default view opens top-up only for that gate. Narration says credits will not help on a capped plan even when the wallet is empty.
+- 8e1cc26: The account tool names who is signed in. `BootstrapCustomer` carries `email` and `name` from the customer record, and the text summary adds `Signed in as: email · customer ref` so a host that only reads the text can quote the ref.
+
+  An anonymous caller is not a customer. A `getCustomerRef` that returns `'anonymous'` is treated as unauthenticated, and the bootstrap no longer tries to mint a hosted checkout session for it; `checkoutUrl` is `null`, which is what the backend already produced by rejecting the ref.
+
+- 97c6831: The bootstrap resource stamps the same default view the account tool picks when `view` is omitted: checkout with no active plan, top-up on a top-up gate, and account otherwise.
+
 ## 0.4.6
 
 ### Patch Changes
