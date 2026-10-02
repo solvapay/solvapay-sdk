@@ -1,5 +1,12 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.6
+
+### Patch Changes
+
+- 815f9a2: Hosted checkout sessions minted by MCP no longer send the synthetic server origin as `returnUrl`. The account link on the hosted page can point at the customer portal.
+- bd029af: Limit checks no longer return `throttled`, `needsUpgrade`, or `upgraded`. `LimitOption.onExceed` is `block` or `draw_credits`; the API still accepts `top_up` and `charge` and stores both as `draw_credits`. Rollover options are gone from the plan types; the API drops them on input. Usage on a recurring plan is paid from prepaid credits, never billed to a card: `overage` (and `consequence: 'overage'`) now means access past the included cap paid from credits. The recurring checkout mandate no longer mentions usage past the included allowance.
+
 ## 0.4.5
 
 ### Patch Changes
