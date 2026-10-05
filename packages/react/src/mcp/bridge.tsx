@@ -83,7 +83,7 @@ export interface SendMessageParams {
  */
 export type McpSuccessEvent =
   | { kind: 'topup'; amountMinor: number; currency: string }
-  | { kind: 'plan-activated'; planName: string | null }
+  | { kind: 'plan-activated'; planName: string | null; creditNote?: string | null }
 
 export type McpMessageOnSuccess = (evt: McpSuccessEvent) => string | null
 
@@ -164,9 +164,7 @@ export function McpBridgeProvider({ app, messageOnSuccess, children }: McpBridge
         }
       },
       notifySuccess: async (evt: McpSuccessEvent): Promise<void> => {
-        const resolved = messageOnSuccess
-          ? messageOnSuccess(evt)
-          : defaultSuccessCopy(evt, locale)
+        const resolved = messageOnSuccess ? messageOnSuccess(evt) : defaultSuccessCopy(evt, locale)
         if (resolved === null || resolved === undefined) return
         if (typeof app.sendMessage !== 'function') return
         try {
@@ -230,8 +228,11 @@ function defaultSuccessCopy(evt: McpSuccessEvent, locale?: string): string {
       const amount = formatPrice(evt.amountMinor, evt.currency, { locale })
       return `Topped up ${amount}. Ready to keep working.`
     }
-    case 'plan-activated':
-      return `Activated ${evt.planName ?? 'plan'}.`
+    case 'plan-activated': {
+      const activated = `Activated ${evt.planName ?? 'plan'}.`
+      if (!evt.creditNote) return activated
+      return `${activated} ${evt.creditNote} Call \`account\` with \`view: 'topup'\` to add credits.`
+    }
     default: {
       // Exhaustiveness guard — TS catches new cases; runtime returns
       // an empty string which `notifySuccess` treats as a no-op.

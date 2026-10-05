@@ -48,6 +48,7 @@ import {
   inferIncludedUnits,
   isPayg,
   planMeterName,
+  recurringCreditNote,
   toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
@@ -498,11 +499,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,
+      creditNote: balance.credits === 0 ? recurringCreditNote(selectedPlanShape) : null,
     }
     setSuccessMeta(meta)
     setStep('success')
     onPurchaseSuccessRef.current?.(meta)
-  }, [selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
+  }, [balance.credits, selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
 
   const advance = useCallback(async () => {
     if (step === 'plan') {

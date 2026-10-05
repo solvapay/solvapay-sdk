@@ -855,6 +855,8 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     })
 
     await waitFor(() => screen.getByText(/Pro active/))
+    expect(screen.getByText('Subscription is live.')).toBeTruthy()
+    expect(screen.queryByText(/credits are ready/)).toBeNull()
     expect(screen.getByText(/Manage from/)).toBeTruthy()
     expect(screen.getByText(/manage_account/)).toBeTruthy()
 
@@ -1066,7 +1068,9 @@ describe('<McpCheckoutView> — CSS hooks', () => {
 
   it('AmountStep renders exactly 4 preset tiles (currency-aware quick amounts)', async () => {
     const { container } = await advanceToAmountStep()
-    const options = container.querySelectorAll('.solvapay-mcp-preset-grid .solvapay-mcp-preset-tile')
+    const options = container.querySelectorAll(
+      '.solvapay-mcp-preset-grid .solvapay-mcp-preset-tile',
+    )
     expect(options).toHaveLength(4)
   })
 
