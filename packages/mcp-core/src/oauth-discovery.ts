@@ -34,12 +34,35 @@ export function resolveOAuthPaths(paths: OAuthBridgePaths = {}): Required<OAuthB
   return { ...DEFAULT_OAUTH_PATHS, ...paths }
 }
 
-export function getOAuthProtectedResourceResponse(publicBaseUrl: string) {
-  const resource = withoutTrailingSlash(publicBaseUrl)
+/**
+ * Overrides for the RFC 9728 protected-resource metadata. Every field
+ * defaults to the SolvaPay-as-authorization-server shape, so callers that
+ * pass nothing get today's output byte-for-byte.
+ */
+export interface OAuthProtectedResourceOptions {
+  /**
+   * Issuer URLs of the authorization servers that mint this resource's
+   * tokens. Emitted verbatim: an issuer that ends in `/` (Auth0) or carries
+   * a path component (Supabase) must be passed exactly as the client will
+   * discover it.
+   */
+  authorizationServers?: string[]
+  scopesSupported?: string[]
+  /** Canonical resource identifier. Defaults to `publicBaseUrl` without a trailing slash. */
+  resource?: string
+}
+
+export const DEFAULT_OAUTH_SCOPES_SUPPORTED: readonly string[] = ['openid', 'profile', 'email']
+
+export function getOAuthProtectedResourceResponse(
+  publicBaseUrl: string,
+  options: OAuthProtectedResourceOptions = {},
+) {
+  const base = withoutTrailingSlash(publicBaseUrl)
   return {
-    resource,
-    authorization_servers: [resource],
-    scopes_supported: ['openid', 'profile', 'email'],
+    resource: options.resource ?? base,
+    authorization_servers: options.authorizationServers ?? [base],
+    scopes_supported: options.scopesSupported ?? [...DEFAULT_OAUTH_SCOPES_SUPPORTED],
   }
 }
 
@@ -58,7 +81,7 @@ export function getOAuthAuthorizationServerResponse({
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
-    scopes_supported: ['openid', 'profile', 'email'],
+    scopes_supported: [...DEFAULT_OAUTH_SCOPES_SUPPORTED],
     code_challenge_methods_supported: ['S256'],
   }
 }

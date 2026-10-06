@@ -46,10 +46,19 @@ export function corsPreflight(req: Request): Response {
 }
 
 /**
+ * RFC 6750 §3.1 error codes a resource server may put on the challenge.
+ * Omit the attribute entirely when the request carried no token at all —
+ * the spec reserves the bare `Bearer` challenge for that case.
+ */
+export type BearerChallengeError = 'invalid_request' | 'invalid_token' | 'insufficient_scope'
+
+/**
  * Produce a 401 JSON-RPC response + `WWW-Authenticate: Bearer
  * resource_metadata="…"` pointing at the protected-resource discovery
  * endpoint so MCP clients know where to discover the authorization
- * server.
+ * server. Pass `error: 'invalid_token'` when a token was presented and
+ * rejected so the client knows to refresh and retry rather than start a
+ * fresh sign-in.
  */
 export function authChallenge(
   req: Request,
@@ -57,21 +66,24 @@ export function authChallenge(
     publicBaseUrl: string
     protectedResourcePath?: string
     jsonRpcId?: string | number | null
+    error?: BearerChallengeError
   },
 ): Response {
   const {
     publicBaseUrl,
     protectedResourcePath = '/.well-known/oauth-protected-resource',
     jsonRpcId = null,
+    error,
   } = options
 
   const headers = new Headers()
   applyNativeCors(req.headers, headers)
   headers.set('Access-Control-Expose-Headers', 'WWW-Authenticate')
-  headers.set(
-    'WWW-Authenticate',
-    `Bearer resource_metadata="${withoutTrailingSlash(publicBaseUrl)}${protectedResourcePath}"`,
-  )
+  const challengeParams = [
+    `resource_metadata="${withoutTrailingSlash(publicBaseUrl)}${protectedResourcePath}"`,
+    ...(error ? [`error="${error}"`] : []),
+  ]
+  headers.set('WWW-Authenticate', `Bearer ${challengeParams.join(', ')}`)
   headers.set('Content-Type', 'application/json')
 
   const body = {
