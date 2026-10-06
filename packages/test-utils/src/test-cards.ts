@@ -45,6 +45,7 @@ export const TEST_CARD_SCENARIO_CODES = {
   asyncSuccess: '501',
   indeterminate: '502',
   railTimeout: '503',
+  railAnswerLost: '504',
   cardUpdated: '601',
   cardExpiryUpdated: '602',
   cardClosed: '603',
