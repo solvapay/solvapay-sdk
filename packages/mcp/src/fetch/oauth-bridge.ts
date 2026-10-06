@@ -20,6 +20,7 @@ import {
   resolveOAuthPaths,
   withoutTrailingSlash,
   type OAuthBridgePaths,
+  type OAuthProtectedResourceOptions,
 } from '@solvapay/mcp-core'
 import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
 import { applyNativeCors, corsPreflight } from './cors'
@@ -81,11 +82,14 @@ function queryOf(req: Request): string {
 export function createProtectedResourceHandler(options: {
   publicBaseUrl: string
   protectedResourcePath?: string
+  /** PRM overrides; omit for the SolvaPay-as-authorization-server default. */
+  metadata?: OAuthProtectedResourceOptions
 }): FetchHandler {
   const path = options.protectedResourcePath ?? '/.well-known/oauth-protected-resource'
+  const body = getOAuthProtectedResourceResponse(options.publicBaseUrl, options.metadata)
   return async req => {
     if (req.method !== 'GET' || pathOf(req) !== path) return null
-    return jsonResponse(req, 200, getOAuthProtectedResourceResponse(options.publicBaseUrl))
+    return jsonResponse(req, 200, body)
   }
 }
 
@@ -274,6 +278,59 @@ export function createOAuthFetchRouter(options: FetchOAuthOptions): FetchHandler
     createOAuthAuthorizeHandler({ apiBaseUrl: options.apiBaseUrl, path: paths.authorize }),
     createOAuthTokenHandler({ apiBaseUrl: options.apiBaseUrl, path: paths.token }),
     createOAuthRevokeHandler({ apiBaseUrl: options.apiBaseUrl, path: paths.revoke }),
+  ]
+
+  return async req => {
+    for (const handler of handlers) {
+      const response = await handler(req)
+      if (response) return response
+    }
+    return null
+  }
+}
+
+export interface ExternalDiscoveryOptions {
+  publicBaseUrl: string
+  apiBaseUrl: string
+  productRef: string
+  protectedResourcePath?: string
+  /** Issuer URLs, emitted verbatim as `authorization_servers`. */
+  issuers: string[]
+  scopesSupported: string[]
+  /** Canonical MCP URL the tokens are bound to; becomes PRM `resource`. */
+  resource: string
+}
+
+/**
+ * Discovery router for an MCP whose tokens are minted by an **external**
+ * authorization server (Auth0, Clerk, Supabase, …). Serves only the RFC 9728
+ * protected-resource document pointing at those issuers, plus the
+ * `openid-configuration` 404. Nothing SolvaPay-proxying is mounted: a
+ * request to `/.well-known/oauth-authorization-server` or `/oauth/*` falls
+ * through to the caller's 404, because the client must discover the
+ * authorization server at the issuer, never here.
+ */
+export function createExternalDiscoveryRouter(options: ExternalDiscoveryOptions): FetchHandler {
+  assertValidProductRef(options.productRef, 'createExternalDiscoveryRouter')
+  logMcpConfigOnce({
+    apiBaseUrl: withoutTrailingSlash(options.apiBaseUrl),
+    productRef: options.productRef,
+    publicBaseUrl: options.publicBaseUrl,
+    authMode: 'external',
+    authorizationServers: options.issuers,
+  })
+
+  const handlers: FetchHandler[] = [
+    createOpenidNotFoundHandler(),
+    createProtectedResourceHandler({
+      publicBaseUrl: options.publicBaseUrl,
+      protectedResourcePath: options.protectedResourcePath,
+      metadata: {
+        authorizationServers: options.issuers,
+        scopesSupported: options.scopesSupported,
+        resource: options.resource,
+      },
+    }),
   ]
 
   return async req => {
