@@ -531,7 +531,11 @@ export interface SolvaPay {
    */
   createCustomerSessionCaptureGrant(params: { sessionId: string }): Promise<CaptureGrant>
 
-  /** Card setup without a payment: save the captured card as the session customer's card. */
+  /**
+   * Card setup without a payment: save the captured card as the session
+   * customer's card, or complete the setup the payer just authenticated
+   * (`{ sessionId, completePendingSetup: true }`).
+   */
   saveCustomerSessionCard(params: SaveCustomerSessionCardParams): Promise<SavedCardResult>
 
   /**

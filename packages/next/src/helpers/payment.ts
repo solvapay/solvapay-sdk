@@ -17,7 +17,7 @@ import {
   saveCardCore,
   isErrorResult,
 } from '@solvapay/server'
-import type { CardBillingDetails } from '@solvapay/server'
+import type { SaveCardBody } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
 import { invalidatePurchaseCacheForRequest } from './_cache'
 
@@ -239,24 +239,21 @@ export async function createCardSetupGrant(
 
 /**
  * Next.js route wrapper for POST /api/save-card: save the captured card on
- * the grant's customer session.
+ * the grant's customer session (`{ sessionId, cardId, returnUrl,
+ * billingDetails? }`), or complete the setup the payer just authenticated
+ * (`{ sessionId, completePendingSetup: true }`). Pass the parsed request
+ * body through; the body is validated here.
  *
  * @example
  * ```typescript
  * export async function POST(request: Request) {
- *   const { sessionId, cardId, billingDetails, returnUrl } = await request.json()
- *   return saveCard(request, { sessionId, cardId, billingDetails, returnUrl })
+ *   return saveCard(request, await request.json())
  * }
  * ```
  */
 export async function saveCard(
   request: globalThis.Request,
-  body: {
-    sessionId: string
-    cardId: string
-    billingDetails?: CardBillingDetails
-    returnUrl?: string
-  },
+  body: SaveCardBody | Record<string, unknown>,
   options: { solvaPay?: SolvaPay } = {},
 ): Promise<NextResponse> {
   const result = await saveCardCore(request, body, options)

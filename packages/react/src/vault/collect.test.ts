@@ -23,7 +23,7 @@ function fakeForm(overrides: Partial<CollectForm> = {}): CollectForm {
 
 describe('captureCard', () => {
   it('sends the grant token with empty data (no meta), and maps the CMP card object', async () => {
-    const createCard = vi.fn((opts, onResponse) => {
+    const createCard = vi.fn<CollectForm['createCard']>((opts, onResponse) => {
       onResponse(201, {
         data: {
           id: 'CRD1',

@@ -120,6 +120,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -159,6 +161,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -208,6 +212,8 @@ describe('<McpAppShell>', () => {
             view: 'usage' as never,
             customer: {
               ref: 'cus_1',
+              email: 'cus@example.com',
+              name: 'Cus Tomer',
               purchase: null,
               paymentMethod: null,
               balance: null,
@@ -231,6 +237,8 @@ describe('<McpAppShell>', () => {
         view: undefined,
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -247,6 +255,8 @@ describe('<McpAppShell>', () => {
 
   const authedCustomer = {
     ref: 'cus_1',
+    email: 'cus@example.com',
+    name: 'Cus Tomer',
     purchase: null,
     paymentMethod: null,
     balance: null,
@@ -353,6 +363,8 @@ describe('<McpAppShell>', () => {
         } as never,
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -408,6 +420,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -431,6 +445,8 @@ describe('<McpAppShell>', () => {
       {
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -469,6 +485,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: 'cus@example.com',
+          name: 'Cus Tomer',
           purchase: null,
           paymentMethod: null,
           balance: null,

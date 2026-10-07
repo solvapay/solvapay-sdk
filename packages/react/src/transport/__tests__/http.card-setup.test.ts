@@ -68,6 +68,21 @@ describe('createHttpTransport — card setup (save a card without paying)', () =
     expect(result).toStrictEqual(saved)
   })
 
+  it('POSTs the completion of a pending setup as { sessionId, completePendingSetup: true }', async () => {
+    const saved = { status: 'succeeded', paymentMethod: { id: 'spm_1' } }
+    const fetchFn = makeFetch(saved)
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const result = await transport.saveCard!({ sessionId: 'cs_sess_1', completePendingSetup: true })
+
+    expect(fetchFn).toHaveBeenCalledWith('/api/save-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'cs_sess_1', completePendingSetup: true }),
+    })
+    expect(result).toStrictEqual(saved)
+  })
+
   it('honours configured routes for both card setup calls', async () => {
     const fetchFn = makeFetch(setupGrant)
     const transport = createHttpTransport({
@@ -76,7 +91,11 @@ describe('createHttpTransport — card setup (save a card without paying)', () =
     })
 
     await transport.createCardSetupGrant!()
-    await transport.saveCard!({ sessionId: 'cs_sess_1', cardId: 'CRD1' })
+    await transport.saveCard!({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/billing',
+    })
 
     expect(fetchFn.mock.calls.map(call => call[0])).toStrictEqual([
       '/billing/setup-grant',
@@ -89,9 +108,9 @@ describe('createHttpTransport — card setup (save a card without paying)', () =
     const fetchFn = makeFetch({ error: 'Bad Gateway' }, 502)
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch, onError })
 
-    await expect(transport.saveCard!({ sessionId: 'cs_sess_1', cardId: 'CRD1' })).rejects.toThrow(
-      'Bad Gateway',
-    )
+    await expect(
+      transport.saveCard!({ sessionId: 'cs_sess_1', completePendingSetup: true }),
+    ).rejects.toThrow('Bad Gateway')
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError.mock.calls[0][1]).toBe('saveCard')
   })

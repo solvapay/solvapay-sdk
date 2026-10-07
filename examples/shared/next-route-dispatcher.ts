@@ -42,18 +42,9 @@ import type { SolvaPay } from '@solvapay/server'
 type Handler = (request: Request) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
-  GET: (
-    request: Request,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
-  POST: (
-    request: Request,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
-  PUT: (
-    request: NextRequest,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
+  GET: (request: Request, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
+  POST: (request: Request, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
+  PUT: (request: NextRequest, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
   DELETE: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
@@ -165,7 +156,11 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     // this grant, then the payment is confirmed server-side.
     'create-capture-grant': async request => {
       const body = await bodyJson(request)
-      return createCaptureGrant(request, { paymentIntentId: String(body.paymentIntentId) }, { solvaPay })
+      return createCaptureGrant(
+        request,
+        { paymentIntentId: String(body.paymentIntentId) },
+        { solvaPay },
+      )
     },
     'confirm-payment': async request => {
       const body = await bodyJson(request)
@@ -182,14 +177,9 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     },
     // Card setup without a payment (AutoRecharge.CardSetup).
     'create-card-setup-grant': async request => createCardSetupGrant(request, { solvaPay }),
-    'save-card': async request => {
-      const body = await bodyJson(request)
-      return saveCard(
-        request,
-        { sessionId: String(body.sessionId), cardId: String(body.cardId) },
-        { solvaPay },
-      )
-    },
+    // The body is the captured card with its return URL, or the completion of
+    // a pending setup after 3DS; `saveCard` validates it.
+    'save-card': async request => saveCard(request, await bodyJson(request), { solvaPay }),
     'activate-plan': async request => {
       const body = await bodyJson(request)
       return activatePlan(

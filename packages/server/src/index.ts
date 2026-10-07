@@ -24,6 +24,7 @@ export type {
 // Re-export client creation (for advanced use cases)
 export { createSolvaPayClient } from './client'
 export type { ServerClientOptions } from './client'
+export type { SaveCardBody } from './helpers/card-setup'
 
 // Opt-in product configuration check (never auto-invoked)
 export { verifyProductConfiguration } from './verify-product-configuration'
@@ -250,6 +251,7 @@ export {
   confirmPaymentCore,
   createCardSetupGrantCore,
   saveCardCore,
+  parseSaveCardBody,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,

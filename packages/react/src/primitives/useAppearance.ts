@@ -52,6 +52,7 @@ export function useAppearance(
     if (appearance !== undefined) return appearance
     if (!root) return undefined
     return buildAppearance(root)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // themeTick is a deliberate extra dependency: the root's computed styles
+    // are re-read when the theme changes.
   }, [root, appearance, themeTick])
 }

@@ -17,7 +17,7 @@ export interface paths {
      * Activate a plan for a customer
      * @description Activates a specific plan on a product for a customer. Usage-based plans (metered, no billing cycle) and free plans activate immediately. A zero credit balance is not an activation gate — empty-wallet access is enforced later as `topup_required` at usage time. Paid recurring, hybrid, or one-time plans return `payment_required`.
      */
-    post: operations['ActivateSdkController_activate']
+    post: operations['activate']
     delete?: never
     options?: never
     head?: never
@@ -35,18 +35,18 @@ export interface paths {
      * Get auto-recharge config for a customer
      * @description Returns the stored auto-recharge configuration (and display block) for the given customer, or a null config when none is set.
      */
-    get: operations['AutoRechargeSdkController_getAutoRecharge']
+    get: operations['getAutoRecharge']
     /**
      * Set or update auto-recharge config for a customer
-     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file the config stays `pending_setup` until a card is saved through a customer session (capture-grant + payment-methods).
+     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file, the config is saved pending one (requiresPaymentMethod) and the caller saves a card through the vault.
      */
-    put: operations['AutoRechargeSdkController_putAutoRecharge']
+    put: operations['putAutoRecharge']
     post?: never
     /**
      * Disable auto-recharge for a customer
      * @description Disables auto-recharge for the given customer. Idempotent.
      */
-    delete: operations['AutoRechargeSdkController_deleteAutoRecharge']
+    delete: operations['deleteAutoRecharge']
     options?: never
     head?: never
     patch?: never
@@ -65,7 +65,7 @@ export interface paths {
      * Create a checkout session
      * @description Creates a hosted checkout session for a customer to purchase a product plan, or to top up credits (`purpose: "credit_topup"`, which skips `productRef`). Returns a session ID and checkout URL for redirect.
      */
-    post: operations['CheckoutSessionSdkController_createCheckoutSession']
+    post: operations['createCheckoutSession']
     delete?: never
     options?: never
     head?: never
@@ -83,7 +83,7 @@ export interface paths {
      * List account-wide credit activity for a customer
      * @description Every credit event on the customer account, newest first, including other products and top-ups. Credits are shared, so the balance only makes sense account-wide.
      */
-    get: operations['CreditActivitySdkController_getActivity']
+    get: operations['getActivity']
     put?: never
     post?: never
     delete?: never
@@ -103,13 +103,13 @@ export interface paths {
      * Get customer by reference, externalRef, or email
      * @description Retrieves a customer's details using their unique reference ID, externalRef, or email. Use query parameter 'reference' to look up by customer reference, 'externalRef' for external auth ID, or 'email' for customer email. Exactly one parameter must be provided. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
      */
-    get: operations['CustomerSdkController_getCustomerByQuery']
+    get: operations['getCustomerByQuery']
     put?: never
     /**
      * Create a new customer
      * @description Creates a new customer record for the authenticated provider. Customers represent end-users who will purchase your products. Email is required and must be unique per provider. The name field is optional but recommended for better tracking.
      */
-    post: operations['CustomerSdkController_createCustomer']
+    post: operations['createCustomer']
     delete?: never
     options?: never
     head?: never
@@ -127,7 +127,7 @@ export interface paths {
      * Get customer by reference
      * @description Retrieves a customer's details using their unique reference ID. Returns the customer's name, email, and active purchases. Only customers owned by the authenticated provider can be accessed.
      */
-    get: operations['CustomerSdkController_getCustomer']
+    get: operations['getCustomer']
     put?: never
     post?: never
     delete?: never
@@ -137,7 +137,7 @@ export interface paths {
      * Update a customer
      * @description Updates an existing customer identified by reference. Use this to backfill or change fields such as `externalRef`, `name`, or `email`. Only the fields supplied in the body are modified.
      */
-    patch: operations['CustomerSdkController_updateCustomer']
+    patch: operations['updateCustomer']
     trace?: never
   }
   '/v1/sdk/customers/{reference}/balance': {
@@ -151,7 +151,7 @@ export interface paths {
      * Get customer credit balance
      * @description Returns the credit balance for a customer identified by reference.
      */
-    get: operations['CustomerSdkController_getCustomerBalance']
+    get: operations['getCustomerBalance']
     put?: never
     post?: never
     delete?: never
@@ -173,7 +173,7 @@ export interface paths {
      * Grant credits to a customer
      * @description Adds credits to a customer balance. Use Idempotency-Key to make grants safe to retry.
      */
-    post: operations['CustomerSdkController_grantCredits']
+    post: operations['grantCredits']
     delete?: never
     options?: never
     head?: never
@@ -193,7 +193,7 @@ export interface paths {
      * Create a customer session
      * @description Creates a customer session URL that can be used to redirect customers to the customer page. Returns the customer URL and session ID. The session is short-lived (15 minutes) for security reasons.
      */
-    post: operations['CustomerSdkController_createCustomerSession']
+    post: operations['createCustomerSession']
     delete?: never
     options?: never
     head?: never
@@ -211,7 +211,7 @@ export interface paths {
      * Get customer session by sessionId
      * @description Retrieves a customer session by its sessionId with all data hydrated including customer details and purchases. The session must belong to the authenticated provider.
      */
-    get: operations['CustomerSdkController_getCustomerSession']
+    get: operations['getCustomerSession']
     put?: never
     post?: never
     delete?: never
@@ -233,7 +233,7 @@ export interface paths {
      * Check usage limits for a customer and product
      * @description Checks whether a customer has an active purchase for a product and is within their usage limits. Returns a checkout URL if payment is required.
      */
-    post: operations['LimitsSdkController_checkLimits']
+    post: operations['checkLimits']
     delete?: never
     options?: never
     head?: never
@@ -273,7 +273,7 @@ export interface paths {
      * Record a meter event
      * @description Records a single usage event against a named meter. When the customer is on a metered plan, credits are also debited for the event (the debit is not surfaced in the response).
      */
-    post: operations['MeterEventsSdkController_recordEvent']
+    post: operations['recordEvent']
     delete?: never
     options?: never
     head?: never
@@ -293,7 +293,7 @@ export interface paths {
      * Record meter events in bulk
      * @description Persists the events with bulkRecordUsage (which records each event like the single POST), after shared meter/customer checks.
      */
-    post: operations['MeterEventsSdkController_recordBulkEvents']
+    post: operations['recordBulkEvents']
     delete?: never
     options?: never
     head?: never
@@ -311,13 +311,13 @@ export interface paths {
      * List payment intents for the provider
      * @description Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
      */
-    get: operations['PaymentIntentSdkController_getPaymentIntents']
+    get: operations['getPaymentIntents']
     put?: never
     /**
      * Create a payment intent
-     * @description Creates a new payment intent for a customer to purchase a plan, top up credits (`purpose: "credit_topup"`), or bill usage (`purpose: "usage_billing"`) with an explicit `amount`/`currency`. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+     * @description Creates a new payment intent for a customer to purchase a plan, top up credits (`purpose: "credit_topup"`), or bill usage (`purpose: "usage_billing"`) with an explicit `amount`/`currency`. Requires an idempotency key to prevent duplicate charges. The card is captured through the vault: request a capture grant with POST :id/capture-grant and confirm with POST :id/confirm.
      */
-    post: operations['PaymentIntentSdkController_createPaymentIntent']
+    post: operations['createPaymentIntent']
     delete?: never
     options?: never
     head?: never
@@ -337,7 +337,7 @@ export interface paths {
      * Grant the browser one card capture into the vault for this payment
      * @description For a payment created with captureMode vault. Capture the card with the grant token and confirm it with POST :paymentIntentId/confirm while the grant is live; the card must be captured within the grant window of this payment and not used for another payment.
      */
-    post: operations['PaymentIntentSdkController_captureGrant']
+    post: operations['captureGrant']
     delete?: never
     options?: never
     head?: never
@@ -353,8 +353,11 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Confirm a vault payment with a captured card or a saved payment method */
-    post: operations['PaymentIntentSdkController_confirm']
+    /**
+     * Confirm a vault payment with a captured card or a saved payment method
+     * @description Takes a vault card (cardId) or a saved payment method (paymentMethodId: the SolvaPay payment method id, spm_…, never a rail credential) and a returnUrl (https, on the provider website or the hosted pages). A decline answers 402 { error: payment_declined, reason, declineCode? }; the payment stays confirmable with a new capture grant. While another confirm of the payment is in flight the answer is 409 { error: confirm_in_progress }. Confirming an already confirmed payment reports its status without charging again.
+     */
+    post: operations['confirm']
     delete?: never
     options?: never
     head?: never
@@ -374,7 +377,7 @@ export interface paths {
      * Attach business tax details to a payment intent
      * @description Applies business or consumer tax location to a payment intent and returns the calculated tax breakdown.
      */
-    post: operations['PaymentIntentSdkController_attachBusinessDetails']
+    post: operations['attachBusinessDetails']
     delete?: never
     options?: never
     head?: never
@@ -391,10 +394,10 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Process payment intent after client-side confirmation
-     * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.
+     * Process payment intent after confirmation
+     * @description Processes a payment intent after POST :id/confirm. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.
      */
-    post: operations['PaymentIntentSdkController_processPaymentIntent']
+    post: operations['processPaymentIntent']
     delete?: never
     options?: never
     head?: never
@@ -410,9 +413,9 @@ export interface paths {
     }
     /**
      * Get a specific payment intent
-     * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret.
+     * @description Retrieves detailed information about a specific payment intent including amount, currency and status.
      */
-    get: operations['PaymentIntentSdkController_getPaymentIntent']
+    get: operations['getPaymentIntent']
     put?: never
     post?: never
     delete?: never
@@ -432,10 +435,14 @@ export interface paths {
      * Get the default payment method for a customer
      * @description Returns the customer's default card for the authenticated provider. Sourced from stored payment-method records (no payment-rail round-trip). Returns `{ kind: 'none' }` when no card is on file.
      */
-    get: operations['PaymentMethodSdkController_getPaymentMethod']
+    get: operations['getPaymentMethod']
     put?: never
     post?: never
-    delete?: never
+    /**
+     * Remove a customer's card on file
+     * @description Removes the card on file shown for the customer at the authenticated provider (the same card GET /v1/sdk/payment-method reports) and detaches it on the payment rail, provided the integration saved it. A shown card the customer saved themselves (portal, hosted checkout) is left alone: 403, and nothing else is removed. The next saved card, if any, becomes the default; auto-recharge that charged the removed card waits for a new card. 404 when no card is on file.
+     */
+    delete: operations['removePaymentMethod']
     options?: never
     head?: never
     patch?: never
@@ -450,7 +457,7 @@ export interface paths {
     }
     /**
      * Get environment-aware platform config for the authenticated provider
-     * @description Returns browser-safe platform values resolved against the provider environment. Today it carries none: no rail configuration reaches the browser. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
+     * @description Returns browser-safe platform values resolved against the provider environment. Today it carries none: no rail configuration reaches the browser. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/provider (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
      */
     get: operations['getPlatformConfig']
     put?: never
@@ -472,13 +479,13 @@ export interface paths {
      * List products
      * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and Managed MCP integration flag.
      */
-    get: operations['ProductSdkController_listProducts']
+    get: operations['listProducts']
     put?: never
     /**
      * Create a product
      * @description Creates a new product for the authenticated provider.
      */
-    post: operations['ProductSdkController_createProduct']
+    post: operations['createProduct']
     delete?: never
     options?: never
     head?: never
@@ -496,18 +503,18 @@ export interface paths {
      * Get a product by reference
      * @description Retrieves a product by its reference or ID, including embedded plans.
      */
-    get: operations['ProductSdkController_getProduct']
+    get: operations['getProduct']
     /**
      * Update a product
      * @description Updates an existing product. Only provided fields are updated.
      */
-    put: operations['ProductSdkController_updateProduct']
+    put: operations['updateProduct']
     post?: never
     /**
      * Delete a product
      * @description Soft-deletes a product (hides it from listings, restorable). If the product has any purchases, deactivates it instead so the catalog row stays resolvable. Same rule in sandbox and live.
      */
-    delete: operations['ProductSdkController_deleteProduct']
+    delete: operations['deleteProduct']
     options?: never
     head?: never
     patch?: never
@@ -526,7 +533,7 @@ export interface paths {
      * Clone a product
      * @description Deep-copies a product including all its plans. Generates new references for the clone.
      */
-    post: operations['ProductSdkController_cloneProduct']
+    post: operations['cloneProduct']
     delete?: never
     options?: never
     head?: never
@@ -545,7 +552,7 @@ export interface paths {
      * Configure MCP plans on an MCP product
      * @description Configures plans and optional tool-to-plan mappings for an MCP product.
      */
-    put: operations['ProductSdkController_configureMcpPlans']
+    put: operations['configureMcpPlans']
     post?: never
     delete?: never
     options?: never
@@ -564,13 +571,13 @@ export interface paths {
      * List plans for a product
      * @description Retrieves the plans belonging to a product, paginated in-memory. Returns SDK-shaped plans with option money serialized to integer minor units; hidden plans are excluded. The `type` field is derived from each plan's composable options.
      */
-    get: operations['PlanSdkController_listPlans']
+    get: operations['listPlans']
     put?: never
     /**
      * Create a plan for a product
      * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
      */
-    post: operations['PlanSdkController_createPlan']
+    post: operations['createPlan']
     delete?: never
     options?: never
     head?: never
@@ -588,18 +595,18 @@ export interface paths {
      * Get a plan for a product
      * @description Retrieves a single plan by reference or ID within the given product.
      */
-    get: operations['PlanSdkController_getPlan']
+    get: operations['getPlan']
     /**
      * Update a plan for a product
      * @description Updates a plan under the product. Provided `options[]` replace the plan pricing and are validated for cross-option coherence (400 if invalid); money fields are integer minor units.
      */
-    put: operations['PlanSdkController_updatePlan']
+    put: operations['updatePlan']
     post?: never
     /**
      * Delete a plan from a product
      * @description Removes a plan from the product.
      */
-    delete: operations['PlanSdkController_deletePlan']
+    delete: operations['deletePlan']
     options?: never
     head?: never
     patch?: never
@@ -618,7 +625,7 @@ export interface paths {
      * Bootstrap MCP product integration
      * @description Creates an MCP-enabled product with a unified plans array, configures origin URL, and maps tools to plans in one request.
      */
-    post: operations['ProductSdkController_bootstrapMcpProduct']
+    post: operations['bootstrapMcpProduct']
     delete?: never
     options?: never
     head?: never
@@ -636,7 +643,7 @@ export interface paths {
      * List purchases for provider
      * @description Retrieves all purchases for the authenticated provider with optional filtering by status, product, or customer.
      */
-    get: operations['PurchaseSdkController_listPurchases']
+    get: operations['listPurchases']
     put?: never
     post?: never
     delete?: never
@@ -656,7 +663,7 @@ export interface paths {
      * Get a purchase by reference
      * @description Retrieves a single purchase including plan snapshot, usage, and billing details.
      */
-    get: operations['PurchaseSdkController_getPurchase']
+    get: operations['getPurchase']
     put?: never
     post?: never
     delete?: never
@@ -678,7 +685,7 @@ export interface paths {
      * Cancel a purchase
      * @description Cancels an active purchase. For recurring purchases, cancellation takes effect at the end of the current billing period.
      */
-    post: operations['PurchaseSdkController_cancelPurchase']
+    post: operations['cancelPurchase']
     delete?: never
     options?: never
     head?: never
@@ -698,7 +705,7 @@ export interface paths {
      * Reactivate a cancelled purchase
      * @description Reactivates a purchase that was cancelled but has not yet reached its end date. Restores auto-renewal and clears cancellation fields.
      */
-    post: operations['PurchaseSdkController_reactivatePurchase']
+    post: operations['reactivatePurchase']
     delete?: never
     options?: never
     head?: never
@@ -716,7 +723,7 @@ export interface paths {
      * Get purchases for a customer
      * @description Retrieves all purchases for a specific customer. Useful for billing history and access checks.
      */
-    get: operations['PurchaseSdkController_getPurchasesForCustomer']
+    get: operations['getPurchasesForCustomer']
     put?: never
     post?: never
     delete?: never
@@ -736,7 +743,7 @@ export interface paths {
      * Get purchases for a product
      * @description Retrieves all purchases for a specific product. Each billing period creates a new purchase document.
      */
-    get: operations['PurchaseSdkController_getPurchasesForProduct']
+    get: operations['getPurchasesForProduct']
     put?: never
     post?: never
     delete?: never
@@ -758,7 +765,7 @@ export interface paths {
      * Record a usage event
      * @description Records a usage event into the Usage timeseries collection.
      */
-    post: operations['UsageSdkController_recordUsage']
+    post: operations['recordUsage']
     delete?: never
     options?: never
     head?: never
@@ -778,7 +785,7 @@ export interface paths {
      * Record bulk usage events
      * @description Same persistence rules as POST /sdk/usages for each item: validate batch first, then one insert per event.
      */
-    post: operations['UsageSdkController_recordBulkUsage']
+    post: operations['recordBulkUsage']
     delete?: never
     options?: never
     head?: never
@@ -798,7 +805,7 @@ export interface paths {
      * Get user info and purchase status
      * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
      */
-    post: operations['UserInfoSdkController_getUserInfo']
+    post: operations['getUserInfo']
     delete?: never
     options?: never
     head?: never
@@ -816,7 +823,7 @@ export interface paths {
      * Get the webhook event envelope schema
      * @description Returns a representative example of the signed webhook payload every endpoint receives. Useful when building and type-checking a webhook handler; the live `type` will be one of the values from `event-types`.
      */
-    get: operations['WebhookSdkController_getEventSchema']
+    get: operations['getEventSchema']
     put?: never
     post?: never
     delete?: never
@@ -836,7 +843,7 @@ export interface paths {
      * List webhook event types
      * @description Returns the catalog of webhook event types you can subscribe to, grouped by category. Use these `type` values when configuring an endpoint’s `enabledEvents`.
      */
-    get: operations['WebhookSdkController_listEventTypes']
+    get: operations['listEventTypes']
     put?: never
     post?: never
     delete?: never
@@ -1320,7 +1327,22 @@ export interface components {
       product: components['schemas']['SdkProductResponse']
     }
     ConfirmVaultPaymentDto: {
+      billingDetails?: {
+        address?: {
+          city?: string
+          country?: string
+          line1?: string
+          line2?: string
+          postalCode?: string
+          state?: string
+        }
+        /** Format: email */
+        email?: string
+        name?: string
+        phone?: string
+      }
       cardId?: string
+      completePendingSetup?: boolean
       paymentMethodId?: string
       /** Format: uri */
       returnUrl?: string
@@ -2230,7 +2252,6 @@ export interface components {
       customerEmail?: string
       customerName?: string
       customerRef: string
-      deferSetupIntent?: boolean
       enabled: boolean
       maxMonthlySpendMajor?: number
       thresholdAmountMajor?: number
@@ -2263,7 +2284,10 @@ export interface components {
     SaveAutoRechargeResponse: {
       config: components['schemas']['AutoRechargeConfigDto']
       display?: components['schemas']['AutoRechargeDisplayDto']
-      /** @description True when no reusable card is on file; collect one before the config can activate */
+      /**
+       * True while the config is pending a reusable card; the card is saved through the vault, not a processor SetupIntent
+       * @example false
+       */
       requiresPaymentMethod: boolean
     }
     SdkCaptureGrantResponse: {
@@ -2454,11 +2478,11 @@ export interface components {
        */
       amount: number
       /**
-       * How the browser takes the card: SDK CardFields (VGS Collect) with a capture grant, confirmed server-side.
+       * How the browser takes the card: always `vault` (SDK CardFields, VGS Collect) with a capture grant, confirmed server-side. Absent on off-session charges.
        * @example vault
        * @enum {string}
        */
-      captureMode: 'vault'
+      captureMode?: 'vault'
       /**
        * Creation timestamp
        * @example 2025-10-18T10:30:00.000Z
@@ -2523,8 +2547,8 @@ export interface components {
        * @example 507f1f77bcf86cd799439011
        */
       transactionId?: string
-      /** @description The vault the browser captures the card into */
-      vault: components['schemas']['SdkVaultInfo']
+      /** @description What VGS Collect needs (on create) */
+      vault?: components['schemas']['SdkVaultInfo']
     }
     SdkPlanResponse: {
       /** @description Creation timestamp */
@@ -3234,7 +3258,7 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
-  ActivateSdkController_activate: {
+  activate: {
     parameters: {
       query?: never
       header?: never
@@ -3258,7 +3282,7 @@ export interface operations {
       }
     }
   }
-  AutoRechargeSdkController_getAutoRecharge: {
+  getAutoRecharge: {
     parameters: {
       query: {
         customerRef: string
@@ -3287,7 +3311,7 @@ export interface operations {
       }
     }
   }
-  AutoRechargeSdkController_putAutoRecharge: {
+  putAutoRecharge: {
     parameters: {
       query?: never
       header?: never
@@ -3318,7 +3342,7 @@ export interface operations {
       }
     }
   }
-  AutoRechargeSdkController_deleteAutoRecharge: {
+  deleteAutoRecharge: {
     parameters: {
       query: {
         customerRef: string
@@ -3347,7 +3371,7 @@ export interface operations {
       }
     }
   }
-  CheckoutSessionSdkController_createCheckoutSession: {
+  createCheckoutSession: {
     parameters: {
       query?: never
       header?: never
@@ -3378,7 +3402,7 @@ export interface operations {
       }
     }
   }
-  CreditActivitySdkController_getActivity: {
+  getActivity: {
     parameters: {
       query: {
         customerRef: string
@@ -3415,7 +3439,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_getCustomerByQuery: {
+  getCustomerByQuery: {
     parameters: {
       query?: {
         /** @description Customer reference identifier (use exactly one query parameter) */
@@ -3460,7 +3484,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_createCustomer: {
+  createCustomer: {
     parameters: {
       query?: never
       header?: never
@@ -3494,7 +3518,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_getCustomer: {
+  getCustomer: {
     parameters: {
       query?: never
       header?: never
@@ -3526,7 +3550,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_updateCustomer: {
+  updateCustomer: {
     parameters: {
       query?: never
       header?: never
@@ -3568,7 +3592,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_getCustomerBalance: {
+  getCustomerBalance: {
     parameters: {
       query?: never
       header?: never
@@ -3600,7 +3624,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_grantCredits: {
+  grantCredits: {
     parameters: {
       query?: never
       header?: {
@@ -3637,7 +3661,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_createCustomerSession: {
+  createCustomerSession: {
     parameters: {
       query?: never
       header?: never
@@ -3680,7 +3704,7 @@ export interface operations {
       }
     }
   }
-  CustomerSdkController_getCustomerSession: {
+  getCustomerSession: {
     parameters: {
       query?: never
       header?: never
@@ -3712,7 +3736,7 @@ export interface operations {
       }
     }
   }
-  LimitsSdkController_checkLimits: {
+  checkLimits: {
     parameters: {
       query?: never
       header?: never
@@ -3777,7 +3801,7 @@ export interface operations {
       }
     }
   }
-  MeterEventsSdkController_recordEvent: {
+  recordEvent: {
     parameters: {
       query?: never
       header?: never
@@ -3818,7 +3842,7 @@ export interface operations {
       }
     }
   }
-  MeterEventsSdkController_recordBulkEvents: {
+  recordBulkEvents: {
     parameters: {
       query?: never
       header?: never
@@ -3861,7 +3885,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_getPaymentIntents: {
+  getPaymentIntents: {
     parameters: {
       query?: {
         /** @description Maximum number of results */
@@ -3886,7 +3910,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_createPaymentIntent: {
+  createPaymentIntent: {
     parameters: {
       query?: never
       header: {
@@ -3923,7 +3947,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_captureGrant: {
+  captureGrant: {
     parameters: {
       query?: never
       header?: never
@@ -3945,7 +3969,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_confirm: {
+  confirm: {
     parameters: {
       query?: never
       header?: never
@@ -3971,7 +3995,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_attachBusinessDetails: {
+  attachBusinessDetails: {
     parameters: {
       query?: never
       header?: never
@@ -4012,7 +4036,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_processPaymentIntent: {
+  processPaymentIntent: {
     parameters: {
       query?: never
       header?: never
@@ -4056,7 +4080,7 @@ export interface operations {
       }
     }
   }
-  PaymentIntentSdkController_getPaymentIntent: {
+  getPaymentIntent: {
     parameters: {
       query?: never
       header?: never
@@ -4088,7 +4112,7 @@ export interface operations {
       }
     }
   }
-  PaymentMethodSdkController_getPaymentMethod: {
+  getPaymentMethod: {
     parameters: {
       query: {
         /** @description Customer reference (e.g. `customer_...`). */
@@ -4114,6 +4138,11 @@ export interface operations {
                 expMonth: number
                 /** @example 2030 */
                 expYear: number
+                /**
+                 * The saved card id, what `POST /v1/sdk/payment-intents/:id/confirm` takes as `paymentMethodId`. Absent on a card saved before cards carried an id.
+                 * @example spm_0123456789abcdef01234567
+                 */
+                id?: string
                 /** @enum {string} */
                 kind: 'card'
                 /** @example 4242 */
@@ -4126,6 +4155,55 @@ export interface operations {
                 kind: 'none'
               }
         }
+      }
+    }
+  }
+  removePaymentMethod: {
+    parameters: {
+      query: {
+        /** @description Customer reference (e.g. `customer_...`). */
+        customerRef: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The removed card, and whether auto-recharge now waits for a new card. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            autoRechargePaused: boolean
+            removed: {
+              /** @example visa */
+              brand: string
+              /** @example 12 */
+              expMonth: number
+              /** @example 2030 */
+              expYear: number
+              /** @example 0018 */
+              last4: string
+            }
+          }
+        }
+      }
+      /** @description The card on file was saved by the customer; only the customer can remove it */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No card on file */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -4149,7 +4227,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_listProducts: {
+  listProducts: {
     parameters: {
       query?: {
         /** @description Max results (1-100) */
@@ -4193,7 +4271,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_createProduct: {
+  createProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4224,7 +4302,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_getProduct: {
+  getProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4254,7 +4332,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_updateProduct: {
+  updateProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4288,7 +4366,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_deleteProduct: {
+  deleteProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4325,7 +4403,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_cloneProduct: {
+  cloneProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4359,7 +4437,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_configureMcpPlans: {
+  configureMcpPlans: {
     parameters: {
       query?: never
       header?: never
@@ -4400,7 +4478,7 @@ export interface operations {
       }
     }
   }
-  PlanSdkController_listPlans: {
+  listPlans: {
     parameters: {
       query?: {
         /** @description Max results (default 50) */
@@ -4441,7 +4519,7 @@ export interface operations {
       }
     }
   }
-  PlanSdkController_createPlan: {
+  createPlan: {
     parameters: {
       query?: never
       header?: never
@@ -4475,7 +4553,7 @@ export interface operations {
       }
     }
   }
-  PlanSdkController_getPlan: {
+  getPlan: {
     parameters: {
       query?: never
       header?: never
@@ -4507,7 +4585,7 @@ export interface operations {
       }
     }
   }
-  PlanSdkController_updatePlan: {
+  updatePlan: {
     parameters: {
       query?: never
       header?: never
@@ -4543,7 +4621,7 @@ export interface operations {
       }
     }
   }
-  PlanSdkController_deletePlan: {
+  deletePlan: {
     parameters: {
       query?: never
       header?: never
@@ -4577,7 +4655,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_bootstrapMcpProduct: {
+  bootstrapMcpProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4608,7 +4686,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_listPurchases: {
+  listPurchases: {
     parameters: {
       query?: {
         /** @description Filter by purchase status */
@@ -4647,7 +4725,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_getPurchase: {
+  getPurchase: {
     parameters: {
       query?: never
       header?: never
@@ -4677,7 +4755,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_cancelPurchase: {
+  cancelPurchase: {
     parameters: {
       query?: never
       header?: never
@@ -4714,7 +4792,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_reactivatePurchase: {
+  reactivatePurchase: {
     parameters: {
       query?: never
       header?: never
@@ -4754,7 +4832,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_getPurchasesForCustomer: {
+  getPurchasesForCustomer: {
     parameters: {
       query?: {
         /** @description Include free auto-enrollments (default true for customer-scoped views) */
@@ -4789,7 +4867,7 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_getPurchasesForProduct: {
+  getPurchasesForProduct: {
     parameters: {
       query?: never
       header?: never
@@ -4821,7 +4899,7 @@ export interface operations {
       }
     }
   }
-  UsageSdkController_recordUsage: {
+  recordUsage: {
     parameters: {
       query?: never
       header?: never
@@ -4852,7 +4930,7 @@ export interface operations {
       }
     }
   }
-  UsageSdkController_recordBulkUsage: {
+  recordBulkUsage: {
     parameters: {
       query?: never
       header?: never
@@ -4883,7 +4961,7 @@ export interface operations {
       }
     }
   }
-  UserInfoSdkController_getUserInfo: {
+  getUserInfo: {
     parameters: {
       query?: never
       header?: never
@@ -4921,7 +4999,7 @@ export interface operations {
       }
     }
   }
-  WebhookSdkController_getEventSchema: {
+  getEventSchema: {
     parameters: {
       query?: never
       header?: never
@@ -4940,7 +5018,7 @@ export interface operations {
       }
     }
   }
-  WebhookSdkController_listEventTypes: {
+  listEventTypes: {
     parameters: {
       query?: never
       header?: never

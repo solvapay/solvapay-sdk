@@ -142,28 +142,15 @@ describe('createMcpAppAdapter', () => {
     const result = await transport.createCardSetupGrant?.()
 
     expect(app.callServerTool).toHaveBeenCalledTimes(1)
-    expect(app.callServerTool).toHaveBeenCalledWith({ name: 'create_card_setup_grant', arguments: {} })
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'create_card_setup_grant',
+      arguments: {},
+    })
     expect(MCP_TOOL_NAMES.createCardSetupGrant).toBe('create_card_setup_grant')
     expect(result).toStrictEqual(grant)
   })
 
-  it('routes saveCard to save_card with the session and card ids, dropping an undefined returnUrl', async () => {
-    const saved = { status: 'processing' }
-    const app = createMockApp(() => ({ structuredContent: saved }))
-    const transport = createMcpAppAdapter(app)
-
-    const result = await transport.saveCard?.({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: undefined })
-
-    expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'save_card',
-      arguments: { sessionId: 'cs_sess_1', cardId: 'CRD1' },
-    })
-    expect(Object.keys(app.calls[0].args)).toStrictEqual(['sessionId', 'cardId'])
-    expect(MCP_TOOL_NAMES.saveCard).toBe('save_card')
-    expect(result).toStrictEqual(saved)
-  })
-
-  it('forwards returnUrl to save_card and returns the 3DS redirect', async () => {
+  it('routes saveCard to save_card with the session, card id and return URL', async () => {
     const saved = { status: 'requires_action', redirectUrl: 'https://acs.bank.test/3ds/setup' }
     const app = createMockApp(() => ({ structuredContent: saved }))
     const transport = createMcpAppAdapter(app)
@@ -177,6 +164,24 @@ describe('createMcpAppAdapter', () => {
     expect(app.callServerTool).toHaveBeenCalledWith({
       name: 'save_card',
       arguments: { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
+    })
+    expect(MCP_TOOL_NAMES.saveCard).toBe('save_card')
+    expect(result).toStrictEqual(saved)
+  })
+
+  it('routes the completion of a pending setup to save_card as { sessionId, completePendingSetup: true }', async () => {
+    const saved = { status: 'succeeded', paymentMethod: { id: 'spm_1' } }
+    const app = createMockApp(() => ({ structuredContent: saved }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.saveCard?.({
+      sessionId: 'cs_sess_1',
+      completePendingSetup: true,
+    })
+
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'save_card',
+      arguments: { sessionId: 'cs_sess_1', completePendingSetup: true },
     })
     expect(result).toStrictEqual(saved)
   })
@@ -205,7 +210,11 @@ describe('createMcpAppAdapter', () => {
     const app = createMockApp(() => ({ structuredContent: payment }))
     const transport = createMcpAppAdapter(app)
 
-    const result = await transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: undefined })
+    const result = await transport.confirmPayment?.({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: undefined,
+    })
 
     expect(app.callServerTool).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).toHaveBeenCalledWith({
@@ -235,7 +244,11 @@ describe('createMcpAppAdapter', () => {
 
     expect(app.callServerTool).toHaveBeenCalledWith({
       name: 'confirm_payment',
-      arguments: { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', returnUrl: 'https://app.example/return' },
+      arguments: {
+        paymentIntentId: 'pi_1',
+        paymentMethodId: 'pm_saved',
+        returnUrl: 'https://app.example/return',
+      },
     })
     expect(result).toStrictEqual(payment)
   })
@@ -250,9 +263,9 @@ describe('createMcpAppAdapter', () => {
     await expect(transport.createCaptureGrant?.({ paymentIntentId: 'pi_1' })).rejects.toThrow(
       'create_capture_grant: Capture grant limit reached',
     )
-    await expect(transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1' })).rejects.toThrow(
-      'confirm_payment: Capture grant limit reached',
-    )
+    await expect(
+      transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1' }),
+    ).rejects.toThrow('confirm_payment: Capture grant limit reached')
     expect(app.callServerTool).toHaveBeenCalledTimes(2)
   })
 

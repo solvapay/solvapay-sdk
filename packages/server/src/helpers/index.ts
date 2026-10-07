@@ -33,7 +33,8 @@ export {
 export type { CreatedPaymentIntent } from './payment'
 
 // Export card setup helpers (save a card without paying)
-export { createCardSetupGrantCore, saveCardCore } from './card-setup'
+export { createCardSetupGrantCore, saveCardCore, parseSaveCardBody } from './card-setup'
+export type { SaveCardBody } from './card-setup'
 
 // Export checkout helpers
 export { createCheckoutSessionCore, createCustomerSessionCore } from './checkout'

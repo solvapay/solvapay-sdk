@@ -22,25 +22,27 @@ const config: AutoRechargeConfig = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
-const autoRechargeMocks = vi.hoisted((): {
-  config: AutoRechargeConfig | null
-  loading: boolean
-  saving: boolean
-  disabling: boolean
-  error: Error | null
-  save: ReturnType<typeof vi.fn>
-  disable: ReturnType<typeof vi.fn>
-  refresh: ReturnType<typeof vi.fn>
-} => ({
-  config: null,
-  loading: false,
-  saving: false,
-  disabling: false,
-  error: null,
-  save: vi.fn(),
-  disable: vi.fn(),
-  refresh: vi.fn(),
-}))
+const autoRechargeMocks = vi.hoisted(
+  (): {
+    config: AutoRechargeConfig | null
+    loading: boolean
+    saving: boolean
+    disabling: boolean
+    error: Error | null
+    save: ReturnType<typeof vi.fn>
+    disable: ReturnType<typeof vi.fn>
+    refresh: ReturnType<typeof vi.fn>
+  } => ({
+    config: null,
+    loading: false,
+    saving: false,
+    disabling: false,
+    error: null,
+    save: vi.fn(),
+    disable: vi.fn(),
+    refresh: vi.fn(),
+  }),
+)
 
 const balanceMocks = vi.hoisted(() => ({
   creditsPerMinorUnit: 100,
@@ -106,10 +108,9 @@ vi.mock('../vault/CardFields', () => ({
     ) : null,
 }))
 
-function returnUrlFor(sessionId: string, cardId: string, base = window.location.href): string {
+function returnUrlFor(sessionId: string, base = window.location.href): string {
   const url = new URL(base)
   url.searchParams.set('solvapay_card_setup_session', sessionId)
-  url.searchParams.set('solvapay_card_setup_card', cardId)
   return url.toString()
 }
 
@@ -122,7 +123,8 @@ function stubAssign(): { assign: ReturnType<typeof vi.fn>; restore: () => void }
   })
   return {
     assign,
-    restore: () => Object.defineProperty(window, 'location', { configurable: true, value: original }),
+    restore: () =>
+      Object.defineProperty(window, 'location', { configurable: true, value: original }),
   }
 }
 
@@ -244,9 +246,7 @@ describe('AutoRecharge primitive', () => {
   it('shows balance threshold summary with natural phrasing', () => {
     renderAutoRecharge({ currency: 'SEK' })
     enableAutoRecharge()
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
   })
 
   it('shows plus applicable tax disclosure when auto-recharge is enabled', () => {
@@ -315,7 +315,8 @@ describe('AutoRecharge primitive', () => {
 
   it('shows disable button when config exists', () => {
     autoRechargeMocks.config = config
-    renderAutoRecharge({}, (
+    renderAutoRecharge(
+      {},
       <>
         <AutoRecharge.Header />
         <AutoRecharge.Body>
@@ -324,8 +325,8 @@ describe('AutoRecharge primitive', () => {
             <AutoRecharge.DisableButton />
           </AutoRecharge.Actions>
         </AutoRecharge.Body>
-      </>
-    ))
+      </>,
+    )
     expect(screen.getByRole('button', { name: 'Disable auto-recharge' })).toBeInTheDocument()
   })
 
@@ -456,9 +457,7 @@ describe('AutoRecharge primitive', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
   })
 
@@ -683,12 +682,14 @@ describe('AutoRecharge card setup confirmation (DEV-581)', () => {
       expect(screen.getByText(enCopy.autoRecharge.savedMessage)).toBeInTheDocument()
     })
     expect(cardSetupMocks.capture).toHaveBeenCalledTimes(1)
-    expect(cardSetupMocks.capture).toHaveBeenCalledWith(setupGrant('cs_sess_1', expect.any(Number) as never))
+    expect(cardSetupMocks.capture).toHaveBeenCalledWith(
+      setupGrant('cs_sess_1', expect.any(Number) as never),
+    )
     expect(cardSetupMocks.saveCard).toHaveBeenCalledTimes(1)
     expect(cardSetupMocks.saveCard).toHaveBeenCalledWith({
       sessionId: 'cs_sess_1',
       cardId: 'CRD_setup_1',
-      returnUrl: returnUrlFor('cs_sess_1', 'CRD_setup_1'),
+      returnUrl: returnUrlFor('cs_sess_1'),
     })
     expect(cardSetupMocks.capture.mock.invocationCallOrder[0]).toBeLessThan(
       cardSetupMocks.saveCard.mock.invocationCallOrder[0],
@@ -731,13 +732,37 @@ describe('AutoRecharge card setup confirmation (DEV-581)', () => {
     })
     expect(cardSetupMocks.createCardSetupGrant).toHaveBeenCalledTimes(2)
     expect(cardSetupMocks.capture).toHaveBeenCalledWith(
-      expect.objectContaining({ token: 'vgs-token-cs_sess_new', scope: { sessionId: 'cs_sess_new' } }),
+      expect.objectContaining({
+        token: 'vgs-token-cs_sess_new',
+        scope: { sessionId: 'cs_sess_new' },
+      }),
     )
     expect(cardSetupMocks.saveCard).toHaveBeenCalledWith({
       sessionId: 'cs_sess_new',
       cardId: 'CRD_setup_1',
-      returnUrl: returnUrlFor('cs_sess_new', 'CRD_setup_1'),
+      returnUrl: returnUrlFor('cs_sess_new'),
     })
+  })
+
+  it('refuses a grant scoped to a payment: no card fields, the auth error shown', async () => {
+    saveReturnsPendingSetup()
+    cardSetupMocks.createCardSetupGrant.mockReset().mockResolvedValue({
+      ...setupGrant('cs_sess_1'),
+      scope: { paymentIntentId: 'pi_1' },
+    })
+
+    renderAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.autoRecharge.setupAuthFailed)).toBeInTheDocument()
+    })
+    expect(cardSetupMocks.createCardSetupGrant).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('card-fields')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: enCopy.autoRecharge.setupSubmit })).toBeDisabled()
+    expect(cardSetupMocks.capture).not.toHaveBeenCalled()
+    expect(cardSetupMocks.saveCard).not.toHaveBeenCalled()
   })
 
   it('shows the card-capture copy and does not save when the vault rejects the card', async () => {
@@ -838,9 +863,9 @@ describe('AutoRecharge card setup outcomes', () => {
     expect(autoRechargeMocks.refresh).toHaveBeenCalledTimes(1)
     const pendingNotes = screen.getAllByText(enCopy.autoRecharge.setupAwaitingConfirmation)
     expect(pendingNotes.map(node => node.tagName)).toEqual(['P', 'P'])
-    expect(
-      document.querySelector('[data-solvapay-auto-recharge-setup-pending]')?.textContent,
-    ).toBe(enCopy.autoRecharge.setupAwaitingConfirmation)
+    expect(document.querySelector('[data-solvapay-auto-recharge-setup-pending]')?.textContent).toBe(
+      enCopy.autoRecharge.setupAwaitingConfirmation,
+    )
     expect(screen.queryByText(enCopy.autoRecharge.savedMessage)).not.toBeInTheDocument()
   })
 
@@ -875,7 +900,7 @@ describe('AutoRecharge card setup 3DS return', () => {
     window.history.replaceState(
       {},
       '',
-      `/billing?tab=credits&solvapay_card_setup_session=cs_sess_1&solvapay_card_setup_card=CRD_setup_1${extra}`,
+      `/billing?tab=credits&solvapay_card_setup_session=cs_sess_1${extra}`,
     )
   }
 
@@ -883,9 +908,8 @@ describe('AutoRecharge card setup 3DS return', () => {
     window.history.replaceState({}, '', '/')
   })
 
-  it('posts the same card again with a tagged returnUrl, strips the params, and reports saved', async () => {
-    arriveBack('&redirect_status=succeeded')
-    const expectedBase = `${window.location.origin}/billing?tab=credits`
+  it('completes the pending setup on the session, strips the params, and reports saved', async () => {
+    arriveBack('&redirect_status=succeeded&setup_intent=seti_1&setup_intent_client_secret=secret')
     autoRechargeMocks.config = { ...pendingConfig }
     autoRechargeMocks.refresh.mockImplementation(async () => {
       if (autoRechargeMocks.config) autoRechargeMocks.config.status = 'active'
@@ -899,8 +923,7 @@ describe('AutoRecharge card setup 3DS return', () => {
     expect(cardSetupMocks.saveCard).toHaveBeenCalledTimes(1)
     expect(cardSetupMocks.saveCard).toHaveBeenCalledWith({
       sessionId: 'cs_sess_1',
-      cardId: 'CRD_setup_1',
-      returnUrl: returnUrlFor('cs_sess_1', 'CRD_setup_1', expectedBase),
+      completePendingSetup: true,
     })
     expect(window.location.search).toBe('?tab=credits')
     expect(autoRechargeMocks.refresh).toHaveBeenCalledWith(true)

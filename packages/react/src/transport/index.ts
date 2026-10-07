@@ -1,5 +1,6 @@
 export type {
   SolvaPayTransport,
+  SaveCardParams,
   TransportBalanceResult,
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,

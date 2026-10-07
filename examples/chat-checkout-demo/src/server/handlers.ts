@@ -160,10 +160,10 @@ const HANDLERS: Record<string, Partial<Record<Method, Handler>>> = {
     POST: async (req, deps) => createCardSetupGrantCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/save-card': {
-    POST: async (req, deps) => {
-      const body = (await req.json()) as { sessionId: string; cardId: string }
-      return saveCardCore(req, body, { solvaPay: deps.solvaPay })
-    },
+    // The body is the captured card with its return URL, or the completion of
+    // a pending setup after 3DS; `saveCardCore` validates it.
+    POST: async (req, deps) =>
+      saveCardCore(req, (await req.json()) as Record<string, unknown>, { solvaPay: deps.solvaPay }),
   },
   '/api/create-checkout-session': {
     POST: async (req, deps) => {

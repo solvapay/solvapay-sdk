@@ -10,7 +10,11 @@ vi.mock('../src/helpers/customer', () => ({
 
 import { createSolvaPay } from '../src/factory'
 import { syncCustomerCore } from '../src/helpers/customer'
-import { createCardSetupGrantCore, saveCardCore } from '../src/helpers/card-setup'
+import {
+  createCardSetupGrantCore,
+  parseSaveCardBody,
+  saveCardCore,
+} from '../src/helpers/card-setup'
 import { createSolvaPayClient } from '../src/client'
 
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
@@ -41,7 +45,9 @@ describe('createCardSetupGrantCore', () => {
 
   it('opens a customer session for the authenticated customer and returns a grant on it', async () => {
     const solvaPay = {
-      createCustomerSession: vi.fn().mockResolvedValue({ sessionId: 'cs_sess_1', customerUrl: 'https://x/c' }),
+      createCustomerSession: vi
+        .fn()
+        .mockResolvedValue({ sessionId: 'cs_sess_1', customerUrl: 'https://x/c' }),
       createCustomerSessionCaptureGrant: vi.fn().mockResolvedValue(grant),
     }
     mockCreateSolvaPay.mockReturnValue(solvaPay as never)
@@ -54,7 +60,9 @@ describe('createCardSetupGrantCore', () => {
     expect(solvaPay.createCustomerSession).toHaveBeenCalledTimes(1)
     expect(solvaPay.createCustomerSession).toHaveBeenCalledWith({ customerRef: 'cus_ABC' })
     expect(solvaPay.createCustomerSessionCaptureGrant).toHaveBeenCalledTimes(1)
-    expect(solvaPay.createCustomerSessionCaptureGrant).toHaveBeenCalledWith({ sessionId: 'cs_sess_1' })
+    expect(solvaPay.createCustomerSessionCaptureGrant).toHaveBeenCalledWith({
+      sessionId: 'cs_sess_1',
+    })
   })
 
   it('returns the auth error without opening a session', async () => {
@@ -70,7 +78,9 @@ describe('createCardSetupGrantCore', () => {
 
   it('maps a backend failure to a route error', async () => {
     const solvaPay = {
-      createCustomerSession: vi.fn().mockResolvedValue({ sessionId: 'cs_sess_1', customerUrl: 'https://x/c' }),
+      createCustomerSession: vi
+        .fn()
+        .mockResolvedValue({ sessionId: 'cs_sess_1', customerUrl: 'https://x/c' }),
       createCustomerSessionCaptureGrant: vi.fn().mockRejectedValue(new Error('boom')),
     }
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -80,6 +90,65 @@ describe('createCardSetupGrantCore', () => {
     expect(result).toMatchObject({ status: 500 })
     expect((result as { error: string }).error).toMatch(/card setup/i)
     spy.mockRestore()
+  })
+})
+
+describe('parseSaveCardBody', () => {
+  it('accepts the captured card with its return URL and keeps billing details', () => {
+    expect(
+      parseSaveCardBody({
+        sessionId: 'cs_sess_1',
+        cardId: 'CRD1',
+        returnUrl: 'https://app.example/r',
+        billingDetails: { name: 'Ada' },
+        extra: 'dropped',
+      }),
+    ).toStrictEqual({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
+      billingDetails: { name: 'Ada' },
+    })
+  })
+
+  it('accepts the completion of a pending setup', () => {
+    expect(parseSaveCardBody({ sessionId: 'cs_sess_1', completePendingSetup: true })).toStrictEqual(
+      { sessionId: 'cs_sess_1', completePendingSetup: true },
+    )
+  })
+
+  it('refuses a body with neither or both shapes, a missing return URL, or a false flag', () => {
+    expect(parseSaveCardBody({ sessionId: 'cs_sess_1' })).toStrictEqual({
+      error: 'Provide exactly one of cardId or completePendingSetup',
+      status: 400,
+    })
+    expect(
+      parseSaveCardBody({ sessionId: 'cs_sess_1', cardId: 'CRD1', completePendingSetup: true }),
+    ).toStrictEqual({ error: 'Provide exactly one of cardId or completePendingSetup', status: 400 })
+    expect(parseSaveCardBody({ sessionId: 'cs_sess_1', cardId: 'CRD1' })).toStrictEqual({
+      error: 'returnUrl is required',
+      status: 400,
+    })
+    expect(
+      parseSaveCardBody({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: '' }),
+    ).toStrictEqual({ error: 'returnUrl is required', status: 400 })
+    expect(parseSaveCardBody({ sessionId: 'cs_sess_1', cardId: '' })).toStrictEqual({
+      error: 'cardId is required',
+      status: 400,
+    })
+    expect(
+      parseSaveCardBody({ sessionId: 'cs_sess_1', completePendingSetup: false }),
+    ).toStrictEqual({ error: 'completePendingSetup must be true', status: 400 })
+    expect(parseSaveCardBody({ cardId: 'CRD1', returnUrl: 'https://app.example/r' })).toStrictEqual(
+      {
+        error: 'sessionId is required',
+        status: 400,
+      },
+    )
+    expect(parseSaveCardBody(undefined)).toStrictEqual({
+      error: 'sessionId is required',
+      status: 400,
+    })
   })
 })
 
@@ -100,7 +169,7 @@ describe('saveCardCore', () => {
     }
   }
 
-  it('saves the captured card on the caller’s own session', async () => {
+  it('saves the captured card on the caller’s own session with its return URL and billing details', async () => {
     const solvaPay = solvaPayFor('cus_ABC')
 
     const result = await saveCardCore(
@@ -108,6 +177,7 @@ describe('saveCardCore', () => {
       {
         sessionId: 'cs_sess_1',
         cardId: 'CRD1',
+        returnUrl: 'https://app.example/r',
         billingDetails: { name: 'Ada Lovelace', address: { country: 'SE', postalCode: '11122' } },
       },
       { solvaPay: solvaPay as never },
@@ -119,11 +189,12 @@ describe('saveCardCore', () => {
     expect(solvaPay.saveCustomerSessionCard).toHaveBeenCalledWith({
       sessionId: 'cs_sess_1',
       cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
       billingDetails: { name: 'Ada Lovelace', address: { country: 'SE', postalCode: '11122' } },
     })
   })
 
-  it('forwards returnUrl and passes a requires_action outcome through', async () => {
+  it('passes a requires_action outcome through', async () => {
     const solvaPay = solvaPayFor('cus_ABC')
     solvaPay.saveCustomerSessionCard.mockResolvedValue({
       status: 'requires_action',
@@ -136,11 +207,25 @@ describe('saveCardCore', () => {
       { solvaPay: solvaPay as never },
     )
 
-    expect(result).toStrictEqual({ status: 'requires_action', redirectUrl: 'https://acs.bank.test/3ds/setup' })
+    expect(result).toStrictEqual({
+      status: 'requires_action',
+      redirectUrl: 'https://acs.bank.test/3ds/setup',
+    })
+  })
+
+  it('completes a pending setup on the caller’s own session', async () => {
+    const solvaPay = solvaPayFor('cus_ABC')
+
+    const result = await saveCardCore(
+      request(),
+      { sessionId: 'cs_sess_1', completePendingSetup: true },
+      { solvaPay: solvaPay as never },
+    )
+
+    expect(result).toStrictEqual(savedCard)
     expect(solvaPay.saveCustomerSessionCard).toHaveBeenCalledWith({
       sessionId: 'cs_sess_1',
-      cardId: 'CRD1',
-      returnUrl: 'https://app.example/r',
+      completePendingSetup: true,
     })
   })
 
@@ -149,52 +234,66 @@ describe('saveCardCore', () => {
     solvaPay.saveCustomerSessionCard.mockResolvedValue({ status: 'processing' })
     const result = await saveCardCore(
       request(),
-      { sessionId: 'cs_sess_1', cardId: 'CRD1' },
+      { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
       { solvaPay: solvaPay as never },
     )
     expect(result).toStrictEqual({ status: 'processing' })
   })
 
-  it('rejects an empty returnUrl with 400 before any backend call', async () => {
+  it('omits billingDetails when none are given', async () => {
     const solvaPay = solvaPayFor('cus_ABC')
+    await saveCardCore(
+      request(),
+      { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
+      { solvaPay: solvaPay as never },
+    )
+    expect(solvaPay.saveCustomerSessionCard).toHaveBeenCalledWith({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
+    })
+  })
+
+  it('refuses a session that belongs to another customer, for a card and for a completion', async () => {
+    const solvaPay = solvaPayFor('cus_OTHER')
+
     expect(
       await saveCardCore(
         request(),
-        { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: '' },
+        { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
         { solvaPay: solvaPay as never },
       ),
-    ).toStrictEqual({ error: 'returnUrl must be a non-empty string', status: 400 })
-    expect(solvaPay.getCustomerSession).not.toHaveBeenCalled()
-  })
-
-  it('omits billingDetails when none are given', async () => {
-    const solvaPay = solvaPayFor('cus_ABC')
-    await saveCardCore(request(), { sessionId: 'cs_sess_1', cardId: 'CRD1' }, { solvaPay: solvaPay as never })
-    expect(solvaPay.saveCustomerSessionCard).toHaveBeenCalledWith({ sessionId: 'cs_sess_1', cardId: 'CRD1' })
-  })
-
-  it('refuses a session that belongs to another customer', async () => {
-    const solvaPay = solvaPayFor('cus_OTHER')
-
-    const result = await saveCardCore(
-      request(),
-      { sessionId: 'cs_sess_1', cardId: 'CRD1' },
-      { solvaPay: solvaPay as never },
-    )
-
-    expect(result).toStrictEqual({ error: 'Customer session not found', status: 404 })
+    ).toStrictEqual({ error: 'Customer session not found', status: 404 })
+    expect(
+      await saveCardCore(
+        request(),
+        { sessionId: 'cs_sess_1', completePendingSetup: true },
+        { solvaPay: solvaPay as never },
+      ),
+    ).toStrictEqual({ error: 'Customer session not found', status: 404 })
     expect(solvaPay.saveCustomerSessionCard).not.toHaveBeenCalled()
   })
 
-  it('rejects a missing sessionId or cardId with 400 before any backend call', async () => {
+  it('answers a malformed body with 400 before any backend call', async () => {
     const solvaPay = solvaPayFor('cus_ABC')
 
     expect(
-      await saveCardCore(request(), { sessionId: '', cardId: 'CRD1' }, { solvaPay: solvaPay as never }),
+      await saveCardCore(
+        request(),
+        { sessionId: '', cardId: 'CRD1' },
+        { solvaPay: solvaPay as never },
+      ),
     ).toStrictEqual({ error: 'sessionId is required', status: 400 })
     expect(
-      await saveCardCore(request(), { sessionId: 'cs_sess_1', cardId: '' }, { solvaPay: solvaPay as never }),
-    ).toStrictEqual({ error: 'cardId is required', status: 400 })
+      await saveCardCore(
+        request(),
+        { sessionId: 'cs_sess_1', cardId: 'CRD1' },
+        { solvaPay: solvaPay as never },
+      ),
+    ).toStrictEqual({ error: 'returnUrl is required', status: 400 })
+    expect(
+      await saveCardCore(request(), { sessionId: 'cs_sess_1' }, { solvaPay: solvaPay as never }),
+    ).toStrictEqual({ error: 'Provide exactly one of cardId or completePendingSetup', status: 400 })
     expect(mockSyncCustomer).not.toHaveBeenCalled()
     expect(solvaPay.getCustomerSession).not.toHaveBeenCalled()
   })
@@ -244,6 +343,23 @@ describe('createSolvaPayClient — card setup routes', () => {
       billingDetails: { name: 'Ada Lovelace' },
       returnUrl: 'https://app.example/r',
     })
+  })
+
+  it('POSTs the completion of a pending setup to /v1/customer-sessions/:sessionId/payment-methods', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(savedCard), { status: 200 }))
+    const client = createSolvaPayClient({ apiKey: 'sk_test_123', apiBaseUrl: baseUrl })
+
+    const result = await client.saveCustomerSessionCard!({
+      sessionId: 'cs_sess_1',
+      completePendingSetup: true,
+    })
+
+    expect(result).toStrictEqual(savedCard)
+    const [url, init] = fetchSpy.mock.calls[0]
+    expect(url).toBe(`${baseUrl}/v1/customer-sessions/cs_sess_1/payment-methods`)
+    expect(JSON.parse(init!.body as string)).toStrictEqual({ completePendingSetup: true })
   })
 
   it('GETs the customer session for the owner check', async () => {

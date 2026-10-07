@@ -212,10 +212,7 @@ export type { FormatPriceOptions } from './utils/format'
 export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
 export { confirmVaultPayment } from './utils/confirmPayment'
-export type {
-  ConfirmVaultPaymentInput,
-  ConfirmVaultPaymentResult,
-} from './utils/confirmPayment'
+export type { ConfirmVaultPaymentInput, ConfirmVaultPaymentResult } from './utils/confirmPayment'
 export { readPaymentIntentId, stripPaymentIntentParams } from './primitives/paymentIntentReturn'
 export * from './vault'
 
@@ -224,6 +221,7 @@ export * from './vault'
 export { createHttpTransport, DEFAULT_ROUTES, UnsupportedTransportMethodError } from './transport'
 export type {
   SolvaPayTransport,
+  SaveCardParams,
   TransportBalanceResult,
   TransportCheckoutSessionResult,
   TransportCustomerSessionResult,

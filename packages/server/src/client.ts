@@ -666,11 +666,17 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          cardId: params.cardId,
-          ...(params.billingDetails !== undefined && { billingDetails: params.billingDetails }),
-          ...(params.returnUrl !== undefined && { returnUrl: params.returnUrl }),
-        }),
+        body: JSON.stringify(
+          'completePendingSetup' in params
+            ? { completePendingSetup: true }
+            : {
+                cardId: params.cardId,
+                returnUrl: params.returnUrl,
+                ...(params.billingDetails !== undefined && {
+                  billingDetails: params.billingDetails,
+                }),
+              },
+        ),
       })
       if (!res.ok) {
         await throwApiError('Save card', res)

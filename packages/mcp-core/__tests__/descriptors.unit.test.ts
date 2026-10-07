@@ -77,8 +77,7 @@ function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
       sessionId: 'csess_test',
       customerUrl: 'https://customer.solvapay.com/portal?session=csess_test',
     }),
-    activatePlan:
-      overrides.activatePlan ?? vi.fn().mockResolvedValue({ status: 'activated' }),
+    activatePlan: overrides.activatePlan ?? vi.fn().mockResolvedValue({ status: 'activated' }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -137,9 +136,9 @@ describe('buildSolvaPayDescriptors', () => {
     expect(activate).toBeTruthy()
     expect((activate!.meta as { ui?: { resourceUri?: string } }).ui?.resourceUri).toBeUndefined()
     expect((activate!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
-    expect((activate!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility).not.toEqual(
-      ['app'],
-    )
+    expect(
+      (activate!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility,
+    ).not.toEqual(['app'])
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
     const uiOnlyTools = [
@@ -276,9 +275,9 @@ describe('buildSolvaPayDescriptors', () => {
     expect(dumped).not.toContain('auto-recharge')
     expect(viewer!.inputSchema.view.description).not.toMatch(/auto-recharge/)
     expect(viewer!.description).not.toMatch(/auto-recharge/)
-    expect(z.object({ view: viewer!.inputSchema.view }).safeParse({ view: 'checkout' }).success).toBe(
-      true,
-    )
+    expect(
+      z.object({ view: viewer!.inputSchema.view }).safeParse({ view: 'checkout' }).success,
+    ).toBe(true)
     expect(
       z.object({ view: viewer!.inputSchema.view }).safeParse({ view: 'auto-recharge' }).success,
     ).toBe(true)
@@ -698,9 +697,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
               status: 404,
             })
           }),
-          getProduct: vi
-            .fn()
-            .mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
+          getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
           listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
         } as unknown as SolvaPayClient,
       }),
@@ -765,17 +762,17 @@ describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping'
   }
 
   it('account stamps a fresh UUID per invocation', async () => {
-      const { tools } = buildBundle()
-      const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const { tools } = buildBundle()
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)!
 
-      const first = await tool.handler({ view: 'checkout' }, {})
-      const second = await tool.handler({ view: 'account' }, {})
+    const first = await tool.handler({ view: 'checkout' }, {})
+    const second = await tool.handler({ view: 'account' }, {})
 
-      const firstId = metaKey(first)
-      const secondId = metaKey(second)
-      expect(firstId).toMatch(UUID_RE)
-      expect(secondId).toMatch(UUID_RE)
-      expect(firstId).not.toBe(secondId)
+    const firstId = metaKey(first)
+    const secondId = metaKey(second)
+    expect(firstId).toMatch(UUID_RE)
+    expect(secondId).toMatch(UUID_RE)
+    expect(firstId).not.toBe(secondId)
   })
 
   it("preserves widgetSessionId when mode: 'text' strips _meta.ui", async () => {
@@ -1014,7 +1011,10 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
   }
 
   function build(
-    options: Pick<Parameters<typeof buildSolvaPayDescriptors>[0], 'onToolCall' | 'onToolResult'> = {},
+    options: Pick<
+      Parameters<typeof buildSolvaPayDescriptors>[0],
+      'onToolCall' | 'onToolResult'
+    > = {},
   ) {
     const solvaPay = makeSolvaPay()
     const { tools } = buildSolvaPayDescriptors({
@@ -1071,12 +1071,27 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     )
     expect(confirmTool.annotations).toStrictEqual({ openWorldHint: true, destructiveHint: true })
     expect(confirmTool.meta).toStrictEqual(uiMeta)
-    expect(Object.keys(confirmTool.inputSchema)).toStrictEqual(['paymentIntentId', 'cardId', 'paymentMethodId', 'returnUrl'])
+    expect(Object.keys(confirmTool.inputSchema)).toStrictEqual([
+      'paymentIntentId',
+      'cardId',
+      'paymentMethodId',
+      'returnUrl',
+    ])
     const schema = z.object(confirmTool.inputSchema)
     expect(schema.parse({ paymentIntentId: 'pi_1' })).toStrictEqual({ paymentIntentId: 'pi_1' })
     expect(
-      schema.parse({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_1', returnUrl: 'https://x/r' }),
-    ).toStrictEqual({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_1', returnUrl: 'https://x/r' })
+      schema.parse({
+        paymentIntentId: 'pi_1',
+        cardId: 'CRD1',
+        paymentMethodId: 'pm_1',
+        returnUrl: 'https://x/r',
+      }),
+    ).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      paymentMethodId: 'pm_1',
+      returnUrl: 'https://x/r',
+    })
     expect(() => schema.parse({ cardId: 'CRD1' })).toThrow()
     expect(() => schema.parse({ paymentIntentId: 'pi_1', cardId: 1 })).toThrow()
   })
@@ -1111,7 +1126,11 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
       structuredContent: grant,
     })
     expect(onToolCall).toHaveBeenCalledTimes(1)
-    expect(onToolCall).toHaveBeenCalledWith('create_capture_grant', { paymentIntentId: 'pi_1' }, authed)
+    expect(onToolCall).toHaveBeenCalledWith(
+      'create_capture_grant',
+      { paymentIntentId: 'pi_1' },
+      authed,
+    )
     expect(onToolResult).toHaveBeenCalledTimes(1)
     expect(onToolResult.mock.calls[0][0]).toBe('create_capture_grant')
     expect(onToolResult.mock.calls[0][1]).toStrictEqual(result)
@@ -1143,7 +1162,11 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(result).toStrictEqual({
       isError: true,
       content: [{ type: 'text', text: 'grant limit reached' }],
-      structuredContent: { error: 'grant limit reached', status: 500, details: 'grant limit reached' },
+      structuredContent: {
+        error: 'grant limit reached',
+        status: 500,
+        details: 'grant limit reached',
+      },
     })
   })
 
@@ -1191,7 +1214,10 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(requiresAction)
     const { confirmTool } = build()
 
-    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved' }, authed)
+    const result = await confirmTool.handler(
+      { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved' },
+      authed,
+    )
 
     expect(coreSpy.mock.calls[0][1]).toStrictEqual({
       paymentIntentId: 'pi_1',
@@ -1217,8 +1243,12 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
         details: 'Pass paymentIntentId as a non-empty string.',
       },
     }
-    expect(await confirmTool.handler({ paymentIntentId: 42, cardId: 'CRD1' }, authed)).toStrictEqual(expected)
-    expect(await confirmTool.handler({ paymentIntentId: '', cardId: 'CRD1' }, authed)).toStrictEqual(expected)
+    expect(
+      await confirmTool.handler({ paymentIntentId: 42, cardId: 'CRD1' }, authed),
+    ).toStrictEqual(expected)
+    expect(
+      await confirmTool.handler({ paymentIntentId: '', cardId: 'CRD1' }, authed),
+    ).toStrictEqual(expected)
     expect(await confirmTool.handler({ cardId: 'CRD1' }, authed)).toStrictEqual(expected)
     expect(coreSpy).not.toHaveBeenCalled()
   })
@@ -1235,21 +1265,31 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
         details: `Omit ${key} or pass it as a non-empty string.`,
       },
     })
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 7 }, authed)).toStrictEqual(expected('cardId'))
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: '' }, authed)).toStrictEqual(expected('cardId'))
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 7 }, authed)).toStrictEqual(
-      expected('paymentMethodId'),
-    )
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', returnUrl: null }, authed)).toStrictEqual(
-      expected('returnUrl'),
-    )
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: '' }, authed)).toStrictEqual(
-      expected('returnUrl'),
-    )
-    // cardId is checked before paymentMethodId and returnUrl.
-    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 7, paymentMethodId: 7, returnUrl: null }, authed)).toStrictEqual(
+    expect(await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 7 }, authed)).toStrictEqual(
       expected('cardId'),
     )
+    expect(
+      await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: '' }, authed),
+    ).toStrictEqual(expected('cardId'))
+    expect(
+      await confirmTool.handler({ paymentIntentId: 'pi_1', paymentMethodId: 7 }, authed),
+    ).toStrictEqual(expected('paymentMethodId'))
+    expect(
+      await confirmTool.handler(
+        { paymentIntentId: 'pi_1', paymentMethodId: 'pm_saved', returnUrl: null },
+        authed,
+      ),
+    ).toStrictEqual(expected('returnUrl'))
+    expect(
+      await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: '' }, authed),
+    ).toStrictEqual(expected('returnUrl'))
+    // cardId is checked before paymentMethodId and returnUrl.
+    expect(
+      await confirmTool.handler(
+        { paymentIntentId: 'pi_1', cardId: 7, paymentMethodId: 7, returnUrl: null },
+        authed,
+      ),
+    ).toStrictEqual(expected('cardId'))
     expect(coreSpy).not.toHaveBeenCalled()
   })
 
@@ -1279,7 +1319,10 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
       status: 400,
     })
     const { confirmTool } = build()
-    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_saved' }, authed)
+    const result = await confirmTool.handler(
+      { paymentIntentId: 'pi_1', cardId: 'CRD1', paymentMethodId: 'pm_saved' },
+      authed,
+    )
     expect(coreSpy.mock.calls[0][1]).toStrictEqual({
       paymentIntentId: 'pi_1',
       cardId: 'CRD1',
@@ -1289,7 +1332,10 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(result).toStrictEqual({
       isError: true,
       content: [{ type: 'text', text: 'Provide either cardId or paymentMethodId, not both' }],
-      structuredContent: { error: 'Provide either cardId or paymentMethodId, not both', status: 400 },
+      structuredContent: {
+        error: 'Provide either cardId or paymentMethodId, not both',
+        status: 400,
+      },
     })
   })
 
@@ -1305,7 +1351,11 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(result).toStrictEqual({
       isError: true,
       content: [{ type: 'text', text: 'card_declined' }],
-      structuredContent: { error: 'Payment confirmation failed', status: 402, details: 'card_declined' },
+      structuredContent: {
+        error: 'Payment confirmation failed',
+        status: 402,
+        details: 'card_declined',
+      },
     })
     expect(onToolResult).toHaveBeenCalledTimes(1)
     expect(onToolResult.mock.calls[0][0]).toBe('confirm_payment')
@@ -1451,15 +1501,24 @@ describe('create_card_setup_grant / save_card descriptors (card setup without a 
     expect(saveTool.meta).toStrictEqual(uiMeta)
     expect(saveTool.description).toBe(
       UI_ONLY_PREFIX +
-        'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId) on its customer session (sessionId). Returns status succeeded | requires_action (with redirectUrl for 3DS; post the same cardId again after the return) | processing.',
+        'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId, with the returnUrl the payer comes back to after 3DS) on its customer session (sessionId), or complete the setup the payer just authenticated (completePendingSetup: true). Exactly one of cardId or completePendingSetup. Returns status succeeded | requires_action (with redirectUrl for 3DS) | processing.',
     )
-    expect(Object.keys(saveTool.inputSchema)).toStrictEqual(['sessionId', 'cardId', 'returnUrl'])
+    expect(Object.keys(saveTool.inputSchema)).toStrictEqual([
+      'sessionId',
+      'cardId',
+      'returnUrl',
+      'completePendingSetup',
+    ])
     const schema = z.object(saveTool.inputSchema)
-    expect(schema.parse({ sessionId: 'cs_sess_1', cardId: 'CRD1' })).toStrictEqual({
+    expect(
+      schema.parse({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' }),
+    ).toStrictEqual({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' })
+    expect(schema.parse({ sessionId: 'cs_sess_1', completePendingSetup: true })).toStrictEqual({
       sessionId: 'cs_sess_1',
-      cardId: 'CRD1',
+      completePendingSetup: true,
     })
-    expect(() => schema.parse({ sessionId: 'cs_sess_1' })).toThrow()
+    expect(() => schema.parse({ cardId: 'CRD1' })).toThrow()
+    expect(() => schema.parse({ sessionId: 'cs_sess_1', completePendingSetup: false })).toThrow()
   })
 
   it('create_card_setup_grant posts as the authenticated customer and returns the session grant', async () => {
@@ -1488,16 +1547,23 @@ describe('create_card_setup_grant / save_card descriptors (card setup without a 
     expect(coreSpy).not.toHaveBeenCalled()
   })
 
-  it('save_card forwards the session and card ids and returns the saved card', async () => {
+  it('save_card forwards the captured card with its return URL and returns the saved card', async () => {
     const coreSpy = (await spyCore('saveCardCore')).mockResolvedValue(saved as never)
     const { solvaPay, saveTool } = build()
 
-    const result = await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 'CRD1' }, authed)
+    const result = await saveTool.handler(
+      { sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: 'https://app.example/r' },
+      authed,
+    )
 
     expect(coreSpy).toHaveBeenCalledTimes(1)
     const [request, body, options] = coreSpy.mock.calls[0]
     expect(request.method).toBe('POST')
-    expect(body).toStrictEqual({ sessionId: 'cs_sess_1', cardId: 'CRD1' })
+    expect(body).toStrictEqual({
+      sessionId: 'cs_sess_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
+    })
     expect(options).toStrictEqual({ solvaPay })
     expect(result).toStrictEqual({
       content: [{ type: 'text', text: JSON.stringify(saved) }],
@@ -1505,9 +1571,9 @@ describe('create_card_setup_grant / save_card descriptors (card setup without a 
     })
   })
 
-  it('save_card forwards returnUrl and returns a requires_action outcome', async () => {
+  it('save_card returns a requires_action outcome with its redirect', async () => {
     const outcome = { status: 'requires_action', redirectUrl: 'https://acs.bank.test/3ds/setup' }
-    const coreSpy = (await spyCore('saveCardCore')).mockResolvedValue(outcome as never)
+    ;(await spyCore('saveCardCore')).mockResolvedValue(outcome as never)
     const { saveTool } = build()
 
     const result = await saveTool.handler(
@@ -1515,49 +1581,75 @@ describe('create_card_setup_grant / save_card descriptors (card setup without a 
       authed,
     )
 
-    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
-      sessionId: 'cs_sess_1',
-      cardId: 'CRD1',
-      returnUrl: 'https://app.example/r',
-    })
     expect(result).toStrictEqual({
       content: [{ type: 'text', text: JSON.stringify(outcome) }],
       structuredContent: outcome,
     })
   })
 
-  it('save_card rejects a missing or non-string id with 400 without calling the core helper', async () => {
+  it('save_card completes a pending setup with { sessionId, completePendingSetup: true }', async () => {
+    const coreSpy = (await spyCore('saveCardCore')).mockResolvedValue(saved as never)
+    const { saveTool } = build()
+
+    const result = await saveTool.handler(
+      { sessionId: 'cs_sess_1', completePendingSetup: true },
+      authed,
+    )
+
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      sessionId: 'cs_sess_1',
+      completePendingSetup: true,
+    })
+    expect(result).toStrictEqual({
+      content: [{ type: 'text', text: JSON.stringify(saved) }],
+      structuredContent: saved,
+    })
+  })
+
+  it('save_card rejects a malformed body with 400 without calling the core helper', async () => {
     const coreSpy = await spyCore('saveCardCore')
     const { saveTool } = build()
-    expect(await saveTool.handler({ cardId: 'CRD1' }, authed)).toStrictEqual({
+    const details =
+      'Pass sessionId with either cardId and returnUrl (the captured card) or completePendingSetup: true (the payer is back from 3DS).'
+    const refused = (error: string) => ({
       isError: true,
-      content: [{ type: 'text', text: 'Pass sessionId as a non-empty string.' }],
-      structuredContent: {
-        error: 'save_card requires sessionId',
-        status: 400,
-        details: 'Pass sessionId as a non-empty string.',
-      },
+      content: [{ type: 'text', text: details }],
+      structuredContent: { error, status: 400, details },
     })
     expect(
-      await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 'CRD1', returnUrl: '' }, authed),
-    ).toStrictEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Omit returnUrl or pass it as a non-empty string.' }],
-      structuredContent: {
-        error: 'save_card returnUrl must be a non-empty string',
-        status: 400,
-        details: 'Omit returnUrl or pass it as a non-empty string.',
-      },
-    })
-    expect(await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 7 }, authed)).toStrictEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Pass cardId as a non-empty string.' }],
-      structuredContent: {
-        error: 'save_card requires cardId',
-        status: 400,
-        details: 'Pass cardId as a non-empty string.',
-      },
-    })
+      await saveTool.handler({ cardId: 'CRD1', returnUrl: 'https://app.example/r' }, authed),
+    ).toStrictEqual(refused('save_card: sessionId is required'))
+    expect(
+      await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 'CRD1' }, authed),
+    ).toStrictEqual(refused('save_card: returnUrl is required'))
+    expect(await saveTool.handler({ sessionId: 'cs_sess_1' }, authed)).toStrictEqual(
+      refused('save_card: Provide exactly one of cardId or completePendingSetup'),
+    )
+    expect(
+      await saveTool.handler(
+        {
+          sessionId: 'cs_sess_1',
+          cardId: 'CRD1',
+          returnUrl: 'https://app.example/r',
+          completePendingSetup: true,
+        },
+        authed,
+      ),
+    ).toStrictEqual(refused('save_card: Provide exactly one of cardId or completePendingSetup'))
+    expect(await saveTool.handler({ sessionId: 'cs_sess_1', cardId: 7 }, authed)).toStrictEqual(
+      refused('save_card: cardId is required'),
+    )
+    expect(coreSpy).not.toHaveBeenCalled()
+  })
+
+  it('save_card refuses unauthenticated callers before calling the core helper', async () => {
+    const coreSpy = await spyCore('saveCardCore')
+    const { saveTool } = build()
+    const result = await saveTool.handler(
+      { sessionId: 'cs_sess_1', completePendingSetup: true },
+      {},
+    )
+    expect(result).toMatchObject({ isError: true, structuredContent: { status: 401 } })
     expect(coreSpy).not.toHaveBeenCalled()
   })
 })

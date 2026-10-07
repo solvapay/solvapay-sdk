@@ -79,8 +79,10 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
     windowDays: 30,
   }
 
+  // The last call of the free allowance: `approaching-limit` is the kind
+  // `NudgeSpec` defines for it (its default CTA opens the checkout).
   const previewNudge = {
-    kind: 'upgrade' as const,
+    kind: 'approaching-limit' as const,
     message:
       `Last free preview for this period — it is shared across both preview tools. ` +
       `\`get_market_quote\` has the full quote; call \`${VIEWER_TOOL_NAME}\` with ` +

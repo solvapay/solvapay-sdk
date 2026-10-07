@@ -35,7 +35,6 @@ import {
   buildCardSetupReturnUrl,
   readCardSetupReturn,
   stripCardSetupReturnParams,
-  withoutCardSetupReturnParams,
 } from './cardSetupReturn'
 import { interpolate } from '../i18n/interpolate'
 import { Spinner } from '../components/Spinner'
@@ -317,10 +316,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const savedSummaryLine = useMemo(() => {
     if (!autoRecharge.config?.enabled) return null
-    return buildSummaryLine(
-      configToForm(autoRecharge.config, currency),
-      currency,
-    )
+    return buildSummaryLine(configToForm(autoRecharge.config, currency), currency)
   }, [autoRecharge.config, currency])
 
   const save = useCallback(async () => {
@@ -392,8 +388,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
   }, [autoRecharge, copy.autoRecharge])
 
   // 3DS return for card setup: `CardSetup` tagged `returnUrl` with the
-  // session and card id. Post the same card again to finish the pending
-  // setup, then re-read the config.
+  // customer session. Complete the setup the session keeps, then re-read
+  // the config.
   const transport = useTransport()
   const setupReturnStarted = useRef(false)
   useEffect(() => {
@@ -401,20 +397,15 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     const resume = readCardSetupReturn(window.location.search)
     if (!resume) return
     setupReturnStarted.current = true
-    const returnUrl = withoutCardSetupReturnParams(window.location.href)
     stripCardSetupReturnParams()
-    if (!transport.saveCard) {
-      setStatusMessage(copy.autoRecharge.setupAuthFailed)
-      return
-    }
     const saveCard = transport.saveCard
     void (async () => {
+      if (!saveCard) {
+        setStatusMessage(copy.autoRecharge.setupAuthFailed)
+        return
+      }
       try {
-        const result = await saveCard({
-          sessionId: resume.sessionId,
-          cardId: resume.cardId,
-          returnUrl: buildCardSetupReturnUrl(returnUrl, resume),
-        })
+        const result = await saveCard({ sessionId: resume.sessionId, completePendingSetup: true })
         if (result.status === 'succeeded') {
           // The form may not reflect the config yet on a fresh page load, so
           // report the activation outcome directly.
@@ -423,7 +414,9 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
             getStatus: () => latestConfigRef.current?.status,
           })
           setStatusMessage(
-            activated ? copy.autoRecharge.savedMessage : copy.autoRecharge.setupAwaitingConfirmation,
+            activated
+              ? copy.autoRecharge.savedMessage
+              : copy.autoRecharge.setupAwaitingConfirmation,
           )
         } else if (result.status === 'processing') {
           await pendingSetup()
@@ -566,12 +559,7 @@ const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function
   forwardedRef,
 ) {
   return (
-    <section
-      ref={forwardedRef}
-      className={className}
-      data-solvapay-auto-recharge-card=""
-      {...rest}
-    >
+    <section ref={forwardedRef} className={className} data-solvapay-auto-recharge-card="" {...rest}>
       {children}
     </section>
   )
@@ -972,7 +960,11 @@ const Setup = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
         {...rest}
       >
         {children ?? (
-          <CardSetup setup={ctx.setup} onComplete={ctx.completeSetup} onPending={ctx.pendingSetup} />
+          <CardSetup
+            setup={ctx.setup}
+            onComplete={ctx.completeSetup}
+            onPending={ctx.pendingSetup}
+          />
         )}
       </div>
     )
@@ -1195,7 +1187,9 @@ const MaxMonthlySpendField = forwardRef<
           {...rest}
         />
       </span>
-      <p data-solvapay-auto-recharge-max-spend-helper="">{copy.autoRecharge.maxMonthlySpendHelper}</p>
+      <p data-solvapay-auto-recharge-max-spend-helper="">
+        {copy.autoRecharge.maxMonthlySpendHelper}
+      </p>
     </section>
   )
 })
@@ -1542,8 +1536,14 @@ function CardSetup({ onComplete, onPending }: CardSetupProps) {
     createGrant()
       .then(next => {
         if (cancelled) return
+        const sessionId = sessionIdOf(next)
+        if (!sessionId) {
+          // A grant not scoped to a session cannot save a card here.
+          setError(copy.autoRecharge.setupAuthFailed)
+          return
+        }
         setGrant(next)
-        setFieldsKey(prev => prev ?? sessionIdOf(next))
+        setFieldsKey(prev => prev ?? sessionId)
       })
       .catch(err => {
         if (cancelled) return
@@ -1573,10 +1573,10 @@ function CardSetup({ onComplete, onPending }: CardSetupProps) {
       const sessionId = sessionIdOf(active)
       if (!sessionId) throw new Error(copy.autoRecharge.setupAuthFailed)
       const card = await capture(active)
-      const resume = { sessionId, cardId: card.cardId }
       const result = await transport.saveCard({
-        ...resume,
-        returnUrl: buildCardSetupReturnUrl(window.location.href, resume),
+        sessionId,
+        cardId: card.cardId,
+        returnUrl: buildCardSetupReturnUrl(window.location.href, { sessionId }),
       })
       if (result.status === 'succeeded') {
         await onComplete()
@@ -1643,6 +1643,7 @@ function CardSetup({ onComplete, onPending }: CardSetupProps) {
   )
 }
 
+/** The session a card-setup grant is scoped to; a grant for a payment cannot save a card here. */
 function sessionIdOf(grant: CaptureGrant): string | null {
   return 'sessionId' in grant.scope && grant.scope.sessionId ? grant.scope.sessionId : null
 }

@@ -20,6 +20,9 @@ import { createFakeCollect, type FakeCollectHandle } from '../../../test-utils/s
 import type { Plan, PurchaseInfo, SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
+/** A grant expiry far in the future: the test never races the clock. */
+const FAR_FUTURE_MS = 4_102_444_800_000
+
 // ---------- Paid-plan success-branch mocks ----------
 //
 // The paid-branch tests below drive <PaymentForm.Root> through the vault
@@ -270,7 +273,7 @@ const PaidHarness: React.FC<{
         token: 'vgs-collect-token',
         tenantId: 'tntr4ol0cbq',
         environment: 'sandbox',
-        expiresAt: Date.now() + 60_000,
+        expiresAt: FAR_FUTURE_MS,
         scope: { paymentIntentId: 'pi_sp_paid' },
       }),
       confirmPayment: vi.fn().mockResolvedValue({
@@ -495,9 +498,7 @@ describe('PaymentForm post-success purchase merge', () => {
     })
 
     const onSuccess = vi.fn()
-    render(
-      <PaidHarness onSuccess={onSuccess} initialPurchases={[seededRecurringPurchase]} />,
-    )
+    render(<PaidHarness onSuccess={onSuccess} initialPurchases={[seededRecurringPurchase]} />)
     const button = await clickSubmitAndSettle()
 
     await waitFor(() => {

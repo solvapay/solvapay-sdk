@@ -37,11 +37,18 @@ function toCreatedPaymentIntent(
   paymentIntent: components['schemas']['SdkPaymentIntentResponse'],
   customerRef: string,
 ): CreatedPaymentIntent {
+  // The SDK creates on-session payments only, which always carry the vault;
+  // the schema marks it optional for off-session charges.
+  if (!paymentIntent.vault) {
+    throw new Error(`Payment intent ${paymentIntent.id} carries no vault capture settings`)
+  }
   return {
     id: paymentIntent.id,
     captureMode: 'vault',
     vault: paymentIntent.vault,
-    ...(paymentIntent.processorPaymentId ? { processorPaymentId: paymentIntent.processorPaymentId } : {}),
+    ...(paymentIntent.processorPaymentId
+      ? { processorPaymentId: paymentIntent.processorPaymentId }
+      : {}),
     customerRef,
   }
 }
@@ -432,11 +439,7 @@ export async function attachBusinessDetailsCore(
 
     return result
   } catch (error) {
-    return handleRouteError(
-      error,
-      'Attach business details',
-      'Failed to attach business details',
-    )
+    return handleRouteError(error, 'Attach business details', 'Failed to attach business details')
   }
 }
 

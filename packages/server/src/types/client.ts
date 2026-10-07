@@ -19,8 +19,10 @@ export type AttachBusinessDetailsResult = components['schemas']['AttachBusinessD
 /**
  * What the browser needs to write one card into the vault: for one payment
  * (`POST /v1/sdk/payment-intents/{id}/capture-grant`, `scope.paymentIntentId`)
- * or for saving a card on a customer session without paying
+ * or on a session, the customer's credential on the hosted pages
  * (`POST /v1/customer-sessions/{sessionId}/capture-grant`, `scope.sessionId`).
+ * The scope echoes what the grant was asked for; the card's binding is
+ * enforced by the backend from the grant window on that record.
  */
 export interface CaptureGrant {
   /** Short-lived vault access token scoped to card capture only. */
@@ -76,14 +78,23 @@ export interface CardBillingDetails {
   }
 }
 
-/** Save a vault-captured card on a customer session (no payment). */
-export interface SaveCustomerSessionCardParams {
-  sessionId: string
-  cardId: string
-  billingDetails?: CardBillingDetails
-  /** Where the rail sends the payer back after 3DS; post the same `cardId` again to finish. */
-  returnUrl?: string
-}
+/**
+ * Save a vault-captured card on a customer session (no payment), or complete
+ * the setup the payer just authenticated. Exactly one of the two shapes.
+ */
+export type SaveCustomerSessionCardParams =
+  | {
+      sessionId: string
+      cardId: string
+      billingDetails?: CardBillingDetails
+      /** Where the rail sends the payer back after 3DS: an https URL on the provider's website or the session's pages. */
+      returnUrl: string
+    }
+  | {
+      sessionId: string
+      /** The payer is back from 3DS: finish the setup the session keeps. */
+      completePendingSetup: true
+    }
 
 /** The card saved on a customer session. */
 export interface SavedCardPaymentMethod {
@@ -96,8 +107,9 @@ export interface SavedCardPaymentMethod {
 
 /**
  * `POST /v1/customer-sessions/{sessionId}/payment-methods`.
- * `requires_action`: send the payer to `redirectUrl`, then post the same
- * `cardId` again to finish. `processing`: the setup settles asynchronously.
+ * `requires_action`: send the payer to `redirectUrl`; when they are back,
+ * post `{ completePendingSetup: true }` to finish. `processing`: the setup
+ * settles asynchronously.
  */
 export interface SavedCardResult {
   status: 'succeeded' | 'requires_action' | 'processing'
@@ -182,7 +194,7 @@ export type OneTimePurchaseInfo = components['schemas']['OneTimePurchaseInfo']
  * the timeout branch.
  */
 export type ProcessPaymentResult =
-  operations['PaymentIntentSdkController_processPaymentIntent']['responses']['200']['content']['application/json']
+  operations['processPaymentIntent']['responses']['200']['content']['application/json']
 
 type ProcessPaymentStatus = ProcessPaymentResult['status']
 true satisfies AssertEqual<
@@ -233,7 +245,7 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
  * `{ kind: 'card', ... } | { kind: 'none' }` discriminated union here.
  */
 export type PaymentMethodInfo =
-  operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
+  operations['getPaymentMethod']['responses']['200']['content']['application/json']
 
 /**
  * Result of `DELETE /v1/sdk/payment-method?customerRef=...`: the removed card,
@@ -551,7 +563,7 @@ export interface SolvaPayClient {
 
   // POST: /v1/sdk/checkout-sessions
   createCheckoutSession(
-    params: operations['CheckoutSessionSdkController_createCheckoutSession']['requestBody']['content']['application/json'],
+    params: operations['createCheckoutSession']['requestBody']['content']['application/json'],
   ): Promise<components['schemas']['CreateCheckoutSessionResponse']>
 
   // POST: /v1/sdk/customers/customer-sessions

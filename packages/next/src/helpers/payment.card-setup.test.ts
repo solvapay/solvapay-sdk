@@ -64,7 +64,10 @@ describe('saveCard (Next route wrapper)', () => {
   })
 
   it('forwards session, card, billing details and returnUrl and returns the outcome', async () => {
-    const saved = { status: 'requires_action' as const, redirectUrl: 'https://acs.bank.test/3ds/setup' }
+    const saved = {
+      status: 'requires_action' as const,
+      redirectUrl: 'https://acs.bank.test/3ds/setup',
+    }
     mockSaveCardCore.mockResolvedValue(saved)
     const request = fakeRequest('/api/save-card')
     const body = {
@@ -82,13 +85,39 @@ describe('saveCard (Next route wrapper)', () => {
     expect(await response.json()).toStrictEqual(saved)
   })
 
+  it('forwards the completion of a pending setup unchanged', async () => {
+    const saved = {
+      status: 'succeeded' as const,
+      paymentMethod: { id: 'spm_1', brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030 },
+    }
+    mockSaveCardCore.mockResolvedValue(saved)
+    const request = fakeRequest('/api/save-card')
+    const body = { sessionId: 'cs_sess_1', completePendingSetup: true as const }
+
+    const response = await saveCard(request, body)
+
+    expect(mockSaveCardCore).toHaveBeenCalledWith(request, body, {})
+    expect(response.status).toBe(200)
+    expect(await response.json()).toStrictEqual(saved)
+  })
+
   it('passes a 404 for another customer’s session through unchanged', async () => {
     mockSaveCardCore.mockResolvedValue({ error: 'Customer session not found', status: 404 })
     const response = await saveCard(fakeRequest('/api/save-card'), {
       sessionId: 'cs_other',
       cardId: 'CRD1',
+      returnUrl: 'https://app.example/r',
     })
     expect(response.status).toBe(404)
     expect(await response.json()).toMatchObject({ error: 'Customer session not found' })
+  })
+
+  it('passes a 400 for a malformed body through unchanged (the body is validated in saveCardCore)', async () => {
+    mockSaveCardCore.mockResolvedValue({
+      error: 'Provide exactly one of cardId or completePendingSetup',
+      status: 400,
+    })
+    const response = await saveCard(fakeRequest('/api/save-card'), { sessionId: 'cs_sess_1' })
+    expect(response.status).toBe(400)
   })
 })

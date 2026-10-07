@@ -46,6 +46,7 @@ import {
   confirmPaymentCore,
   createCardSetupGrantCore,
   saveCardCore,
+  parseSaveCardBody,
   getHistoryCore,
   isErrorResult,
   listPlansCore,
@@ -72,10 +73,7 @@ import {
 import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { deriveDefaultView } from './derive-view'
 import { mergeCsp } from './csp'
-import {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+import { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 import {
   SOLVAPAY_OVERVIEW_MARKDOWN,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
@@ -517,7 +515,11 @@ export function buildSolvaPayDescriptors(
       productRef: z.string().optional(),
     },
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: true }),
+    annotations: solvapayTool({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createHostedSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -586,7 +588,8 @@ export function buildSolvaPayDescriptors(
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
-        const purpose = args.purpose === 'plan' || args.purpose === 'topup' ? args.purpose : undefined
+        const purpose =
+          args.purpose === 'plan' || args.purpose === 'topup' ? args.purpose : undefined
         if (!purpose) {
           return toolErrorResult({
             error: 'create_payment_intent requires purpose',
@@ -701,22 +704,23 @@ export function buildSolvaPayDescriptors(
       taxIdType: z.enum(TAX_ID_TYPES).optional(),
     },
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: true }),
+    annotations: solvapayTool({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.attachBusinessDetails, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
         const isBusiness = args.isBusiness === true
-        const businessName =
-          typeof args.businessName === 'string' ? args.businessName : undefined
+        const businessName = typeof args.businessName === 'string' ? args.businessName : undefined
         const country = typeof args.country === 'string' ? args.country : undefined
         const customerCountry =
           typeof args.customerCountry === 'string' ? args.customerCountry : undefined
-        const customerName =
-          typeof args.customerName === 'string' ? args.customerName : undefined
+        const customerName = typeof args.customerName === 'string' ? args.customerName : undefined
         const customerState =
           typeof args.customerState === 'string' ? args.customerState : undefined
         const customerPostalCode =
@@ -755,13 +759,16 @@ export function buildSolvaPayDescriptors(
       paymentIntentId: z.string(),
     },
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: false }),
+    annotations: solvapayTool({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+    }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCaptureGrant, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
         if (!paymentIntentId) {
           return toolErrorResult({
             error: 'create_capture_grant requires paymentIntentId',
@@ -796,8 +803,7 @@ export function buildSolvaPayDescriptors(
       trace(MCP_TOOL_NAMES.confirmPayment, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
         if (!paymentIntentId) {
           return toolErrorResult({
             error: 'confirm_payment requires paymentIntentId',
@@ -836,7 +842,11 @@ export function buildSolvaPayDescriptors(
       'Card setup without a payment (auto-recharge): open a customer session and grant the widget one short-lived card capture into the vault on it. The grant scope carries the sessionId for save_card.',
     inputSchema: {},
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: false }),
+    annotations: solvapayTool({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+    }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.createCardSetupGrant, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -853,11 +863,12 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.saveCard,
     description:
       UI_ONLY_PREFIX +
-      'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId) on its customer session (sessionId). Returns status succeeded | requires_action (with redirectUrl for 3DS; post the same cardId again after the return) | processing.',
+      'Card setup without a payment: save the card captured under a create_card_setup_grant grant (cardId, with the returnUrl the payer comes back to after 3DS) on its customer session (sessionId), or complete the setup the payer just authenticated (completePendingSetup: true). Exactly one of cardId or completePendingSetup. Returns status succeeded | requires_action (with redirectUrl for 3DS) | processing.',
     inputSchema: {
       sessionId: z.string(),
-      cardId: z.string(),
+      cardId: z.string().optional(),
       returnUrl: z.string().optional(),
+      completePendingSetup: z.literal(true).optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ destructiveHint: false }),
@@ -865,32 +876,18 @@ export function buildSolvaPayDescriptors(
       trace(MCP_TOOL_NAMES.saveCard, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
-        for (const key of ['sessionId', 'cardId'] as const) {
-          const value = args[key]
-          if (typeof value !== 'string' || !value) {
-            return toolErrorResult({
-              error: `save_card requires ${key}`,
-              status: 400,
-              details: `Pass ${key} as a non-empty string.`,
-            })
-          }
-        }
-        if (args.returnUrl !== undefined && (typeof args.returnUrl !== 'string' || !args.returnUrl)) {
+        const body = parseSaveCardBody(args)
+        if (isErrorResult(body)) {
           return toolErrorResult({
-            error: 'save_card returnUrl must be a non-empty string',
-            status: 400,
-            details: 'Omit returnUrl or pass it as a non-empty string.',
+            ...body,
+            error: `save_card: ${body.error}`,
+            details:
+              'Pass sessionId with either cardId and returnUrl (the captured card) or completePendingSetup: true (the payer is back from 3DS).',
           })
         }
-        const result = await saveCardCore(
-          buildRequest(extra, { method: 'POST' }),
-          {
-            sessionId: args.sessionId as string,
-            cardId: args.cardId as string,
-            ...(typeof args.returnUrl === 'string' ? { returnUrl: args.returnUrl } : {}),
-          },
-          { solvaPay },
-        )
+        const result = await saveCardCore(buildRequest(extra, { method: 'POST' }), body, {
+          solvaPay,
+        })
         if (isErrorResult(result)) return toolErrorResult(result)
         return toolResult(result)
       }),
@@ -903,7 +900,11 @@ export function buildSolvaPayDescriptors(
       "Remove the customer's card on file. The next saved card becomes the default; auto-recharge on the removed card waits for a new one (autoRechargePaused). Returns the removed card's brand, last4 and expiry.",
     inputSchema: {},
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: true, idempotentHint: false }),
+    annotations: solvapayTool({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    }),
     handler: async (args, extra) =>
       trace(MCP_TOOL_NAMES.removePaymentMethod, args, extra, async () => {
         const auth = requireCustomerRef(extra)
@@ -923,9 +924,7 @@ export function buildSolvaPayDescriptors(
       'Toggle auto-renewal on an active purchase. Pass enabled: false to cancel (access continues until period end) or enabled: true to undo a pending cancellation.',
     inputSchema: {
       purchaseRef: z.string(),
-      enabled: z
-        .boolean()
-        .describe('true to reactivate auto-renewal; false to cancel renewal.'),
+      enabled: z.boolean().describe('true to reactivate auto-renewal; false to cancel renewal.'),
       reason: z.string().optional(),
     },
     meta: uiToolMeta,
@@ -1167,7 +1166,9 @@ export function buildSolvaPayPrompts(
       description:
         'Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer.',
       handler: async () =>
-        userMessage(`Call the \`${VIEWER_TOOL_NAME}\` tool with view: "account" to show my SolvaPay account.`),
+        userMessage(
+          `Call the \`${VIEWER_TOOL_NAME}\` tool with view: "account" to show my SolvaPay account.`,
+        ),
     })
   }
 

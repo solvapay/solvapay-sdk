@@ -40,6 +40,11 @@ import type {
 } from '@solvapay/server'
 import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
+/** `saveCard` input: the captured card with its return URL, or the completion of a pending setup. */
+export type SaveCardParams =
+  | { sessionId: string; cardId: string; returnUrl: string }
+  | { sessionId: string; completePendingSetup: true }
+
 export type { CreditDisplayBlock, AutoRechargeDisplayBlock }
 
 export interface TransportBalanceResult {
@@ -149,15 +154,12 @@ export interface SolvaPayTransport {
   createCardSetupGrant?: () => Promise<CaptureGrant>
   /**
    * Card setup: save the captured card (`cardId`) on the grant's customer
-   * session. `requires_action` carries the 3DS `redirectUrl`; the payer comes
-   * back to `returnUrl` and the same `cardId` is posted again to finish.
+   * session, or complete the setup the payer just authenticated.
+   * `requires_action` carries the 3DS `redirectUrl`; the payer comes back to
+   * `returnUrl` and `{ sessionId, completePendingSetup: true }` finishes.
    * HTTP: `POST /api/save-card`. MCP: `save_card`.
    */
-  saveCard?: (params: {
-    sessionId: string
-    cardId: string
-    returnUrl?: string
-  }) => Promise<SavedCardResult>
+  saveCard?: (params: SaveCardParams) => Promise<SavedCardResult>
   /**
    * Optional: fetch the authenticated customer's usage snapshot for the
    * active usage-based plan. When omitted, `useUsage()` falls back to
