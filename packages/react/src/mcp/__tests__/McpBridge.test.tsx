@@ -268,7 +268,26 @@ describe('useMcpBridge.notifySuccess', () => {
       })
     })
     const text = sendMessage.mock.calls[0][0].content[0].text
-    expect(text).toMatch(/Activated Pro/)
+    expect(text).toBe('Activated Pro.')
+  })
+
+  it('appends the credit note and the top-up action when credits are empty', async () => {
+    const sendMessage = vi.fn().mockResolvedValue({})
+    const app = { sendMessage }
+    const { result } = renderBridge(app)
+    const creditNote =
+      'Usage past your 10 included requests is paid from credits. Your balance is 0.'
+    await act(async () => {
+      await result.current.notifySuccess({
+        kind: 'plan-activated',
+        planName: 'Pro',
+        creditNote,
+      })
+    })
+    const text = sendMessage.mock.calls[0][0].content[0].text
+    expect(text).toBe(
+      "Activated Pro. Usage past your 10 included requests is paid from credits. Your balance is 0. Call `account` with `view: 'topup'` to add credits.",
+    )
   })
 
   it('honours the merchant-provided messageOnSuccess override', async () => {

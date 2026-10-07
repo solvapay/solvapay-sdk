@@ -1,5 +1,11 @@
 # @solvapay/server changelog
 
+## 2.10.0
+
+### Minor Changes
+
+- 07ca69e: `GetUsageResult.used` is `number | null`. `deriveUsageSnapshot` no longer takes `used`. `PurchaseInfo.usage` is the billing period only (`periodStart`, `periodEnd`); counts come from limits.
+
 ## 2.9.0
 
 ### Minor Changes

@@ -1,5 +1,22 @@
 # @solvapay/react changelog
 
+## 2.6.0
+
+### Minor Changes
+
+- 07ca69e: `UsageSnapshot.used` is `number | null`. `PurchaseInfo.usage` is the billing period only (`periodStart`, `periodEnd`).
+
+### Patch Changes
+
+- 97c6831: The account widget opens on the view the server stamped instead of flashing the plan picker. An opening tool result replaces an in-flight fallback fetch, so `/upgrade` and `/topup` land on the surface that was requested.
+- 8e1cc26: The account view shows the signed-in email and customer ref, including on the inline widget. The fullscreen footer includes the customer ref.
+- 66bd47f: The MCP checkout's hosted-checkout handoff ("Complete your {plan} purchase" on hosts that block embedded payments) now spaces its back-link, heading, explanation and CTA with the shared stack gap instead of rendering them flush against each other.
+- c3e6ae4: A hybrid plan (a recurring fee plus metered usage, such as Basic at $19/month) now goes through card payment in the MCP checkout instead of the pay-as-you-go activation path. Pay-as-you-go activation also honours the backend status, so `payment_required` surfaces an error instead of a "Plan activated" receipt.
+- 335fd64: The MCP widget footer now reads `Provided by SolvaPay   Terms   Privacy` as one muted line with no `·` separators. `Provided by SolvaPay` is plain text instead of a link to solvapay.com; Terms and Privacy still link to SolvaPay's legal pages. The `<LegalFooter>` primitive's separator span now carries `data-solvapay-legal-footer-separator` so shells can style or hide it; its default rendering is unchanged.
+- 760e8db: The MCP widget no longer paints its own outer card border and radius, or a 16px gutter on `#root`. This fixes the double frame on Claude Desktop and ChatGPT, which frame the iframe themselves. The legal footer now sits directly under the surface card with a 16px bottom inset instead of floating 36px below the last control and flush against the host frame. The widget root also declares `scrollbar-width: none`: inline frames are sized to the content by the host, and Chromium (Claude Desktop) could otherwise keep a thumbless root scrollbar after a view grew in place, stealing 15px of layout width. Inline chrome, card and shell no longer cap themselves at a centered 760px: the host draws its frame at the full column width, so the cap showed as empty margins inside that frame on wide Claude Desktop windows.
+- b5b6754: The MCP widget legal footer now follows the widget's type scale. The shared footer sizes in rem, which assumes a 16px root; the widget root is 14px, so the line was larger than the shell's 12px.
+- 939f6f9: The MCP checkout "How many credits?" step uses the same full-width preset tiles as the top-up view. The old `.solvapay-mcp-amount-option` chip styles are removed; `amountOptions` and `amountOption` className slots remain but are unused.
+
 ## 2.5.0
 
 ### Minor Changes

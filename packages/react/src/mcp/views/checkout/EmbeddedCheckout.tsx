@@ -207,6 +207,9 @@ function McpCheckoutBody({
         void bridge.notifySuccess({
           kind: 'plan-activated',
           planName: meta.plan.name ?? null,
+          ...(meta.branch === 'recurring' && meta.creditNote
+            ? { creditNote: meta.creditNote }
+            : {}),
         })
       }
       onPurchaseSuccess?.()

@@ -1,5 +1,11 @@
 # @solvapay/mcp changelog
 
+## 0.4.5
+
+### Patch Changes
+
+- 760e8db: The UI resource now advertises `prefersBorder: true` on `resources/list` and `resources/read`. The host draws the widget frame.
+
 ## 0.4.4
 
 ### Patch Changes
