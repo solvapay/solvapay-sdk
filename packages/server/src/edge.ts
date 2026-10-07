@@ -10,7 +10,8 @@ import type { WebhookEvent } from './types/webhook'
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'
-export type { ServerClientOptions } from './client'
+export type { ServerClientOptions, ParsedApiErrorBody } from './client'
+export { parseApiErrorBody } from './client'
 export type { SaveCardBody } from './helpers/card-setup'
 
 // Opt-in product configuration check (never auto-invoked)

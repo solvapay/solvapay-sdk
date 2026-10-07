@@ -37,6 +37,7 @@ import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './type
 import { selectActivePlanPurchase } from './active-purchase'
 import { createMcpCheckoutSession } from './hosted-checkout'
 import { autoRechargeUrlFrom } from './portal-links'
+import { paymentReturnUrl } from './payment-return'
 
 export interface CreateBuildBootstrapPayloadOptions {
   solvaPay: SolvaPay
@@ -286,7 +287,7 @@ export function createBuildBootstrapPayload(
     return {
       view,
       productRef,
-      returnUrl: publicBaseUrl,
+      returnUrl: paymentReturnUrl(publicBaseUrl),
       merchant: merchantResult,
       product: productResult,
       plans,

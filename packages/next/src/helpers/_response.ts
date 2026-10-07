@@ -5,7 +5,9 @@ import type { ErrorResult } from '@solvapay/server'
 /**
  * Wraps a `*Core` helper result into a `NextResponse`.
  *
- * - `ErrorResult` → `NextResponse.json({ error, details }, { status })`.
+ * - `ErrorResult` → `NextResponse.json({ error, details, code?, reason?, declineCode? }, { status })`:
+ *   the backend's error key and decline fields travel with the text so the
+ *   browser picks the payer's copy by key.
  * - Anything else → `NextResponse.json(result)`.
  *
  * Lets each route-wrapper helper in `@solvapay/next/helpers` collapse to a
@@ -19,7 +21,13 @@ import type { ErrorResult } from '@solvapay/server'
 export function toNextRouteResponse<T>(result: T | ErrorResult): NextResponse {
   if (isErrorResult(result)) {
     return NextResponse.json(
-      { error: result.error, details: result.details },
+      {
+        error: result.error,
+        details: result.details,
+        ...(result.code ? { code: result.code } : {}),
+        ...(result.reason ? { reason: result.reason } : {}),
+        ...(result.declineCode ? { declineCode: result.declineCode } : {}),
+      },
       { status: result.status },
     )
   }

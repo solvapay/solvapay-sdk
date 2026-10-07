@@ -18,7 +18,13 @@ export function jsonResponse(
 export function errorResponse(result: ErrorResult, req?: Request): Response {
   const corsHeaders = req ? getCorsHeaders(req) : {}
   return new Response(
-    JSON.stringify({ error: result.error, ...(result.details ? { details: result.details } : {}) }),
+    JSON.stringify({
+      error: result.error,
+      ...(result.details ? { details: result.details } : {}),
+      ...(result.code ? { code: result.code } : {}),
+      ...(result.reason ? { reason: result.reason } : {}),
+      ...(result.declineCode ? { declineCode: result.declineCode } : {}),
+    }),
     {
       status: result.status,
       headers: {

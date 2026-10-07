@@ -28,6 +28,12 @@ export interface PaymentFormContextValue {
   requireTermsAcceptance: boolean
   canSubmit: boolean
   error: string | null
+  /**
+   * What the payer is told while the payment is still settling (the rail
+   * holds it, or the bank's page is open elsewhere). Rendered by
+   * `PaymentForm.Notice`; not a failure, so `onError` does not fire for it.
+   */
+  notice: string | null
   elementKind: PaymentElementKind
   returnUrl: string
   submitButtonText?: string

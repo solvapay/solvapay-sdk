@@ -10,24 +10,16 @@ import type {
   TopupPaymentResult,
   BalanceStatus,
   CancelResult,
+  ConfirmPaymentInput,
   ReactivateResult,
   PrefillCustomer,
   SolvaPayConfig,
   SolvaPayProviderInitial,
 } from './types'
-import type {
-  ProcessPaymentResult,
-  TopupProcessResult,
-  ActivatePlanResult,
-} from '@solvapay/server'
+import type { ProcessPaymentResult, TopupProcessResult, ActivatePlanResult } from '@solvapay/server'
 import { pollBalanceUntilIncreased, BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
-import {
-  BALANCE_RECONCILE_GRACE_MS,
-} from './helpers/auto-recharge-cache'
-import {
-  autoRechargeCacheKeyFor,
-  invalidateAutoRecharge,
-} from './hooks/autoRechargeCache'
+import { BALANCE_RECONCILE_GRACE_MS } from './helpers/auto-recharge-cache'
+import { autoRechargeCacheKeyFor, invalidateAutoRecharge } from './hooks/autoRechargeCache'
 import {
   filterPurchases,
   isPaidPurchase,
@@ -121,9 +113,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(!!initial?.customerRef)
 
-  const [creditsValue, setCreditsValue] = useState<number | null>(
-    initial?.balance?.credits ?? null,
-  )
+  const [creditsValue, setCreditsValue] = useState<number | null>(initial?.balance?.credits ?? null)
   const [displayCurrencyValue, setDisplayCurrencyValue] = useState<string | null>(
     initial?.balance?.displayCurrency ?? null,
   )
@@ -145,7 +135,9 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fetchBalanceRef = useRef<(() => Promise<number | null>) | null>(null)
   const reconcileRunningRef = useRef(false)
-  const reconcilePollRef = useRef<{ baseline: number; generation: number; pending: number } | null>(null)
+  const reconcilePollRef = useRef<{ baseline: number; generation: number; pending: number } | null>(
+    null,
+  )
 
   const inFlightRef = useRef<string | null>(null)
   const loadedCacheKeysRef = useRef<Set<string>>(
@@ -294,7 +286,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
             continue
           }
         } catch (error) {
-          console.error('[SolvaPayProvider] Failed to reconcile balance after auto-recharge:', error)
+          console.error(
+            '[SolvaPayProvider] Failed to reconcile balance after auto-recharge:',
+            error,
+          )
         }
 
         finishReconcilePoll()
@@ -369,8 +364,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       amount: number
       currency?: string
       autoRecharge?: import('@solvapay/server').AutoRechargeInput
-    }): Promise<TopupPaymentResult> =>
-      transportRef.current.createTopupPayment(params),
+    }): Promise<TopupPaymentResult> => transportRef.current.createTopupPayment(params),
     [],
   )
 
@@ -412,12 +406,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     [],
   )
   const confirmPayment = useCallback(
-    (params: {
-      paymentIntentId: string
-      cardId?: string
-      paymentMethodId?: string
-      returnUrl?: string
-    }) => transportRef.current.confirmPayment(params),
+    (params: ConfirmPaymentInput) => transportRef.current.confirmPayment(params),
     [],
   )
   useEffect(() => {
@@ -740,8 +729,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       purchases: purchaseData.purchases,
       hasProduct: (productName: string) => {
         return planPurchases.some(
-          p =>
-            p.productName?.toLowerCase() === productName.toLowerCase() && p.status === 'active',
+          p => p.productName?.toLowerCase() === productName.toLowerCase() && p.status === 'active',
         )
       },
       activePurchase,
@@ -785,9 +773,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       processPayment,
       createTopupPayment,
       processTopupPayment: hasProcessTopupPayment ? processTopupPayment : undefined,
-      attachBusinessDetails: hasAttachBusinessDetails
-        ? attachBusinessDetails
-        : undefined,
+      attachBusinessDetails: hasAttachBusinessDetails ? attachBusinessDetails : undefined,
       createCaptureGrant,
       confirmPayment,
       cancelRenewal,

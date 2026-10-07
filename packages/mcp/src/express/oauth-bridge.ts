@@ -13,9 +13,11 @@ import {
   buildAuthInfoFromBearer,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
+  isPaymentReturnPath,
   logDcrFailureDiagnostic,
   logMcpConfigOnce,
   McpBearerAuthError,
+  renderPaymentReturnPage,
   resolveOAuthPaths,
   withoutTrailingSlash,
   type BuildAuthInfoFromBearerOptions,
@@ -455,6 +457,29 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     res.json(getOAuthProtectedResourceResponse(publicBaseUrl))
   }
 
+  // The page the rail sends the payer back to after 3DS started from the
+  // widget (the bootstrap's `returnUrl`); the widget follows the payment
+  // through the backend meanwhile, so the page only sends the payer back.
+  const paymentReturnMiddleware: Middleware = (req, res, next) => {
+    if (req.method !== 'GET' || !req.path || !isPaymentReturnPath(req.path)) {
+      next()
+      return
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Referrer-Policy', 'no-referrer')
+    res.status(200)
+    const html = renderPaymentReturnPage()
+    if (typeof res.send === 'function') {
+      res.send(html)
+    } else if (typeof res.end === 'function') {
+      res.end(html)
+    } else {
+      throw new Error('createMcpOAuthBridge: the response cannot send HTML (no send or end)')
+    }
+  }
+
   const authorizationServerMiddleware: Middleware = (req, res, next) => {
     if (req.method !== 'GET' || req.path !== authorizationServerPath) {
       next()
@@ -540,6 +565,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
   return [
     openidDiscoveryMiddleware,
     protectedResourceMiddleware,
+    paymentReturnMiddleware,
     authorizationServerMiddleware,
     registerMiddleware,
     authorizeMiddleware,

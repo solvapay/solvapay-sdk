@@ -709,6 +709,31 @@ describe('createMcpOAuthBridge integration', () => {
     expect(middlewares.length).toBeGreaterThanOrEqual(7)
   })
 
+  it('serves the 3DS return page on GET /solvapay/payment-return and leaves other methods to the app', async () => {
+    const middlewares = createMcpOAuthBridge({ publicBaseUrl, apiBaseUrl, productRef })
+    const { res, state } = mockRes()
+    await runPipeline(
+      middlewares,
+      mockReq({ method: 'GET', path: '/solvapay/payment-return' }),
+      res,
+      state,
+    )
+    expect(state.statusCode).toBe(200)
+    expect(state.headers['content-type']).toBe('text/html; charset=utf-8')
+    expect(state.headers['cache-control']).toBe('no-store')
+    expect(state.bodyText).toContain('Authentication complete')
+    expect(state.ended).toBe(true)
+
+    const other = mockRes()
+    await runPipeline(
+      middlewares,
+      mockReq({ method: 'POST', path: '/solvapay/payment-return' }),
+      other.res,
+      other.state,
+    )
+    expect(other.state.ended).toBe(false)
+  })
+
   it('serves discovery doc hosted on publicBaseUrl — and no product_ref leaks into it', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,

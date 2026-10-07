@@ -91,9 +91,7 @@ function Wrap({ value, children }: { value: SolvaPayContextValue; children: Reac
 
 async function selectBuyerCountry(value = 'SE') {
   await waitFor(() => {
-    expect(
-      document.querySelector('[data-solvapay-topup-form][data-state="ready"]'),
-    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-topup-form][data-state="ready"]')).toBeTruthy()
   })
   const country = await screen.findByRole('combobox', { name: /country/i })
   await act(async () => {
@@ -213,9 +211,7 @@ describe('TopupForm primitive', () => {
     // `TopupForm.Root` swaps OfflineInner → Inner after
     // `createTopupPayment` resolves, which unmounts the initial button.
     // Wait for the post-switch render before grabbing a reference.
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
 
     const cardFields = screen.getByTestId('card-fields')
     await act(async () => {
@@ -249,14 +245,19 @@ describe('TopupForm primitive', () => {
     expect((processingButton as HTMLButtonElement).disabled).toBe(true)
     expect(processingButton.textContent).toMatch(/processing/i)
 
-    resolveConfirm.current?.({ id: 'pi_test_123', processorPaymentId: 'pi_test_123', status: 'succeeded' })
+    resolveConfirm.current?.({
+      id: 'pi_test_123',
+      processorPaymentId: 'pi_test_123',
+      status: 'succeeded',
+    })
     await waitFor(() =>
-      expect(confirmMock.confirmPayment).toHaveBeenCalledWith({
-        paymentIntentId: 'pi_test_123',
-        cardId: 'CRD_test_1',
-        returnUrl: window.location.href,
-      }),
+      expect(confirmMock.confirmPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ paymentIntentId: 'pi_test_123', cardId: 'CRD_test_1' }),
+      ),
     )
+    // The return URL is the page itself, tagged with the payment for the 3DS return.
+    const { returnUrl } = confirmMock.confirmPayment.mock.calls[0][0] as { returnUrl: string }
+    expect(new URL(returnUrl).searchParams.get('solvapay_payment')).toBe('pi_test_123')
   })
 
   it('throws MissingProviderError when rendered outside SolvaPayProvider', () => {
@@ -296,9 +297,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
 
     // Flip paymentInputComplete=true so the submit button enables.
     await act(async () => {
@@ -339,9 +338,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -377,9 +374,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -419,9 +414,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -453,9 +446,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -490,9 +481,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -506,10 +495,9 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     })
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
-    expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pi_test_123' }),
-      { creditsAdded: 250 },
-    )
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'pi_test_123' }), {
+      creditsAdded: 250,
+    })
   })
 
   it('omits the extras argument when the backend does not surface creditsAdded', async () => {
@@ -530,9 +518,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -568,9 +554,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       </Wrap>,
     )
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
     })
@@ -597,9 +581,7 @@ describe('TopupForm business details + summary', () => {
     currency: 'USD',
   }
 
-  function businessCtx(
-    overrides?: Partial<SolvaPayContextValue>,
-  ): SolvaPayContextValue {
+  function businessCtx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
     return ctx({
       createTopupPayment: vi.fn().mockResolvedValue(vaultIntent),
       attachBusinessDetails: vi.fn().mockResolvedValue({ taxBreakdown }),
@@ -670,9 +652,7 @@ describe('TopupForm business details + summary', () => {
     })
     await waitFor(() => expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown))
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))
@@ -707,9 +687,7 @@ describe('TopupForm business details + summary', () => {
     await selectBuyerCountry()
     await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalledTimes(1))
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('card-fields')).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.queryByTestId('card-fields')).toBeTruthy())
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('card-fields'))

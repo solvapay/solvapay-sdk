@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createMcpAppAdapter } from '../adapter'
+import { TransportError } from '../../transport/errors'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 
 interface CallRecord {
@@ -267,6 +268,60 @@ describe('createMcpAppAdapter', () => {
       transport.confirmPayment?.({ paymentIntentId: 'pi_1', cardId: 'CRD1' }),
     ).rejects.toThrow('confirm_payment: Capture grant limit reached')
     expect(app.callServerTool).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects a keyed tool error as a TransportError with the key, status, reason and decline code', async () => {
+    const declined = {
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    }
+    const app = createMockApp(() => ({
+      isError: true,
+      content: [{ type: 'text', text: declined.details }],
+      structuredContent: declined,
+    }))
+    const transport = createMcpAppAdapter(app)
+
+    const thrown = await transport.confirmPayment({ paymentIntentId: 'pi_1', cardId: 'CRD1' }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(thrown).toBeInstanceOf(TransportError)
+    expect(thrown).toMatchObject({
+      message: declined.details,
+      status: 402,
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+  })
+
+  it('routes confirmPayment with billingDetails to confirm_payment', async () => {
+    const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' }
+    const app = createMockApp(() => ({ structuredContent: payment }))
+    const transport = createMcpAppAdapter(app)
+    const billingDetails = { name: 'Ada', address: { country: 'SE' } }
+
+    await transport.confirmPayment({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://mcp.example/solvapay/payment-return',
+      billingDetails,
+    })
+
+    expect(app.calls[0]).toStrictEqual({
+      name: MCP_TOOL_NAMES.confirmPayment,
+      args: {
+        paymentIntentId: 'pi_1',
+        cardId: 'CRD1',
+        returnUrl: 'https://mcp.example/solvapay/payment-return',
+        billingDetails,
+      },
+    })
   })
 
   it('omits the read tools now folded into the bootstrap payload', () => {

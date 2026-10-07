@@ -26,6 +26,10 @@ vi.mock('../../src/helpers', () => ({
   getMerchantCore: vi.fn(),
   getProductCore: vi.fn(),
   getHistoryCore: vi.fn(),
+  createCaptureGrantCore: vi.fn(),
+  confirmPaymentCore: vi.fn(),
+  createCardSetupGrantCore: vi.fn(),
+  saveCardCore: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
@@ -53,6 +57,10 @@ import {
   getProductCore,
   getHistoryCore,
   removePaymentMethodCore,
+  createCaptureGrantCore,
+  confirmPaymentCore,
+  createCardSetupGrantCore,
+  saveCardCore,
 } from '../../src/helpers'
 import { verifyWebhook } from '../../src/edge'
 import {
@@ -73,6 +81,10 @@ import {
   getProduct,
   getHistory,
   removePaymentMethod,
+  createCaptureGrant,
+  confirmPayment,
+  createCardSetupGrant,
+  saveCard,
   solvapayWebhook,
 } from '../../src/fetch/handlers'
 import { configureCors } from '../../src/fetch/cors'
@@ -94,6 +106,10 @@ const mockGetMerchantCore = vi.mocked(getMerchantCore)
 const mockGetProductCore = vi.mocked(getProductCore)
 const mockGetHistoryCore = vi.mocked(getHistoryCore)
 const mockRemovePaymentMethodCore = vi.mocked(removePaymentMethodCore)
+const mockCreateCaptureGrantCore = vi.mocked(createCaptureGrantCore)
+const mockConfirmPaymentCore = vi.mocked(confirmPaymentCore)
+const mockCreateCardSetupGrantCore = vi.mocked(createCardSetupGrantCore)
+const mockSaveCardCore = vi.mocked(saveCardCore)
 const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
@@ -180,9 +196,7 @@ describe('createPaymentIntent', () => {
       customerRef: 'cus_1',
     })
 
-    const res = await createPaymentIntent(
-      fakePost({ planRef: 'pln_1', productRef: 'prd_1' }),
-    )
+    const res = await createPaymentIntent(fakePost({ planRef: 'pln_1', productRef: 'prd_1' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ clientSecret: 'cs_1' })
   })
@@ -200,9 +214,7 @@ describe('processPayment', () => {
       type: 'recurring',
     })
 
-    const res = await processPayment(
-      fakePost({ paymentIntentId: 'pi_1', productRef: 'prd_1' }),
-    )
+    const res = await processPayment(fakePost({ paymentIntentId: 'pi_1', productRef: 'prd_1' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ status: 'succeeded' })
   })
@@ -217,9 +229,7 @@ describe('createTopupPaymentIntent', () => {
       customerRef: 'cus_1',
     })
 
-    const res = await createTopupPaymentIntent(
-      fakePost({ amount: 1000, currency: 'USD' }),
-    )
+    const res = await createTopupPaymentIntent(fakePost({ amount: 1000, currency: 'USD' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ clientSecret: 'cs_1' })
   })
@@ -273,9 +283,7 @@ describe('activatePlan', () => {
       purchase: { reference: 'pur_1' },
     } as never)
 
-    const res = await activatePlan(
-      fakePost({ productRef: 'prd_1', planRef: 'pln_1' }),
-    )
+    const res = await activatePlan(fakePost({ productRef: 'prd_1', planRef: 'pln_1' }))
     expect(res.status).toBe(200)
   })
 })
@@ -435,7 +443,9 @@ describe('createCheckoutSession', () => {
 
     const res = await createCheckoutSession(fakePost({}))
     expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ error: 'Missing required parameter: productRef is required' })
+    expect(await res.json()).toMatchObject({
+      error: 'Missing required parameter: productRef is required',
+    })
   })
 })
 
@@ -468,6 +478,127 @@ describe('createCustomerSession', () => {
     const res = await createCustomerSession(fakePost())
     expect(res.status).toBe(401)
     expect(await res.json()).toMatchObject({ error: 'Unauthorized' })
+  })
+})
+
+describe('vault checkout handlers', () => {
+  const grant = {
+    token: 'vgs-collect-token',
+    tenantId: 'tntr4ol0cbq',
+    environment: 'sandbox' as const,
+    expiresAt: 1_800_000_000_000,
+    scope: { paymentIntentId: 'pi_1' },
+  }
+
+  it('createCaptureGrant forwards the payment id to createCaptureGrantCore and answers the grant', async () => {
+    mockCreateCaptureGrantCore.mockResolvedValue(grant)
+    const req = fakePost({ paymentIntentId: 'pi_1' })
+
+    const res = await createCaptureGrant(req)
+
+    expect(mockCreateCaptureGrantCore).toHaveBeenCalledWith(req, { paymentIntentId: 'pi_1' })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(await res.json()).toStrictEqual(grant)
+  })
+
+  it('createCaptureGrant answers a keyed refusal with its status and key', async () => {
+    mockCreateCaptureGrantCore.mockResolvedValue({
+      error: 'Create capture grant failed (403): capture_grant_exhausted',
+      status: 403,
+      code: 'capture_grant_exhausted',
+    })
+
+    const res = await createCaptureGrant(fakePost({ paymentIntentId: 'pi_1' }))
+
+    expect(res.status).toBe(403)
+    expect(await res.json()).toStrictEqual({
+      error: 'Create capture grant failed (403): capture_grant_exhausted',
+      code: 'capture_grant_exhausted',
+    })
+  })
+
+  it('confirmPayment forwards the body with billingDetails and answers the confirmed payment', async () => {
+    const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' as const }
+    mockConfirmPaymentCore.mockResolvedValue(payment)
+    const body = {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+      billingDetails: { name: 'Ada', address: { country: 'SE' } },
+    }
+    const req = fakePost(body)
+
+    const res = await confirmPayment(req)
+
+    expect(mockConfirmPaymentCore).toHaveBeenCalledWith(req, body)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toStrictEqual(payment)
+  })
+
+  it('confirmPayment answers a 402 decline with the key, reason and decline code', async () => {
+    mockConfirmPaymentCore.mockResolvedValue({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+
+    const res = await confirmPayment(fakePost({ paymentIntentId: 'pi_1', cardId: 'CRD1' }))
+
+    expect(res.status).toBe(402)
+    expect(await res.json()).toStrictEqual({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+  })
+
+  it('createCardSetupGrant takes no body and answers the session grant', async () => {
+    const sessionGrant = { ...grant, scope: { sessionId: 'cs_1' } }
+    mockCreateCardSetupGrantCore.mockResolvedValue(sessionGrant)
+    const req = fakePost()
+
+    const res = await createCardSetupGrant(req)
+
+    expect(mockCreateCardSetupGrantCore).toHaveBeenCalledWith(req)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toStrictEqual(sessionGrant)
+  })
+
+  it('saveCard forwards the body to saveCardCore, which validates it, and answers the result', async () => {
+    mockSaveCardCore.mockResolvedValue({ status: 'succeeded' })
+    const body = { sessionId: 'cs_1', cardId: 'CRD1', returnUrl: 'https://app.example/return' }
+    const req = fakePost(body)
+
+    const res = await saveCard(req)
+
+    expect(mockSaveCardCore).toHaveBeenCalledWith(req, body)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toStrictEqual({ status: 'succeeded' })
+  })
+
+  it('saveCard answers the core 400 for a malformed body', async () => {
+    mockSaveCardCore.mockResolvedValue({ error: 'returnUrl is required', status: 400 })
+
+    const res = await saveCard(fakePost({ sessionId: 'cs_1', cardId: 'CRD1' }))
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toStrictEqual({ error: 'returnUrl is required' })
+  })
+
+  it('every vault handler answers CORS preflight', async () => {
+    for (const handler of [createCaptureGrant, confirmPayment, createCardSetupGrant, saveCard]) {
+      expect((await handler(fakeOptions())).status).toBe(204)
+    }
+    expect(mockCreateCaptureGrantCore).not.toHaveBeenCalled()
+    expect(mockConfirmPaymentCore).not.toHaveBeenCalled()
+    expect(mockCreateCardSetupGrantCore).not.toHaveBeenCalled()
+    expect(mockSaveCardCore).not.toHaveBeenCalled()
   })
 })
 

@@ -35,6 +35,9 @@ export function handleRouteError(
       error: errorMessage,
       status: error.status ?? 500,
       details: errorMessage,
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.reason ? { reason: error.reason } : {}),
+      ...(error.declineCode ? { declineCode: error.declineCode } : {}),
     }
   }
 

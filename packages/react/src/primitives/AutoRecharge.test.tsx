@@ -6,6 +6,7 @@ import { AutoRecharge } from './AutoRecharge'
 import { AutoRecharge as AutoRechargeComponent } from '../components/AutoRecharge'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { enCopy } from '../i18n/en'
+import { TransportError } from '../transport/errors'
 import { interpolate } from '../i18n/interpolate'
 import { formatPrice } from '../utils/format'
 import type { AutoRechargeConfig } from '@solvapay/server'
@@ -415,25 +416,24 @@ describe('AutoRecharge primitive', () => {
     expect(screen.getByText('Auto-recharge settings saved.')).toBeInTheDocument()
   })
 
-  it('with deferCardSetup, save persists to backend and exposes pending config', async () => {
+  it('with deferCardSetup, save hands the validated config to onPendingConfig without saving it', async () => {
     const onPendingConfig = vi.fn()
-    autoRechargeMocks.save.mockImplementation(async () => {
-      autoRechargeMocks.config = config
-      // A deferred save ignores the flag: the card is armed on the top-up.
-      return { config, requiresPaymentMethod: true }
-    })
-    renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig })
+    const onSaved = vi.fn()
+    renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig, onSaved })
     openModal()
     enableAutoRecharge()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
-    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: true, topupAmountMajor: 10, deferSetupIntent: true }),
-    )
+    // The top-up payment intent carries the config; nothing is saved here and
+    // no `deferSetupIntent` flag exists.
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(onPendingConfig).toHaveBeenCalledTimes(1)
     expect(onPendingConfig).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: true, topupAmountMajor: 10 }),
     )
+    expect(onPendingConfig.mock.calls[0][0]).not.toHaveProperty('deferSetupIntent')
     expect(screen.queryByTestId('card-fields')).not.toBeInTheDocument()
     expect(cardSetupMocks.createCardSetupGrant).not.toHaveBeenCalled()
     expect(
@@ -442,12 +442,7 @@ describe('AutoRecharge primitive', () => {
     expect(screen.getByText('Auto-recharge settings saved.')).toBeInTheDocument()
   })
 
-  it('with deferCardSetup, shows saved summary on card after save', async () => {
-    autoRechargeMocks.save.mockImplementation(async () => {
-      autoRechargeMocks.config = config
-      // A deferred save ignores the flag: the card is armed on the top-up.
-      return { config, requiresPaymentMethod: true }
-    })
+  it('with deferCardSetup, closes the dialog and shows the pending summary without a server round-trip', async () => {
     renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig: vi.fn() })
     openModal()
     enableAutoRecharge()
@@ -457,18 +452,12 @@ describe('AutoRecharge primitive', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
+    expect(screen.getByText('Auto-recharge settings saved.')).toBeInTheDocument()
   })
 
-  it('with deferCardSetup and enabled server config, save updates via API', async () => {
+  it('with deferCardSetup and an enabled server config, the edited config rides on the top-up, not on a save', async () => {
     autoRechargeMocks.config = config
-    autoRechargeMocks.save.mockResolvedValue({
-      config: {
-        ...config,
-        trigger: { type: 'balance', thresholdAmountMinor: 400 },
-      },
-    })
     const onPendingConfig = vi.fn()
     renderModalAutoRecharge({ deferCardSetup: true, onPendingConfig })
     openModal()
@@ -476,9 +465,7 @@ describe('AutoRecharge primitive', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
     })
-    expect(autoRechargeMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ thresholdAmountMajor: 4 }),
-    )
+    expect(autoRechargeMocks.save).not.toHaveBeenCalled()
     expect(onPendingConfig).toHaveBeenCalledWith(
       expect.objectContaining({ thresholdAmountMajor: 4 }),
     )
@@ -792,6 +779,28 @@ describe('AutoRecharge card setup confirmation (DEV-581)', () => {
     expect(autoRechargeMocks.refresh).not.toHaveBeenCalled()
   })
 
+  it('shows the payer copy for a keyed save refusal (402 with a decline code)', async () => {
+    saveReturnsPendingSetup()
+    cardSetupMocks.saveCard.mockRejectedValue(
+      new TransportError('Save card failed (402): Payment card_declined', {
+        status: 402,
+        code: 'payment_declined',
+        reason: 'card_declined',
+        declineCode: 'insufficient_funds',
+      }),
+    )
+
+    await submitCardSetup()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(enCopy.vaultErrors.declineCodes.insufficientFunds),
+      ).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/card_declined/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('card-fields')).toBeInTheDocument()
+  })
+
   it('shows the grant error and no card fields when card setup cannot start', async () => {
     saveReturnsPendingSetup()
     cardSetupMocks.createCardSetupGrant
@@ -956,6 +965,23 @@ describe('AutoRecharge card setup 3DS return', () => {
     })
     expect(autoRechargeMocks.refresh).not.toHaveBeenCalled()
     expect(window.location.search).toBe('?tab=credits')
+  })
+
+  it('shows the keyed copy when the finish answers a keyed refusal', async () => {
+    arriveBack()
+    autoRechargeMocks.config = { ...pendingConfig }
+    cardSetupMocks.saveCard.mockRejectedValue(
+      new TransportError('Save card failed (403): card_already_used', {
+        status: 403,
+        code: 'card_already_used',
+      }),
+    )
+
+    renderAutoRecharge()
+
+    await waitFor(() => {
+      expect(screen.getByText(enCopy.vaultErrors.cardAlreadyUsed)).toBeInTheDocument()
+    })
   })
 
   it('does nothing without the return params', async () => {

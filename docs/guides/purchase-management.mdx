@@ -263,10 +263,11 @@ accept an `AutoRechargeInput`:
 | `maxMonthlySpendMajor` | `number` | No | Optional monthly spend cap in display-currency major units. Resets each UTC calendar month; blank means unlimited |
 | `currency` | `string` | Yes | ISO 4217 currency, must be a supported top-up currency |
 
-`SaveAutoRechargeInput` also accepts `deferSetupIntent?: boolean` — set it to
-stage the config without creating a SetupIntent (used by the combined top-up +
-auto-recharge flow). Validation enforces both amounts `<= 10,000` major units and
-a per-currency rail minimum on the top-up amount.
+`SaveAutoRechargeInput` is the same input; a save without a card on file answers
+`requiresPaymentMethod: true`. To arm the config with the card of a top-up, pass it
+as `autoRecharge` on the top-up payment intent instead of saving it. Validation
+enforces both amounts `<= 10,000` major units and a per-currency rail minimum on
+the top-up amount.
 
 ### Routes to wire
 
@@ -279,7 +280,7 @@ a per-currency rail minimum on the top-up amount.
 ### Behavior notes
 
 - **Credits mint on charge success.** Credits are booked when the off-session charge succeeds; the webhook is an idempotent backstop, not the primary path.
-- **Deferred setup stages the config.** With `deferSetupIntent` / `deferCardSetup`, the config is `pending_setup` and is **not** armed until the card is saved on the top-up charge and the status flips to `active`.
+- **A top-up with `autoRecharge` stages the config.** With `deferCardSetup`, the config travels on the top-up payment intent, is `pending_setup` and is **not** armed until the card is saved on that charge and the status flips to `active`.
 - **Live FX, no stored credit threshold.** The threshold is stored in display-currency minor units and re-resolved to credits at trigger time — there's no persisted `thresholdCredits`.
 - **Monthly spend cap.** An optional `maxMonthlySpendMajor` limits how much auto-recharge spend is allowed per UTC calendar month. The config stays `active` when the cap is hit — charges resume automatically next month. The `<AutoRecharge>` component exposes the cap under **Advanced** and shows current-period spend on the summary card; read `monthlySpendMinor` / `monthlySpendPeriod` on the config when building a custom UI.
 

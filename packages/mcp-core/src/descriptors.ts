@@ -267,6 +267,23 @@ function readAutoRechargeArg(value: unknown): AutoRechargeInput | undefined {
   return value as AutoRechargeInput
 }
 
+/** The cardholder's billing details a confirm carries (`CardBillingDetails`). */
+const BILLING_DETAILS_SCHEMA = z.object({
+  name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  address: z
+    .object({
+      line1: z.string().optional(),
+      line2: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      postalCode: z.string().optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
+})
+
 /**
  * Build the framework-neutral SolvaPay tool + resource descriptors. The
  * returned bundle is adapter-shaped — pass it to the registration helper
@@ -796,6 +813,7 @@ export function buildSolvaPayDescriptors(
       cardId: z.string().optional(),
       paymentMethodId: z.string().optional(),
       returnUrl: z.string().optional(),
+      billingDetails: BILLING_DETAILS_SCHEMA.optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ destructiveHint: true }),
@@ -825,9 +843,26 @@ export function buildSolvaPayDescriptors(
         const paymentMethodId =
           typeof args.paymentMethodId === 'string' ? args.paymentMethodId : undefined
         const returnUrl = typeof args.returnUrl === 'string' ? args.returnUrl : undefined
+        const billingDetails = BILLING_DETAILS_SCHEMA.safeParse(args.billingDetails)
+        if (args.billingDetails !== undefined && !billingDetails.success) {
+          return toolErrorResult({
+            error: 'confirm_payment billingDetails is malformed',
+            status: 400,
+            details:
+              'Pass name, email, phone and address (line1, line2, city, state, postalCode, country) as strings.',
+          })
+        }
         const result = await confirmPaymentCore(
           buildRequest(extra, { method: 'POST' }),
-          { paymentIntentId, cardId, paymentMethodId, returnUrl },
+          {
+            paymentIntentId,
+            cardId,
+            paymentMethodId,
+            returnUrl,
+            ...(billingDetails.success && billingDetails.data !== undefined
+              ? { billingDetails: billingDetails.data }
+              : {}),
+          },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

@@ -8,8 +8,7 @@ vi.mock('@solvapay/server', () => ({
   cancelPurchaseCore: vi.fn(),
   getAuthenticatedUserCore: vi.fn(),
   isErrorResult: vi.fn(
-    (r: unknown) =>
-      typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
+    (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
 }))
 
@@ -57,7 +56,26 @@ describe('toNextRouteResponse', () => {
     })
   })
 
-  it('omits extra fields on the error envelope (only error + details are forwarded)', async () => {
+  it('forwards the backend error key and decline fields on the error envelope', async () => {
+    const response = toNextRouteResponse({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+    expect(response.status).toBe(402)
+    expect(await response.json()).toStrictEqual({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+  })
+
+  it('omits extra fields on the error envelope (only error, details and the keyed fields are forwarded)', async () => {
     const response = toNextRouteResponse({
       error: 'Not found',
       status: 404,

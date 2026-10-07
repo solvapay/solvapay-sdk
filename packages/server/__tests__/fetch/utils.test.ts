@@ -40,4 +40,22 @@ describe('errorResponse', () => {
     expect(body.error).toBe('Bad request')
     expect(body.details).toBe('Missing field')
   })
+
+  it('carries the backend error key and decline fields, and nothing else', async () => {
+    const res = errorResponse({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+
+    expect(res.status).toBe(402)
+    expect(await res.json()).toStrictEqual({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+  })
 })

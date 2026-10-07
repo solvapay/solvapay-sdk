@@ -27,18 +27,78 @@ function isNonJsonResponseBody(body: string, contentType: string | null): boolea
   return false
 }
 
+/**
+ * The backend's error keys are snake_case (`payment_declined`,
+ * `confirm_in_progress`); a plain NestJS body carries the HTTP reason
+ * phrase in `error` (`Bad Request`), which is not a key.
+ */
+const ERROR_KEY = /^[a-z][a-z0-9_]*$/
+
+/** What the client read out of a JSON error body. */
+export interface ParsedApiErrorBody {
+  /** The backend's error key, when the body is keyed. */
+  code?: string
+  /** The body's `message` (NestJS keeps the exception message there), joined when it is an array. */
+  message?: string
+  reason?: string
+  declineCode?: string
+}
+
+/**
+ * Read a JSON error body: the key, the message and, on a decline, the
+ * reason and decline code. `undefined` when the body is not a JSON object.
+ */
+export function parseApiErrorBody(body: string): ParsedApiErrorBody | undefined {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(body)
+  } catch {
+    return undefined
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined
+  const record = parsed as Record<string, unknown>
+  const rawMessage = record.message
+  const message =
+    typeof rawMessage === 'string'
+      ? rawMessage
+      : Array.isArray(rawMessage) && rawMessage.every(m => typeof m === 'string')
+        ? rawMessage.join('; ')
+        : undefined
+  // The vault routes key the body in `error`; other routes answer `code`.
+  const keyed =
+    typeof record.error === 'string' && ERROR_KEY.test(record.error) ? record.error : undefined
+  const coded = typeof record.code === 'string' && record.code ? record.code : undefined
+  const code = keyed ?? coded
+  const detail = !keyed && coded && message ? `${coded}: ${message}` : (message ?? coded)
+  return {
+    ...(code ? { code } : {}),
+    ...(detail ? { message: detail } : {}),
+    ...(typeof record.reason === 'string' ? { reason: record.reason } : {}),
+    ...(typeof record.declineCode === 'string' ? { declineCode: record.declineCode } : {}),
+  }
+}
+
 async function throwApiError(operation: string, res: Response): Promise<never> {
   const body = await res.text()
   const contentType = res.headers.get('content-type')
   const nonJson = isNonJsonResponseBody(body, contentType)
   const snippet = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}…` : body
-  const detail = nonJson
-    ? `non-JSON response (${contentType ?? 'unknown content-type'}) — the API may not have been reached. Body: ${snippet}`
-    : snippet
-  apiDebugLog(`❌ API Error: ${res.status} - ${detail}`)
+  if (nonJson) {
+    const detail = `non-JSON response (${contentType ?? 'unknown content-type'}): the API may not have been reached. Body: ${snippet}`
+    apiDebugLog(`API error: ${res.status} ${detail}`)
+    throw new SolvaPayError(`${operation} failed (${res.status}): ${detail}`, {
+      status: res.status,
+      code: 'non_json_response',
+    })
+  }
+  const parsed = parseApiErrorBody(body)
+  const detail = parsed?.message ?? snippet
+  apiDebugLog(`API error: ${res.status} ${parsed?.code ?? ''} ${detail}`)
   throw new SolvaPayError(`${operation} failed (${res.status}): ${detail}`, {
     status: res.status,
-    code: nonJson ? 'non_json_response' : undefined,
+    ...(parsed?.code ? { code: parsed.code } : {}),
+    ...(parsed?.reason ? { reason: parsed.reason } : {}),
+    ...(parsed?.declineCode ? { declineCode: parsed.declineCode } : {}),
   })
 }
 
@@ -632,6 +692,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
           ...(params.cardId !== undefined && { cardId: params.cardId }),
           ...(params.paymentMethodId !== undefined && { paymentMethodId: params.paymentMethodId }),
           ...(params.returnUrl !== undefined && { returnUrl: params.returnUrl }),
+          ...(params.billingDetails !== undefined && { billingDetails: params.billingDetails }),
         }),
       })
       if (!res.ok) {

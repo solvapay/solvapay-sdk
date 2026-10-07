@@ -12,6 +12,7 @@
 import type {
   CaptureGrant,
   ConfirmedPayment,
+  ConfirmPaymentInput,
   CustomerPurchaseData,
   PaymentIntentResult,
   TopupPaymentResult,
@@ -37,12 +38,13 @@ import type {
   SaveAutoRechargeResponse,
   CreditDisplayBlock,
   AutoRechargeDisplayBlock,
+  CardBillingDetails,
 } from '@solvapay/server'
 import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
-/** `saveCard` input: the captured card with its return URL, or the completion of a pending setup. */
+/** `saveCard` input: the captured card with its return URL (and the cardholder's billing details), or the completion of a pending setup. */
 export type SaveCardParams =
-  | { sessionId: string; cardId: string; returnUrl: string }
+  | { sessionId: string; cardId: string; returnUrl: string; billingDetails?: CardBillingDetails }
   | { sessionId: string; completePendingSetup: true }
 
 export type { CreditDisplayBlock, AutoRechargeDisplayBlock }
@@ -243,16 +245,14 @@ export interface SolvaPayTransport {
   createCaptureGrant: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
   /**
    * Confirm a payment server-side with the captured card
-   * (`cardId`) or a saved payment method (`paymentMethodId`). The rail
-   * charge happens here; a `redirectUrl` in the result means the payer
-   * must complete 3DS and returns to `returnUrl`.
+   * (`cardId`) or a saved payment method (`paymentMethodId`), with the
+   * cardholder's `billingDetails`. The rail charge happens here; a
+   * `redirectUrl` in the result means the payer must complete 3DS and
+   * returns to `returnUrl`. A refusal throws `TransportError` with the
+   * backend's `code` (a 402 `payment_declined` carries `reason` and
+   * `declineCode`).
    */
-  confirmPayment: (params: {
-    paymentIntentId: string
-    cardId?: string
-    paymentMethodId?: string
-    returnUrl?: string
-  }) => Promise<ConfirmedPayment>
+  confirmPayment: (params: ConfirmPaymentInput) => Promise<ConfirmedPayment>
 
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
 

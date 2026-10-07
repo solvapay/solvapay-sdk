@@ -274,7 +274,8 @@ describe('createBuildBootstrapPayload', () => {
       expect.not.objectContaining({ returnUrl: expect.anything() }),
     )
     expect(client.createCheckoutSession.mock.calls[0][0]).not.toHaveProperty('returnUrl')
-    expect(payload.returnUrl).toBe('https://mcp.example.test')
+    // The 3DS return URL is the return page the MCP server serves, not its root.
+    expect(payload.returnUrl).toBe('https://mcp.example.test/solvapay/payment-return')
     expect(payload.portalUrl).toBe('https://example.test/portal')
     expect(payload.autoRechargeUrl).toBe(
       'https://example.test/portal?tab=credits&intent=autorecharge',

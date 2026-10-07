@@ -73,6 +73,8 @@ Deploy individually:
 supabase functions deploy check-purchase
 supabase functions deploy create-payment-intent
 supabase functions deploy process-payment
+supabase functions deploy create-capture-grant
+supabase functions deploy confirm-payment
 supabase functions deploy create-topup-payment-intent
 supabase functions deploy customer-balance
 supabase functions deploy cancel-renewal
@@ -96,24 +98,28 @@ supabase functions deploy
 
 ## Edge Functions
 
-| Function                       | Method | Handler                    | Description                       |
-| ------------------------------ | ------ | -------------------------- | --------------------------------- |
-| `check-purchase`               | GET    | `checkPurchase`            | Check user's purchase status      |
-| `create-payment-intent`        | POST   | `createPaymentIntent`      | Create payment intent for a plan  |
-| `process-payment`              | POST   | `processPayment`           | Process confirmed payment         |
-| `create-topup-payment-intent`  | POST   | `createTopupPaymentIntent` | Create credit top-up intent       |
-| `customer-balance`             | GET    | `customerBalance`          | Get customer credit balance       |
-| `cancel-renewal`               | POST   | `cancelRenewal`            | Cancel subscription renewal       |
-| `reactivate-renewal`           | POST   | `reactivateRenewal`        | Reactivate cancelled subscription |
-| `activate-plan`                | POST   | `activatePlan`             | Activate a free/usage plan        |
-| `list-plans`                   | GET    | `listPlans`                | List available plans              |
-| `get-merchant`                 | GET    | `getMerchant`              | Fetch the authenticated merchant's public metadata (name, branding, currency). |
-| `get-product`                  | GET    | `getProduct`               | Fetch a product by reference (name, description). |
-| `track-usage`                  | POST   | `trackUsage`               | Track usage for metered billing   |
-| `sync-customer`                | POST   | `syncCustomer`             | Sync/create customer in SolvaPay  |
-| `create-checkout-session`      | POST   | `createCheckoutSession`    | Create hosted checkout session    |
-| `create-customer-session`      | POST   | `createCustomerSession`    | Create customer portal session    |
-| `solvapay-webhook`             | POST   | `solvapayWebhook(options)` | Receive and verify webhook events |
+| Function                      | Method | Handler                    | Description                                                                                               |
+| ----------------------------- | ------ | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `check-purchase`              | GET    | `checkPurchase`            | Check user's purchase status                                                                              |
+| `create-payment-intent`       | POST   | `createPaymentIntent`      | Create payment intent for a plan                                                                          |
+| `process-payment`             | POST   | `processPayment`           | Process confirmed payment                                                                                 |
+| `create-capture-grant`        | POST   | `createCaptureGrant`       | One vault card capture for a payment (the SDK's `CardFields` write the card under it)                     |
+| `confirm-payment`             | POST   | `confirmPayment`           | Confirm a payment with the captured card or a saved payment method, with `returnUrl` and `billingDetails` |
+| `create-card-setup-grant`     | POST   | `createCardSetupGrant`     | A vault grant on a customer session, for saving a card without paying (`AutoRecharge.CardSetup`)          |
+| `save-card`                   | POST   | `saveCard`                 | Save the captured card on its session, or complete a pending setup after 3DS                              |
+| `create-topup-payment-intent` | POST   | `createTopupPaymentIntent` | Create credit top-up intent                                                                               |
+| `customer-balance`            | GET    | `customerBalance`          | Get customer credit balance                                                                               |
+| `cancel-renewal`              | POST   | `cancelRenewal`            | Cancel subscription renewal                                                                               |
+| `reactivate-renewal`          | POST   | `reactivateRenewal`        | Reactivate cancelled subscription                                                                         |
+| `activate-plan`               | POST   | `activatePlan`             | Activate a free/usage plan                                                                                |
+| `list-plans`                  | GET    | `listPlans`                | List available plans                                                                                      |
+| `get-merchant`                | GET    | `getMerchant`              | Fetch the authenticated merchant's public metadata (name, branding, currency).                            |
+| `get-product`                 | GET    | `getProduct`               | Fetch a product by reference (name, description).                                                         |
+| `track-usage`                 | POST   | `trackUsage`               | Track usage for metered billing                                                                           |
+| `sync-customer`               | POST   | `syncCustomer`             | Sync/create customer in SolvaPay                                                                          |
+| `create-checkout-session`     | POST   | `createCheckoutSession`    | Create hosted checkout session                                                                            |
+| `create-customer-session`     | POST   | `createCustomerSession`    | Create customer portal session                                                                            |
+| `solvapay-webhook`            | POST   | `solvapayWebhook(options)` | Receive and verify webhook events                                                                         |
 
 ## CORS configuration
 
@@ -149,6 +155,10 @@ const SUPABASE_URL = 'https://<project-ref>.supabase.co/functions/v1'
       checkPurchase: `${SUPABASE_URL}/check-purchase`,
       createPayment: `${SUPABASE_URL}/create-payment-intent`,
       processPayment: `${SUPABASE_URL}/process-payment`,
+      createCaptureGrant: `${SUPABASE_URL}/create-capture-grant`,
+      confirmPayment: `${SUPABASE_URL}/confirm-payment`,
+      createCardSetupGrant: `${SUPABASE_URL}/create-card-setup-grant`,
+      saveCard: `${SUPABASE_URL}/save-card`,
       createTopupPayment: `${SUPABASE_URL}/create-topup-payment-intent`,
       customerBalance: `${SUPABASE_URL}/customer-balance`,
       cancelRenewal: `${SUPABASE_URL}/cancel-renewal`,
@@ -181,6 +191,10 @@ supabase/functions/
 ├── check-purchase/index.ts
 ├── create-payment-intent/index.ts
 ├── process-payment/index.ts
+├── create-capture-grant/index.ts
+├── confirm-payment/index.ts
+├── create-card-setup-grant/index.ts
+├── save-card/index.ts
 ├── create-topup-payment-intent/index.ts
 ├── customer-balance/index.ts
 ├── cancel-renewal/index.ts
@@ -196,4 +210,4 @@ supabase/functions/
 └── solvapay-webhook/index.ts
 ```
 
-Total backend code: ~40 lines across 14 files.
+Total backend code: ~50 lines across 18 files.

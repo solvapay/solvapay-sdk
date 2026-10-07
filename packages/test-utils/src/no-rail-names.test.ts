@@ -106,6 +106,28 @@ describe('no rail names on the public surface', () => {
     expect(lines).toEqual([])
   })
 
+  it('the generated API types carry no rail identifier, in a field name or an example', () => {
+    // `spm_` is SolvaPay's and does not match; `api_call` does not either.
+    const railIdentifier = /\b(?:pm|pi|acct|seti)_/
+    const lines = readFileSync(GENERATED, 'utf8')
+      .split('\n')
+      .map((line, i) => `${i + 1}: ${line.trim()}`)
+      .filter(line => railIdentifier.test(line))
+    expect(lines).toEqual([])
+  })
+
+  it('the public auto-recharge config names its card by SolvaPay id only', () => {
+    const generated = readFileSync(GENERATED, 'utf8')
+    const configType = generated.slice(
+      generated.indexOf('AutoRechargeConfigDto: {'),
+      generated.indexOf('AutoRechargeDisplayDto: {'),
+    )
+    expect(configType).toContain('paymentMethod?:')
+    for (const field of ['paymentMethodId', 'inFlightPaymentIntentId', 'lockAcquiredAt']) {
+      expect(configType).not.toMatch(new RegExp(`^\\s*${field}\\??:`, 'm'))
+    }
+  })
+
   it('carries no rail test card number', () => {
     const offenders = sdkSources
       .filter(file => RAIL_TEST_CARD.test(readFileSync(file, 'utf8')))

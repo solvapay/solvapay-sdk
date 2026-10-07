@@ -493,8 +493,46 @@ export interface SolvaPayCopy {
     paymentStatusPrefix: string
     /** Vault mode: the rail returned `requires_action` without a `redirectUrl`. */
     authenticationUnavailable: string
+    /** The bank's page is open elsewhere (MCP host); the form follows the payment meanwhile. */
+    paymentAwaitingAuthentication: string
+    /** The wait for the bank's answer ended without a settled payment. */
+    paymentAuthenticationTimedOut: string
+    /** A 3DS return whose payment the page no longer knows (storage cleared, other browser). */
+    paymentReturnUnresolved: string
     paywallInvalidContent: string
     usageLoadFailed: string
+  }
+  /**
+   * Payer copy for the vault routes' keyed refusals, picked by the `error`
+   * key the backend answers (never by message text). The keys and the
+   * copy match the hosted checkout.
+   */
+  vaultErrors: {
+    /** The plain decline when neither a decline code nor a reason has copy. */
+    paymentDeclined: string
+    captureGrantExhausted: string
+    cardNotInGrantWindow: string
+    cardAlreadyUsed: string
+    railCredentialRejected: string
+    confirmInProgress: string
+    checkoutSessionUnavailable: string
+    railOutcomeUnknown: string
+    cardPostSaveFailed: string
+    cardNotFound: string
+    /** By the canonical decline code of a 402. */
+    declineCodes: {
+      insufficientFunds: string
+      expiredCard: string
+      incorrectCvc: string
+      incorrectNumber: string
+      authenticationRequired: string
+    }
+    /** By the connector's failure reason of a 402 without a decline code. */
+    reasons: {
+      authenticationRequired: string
+      authenticationFailed: string
+      processingError: string
+    }
   }
   paywall: {
     header: string

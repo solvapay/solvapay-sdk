@@ -12,7 +12,12 @@ import {
 } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
-import type { CaptureGrant, ConfirmPaymentResult, TopupProcessResult } from '../types/client'
+import type {
+  CaptureGrant,
+  CardBillingDetails,
+  ConfirmPaymentResult,
+  TopupProcessResult,
+} from '../types/client'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
@@ -586,6 +591,8 @@ export async function confirmPaymentCore(
     cardId?: string
     paymentMethodId?: string
     returnUrl?: string
+    /** The cardholder's name, email and address, put on the card the rail creates. */
+    billingDetails?: CardBillingDetails
   },
   options: { solvaPay?: SolvaPay } = {},
 ): Promise<ConfirmPaymentResult | ErrorResult> {
@@ -605,13 +612,14 @@ export async function confirmPaymentCore(
     if (isErrorResult(customerResult)) return customerResult
 
     const solvaPay = options.solvaPay || createSolvaPay()
+    const common = {
+      paymentIntentId: body.paymentIntentId,
+      returnUrl: body.returnUrl,
+      ...(body.billingDetails !== undefined ? { billingDetails: body.billingDetails } : {}),
+    }
     const params = body.cardId
-      ? { paymentIntentId: body.paymentIntentId, cardId: body.cardId, returnUrl: body.returnUrl }
-      : {
-          paymentIntentId: body.paymentIntentId,
-          paymentMethodId: body.paymentMethodId as string,
-          returnUrl: body.returnUrl,
-        }
+      ? { ...common, cardId: body.cardId }
+      : { ...common, paymentMethodId: body.paymentMethodId as string }
     return await solvaPay.confirmPayment(params)
   } catch (error) {
     return handleRouteError(error, 'Confirm payment', 'Payment confirmation failed')

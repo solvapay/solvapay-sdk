@@ -64,9 +64,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       apiBaseUrl,
       productRef,
     })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
-    )
+    const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
     expect(res.status).toBe(200)
     const body = (await res.json()) as { resource: string }
     expect(body.resource).toBe(publicBaseUrl)
@@ -150,6 +148,28 @@ describe('createSolvaPayMcpFetchHandler', () => {
     const res = await handler(new Request(`${publicBaseUrl}/mcp`, { method: 'GET' }))
     expect(res.status).toBe(405)
     expect(res.headers.get('allow')).toBe('POST, OPTIONS')
+  })
+
+  it('serves the 3DS return page on GET /solvapay/payment-return without auth', async () => {
+    const handler = createSolvaPayMcpFetchHandler({
+      factory: mockFactory(),
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const res = await handler(new Request(`${publicBaseUrl}/solvapay/payment-return`))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8')
+    expect(res.headers.get('cache-control')).toBe('no-store')
+    const html = await res.text()
+    expect(html).toContain('<!doctype html>')
+    expect(html).toContain('Authentication complete')
+    expect(html).not.toMatch(/stripe|pi_|pm_/i)
+
+    const post = await handler(
+      new Request(`${publicBaseUrl}/solvapay/payment-return`, { method: 'POST' }),
+    )
+    expect(post.status).toBe(404)
   })
 
   it('returns 404 for unknown paths', async () => {

@@ -81,6 +81,7 @@ export {
   ExternalLinkProvider,
   useExternalLinkClick,
   useOpenExternal,
+  useCanOpenExternal,
 } from './hooks/useExternalLink'
 export type { ExternalLinkOpener, ExternalLinkProviderProps } from './hooks/useExternalLink'
 
@@ -213,12 +214,36 @@ export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
 export { confirmVaultPayment } from './utils/confirmPayment'
 export type { ConfirmVaultPaymentInput, ConfirmVaultPaymentResult } from './utils/confirmPayment'
-export { readPaymentIntentId, stripPaymentIntentParams } from './primitives/paymentIntentReturn'
+export {
+  PAYMENT_RETURN_PARAM,
+  buildPaymentReturnUrl,
+  readPaymentReturn,
+  rememberPaymentReturn,
+  stripPaymentReturnParams,
+  takePaymentReturn,
+} from './primitives/paymentReturn'
+export type { PaymentReturn, PaymentReturnRecord } from './primitives/paymentReturn'
+export {
+  PAYMENT_ERROR_CODES,
+  paymentErrorMessage,
+  paymentFailureMessage,
+  paymentErrorCode,
+  declineMessage,
+} from './utils/paymentErrorCopy'
+export type { PaymentErrorCode } from './utils/paymentErrorCopy'
+export { buildBillingDetails } from './utils/billingDetails'
+export type { CardBillingDetails } from './utils/billingDetails'
 export * from './vault'
 
 // Transport — unified data-access surface. Use with SolvaPayProvider via
 // `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.
-export { createHttpTransport, DEFAULT_ROUTES, UnsupportedTransportMethodError } from './transport'
+export {
+  createHttpTransport,
+  DEFAULT_ROUTES,
+  UnsupportedTransportMethodError,
+  TransportError,
+} from './transport'
+export type { TransportErrorInit } from './transport'
 export type {
   SolvaPayTransport,
   SaveCardParams,

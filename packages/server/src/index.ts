@@ -23,7 +23,8 @@ export type {
 
 // Re-export client creation (for advanced use cases)
 export { createSolvaPayClient } from './client'
-export type { ServerClientOptions } from './client'
+export type { ServerClientOptions, ParsedApiErrorBody } from './client'
+export { parseApiErrorBody } from './client'
 export type { SaveCardBody } from './helpers/card-setup'
 
 // Opt-in product configuration check (never auto-invoked)

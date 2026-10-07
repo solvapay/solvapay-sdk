@@ -16,11 +16,10 @@
  * After PAYG activate, the wallet decides the next step: empty → amount
  * picker (`credit_topup`); funded → success with no card.
  *
- * 3DS returns: when `payment_intent` is present in the URL on mount, the
- * hook starts on the `payment` step so `<CheckoutSteps.Payment>` (or a
- * mounted `PaymentForm` / `TopupForm`) can resume. Return-path resume
- * itself lives in those form primitives — see `readPaymentIntentId` /
- * `stripPaymentIntentParams`.
+ * 3DS returns: when the SDK's payment return param is present in the URL
+ * on mount, the hook starts on the `payment` step so `<CheckoutSteps.Payment>`
+ * (or a mounted `PaymentForm` / `TopupForm`) can resume. Return-path resume
+ * itself lives in those form primitives, see `readPaymentReturn`.
  *
  * Lifecycle hooks fire at well-defined points:
  *  - `onPlanSelect(planRef, plan)` — every selectPlan() call
@@ -53,11 +52,11 @@ import {
   type SuccessMeta,
 } from '../primitives/checkout/shared'
 import { resolvePlanPricingOption } from '../utils/planPricing'
-import { readPaymentIntentId } from '../primitives/paymentIntentReturn'
+import { readPaymentReturn } from '../primitives/paymentReturn'
 
 function resolveInitialCheckoutStep(initialStep: CheckoutStep): CheckoutStep {
   if (typeof window === 'undefined') return initialStep
-  return readPaymentIntentId(window.location.search) ? 'payment' : initialStep
+  return readPaymentReturn(window.location.search) ? 'payment' : initialStep
 }
 
 export type CheckoutStatus = 'idle' | 'activating' | 'paying' | 'error'

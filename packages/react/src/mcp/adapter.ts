@@ -18,11 +18,13 @@
  * ```
  *
  * The adapter is tool-name-based: unimplemented tools surface as errors from
- * the MCP server, which are re-thrown with the server's text payload as the
- * message. Call sites can feature-detect by catching and matching.
+ * the MCP server, which are re-thrown as `TransportError` with the server's
+ * text payload as the message and the keyed fields (`status`, `code`,
+ * `reason`, `declineCode`) from `structuredContent`.
  */
 
 import type { SolvaPayTransport } from '../transport/types'
+import { TransportError, readErrorBody } from '../transport/errors'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 
 /**
@@ -50,10 +52,17 @@ export interface McpAppLike {
 
 function unwrap<T>(result: CallToolResultLike): T {
   if (result.isError) {
+    // `toolErrorResult` puts the whole `ErrorResult` in `structuredContent`:
+    // the backend's key, status, reason and decline code travel with the text.
+    const fields = readErrorBody(result.structuredContent)
     const first = result.content?.[0]
-    const message =
-      first && 'text' in first && typeof first.text === 'string' ? first.text : 'MCP tool failed'
-    throw new Error(message)
+    const text = first && 'text' in first && typeof first.text === 'string' ? first.text : undefined
+    throw new TransportError(text ?? fields.message ?? 'MCP tool failed', {
+      ...(fields.status !== undefined ? { status: fields.status } : {}),
+      ...(fields.code ? { code: fields.code } : {}),
+      ...(fields.reason ? { reason: fields.reason } : {}),
+      ...(fields.declineCode ? { declineCode: fields.declineCode } : {}),
+    })
   }
   if (result.structuredContent !== undefined) {
     return result.structuredContent as T
@@ -93,18 +102,12 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   // read tools (history is the exception).
   return {
     createPayment: params =>
-      callTool(
-        MCP_TOOL_NAMES.createPayment,
-        pickDefined({ purpose: 'plan', ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ purpose: 'plan', ...params })),
 
     processPayment: params => callTool(MCP_TOOL_NAMES.processPayment, pickDefined({ ...params })),
 
     createTopupPayment: params =>
-      callTool(
-        MCP_TOOL_NAMES.createPayment,
-        pickDefined({ purpose: 'topup', ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ purpose: 'topup', ...params })),
 
     attachBusinessDetails: params =>
       callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
@@ -121,16 +124,10 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
     removePaymentMethod: () => callTool(MCP_TOOL_NAMES.removePaymentMethod, {}),
 
     cancelRenewal: params =>
-      callTool(
-        MCP_TOOL_NAMES.setRenewal,
-        pickDefined({ enabled: false, ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.setRenewal, pickDefined({ enabled: false, ...params })),
 
     reactivateRenewal: params =>
-      callTool(
-        MCP_TOOL_NAMES.setRenewal,
-        pickDefined({ enabled: true, ...params }),
-      ),
+      callTool(MCP_TOOL_NAMES.setRenewal, pickDefined({ enabled: true, ...params })),
 
     activatePlan: params => callTool(MCP_TOOL_NAMES.activatePlan, pickDefined({ ...params })),
 
@@ -140,8 +137,7 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
         pickDefined({ kind: 'checkout', ...(params ?? {}) }),
       ),
 
-    createCustomerSession: () =>
-      callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
+    createCustomerSession: () => callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
 
     // History is not on bootstrap (`checkPurchaseCore` is active-only).
     // This is the documented exception to the reads-from-bootstrap rule.

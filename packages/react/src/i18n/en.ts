@@ -420,8 +420,46 @@ export const enCopy: SolvaPayCopy = {
     paymentStatusPrefix: 'Payment status: {status}',
     authenticationUnavailable:
       'Your bank asked for additional authentication, but no authentication page was provided. Please try another card or contact support.',
+    paymentAwaitingAuthentication:
+      'Complete the authentication in the window your bank opened. This page updates as soon as your bank answers.',
+    paymentAuthenticationTimedOut:
+      'Your bank did not answer in time. If you completed the authentication, your payment finishes on its own; otherwise enter your card again.',
+    paymentReturnUnresolved:
+      'We could not find the payment you came back from. If your card was charged, your purchase completes on its own; otherwise start again.',
     paywallInvalidContent: 'Paywall content is missing or malformed.',
     usageLoadFailed: 'Failed to load usage',
+  },
+  vaultErrors: {
+    paymentDeclined: 'Your card was declined.',
+    captureGrantExhausted:
+      'Too many card attempts for this payment. Start a new checkout from the seller, or open a new link to your account.',
+    cardNotInGrantWindow: 'Your card details timed out. Please enter your card again.',
+    cardAlreadyUsed: 'This card entry was already used. Please enter your card again.',
+    railCredentialRejected:
+      'The payment provider could not accept your card. Please try again or contact the seller.',
+    confirmInProgress:
+      'This payment is already being confirmed. Please wait a moment, then refresh the page to see its status.',
+    checkoutSessionUnavailable:
+      'This link has already been used or has expired. Start a new checkout from the seller, or open a new link to your account.',
+    railOutcomeUnknown:
+      'The payment provider did not answer. Your payment is being confirmed; please wait a moment, then refresh the page to see its status. Do not enter your card again.',
+    cardPostSaveFailed:
+      'Your card is saved, but finishing its setup failed. Please press Save again to complete it.',
+    cardNotFound: 'Your card details could not be found. Please enter your card again.',
+    declineCodes: {
+      insufficientFunds: 'Your card has insufficient funds.',
+      expiredCard: 'Your card has expired.',
+      incorrectCvc: "Your card's security code is incorrect.",
+      incorrectNumber: 'Your card number is incorrect.',
+      authenticationRequired: 'Your bank requires you to authenticate this card. Please try again.',
+    },
+    reasons: {
+      authenticationRequired: 'Your bank requires you to authenticate this card. Please try again.',
+      authenticationFailed:
+        'Your bank could not authenticate this card. Please try again or use another card.',
+      processingError:
+        'The payment could not be processed. Nothing was charged. Please try again in a moment.',
+    },
   },
   paywall: {
     header: 'Unlock access',

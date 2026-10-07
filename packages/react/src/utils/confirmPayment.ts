@@ -1,35 +1,40 @@
 import type { SolvaPayCopy } from '../i18n/types'
 import { interpolate } from '../i18n/interpolate'
-import type { CaptureGrant, ConfirmedPayment } from '../types'
+import type { CaptureGrant, ConfirmedPayment, ConfirmPaymentInput } from '../types'
 import type { CapturedCard } from '../vault/collect'
 import { CardCaptureError } from '../vault/collect'
+import type { CardBillingDetails } from './billingDetails'
+import { paymentErrorCode, paymentFailureMessage } from './paymentErrorCopy'
 
 // ---------- Vault checkout ----------
 
 export type ConfirmVaultPaymentInput = {
   /** SolvaPay payment intent id. */
   paymentIntentId: string
-  /** Writes the entered card into the vault under a grant — registered by `PaymentForm.CardFields`. */
+  /** Writes the entered card into the vault under a grant; registered by `PaymentForm.CardFields`. */
   capture: (grant: CaptureGrant) => Promise<CapturedCard>
   createCaptureGrant: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
-  confirmPayment: (params: {
-    paymentIntentId: string
-    cardId?: string
-    paymentMethodId?: string
-    returnUrl?: string
-  }) => Promise<ConfirmedPayment>
+  confirmPayment: (params: ConfirmPaymentInput) => Promise<ConfirmedPayment>
   /** Pay with a saved entry instead of capturing a card. Skips the grant and capture. */
   paymentMethodId?: string
   returnUrl: string
+  /** The cardholder's name, email and address, put on the card the rail creates. */
+  billingDetails?: CardBillingDetails
   copy: SolvaPayCopy
 }
 
 export type ConfirmVaultPaymentResult =
   | { status: 'succeeded'; payment: ConfirmedPayment }
+  /** The rail still holds the payment; reconcile it through the backend. */
   | { status: 'pending'; message: string; payment: ConfirmedPayment }
   | { status: 'requires_action'; message: string; redirectUrl: string; payment: ConfirmedPayment }
   | { status: 'other'; message: string; payment: ConfirmedPayment }
-  | { status: 'error'; message: string }
+  /**
+   * The grant, the capture or the confirm failed. `message` is the payer's
+   * copy (by the backend's error key when it answered one); `code` is that
+   * key, for integrators who branch on it.
+   */
+  | { status: 'error'; message: string; code?: string }
 
 /**
  * Grant → capture the card into the vault → confirm server-side. The
@@ -39,8 +44,14 @@ export type ConfirmVaultPaymentResult =
 export async function confirmVaultPayment(
   input: ConfirmVaultPaymentInput,
 ): Promise<ConfirmVaultPaymentResult> {
-  const { paymentIntentId, capture, createCaptureGrant, confirmPayment: confirm, returnUrl, copy } =
-    input
+  const {
+    paymentIntentId,
+    capture,
+    createCaptureGrant,
+    confirmPayment: confirm,
+    returnUrl,
+    copy,
+  } = input
   try {
     let cardId: string | undefined
     if (!input.paymentMethodId) {
@@ -52,15 +63,18 @@ export async function confirmVaultPayment(
       paymentIntentId,
       ...(cardId ? { cardId } : { paymentMethodId: input.paymentMethodId }),
       returnUrl,
+      ...(input.billingDetails !== undefined ? { billingDetails: input.billingDetails } : {}),
     })
     return mapConfirmedPayment(payment, copy)
   } catch (err) {
     if (err instanceof CardCaptureError) {
       return { status: 'error', message: copy.errors.cardCaptureFailed }
     }
+    const code = paymentErrorCode(err)
     return {
       status: 'error',
-      message: err instanceof Error ? err.message : copy.errors.paymentUnexpected,
+      message: paymentFailureMessage(err, copy, copy.errors.paymentUnexpected),
+      ...(code ? { code } : {}),
     }
   }
 }

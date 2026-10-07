@@ -51,17 +51,24 @@ import { CheckoutSummary as CheckoutSummaryShim } from '../components/CheckoutSu
 import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { confirmVaultPayment } from '../utils/confirmPayment'
-import { reconcilePayment } from '../utils/processPaymentResult'
-import { readPaymentIntentId, stripPaymentIntentParams } from './paymentIntentReturn'
+import { reconcilePayment, type ReconcilePaymentResult } from '../utils/processPaymentResult'
+import { buildBillingDetails } from '../utils/billingDetails'
+import {
+  buildPaymentReturnUrl,
+  readPaymentReturn,
+  rememberPaymentReturn,
+  stripPaymentReturnParams,
+  takePaymentReturn,
+  type PaymentReturn,
+} from './paymentReturn'
+import { useCanOpenExternal, useOpenExternal } from '../hooks/useExternalLink'
+import { AUTHENTICATION_WAIT_ATTEMPTS } from './authenticationWait'
 import { VaultCardFields, type CardFieldsProps } from '../vault/CardFields'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
-import {
-  useBusinessDetailsAttach,
-  defaultBusinessDetails,
-} from '../hooks/useBusinessDetailsAttach'
+import { useBusinessDetailsAttach, defaultBusinessDetails } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
   createTaxSummaryParts,
@@ -155,8 +162,14 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     const hasInitializedRef = useRef(false)
     const hasPlanOrProduct = !!(effectivePlanRef || effectiveProductRef)
 
+    // A 3DS return names the payment the payer left for: that payment is
+    // reconciled and no new one is created.
+    const [paymentReturn] = useState<PaymentReturn | null>(() =>
+      typeof window === 'undefined' ? null : (readPaymentReturn(window.location.search) ?? null),
+    )
+
     useEffect(() => {
-      if (isFreePlan) return
+      if (isFreePlan || paymentReturn) return
       if (
         !hasInitializedRef.current &&
         hasPlanOrProduct &&
@@ -180,6 +193,7 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
       paymentIntentId,
       startCheckout,
       isFreePlan,
+      paymentReturn,
     ])
 
     const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
@@ -196,14 +210,16 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
     // payment is confirmed server-side.
     const paidReady = !!paymentIntentId && !!vault
 
-    const dataState = !hasPlanOrProduct || checkoutError
-      ? 'error'
-      : isFreePlan && resolvedPlan
-        ? 'ready'
-        : paidReady
+    const dataState =
+      !hasPlanOrProduct || checkoutError
+        ? 'error'
+        : isFreePlan && resolvedPlan
           ? 'ready'
-          : 'loading'
-    const dataVariant = isFreePlan && resolvedPlan ? 'free' : paidReady ? 'paid' : undefined
+          : paidReady || paymentReturn
+            ? 'ready'
+            : 'loading'
+    const dataVariant =
+      isFreePlan && resolvedPlan ? 'free' : paidReady || paymentReturn ? 'paid' : undefined
 
     const pending = (
       <PendingInner
@@ -238,6 +254,22 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           </p>
         ) : checkoutError ? (
           pending
+        ) : paymentReturn && !isFreePlan ? (
+          <ReturnBody
+            planRef={effectivePlanRef}
+            productRef={effectiveProductRef}
+            resolvedPlanRef={resolvedPlanRef}
+            plan={resolvedPlan ?? null}
+            paymentReturn={paymentReturn}
+            returnUrl={finalReturnUrl}
+            submitButtonText={submitButtonText}
+            buttonClassName={buttonClassName}
+            onSuccess={onSuccess}
+            onResult={onResult}
+            onError={onError}
+          >
+            {children}
+          </ReturnBody>
         ) : isFreePlan && resolvedPlan ? (
           <FreeInner
             planRef={effectivePlanRef}
@@ -310,6 +342,66 @@ type PaidBodyProps = {
   children?: React.ReactNode
 }
 
+/**
+ * Settle a reconciled payment into provider state and the callbacks.
+ * Shared by the submit path, the awaited-authentication path and the 3DS
+ * return body.
+ */
+function useSettlePayment(input: {
+  planRef?: string
+  productRef?: string
+  resolvedPlanRef: string | null
+  onSuccess?: PaymentFormProps['onSuccess']
+  onResult?: PaymentFormProps['onResult']
+}) {
+  const { planRef, productRef, resolvedPlanRef, onSuccess, onResult } = input
+  const copy = useCopy()
+  const { processPayment, upsertPurchase } = useSolvaPay()
+  const { refetch } = usePurchase()
+
+  const reconcile = useCallback(
+    (railPaymentId: string) =>
+      reconcilePayment({
+        paymentIntentId: railPaymentId,
+        productRef,
+        planRef: planRef || resolvedPlanRef || undefined,
+        processPayment,
+        refetchPurchase: refetch,
+        copy,
+      }),
+    [productRef, planRef, resolvedPlanRef, processPayment, refetch, copy],
+  )
+
+  const settle = useCallback(
+    async (
+      paymentIntent: Parameters<NonNullable<PaymentFormProps['onSuccess']>>[0],
+      reconciled: Extract<ReconcilePaymentResult, { status: 'success' }>,
+    ) => {
+      const r = reconciled.result
+      if (r && 'type' in r && r.type === 'recurring') {
+        upsertPurchase(r.purchase)
+      } else if (r && 'type' in r && r.type === 'one-time') {
+        upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
+      } else {
+        try {
+          await refetch()
+        } catch (error) {
+          console.error(
+            '[PaymentForm] secondary purchase refetch failed after submit success',
+            error,
+          )
+        }
+      }
+      onSuccess?.(paymentIntent)
+      const paid: PaymentResult = { kind: 'paid', paymentIntent }
+      onResult?.(paid)
+    },
+    [upsertPurchase, refetch, onSuccess, onResult],
+  )
+
+  return { reconcile, settle }
+}
+
 const PaidBody: React.FC<PaidBodyProps> = ({
   planRef,
   productRef,
@@ -333,13 +425,17 @@ const PaidBody: React.FC<PaidBodyProps> = ({
   children,
 }) => {
   const copy = useCopy()
-  const {
-    processPayment,
-    upsertPurchase,
-    createCaptureGrant,
-    confirmPayment: confirmPaymentTransport,
-  } = useSolvaPay()
-  const { refetch } = usePurchase()
+  const { createCaptureGrant, confirmPayment: confirmPaymentTransport } = useSolvaPay()
+  const customer = useCustomer()
+  const openExternal = useOpenExternal()
+  const canOpenExternal = useCanOpenExternal()
+  const { reconcile, settle } = useSettlePayment({
+    planRef,
+    productRef,
+    resolvedPlanRef,
+    onSuccess,
+    onResult,
+  })
 
   const {
     businessDetails,
@@ -371,74 +467,73 @@ const PaidBody: React.FC<PaidBodyProps> = ({
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const returnResumeStarted = useRef(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
-  const finishSucceeded = useCallback(
-    async (paymentIntent: Parameters<NonNullable<PaymentFormProps['onSuccess']>>[0], railPaymentId: string) => {
-      const reconcileResult = await reconcilePayment({
-        paymentIntentId: railPaymentId,
-        productRef,
-        planRef: planRef || resolvedPlanRef || undefined,
-        processPayment,
-        refetchPurchase: refetch,
-        copy,
-      })
-      if (reconcileResult.status === 'success') {
-        const r = reconcileResult.result
-        if (r && 'type' in r && r.type === 'recurring') {
-          upsertPurchase(r.purchase)
-        } else if (r && 'type' in r && r.type === 'one-time') {
-          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
-        } else {
-          try {
-            await refetch()
-          } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
-          }
-        }
-        onSuccess?.(paymentIntent)
-        const paid: PaymentResult = { kind: 'paid', paymentIntent }
-        onResult?.(paid)
-        return true
+  /**
+   * Reconcile a confirmed payment once. A settled payment fires the
+   * callbacks; one the backend still reports pending leaves the pending
+   * notice; a failure is an error. Returns the reconcile outcome.
+   */
+  const finishConfirmed = useCallback(
+    async (
+      paymentIntent: Parameters<NonNullable<PaymentFormProps['onSuccess']>>[0],
+      railPaymentId: string,
+    ): Promise<ReconcilePaymentResult['status']> => {
+      const reconciled = await reconcile(railPaymentId)
+      if (reconciled.status === 'success') {
+        setNotice(null)
+        await settle(paymentIntent, reconciled)
+        return reconciled.status
       }
-      const msg =
-        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
-          ? reconcileResult.error.message
-          : copy.errors.paymentProcessingFailed
-      setError(msg)
-      onError?.(reconcileResult.error)
-      return false
+      if (reconciled.status === 'pending') {
+        setNotice(reconciled.error.message)
+        return reconciled.status
+      }
+      setNotice(null)
+      setError(
+        reconciled.status === 'timeout'
+          ? reconciled.error.message
+          : copy.errors.paymentProcessingFailed,
+      )
+      onError?.(reconciled.error)
+      return reconciled.status
     },
-    [productRef, planRef, resolvedPlanRef, processPayment, refetch, copy, upsertPurchase, onSuccess, onResult, onError],
+    [reconcile, settle, copy, onError],
   )
 
-  // 3DS return path: the rail sends the payer back with `payment_intent`
-  // in the URL; resume by reconciling through the backend on that id.
-  useEffect(() => {
-    if (returnResumeStarted.current || typeof window === 'undefined') return
-    const railPaymentId = readPaymentIntentId(window.location.search)
-    if (!railPaymentId) return
-    returnResumeStarted.current = true
-    let cancelled = false
-    void (async () => {
-      setIsProcessing(true)
-      setError(null)
-      stripPaymentIntentParams()
-      try {
-        if (cancelled) return
-        await finishSucceeded(
-          { id: paymentIntentId ?? railPaymentId, processorPaymentId: railPaymentId, status: 'succeeded' },
-          railPaymentId,
-        )
-      } finally {
-        if (!cancelled) setIsProcessing(false)
+  /**
+   * The bank's page is open outside the form (an MCP host opened it): keep
+   * the form mounted and follow the payment through the backend until it
+   * settles or the wait budget ends.
+   */
+  const awaitAuthentication = useCallback(
+    async (
+      paymentIntent: Parameters<NonNullable<PaymentFormProps['onSuccess']>>[0],
+      railPaymentId: string,
+    ) => {
+      setNotice(copy.errors.paymentAwaitingAuthentication)
+      for (let attempt = 0; attempt < AUTHENTICATION_WAIT_ATTEMPTS; attempt++) {
+        const reconciled = await reconcile(railPaymentId)
+        if (reconciled.status === 'success') {
+          setNotice(null)
+          await settle(paymentIntent, reconciled)
+          return
+        }
+        if (reconciled.status === 'error') {
+          setNotice(null)
+          setError(copy.errors.paymentProcessingFailed)
+          onError?.(reconciled.error)
+          return
+        }
+        // timeout | pending: the payer is still with the bank.
       }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [paymentIntentId, finishSucceeded])
-
+      setNotice(null)
+      const timedOut = new Error(copy.errors.paymentAuthenticationTimedOut)
+      setError(timedOut.message)
+      onError?.(timedOut)
+    },
+    [reconcile, settle, copy, onError],
+  )
 
   const isReady = !!paymentIntentId
   const paymentSourceReady = !!cardCapture
@@ -471,6 +566,7 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       }
     }
     setError(null)
+    setNotice(null)
     setIsProcessing(true)
     // try/finally so a throw anywhere after `setIsProcessing(true)` (confirm,
     // reconcile, upsertPurchase, onSuccess/onResult) cannot wedge the button
@@ -481,7 +577,12 @@ const PaidBody: React.FC<PaidBodyProps> = ({
         capture: cardCapture,
         createCaptureGrant,
         confirmPayment: confirmPaymentTransport,
-        returnUrl,
+        returnUrl: buildPaymentReturnUrl(returnUrl, { paymentIntentId }),
+        billingDetails: buildBillingDetails({
+          name: customerName,
+          email: customer.email ?? prefillCustomer?.email,
+          businessDetails,
+        }),
         copy,
       })
       if (result.status === 'error') {
@@ -490,17 +591,35 @@ const PaidBody: React.FC<PaidBodyProps> = ({
         return
       }
       if (result.status === 'requires_action') {
-        // The rail needs the payer (3DS). Send them there; the return path
-        // above resumes on `payment_intent`.
+        // The bank needs the payer. Inside an MCP host the host opens the
+        // page and the form follows the payment here; otherwise the browser
+        // navigates and the return path reconciles the remembered payment.
+        rememberPaymentReturn({
+          paymentIntentId,
+          processorPaymentId: result.payment.processorPaymentId,
+        })
+        if (canOpenExternal) {
+          const opened = await openExternal(result.redirectUrl)
+          if (!opened) {
+            const msg = copy.errors.authenticationUnavailable
+            setError(msg)
+            onError?.(new Error(msg))
+            return
+          }
+          await awaitAuthentication(result.payment, result.payment.processorPaymentId)
+          return
+        }
         window.location.assign(result.redirectUrl)
         return
       }
-      if (result.status === 'pending' || result.status === 'other') {
+      if (result.status === 'other') {
         setError(result.message)
         onError?.(new Error(result.message))
         return
       }
-      await finishSucceeded(result.payment, result.payment.processorPaymentId)
+      // `succeeded` and `pending` both go through the backend: a pending
+      // payment is followed, not failed.
+      await finishConfirmed(result.payment, result.payment.processorPaymentId)
     } finally {
       setIsProcessing(false)
     }
@@ -509,7 +628,10 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     cardCapture,
     createCaptureGrant,
     confirmPaymentTransport,
-    finishSucceeded,
+    finishConfirmed,
+    awaitAuthentication,
+    openExternal,
+    canOpenExternal,
     returnUrl,
     copy,
     onError,
@@ -518,6 +640,9 @@ const PaidBody: React.FC<PaidBodyProps> = ({
     runAttach,
     businessDetails,
     businessDetailsError,
+    customerName,
+    customer.email,
+    prefillCustomer?.email,
   ])
 
   const effectiveError = error ?? businessDetailsError
@@ -540,6 +665,7 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       requireTermsAcceptance,
       canSubmit,
       error: effectiveError ?? null,
+      notice,
       elementKind,
       returnUrl,
       submitButtonText,
@@ -576,6 +702,7 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       requireTermsAcceptance,
       canSubmit,
       effectiveError,
+      notice,
       elementKind,
       returnUrl,
       submitButtonText,
@@ -591,6 +718,153 @@ const PaidBody: React.FC<PaidBodyProps> = ({
       setBusinessDetails,
       setCardCaptureStable,
       submit,
+    ],
+  )
+
+  return <PaymentFormProvider value={contextValue}>{children}</PaymentFormProvider>
+}
+
+// ---------- Return body ----------
+
+/**
+ * The payer is back from the bank (`solvapay_payment` in the URL): reconcile
+ * the payment they left for, with the rail reference the form remembered
+ * before the redirect. No new payment is created; a return without a
+ * remembered record is reported as unresolved.
+ */
+const ReturnBody: React.FC<{
+  planRef?: string
+  productRef?: string
+  resolvedPlanRef: string | null
+  plan: Plan | null
+  paymentReturn: PaymentReturn
+  returnUrl: string
+  submitButtonText?: string
+  buttonClassName?: string
+  onSuccess?: PaymentFormProps['onSuccess']
+  onResult?: PaymentFormProps['onResult']
+  onError?: PaymentFormProps['onError']
+  children?: React.ReactNode
+}> = ({
+  planRef,
+  productRef,
+  resolvedPlanRef,
+  plan,
+  paymentReturn,
+  returnUrl,
+  submitButtonText,
+  buttonClassName,
+  onSuccess,
+  onResult,
+  onError,
+  children,
+}) => {
+  const copy = useCopy()
+  const { reconcile, settle } = useSettlePayment({
+    planRef,
+    productRef,
+    resolvedPlanRef,
+    onSuccess,
+    onResult,
+  })
+  const [isProcessing, setIsProcessing] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    stripPaymentReturnParams()
+    const record = takePaymentReturn(paymentReturn.paymentIntentId)
+    void (async () => {
+      try {
+        if (!record) {
+          const unresolved = new Error(copy.errors.paymentReturnUnresolved)
+          setError(unresolved.message)
+          onError?.(unresolved)
+          return
+        }
+        setProcessorPaymentId(record.processorPaymentId)
+        const reconciled = await reconcile(record.processorPaymentId)
+        if (reconciled.status === 'success') {
+          await settle(
+            {
+              id: record.paymentIntentId,
+              processorPaymentId: record.processorPaymentId,
+              status: 'succeeded',
+            },
+            reconciled,
+          )
+          return
+        }
+        if (reconciled.status === 'pending') {
+          setNotice(reconciled.error.message)
+          return
+        }
+        setError(
+          reconciled.status === 'timeout'
+            ? reconciled.error.message
+            : copy.errors.paymentProcessingFailed,
+        )
+        onError?.(reconciled.error)
+      } finally {
+        setIsProcessing(false)
+      }
+    })()
+  }, [paymentReturn, reconcile, settle, copy, onError])
+
+  const contextValue: PaymentFormContextValue = useMemo(
+    () => ({
+      planRef,
+      productRef,
+      prefillCustomer: undefined,
+      resolvedPlanRef,
+      plan,
+      paymentIntentId: paymentReturn.paymentIntentId,
+      vault: null,
+      processorPaymentId,
+      isProcessing,
+      isReady: false,
+      paymentInputComplete: false,
+      termsAccepted: false,
+      requireTermsAcceptance: false,
+      canSubmit: false,
+      error,
+      notice,
+      elementKind: null,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: () => {},
+      setElementKind: () => {},
+      setCardCapture: () => {},
+      setPaymentInputComplete: () => {},
+      setTermsAccepted: () => {},
+      submit: async () => {},
+    }),
+    [
+      planRef,
+      productRef,
+      resolvedPlanRef,
+      plan,
+      paymentReturn,
+      processorPaymentId,
+      isProcessing,
+      error,
+      notice,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
     ],
   )
 
@@ -688,6 +962,7 @@ const FreeInner: React.FC<{
       requireTermsAcceptance,
       canSubmit,
       error,
+      notice: null,
       elementKind: null,
       returnUrl: '',
       submitButtonText,
@@ -765,6 +1040,7 @@ const PendingInner: React.FC<{
       requireTermsAcceptance: false,
       canSubmit: false,
       error,
+      notice: null,
       elementKind: null,
       returnUrl,
       submitButtonText,
@@ -894,30 +1170,35 @@ const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
  * the backend for a grant, writes the card into the vault and confirms
  * server-side. The card number never touches the integrator's DOM.
  */
-const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(function PaymentFormCardFields(
-  props,
-  ref,
-) {
-  const { vault, paymentIntentId, appearance, setElementKind, setCardCapture, setPaymentInputComplete } =
-    usePaymentForm()
-  const onActive = useCallback(
-    (active: boolean) => setElementKind(active ? 'card-fields' : null),
-    [setElementKind],
-  )
-  return (
-    <VaultCardFields
-      ref={ref}
-      data-solvapay-payment-form-card-fields=""
-      {...props}
-      vault={vault}
-      paymentIntentId={paymentIntentId}
-      appearance={appearance}
-      onCapture={setCardCapture}
-      onComplete={setPaymentInputComplete}
-      onActive={onActive}
-    />
-  )
-})
+const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(
+  function PaymentFormCardFields(props, ref) {
+    const {
+      vault,
+      paymentIntentId,
+      appearance,
+      setElementKind,
+      setCardCapture,
+      setPaymentInputComplete,
+    } = usePaymentForm()
+    const onActive = useCallback(
+      (active: boolean) => setElementKind(active ? 'card-fields' : null),
+      [setElementKind],
+    )
+    return (
+      <VaultCardFields
+        ref={ref}
+        data-solvapay-payment-form-card-fields=""
+        {...props}
+        vault={vault}
+        paymentIntentId={paymentIntentId}
+        appearance={appearance}
+        onCapture={setCardCapture}
+        onComplete={setPaymentInputComplete}
+        onActive={onActive}
+      />
+    )
+  },
+)
 
 type TermsCheckboxProps = React.LabelHTMLAttributes<HTMLLabelElement> & {
   asChild?: boolean
@@ -978,7 +1259,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
     const baseMinor = ctx.taxBreakdown?.total ?? plan?.price ?? ctx.plan?.price ?? 0
     const amountFormatted = formatPrice(baseMinor, ctx.taxBreakdown?.currency ?? planCurrency, {
       locale,
-      interval: variant === 'recurring' ? plan?.interval ?? ctx.plan?.interval : undefined,
+      interval: variant === 'recurring' ? (plan?.interval ?? ctx.plan?.interval) : undefined,
       intervalCount: variant === 'recurring' ? 1 : undefined,
       free: copy.interval.free,
     })
@@ -1107,6 +1388,38 @@ const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorProps>(function PaymentF
   )
 })
 
+type NoticeProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
+
+/**
+ * What the payer is told while the payment settles: the rail still holds
+ * it, or the bank's page is open elsewhere. Not an error; `role="status"`.
+ */
+const NoticeSlot = forwardRef<HTMLParagraphElement, NoticeProps>(function PaymentFormNotice(
+  { asChild, children, ...rest },
+  ref,
+) {
+  const ctx = usePaymentForm()
+  if (!ctx.notice) return null
+  if (asChild) {
+    return (
+      <Slot
+        ref={ref as React.Ref<HTMLElement>}
+        role="status"
+        aria-live="polite"
+        data-solvapay-payment-form-notice=""
+        {...rest}
+      >
+        {children ?? ctx.notice}
+      </Slot>
+    )
+  }
+  return (
+    <p ref={ref} role="status" aria-live="polite" data-solvapay-payment-form-notice="" {...rest}>
+      {children ?? ctx.notice}
+    </p>
+  )
+})
+
 function usePaymentBusinessCtx(_part: string) {
   const ctx = usePaymentForm()
   return {
@@ -1141,6 +1454,7 @@ export const PaymentFormTermsCheckbox = TermsCheckbox
 export const PaymentFormSubmitButton = SubmitButton
 export const PaymentFormLoading = Loading
 export const PaymentFormError = ErrorSlot
+export const PaymentFormNotice = NoticeSlot
 export const PaymentFormLegalFooter = LegalFooter
 export const PaymentFormBusinessDetails = BusinessDetails
 export const PaymentFormTaxSummary = TaxSummary
@@ -1157,5 +1471,6 @@ export const PaymentForm = {
   SubmitButton,
   Loading,
   Error: ErrorSlot,
+  Notice: NoticeSlot,
   LegalFooter,
 } as const

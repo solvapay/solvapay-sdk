@@ -9,6 +9,9 @@ const EXPECTED_FUNCTIONS = [
   'activate-plan',
   'cancel-renewal',
   'check-purchase',
+  'confirm-payment',
+  'create-capture-grant',
+  'create-card-setup-grant',
   'create-checkout-session',
   'create-customer-session',
   'create-payment-intent',
@@ -20,6 +23,7 @@ const EXPECTED_FUNCTIONS = [
   'list-plans',
   'process-payment',
   'reactivate-renewal',
+  'save-card',
   'solvapay-webhook',
   'sync-customer',
   'track-usage',
@@ -45,10 +49,7 @@ describe('supabase-edge example', () => {
       const match = content.match(
         /import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/server\/fetch['"]/,
       )
-      expect(
-        match,
-        `${fn}/index.ts should import from @solvapay/server/fetch`,
-      ).toBeTruthy()
+      expect(match, `${fn}/index.ts should import from @solvapay/server/fetch`).toBeTruthy()
 
       const importedName = match![1]
       expect(

@@ -40,10 +40,18 @@ describe('createCaptureGrant (Next route wrapper)', () => {
     const request = fakeRequest('/api/create-capture-grant')
     const solvaPay = { createCaptureGrant: vi.fn() }
 
-    const response = await createCaptureGrant(request, { paymentIntentId: 'pi_1' }, { solvaPay: solvaPay as never })
+    const response = await createCaptureGrant(
+      request,
+      { paymentIntentId: 'pi_1' },
+      { solvaPay: solvaPay as never },
+    )
 
     expect(mockCreateCaptureGrantCore).toHaveBeenCalledTimes(1)
-    expect(mockCreateCaptureGrantCore).toHaveBeenCalledWith(request, { paymentIntentId: 'pi_1' }, { solvaPay })
+    expect(mockCreateCaptureGrantCore).toHaveBeenCalledWith(
+      request,
+      { paymentIntentId: 'pi_1' },
+      { solvaPay },
+    )
     expect(response).toBeInstanceOf(NextResponse)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('application/json')
@@ -54,7 +62,11 @@ describe('createCaptureGrant (Next route wrapper)', () => {
     mockCreateCaptureGrantCore.mockResolvedValue(grant)
     const request = fakeRequest('/api/create-capture-grant')
     await createCaptureGrant(request, { paymentIntentId: 'pi_1' })
-    expect(mockCreateCaptureGrantCore).toHaveBeenCalledWith(request, { paymentIntentId: 'pi_1' }, {})
+    expect(mockCreateCaptureGrantCore).toHaveBeenCalledWith(
+      request,
+      { paymentIntentId: 'pi_1' },
+      {},
+    )
   })
 
   it('maps a core ErrorResult to a JSON error envelope with the same status', async () => {
@@ -63,7 +75,9 @@ describe('createCaptureGrant (Next route wrapper)', () => {
       status: 400,
     })
 
-    const response = await createCaptureGrant(fakeRequest('/api/create-capture-grant'), { paymentIntentId: '' })
+    const response = await createCaptureGrant(fakeRequest('/api/create-capture-grant'), {
+      paymentIntentId: '',
+    })
 
     expect(response.status).toBe(400)
     expect(await response.json()).toStrictEqual({ error: 'paymentIntentId is required' })
@@ -76,7 +90,9 @@ describe('createCaptureGrant (Next route wrapper)', () => {
       details: 'grant limit reached',
     })
 
-    const response = await createCaptureGrant(fakeRequest('/api/create-capture-grant'), { paymentIntentId: 'pi_1' })
+    const response = await createCaptureGrant(fakeRequest('/api/create-capture-grant'), {
+      paymentIntentId: 'pi_1',
+    })
 
     expect(response.status).toBe(500)
     expect(await response.json()).toStrictEqual({
@@ -95,7 +111,11 @@ describe('confirmPayment (Next route wrapper)', () => {
     const payment = { id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' as const }
     mockConfirmPaymentCore.mockResolvedValue(payment)
     const request = fakeRequest('/api/confirm-payment')
-    const body = { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://app.example/return' }
+    const body = {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+    }
 
     const response = await confirmPayment(request, body)
 
@@ -131,16 +151,25 @@ describe('confirmPayment (Next route wrapper)', () => {
       status: 400,
     })
 
-    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), { paymentIntentId: 'pi_1' })
+    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), {
+      paymentIntentId: 'pi_1',
+    })
 
     expect(response.status).toBe(400)
     expect(await response.json()).toStrictEqual({ error: 'Provide cardId or paymentMethodId' })
   })
 
   it('maps an auth error from the core helper to 401', async () => {
-    mockConfirmPaymentCore.mockResolvedValue({ error: 'Unauthorized', status: 401, details: 'No token' })
+    mockConfirmPaymentCore.mockResolvedValue({
+      error: 'Unauthorized',
+      status: 401,
+      details: 'No token',
+    })
 
-    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), { paymentIntentId: 'pi_1', cardId: 'CRD1' })
+    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+    })
 
     expect(response.status).toBe(401)
     expect(await response.json()).toStrictEqual({ error: 'Unauthorized', details: 'No token' })
@@ -153,9 +182,63 @@ describe('confirmPayment (Next route wrapper)', () => {
       details: 'rail down',
     })
 
-    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), { paymentIntentId: 'pi_1', cardId: 'CRD1' })
+    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+    })
 
     expect(response.status).toBe(500)
-    expect(await response.json()).toStrictEqual({ error: 'Payment confirmation failed', details: 'rail down' })
+    expect(await response.json()).toStrictEqual({
+      error: 'Payment confirmation failed',
+      details: 'rail down',
+    })
+  })
+
+  it('forwards billingDetails to the core helper', async () => {
+    mockConfirmPaymentCore.mockResolvedValue({
+      id: 'pi_1',
+      processorPaymentId: 'pi_rail_1',
+      status: 'succeeded',
+    })
+    const request = fakeRequest('/api/confirm-payment')
+    const body = {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+      billingDetails: {
+        name: 'Ada',
+        email: 'ada@example.com',
+        address: { country: 'SE', postalCode: '111 22' },
+      },
+    }
+
+    await confirmPayment(request, body)
+
+    expect(mockConfirmPaymentCore).toHaveBeenCalledWith(request, body, {})
+  })
+
+  it('answers a 402 decline with the key, reason and decline code beside the text', async () => {
+    mockConfirmPaymentCore.mockResolvedValue({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+
+    const response = await confirmPayment(fakeRequest('/api/confirm-payment'), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+    })
+
+    expect(response.status).toBe(402)
+    expect(await response.json()).toStrictEqual({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
   })
 })

@@ -17,7 +17,7 @@ import {
   saveCardCore,
   isErrorResult,
 } from '@solvapay/server'
-import type { SaveCardBody } from '@solvapay/server'
+import type { CardBillingDetails, SaveCardBody } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
 import { invalidatePurchaseCacheForRequest } from './_cache'
 
@@ -198,8 +198,15 @@ export async function createCaptureGrant(
  * @example
  * ```typescript
  * export async function POST(request: Request) {
- *   const { paymentIntentId, cardId, paymentMethodId, returnUrl } = await request.json()
- *   return confirmPayment(request, { paymentIntentId, cardId, paymentMethodId, returnUrl })
+ *   const { paymentIntentId, cardId, paymentMethodId, returnUrl, billingDetails } =
+ *     await request.json()
+ *   return confirmPayment(request, {
+ *     paymentIntentId,
+ *     cardId,
+ *     paymentMethodId,
+ *     returnUrl,
+ *     billingDetails,
+ *   })
  * }
  * ```
  */
@@ -210,6 +217,8 @@ export async function confirmPayment(
     cardId?: string
     paymentMethodId?: string
     returnUrl?: string
+    /** The cardholder's name, email and address, put on the card the rail creates. */
+    billingDetails?: CardBillingDetails
   },
   options: { solvaPay?: SolvaPay } = {},
 ): Promise<NextResponse> {

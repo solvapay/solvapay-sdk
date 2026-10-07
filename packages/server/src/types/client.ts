@@ -39,6 +39,8 @@ export type ConfirmPaymentParams = {
   paymentIntentId: string
   /** Where the rail sends the payer back after a customer action (3DS). */
   returnUrl?: string
+  /** The cardholder's name, email and address for a vault card; a saved payment method keeps its own. */
+  billingDetails?: CardBillingDetails
 } & (
   | { cardId: string; paymentMethodId?: undefined }
   | { paymentMethodId: string; cardId?: undefined }
@@ -273,14 +275,15 @@ export type CreditDisplayBlock = components['schemas']['CustomerBalanceDisplayDt
 
 export type AutoRechargeInput = Omit<
   components['schemas']['PutAutoRechargeSdkDto'],
-  'customerRef' | 'customerEmail' | 'customerName' | 'deferSetupIntent'
->
-
-/** PUT /sdk/auto-recharge — input plus request-only flags. */
-export type SaveAutoRechargeInput = Omit<
-  components['schemas']['PutAutoRechargeSdkDto'],
   'customerRef' | 'customerEmail' | 'customerName'
 >
+
+/**
+ * PUT /sdk/auto-recharge. A config saved without a card on file answers
+ * `requiresPaymentMethod: true`; a top-up payment intent created with
+ * `autoRecharge` stages the same config and arms it with the charged card.
+ */
+export type SaveAutoRechargeInput = AutoRechargeInput
 
 export type AutoRechargeResponse = components['schemas']['AutoRechargeGetResponse']
 

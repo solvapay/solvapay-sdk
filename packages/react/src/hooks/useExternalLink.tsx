@@ -75,6 +75,17 @@ export function useOpenExternal(): (url: string) => Promise<boolean> {
 }
 
 /**
+ * Whether a host-mediated opener is mounted and can open links right now.
+ * The payment forms read it on `requires_action`: with a host opener the
+ * bank's page opens outside the frame and the form follows the payment;
+ * without one the browser navigates to it.
+ */
+export function useCanOpenExternal(): boolean {
+  const opener = useContext(ExternalLinkContext)
+  return opener?.canOpen() ?? false
+}
+
+/**
  * `onClick` for any `<a href target="_blank">` the SDK renders. A no-op
  * when no host opener is mounted, which leaves the browser to navigate.
  */

@@ -1076,6 +1076,7 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
       'cardId',
       'paymentMethodId',
       'returnUrl',
+      'billingDetails',
     ])
     const schema = z.object(confirmTool.inputSchema)
     expect(schema.parse({ paymentIntentId: 'pi_1' })).toStrictEqual({ paymentIntentId: 'pi_1' })
@@ -1201,6 +1202,57 @@ describe('create_capture_grant / confirm_payment descriptors (vault checkout)', 
     expect(result).toStrictEqual({
       content: [{ type: 'text', text: JSON.stringify(confirmed) }],
       structuredContent: confirmed,
+    })
+  })
+
+  it('confirm_payment forwards billingDetails to the core helper and refuses a malformed one', async () => {
+    const coreSpy = (await spyCore('confirmPaymentCore')).mockResolvedValue(confirmed)
+    const { confirmTool } = build()
+    const billingDetails = {
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      address: { country: 'SE', postalCode: '111 22' },
+    }
+
+    await confirmTool.handler(
+      { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r', billingDetails },
+      authed,
+    )
+    expect(coreSpy.mock.calls[0][1]).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      paymentMethodId: undefined,
+      returnUrl: 'https://x/r',
+      billingDetails,
+    })
+
+    const refused = await confirmTool.handler(
+      { paymentIntentId: 'pi_1', cardId: 'CRD1', billingDetails: { address: { country: 7 } } },
+      authed,
+    )
+    expect(refused).toMatchObject({
+      isError: true,
+      structuredContent: { error: 'confirm_payment billingDetails is malformed', status: 400 },
+    })
+    expect(coreSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('confirm_payment passes a 402 decline through with its key, reason and decline code', async () => {
+    const declined = {
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    }
+    ;(await spyCore('confirmPaymentCore')).mockResolvedValue(declined)
+    const { confirmTool } = build()
+    const result = await confirmTool.handler({ paymentIntentId: 'pi_1', cardId: 'CRD1' }, authed)
+    expect(result).toStrictEqual({
+      isError: true,
+      content: [{ type: 'text', text: declined.details }],
+      structuredContent: declined,
     })
   })
 

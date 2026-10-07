@@ -22,6 +22,35 @@ describe('handleRouteError', () => {
     expect(result.details).toBe('Get merchant failed (404): not found')
   })
 
+  it('copies the error key, reason and decline code of a keyed API answer', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new SolvaPayError('Confirm payment failed (402): Payment card_declined', {
+      status: 402,
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+    expect(handleRouteError(err, 'Confirm payment')).toStrictEqual({
+      error: 'Confirm payment failed (402): Payment card_declined',
+      status: 402,
+      details: 'Confirm payment failed (402): Payment card_declined',
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+    })
+  })
+
+  it('leaves the keyed fields out when the error has none', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = handleRouteError(
+      new SolvaPayError('Get merchant failed (404): not found', { status: 404 }),
+      'Get merchant',
+    )
+    expect(result).not.toHaveProperty('code')
+    expect(result).not.toHaveProperty('reason')
+    expect(result).not.toHaveProperty('declineCode')
+  })
+
   it('defaults to 500 for a SolvaPayError without a status', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const err = new SolvaPayError('Missing apiKey')

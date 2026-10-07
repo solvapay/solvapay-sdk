@@ -38,6 +38,9 @@ import {
   activatePlanCore,
   cancelPurchaseCore,
   checkPurchaseCore,
+  confirmPaymentCore,
+  createCaptureGrantCore,
+  createCardSetupGrantCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createPaymentIntentCore,
@@ -52,6 +55,7 @@ import {
   listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
+  saveCardCore,
   syncCustomerCore,
   trackUsageCore,
 } from '../helpers'
@@ -114,6 +118,77 @@ export async function processPayment(req: Request): Promise<Response> {
 
   const body = await parseJsonBody(req)
   const result = await processPaymentIntentCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+/**
+ * `POST`: one short-lived vault grant for the payment in `body.paymentIntentId`.
+ * The SDK's `CardFields` write the card into the vault under it.
+ */
+export async function createCaptureGrant(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const body = await parseJsonBody(req)
+  const result = await createCaptureGrantCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+/**
+ * `POST`: confirm the payment server-side with the captured card (`cardId`)
+ * or a saved payment method (`paymentMethodId`), with `returnUrl` and the
+ * payer's `billingDetails`. A refusal answers the backend's status with its
+ * `code` (`payment_declined` carries `reason` and `declineCode`).
+ */
+export async function confirmPayment(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const body = await parseJsonBody(req)
+  const result = await confirmPaymentCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+/** `POST`: a vault grant on a fresh customer session, for saving a card without paying. */
+export async function createCardSetupGrant(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await createCardSetupGrantCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+/**
+ * `POST`: save the captured card on the grant's customer session
+ * (`{ sessionId, cardId, returnUrl, billingDetails? }`) or complete the setup
+ * the payer just authenticated (`{ sessionId, completePendingSetup: true }`).
+ */
+export async function saveCard(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const body = await parseJsonBody(req)
+  const result = await saveCardCore(req, body)
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

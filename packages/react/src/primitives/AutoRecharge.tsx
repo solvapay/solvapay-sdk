@@ -40,6 +40,7 @@ import { interpolate } from '../i18n/interpolate'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
+import { paymentErrorMessage, paymentFailureMessage } from '../utils/paymentErrorCopy'
 import {
   buildSummaryLine,
   configToForm,
@@ -323,21 +324,29 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
     const payload = emitValidation(form)
     if (!payload) return
 
-    const saveInput = deferCardSetup ? { ...payload, deferSetupIntent: true } : payload
+    // Deferred: nothing is saved here. The validated config rides on the
+    // top-up payment intent (`TopupForm` `autoRecharge`), which stages it
+    // and arms it with the charged card.
+    if (deferCardSetup) {
+      setSetup(null)
+      await onPendingConfig?.(payload)
+      setStatusMessage(
+        payload.enabled ? copy.autoRecharge.savedMessage : copy.autoRecharge.disabledMessage,
+      )
+      setOpen(false)
+      return
+    }
 
-    const result = await autoRecharge.save(saveInput)
+    const result = await autoRecharge.save(payload)
     // No reusable card on file: collect one through `CardSetup` (vault,
-    // customer session). A deferred save arms the card on the top-up instead.
-    if (!deferCardSetup && result.requiresPaymentMethod === true) {
+    // customer session).
+    if (result.requiresPaymentMethod === true) {
       setSetup(result)
       setStatusMessage(copy.autoRecharge.setupRequiredMessage)
       await onSetupRequired?.(result)
       return
     }
     setSetup(null)
-    if (deferCardSetup) {
-      await onPendingConfig?.(payload)
-    }
     setStatusMessage(
       payload.enabled ? copy.autoRecharge.savedMessage : copy.autoRecharge.disabledMessage,
     )
@@ -425,11 +434,12 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
         } else {
           setStatusMessage(copy.autoRecharge.setupAuthFailed)
         }
-      } catch {
-        setStatusMessage(copy.autoRecharge.setupAuthFailed)
+      } catch (err) {
+        // A keyed refusal names the payer's copy; anything else is the auth-failed copy.
+        setStatusMessage(paymentErrorMessage(err, copy) ?? copy.autoRecharge.setupAuthFailed)
       }
     })()
-  }, [transport, autoRecharge, copy.autoRecharge, pendingSetup])
+  }, [transport, autoRecharge, copy, pendingSetup])
 
   const dataState: AutoRechargeDataState = setup
     ? 'setup'
@@ -1547,7 +1557,7 @@ function CardSetup({ onComplete, onPending }: CardSetupProps) {
       })
       .catch(err => {
         if (cancelled) return
-        setError(err instanceof Error ? err.message : copy.autoRecharge.setupAuthFailed)
+        setError(paymentFailureMessage(err, copy, copy.autoRecharge.setupAuthFailed))
       })
     return () => {
       cancelled = true
@@ -1591,12 +1601,12 @@ function CardSetup({ onComplete, onPending }: CardSetupProps) {
         setError(copy.autoRecharge.setupAuthFailed)
       }
     } catch (err) {
+      // The refusal's key picks the copy (`payment_declined` with its decline
+      // code, `card_not_in_grant_window`, ...); an unkeyed error shows its message.
       setError(
         err instanceof CardCaptureError
           ? copy.errors.cardCaptureFailed
-          : err instanceof Error && err.message
-            ? err.message
-            : copy.autoRecharge.setupAuthFailed,
+          : paymentFailureMessage(err, copy, copy.autoRecharge.setupAuthFailed),
       )
     } finally {
       if (!redirecting) setProcessing(false)

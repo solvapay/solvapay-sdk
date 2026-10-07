@@ -40,27 +40,47 @@ export class SolvaPayError extends Error {
   readonly status?: number
 
   /**
-   * Optional short code for programmatic branching (e.g.
-   * `'missing_secret'`, `'merchant_not_found'`). Free-form by design;
+   * Optional short code for programmatic branching. For an API answer
+   * this is the backend's error key (`'payment_declined'`,
+   * `'confirm_in_progress'`, `'card_not_found'`); for a client-side
+   * failure a code such as `'non_json_response'`. Free-form by design;
    * callers should not depend on an exhaustive enum.
    */
   readonly code?: string
 
   /**
+   * Why a payment was not collected, as the backend names it on a 402
+   * `payment_declined` answer (the connector's failure reason).
+   */
+  readonly reason?: string
+
+  /** Canonical decline code on a 402 `payment_declined` answer, when the rail gave one. */
+  readonly declineCode?: string
+
+  /**
    * Creates a new SolvaPayError instance.
    *
    * @param message - Error message
-   * @param init - Optional `{ status, code }` metadata. Both fields
-   *   are preserved on the instance so downstream consumers
-   *   (`handleRouteError`, MCP trace wrappers) can branch on HTTP
-   *   status without parsing the message string.
+   * @param init - Optional `{ status, code, reason, declineCode }`
+   *   metadata, preserved on the instance so downstream consumers
+   *   (`handleRouteError`, the React transports) can branch on HTTP
+   *   status and error key without parsing the message string.
    */
-  constructor(message: string, init: { status?: number; code?: string } = {}) {
+  constructor(message: string, init: SolvaPayErrorInit = {}) {
     super(message)
     this.name = 'SolvaPayError'
     this.status = init.status
     this.code = init.code
+    this.reason = init.reason
+    this.declineCode = init.declineCode
   }
+}
+
+export interface SolvaPayErrorInit {
+  status?: number
+  code?: string
+  reason?: string
+  declineCode?: string
 }
 
 export interface SolvaPayConfig {

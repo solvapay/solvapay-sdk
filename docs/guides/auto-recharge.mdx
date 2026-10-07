@@ -77,8 +77,9 @@ per-currency minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for 
 provider's **minimum top-up** (`minTopUpMinor` in SolvaPay Console settings). Amounts below that
 floor are rejected.
 
-`SaveAutoRechargeInput` additionally accepts `deferSetupIntent?: boolean` — see
-[staging with the first top-up](#stage-auto-recharge-with-the-first-top-up).
+`SaveAutoRechargeInput` is the same input. A save without a card on file answers
+`requiresPaymentMethod: true`; to arm the config with the card of a top-up instead, pass it on the
+top-up payment intent (see [staging with the first top-up](#stage-auto-recharge-with-the-first-top-up)).
 
 ## Reading the config
 
@@ -132,12 +133,12 @@ Auto-recharge can be armed as part of the customer's **initial** top-up charge, 
 separate card-setup step:
 
 1. Render `<AutoRecharge deferCardSetup onPendingConfig={...}>` alongside your top-up amount step.
-2. Saving the form sends `deferSetupIntent: true` — the config is staged as `pending_setup`
-   without asking for a card, and `onPendingConfig` receives the `AutoRechargeInput`.
+2. Saving the form validates the config and hands the `AutoRechargeInput` to `onPendingConfig`;
+   nothing is saved and no card is asked for.
 3. Pass that payload into `TopupForm.Root` (or `createTopupPaymentIntent`) as `autoRecharge`.
-4. The backend creates the payment intent with `setup_future_usage: 'off_session'`, saves the card
-   on that same charge, and flips the config from `pending_setup` to `active` when the
-   confirmation webhook lands.
+4. The backend stages the config as `pending_setup` when it creates the payment intent, keeps the
+   card of that same charge for off-session use, and flips the config to `active` when the charge
+   settles.
 
 ```tsx
 import { useMemo, useState } from 'react'

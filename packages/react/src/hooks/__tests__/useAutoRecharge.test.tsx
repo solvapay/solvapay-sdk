@@ -16,7 +16,13 @@ const config: AutoRechargeConfig = {
   trigger: { type: 'balance', thresholdAmountMinor: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
   fundingSourceType: 'saved_card',
-  paymentMethodId: 'pm_123',
+  paymentMethod: {
+    id: 'spm_0123456789abcdef01234567',
+    brand: 'visa',
+    last4: '4242',
+    expMonth: 12,
+    expYear: 2030,
+  },
   status: 'active',
   failureCount: 0,
   monthlySpendMinor: 0,
@@ -77,10 +83,7 @@ describe('useAutoRecharge', () => {
       exchangeRate: 1,
       rateSource: 'parity' as const,
     }
-    const fetchFn = makeFetch([
-      { config: null },
-      { config, display: savedDisplay },
-    ])
+    const fetchFn = makeFetch([{ config: null }, { config, display: savedDisplay }])
     const { result } = renderHook(() => useAutoRecharge(), {
       wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
     })
@@ -251,10 +254,7 @@ describe('useAutoRecharge', () => {
       trigger: { type: 'balance', thresholdAmountMinor: 700 },
     }
 
-    const fetchFn = makeFetch([
-      { config },
-      { config: editedConfig },
-    ])
+    const fetchFn = makeFetch([{ config }, { config: editedConfig }])
 
     const { result } = renderHook(() => useAutoRecharge(), {
       wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),

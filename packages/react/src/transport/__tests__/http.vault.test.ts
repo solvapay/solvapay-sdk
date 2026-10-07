@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createHttpTransport, DEFAULT_ROUTES } from '../http'
+import { TransportError } from '../errors'
 
 function makeFetch(payload: unknown, status = 200) {
   return vi.fn().mockImplementation(
@@ -46,7 +47,11 @@ describe('createHttpTransport — vault checkout', () => {
     const fetchFn = makeFetch(payment)
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    const result = await transport.confirmPayment!({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r' })
+    const result = await transport.confirmPayment!({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+    })
 
     expect(DEFAULT_ROUTES.confirmPayment).toBe('/api/confirm-payment')
     expect(fetchFn).toHaveBeenCalledTimes(1)
@@ -122,17 +127,80 @@ describe('createHttpTransport — vault checkout', () => {
       'Capture grant limit reached',
     )
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith(new Error('Capture grant limit reached'), 'createCaptureGrant')
+    const [reported, context] = onError.mock.calls[0]
+    expect(context).toBe('createCaptureGrant')
+    expect(reported).toBeInstanceOf(TransportError)
+    expect(reported).toMatchObject({ message: 'Capture grant limit reached', status: 429 })
+    expect(reported.code).toBeUndefined()
+  })
+
+  it('throws a TransportError carrying the key, reason and decline code of a 402 confirm', async () => {
+    const fetchFn = makeFetch(
+      {
+        error: 'Confirm payment failed (402): Payment card_declined',
+        details: 'Confirm payment failed (402): Payment card_declined',
+        code: 'payment_declined',
+        reason: 'card_declined',
+        declineCode: 'insufficient_funds',
+      },
+      402,
+    )
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    const thrown = await transport.confirmPayment!({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+    }).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    expect(thrown).toBeInstanceOf(TransportError)
+    expect(thrown).toMatchObject({
+      status: 402,
+      code: 'payment_declined',
+      reason: 'card_declined',
+      declineCode: 'insufficient_funds',
+      message: 'Confirm payment failed (402): Payment card_declined',
+    })
+  })
+
+  it('sends billingDetails with the confirm body', async () => {
+    const fetchFn = makeFetch({ id: 'pi_1', processorPaymentId: 'pi_rail_1', status: 'succeeded' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+    const billingDetails = { name: 'Ada', address: { country: 'SE', postalCode: '111 22' } }
+
+    await transport.confirmPayment!({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+      billingDetails,
+    })
+
+    const [, init] = fetchFn.mock.calls[0]
+    expect(JSON.parse(init.body as string)).toStrictEqual({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+      billingDetails,
+    })
   })
 
   it('falls back to the prefixed status text when a failed confirm has no error body', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(new Response('nope', { status: 502, statusText: 'Bad Gateway' }))
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(new Response('nope', { status: 502, statusText: 'Bad Gateway' }))
     const onError = vi.fn()
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch, onError })
 
-    await expect(transport.confirmPayment!({ paymentIntentId: 'pi_1', cardId: 'CRD1' })).rejects.toThrow(
-      'Failed to confirm payment: Bad Gateway',
-    )
-    expect(onError).toHaveBeenCalledWith(new Error('Failed to confirm payment: Bad Gateway'), 'confirmPayment')
+    await expect(
+      transport.confirmPayment!({ paymentIntentId: 'pi_1', cardId: 'CRD1' }),
+    ).rejects.toThrow('Failed to confirm payment: Bad Gateway')
+    const [reported, context] = onError.mock.calls[0]
+    expect(context).toBe('confirmPayment')
+    expect(reported).toBeInstanceOf(TransportError)
+    expect(reported).toMatchObject({
+      message: 'Failed to confirm payment: Bad Gateway',
+      status: 502,
+    })
   })
 })

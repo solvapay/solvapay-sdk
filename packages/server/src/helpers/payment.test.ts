@@ -607,9 +607,16 @@ describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode 
   it('forwards id, captureMode and vault so the browser can capture into the vault (no client secret)', async () => {
     const createPaymentIntent = vi.fn().mockResolvedValue(vaultResponse)
     mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
-    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
+    const result = await createPaymentIntentCore(fakeRequest(), {
+      planRef: 'pln',
+      productRef: 'prd',
+    })
     expect(createPaymentIntent).toHaveBeenCalledTimes(1)
-    expect(createPaymentIntent).toHaveBeenCalledWith({ customerRef: 'cus_ABC', planRef: 'pln', productRef: 'prd' })
+    expect(createPaymentIntent).toHaveBeenCalledWith({
+      customerRef: 'cus_ABC',
+      planRef: 'pln',
+      productRef: 'prd',
+    })
     expect(result).toStrictEqual({
       id: '66f1c2d3e4f5a6b7c8d9e0f1',
       captureMode: 'vault',
@@ -621,7 +628,10 @@ describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode 
   it('does the same for top-ups', async () => {
     const createTopupPaymentIntent = vi.fn().mockResolvedValue(vaultResponse)
     mockCreateSolvaPay.mockReturnValue({ createTopupPaymentIntent } as never)
-    const result = await createTopupPaymentIntentCore(fakeRequest(), { amount: 2500, currency: 'USD' })
+    const result = await createTopupPaymentIntentCore(fakeRequest(), {
+      amount: 2500,
+      currency: 'USD',
+    })
     expect(createTopupPaymentIntent).toHaveBeenCalledTimes(1)
     expect(createTopupPaymentIntent).toHaveBeenCalledWith({
       customerRef: 'cus_ABC',
@@ -649,7 +659,10 @@ describe('createPaymentIntentCore / createTopupPaymentIntentCore — vault mode 
       status: 'requires_payment_method',
     })
     mockCreateSolvaPay.mockReturnValue({ createPaymentIntent } as never)
-    const result = await createPaymentIntentCore(fakeRequest(), { planRef: 'pln', productRef: 'prd' })
+    const result = await createPaymentIntentCore(fakeRequest(), {
+      planRef: 'pln',
+      productRef: 'prd',
+    })
     expect(result).toStrictEqual({
       id: '66f1c2d3e4f5a6b7c8d9e0f1',
       captureMode: 'vault',
@@ -704,7 +717,11 @@ describe('createCaptureGrantCore', () => {
   it('uses the provided solvaPay instance for both the customer sync and the grant', async () => {
     const provided = { createCaptureGrant: vi.fn().mockResolvedValue(grant) }
     const request = fakeRequest()
-    const result = await createCaptureGrantCore(request, { paymentIntentId: 'pi_1' }, { solvaPay: provided as never })
+    const result = await createCaptureGrantCore(
+      request,
+      { paymentIntentId: 'pi_1' },
+      { solvaPay: provided as never },
+    )
     expect(mockSyncCustomer).toHaveBeenCalledWith(request, { solvaPay: provided })
     expect(mockCreateSolvaPay).not.toHaveBeenCalled()
     expect(provided.createCaptureGrant).toHaveBeenCalledWith({ paymentIntentId: 'pi_1' })
@@ -729,7 +746,11 @@ describe('createCaptureGrantCore', () => {
       status: 500,
     })
     expect(mockHandleRouteError).toHaveBeenCalledTimes(1)
-    expect(mockHandleRouteError).toHaveBeenCalledWith(boom, 'Create capture grant', 'Could not start card capture')
+    expect(mockHandleRouteError).toHaveBeenCalledWith(
+      boom,
+      'Create capture grant',
+      'Could not start card capture',
+    )
   })
 })
 
@@ -747,7 +768,9 @@ describe('confirmPaymentCore', () => {
   })
 
   it('rejects a missing paymentIntentId with 400 before anything else', async () => {
-    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: '', cardId: 'CRD1' })).toStrictEqual({
+    expect(
+      await confirmPaymentCore(fakeRequest(), { paymentIntentId: '', cardId: 'CRD1' }),
+    ).toStrictEqual({
       error: 'paymentIntentId is required',
       status: 400,
     })
@@ -760,7 +783,13 @@ describe('confirmPaymentCore', () => {
       error: 'Provide cardId or paymentMethodId',
       status: 400,
     })
-    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: '', paymentMethodId: '' })).toStrictEqual({
+    expect(
+      await confirmPaymentCore(fakeRequest(), {
+        paymentIntentId: 'pi_1',
+        cardId: '',
+        paymentMethodId: '',
+      }),
+    ).toStrictEqual({
       error: 'Provide cardId or paymentMethodId',
       status: 400,
     })
@@ -770,7 +799,11 @@ describe('confirmPaymentCore', () => {
 
   it('rejects a body with both cardId and paymentMethodId with a distinct 400', async () => {
     expect(
-      await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c', paymentMethodId: 'pm' }),
+      await confirmPaymentCore(fakeRequest(), {
+        paymentIntentId: 'pi_1',
+        cardId: 'c',
+        paymentMethodId: 'pm',
+      }),
     ).toStrictEqual({ error: 'Provide either cardId or paymentMethodId, not both', status: 400 })
     expect(mockSyncCustomer).not.toHaveBeenCalled()
     expect(confirmPayment).not.toHaveBeenCalled()
@@ -787,8 +820,44 @@ describe('confirmPaymentCore', () => {
     expect(mockSyncCustomer).toHaveBeenCalledWith(request, { solvaPay: undefined })
     expect(mockCreateSolvaPay).toHaveBeenCalledTimes(1)
     expect(confirmPayment).toHaveBeenCalledTimes(1)
-    expect(confirmPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r' })
+    expect(confirmPayment).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+    })
     expect(result).toStrictEqual(confirmed)
+  })
+
+  it('forwards billingDetails to the client confirm with either card shape', async () => {
+    const billingDetails = {
+      name: 'Ada',
+      email: 'ada@example.com',
+      address: { country: 'SE', postalCode: '111 22' },
+    }
+    await confirmPaymentCore(fakeRequest(), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+      billingDetails,
+    })
+    expect(confirmPayment).toHaveBeenLastCalledWith({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+      billingDetails,
+    })
+    await confirmPaymentCore(fakeRequest(), {
+      paymentIntentId: 'pi_1',
+      paymentMethodId: 'spm_1',
+      returnUrl: 'https://x/r',
+      billingDetails,
+    })
+    expect(confirmPayment).toHaveBeenLastCalledWith({
+      paymentIntentId: 'pi_1',
+      paymentMethodId: 'spm_1',
+      returnUrl: 'https://x/r',
+      billingDetails,
+    })
   })
 
   it('passes a 3DS redirect back untouched', async () => {
@@ -799,12 +868,19 @@ describe('confirmPaymentCore', () => {
       redirectUrl: 'https://acs.bank.test/3ds/abc',
     }
     confirmPayment.mockResolvedValue(requiresAction)
-    const result = await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: 'https://x/r' })
+    const result = await confirmPaymentCore(fakeRequest(), {
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://x/r',
+    })
     expect(result).toStrictEqual(requiresAction)
   })
 
   it('confirms with a saved payment method and never sends a cardId', async () => {
-    const result = await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', paymentMethodId: 'pm_1' })
+    const result = await confirmPaymentCore(fakeRequest(), {
+      paymentIntentId: 'pi_1',
+      paymentMethodId: 'pm_1',
+    })
     expect(confirmPayment).toHaveBeenCalledTimes(1)
     expect(confirmPayment).toHaveBeenCalledWith({
       paymentIntentId: 'pi_1',
@@ -818,17 +894,27 @@ describe('confirmPaymentCore', () => {
   it('uses the provided solvaPay instance instead of creating one', async () => {
     const provided = { confirmPayment: vi.fn().mockResolvedValue(confirmed) }
     const request = fakeRequest()
-    const result = await confirmPaymentCore(request, { paymentIntentId: 'pi_1', cardId: 'CRD1' }, { solvaPay: provided as never })
+    const result = await confirmPaymentCore(
+      request,
+      { paymentIntentId: 'pi_1', cardId: 'CRD1' },
+      { solvaPay: provided as never },
+    )
     expect(mockSyncCustomer).toHaveBeenCalledWith(request, { solvaPay: provided })
     expect(mockCreateSolvaPay).not.toHaveBeenCalled()
-    expect(provided.confirmPayment).toHaveBeenCalledWith({ paymentIntentId: 'pi_1', cardId: 'CRD1', returnUrl: undefined })
+    expect(provided.confirmPayment).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_1',
+      cardId: 'CRD1',
+      returnUrl: undefined,
+    })
     expect(confirmPayment).not.toHaveBeenCalled()
     expect(result).toStrictEqual(confirmed)
   })
 
   it('propagates syncCustomerCore errors verbatim without confirming', async () => {
     mockSyncCustomer.mockResolvedValue({ error: 'Unauthorized', status: 401 })
-    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'CRD1' })).toStrictEqual({
+    expect(
+      await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'CRD1' }),
+    ).toStrictEqual({
       error: 'Unauthorized',
       status: 401,
     })
@@ -838,11 +924,17 @@ describe('confirmPaymentCore', () => {
   it('maps thrown errors through handleRouteError with the confirm-specific message', async () => {
     const boom = new Error('rail down')
     confirmPayment.mockRejectedValue(boom)
-    expect(await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c' })).toStrictEqual({
+    expect(
+      await confirmPaymentCore(fakeRequest(), { paymentIntentId: 'pi_1', cardId: 'c' }),
+    ).toStrictEqual({
       error: 'Payment confirmation failed',
       status: 500,
     })
     expect(mockHandleRouteError).toHaveBeenCalledTimes(1)
-    expect(mockHandleRouteError).toHaveBeenCalledWith(boom, 'Confirm payment', 'Payment confirmation failed')
+    expect(mockHandleRouteError).toHaveBeenCalledWith(
+      boom,
+      'Confirm payment',
+      'Payment confirmation failed',
+    )
   })
 })

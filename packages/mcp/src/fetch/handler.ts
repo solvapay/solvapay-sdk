@@ -8,7 +8,9 @@
 
 import {
   buildAuthInfoFromBearer,
+  isPaymentReturnPath,
   McpBearerAuthError,
+  paymentReturnResponse,
   type BuildAuthInfoFromBearerOptions,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
@@ -80,7 +82,8 @@ async function readJsonRpcId(req: Request): Promise<string | number | null> {
  *
  * 1. Serves `OPTIONS` preflight for native-scheme origins.
  * 2. Serves every `.well-known/*` + `/oauth/*` route via
- *    {@link createOAuthFetchRouter}.
+ *    {@link createOAuthFetchRouter}, and the 3DS return page on
+ *    `PAYMENT_RETURN_PATH`.
  * 3. Enforces bearer-token auth on the MCP path (default `/mcp`) and
  *    returns `401 + WWW-Authenticate: Bearer resource_metadata="…"`
  *    when auth is missing.
@@ -131,6 +134,12 @@ export function createSolvaPayMcpFetchHandler(
 
     const oauthResponse = await oauthRouter(req)
     if (oauthResponse) return oauthResponse
+
+    // The 3DS return page (the bootstrap's `returnUrl`): the widget follows
+    // the payment through the backend, the page only sends the payer back.
+    if (req.method === 'GET' && isPaymentReturnPath(pathname)) {
+      return paymentReturnResponse()
+    }
 
     if (pathname !== mcpPath) {
       return new Response('not_found', { status: 404 })

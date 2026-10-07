@@ -10,6 +10,7 @@ description: "Protect Model Context Protocol (MCP) tools with SolvaPay using cre
 - [Protecting Tools](#protecting-tools)
 - [Free tools with a usage cap](#free-tools-with-a-usage-cap)
 - [Authentication](#authentication)
+- [3DS return URL](#3ds-return-url)
 - [Response Format](#response-format)
 - [Plan Activation](#plan-activation)
 - [Error Handling](#error-handling)
@@ -192,6 +193,27 @@ Deno.serve(
   }),
 )
 ```
+
+## 3DS return URL
+
+When a card payment made in the widget needs the payer's bank (3DS), the widget opens the bank's
+page through the host (`ui/open-link`), stays mounted and follows the payment through the backend
+until it settles. The bank then sends the payer to the **return URL** the SDK put on the confirm:
+the return page the MCP server serves at `publicBaseUrl` + `/solvapay/payment-return`
+(`PAYMENT_RETURN_PATH` from `@solvapay/mcp-core`). Both `createMcpOAuthBridge` and the fetch
+handler serve it; it only tells the payer the bank step is done and to go back to the chat.
+Nothing is confirmed there.
+
+The backend accepts a return URL only on the origin of the **website registered for your SolvaPay
+account** (or the SolvaPay hosted pages). `publicBaseUrl` must therefore share that origin, with
+the same scheme, host and port: `https://acme.com/mcp` works when the registered website is
+`https://acme.com`; `https://mcp.acme.com` is another origin and every confirm answers 400
+(`returnUrl must be on one of the origins ...`). In sandbox, `http://localhost:<port>` and
+`http://127.0.0.1:<port>` are accepted as well; live is https everywhere. Set the website in the
+SolvaPay console before taking card payments from the widget.
+
+If the payer closes the chat while the bank's page is open, the widget's wait ends with it; the
+payment still settles on the backend and the next bootstrap shows the purchase.
 
 ### Advanced: custom customer-ref extraction
 

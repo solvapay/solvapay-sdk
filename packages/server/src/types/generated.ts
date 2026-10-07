@@ -898,12 +898,8 @@ export interface components {
        * @enum {string}
        */
       fundingSourceType: 'saved_card' | 'tokenized_card'
-      /** @description PaymentIntent ID of an in-flight recharge */
-      inFlightPaymentIntentId?: string
       /** @description Timestamp of the last successful charge */
       lastChargeAt?: string
-      /** @description Timestamp the processing lock was acquired */
-      lockAcquiredAt?: string
       /**
        * Optional monthly spend cap in topup.currency minor units
        * @example 10000
@@ -919,8 +915,8 @@ export interface components {
        * @example 2026-07
        */
       monthlySpendPeriod?: string
-      /** @description Saved payment method ID backing the recharge */
-      paymentMethodId?: string
+      /** @description The saved card funding the recharge; absent while the config waits for one */
+      paymentMethod?: components['schemas']['AutoRechargePaymentMethodDto']
       /**
        * Current config status
        * @enum {string}
@@ -978,6 +974,33 @@ export interface components {
       display?: components['schemas']['AutoRechargeDisplayDto']
       /** @description Validation metadata for the auto-recharge form (always present) */
       validation: components['schemas']['AutoRechargeValidationMetaResponse']
+    }
+    AutoRechargePaymentMethodDto: {
+      /**
+       * Card brand
+       * @example visa
+       */
+      brand: string
+      /**
+       * Expiry month
+       * @example 12
+       */
+      expMonth: number
+      /**
+       * Expiry year
+       * @example 2030
+       */
+      expYear: number
+      /**
+       * The saved card id (`spm_…`), what a confirm takes as `paymentMethodId`. Absent on a card saved before cards carried an id.
+       * @example spm_0123456789abcdef01234567
+       */
+      id?: string
+      /**
+       * Last four digits
+       * @example 4242
+       */
+      last4: string
     }
     AutoRechargeTopupDto: {
       /**
@@ -2317,10 +2340,7 @@ export interface components {
     SdkConfirmPaymentResponse: {
       /** @description SolvaPay payment intent id */
       id: string
-      /**
-       * Payment reference on the payment rail
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
+      /** @description Payment reference on the payment rail */
       processorPaymentId: string
       /** @description Where to send the payer to complete a customer action (3DS) */
       redirectUrl?: string
@@ -2443,10 +2463,7 @@ export interface components {
        * @example pln_2b3c4d5e6f7g
        */
       planRef?: string
-      /**
-       * Payment processor payment intent ID
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
+      /** @description Payment reference on the payment rail */
       processorPaymentId: string
       /**
        * Payment intent status
@@ -2523,10 +2540,7 @@ export interface components {
        * @example pln_2b3c4d5e6f7g
        */
       planRef?: string
-      /**
-       * Payment processor payment intent ID. Absent in vault mode until confirm.
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
+      /** @description Payment reference on the payment rail. Absent in vault mode until confirm. */
       processorPaymentId?: string
       /**
        * Payment intent status
@@ -3124,6 +3138,56 @@ export interface components {
       name?: string | null
       /** @example cus_3C4D5E6F */
       reference: string
+    }
+    VaultErrorBodyDto: {
+      /**
+       * Canonical decline code when the rail gave one (402 only)
+       * @example insufficient_funds
+       * @enum {string}
+       */
+      declineCode?:
+        | 'generic_decline'
+        | 'insufficient_funds'
+        | 'lost_card'
+        | 'stolen_card'
+        | 'expired_card'
+        | 'incorrect_cvc'
+        | 'incorrect_number'
+        | 'velocity_exceeded'
+        | 'fraud_blocked'
+        | 'authentication_required'
+      /**
+       * The error key the client picks its copy by
+       * @example payment_declined
+       * @enum {string}
+       */
+      error:
+        | 'payment_declined'
+        | 'capture_grant_exhausted'
+        | 'card_not_in_grant_window'
+        | 'card_already_used'
+        | 'rail_credential_rejected'
+        | 'confirm_in_progress'
+        | 'checkout_session_unavailable'
+        | 'rail_outcome_unknown'
+        | 'card_post_save_failed'
+        | 'card_not_found'
+        | 'card_detach_failed'
+      /**
+       * Operator-facing text; not for the payer
+       * @example Payment card_declined
+       */
+      message: string
+      /**
+       * Why the payment was not collected (402 only): the connector's failure reason
+       * @example card_declined
+       */
+      reason?: string
+      /**
+       * HTTP status of the answer
+       * @example 402
+       */
+      statusCode: number
     }
     WebhookEventCategoryDto: {
       /**
@@ -3967,6 +4031,15 @@ export interface operations {
           'application/json': components['schemas']['SdkCaptureGrantResponse']
         }
       }
+      /** @description capture_grant_exhausted: the payment has issued its grants */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
     }
   }
   confirm: {
@@ -3991,6 +4064,60 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SdkConfirmPaymentResponse']
+        }
+      }
+      /** @description payment_declined, with reason and declineCode when the rail gave one */
+      402: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
+      /** @description card_not_in_grant_window or card_already_used */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
+      /** @description card_not_found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
+      /** @description confirm_in_progress */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
+      /** @description rail_credential_rejected */
+      502: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
+        }
+      }
+      /** @description rail_outcome_unknown: the attempt stays open until the rail answers */
+      504: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VaultErrorBodyDto']
         }
       }
     }
@@ -4041,7 +4168,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Payment processor ID returned from createPaymentIntent */
+        /** @description The payment reference returned from createPaymentIntent */
         processorPaymentId: string
       }
       cookie?: never
@@ -4198,8 +4325,15 @@ export interface operations {
         }
         content?: never
       }
-      /** @description No card on file */
+      /** @description card_not_found: no card on file */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description card_detach_failed: the card was removed, but the rail refused to detach its credential */
+      502: {
         headers: {
           [name: string]: unknown
         }

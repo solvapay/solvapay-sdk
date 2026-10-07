@@ -14,7 +14,7 @@ import type {
 } from './types'
 import type { GetHistoryResult } from '@solvapay/server'
 import { buildRequestHeaders } from '../utils/headers'
-import { readErrorMessage } from '../utils/readErrorMessage'
+import { readTransportError } from './errors'
 
 type FetchFn = typeof fetch
 
@@ -39,8 +39,9 @@ async function request<T>(
 
   const res = await fetchFn(url, init)
   if (!res.ok) {
-    const message = await readErrorMessage(res, opts.errorPrefix)
-    const error = new Error(message)
+    // A `TransportError`: the route's `error` text with the backend's key
+    // (`code`), `reason` and `declineCode`, so the forms pick copy by key.
+    const error = await readTransportError(res, opts.errorPrefix)
     config?.onError?.(error, opts.onErrorContext)
     throw error
   }

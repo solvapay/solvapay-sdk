@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { confirmVaultPayment } from './confirmPayment'
 import { CardCaptureError } from '../vault/collect'
 import { enCopy } from '../i18n/en'
+import { TransportError } from '../transport/errors'
 
 const grant = {
   token: 'vgs-token',
@@ -212,6 +213,77 @@ describe('confirmVaultPayment', () => {
     expect(await confirmVaultPayment(d)).toStrictEqual({
       status: 'error',
       message: 'Failed to confirm payment: 502',
+    })
+  })
+
+  it('sends billingDetails with the confirm call', async () => {
+    const billingDetails = { name: 'Ada', email: 'ada@example.com', address: { country: 'SE' } }
+    const d = deps({ billingDetails })
+    await confirmVaultPayment(d)
+    expect(d.confirmPayment).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_sp_1',
+      cardId: 'CRD1',
+      returnUrl: 'https://app.example/return',
+      billingDetails,
+    })
+  })
+
+  it('maps a 402 decline to the payer copy by decline code, then reason, then the plain decline', async () => {
+    const declined = (init: { reason?: string; declineCode?: string }) =>
+      deps({
+        confirmPayment: vi.fn().mockRejectedValue(
+          new TransportError('Confirm payment failed (402): Payment card_declined', {
+            status: 402,
+            code: 'payment_declined',
+            ...init,
+          }),
+        ),
+      })
+    expect(
+      await confirmVaultPayment(
+        declined({ reason: 'card_declined', declineCode: 'insufficient_funds' }),
+      ),
+    ).toStrictEqual({
+      status: 'error',
+      message: enCopy.vaultErrors.declineCodes.insufficientFunds,
+      code: 'payment_declined',
+    })
+    expect(await confirmVaultPayment(declined({ reason: 'processing_error' }))).toStrictEqual({
+      status: 'error',
+      message: enCopy.vaultErrors.reasons.processingError,
+      code: 'payment_declined',
+    })
+    expect(await confirmVaultPayment(declined({ reason: 'card_declined' }))).toStrictEqual({
+      status: 'error',
+      message: enCopy.vaultErrors.paymentDeclined,
+      code: 'payment_declined',
+    })
+  })
+
+  it('maps every other keyed refusal to its copy and keeps the key', async () => {
+    const keyed = (code: string) =>
+      deps({
+        createCaptureGrant: vi
+          .fn()
+          .mockRejectedValue(
+            new TransportError(`Create capture grant failed (403): ${code}`, { status: 403, code }),
+          ),
+      })
+    expect(await confirmVaultPayment(keyed('capture_grant_exhausted'))).toStrictEqual({
+      status: 'error',
+      message: enCopy.vaultErrors.captureGrantExhausted,
+      code: 'capture_grant_exhausted',
+    })
+    expect(await confirmVaultPayment(keyed('card_not_in_grant_window'))).toStrictEqual({
+      status: 'error',
+      message: enCopy.vaultErrors.cardNotInGrantWindow,
+      code: 'card_not_in_grant_window',
+    })
+    // An unknown key shows the error's own message and keeps the key.
+    expect(await confirmVaultPayment(keyed('something_new'))).toStrictEqual({
+      status: 'error',
+      message: 'Create capture grant failed (403): something_new',
+      code: 'something_new',
     })
   })
 

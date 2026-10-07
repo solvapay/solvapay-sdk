@@ -21,7 +21,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
-import { readPaymentIntentId } from '../primitives/paymentIntentReturn'
+import { readPaymentReturn } from '../primitives/paymentReturn'
 import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
@@ -31,11 +31,11 @@ import type { Merchant, Plan, PurchaseInfo, SolvaPayConfig, SolvaPayContextValue
 
 const productRef = 'prd_test'
 
-vi.mock('../primitives/paymentIntentReturn', async importOriginal => {
-  const actual = await importOriginal<typeof import('../primitives/paymentIntentReturn')>()
+vi.mock('../primitives/paymentReturn', async importOriginal => {
+  const actual = await importOriginal<typeof import('../primitives/paymentReturn')>()
   return {
     ...actual,
-    readPaymentIntentId: vi.fn(actual.readPaymentIntentId),
+    readPaymentReturn: vi.fn(actual.readPaymentReturn),
   }
 })
 
@@ -208,9 +208,9 @@ function makeWrapper(opts: WrapperOptions = {}): {
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
-  vi.mocked(readPaymentIntentId).mockImplementation(search => {
-    const value = new URLSearchParams(search).get('payment_intent')
-    return value && value.length > 0 ? value : undefined
+  vi.mocked(readPaymentReturn).mockImplementation(search => {
+    const value = new URLSearchParams(search).get('solvapay_payment')
+    return value && value.length > 0 ? { paymentIntentId: value } : undefined
   })
 })
 
@@ -245,8 +245,8 @@ describe('useCheckoutFlow — initial state', () => {
 })
 
 describe('useCheckoutFlow — 3DS return resume', () => {
-  it('starts on the payment step when payment_intent is in the URL', async () => {
-    vi.mocked(readPaymentIntentId).mockReturnValueOnce('pi_rail_return')
+  it('starts on the payment step when the payment return param is in the URL', async () => {
+    vi.mocked(readPaymentReturn).mockReturnValueOnce({ paymentIntentId: 'pi_sp_return' })
 
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
@@ -256,7 +256,7 @@ describe('useCheckoutFlow — 3DS return resume', () => {
   })
 
   it('keeps the configured initialStep when no return params are present', () => {
-    vi.mocked(readPaymentIntentId).mockReturnValueOnce(undefined)
+    vi.mocked(readPaymentReturn).mockReturnValueOnce(undefined)
 
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {

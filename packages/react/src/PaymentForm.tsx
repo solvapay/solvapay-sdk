@@ -32,6 +32,7 @@ import {
   PaymentFormSubmitButton,
   PaymentFormLoading,
   PaymentFormError,
+  PaymentFormNotice,
   PaymentFormLegalFooter,
   PaymentFormBusinessDetails,
   PaymentFormTaxSummary,
@@ -45,15 +46,14 @@ type PaymentFormRootProps = PaymentFormProps & {
   children?: React.ReactNode
 }
 
-const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
-  requireTermsAcceptance,
-}) => (
+const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({ requireTermsAcceptance }) => (
   <>
     <Primitive.Summary />
     <PaidBusinessSlots />
     <Primitive.CustomerFields />
     <Primitive.CardFields />
     <Primitive.Error />
+    <Primitive.Notice />
     {requireTermsAcceptance && <Primitive.TermsCheckbox />}
     <Primitive.SubmitButton />
     <Primitive.MandateText />
@@ -94,6 +94,7 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   SubmitButton: typeof PaymentFormSubmitButton
   Loading: typeof PaymentFormLoading
   Error: typeof PaymentFormError
+  Notice: typeof PaymentFormNotice
   LegalFooter: typeof PaymentFormLegalFooter
   BusinessDetails: typeof PaymentFormBusinessDetails
   TaxSummary: typeof PaymentFormTaxSummary
@@ -106,6 +107,7 @@ export const PaymentForm: React.FC<PaymentFormRootProps> & {
   SubmitButton: PaymentFormSubmitButton,
   Loading: PaymentFormLoading,
   Error: PaymentFormError,
+  Notice: PaymentFormNotice,
   LegalFooter: PaymentFormLegalFooter,
   BusinessDetails: PaymentFormBusinessDetails,
   TaxSummary: PaymentFormTaxSummary,

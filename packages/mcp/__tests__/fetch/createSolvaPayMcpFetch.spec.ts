@@ -16,7 +16,12 @@
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { MCP_PROMPT_NAMES, MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
+import {
+  MCP_PROMPT_NAMES,
+  MCP_TOOL_NAMES,
+  SOLVAPAY_BOOTSTRAP_URI,
+  VIEWER_TOOL_NAME,
+} from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '../../src/fetch/createSolvaPayMcpFetch'
@@ -104,19 +109,16 @@ async function fetch200<T = unknown>(
 }
 
 async function initialize(handler: (req: Request) => Promise<Response>) {
-  return callRpc<{ serverInfo?: { name?: string; icons?: Array<{ src: string }> } }>(
-    handler,
-    {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'test-client', version: '0.0.0' },
-      },
+  return callRpc<{ serverInfo?: { name?: string; icons?: Array<{ src: string }> } }>(handler, {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-06-18',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '0.0.0' },
     },
-  )
+  })
 }
 
 const INTENT_TOOLS = [VIEWER_TOOL_NAME, MCP_TOOL_NAMES.activatePlan]
@@ -283,7 +285,7 @@ describe('createSolvaPayMcpFetch', () => {
       view?: string
     }
     expect(payload.productRef).toBe(productRef)
-    expect(payload.returnUrl).toBe(publicBaseUrl)
+    expect(payload.returnUrl).toBe(`${publicBaseUrl}/solvapay/payment-return`)
     expect(payload.view).toBe('checkout')
   })
 
@@ -363,7 +365,10 @@ describe('createSolvaPayMcpFetch', () => {
     // for their consumers, since the root entry carries
     // `registerPayableTool` + its zod-compat + payable-handler wiring
     // that the subpath is meant to leave behind.
-    const source = await readFile(path.resolve(__dirname, 'createSolvaPayMcpFetch.spec.ts'), 'utf-8')
+    const source = await readFile(
+      path.resolve(__dirname, 'createSolvaPayMcpFetch.spec.ts'),
+      'utf-8',
+    )
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })
 

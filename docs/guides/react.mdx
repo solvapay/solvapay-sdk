@@ -186,8 +186,8 @@ function CheckoutPage() {
 - `planRef` (required) - Plan reference to subscribe to
 - `productRef` (optional) - Product reference for usage tracking
 - `onSuccess` - Callback when payment succeeds
-- `onError` - Callback when payment fails
-- `returnUrl` - Optional return URL after payment
+- `onError` - Callback when payment fails (never for a payment that is still settling)
+- `returnUrl` - Where the payer comes back after 3DS (defaults to the current URL). Must be an https URL on the origin of the website registered for your SolvaPay account (the backend refuses any other origin; `http://localhost` is accepted in sandbox only). The form tags it with `solvapay_payment=<id>` so the return resumes that payment.
 - `submitButtonText` - Custom submit button text (default: "Pay Now")
 - `className` - Custom CSS class for form container
 - `buttonClassName` - Custom CSS class for submit button
@@ -319,7 +319,7 @@ function TopUpCredits() {
 - `autoRecharge` — optional `AutoRechargeInput` to enable auto-recharge in the **same** payment (see [Credit Top-Ups & Auto-Recharge](#credit-top-ups--auto-recharge)).
 - `onSuccess(paymentIntent, extras?)` — fires once the customer is fully credited. `extras.creditsAdded` carries the wallet delta when the backend reports it.
 - `onError(error)` — called when the payment fails.
-- `returnUrl` — where the payer comes back after 3DS (defaults to the current URL).
+- `returnUrl` — where the payer comes back after 3DS (defaults to the current URL). Same origin rule as `PaymentForm`: https, on your registered website's origin.
 - `className` / `buttonClassName` — styling hooks.
 
 Credits mint when the charge succeeds. The webhook is an idempotent backstop, not
@@ -356,7 +356,7 @@ function AutoRechargeSettings() {
 - `currency` — ISO 4217 currency code (default: `USD`).
 - `defaultThresholdAmountMajor` — pre-fills the threshold field (form default: `5`).
 - `defaultTopupAmountMajor` — pre-fills the top-up field (form default: `10`).
-- `deferCardSetup` — when `true`, saving stages the config **without** asking for a card and fires `onPendingConfig` instead. Use this to arm auto-recharge inside a top-up payment (see below).
+- `deferCardSetup` — when `true`, saving validates the form and hands the config to `onPendingConfig` **without** saving it or asking for a card. The top-up payment intent created with that config stages and arms it (see below).
 - `onPendingConfig(payload)` — receives the `AutoRechargeInput` to forward into `TopupForm` when `deferCardSetup` is set.
 - `onSetupRequired(result)` — called when a separate card-setup step is required (non-deferred flow).
 - `onSaved(result)` / `onDisabled()` — lifecycle callbacks.
@@ -599,7 +599,7 @@ function AutoRechargeStatus() {
 - `loading` / `saving` / `disabling` — in-flight state flags.
 - `error` — the last error, or `null`.
 - `refresh(force?)` — re-fetch the config.
-- `save(input)` — set or update the config. Accepts `SaveAutoRechargeInput` (see the [top-up section](#credit-top-ups--auto-recharge) for the `maxMonthlySpendMajor` cap and `deferSetupIntent`).
+- `save(input)` — set or update the config. Accepts `SaveAutoRechargeInput` (see the [top-up section](#credit-top-ups--auto-recharge) for the `maxMonthlySpendMajor` cap). A save without a card on file answers `requiresPaymentMethod: true` and the form opens `AutoRecharge.CardSetup`.
 - `disable()` — turn auto-recharge off.
 
 `config.status` is `active`, `disabled`, `pending_setup`, or `failed`. Read
@@ -719,17 +719,44 @@ switch (result.status) {
 }
 ```
 
-The built-in forms surface `pending` as a message and keep the customer on the form —
-`onSuccess` never fires from a pending payment. Pay with a saved card by passing
-`paymentMethodId` instead of a capture.
+Pass `billingDetails` (`CardBillingDetails`: name, email, address) so the rail gets the
+cardholder for AVS and receipts; the built-in forms build it from the customer name field, the
+customer's email and the buyer country, state and postal code (`buildBillingDetails`). Pay with a
+saved card by passing `paymentMethodId` instead of a capture.
+
+The built-in forms follow a `pending` confirm through the backend (`processPayment` /
+`processTopupPayment`): a payment that settles fires `onSuccess`; one the backend still reports
+pending shows the pending copy in `PaymentForm.Notice` / `TopupForm.Notice` (`role="status"`),
+not in the `Error` slot, and `onError` does not fire for it.
+
+### Keyed errors
+
+Every refusal of a capture grant, a confirm or a card save is a keyed body from the backend
+(`code`: `payment_declined`, `capture_grant_exhausted`, `card_not_in_grant_window`,
+`card_already_used`, `confirm_in_progress`, `rail_outcome_unknown`, `card_not_found`, ...; a 402
+`payment_declined` also carries `reason` and `declineCode`). The transports throw a
+`TransportError` with those fields, and the forms pick the payer's copy by key from
+`copy.vaultErrors` (`paymentErrorMessage`), never from message text. `confirmVaultPayment`'s
+`error` result carries the `code` for your own branching. The `@solvapay/next` and
+`@solvapay/server/fetch` route wrappers put `code`, `reason` and `declineCode` on the JSON error
+body next to `error`, so a custom transport can do the same.
 
 ### 3DS return
 
-When the confirm answers `requires_action`, the forms send the payer to `redirectUrl`. The rail
-brings them back to `returnUrl` with `payment_intent` in the query; `PaymentForm` and `TopupForm`
-read it on mount, strip the return parameters from the URL, and reconcile through the backend,
-firing `onSuccess` once the payment was processed. Make sure `returnUrl` points at the page that
-renders the form.
+When the confirm answers `requires_action`, the forms send the payer to `redirectUrl`. Outside an
+MCP host the browser navigates there; before that the form tags `returnUrl` with
+`solvapay_payment=<payment id>` and remembers the payment in `sessionStorage`. The rail brings the
+payer back to that URL; `PaymentForm` and `TopupForm` read the tag on mount, do **not** create a
+new payment, strip the return parameters from the URL and reconcile the remembered payment
+through the backend, firing `onSuccess` with that payment's ids once it was processed. A return
+whose payment is not remembered (storage cleared, another browser) reports
+`copy.errors.paymentReturnUnresolved` through `onError`. Make sure `returnUrl` points at the page
+that renders the form and is on your registered website's origin.
+
+Inside an MCP host the form opens `redirectUrl` through the host (`ui/open-link`), stays mounted
+with `copy.errors.paymentAwaitingAuthentication` in the `Notice` slot and polls the backend until
+the payment settles; the return page the MCP server serves only sends the payer back to the chat
+(see the [MCP guide](/guides/mcp#3ds-return-url)).
 
 ## Multi-Currency Plans & Top-Ups
 
@@ -876,11 +903,11 @@ function TopupWithAutoRecharge({ amount, currency = 'USD' }: { amount: number; c
 }
 ```
 
-With `deferCardSetup`, saving the `AutoRecharge` form sends `deferSetupIntent: true`
-(no inline SetupIntent) and fires `onPendingConfig`. The backend creates the
-payment intent with `setup_future_usage: 'off_session'`, saves the card on that
-same charge, and activates the config (`pending_setup` → `active`) when the
-webhook lands — so the customer configures and funds auto-recharge in one step.
+With `deferCardSetup`, saving the `AutoRecharge` form validates the config and fires
+`onPendingConfig` without a server round-trip. `TopupForm` sends it as `autoRecharge`
+on the top-up payment intent; the backend stages the config (`pending_setup`),
+keeps the card of that same charge for off-session use and activates the config
+when the charge settles, so the customer configures and funds auto-recharge in one step.
 
 ### Managing auto-recharge on its own
 

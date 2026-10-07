@@ -119,6 +119,37 @@ export async function POST(request: Request) {
 }
 ```
 
+#### Capture Grant and Confirm
+
+The SDK's card fields write the card into the vault under a short-lived grant, then the payment is
+confirmed server-side. `billingDetails` (the cardholder's name, email and address) goes on the
+card the rail creates; the built-in forms send it. A refusal answers the backend's status with its
+`code` on the JSON body (a 402 `payment_declined` carries `reason` and `declineCode`), which the
+React forms turn into payer copy.
+
+```typescript
+// app/api/create-capture-grant/route.ts
+import { createCaptureGrant } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const { paymentIntentId } = await request.json()
+  return createCaptureGrant(request, { paymentIntentId })
+}
+
+// app/api/confirm-payment/route.ts
+import { confirmPayment } from '@solvapay/next'
+
+export async function POST(request: Request) {
+  const { paymentIntentId, cardId, paymentMethodId, returnUrl, billingDetails } =
+    await request.json()
+  return confirmPayment(request, { paymentIntentId, cardId, paymentMethodId, returnUrl, billingDetails })
+}
+```
+
+`returnUrl` is where the payer comes back after 3DS: https, on the origin of the website registered
+for your SolvaPay account (`http://localhost` in sandbox only). Card setup without a payment
+(`AutoRecharge.CardSetup`) uses `createCardSetupGrant` and `saveCard` the same way.
+
 #### Process Payment
 
 ```typescript

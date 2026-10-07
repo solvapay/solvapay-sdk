@@ -20,10 +20,9 @@ export const TopupForm: React.FC<TopupFormProps> = props => {
     <Primitive.Root {...rootProps} className={rootClass}>
       <Primitive.CardFields />
       <Primitive.Error className="solvapay-topup-form-error" />
+      <Primitive.Notice className="solvapay-topup-form-notice" />
       <Primitive.Loading className="solvapay-topup-form-loading" />
-      <Primitive.SubmitButton className={buttonClass}>
-        {submitButtonText}
-      </Primitive.SubmitButton>
+      <Primitive.SubmitButton className={buttonClass}>{submitButtonText}</Primitive.SubmitButton>
     </Primitive.Root>
   )
 }

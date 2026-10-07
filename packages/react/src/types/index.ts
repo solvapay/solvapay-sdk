@@ -15,6 +15,7 @@ import type {
   PurchaseCheckResult,
   PurchaseInfo,
   SdkMerchantResponse,
+  CardBillingDetails,
 } from '@solvapay/server'
 
 export type { PurchaseInfo }
@@ -64,6 +65,19 @@ export interface CaptureGrant {
   /** Epoch milliseconds. */
   expiresAt: number
   scope: { paymentIntentId: string } | { sessionId: string }
+}
+
+/**
+ * Input of the server-side confirm: the captured card (`cardId`) or a saved
+ * payment method (`paymentMethodId`), where the payer returns after 3DS and
+ * the cardholder's billing details for the card the rail creates.
+ */
+export interface ConfirmPaymentInput {
+  paymentIntentId: string
+  cardId?: string
+  paymentMethodId?: string
+  returnUrl?: string
+  billingDetails?: CardBillingDetails
 }
 
 /** Outcome of a server-side vault confirm. */
@@ -489,12 +503,7 @@ export interface SolvaPayContextValue {
   /** Grant for writing one card into the vault for a payment intent. */
   createCaptureGrant: (params: { paymentIntentId: string }) => Promise<CaptureGrant>
   /** Confirm a payment server-side with a captured card or a saved payment method. */
-  confirmPayment: (params: {
-    paymentIntentId: string
-    cardId?: string
-    paymentMethodId?: string
-    returnUrl?: string
-  }) => Promise<ConfirmedPayment>
+  confirmPayment: (params: ConfirmPaymentInput) => Promise<ConfirmedPayment>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
   activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>

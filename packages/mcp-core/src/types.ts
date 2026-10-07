@@ -111,7 +111,11 @@ export interface SolvaPayCallToolResult {
   content: Array<
     | { type: 'text'; text: string; annotations?: SolvaPayContentAnnotations }
     | { type: 'image'; data: string; mimeType: string; annotations?: SolvaPayContentAnnotations }
-    | { type: 'resource'; resource: Record<string, unknown>; annotations?: SolvaPayContentAnnotations }
+    | {
+        type: 'resource'
+        resource: Record<string, unknown>
+        annotations?: SolvaPayContentAnnotations
+      }
   >
   structuredContent?: Record<string, unknown>
   isError?: boolean
@@ -234,6 +238,12 @@ export const SOLVAPAY_MCP_VIEW_KINDS = [
 export interface BootstrapPayload {
   view: SolvaPayMcpViewKind
   productRef: string
+  /**
+   * Where the rail sends the payer after a customer action (3DS): the
+   * return page the MCP server serves under `publicBaseUrl`
+   * (`PAYMENT_RETURN_PATH`). The backend accepts it only on the origin of
+   * the provider's registered website or the hosted pages.
+   */
   returnUrl: string
   merchant: BootstrapMerchant
   product: BootstrapProduct

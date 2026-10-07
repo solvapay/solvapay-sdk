@@ -36,7 +36,7 @@ import {
   createCardSetupGrant,
   saveCard,
 } from '@solvapay/next'
-import type { SolvaPay } from '@solvapay/server'
+import type { CardBillingDetails, SolvaPay } from '@solvapay/server'
 
 /** Route handlers accept the web-standard `Request` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
 type Handler = (request: Request) => Promise<Response>
@@ -171,6 +171,9 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
           ...(body.cardId ? { cardId: String(body.cardId) } : {}),
           ...(body.paymentMethodId ? { paymentMethodId: String(body.paymentMethodId) } : {}),
           ...(body.returnUrl ? { returnUrl: String(body.returnUrl) } : {}),
+          ...(body.billingDetails && typeof body.billingDetails === 'object'
+            ? { billingDetails: body.billingDetails as CardBillingDetails }
+            : {}),
         },
         { solvaPay },
       )

@@ -41,6 +41,10 @@ import {
   type TaxBreakdown,
 } from '@solvapay/core'
 import { confirmVaultPayment } from '../utils/confirmPayment'
+import { buildBillingDetails } from '../utils/billingDetails'
+import { useCustomer } from '../hooks/useCustomer'
+import { useCanOpenExternal, useOpenExternal } from '../hooks/useExternalLink'
+import { AUTHENTICATION_WAIT_ATTEMPTS } from './authenticationWait'
 import type {
   Appearance,
   SolvaPayContextValue,
@@ -49,7 +53,14 @@ import type {
   VaultInfo,
 } from '../types'
 import { VaultCardFields, type CardCapture, type CardFieldsProps } from '../vault/CardFields'
-import { readPaymentIntentId, stripPaymentIntentParams } from './paymentIntentReturn'
+import {
+  buildPaymentReturnUrl,
+  readPaymentReturn,
+  rememberPaymentReturn,
+  stripPaymentReturnParams,
+  takePaymentReturn,
+  type PaymentReturn,
+} from './paymentReturn'
 import {
   useBusinessDetailsAttach,
   type UseBusinessDetailsAttachReturn,
@@ -75,6 +86,8 @@ type TopupFormContextValue = {
   paymentInputComplete: boolean
   canSubmit: boolean
   error: string | null
+  /** What the payer is told while the top-up settles; rendered by `TopupForm.Notice`, not a failure. */
+  notice: string | null
   returnUrl: string
   businessDetails: BusinessDetailsInput
   taxBreakdown: TaxBreakdown | null
@@ -154,14 +167,15 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   const hasInitializedRef = useRef(false)
   const hasAmount = amount > 0
 
+  // A 3DS return names the top-up the payer left for: that payment is
+  // reconciled and no new one is created.
+  const [paymentReturn] = useState<PaymentReturn | null>(() =>
+    typeof window === 'undefined' ? null : (readPaymentReturn(window.location.search) ?? null),
+  )
+
   useEffect(() => {
-    if (
-      !hasInitializedRef.current &&
-      hasAmount &&
-      !loading &&
-      !topupError &&
-      !paymentIntentId
-    ) {
+    if (paymentReturn) return
+    if (!hasInitializedRef.current && hasAmount && !loading && !topupError && !paymentIntentId) {
       hasInitializedRef.current = true
       startTopup().catch(error => {
         console.error('[TopupForm] startTopup failed', error)
@@ -169,7 +183,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       })
     }
     if (hasAmount && paymentIntentId) hasInitializedRef.current = true
-  }, [hasAmount, loading, topupError, paymentIntentId, startTopup])
+  }, [hasAmount, loading, topupError, paymentIntentId, startTopup, paymentReturn])
 
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
@@ -180,14 +194,20 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
   }, [])
   const resolvedAppearance = useAppearance(rootEl, appearance)
 
-  const outerError = !hasAmount
-    ? copy.errors.configMissingAmount
-    : topupError
-      ? `${copy.errors.topupInitFailed} ${topupError.message || copy.errors.unknownError}`
-      : null
+  const outerError = paymentReturn
+    ? null
+    : !hasAmount
+      ? copy.errors.configMissingAmount
+      : topupError
+        ? `${copy.errors.topupInitFailed} ${topupError.message || copy.errors.unknownError}`
+        : null
 
   const intentReady = !!paymentIntentId && !!vault
-  const dataState: TopupFormState = outerError ? 'error' : intentReady ? 'ready' : 'loading'
+  const dataState: TopupFormState = outerError
+    ? 'error'
+    : intentReady || paymentReturn
+      ? 'ready'
+      : 'loading'
 
   // Owned on Root so country/state/postal survive the OfflineInner → Inner
   // swap when the PaymentIntent arrives. OfflineInner used to no-op
@@ -232,6 +252,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
         {children}
       </Slot>
     )
+    if (paymentReturn) {
+      return (
+        <ReturnInner {...innerCommon} paymentReturn={paymentReturn}>
+          {slotted}
+        </ReturnInner>
+      )
+    }
     if (intentReady) {
       return <Inner {...innerCommon}>{slotted}</Inner>
     }
@@ -246,7 +273,11 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       data-state={dataState}
       {...rest}
     >
-      {intentReady ? (
+      {paymentReturn ? (
+        <ReturnInner {...innerCommon} paymentReturn={paymentReturn}>
+          {children}
+        </ReturnInner>
+      ) : intentReady ? (
         <Inner {...innerCommon}>{children}</Inner>
       ) : (
         <OfflineInner {...innerCommon}>{children}</OfflineInner>
@@ -281,7 +312,9 @@ type InnerProps = {
    * argument so the checkout flow can optimistically bump the
    * in-memory balance before its deterministic refetch lands.
    */
-  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
     | { status: 'processing' }
     | { status: 'timeout'; message?: string }
@@ -292,6 +325,25 @@ type InnerProps = {
   confirmPaymentTransport: SolvaPayContextValue['confirmPayment']
   businessAttach: UseBusinessDetailsAttachReturn
   children?: React.ReactNode
+}
+
+type TopupSettlement =
+  | { status: 'succeeded'; creditsAdded?: number }
+  | { status: 'processing' }
+  | { status: 'timeout'; message?: string }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
+
+/**
+ * Ask the backend to process the top-up (it waits for the credit booking).
+ * Without `processTopupPayment` the confirm alone is the settlement.
+ */
+async function settleTopup(
+  processTopupPayment: InnerProps['processTopupPayment'],
+  railPaymentId: string,
+): Promise<TopupSettlement> {
+  if (!processTopupPayment) return { status: 'succeeded' }
+  return processTopupPayment({ paymentIntentId: railPaymentId })
 }
 
 const Inner: React.FC<InnerProps> = ({
@@ -313,6 +365,9 @@ const Inner: React.FC<InnerProps> = ({
   children,
 }) => {
   const copy = useCopy()
+  const customer = useCustomer()
+  const openExternal = useOpenExternal()
+  const canOpenExternal = useCanOpenExternal()
 
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [cardCapture, setCardCapture] = useState<CardCapture | null>(null)
@@ -321,65 +376,96 @@ const Inner: React.FC<InnerProps> = ({
   }, [])
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const returnResumeStarted = useRef(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
-  /** Wait for the backend to book the credit, then fire `onSuccess`. */
-  const finishVaultTopup = useCallback(
-    async (payment: SucceededPayment, railPaymentId: string) => {
-      let creditsAdded: number | undefined
-      if (processTopupPayment) {
-        try {
-          const result = await processTopupPayment({ paymentIntentId: railPaymentId })
-          if (result.status === 'processing') {
-            setError(copy.errors.paymentPending)
-            return
-          }
-          if (result.status === 'failed' || result.status === 'cancelled') {
-            setError(copy.errors.paymentUnexpected)
-            onError?.(new Error(`Topup ${result.status}`))
-            return
-          }
-          if (result.status === 'succeeded' && typeof result.creditsAdded === 'number') {
-            creditsAdded = result.creditsAdded
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          setError(msg)
-          onError?.(err instanceof Error ? err : new Error(msg))
-          return
-        }
+  /**
+   * Settle a confirmed top-up once: a booked credit fires `onSuccess`; one
+   * the backend still reports processing leaves the pending notice; a
+   * failed or cancelled one is an error. Returns the settlement status.
+   */
+  const finishConfirmed = useCallback(
+    async (
+      payment: SucceededPayment,
+      railPaymentId: string,
+    ): Promise<TopupSettlement['status']> => {
+      let settlement: TopupSettlement
+      try {
+        settlement = await settleTopup(processTopupPayment, railPaymentId)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setNotice(null)
+        setError(msg)
+        onError?.(err instanceof Error ? err : new Error(msg))
+        return 'failed'
       }
-      await onSuccess?.(payment, creditsAdded !== undefined ? { creditsAdded } : undefined)
+      if (settlement.status === 'processing') {
+        setNotice(copy.errors.paymentPending)
+        return settlement.status
+      }
+      if (settlement.status === 'failed' || settlement.status === 'cancelled') {
+        setNotice(null)
+        setError(copy.errors.paymentUnexpected)
+        onError?.(new Error(`Topup ${settlement.status}`))
+        return settlement.status
+      }
+      // `succeeded`, or `timeout` (the rail confirmed; the credit lands with
+      // the webhook and the purchase refetch converges on it).
+      setNotice(null)
+      await onSuccess?.(
+        payment,
+        settlement.status === 'succeeded' && settlement.creditsAdded !== undefined
+          ? { creditsAdded: settlement.creditsAdded }
+          : undefined,
+      )
+      return settlement.status
     },
     [processTopupPayment, copy, onSuccess, onError],
   )
 
-  // 3DS return path: the rail sends the payer back with `payment_intent`
-  // in the URL; resume through the backend on that id.
-  useEffect(() => {
-    if (!paymentIntentId || returnResumeStarted.current || typeof window === 'undefined') return
-    const railPaymentId = readPaymentIntentId(window.location.search)
-    if (!railPaymentId) return
-    returnResumeStarted.current = true
-    let cancelled = false
-    void (async () => {
-      setIsProcessing(true)
-      setError(null)
-      stripPaymentIntentParams()
-      try {
-        if (cancelled) return
-        await finishVaultTopup(
-          { id: paymentIntentId ?? railPaymentId, processorPaymentId: railPaymentId, status: 'succeeded' },
-          railPaymentId,
-        )
-      } finally {
-        if (!cancelled) setIsProcessing(false)
+  /**
+   * The bank's page is open outside the form (an MCP host opened it): keep
+   * the form mounted and follow the top-up through the backend until it
+   * settles or the wait budget ends.
+   */
+  const awaitAuthentication = useCallback(
+    async (payment: SucceededPayment, railPaymentId: string) => {
+      setNotice(copy.errors.paymentAwaitingAuthentication)
+      for (let attempt = 0; attempt < AUTHENTICATION_WAIT_ATTEMPTS; attempt++) {
+        let settlement: TopupSettlement
+        try {
+          settlement = await settleTopup(processTopupPayment, railPaymentId)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setNotice(null)
+          setError(msg)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+        if (settlement.status === 'succeeded') {
+          setNotice(null)
+          await onSuccess?.(
+            payment,
+            settlement.creditsAdded !== undefined
+              ? { creditsAdded: settlement.creditsAdded }
+              : undefined,
+          )
+          return
+        }
+        if (settlement.status === 'failed' || settlement.status === 'cancelled') {
+          setNotice(null)
+          setError(copy.errors.paymentUnexpected)
+          onError?.(new Error(`Topup ${settlement.status}`))
+          return
+        }
+        // processing | timeout: the payer is still with the bank.
       }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [paymentIntentId, finishVaultTopup])
+      setNotice(null)
+      const timedOut = new Error(copy.errors.paymentAuthenticationTimedOut)
+      setError(timedOut.message)
+      onError?.(timedOut)
+    },
+    [processTopupPayment, copy, onSuccess, onError],
+  )
 
   const {
     businessDetails,
@@ -406,7 +492,9 @@ const Inner: React.FC<InnerProps> = ({
 
   const submit = useCallback(async () => {
     if (!paymentIntentId || !cardCapture) {
-      const msg = !paymentIntentId ? copy.errors.paymentIntentUnavailable : copy.errors.cardFieldsMissing
+      const msg = !paymentIntentId
+        ? copy.errors.paymentIntentUnavailable
+        : copy.errors.cardFieldsMissing
       setError(msg)
       onError?.(new Error(msg))
       return
@@ -421,6 +509,7 @@ const Inner: React.FC<InnerProps> = ({
       }
     }
     setError(null)
+    setNotice(null)
     setIsProcessing(true)
     try {
       const result = await confirmVaultPayment({
@@ -428,7 +517,12 @@ const Inner: React.FC<InnerProps> = ({
         capture: cardCapture,
         createCaptureGrant,
         confirmPayment: confirmPaymentTransport,
-        returnUrl,
+        returnUrl: buildPaymentReturnUrl(returnUrl, { paymentIntentId }),
+        billingDetails: buildBillingDetails({
+          name: customer.name,
+          email: customer.email,
+          businessDetails,
+        }),
         copy,
       })
       if (result.status === 'error') {
@@ -437,15 +531,35 @@ const Inner: React.FC<InnerProps> = ({
         return
       }
       if (result.status === 'requires_action') {
+        // The bank needs the payer. Inside an MCP host the host opens the
+        // page and the form follows the top-up here; otherwise the browser
+        // navigates and the return path reconciles the remembered payment.
+        rememberPaymentReturn({
+          paymentIntentId,
+          processorPaymentId: result.payment.processorPaymentId,
+        })
+        if (canOpenExternal) {
+          const opened = await openExternal(result.redirectUrl)
+          if (!opened) {
+            const msg = copy.errors.authenticationUnavailable
+            setError(msg)
+            onError?.(new Error(msg))
+            return
+          }
+          await awaitAuthentication(result.payment, result.payment.processorPaymentId)
+          return
+        }
         window.location.assign(result.redirectUrl)
         return
       }
-      if (result.status === 'pending' || result.status === 'other') {
+      if (result.status === 'other') {
         setError(result.message)
         onError?.(new Error(result.message))
         return
       }
-      await finishVaultTopup(result.payment, result.payment.processorPaymentId)
+      // `succeeded` and `pending` both go through the backend: a pending
+      // top-up is followed, not failed.
+      await finishConfirmed(result.payment, result.payment.processorPaymentId)
     } finally {
       setIsProcessing(false)
     }
@@ -454,7 +568,10 @@ const Inner: React.FC<InnerProps> = ({
     cardCapture,
     createCaptureGrant,
     confirmPaymentTransport,
-    finishVaultTopup,
+    finishConfirmed,
+    awaitAuthentication,
+    openExternal,
+    canOpenExternal,
     returnUrl,
     copy,
     onError,
@@ -463,6 +580,8 @@ const Inner: React.FC<InnerProps> = ({
     runAttach,
     businessDetails,
     businessDetailsError,
+    customer.name,
+    customer.email,
   ])
 
   const effectiveError = error ?? outerError ?? businessDetailsError
@@ -481,6 +600,7 @@ const Inner: React.FC<InnerProps> = ({
       paymentInputComplete,
       canSubmit,
       error: effectiveError,
+      notice,
       returnUrl,
       businessDetails,
       taxBreakdown,
@@ -506,6 +626,7 @@ const Inner: React.FC<InnerProps> = ({
       paymentInputComplete,
       canSubmit,
       effectiveError,
+      notice,
       returnUrl,
       businessDetails,
       taxBreakdown,
@@ -519,6 +640,128 @@ const Inner: React.FC<InnerProps> = ({
     ],
   )
 
+  return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>
+}
+
+/**
+ * The payer is back from the bank (`solvapay_payment` in the URL): settle
+ * the top-up they left for, with the rail reference the form remembered
+ * before the redirect. No new payment is created; a return without a
+ * remembered record is reported as unresolved.
+ */
+const ReturnInner: React.FC<InnerProps & { paymentReturn: PaymentReturn }> = ({
+  amount,
+  currency,
+  appearance,
+  returnUrl,
+  state,
+  onSuccess,
+  onError,
+  processTopupPayment,
+  businessAttach,
+  paymentReturn,
+  children,
+}) => {
+  const copy = useCopy()
+  const [isProcessing, setIsProcessing] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
+  const started = useRef(false)
+  const noopSubmit = useCallback(async () => {}, [])
+  const noopSet = useCallback(() => {}, [])
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    stripPaymentReturnParams()
+    const record = takePaymentReturn(paymentReturn.paymentIntentId)
+    void (async () => {
+      try {
+        if (!record) {
+          const unresolved = new Error(copy.errors.paymentReturnUnresolved)
+          setError(unresolved.message)
+          onError?.(unresolved)
+          return
+        }
+        setProcessorPaymentId(record.processorPaymentId)
+        let settlement: TopupSettlement
+        try {
+          settlement = await settleTopup(processTopupPayment, record.processorPaymentId)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setError(msg)
+          onError?.(err instanceof Error ? err : new Error(msg))
+          return
+        }
+        if (settlement.status === 'processing') {
+          setNotice(copy.errors.paymentPending)
+          return
+        }
+        if (settlement.status === 'failed' || settlement.status === 'cancelled') {
+          setError(copy.errors.paymentUnexpected)
+          onError?.(new Error(`Topup ${settlement.status}`))
+          return
+        }
+        await onSuccess?.(
+          {
+            id: record.paymentIntentId,
+            processorPaymentId: record.processorPaymentId,
+            status: 'succeeded',
+          },
+          settlement.status === 'succeeded' && settlement.creditsAdded !== undefined
+            ? { creditsAdded: settlement.creditsAdded }
+            : undefined,
+        )
+      } finally {
+        setIsProcessing(false)
+      }
+    })()
+  }, [paymentReturn, processTopupPayment, copy, onSuccess, onError])
+
+  const ctx = useMemo<TopupFormContextValue>(
+    () => ({
+      amount,
+      currency,
+      state,
+      paymentIntentId: paymentReturn.paymentIntentId,
+      vault: null,
+      appearance,
+      processorPaymentId,
+      isReady: false,
+      isProcessing,
+      paymentInputComplete: false,
+      canSubmit: false,
+      error,
+      notice,
+      returnUrl,
+      businessDetails: businessAttach.businessDetails,
+      taxBreakdown: businessAttach.taxBreakdown,
+      businessDetailsAttached: businessAttach.businessDetailsAttached,
+      businessDetailsAttaching: businessAttach.businessDetailsAttaching,
+      businessDetailsError: businessAttach.businessDetailsError,
+      fieldErrors: businessAttach.fieldErrors,
+      setBusinessDetails: businessAttach.setBusinessDetails,
+      setPaymentInputComplete: noopSet,
+      setCardCapture: noopSet,
+      submit: noopSubmit,
+    }),
+    [
+      amount,
+      currency,
+      state,
+      paymentReturn,
+      appearance,
+      processorPaymentId,
+      isProcessing,
+      error,
+      notice,
+      returnUrl,
+      businessAttach,
+      noopSet,
+      noopSubmit,
+    ],
+  )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>
 }
 
@@ -552,6 +795,7 @@ const OfflineInner: React.FC<InnerProps> = ({
       paymentInputComplete: false,
       canSubmit: false,
       error: outerError,
+      notice: null,
       returnUrl,
       businessDetails: businessAttach.businessDetails,
       taxBreakdown: businessAttach.taxBreakdown,
@@ -632,7 +876,10 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        >
           {slotChild}
         </Slot>
       )
@@ -709,6 +956,41 @@ const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorSlotProps>(function Topu
   )
 })
 
+type NoticeSlotProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
+
+/** What the payer is told while the top-up settles. Not an error; `role="status"`. */
+const NoticeSlot = forwardRef<HTMLParagraphElement, NoticeSlotProps>(function TopupFormNotice(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useTopupCtx('Notice')
+  if (!ctx.notice) return null
+  if (asChild) {
+    return (
+      <Slot
+        ref={forwardedRef as React.Ref<HTMLElement>}
+        role="status"
+        aria-live="polite"
+        data-solvapay-topup-form-notice=""
+        {...rest}
+      >
+        {children ?? ctx.notice}
+      </Slot>
+    )
+  }
+  return (
+    <p
+      ref={forwardedRef}
+      role="status"
+      aria-live="polite"
+      data-solvapay-topup-form-notice=""
+      {...rest}
+    >
+      {children ?? ctx.notice}
+    </p>
+  )
+})
+
 function useTopupBusinessCtx(part: string) {
   const ctx = useTopupCtx(part)
   return {
@@ -734,27 +1016,30 @@ const Summary = createTaxSummaryParts(useTopupSummaryCtx, 'topup-form')
 
 export const TopupFormRoot = Root
 /** Card entry for top-ups; see `PaymentForm.CardFields`. Renders nothing until the intent exists. */
-const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(function TopupFormCardFields(props, ref) {
-  const { vault, paymentIntentId, appearance, setCardCapture, setPaymentInputComplete } =
-    useTopupCtx('CardFields')
-  return (
-    <VaultCardFields
-      ref={ref}
-      data-solvapay-topup-form-card-fields=""
-      {...props}
-      vault={vault}
-      paymentIntentId={paymentIntentId}
-      appearance={appearance}
-      onCapture={setCardCapture}
-      onComplete={setPaymentInputComplete}
-    />
-  )
-})
+const CardFieldsSlot = forwardRef<HTMLElement, CardFieldsProps>(
+  function TopupFormCardFields(props, ref) {
+    const { vault, paymentIntentId, appearance, setCardCapture, setPaymentInputComplete } =
+      useTopupCtx('CardFields')
+    return (
+      <VaultCardFields
+        ref={ref}
+        data-solvapay-topup-form-card-fields=""
+        {...props}
+        vault={vault}
+        paymentIntentId={paymentIntentId}
+        appearance={appearance}
+        onCapture={setCardCapture}
+        onComplete={setPaymentInputComplete}
+      />
+    )
+  },
+)
 
 export const TopupFormCardFields = CardFieldsSlot
 export const TopupFormSubmitButton = SubmitButton
 export const TopupFormLoading = Loading
 export const TopupFormError = ErrorSlot
+export const TopupFormNotice = NoticeSlot
 export const TopupFormLegalFooter = LegalFooter
 export const TopupFormBusinessDetails = BusinessDetails
 export const TopupFormSummary = Summary
@@ -768,6 +1053,7 @@ export const TopupForm = {
   SubmitButton,
   Loading,
   Error: ErrorSlot,
+  Notice: NoticeSlot,
   LegalFooter,
 } as const
 
