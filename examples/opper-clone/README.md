@@ -30,6 +30,8 @@ pnpm agent:connect verify you@example.com 123456  # creates an agent, saves data
 scripts/api-key-helper.sh                         # prints a fresh 15-minute agent token
 ```
 
+Run Claude Code as that agent with `scripts/claude-as-agent.sh` (arguments pass through to `claude`). It removes `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`, which outrank `apiKeyHelper`, leaves user settings out (a settings `env` can put `ANTHROPIC_API_KEY` back), and sets the helper and base URL through `--settings`. Run it from a normal terminal: Claude Code started from inside the Claude desktop app inherits the app's own auth.
+
 ## Layout
 
 | Path | What it does |

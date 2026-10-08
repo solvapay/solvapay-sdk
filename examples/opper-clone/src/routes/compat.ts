@@ -58,6 +58,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     }
 
     const agentRef = identity.kind === 'agent' ? identity.agent.agentRef : null
+    const tokenId = identity.kind === 'agent' ? identity.agent.tokenId : null
     const userRef =
       identity.kind === 'agent' ? identity.agent.principalRef : deps.merchantKeys.resolve(presented)
     if (!userRef) {
@@ -86,6 +87,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
       runtimeKey: account.runtimeKey,
       userRef,
       agentRef,
+      tokenId,
       project: account.projectName,
     })
   })
@@ -98,6 +100,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     runtimeKey: string | null
     userRef: string | null
     agentRef?: string | null
+    tokenId?: string | null
     project?: string
   }): Promise<Response> {
     const started = Date.now()
@@ -118,6 +121,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
           userRef: call.userRef,
           auth: call.agentRef ? 'agent' : call.userRef ? 'merchant_key' : 'none',
           agentRef: call.agentRef ?? null,
+          tokenId: call.tokenId ?? null,
           project: call.project ?? null,
           method: call.request.method,
           subpath: call.subpath,
