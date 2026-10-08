@@ -1,3 +1,4 @@
+import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import type {
   MintedKey,
   OpperManagement,
@@ -79,4 +80,39 @@ export function chunkedResponse(
     },
   })
   return new Response(body, { status: init.status ?? 200, headers: init.headers })
+}
+
+/** SolvaPay agent token test fixtures. */
+export const ISSUER = 'https://api.solvapay.test/v1/agent'
+export const PROVIDER = 'prov_W3TLPNOA'
+
+export async function agentKeys() {
+  const pair = await generateKeyPair('ES256', { extractable: true })
+  const jwk = { ...(await exportJWK(pair.publicKey)), kid: 'k1', alg: 'ES256', use: 'sig' }
+  return { privateKey: pair.privateKey, publicJwk: jwk }
+}
+
+export function signAgentToken(
+  key: CryptoKey,
+  overrides: {
+    iss?: string
+    aud?: string
+    sub?: string
+    principal?: string | null
+    scope?: string
+    expiresIn?: string
+    kid?: string
+  } = {},
+): Promise<string> {
+  const claims: Record<string, unknown> = { scope: overrides.scope ?? 'inference' }
+  if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
+  return new SignJWT(claims)
+    .setProtectedHeader({ alg: 'ES256', kid: overrides.kid ?? 'k1' })
+    .setIssuer(overrides.iss ?? ISSUER)
+    .setAudience(overrides.aud ?? PROVIDER)
+    .setSubject(overrides.sub ?? 'agt_TESTAGNT')
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(overrides.expiresIn ?? '15m')
+    .sign(key)
 }

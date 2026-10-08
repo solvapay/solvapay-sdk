@@ -5,6 +5,11 @@ export interface CloneConfig {
   opperBaseUrl: string
   opperManagementKey: string
   keyEncryptionKey: string
+  /** SolvaPay agent token issuer; the JWKS is fetched from `agentJwksUrl`. */
+  agentIssuer: string
+  agentJwksUrl: string
+  /** This merchant's SolvaPay provider reference: the `aud` agent tokens must carry. */
+  providerRef: string
   dataDir: string
 }
 
@@ -17,6 +22,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CloneConfig {
     opperBaseUrl: required(env, 'OPPER_BASE_URL').replace(/\/+$/, ''),
     opperManagementKey: required(env, 'OPPER_MANAGEMENT_KEY'),
     keyEncryptionKey: required(env, 'CLONE_KEY_ENCRYPTION_KEY'),
+    agentIssuer: required(env, 'SOLVAPAY_AGENT_ISSUER'),
+    agentJwksUrl: required(env, 'SOLVAPAY_AGENT_JWKS_URL'),
+    providerRef: required(env, 'SOLVAPAY_PROVIDER_REF'),
     dataDir: fileURLToPath(new URL('../data/', import.meta.url)),
   }
 }

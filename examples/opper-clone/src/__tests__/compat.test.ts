@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { createLocalJWKSet, type JWK } from 'jose'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { createAgentLayer } from '../agent-layer'
+import { createAgentTokenVerifier } from '../agent-layer/identity/verify-agent-token'
 import { createApp } from '../app'
 import { importEncryptionKey } from '../lib/crypto'
 import { MemoryKvStore } from '../lib/kv-store'
@@ -6,9 +9,27 @@ import type { Logger } from '../log'
 import { merchantKeysFrom } from '../merchant/merchant-keys'
 import { OpperAccounts } from '../merchant/opper-accounts'
 import { createOpperUpstream, formatTags, readCost } from '../upstream/opper'
-import { chunkedResponse, FakeOpperManagement, TEST_ENCRYPTION_KEY } from './fakes'
+import {
+  agentKeys,
+  chunkedResponse,
+  FakeOpperManagement,
+  ISSUER,
+  PROVIDER,
+  signAgentToken,
+  TEST_ENCRYPTION_KEY,
+} from './fakes'
 
 const MERCHANT_KEY = 'op-clone-test-alice'
+const PRINCIPAL = 'ppl_ABCDEFGHIJKLMNOP'
+
+let agentKey: CryptoKey
+let agentJwk: JWK
+
+beforeAll(async () => {
+  const keys = await agentKeys()
+  agentKey = keys.privateKey
+  agentJwk = keys.publicJwk
+})
 const SSE = [
   'event: message_start\ndata: {"type":"message_start"}\n\n',
   'event: content_block_delta\ndata: {"type":"content_block_delta"}\n\n',
@@ -45,6 +66,13 @@ async function setup(reply: (seen: Seen) => Response) {
   }) as typeof fetch
   const opper = new FakeOpperManagement()
   const app = createApp({
+    agentLayer: createAgentLayer({
+      verifyAgentToken: createAgentTokenVerifier({
+        issuer: ISSUER,
+        providerRef: PROVIDER,
+        keys: createLocalJWKSet({ keys: [agentJwk] }),
+      }),
+    }),
     merchantKeys: merchantKeysFrom([{ key: MERCHANT_KEY, userRef: 'alice', label: 'test' }]),
     accounts: new OpperAccounts(
       opper,
@@ -190,6 +218,54 @@ describe('compat route', () => {
     expect(await response.text()).toBe('{"data":[]}')
     expect(seen[0].method).toBe('GET')
     expect((await completed(events)).paid).toBe(false)
+  })
+})
+
+describe('agent tokens', () => {
+  it('serves an agent as its pairwise principal, with the agent in the tags and the log', async () => {
+    const { app, seen, events, opper } = await setup(() => new Response('{"ok":true}'))
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+    expect(response.status).toBe(200)
+    await response.text()
+
+    expect(opper.projects.has(`sp-${PRINCIPAL}`)).toBe(true)
+    expect(seen[0].headers.get('authorization')).toBe('Bearer op-secret-1')
+    expect(seen[0].headers.get('x-opper-tags')).toMatch(
+      new RegExp(`clone_user:${PRINCIPAL},agent_id:agt_TESTAGNT$`),
+    )
+    expect(await completed(events)).toMatchObject({
+      auth: 'agent',
+      agentRef: 'agt_TESTAGNT',
+      userRef: PRINCIPAL,
+    })
+  })
+
+  it('accepts the token as x-api-key too', async () => {
+    const { app } = await setup(() => new Response('{}'))
+    const token = await signAgentToken(agentKey)
+    expect((await app.request(messages({ 'x-api-key': token }))).status).toBe(200)
+  })
+
+  it("refuses a token for another provider with Opper's 401 shape, without calling Opper", async () => {
+    const { app, seen, events } = await setup(() => new Response('{}'))
+    const token = await signAgentToken(agentKey, { aud: 'prov_OTHER001' })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({
+      error: 'invalid bearer token. The agent token was not accepted (invalid).',
+    })
+    expect(seen).toHaveLength(0)
+    expect(events.find(e => e.event === 'call.rejected')?.fields).toMatchObject({
+      reason: 'agent_token_invalid',
+    })
+  })
+
+  it('keeps the merchant key path for non-agent callers', async () => {
+    const { app, events } = await setup(() => new Response('{}'))
+    const response = await app.request(messages({ 'x-api-key': MERCHANT_KEY }))
+    await response.text()
+    expect(await completed(events)).toMatchObject({ auth: 'merchant_key', agentRef: null })
   })
 })
 

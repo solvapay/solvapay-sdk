@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { AgentLayer } from '../agent-layer'
 import type { Logger } from '../log'
 import { presentedKey, type MerchantKeys } from '../merchant/merchant-keys'
 import type { ProviderAccount } from '../merchant/opper-accounts'
@@ -9,6 +10,7 @@ const PREFIX = '/v3/compat'
 const PAID_ROUTE = { method: 'POST', subpath: '/v1/messages' }
 
 export interface CompatDeps {
+  agentLayer: AgentLayer
   merchantKeys: MerchantKeys
   accounts: ProviderAccount
   upstream: OpperUpstream
@@ -40,7 +42,24 @@ export function compatRoutes(deps: CompatDeps): Hono {
       return forwardAndLog({ request, requestId, subpath, paid, runtimeKey: null, userRef: null })
     }
 
-    const userRef = deps.merchantKeys.resolve(presented)
+    // A SolvaPay agent token takes precedence; anything else is the merchant's own key.
+    const identity = await deps.agentLayer.identify(presented)
+    if (identity.kind === 'rejected') {
+      deps.log.info('call.rejected', {
+        requestId,
+        subpath,
+        reason: `agent_token_${identity.reason}`,
+        detail: identity.detail,
+      })
+      return c.json(
+        opperError(`invalid bearer token. The agent token was not accepted (${identity.reason}).`),
+        401,
+      )
+    }
+
+    const agentRef = identity.kind === 'agent' ? identity.agent.agentRef : null
+    const userRef =
+      identity.kind === 'agent' ? identity.agent.principalRef : deps.merchantKeys.resolve(presented)
     if (!userRef) {
       deps.log.info('call.rejected', { requestId, subpath, reason: 'unknown_key' })
       return c.json(
@@ -66,6 +85,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
       paid,
       runtimeKey: account.runtimeKey,
       userRef,
+      agentRef,
       project: account.projectName,
     })
   })
@@ -77,11 +97,13 @@ export function compatRoutes(deps: CompatDeps): Hono {
     paid: boolean
     runtimeKey: string | null
     userRef: string | null
+    agentRef?: string | null
     project?: string
   }): Promise<Response> {
     const started = Date.now()
     const tags: Record<string, string> = { request_id: call.requestId }
     if (call.userRef) tags.clone_user = call.userRef
+    if (call.agentRef) tags.agent_id = call.agentRef
     const { response, completion } = await deps.upstream.forward({
       request: call.request,
       subpath: call.subpath,
@@ -94,6 +116,8 @@ export function compatRoutes(deps: CompatDeps): Hono {
         deps.log.info(call.userRef ? 'call.completed' : 'call.anonymous', {
           requestId: call.requestId,
           userRef: call.userRef,
+          auth: call.agentRef ? 'agent' : call.userRef ? 'merchant_key' : 'none',
+          agentRef: call.agentRef ?? null,
           project: call.project ?? null,
           method: call.request.method,
           subpath: call.subpath,

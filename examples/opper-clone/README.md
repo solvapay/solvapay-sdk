@@ -20,10 +20,21 @@ ANTHROPIC_BASE_URL=http://localhost:3040/v3/compat ANTHROPIC_API_KEY=op-clone-..
 
 On the first call for a user, the clone creates Opper project `sp-<userRef>` and one runtime key, and stores the key encrypted in `data/kv.json`. Each call logs one `call.completed` line with the user, project, status, bytes, `X-Opper-Cost` and every `x-opper-*` response header.
 
+## Agent tokens (S2)
+
+A caller can present a SolvaPay agent token instead of a merchant key: an ES256 JWT from SolvaPay's agent service, verified against `SOLVAPAY_AGENT_JWKS_URL`, with `iss` = `SOLVAPAY_AGENT_ISSUER` and `aud` = `SOLVAPAY_PROVIDER_REF`. The clone serves the agent as its pairwise principal (`ppl_…`), so the Opper project is `sp-ppl_…`, and tags each call with `agent_id`. A rejected token gets a 401 in Opper's shape.
+
+```bash
+pnpm agent:connect login you@example.com          # emails a sign-in code
+pnpm agent:connect verify you@example.com 123456  # creates an agent, saves data/agent-credential
+scripts/api-key-helper.sh                         # prints a fresh 15-minute agent token
+```
+
 ## Layout
 
 | Path | What it does |
 |---|---|
+| `src/agent-layer/` | SolvaPay's part: agent token verification now; policy, top-ups and metering later |
 | `src/routes/compat.ts` | `ALL /v3/compat/*`; `POST /v3/compat/v1/messages` is the paid route |
 | `src/upstream/opper.ts` | Forwards with the user's key and `X-Opper-Tags`, streams the body, reads the cost when the stream ends |
 | `src/merchant/merchant-keys.ts` | The clone's toy version of Opper's own API keys |

@@ -1,6 +1,9 @@
 import 'dotenv/config'
 import { join } from 'node:path'
 import { serve } from '@hono/node-server'
+import { createRemoteJWKSet } from 'jose'
+import { createAgentLayer } from './agent-layer'
+import { createAgentTokenVerifier } from './agent-layer/identity/verify-agent-token'
 import { createApp } from './app'
 import { loadConfig } from './config'
 import { importEncryptionKey } from './lib/crypto'
@@ -18,6 +21,13 @@ if (entries.length === 0) {
 }
 
 const app = createApp({
+  agentLayer: createAgentLayer({
+    verifyAgentToken: createAgentTokenVerifier({
+      issuer: config.agentIssuer,
+      providerRef: config.providerRef,
+      keys: createRemoteJWKSet(new URL(config.agentJwksUrl)),
+    }),
+  }),
   merchantKeys: merchantKeysFrom(entries),
   accounts: new OpperAccounts(
     new OpperClient(config.opperBaseUrl, config.opperManagementKey),
@@ -32,6 +42,8 @@ serve({ fetch: app.fetch, port: config.port }, info => {
   consoleLogger.info('clone.listening', {
     port: info.port,
     merchantKeys: entries.length,
+    providerRef: config.providerRef,
+    agentIssuer: config.agentIssuer,
     anthropicBaseUrl: `http://localhost:${info.port}/v3/compat`,
   })
 })
