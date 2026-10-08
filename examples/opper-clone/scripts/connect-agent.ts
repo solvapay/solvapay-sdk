@@ -150,13 +150,20 @@ async function card(amountMinor: number) {
 
   const result = await page.done
   await page.close()
-  if (result.status !== 'succeeded') fail(`SetupIntent ended as ${result.status}`)
-  process.stdout.write('Card confirmed. Waiting for Stripe to tell SolvaPay…\n')
+  if (result.status !== 'succeeded' || !result.paymentMethodId) {
+    fail(`SetupIntent ended as ${result.status}`)
+  }
+  process.stdout.write(
+    `Card ${result.paymentMethodId} confirmed. Waiting for Stripe to tell SolvaPay…\n`,
+  )
 
+  // Wait for this card, not just any: a card saved earlier is already there, and
+  // the newest saved card becomes the default the lot is charged to.
   const deadline = Date.now() + CARD_WAIT_MS
   for (;;) {
     const view = await request('GET', `/v1/account/merchants/${providerRef}`, undefined, token)
-    if (view.ok && view.body.card) break
+    const saved = view.body.card as { paymentMethodId?: string } | null | undefined
+    if (view.ok && saved?.paymentMethodId === result.paymentMethodId) break
     if (Date.now() > deadline) {
       fail('No saved card after 90 s. Is the Stripe webhook reaching the local stack?')
     }

@@ -96,7 +96,14 @@
         await fetch('/done', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ setupIntentId: setupIntent.id, status: setupIntent.status }),
+          body: JSON.stringify({
+            setupIntentId: setupIntent.id,
+            status: setupIntent.status,
+            paymentMethodId:
+              typeof setupIntent.payment_method === 'string'
+                ? setupIntent.payment_method
+                : setupIntent.payment_method && setupIntent.payment_method.id,
+          }),
         })
         show(
           setupIntent.status === 'succeeded'

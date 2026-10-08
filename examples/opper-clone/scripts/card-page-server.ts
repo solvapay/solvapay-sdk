@@ -17,6 +17,8 @@ export interface CardPageConfig {
 export interface CardPageResult {
   setupIntentId: string
   status: string
+  /** The card the SetupIntent saved, `pm_…`; absent unless it succeeded. */
+  paymentMethodId?: string
 }
 
 export interface CardPageServer {
@@ -102,7 +104,11 @@ function parseResult(body: string): CardPageResult | null {
       return null
     }
     if (typeof value.status !== 'string') return null
-    return { setupIntentId: value.setupIntentId, status: value.status }
+    const paymentMethodId =
+      typeof value.paymentMethodId === 'string' && value.paymentMethodId.startsWith('pm_')
+        ? value.paymentMethodId
+        : undefined
+    return { setupIntentId: value.setupIntentId, status: value.status, paymentMethodId }
   } catch {
     return null
   }

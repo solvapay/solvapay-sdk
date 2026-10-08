@@ -34,11 +34,19 @@ describe('card page server', () => {
     const response = await fetch(`${server.url}done`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ setupIntentId: 'seti_1', status: 'succeeded' }),
+      body: JSON.stringify({
+        setupIntentId: 'seti_1',
+        status: 'succeeded',
+        paymentMethodId: 'pm_1',
+      }),
     })
 
     expect(response.status).toBe(204)
-    await expect(server.done).resolves.toEqual({ setupIntentId: 'seti_1', status: 'succeeded' })
+    await expect(server.done).resolves.toEqual({
+      setupIntentId: 'seti_1',
+      status: 'succeeded',
+      paymentMethodId: 'pm_1',
+    })
   })
 
   it('refuses a report that is not a SetupIntent, and unknown paths', async () => {
