@@ -30,7 +30,7 @@ On the first call for a user, the clone creates Opper project `sp-<userRef>` and
 | `src/merchant/opper-accounts.ts` | One Opper project and key per user (ported from `solvapay/opper-mcp`) |
 | `data/` | Local state, git-ignored |
 
-## Not yet
+## Behaviour to know
 
-- Error bodies are Anthropic's shapes; checking them against Opper's is task 1.6.
-- Where Opper reports the cost of a streamed call is task 1.5: the log line shows whether `X-Opper-Cost` arrives on a stream.
+- A call with no key is forwarded to Opper without credentials, so Opper gives its own 401 (or 404 for an unknown path). An unknown key gets a 401 in Opper's shape from the clone. See `FIDELITY.md`.
+- Cost comes from `X-Opper-Cost` on a plain call and from the final `message_delta` event on a streamed call; Opper sends no cost header on streams.

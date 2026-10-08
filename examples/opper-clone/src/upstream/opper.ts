@@ -1,5 +1,10 @@
 // Forwards a call to Opper's compatibility API with the user's runtime key and
 // streams the answer back untouched.
+//
+// Where Opper reports cost (S1 spike, 8 Oct 2026): a plain call carries
+// `X-Opper-Cost`; a streamed call has no cost header, and the cost arrives in
+// the final `message_delta` event as `usage.cost` (USD).
+import { isRecord } from '../lib/guards'
 
 /** Request headers that never go upstream: the caller's credentials and hop-by-hop headers. */
 const DROP_REQUEST_HEADERS = [
@@ -23,7 +28,7 @@ const DROP_RESPONSE_HEADERS = [
 const MAX_TAGS = 8
 
 export type CostReading =
-  | { usd: number; source: 'x-opper-cost' }
+  | { usd: number; source: 'x-opper-cost' | 'stream-message-delta' }
   | { usd: null; source: 'missing' | 'unparseable'; raw?: string }
 
 export interface Completion {
@@ -33,13 +38,16 @@ export interface Completion {
   opperHeaders: string[]
   streamed: boolean
   bytes: number
+  /** `x-opper-trace-id`, the handle for reconciling against Opper's logs. */
+  traceId: string | null
 }
 
 export interface ForwardInput {
   request: Request
   /** Path below `/v3/compat`, for example `/v1/messages`. */
   subpath: string
-  runtimeKey: string
+  /** The user's Opper key, or null to forward a call that presented no key. */
+  runtimeKey: string | null
   tags: Record<string, string>
 }
 
@@ -64,7 +72,7 @@ export function createOpperUpstream(options: {
       const target = `${options.baseUrl}/v3/compat${subpath}${source.search}`
       const headers = new Headers(request.headers)
       for (const name of DROP_REQUEST_HEADERS) headers.delete(name)
-      headers.set('authorization', `Bearer ${runtimeKey}`)
+      if (runtimeKey) headers.set('authorization', `Bearer ${runtimeKey}`)
       headers.set('accept-encoding', 'identity')
       headers.set('x-opper-tags', formatTags(tags))
 
@@ -77,11 +85,13 @@ export function createOpperUpstream(options: {
 
       const responseHeaders = new Headers(upstream.headers)
       for (const name of DROP_RESPONSE_HEADERS) responseHeaders.delete(name)
+      const streamed = (upstream.headers.get('content-type') ?? '').includes('text/event-stream')
       const base = {
         cost: readCost(upstream.headers),
         status: upstream.status,
         opperHeaders: [...upstream.headers.keys()].filter(name => name.startsWith('x-opper-')),
-        streamed: (upstream.headers.get('content-type') ?? '').includes('text/event-stream'),
+        streamed,
+        traceId: upstream.headers.get('x-opper-trace-id'),
       }
 
       if (!upstream.body) {
@@ -92,6 +102,7 @@ export function createOpperUpstream(options: {
       }
 
       let bytes = 0
+      const scanner = streamed ? new StreamCostScanner() : null
       let finish: (completion: Completion) => void = () => undefined
       let fail: (error: unknown) => void = () => undefined
       const completion = new Promise<Completion>((resolve, reject) => {
@@ -101,10 +112,11 @@ export function createOpperUpstream(options: {
       const counter = new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, controller) {
           bytes += chunk.byteLength
+          scanner?.push(chunk)
           controller.enqueue(chunk)
         },
         flush() {
-          finish({ ...base, bytes })
+          finish({ ...base, bytes, cost: scanner ? scanner.finish() : base.cost })
         },
       })
       upstream.body.pipeTo(counter.writable).catch(fail)
@@ -137,4 +149,52 @@ export function readCost(headers: Headers): CostReading {
   const usd = Number(raw)
   if (!Number.isFinite(usd) || usd < 0) return { usd: null, source: 'unparseable', raw }
   return { usd, source: 'x-opper-cost' }
+}
+
+/**
+ * Reads the cost from an Anthropic-shaped SSE stream without holding it: only
+ * the unfinished tail of the last event is kept between chunks.
+ */
+export class StreamCostScanner {
+  private readonly decoder = new TextDecoder()
+  private pending = ''
+  private cost: CostReading = { usd: null, source: 'missing' }
+
+  push(chunk: Uint8Array): void {
+    this.pending += this.decoder.decode(chunk, { stream: true }).replace(/\r\n/g, '\n')
+    let end = this.pending.indexOf('\n\n')
+    while (end !== -1) {
+      this.readEvent(this.pending.slice(0, end))
+      this.pending = this.pending.slice(end + 2)
+      end = this.pending.indexOf('\n\n')
+    }
+  }
+
+  finish(): CostReading {
+    this.pending += this.decoder.decode()
+    if (this.pending.trim()) this.readEvent(this.pending)
+    this.pending = ''
+    return this.cost
+  }
+
+  private readEvent(event: string): void {
+    const data = event
+      .split('\n')
+      .filter(line => line.startsWith('data:'))
+      .map(line => line.slice(5).trimStart())
+      .join('\n')
+    if (!data.includes('message_delta')) return
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(data)
+    } catch {
+      return
+    }
+    if (!isRecord(parsed) || parsed.type !== 'message_delta' || !isRecord(parsed.usage)) return
+    const usd = parsed.usage.cost
+    this.cost =
+      typeof usd === 'number' && Number.isFinite(usd) && usd >= 0
+        ? { usd, source: 'stream-message-delta' }
+        : { usd: null, source: 'unparseable', raw: JSON.stringify(usd) }
+  }
 }

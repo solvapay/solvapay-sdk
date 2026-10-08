@@ -12,6 +12,9 @@ const MERCHANT_KEY = 'op-clone-test-alice'
 const SSE = [
   'event: message_start\ndata: {"type":"message_start"}\n\n',
   'event: content_block_delta\ndata: {"type":"content_block_delta"}\n\n',
+  // Opper's final usage event, as observed live on 8 Oct 2026, split across two chunks.
+  'event: message_delta\ndata: {"cost":0.000043,"delta":{"stop_reason":"end_turn"},"type":"message_delta",',
+  '"usage":{"cost":0.000043,"input_tokens":13,"output_tokens":6}}\n\n',
   'event: message_stop\ndata: {"type":"message_stop"}\n\n',
 ]
 
@@ -72,15 +75,26 @@ async function completed(events: { event: string; fields?: Record<string, unknow
 }
 
 describe('compat route', () => {
-  it('rejects an unknown key with an Anthropic-shaped 401 and never calls Opper', async () => {
+  it("rejects an unknown key with Opper's 401 shape and never calls Opper", async () => {
     const { app, seen } = await setup(() => new Response('{}'))
     const response = await app.request(messages({ 'x-api-key': 'op-clone-nope' }))
     expect(response.status).toBe(401)
     expect(await response.json()).toEqual({
-      type: 'error',
-      error: { type: 'authentication_error', message: 'invalid x-api-key' },
+      error: 'invalid bearer token. The key was not recognised; check it, or mint a new one.',
     })
     expect(seen).toHaveLength(0)
+  })
+
+  it('forwards a call with no key to Opper without credentials, so Opper answers', async () => {
+    const opperBody = '{"error":"No API key was sent."}'
+    const { app, seen, events, opper } = await setup(() => new Response(opperBody, { status: 401 }))
+    const response = await app.request(messages({}))
+    expect(response.status).toBe(401)
+    expect(await response.text()).toBe(opperBody)
+    expect(seen[0].headers.get('authorization')).toBeNull()
+    expect(seen[0].headers.get('x-opper-tags')).toMatch(/^request_id:[0-9a-f-]+$/)
+    expect(opper.calls).toEqual([])
+    expect(events.some(e => e.event === 'call.anonymous')).toBe(true)
   })
 
   it('forwards with the user key in place of the caller key, with tags', async () => {
@@ -105,13 +119,13 @@ describe('compat route', () => {
     expect(response.status).toBe(200)
   })
 
-  it('streams the body through and logs cost once the stream ends', async () => {
+  it('streams the body through and reads the cost from the final message_delta', async () => {
     const { app, events } = await setup(() =>
       chunkedResponse(SSE, {
         headers: {
           'content-type': 'text/event-stream',
           'content-encoding': 'gzip',
-          'x-opper-cost': '0.0213',
+          'x-opper-trace-id': 'trace-1',
         },
       }),
     )
@@ -123,11 +137,36 @@ describe('compat route', () => {
     expect(fields).toMatchObject({
       paid: true,
       streamed: true,
-      costUsd: 0.0213,
-      costSource: 'x-opper-cost',
+      costUsd: 0.000043,
+      costSource: 'stream-message-delta',
       project: 'sp-alice',
-      opperHeaders: ['x-opper-cost'],
+      traceId: 'trace-1',
     })
+  })
+
+  it('reads X-Opper-Cost on a plain call', async () => {
+    const { app, events } = await setup(
+      () =>
+        new Response('{"usage":{"cost":0.000043}}', {
+          headers: { 'content-type': 'application/json', 'x-opper-cost': '0.000043' },
+        }),
+    )
+    const response = await app.request(messages({ 'x-api-key': MERCHANT_KEY }))
+    await response.text()
+    expect(await completed(events)).toMatchObject({
+      streamed: false,
+      costUsd: 0.000043,
+      costSource: 'x-opper-cost',
+    })
+  })
+
+  it('reports a stream without a cost event as missing', async () => {
+    const { app, events } = await setup(() =>
+      chunkedResponse([SSE[0], SSE[4]], { headers: { 'content-type': 'text/event-stream' } }),
+    )
+    const response = await app.request(messages({ 'x-api-key': MERCHANT_KEY }))
+    await response.text()
+    expect(await completed(events)).toMatchObject({ costUsd: null, costSource: 'missing' })
   })
 
   it("passes Opper's error status and body through unchanged", async () => {

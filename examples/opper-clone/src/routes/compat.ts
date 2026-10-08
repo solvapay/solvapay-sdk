@@ -15,6 +15,15 @@ export interface CompatDeps {
   log: Logger
 }
 
+/**
+ * Opper's own 401 body on /v3/compat is `{"error": "<text>", ...}`, not
+ * Anthropic's shape (fidelity check, 8 Oct 2026). The clone answers an unknown
+ * key the same way, without Opper's sign-up links.
+ */
+function opperError(message: string) {
+  return { error: message }
+}
+
 export function compatRoutes(deps: CompatDeps): Hono {
   const app = new Hono()
 
@@ -25,12 +34,19 @@ export function compatRoutes(deps: CompatDeps): Hono {
     const paid = request.method === PAID_ROUTE.method && subpath === PAID_ROUTE.subpath
 
     const presented = presentedKey(request)
-    const userRef = presented ? deps.merchantKeys.resolve(presented) : null
+    if (!presented) {
+      // Nothing to authenticate, so Opper answers itself: its 401 for a missing
+      // key, its 404 for an unknown path such as Claude Code's /api/hello probe.
+      return forwardAndLog({ request, requestId, subpath, paid, runtimeKey: null, userRef: null })
+    }
+
+    const userRef = deps.merchantKeys.resolve(presented)
     if (!userRef) {
       deps.log.info('call.rejected', { requestId, subpath, reason: 'unknown_key' })
-      // Anthropic's error shape; S1 task 1.6 checks it against Opper's own body.
       return c.json(
-        { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } },
+        opperError(
+          'invalid bearer token. The key was not recognised; check it, or mint a new one.',
+        ),
         401,
       )
     }
@@ -40,44 +56,68 @@ export function compatRoutes(deps: CompatDeps): Hono {
       account = await deps.accounts.open(userRef)
     } catch (error) {
       deps.log.error('account.open_failed', { requestId, userRef, error: errorMessage(error) })
-      return c.json(
-        { type: 'error', error: { type: 'api_error', message: 'Upstream account unavailable' } },
-        502,
-      )
+      return c.json(opperError('Upstream account unavailable. Try again shortly.'), 502)
     }
 
-    const started = Date.now()
-    const { response, completion } = await deps.upstream.forward({
+    return forwardAndLog({
       request,
+      requestId,
       subpath,
+      paid,
       runtimeKey: account.runtimeKey,
-      tags: { request_id: requestId, clone_user: userRef },
+      userRef,
+      project: account.projectName,
+    })
+  })
+
+  async function forwardAndLog(call: {
+    request: Request
+    requestId: string
+    subpath: string
+    paid: boolean
+    runtimeKey: string | null
+    userRef: string | null
+    project?: string
+  }): Promise<Response> {
+    const started = Date.now()
+    const tags: Record<string, string> = { request_id: call.requestId }
+    if (call.userRef) tags.clone_user = call.userRef
+    const { response, completion } = await deps.upstream.forward({
+      request: call.request,
+      subpath: call.subpath,
+      runtimeKey: call.runtimeKey,
+      tags,
     })
 
     completion
       .then(done =>
-        deps.log.info('call.completed', {
-          requestId,
-          userRef,
-          project: account.projectName,
-          method: request.method,
-          subpath,
-          paid,
+        deps.log.info(call.userRef ? 'call.completed' : 'call.anonymous', {
+          requestId: call.requestId,
+          userRef: call.userRef,
+          project: call.project ?? null,
+          method: call.request.method,
+          subpath: call.subpath,
+          paid: call.paid,
           status: done.status,
           streamed: done.streamed,
           bytes: done.bytes,
           costUsd: done.cost.usd,
           costSource: done.cost.source,
           opperHeaders: done.opperHeaders,
+          traceId: done.traceId,
           ms: Date.now() - started,
         }),
       )
       .catch(error =>
-        deps.log.error('call.stream_failed', { requestId, userRef, error: errorMessage(error) }),
+        deps.log.error('call.stream_failed', {
+          requestId: call.requestId,
+          userRef: call.userRef,
+          error: errorMessage(error),
+        }),
       )
 
     return response
-  })
+  }
 
   return app
 }
