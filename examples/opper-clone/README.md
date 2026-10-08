@@ -32,6 +32,23 @@ scripts/api-key-helper.sh                         # prints a fresh 15-minute age
 
 Run Claude Code as that agent with `scripts/claude-as-agent.sh` (arguments pass through to `claude`). It removes `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`, which outrank `apiKeyHelper`, leaves user settings out (a settings `env` can put `ANTHROPIC_API_KEY` back), and sets the helper and base URL through `--settings`. Run it from a normal terminal: Claude Code started from inside the Claude desktop app inherits the app's own auth.
 
+## Card and first lot (S3)
+
+`pnpm agent:connect` also stands in for the SolvaPay console until it exists. `verify` saves the account session to `data/account-session` (12 hours) and keeps the saved agent if its credential still works for that account. `card` then:
+
+1. asks SolvaPay to link the account to a customer at this merchant and start a SetupIntent on the merchant's connected account;
+2. serves a Stripe.js page on `http://127.0.0.1:3041/` (`CARD_PAGE_PORT`) and opens it; save the card there, with the 3DS test card 4000 0025 0000 3155;
+3. waits for Stripe's `setup_intent.succeeded` webhook to reach the local stack, then charges the first lot off-session and prints the lot and the balance.
+
+```bash
+pnpm agent:connect login you@example.com
+pnpm agent:connect verify you@example.com 123456
+pnpm agent:connect card          # 2.50 USD lot; pass an amount in cents to change it
+pnpm agent:connect merchant      # customer, card and balance at this merchant
+```
+
+The lot is a direct charge on the merchant's account, with `lot_id`, `agent_id` and `mandate_id` in the PaymentIntent's metadata. The clone itself reads no balance yet.
+
 ## Layout
 
 | Path | What it does |
@@ -41,6 +58,7 @@ Run Claude Code as that agent with `scripts/claude-as-agent.sh` (arguments pass 
 | `src/upstream/opper.ts` | Forwards with the user's key and `X-Opper-Tags`, streams the body, reads the cost when the stream ends |
 | `src/merchant/merchant-keys.ts` | The clone's toy version of Opper's own API keys |
 | `src/merchant/opper-accounts.ts` | One Opper project and key per user (ported from `solvapay/opper-mcp`) |
+| `scripts/connect-agent.ts`, `scripts/card-page*` | Console stand-in: sign-in, agent, card and first lot |
 | `data/` | Local state, git-ignored |
 
 ## Behaviour to know
