@@ -84,6 +84,18 @@ pnpm agent:connect policy show
 
 Every refusal on this route is Anthropic-shaped: `{"type":"error","error":{"type":"invalid_request_error","message":…},"request_id":…}`. The 401s stay in Opper's shape. `X-Opper-Tags` gains `decision_id`, and `call.completed` and `call.refused` log the decision, the policy and its counters.
 
+## Top-ups (S6)
+
+When an agent's call leaves its balance at this merchant below the spend policy's low-water mark, SolvaPay tops it up with no click. The clone does nothing for it: billing publishes each cost debit, and SolvaPay's agent-service decides a top-up against the policy and opens one lot off-session on the merchant's account, with `lot_id`, `agent_id`, `policy_id` and `decision_id` in the PaymentIntent's metadata. A top-up is allowed while the month's spend, the balance and the new lot fit the budget; past it, an ask is recorded and nothing is charged. The calls go on until the balance falls below one call's estimate, then get the 402 `topup_required`.
+
+```bash
+pnpm agent:connect policy update max-topup=0.50 low-water=2.74   # lot size, and the balance below which one is decided
+pnpm agent:connect policy show                                   # the mark, a top-up being charged, the last refusal
+scripts/run-turns.sh 15                                          # 15 one-sentence turns through claude-as-agent.sh
+```
+
+`run-turns.sh` stops at the first turn that fails. From the desktop app's terminal panel, wrap it in `env -i` as `claude-as-agent.sh` needs.
+
 ## Layout
 
 | Path | What it does |

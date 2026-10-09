@@ -9,8 +9,9 @@
 //   pnpm agent:connect merchant
 //   pnpm agent:connect policy create [monthly budget USD, default 5] [--tiers S,M,L]
 //                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
+//                                    [--max-topup x] [--low-water x]
 //   pnpm agent:connect policy update <field=value…>   budget, ceiling, per-call, daily,
-//                                    max-topup, tiers, rate, timezone, status
+//                                    max-topup, low-water, tiers, rate, timezone, status
 //   pnpm agent:connect policy show
 //
 // Local state in data/ (git-ignored, mode 600): agent-credential (never
@@ -52,6 +53,8 @@ const POLICY_FIELDS: Record<string, (value: string) => Record<string, unknown>> 
   'per-call': value => ({ perCallCapUsd: value }),
   daily: value => ({ dailyCapUsd: value }),
   'max-topup': value => ({ maxTopupAmountUsd: value }),
+  /** A balance below this after an agent's debit decides a top-up of one `max-topup` lot. */
+  'low-water': value => ({ lowWaterUsd: value }),
   tiers: value => ({ allowedTiers: value.split(',').map(tier => tier.trim().toUpperCase()) }),
   rate: value => ({ maxCallsPerMinute: Number(value) }),
   timezone: value => ({ timezone: value }),
@@ -82,6 +85,7 @@ try {
         '       pnpm agent:connect merchant\n' +
         '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
         '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
+        '                                        [--max-topup x] [--low-water x]\n' +
         '       pnpm agent:connect policy update <field=value…>  (' +
         Object.keys(POLICY_FIELDS).join(', ') +
         ', status)\n' +
@@ -221,6 +225,7 @@ interface PolicyView {
     perCallCapUsd: string
     dailyCapUsd: string
     maxTopupAmountUsd: string
+    lowWaterUsd: string
     allowedTiers: string[]
     maxCallsPerMinute: number
     timezone: string
@@ -233,6 +238,16 @@ interface PolicyView {
     spentDayUsd: string
     reservedUsd: string
     reservations: number
+  }
+  topup: {
+    inFlight: { lotRef: string; decisionRef: string; startedAt: string; failedAt?: string } | null
+    lastRefusal: {
+      decisionRef: string
+      action: 'ask' | 'deny'
+      version: number
+      periodKey: string
+      at: string
+    } | null
   }
 }
 
@@ -252,7 +267,10 @@ async function policyCreate(args: string[]) {
     const value = args[++i]
     if (!POLICY_FIELDS[name] || name === 'budget' || value === undefined) {
       fail(
-        `Unknown or empty option ${arg}. Options: --tiers, --per-call, --ceiling, --daily, --timezone`,
+        `Unknown or empty option ${arg}. Options: ${Object.keys(POLICY_FIELDS)
+          .filter(field => field !== 'budget')
+          .map(field => `--${field}`)
+          .join(', ')}`,
       )
     }
     Object.assign(limits, POLICY_FIELDS[name](value))
@@ -324,13 +342,30 @@ function printPolicy(policy: PolicyView) {
     `  ceiling     ${usd(limits.hardCeilingUsd)}`,
     `  per call    ${usd(limits.perCallCapUsd)}`,
     `  daily cap   ${usd(limits.dailyCapUsd)}`,
-    `  max top-up  ${usd(limits.maxTopupAmountUsd)}`,
+    `  max top-up  ${usd(limits.maxTopupAmountUsd)}, decided when the balance falls below ${usd(limits.lowWaterUsd)}`,
     `  tiers       ${limits.allowedTiers.join(', ')}`,
     `  rate        ${limits.maxCallsPerMinute} calls a minute (stored, not enforced yet)`,
     `  time zone   ${limits.timezone}`,
     `  spent       ${usd(counters.spentPeriodUsd)} in ${counters.periodKey}, ${usd(counters.spentDayUsd)} on ${counters.dayKey}; ` +
       `${usd(counters.reservedUsd)} reserved by ${counters.reservations} call(s) in flight`,
   ]
+  const { inFlight, lastRefusal } = policy.topup
+  if (inFlight) {
+    lines.push(
+      `  top-up      ${inFlight.lotRef} (${inFlight.decisionRef}) ` +
+        (inFlight.failedAt
+          ? `failed at ${inFlight.failedAt}; no retry until 10 minutes after ${inFlight.startedAt}`
+          : `charging since ${inFlight.startedAt}`),
+    )
+  }
+  if (lastRefusal) {
+    lines.push(
+      `  refused     ${lastRefusal.action} ${lastRefusal.decisionRef} under v${lastRefusal.version} in ${lastRefusal.periodKey}, at ${lastRefusal.at}` +
+        (lastRefusal.version === policy.version
+          ? ''
+          : ' (an older version: the next top-up decides again)'),
+    )
+  }
   process.stdout.write(`${lines.join('\n')}\n`)
 }
 
