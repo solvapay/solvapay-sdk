@@ -66,8 +66,8 @@ Before the balance gate, SolvaPay decides each agent call against the agent's sp
 1. The body is read once. Not JSON, or no `model`: an Anthropic 400, and neither SolvaPay nor Opper is called.
 2. The estimate (`src/agent-layer/pricing.ts`): input tokens ≈ body bytes ÷ 4, output = min(`max_tokens`, 2,000), at Anthropic's list price for the model. The tier is the model family: Haiku S, Sonnet M, Opus L, anything else XL.
 3. The customer, by the agent's principal; none gives a 402.
-4. Decide: an allow reserves the estimate on the spend policy. Ask is an Anthropic 402 and deny an Anthropic 422, both with SolvaPay's reason text. Neither reaches Opper.
-5. The balance gate at the same estimate. Refused: the reservation is released at once and the caller gets a 402 `topup_required`.
+4. Decide: an allow reserves the estimate on the spend policy. Ask is an Anthropic 402 and deny an Anthropic 422, both with SolvaPay's reason text; an ask past the budget names the approval it opened (Approvals, below). Neither reaches Opper.
+5. The balance gate at the same estimate. Refused: the reservation is released at once and the caller gets a 402 `topup_required`, with one more sentence when SolvaPay reports an approval waiting or declined.
 6. After the stream, the policy settle first (`POST /v1/sdk/agent/settle`), then the credit debit, whose usage row carries `decision_ref`. Settle rules are S4's: an Opper error releases the reservation.
 
 The spend policy is set from the command line until the console has a page for it:
@@ -86,7 +86,7 @@ Every refusal on this route is Anthropic-shaped: `{"type":"error","error":{"type
 
 ## Top-ups (S6)
 
-When an agent's call leaves its balance at this merchant below the spend policy's low-water mark, SolvaPay tops it up with no click. The clone does nothing for it: billing publishes each cost debit, and SolvaPay's agent-service decides a top-up against the policy and opens one lot off-session on the merchant's account, with `lot_id`, `agent_id`, `policy_id` and `decision_id` in the PaymentIntent's metadata. A top-up is allowed while the month's spend, the balance and the new lot fit the budget; past it, an ask is recorded and nothing is charged. The calls go on until the balance falls below one call's estimate, then get the 402 `topup_required`.
+When an agent's call leaves its balance at this merchant below the spend policy's low-water mark, SolvaPay tops it up with no click. The clone does nothing for it: billing publishes each cost debit, and SolvaPay's agent-service decides a top-up against the policy and opens one lot off-session on the merchant's account, with `lot_id`, `agent_id`, `policy_id` and `decision_id` in the PaymentIntent's metadata. A top-up is allowed while the month's spend, the balance and the new lot fit the budget; past it, an ask is recorded, nothing is charged, and the month's approval opens (Approvals, below). The calls go on until the balance falls below one call's estimate, then get the 402 `topup_required`.
 
 ```bash
 pnpm agent:connect policy update max-topup=0.50 low-water=2.74   # lot size, and the balance below which one is decided
@@ -95,6 +95,18 @@ scripts/run-turns.sh 15                                          # 15 one-senten
 ```
 
 `run-turns.sh` stops at the first turn that fails. From the desktop app's terminal panel, wrap it in `env -i` as `claude-as-agent.sh` needs.
+
+## Approvals (S7)
+
+When the budget is reached, whichever check sees it first (a call that would pass it, or a top-up that would), SolvaPay opens the spend policy's one approval for the month and emails the account's owner a link to the approve page in `account-app`. The clone does nothing for it beyond showing what SolvaPay reports: the ask's text names the approval, and a `topup_required` 402 adds "Approval apr_… for more budget is waiting for your owner." The decide response's `approval.statusUrl` (`GET /v1/sdk/agent/approvals/:ref`, secret key) gives status and expiry, nothing to act with.
+
+Approving grants one lot more this month (never past the ceiling) and decides a top-up at once, so the lot opens with `approval_id` in its metadata. Declining holds for the month; an approval expires after 15 minutes and the next ask opens a new one. Until the console's page exists, the owner can do it here, signed in:
+
+```bash
+pnpm agent:connect approvals              # the active account's, with how the email went
+pnpm agent:connect approve apr_…          # one lot more, and the top-up it decided
+pnpm agent:connect decline apr_…
+```
 
 ## Accounts (SA)
 

@@ -210,6 +210,8 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   reasonText = 'Within limits.'
   /** An HTTP status for decide to fail with. */
   failDecide: number | null = null
+  /** The month's approval to report on every decision, as SolvaPay does while one waits. */
+  approval: DecideResponse['approval'] | null = null
   readonly decides: DecideInput[] = []
   readonly settles: (SettleInput & { usagesBefore: number })[] = []
   private next = 1
@@ -245,6 +247,7 @@ export class FakeAgentApi implements SolvaPayAgentClient {
         effectiveBudgetUsd: '5',
         ceilingUsd: '12.5',
       },
+      ...(this.approval ? { approval: this.approval } : {}),
     }
   }
 

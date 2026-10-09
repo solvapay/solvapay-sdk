@@ -273,7 +273,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     if (opened.kind === 'refused') {
       await releaseDecision(decided, requestId)
       refused(opened.reason, decisionFields(decided, estimate))
-      return agentErrors.topupRequired(opened.message, requestId)
+      return agentErrors.topupRequired(withApproval(opened.message, decided.approval), requestId)
     }
 
     return { decided, opened, estimate }
@@ -467,4 +467,19 @@ function settleFields(settled: Settled | null): Record<string, unknown> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * The SDK's balance text, plus what SolvaPay said about the month's approval:
+ * the human then knows a request is with the owner, or was declined. The
+ * agent itself never sees it (the turn ends on a 402).
+ */
+function withApproval(message: string, approval: Decided['approval']): string {
+  if (approval?.status === 'pending') {
+    return `${message} Approval ${approval.reference} for more budget is waiting for your owner.`
+  }
+  if (approval?.status === 'declined') {
+    return `${message} Your owner declined more budget this month.`
+  }
+  return message
 }

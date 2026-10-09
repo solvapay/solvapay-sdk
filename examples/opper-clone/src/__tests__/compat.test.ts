@@ -348,6 +348,29 @@ describe('agent billing', () => {
     })
   })
 
+  it.each([
+    ['pending', ' Approval apr_TEST0001 for more budget is waiting for your owner.'],
+    ['declined', ' Your owner declined more budget this month.'],
+  ] as const)(
+    'adds a %s approval to the 402 when the balance is short',
+    async (status, sentence) => {
+      const api = new FakeSolvaPayApi()
+      api.credits = 100
+      const { app, agentApi } = await setup(streamed, api)
+      agentApi.approval = {
+        reference: 'apr_TEST0001',
+        status,
+        expiresAt: '2026-10-10T08:15:00.000Z',
+        statusUrl: 'https://api.example.test/v1/sdk/agent/approvals/apr_TEST0001',
+      }
+      const response = await agentCall(app)
+      expect(response.status).toBe(402)
+      const message = (await response.json()).error.message as string
+      expect(message).toMatch(/^The balance of 0\.01 USD is below/)
+      expect(message.endsWith(sentence)).toBe(true)
+    },
+  )
+
   it('does not bill unpaid paths', async () => {
     const { app, events, api } = await setup(() => new Response('{"data":[]}'))
     const token = await signAgentToken(agentKey)

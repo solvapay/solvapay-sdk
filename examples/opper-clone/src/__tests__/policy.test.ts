@@ -50,6 +50,22 @@ describe('policy', () => {
     },
   )
 
+  it('keeps the approval SolvaPay reports, on an ask and on an allow', async () => {
+    const api = new FakeAgentApi()
+    api.approval = {
+      reference: 'apr_TEST0001',
+      status: 'pending',
+      expiresAt: '2026-10-10T08:15:00.000Z',
+      statusUrl: 'https://api.example.test/v1/sdk/agent/approvals/apr_TEST0001',
+    }
+    const policy = createPolicy({ client: api })
+    expect((await policy.decide(INPUT)).approval).toEqual(api.approval)
+    api.action = 'ask'
+    expect((await policy.decide({ ...INPUT, requestId: 'req-2' })).approval).toEqual(api.approval)
+    api.approval = null
+    expect((await policy.decide({ ...INPUT, requestId: 'req-3' })).approval).toBeNull()
+  })
+
   it('settles at the reported cost, else the estimate as provisional, else releases', async () => {
     const api = new FakeAgentApi()
     const policy = createPolicy({ client: api })

@@ -30,6 +30,18 @@ export interface DecideResponse {
     effectiveBudgetUsd: string
     ceilingUsd: string
   }
+  /**
+   * The spend policy's approval this month, while one is waiting for the
+   * owner or a decline holds. Its status URL grants nothing.
+   */
+  approval?: DecideApproval
+}
+
+export interface DecideApproval {
+  reference: string
+  status: 'pending' | 'declined'
+  expiresAt: string
+  statusUrl: string
 }
 
 export type PolicySettleSource = 'reported' | 'provisional' | 'none'

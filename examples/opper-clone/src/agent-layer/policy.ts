@@ -27,6 +27,8 @@ interface DecisionFields {
   reasonText: string
   policy: { reference: string; version: number } | null
   budget: DecideResponse['budget'] | null
+  /** The month's approval, when SolvaPay reports one; shown to the human, never acted on. */
+  approval: DecideResponse['approval'] | null
 }
 
 export type Decided =
@@ -66,6 +68,7 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
         reasonText: decision.reasonText,
         policy: decision.policy ?? null,
         budget: decision.budget ?? null,
+        approval: decision.approval ?? null,
       }
       if (decision.action !== 'allow') return { ...fields, action: decision.action }
 

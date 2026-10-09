@@ -20,6 +20,9 @@
 //                                    per-call, daily, max-topup, low-water, tiers, rate,
 //                                    timezone, status
 //   pnpm agent:connect policy show [--agent agt_…]
+//   pnpm agent:connect approvals                    the active account's, newest first
+//   pnpm agent:connect approve <apr_…>             one lot more this month, and a top-up at once
+//   pnpm agent:connect decline <apr_…>
 //
 // card and policy act on --agent, else the saved agent if it belongs to the
 // active account, else the active account's only agent at this merchant.
@@ -112,6 +115,10 @@ try {
     await switchTo(args[0])
   } else if (command === 'agent' && args[0] === 'new' && args.length > 1) {
     await agentNew(args.slice(1).join(' '))
+  } else if (command === 'approvals') {
+    await approvals()
+  } else if ((command === 'approve' || command === 'decline') && args[0]?.startsWith('apr_')) {
+    await decideApproval(command, args[0])
   } else if (command === 'card') {
     await card(args[0] ? Number(args[0]) : 250)
   } else if (command === 'merchant') {
@@ -139,6 +146,9 @@ try {
         Object.keys(POLICY_FIELDS).join(', ') +
         ', status)\n' +
         '       pnpm agent:connect policy show\n' +
+        '       pnpm agent:connect approvals\n' +
+        '       pnpm agent:connect approve <apr_…>\n' +
+        '       pnpm agent:connect decline <apr_…>\n' +
         'card and policy take --agent agt_… when the active account has several agents here.',
     )
   }
@@ -321,6 +331,78 @@ async function card(amountMinor: number) {
     token,
   )
   print(lot)
+}
+
+interface ApprovalView {
+  reference: string
+  status: 'pending' | 'approved' | 'declined' | 'expired'
+  amountUsd: string
+  expiresAt: string
+  agentRef: string
+  policyRef: string
+  reasonCode: string
+  decidedAt?: string
+  grant?: { amountUsd: string; capped: boolean }
+  topup?: { decisionRef: string; lotRef?: string }
+  notification?: { recipients: number; sentAt?: string; failedAt?: string; error?: string }
+}
+
+/** The active account's approvals, newest first, with how the email went. */
+async function approvals() {
+  const list = (await call(
+    'GET',
+    '/v1/account/approvals',
+    undefined,
+    await session(),
+  )) as unknown as ApprovalView[]
+  if (list.length === 0) {
+    process.stdout.write('No approvals in the active account.\n')
+    return
+  }
+  for (const approval of list) process.stdout.write(`${approvalLine(approval)}\n`)
+}
+
+/**
+ * Approves or declines as the signed-in owner, as the console's approve page
+ * does: a POST with the session, checked live. Approving grants one lot more
+ * this month and decides a top-up at once.
+ */
+async function decideApproval(action: 'approve' | 'decline', reference: string) {
+  const result = await call(
+    'POST',
+    `/v1/account/approvals/${reference}/${action}`,
+    {},
+    await session(),
+  )
+  process.stdout.write(`${approvalLine(result.approval as ApprovalView)}\n`)
+  const topup = result.topup as
+    | { action: string; reason?: string; decisionRef?: string; lotRef?: string }
+    | undefined
+  if (topup) {
+    process.stdout.write(
+      topup.action === 'allow'
+        ? `  top-up    ${topup.lotRef} opened (${topup.decisionRef})\n`
+        : `  top-up    ${topup.action}${topup.reason ? ` (${topup.reason})` : ''}\n`,
+    )
+  }
+}
+
+function approvalLine(approval: ApprovalView): string {
+  const parts = [
+    `${approval.reference} ${approval.status.padEnd(8)} ${usd(approval.amountUsd)} for ${approval.agentRef}`,
+    `(${approval.reasonCode}, ${approval.policyRef})`,
+    approval.status === 'pending' ? `expires ${approval.expiresAt}` : '',
+    approval.grant
+      ? `granted ${usd(approval.grant.amountUsd)}${approval.grant.capped ? ' (cut at the ceiling)' : ''}`
+      : '',
+    approval.topup?.lotRef ? `lot ${approval.topup.lotRef}` : '',
+    approval.notification?.sentAt
+      ? `emailed ${approval.notification.recipients}`
+      : approval.notification?.failedAt
+        ? `email failed: ${approval.notification.error}`
+        : '',
+  ]
+  return parts.filter(Boolean).join('  ')
 }
 
 interface PolicyView {
