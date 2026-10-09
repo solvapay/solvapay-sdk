@@ -70,6 +70,18 @@ Before the balance gate, SolvaPay decides each agent call against the agent's sp
 5. The balance gate at the same estimate. Refused: the reservation is released at once and the caller gets a 402 `topup_required`.
 6. After the stream, the policy settle first (`POST /v1/sdk/agent/settle`), then the credit debit, whose usage row carries `decision_ref`. Settle rules are S4's: an Opper error releases the reservation.
 
+The spend policy is set from the command line until the console has a page for it:
+
+```bash
+pnpm agent:connect policy create 5                  # 5 USD a month; ceiling, caps and top-up compiled from it
+pnpm agent:connect policy create 5 --tiers S,M --per-call 0.50
+pnpm agent:connect policy update tiers=S            # limits make a new version; spend carries over
+pnpm agent:connect policy update status=paused      # or active, revoked
+pnpm agent:connect policy show
+```
+
+`update` takes `budget`, `ceiling`, `per-call`, `daily`, `max-topup`, `tiers`, `rate`, `timezone` and `status`.
+
 Every refusal on this route is Anthropic-shaped: `{"type":"error","error":{"type":"invalid_request_error","message":…},"request_id":…}`. The 401s stay in Opper's shape. `X-Opper-Tags` gains `decision_id`, and `call.completed` and `call.refused` log the decision, the policy and its counters.
 
 ## Layout

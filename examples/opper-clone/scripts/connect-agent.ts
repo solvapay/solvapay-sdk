@@ -1,11 +1,17 @@
 // Plays the SolvaPay console for this clone until the console exists: signs in
 // to a SolvaPay account by email code, connects an agent to this merchant,
-// saves a card at the merchant and opens the first credit lot.
+// saves a card at the merchant, opens the first credit lot and sets the
+// agent's spend policy.
 //
 //   pnpm agent:connect login <email>
 //   pnpm agent:connect verify <email> <code> [agent name]
 //   pnpm agent:connect card [amount in cents, default 250]
 //   pnpm agent:connect merchant
+//   pnpm agent:connect policy create [monthly budget USD, default 5] [--tiers S,M,L]
+//                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
+//   pnpm agent:connect policy update <field=value…>   budget, ceiling, per-call, daily,
+//                                    max-topup, tiers, rate, timezone, status
+//   pnpm agent:connect policy show
 //
 // Local state in data/ (git-ignored, mode 600): agent-credential (never
 // printed), agent.json (agent and principal references), account-session (the
@@ -39,6 +45,18 @@ interface SavedAgent {
   principalRef: string
 }
 
+/** The command-line names of a spend policy's limits, and the API field each sets. */
+const POLICY_FIELDS: Record<string, (value: string) => Record<string, unknown>> = {
+  budget: value => ({ periodBudgetUsd: value }),
+  ceiling: value => ({ hardCeilingUsd: value }),
+  'per-call': value => ({ perCallCapUsd: value }),
+  daily: value => ({ dailyCapUsd: value }),
+  'max-topup': value => ({ maxTopupAmountUsd: value }),
+  tiers: value => ({ allowedTiers: value.split(',').map(tier => tier.trim().toUpperCase()) }),
+  rate: value => ({ maxCallsPerMinute: Number(value) }),
+  timezone: value => ({ timezone: value }),
+}
+
 const [command, ...args] = process.argv.slice(2)
 
 try {
@@ -50,12 +68,24 @@ try {
     await card(args[0] ? Number(args[0]) : 250)
   } else if (command === 'merchant') {
     print(await call('GET', `/v1/account/merchants/${providerRef}`, undefined, await session()))
+  } else if (command === 'policy' && args[0] === 'create') {
+    await policyCreate(args.slice(1))
+  } else if (command === 'policy' && args[0] === 'update' && args.length > 1) {
+    await policyUpdate(args.slice(1))
+  } else if (command === 'policy' && args[0] === 'show') {
+    await policyShow()
   } else {
     fail(
       'Usage: pnpm agent:connect login <email>\n' +
         '       pnpm agent:connect verify <email> <code> [agent name]\n' +
         '       pnpm agent:connect card [amount in cents, default 250]\n' +
-        '       pnpm agent:connect merchant',
+        '       pnpm agent:connect merchant\n' +
+        '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
+        '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
+        '       pnpm agent:connect policy update <field=value…>  (' +
+        Object.keys(POLICY_FIELDS).join(', ') +
+        ', status)\n' +
+        '       pnpm agent:connect policy show',
     )
   }
 } catch (error) {
@@ -177,6 +207,143 @@ async function card(amountMinor: number) {
     token,
   )
   print(lot)
+}
+
+interface PolicyView {
+  reference: string
+  agentRef: string
+  providerRef: string
+  status: string
+  version: number
+  limits: {
+    periodBudgetUsd: string
+    hardCeilingUsd: string
+    perCallCapUsd: string
+    dailyCapUsd: string
+    maxTopupAmountUsd: string
+    allowedTiers: string[]
+    maxCallsPerMinute: number
+    timezone: string
+  }
+  extensionUsd: string
+  counters: {
+    periodKey: string
+    dayKey: string
+    spentPeriodUsd: string
+    spentDayUsd: string
+    reservedUsd: string
+    reservations: number
+  }
+}
+
+/** Compiles the agent's spend policy from a monthly budget; flags override single limits. */
+async function policyCreate(args: string[]) {
+  const token = await session()
+  const agent = await requireSavedAgent()
+  let budget = '5'
+  const limits: Record<string, unknown> = {}
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (!arg.startsWith('--')) {
+      budget = arg
+      continue
+    }
+    const name = arg.slice(2)
+    const value = args[++i]
+    if (!POLICY_FIELDS[name] || name === 'budget' || value === undefined) {
+      fail(
+        `Unknown or empty option ${arg}. Options: --tiers, --per-call, --ceiling, --daily, --timezone`,
+      )
+    }
+    Object.assign(limits, POLICY_FIELDS[name](value))
+  }
+  const created = await call(
+    'POST',
+    '/v1/account/spend-policies',
+    {
+      agentRef: agent.reference,
+      monthlyBudgetUsd: budget,
+      ...(Object.keys(limits).length > 0 ? { limits } : {}),
+    },
+    token,
+  )
+  printPolicy(created as unknown as PolicyView)
+}
+
+/** Changes the policy in force: limits make a new version; status pauses, resumes or revokes. */
+async function policyUpdate(args: string[]) {
+  const token = await session()
+  const current = await policyInForce(token)
+  const limits: Record<string, unknown> = {}
+  let status: string | undefined
+  for (const arg of args) {
+    const at = arg.indexOf('=')
+    const name = at > 0 ? arg.slice(0, at) : ''
+    const value = arg.slice(at + 1)
+    if (name === 'status') status = value
+    else if (POLICY_FIELDS[name] && value) Object.assign(limits, POLICY_FIELDS[name](value))
+    else
+      fail(
+        `Expected field=value, one of ${Object.keys(POLICY_FIELDS).join(', ')}, status; got "${arg}"`,
+      )
+  }
+  const updated = await call(
+    'PATCH',
+    `/v1/account/spend-policies/${current.reference}`,
+    { ...(Object.keys(limits).length > 0 ? { limits } : {}), ...(status ? { status } : {}) },
+    token,
+  )
+  printPolicy(updated as unknown as PolicyView)
+}
+
+async function policyShow() {
+  printPolicy(await policyInForce(await session()))
+}
+
+/** The saved agent's active or paused policy: at most one, by a unique index on the platform. */
+async function policyInForce(token: string): Promise<PolicyView> {
+  const agent = await requireSavedAgent()
+  const policies = (await call(
+    'GET',
+    `/v1/account/spend-policies?agentRef=${agent.reference}`,
+    undefined,
+    token,
+  )) as unknown as PolicyView[]
+  const current = policies.find(p => p.status === 'active' || p.status === 'paused')
+  if (!current)
+    fail(`Agent ${agent.reference} has no spend policy. Run: pnpm agent:connect policy create`)
+  return current
+}
+
+function printPolicy(policy: PolicyView) {
+  const { limits, counters } = policy
+  const lines = [
+    `Spend policy ${policy.reference} v${policy.version} (${policy.status}) for ${policy.agentRef} at ${policy.providerRef}`,
+    `  budget      ${usd(limits.periodBudgetUsd)} a month` +
+      (Number(policy.extensionUsd) > 0 ? ` + ${usd(policy.extensionUsd)} extension` : ''),
+    `  ceiling     ${usd(limits.hardCeilingUsd)}`,
+    `  per call    ${usd(limits.perCallCapUsd)}`,
+    `  daily cap   ${usd(limits.dailyCapUsd)}`,
+    `  max top-up  ${usd(limits.maxTopupAmountUsd)}`,
+    `  tiers       ${limits.allowedTiers.join(', ')}`,
+    `  rate        ${limits.maxCallsPerMinute} calls a minute (stored, not enforced yet)`,
+    `  time zone   ${limits.timezone}`,
+    `  spent       ${usd(counters.spentPeriodUsd)} in ${counters.periodKey}, ${usd(counters.spentDayUsd)} on ${counters.dayKey}; ` +
+      `${usd(counters.reservedUsd)} reserved by ${counters.reservations} call(s) in flight`,
+  ]
+  process.stdout.write(`${lines.join('\n')}\n`)
+}
+
+/** `$5.00`, `$0.25`, `$0.0912`: two places at least, more when the amount has them. */
+function usd(amount: string) {
+  const [whole, fraction = ''] = amount.split('.')
+  return `$${whole}.${fraction.padEnd(2, '0')}`
+}
+
+async function requireSavedAgent(): Promise<SavedAgent> {
+  const agent = await readSavedAgent()
+  if (!agent) fail('No agent saved. Run: pnpm agent:connect verify <email> <code>')
+  return agent
 }
 
 async function session(): Promise<string> {
