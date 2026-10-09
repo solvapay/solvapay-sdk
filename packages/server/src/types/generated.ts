@@ -997,6 +997,13 @@ export interface components {
          * @enum {string}
          */
         actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+        cost?: {
+          amount: string
+          /** @enum {string} */
+          currency: 'USD'
+          /** @enum {string} */
+          source: 'reported' | 'provisional'
+        }
         customerRef: string
         description?: string
         duration?: number
@@ -1032,6 +1039,8 @@ export interface components {
       creditDebit?:
         | components['schemas']['CreditDebitSuccessResponse']
         | components['schemas']['CreditDebitSkippedResponse']
+        | components['schemas']['CostDebitSuccessResponse']
+        | components['schemas']['CostDebitSkippedResponse']
       /** @example usage_A1B2C3D4 */
       reference: string
     }
@@ -1282,6 +1291,45 @@ export interface components {
       /** @description Updated product */
       product: components['schemas']['SdkProductResponse']
     }
+    CostDebitSkippedResponse: {
+      /** @enum {number} */
+      debited: false
+      /**
+       * @example duplicate
+       * @enum {string}
+       */
+      reason: 'duplicate' | 'customer_not_found' | 'record_failed'
+    }
+    CostDebitSuccessResponse: {
+      /**
+       * Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)
+       * @example 0
+       */
+      amount: number
+      /**
+       * Exact amount debited, USD decimal string
+       * @example 0.000043
+       */
+      amountUsd: string
+      autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
+      /**
+       * Balance in whole credits after the debit
+       * @example 30000
+       */
+      balanceCredits: number
+      /**
+       * Exact balance after the debit, USD decimal string
+       * @example 2.999957
+       */
+      balanceUsd: string
+      /**
+       * Set on a debit by reported cost: whether the cost was reported or an estimate
+       * @enum {string}
+       */
+      costSource: 'reported' | 'provisional'
+      /** @enum {number} */
+      debited: true
+    }
     CreateCheckoutSessionRequest: {
       customerRef: string
       planRef?: string
@@ -1484,6 +1532,13 @@ export interface components {
        * @enum {string}
        */
       actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+      cost?: {
+        amount?: string
+        /** @enum {string} */
+        currency?: 'USD'
+        /** @enum {string} */
+        source?: 'reported' | 'provisional'
+      }
       customerRef: string
       description?: string
       duration?: number
@@ -2922,6 +2977,8 @@ export interface components {
       creditDebit?:
         | components['schemas']['CreditDebitSuccessResponse']
         | components['schemas']['CreditDebitSkippedResponse']
+        | components['schemas']['CostDebitSuccessResponse']
+        | components['schemas']['CostDebitSkippedResponse']
       /** @example usage_A1B2C3D4 */
       reference: string
       /** @example true */
