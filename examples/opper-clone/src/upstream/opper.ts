@@ -46,6 +46,8 @@ export interface Completion {
 
 export interface ForwardInput {
   request: Request
+  /** The request body, read once by the route; undefined for GET and HEAD. */
+  body: ArrayBuffer | undefined
   /** Path below `/v3/compat`, for example `/v1/messages`. */
   subpath: string
   /** The user's Opper key, or null to forward a call that presented no key. */
@@ -73,7 +75,7 @@ export function createOpperUpstream(options: {
 }): OpperUpstream {
   const fetchImpl = options.fetchImpl ?? fetch
   return {
-    async forward({ request, subpath, runtimeKey, tags }) {
+    async forward({ request, body, subpath, runtimeKey, tags }) {
       const source = new URL(request.url)
       const target = `${options.baseUrl}/v3/compat${subpath}${source.search}`
       const headers = new Headers(request.headers)
@@ -82,12 +84,7 @@ export function createOpperUpstream(options: {
       headers.set('accept-encoding', 'identity')
       headers.set('x-opper-tags', formatTags(tags))
 
-      const hasBody = request.method !== 'GET' && request.method !== 'HEAD'
-      const upstream = await fetchImpl(target, {
-        method: request.method,
-        headers,
-        body: hasBody ? await request.arrayBuffer() : undefined,
-      })
+      const upstream = await fetchImpl(target, { method: request.method, headers, body })
 
       const responseHeaders = new Headers(upstream.headers)
       for (const name of DROP_RESPONSE_HEADERS) responseHeaders.delete(name)

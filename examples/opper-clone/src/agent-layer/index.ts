@@ -1,11 +1,16 @@
 // The SolvaPay agent layer: the one interface the clone's handler imports
 // (prototype spec §2.1 rule 4). Identity is here (S2); metering is in
-// `./metering` (S4). Policy, top-up and errors join as sub-modules in later slices.
+// `./metering` (S4); the spend policy, its pricing and the error bodies are in
+// `./policy`, `./pricing` and `./errors` (S5). Top-ups join in a later slice.
 import {
   looksLikeJwt,
   type AgentTokenResult,
   type VerifiedAgent,
 } from './identity/verify-agent-token'
+
+export { createPolicy, type Decided, type Policy, type PolicySettled } from './policy'
+export { estimateCall, type Estimate, type ModelTier } from './pricing'
+export * as agentErrors from './errors'
 
 export type Identification =
   | { kind: 'agent'; agent: VerifiedAgent }

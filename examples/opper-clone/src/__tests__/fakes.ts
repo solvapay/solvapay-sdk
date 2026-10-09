@@ -1,5 +1,13 @@
 import { createSolvaPay, type TrackUsageRequest, type TrackUsageResponse } from '@solvapay/server'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
+import {
+  AgentApiError,
+  type DecideInput,
+  type DecideResponse,
+  type SettleInput,
+  type SettleResponse,
+  type SolvaPayAgentClient,
+} from '../agent-layer/client'
 import type {
   MintedKey,
   OpperManagement,
@@ -188,5 +196,65 @@ export class FakeSolvaPayApi {
 
   solvaPay() {
     return createSolvaPay({ apiClient: this })
+  }
+}
+
+/**
+ * In-memory stand-in for SolvaPay's agent endpoints (decide, settle). Every
+ * decision has the action set on `action`; each settle records how many usage
+ * rows the credit side had written by then, to check the order.
+ */
+export class FakeAgentApi implements SolvaPayAgentClient {
+  action: 'allow' | 'ask' | 'deny' = 'allow'
+  reasonCode = 'within_limits'
+  reasonText = 'Within limits.'
+  /** An HTTP status for decide to fail with. */
+  failDecide: number | null = null
+  readonly decides: DecideInput[] = []
+  readonly settles: (SettleInput & { usagesBefore: number })[] = []
+  private next = 1
+
+  constructor(private readonly api?: FakeSolvaPayApi) {}
+
+  async decide(input: DecideInput): Promise<DecideResponse> {
+    this.decides.push(input)
+    if (this.failDecide !== null) {
+      throw new AgentApiError(
+        `POST /v1/sdk/agent/decide failed (${this.failDecide})`,
+        this.failDecide,
+      )
+    }
+    const decisionRef = `dec_TEST${String(this.next++).padStart(4, '0')}`
+    return {
+      decisionRef,
+      action: this.action,
+      reasonCode: this.reasonCode,
+      reasonText: this.reasonText,
+      policy: { reference: 'pol_TESTPOL1', version: 2 },
+      ...(this.action === 'allow'
+        ? {
+            reservation: {
+              amountUsd: input.estimatedCost,
+              expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+            },
+          }
+        : {}),
+      budget: {
+        spentUsd: '0.10',
+        reservedUsd: '0',
+        effectiveBudgetUsd: '5',
+        ceilingUsd: '12.5',
+      },
+    }
+  }
+
+  async settle(input: SettleInput): Promise<SettleResponse> {
+    this.settles.push({ ...input, usagesBefore: this.api?.usages.length ?? 0 })
+    return {
+      settled: true,
+      duplicate: false,
+      policy: { spentPeriodUsd: input.amountUsd ?? '0', spentDayUsd: '0', reservedUsd: '0' },
+      flags: input.source === 'provisional' ? ['provisional'] : [],
+    }
   }
 }

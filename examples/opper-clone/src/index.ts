@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { serve } from '@hono/node-server'
 import { createSolvaPay } from '@solvapay/server'
 import { createRemoteJWKSet } from 'jose'
-import { createAgentLayer } from './agent-layer'
+import { createAgentLayer, createPolicy } from './agent-layer'
+import { createSolvaPayAgentClient } from './agent-layer/client'
 import { createMetering } from './agent-layer/metering'
 import { createAgentTokenVerifier } from './agent-layer/identity/verify-agent-token'
 import { createApp } from './app'
@@ -42,7 +43,12 @@ const app = createApp({
       apiBaseUrl: config.solvapayApiBaseUrl,
     }),
     productRef: config.productRef,
-    estimateUsd: config.estimateUsd,
+  }),
+  policy: createPolicy({
+    client: createSolvaPayAgentClient({
+      apiBaseUrl: config.solvapayApiBaseUrl,
+      secretKey: config.solvapaySecretKey,
+    }),
   }),
   upstream: createOpperUpstream({ baseUrl: config.opperBaseUrl }),
   log: consoleLogger,
@@ -54,7 +60,6 @@ serve({ fetch: app.fetch, port: config.port }, info => {
     merchantKeys: entries.length,
     providerRef: config.providerRef,
     productRef: config.productRef,
-    estimateUsd: config.estimateUsd,
     agentIssuer: config.agentIssuer,
     anthropicBaseUrl: `http://localhost:${info.port}/v3/compat`,
   })

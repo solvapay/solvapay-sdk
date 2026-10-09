@@ -1,6 +1,6 @@
 import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createAgentLayer } from '../agent-layer'
+import { createAgentLayer, createPolicy } from '../agent-layer'
 import { createMetering } from '../agent-layer/metering'
 import { createAgentTokenVerifier } from '../agent-layer/identity/verify-agent-token'
 import { createApp } from '../app'
@@ -13,6 +13,7 @@ import { createOpperUpstream, formatTags, readCost } from '../upstream/opper'
 import {
   agentKeys,
   chunkedResponse,
+  FakeAgentApi,
   FakeOpperManagement,
   FakeSolvaPayApi,
   ISSUER,
@@ -48,7 +49,11 @@ interface Seen {
   body: string
 }
 
-async function setup(reply: (seen: Seen) => Response, api = new FakeSolvaPayApi()) {
+async function setup(
+  reply: (seen: Seen) => Response,
+  api = new FakeSolvaPayApi(),
+  agentApi = new FakeAgentApi(api),
+) {
   const seen: Seen[] = []
   const events: { event: string; fields?: Record<string, unknown> }[] = []
   const log: Logger = {
@@ -81,15 +86,12 @@ async function setup(reply: (seen: Seen) => Response, api = new FakeSolvaPayApi(
       new MemoryKvStore(),
       await importEncryptionKey(TEST_ENCRYPTION_KEY),
     ),
-    metering: createMetering({
-      solvaPay: api.solvaPay(),
-      productRef: 'prd_TEST',
-      estimateUsd: '0.50',
-    }),
+    metering: createMetering({ solvaPay: api.solvaPay(), productRef: 'prd_TEST' }),
+    policy: createPolicy({ client: agentApi }),
     upstream: createOpperUpstream({ baseUrl: 'https://opper.test', fetchImpl }),
     log,
   })
-  return { app, seen, events, opper, api }
+  return { app, seen, events, opper, api, agentApi }
 }
 
 function messages(headers: Record<string, string>) {
@@ -239,7 +241,7 @@ describe('agent tokens', () => {
     expect(opper.projects.has(`sp-${PRINCIPAL}`)).toBe(true)
     expect(seen[0].headers.get('authorization')).toBe('Bearer op-secret-1')
     expect(seen[0].headers.get('x-opper-tags')).toMatch(
-      new RegExp(`clone_user:${PRINCIPAL},agent_id:agt_TESTAGNT$`),
+      new RegExp(`clone_user:${PRINCIPAL},agent_id:agt_TESTAGNT,decision_id:dec_TEST0001$`),
     )
     expect(await completed(events)).toMatchObject({
       auth: 'agent',
@@ -306,25 +308,42 @@ describe('agent billing', () => {
     })
   })
 
-  it('refuses an agent whose principal has no customer here with a 402, without calling Opper', async () => {
-    const { app, seen, events, api } = await setup(streamed)
+  it('refuses an agent whose principal has no customer here with an Anthropic 402, before SolvaPay decides', async () => {
+    const { app, seen, events, api, agentApi } = await setup(streamed)
     const response = await agentCall(app, 'ppl_UNLINKEDUNLINKED')
     expect(response.status).toBe(402)
-    expect(await response.json()).toMatchObject({ reason: 'customer_not_linked' })
+    expect(await response.json()).toMatchObject({
+      type: 'error',
+      error: {
+        type: 'invalid_request_error',
+        message: expect.stringMatching(/Connect it in SolvaPay/),
+      },
+    })
     expect(seen).toHaveLength(0)
+    expect(agentApi.decides).toHaveLength(0)
     expect(api.usages).toHaveLength(0)
     expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
       reason: 'customer_not_linked',
     })
   })
 
-  it('refuses an agent below the estimate with a 402, without calling Opper', async () => {
+  it('refuses an agent below the estimate with an Anthropic 402 and releases the reservation', async () => {
     const api = new FakeSolvaPayApi()
     api.credits = 100
-    const { app, seen } = await setup(streamed, api)
+    const { app, seen, events, agentApi } = await setup(streamed, api)
     const response = await agentCall(app)
     expect(response.status).toBe(402)
+    const body = await response.json()
+    expect(body.type).toBe('error')
+    expect(body.error.message).toMatch(/^The balance of 0\.01 USD is below the 0\.03\d* USD/)
     expect(seen).toHaveLength(0)
+    expect(agentApi.settles).toEqual([
+      { decisionRef: 'dec_TEST0001', source: 'none', usagesBefore: 0 },
+    ])
+    expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
+      reason: 'topup_required',
+      decisionRef: 'dec_TEST0001',
+    })
   })
 
   it('does not bill unpaid paths', async () => {
@@ -368,6 +387,177 @@ describe('agent billing', () => {
       settleSource: 'reported',
     })
     expect(api.usages[0]).toMatchObject({ outcome: 'fail', cost: { amount: '0.000043' } })
+  })
+})
+
+describe('spend policy', () => {
+  const streamed = () => chunkedResponse(SSE, { headers: { 'content-type': 'text/event-stream' } })
+
+  function agentMessages(token: string, body: string) {
+    return new Request('http://clone.test/v3/compat/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body,
+    })
+  }
+
+  it('decides with the agent token, the model, its tier and the estimate from the body', async () => {
+    const { app, agentApi } = await setup(streamed)
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const body = JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [] })
+    const response = await app.request(agentMessages(token, body))
+    await response.text()
+
+    expect(agentApi.decides).toHaveLength(1)
+    const [decide] = agentApi.decides
+    expect(decide).toMatchObject({
+      agentToken: token,
+      kind: 'inference',
+      model: 'claude-sonnet-4-6',
+      tier: 'M',
+    })
+    // ceil(bytes ÷ 4) × 3 USD/MTok + 1,000 × 15 USD/MTok
+    const expected = (Math.ceil(body.length / 4) * 300 + 1_000 * 1_500) / 1e8
+    expect(Number(decide.estimatedCost)).toBeCloseTo(expected, 8)
+  })
+
+  it('denies with an Anthropic 422 carrying the reason text, and never calls Opper', async () => {
+    const { app, seen, events, api, agentApi } = await setup(streamed)
+    agentApi.action = 'deny'
+    agentApi.reasonCode = 'tier_not_allowed'
+    agentApi.reasonText =
+      "claude-sonnet-4-6 is a tier M model, which this spend policy doesn't cover. Use a model in tier S."
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+
+    expect(response.status).toBe(422)
+    const body = await response.json()
+    expect(body).toEqual({
+      type: 'error',
+      error: { type: 'invalid_request_error', message: agentApi.reasonText },
+      request_id: expect.any(String),
+    })
+    expect(seen).toHaveLength(0)
+    expect(api.usages).toHaveLength(0)
+    expect(agentApi.settles).toHaveLength(0)
+    expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
+      reason: 'tier_not_allowed',
+      action: 'deny',
+      decisionRef: 'dec_TEST0001',
+      requestId: body.request_id,
+      tier: 'M',
+    })
+  })
+
+  it('asks with an Anthropic 402, and never calls Opper', async () => {
+    const { app, seen, agentApi } = await setup(streamed)
+    agentApi.action = 'ask'
+    agentApi.reasonCode = 'budget_exhausted_ask'
+    agentApi.reasonText = "Stopped: this call would pass this month's $0.05 budget ($0.04 used)."
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+
+    expect(response.status).toBe(402)
+    expect((await response.json()).error.message).toBe(agentApi.reasonText)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('a deny wins over a short balance: permission before money', async () => {
+    const api = new FakeSolvaPayApi()
+    api.credits = 0
+    const { app, agentApi } = await setup(streamed, api)
+    agentApi.action = 'deny'
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    expect((await app.request(messages({ authorization: `Bearer ${token}` }))).status).toBe(422)
+  })
+
+  it('settles the policy first, then the credit debit with decision_ref, and tags the call', async () => {
+    const { app, seen, events, api, agentApi } = await setup(streamed)
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+    await response.text()
+
+    const fields = await completed(events)
+    expect(agentApi.settles).toEqual([
+      { decisionRef: 'dec_TEST0001', source: 'reported', amountUsd: '0.000043', usagesBefore: 0 },
+    ])
+    expect(api.usages).toHaveLength(1)
+    expect(api.usages[0].metadata).toMatchObject({ decision_ref: 'dec_TEST0001' })
+    expect(seen[0].headers.get('x-opper-tags')).toMatch(/,decision_id:dec_TEST0001$/)
+    expect(fields).toMatchObject({
+      decisionRef: 'dec_TEST0001',
+      policyRef: 'pol_TESTPOL1',
+      policyVersion: 2,
+      tier: 'M',
+      policySettled: true,
+      policySource: 'reported',
+      settled: true,
+      amountUsd: '0.000043',
+    })
+  })
+
+  it('releases the reservation when Opper refuses the call, and debits nothing', async () => {
+    const { app, api, agentApi, events } = await setup(
+      () => new Response('{"type":"error"}', { status: 529 }),
+    )
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    await (await app.request(messages({ authorization: `Bearer ${token}` }))).text()
+    expect(await completed(events)).toMatchObject({ policySource: 'none', settled: false })
+    expect(agentApi.settles[0]).toMatchObject({ source: 'none' })
+    expect(api.usages).toHaveLength(0)
+  })
+
+  it('answers a body that is not JSON with an Anthropic 400, reaching neither SolvaPay nor Opper', async () => {
+    const { app, seen, api, agentApi } = await setup(streamed)
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(agentMessages(token, '{"model": "claude-sonnet-4-6",'))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      type: 'error',
+      error: { type: 'invalid_request_error', message: 'The request body is not valid JSON.' },
+    })
+    expect(seen).toHaveLength(0)
+    expect(agentApi.decides).toHaveLength(0)
+    expect(api.lookups).toHaveLength(0)
+  })
+
+  it('answers a body without a model with an Anthropic 400', async () => {
+    const { app, seen } = await setup(streamed)
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(agentMessages(token, '{"messages":[]}'))
+    expect(response.status).toBe(400)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('still forwards a merchant-key call with a bad body for Opper to answer', async () => {
+    const { app, seen } = await setup(() => new Response('{}', { status: 400 }))
+    const response = await app.request(
+      new Request('http://clone.test/v3/compat/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': MERCHANT_KEY },
+        body: 'not json',
+      }),
+    )
+    expect(response.status).toBe(400)
+    expect(seen[0].body).toBe('not json')
+  })
+
+  it('fails closed with a 502 when the spend policy check is unavailable', async () => {
+    const { app, seen, agentApi } = await setup(streamed)
+    agentApi.failDecide = 503
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    expect((await app.request(messages({ authorization: `Bearer ${token}` }))).status).toBe(502)
+    expect(seen).toHaveLength(0)
+  })
+
+  it("answers Opper's 401 when SolvaPay refuses the agent on decide (revoked)", async () => {
+    const { app, seen, agentApi } = await setup(streamed)
+    agentApi.failDecide = 401
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(messages({ authorization: `Bearer ${token}` }))
+    expect(response.status).toBe(401)
+    expect((await response.json()).error).toMatch(/^invalid bearer token\. SolvaPay did not accept/)
+    expect(seen).toHaveLength(0)
   })
 })
 

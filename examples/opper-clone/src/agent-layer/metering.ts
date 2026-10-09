@@ -1,7 +1,9 @@
 // Metering for an agent's paid calls (agent payments PoC, S4): gate each call
-// on the customer's balance, then settle it at the cost Opper reported.
+// on the customer's balance, then settle it at the cost Opper reported. Since
+// S5 the spend policy decides first (`./policy`), and the gate takes that
+// call's estimate.
 //
-// Settle rules (build plan §7d, decision 8):
+// Settle rules (build plan §7d, decision 8; the spend policy settles by the same rules):
 // - the upstream reported a cost: settle at that cost, also when the stream
 //   was cut after the cost was read;
 // - the upstream answered without a cost: one provisional settle at the
@@ -36,17 +38,39 @@ export type Opened =
       balanceUsd: string
       settle(result: CallResult): Promise<Settled>
     }
-  | { kind: 'refused'; reason: 'customer_not_linked' | 'topup_required'; response: Response }
+  /** `message` is the gate's own text: the balance and the estimate. */
+  | { kind: 'refused'; reason: 'topup_required'; message: string }
 
 export interface Metering {
-  open(input: { request: Request; principalRef: string }): Promise<Opened>
+  /** The customer an agent's principal is at this merchant, or null when it never linked. */
+  customer(principalRef: string): Promise<string | null>
+  open(input: {
+    request: Request
+    customerRef: string
+    /** This call's estimate, USD decimal string; also the provisional amount. */
+    estimateUsd: string
+    /** Added to the usage row the settle writes, for example `decision_ref`. */
+    metadata?: Record<string, string>
+  }): Promise<Opened>
+}
+
+/**
+ * What a finished call is settled at: the reported cost, else the estimate
+ * as provisional; null when the upstream answered with an error.
+ */
+export function amountToSettle(
+  result: CallResult,
+  estimateUsd: string,
+): { source: 'reported' | 'provisional'; amountUsd: string } | null {
+  if (result.status >= 400) return null
+  return result.costUsd !== null
+    ? { source: 'reported', amountUsd: usdString(result.costUsd) }
+    : { source: 'provisional', amountUsd: estimateUsd }
 }
 
 export function createMetering(deps: {
   solvaPay: Pick<SolvaPay, 'payable' | 'getCustomer'>
   productRef: string
-  /** The most one call is expected to cost, USD decimal string. */
-  estimateUsd: string
 }): Metering {
   const payable = deps.solvaPay.payable({ productRef: deps.productRef })
   /** principal → customer reference; a principal's customer never changes. */
@@ -77,29 +101,15 @@ export function createMetering(deps: {
   }
 
   return {
-    async open({ request, principalRef }) {
-      const customerRef = await customerOf(principalRef)
-      if (!customerRef) {
-        return {
-          kind: 'refused',
-          reason: 'customer_not_linked',
-          response: Response.json(
-            {
-              error:
-                'This agent has no payment set up with this merchant. Connect it in SolvaPay, then retry.',
-              reason: 'customer_not_linked',
-            },
-            { status: 402 },
-          ),
-        }
-      }
+    customer: customerOf,
 
+    async open({ request, customerRef, estimateUsd, metadata }) {
       const gate = await payable.gate(request, {
-        cost: { estimateUsd: deps.estimateUsd },
+        cost: { estimateUsd },
         getCustomerRef: () => customerRef,
       })
       if (gate.kind === 'paywall') {
-        return { kind: 'refused', reason: 'topup_required', response: gate.response }
+        return { kind: 'refused', reason: 'topup_required', message: gate.content.message }
       }
 
       return {
@@ -107,16 +117,18 @@ export function createMetering(deps: {
         customerRef,
         balanceUsd: gate.balanceUsd,
         async settle(result) {
-          if (result.status >= 400) return { settled: false, reason: 'upstream_error' }
-          const amountUsd = result.costUsd !== null ? usdString(result.costUsd) : deps.estimateUsd
-          const source = result.costUsd !== null ? 'reported' : 'provisional'
+          const amount = amountToSettle(result, estimateUsd)
+          if (!amount) return { settled: false, reason: 'upstream_error' }
+          const extra = {
+            ...(metadata ?? {}),
+            ...(result.interrupted ? { interrupted: result.interrupted } : {}),
+          }
           const debit = await gate.settle({
-            amountUsd,
-            source,
+            ...amount,
             outcome: result.interrupted ? 'fail' : 'success',
-            ...(result.interrupted ? { metadata: { interrupted: result.interrupted } } : {}),
+            ...(Object.keys(extra).length > 0 ? { metadata: extra } : {}),
           })
-          return { settled: true, source, amountUsd, debit }
+          return { settled: true, ...amount, debit }
         },
       }
     },

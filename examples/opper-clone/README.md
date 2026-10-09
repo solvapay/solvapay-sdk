@@ -47,23 +47,36 @@ pnpm agent:connect card          # 2.50 USD lot; pass an amount in cents to chan
 pnpm agent:connect merchant      # customer, card and balance at this merchant
 ```
 
-The lot is a direct charge on the merchant's account, with `lot_id`, `agent_id` and `mandate_id` in the PaymentIntent's metadata.
+The lot is a direct charge on the merchant's account, with `lot_id`, `agent_id` and `policy_id` in the PaymentIntent's metadata. `policy_id` is the agent's active spend policy, or `none` (the S3 lots say `mandate_id: none`, from before the rename).
 
 ## Debit by cost (S4)
 
 An agent's `POST /v3/compat/v1/messages` goes through `@solvapay/server`'s `payable.gate()` in cost mode:
 
 1. The clone finds the customer by the agent's principal (`externalRef`); it never creates one. No customer gives a 402 `customer_not_linked`.
-2. The call is allowed while the balance covers `CLONE_ESTIMATE_USD` (0.50 by default), else a 402 `topup_required`. Neither 402 reaches Opper.
+2. The call is allowed while the balance covers the call's estimate (see below), else a 402 `topup_required`. Neither 402 reaches Opper.
 3. When the stream ends, the clone settles at `usage.cost` from the final `message_delta`, exact to 1e-8 USD, so a call below one credit is still debited exactly.
 
 A stream cut after the cost arrived is settled at that cost. A call Opper answered without a cost is settled once at the estimate, marked `provisional`. A call Opper refused (4xx or 5xx) is not settled. `call.completed` logs the debit and the balance after it.
+
+## Spend policy (S5)
+
+Before the balance gate, SolvaPay decides each agent call against the agent's spend policy (`POST /v1/sdk/agent/decide`). The order on `POST /v3/compat/v1/messages`:
+
+1. The body is read once. Not JSON, or no `model`: an Anthropic 400, and neither SolvaPay nor Opper is called.
+2. The estimate (`src/agent-layer/pricing.ts`): input tokens ≈ body bytes ÷ 4, output = min(`max_tokens`, 2,000), at Anthropic's list price for the model. The tier is the model family: Haiku S, Sonnet M, Opus L, anything else XL.
+3. The customer, by the agent's principal; none gives a 402.
+4. Decide: an allow reserves the estimate on the spend policy. Ask is an Anthropic 402 and deny an Anthropic 422, both with SolvaPay's reason text. Neither reaches Opper.
+5. The balance gate at the same estimate. Refused: the reservation is released at once and the caller gets a 402 `topup_required`.
+6. After the stream, the policy settle first (`POST /v1/sdk/agent/settle`), then the credit debit, whose usage row carries `decision_ref`. Settle rules are S4's: an Opper error releases the reservation.
+
+Every refusal on this route is Anthropic-shaped: `{"type":"error","error":{"type":"invalid_request_error","message":…},"request_id":…}`. The 401s stay in Opper's shape. `X-Opper-Tags` gains `decision_id`, and `call.completed` and `call.refused` log the decision, the policy and its counters.
 
 ## Layout
 
 | Path | What it does |
 |---|---|
-| `src/agent-layer/` | SolvaPay's part: agent token verification and metering; policy and top-ups later |
+| `src/agent-layer/` | SolvaPay's part: agent token verification, metering, spend policy, pricing and error bodies; top-ups later |
 | `src/routes/compat.ts` | `ALL /v3/compat/*`; `POST /v3/compat/v1/messages` is the paid route |
 | `src/upstream/opper.ts` | Forwards with the user's key and `X-Opper-Tags`, streams the body, reads the cost when the stream ends |
 | `src/merchant/merchant-keys.ts` | The clone's toy version of Opper's own API keys |
