@@ -34,7 +34,7 @@ Run Claude Code as that agent with `scripts/claude-as-agent.sh` (arguments pass 
 
 ## Card and first lot (S3)
 
-`pnpm agent:connect` also stands in for the SolvaPay console until it exists. `verify` saves the account session to `data/account-session` (12 hours) and keeps the saved agent if its credential still works for that account. `card` then:
+`pnpm agent:connect` also stands in for the SolvaPay console until it exists. `verify` saves the account session to `data/account-session` (one hour, renewed while in use; see Accounts) and keeps the saved agent if its credential still works for that account. `card` then:
 
 1. asks SolvaPay to link the account to a customer at this merchant and start a SetupIntent on the merchant's connected account;
 2. serves a Stripe.js page on `http://127.0.0.1:3041/` (`CARD_PAGE_PORT`) and opens it; save the card there, with the 3DS test card 4000 0025 0000 3155;
@@ -95,6 +95,20 @@ scripts/run-turns.sh 15                                          # 15 one-senten
 ```
 
 `run-turns.sh` stops at the first turn that fails. From the desktop app's terminal panel, wrap it in `env -i` as `claude-as-agent.sh` needs.
+
+## Accounts (SA)
+
+Who signs in is an account user; who pays is an account, personal or business. Signing in opens your personal account, and every other command acts in the active account: its agents, its customer at this merchant (a business gets its own principal, so its own customer and balance), its spend policies.
+
+```bash
+pnpm agent:connect accounts                       # your accounts; * marks the active one
+pnpm agent:connect business "Example AB" SE       # a business you own; does not switch
+pnpm agent:connect switch acc_…                   # act in it (a new session, after a live membership check)
+pnpm agent:connect agent new "Business agent"     # an agent there; credential in data/agents/agt_…
+pnpm agent:connect policy create 5 --agent agt_…  # card and policy take --agent when there are several
+```
+
+The session lasts an hour. Each command renews it once it is 15 minutes old, up to 12 hours after `verify`; after an hour without a command, or after 12 hours, sign in again. `data/agent-credential`, which `apiKeyHelper` uses, stays the agent `verify` made or kept; `agent new` never overwrites it.
 
 ## Layout
 

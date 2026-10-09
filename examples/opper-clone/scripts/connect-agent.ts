@@ -1,22 +1,34 @@
 // Plays the SolvaPay console for this clone until the console exists: signs in
 // to a SolvaPay account by email code, connects an agent to this merchant,
 // saves a card at the merchant, opens the first credit lot and sets the
-// agent's spend policy.
+// agent's spend policy. Signing in opens the personal account; a business
+// account is created and switched to here too, and every other command acts
+// in the active account.
 //
 //   pnpm agent:connect login <email>
 //   pnpm agent:connect verify <email> <code> [agent name]
-//   pnpm agent:connect card [amount in cents, default 250]
+//   pnpm agent:connect accounts
+//   pnpm agent:connect business <legal name> <country>
+//   pnpm agent:connect switch <acc_…>
+//   pnpm agent:connect agent new <name>
+//   pnpm agent:connect card [amount in cents, default 250] [--agent agt_…]
 //   pnpm agent:connect merchant
 //   pnpm agent:connect policy create [monthly budget USD, default 5] [--tiers S,M,L]
 //                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
-//                                    [--max-topup x] [--low-water x]
-//   pnpm agent:connect policy update <field=value…>   budget, ceiling, per-call, daily,
-//                                    max-topup, low-water, tiers, rate, timezone, status
-//   pnpm agent:connect policy show
+//                                    [--max-topup x] [--low-water x] [--agent agt_…]
+//   pnpm agent:connect policy update <field=value…> [--agent agt_…]   budget, ceiling,
+//                                    per-call, daily, max-topup, low-water, tiers, rate,
+//                                    timezone, status
+//   pnpm agent:connect policy show [--agent agt_…]
+//
+// card and policy act on --agent, else the saved agent if it belongs to the
+// active account, else the active account's only agent at this merchant.
 //
 // Local state in data/ (git-ignored, mode 600): agent-credential (never
-// printed), agent.json (agent and principal references), account-session (the
-// 12-hour account session).
+// printed; the agent apiKeyHelper uses), agent.json (its agent and principal
+// references), agents/<agt_…> (credentials of agents made with `agent new`),
+// account-session (the one-hour account session, renewed while in use until
+// 12 hours after sign-in).
 import 'dotenv/config'
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
@@ -31,19 +43,39 @@ const files = {
   credential: join(dataDir, 'agent-credential'),
   agent: join(dataDir, 'agent.json'),
   session: join(dataDir, 'account-session'),
+  agents: join(dataDir, 'agents'),
 }
 /** How long `card` waits for the SetupIntent webhook to save the card. */
 const CARD_WAIT_MS = 90_000
+/**
+ * A session is renewed once it is this old, so a script in use keeps one for
+ * the 12 hours a sign-in allows. Renewing needs a session that has not
+ * expired: after an hour without a command, sign in again.
+ */
+const RENEW_AFTER_MS = 15 * 60_000
+const SIGN_IN_MAX_AGE_MS = 12 * 60 * 60_000
 
 interface Session {
   token: string
+  issuedAt: string
   expiresAt: string
+  /** The active account. */
   accountRef: string
+  accountUserRef: string
+  /** When the code was verified; renewals keep it. */
+  authTime: string
 }
 
 interface SavedAgent {
   reference: string
   principalRef: string
+}
+
+interface AccountView {
+  reference: string
+  type: 'personal' | 'business'
+  displayName: string
+  status: string
 }
 
 /** The command-line names of a spend policy's limits, and the API field each sets. */
@@ -60,13 +92,26 @@ const POLICY_FIELDS: Record<string, (value: string) => Record<string, unknown>> 
   timezone: value => ({ timezone: value }),
 }
 
-const [command, ...args] = process.argv.slice(2)
+const [command, ...rawArgs] = process.argv.slice(2)
+const agentFlag = rawArgs.indexOf('--agent')
+const explicitAgent = agentFlag >= 0 ? rawArgs[agentFlag + 1] : undefined
+if (agentFlag >= 0 && !explicitAgent?.startsWith('agt_')) fail('--agent takes an agt_ reference')
+const args =
+  agentFlag >= 0 ? rawArgs.filter((_, i) => i !== agentFlag && i !== agentFlag + 1) : rawArgs
 
 try {
   if (command === 'login' && args[0]) {
     await login(args[0])
   } else if (command === 'verify' && args[0] && args[1]) {
     await verify(args[0], args[1], args.slice(2).join(' ') || 'Claude Code')
+  } else if (command === 'accounts') {
+    await accounts()
+  } else if (command === 'business' && args.length >= 2) {
+    await business(args.slice(0, -1).join(' '), args[args.length - 1])
+  } else if (command === 'switch' && args[0]) {
+    await switchTo(args[0])
+  } else if (command === 'agent' && args[0] === 'new' && args.length > 1) {
+    await agentNew(args.slice(1).join(' '))
   } else if (command === 'card') {
     await card(args[0] ? Number(args[0]) : 250)
   } else if (command === 'merchant') {
@@ -81,6 +126,10 @@ try {
     fail(
       'Usage: pnpm agent:connect login <email>\n' +
         '       pnpm agent:connect verify <email> <code> [agent name]\n' +
+        '       pnpm agent:connect accounts\n' +
+        '       pnpm agent:connect business <legal name> <country>\n' +
+        '       pnpm agent:connect switch <acc_…>\n' +
+        '       pnpm agent:connect agent new <name>\n' +
         '       pnpm agent:connect card [amount in cents, default 250]\n' +
         '       pnpm agent:connect merchant\n' +
         '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
@@ -89,7 +138,8 @@ try {
         '       pnpm agent:connect policy update <field=value…>  (' +
         Object.keys(POLICY_FIELDS).join(', ') +
         ', status)\n' +
-        '       pnpm agent:connect policy show',
+        '       pnpm agent:connect policy show\n' +
+        'card and policy take --agent agt_… when the active account has several agents here.',
     )
   }
 } catch (error) {
@@ -101,13 +151,13 @@ async function login(email: string) {
   process.stdout.write(`Code sent to ${email}. Then: pnpm agent:connect verify ${email} <code>\n`)
 }
 
-/** Signs in and saves the session. Keeps a working saved agent; creates one otherwise. */
+/**
+ * Signs in, which opens the personal account, and saves the session. Keeps a
+ * working saved agent of that account; creates one otherwise.
+ */
 async function verify(email: string, code: string, agentName: string) {
   const signedIn = await call('POST', '/v1/account/auth/logins/verifications', { email, code })
-  const token = signedIn.token as string
-  const accountRef = (signedIn.account as { reference: string }).reference
-  const expiresAt = new Date(Date.now() + (signedIn.expiresIn as number) * 1000).toISOString()
-  await save(files.session, JSON.stringify({ token, expiresAt, accountRef } satisfies Session))
+  const { token, accountRef, expiresAt } = await saveSession(signedIn, new Date())
 
   let agent = await savedAgentOf(token)
   if (agent) {
@@ -130,6 +180,66 @@ async function verify(email: string, code: string, agentName: string) {
   process.stdout.write(
     `Account ${accountRef}, principal ${agent.principalRef} at ${providerRef}. ` +
       `Session saved until ${expiresAt}.\n`,
+  )
+}
+
+/** The signed-in account user's accounts, the active one marked. */
+async function accounts() {
+  const me = (await call('GET', '/v1/account/auth/me', undefined, await session())) as unknown as {
+    accountUser: { reference: string; email: string }
+    active: { accountRef: string; role: string }
+    memberships: Array<{ account: AccountView; role: string }>
+  }
+  const lines = [`${me.accountUser.email} (${me.accountUser.reference})`]
+  for (const { account, role } of me.memberships) {
+    const active = account.reference === me.active.accountRef ? '*' : ' '
+    lines.push(
+      `${active} ${account.reference}  ${account.type.padEnd(8)}  ${role.padEnd(6)}  ${account.displayName}`,
+    )
+  }
+  process.stdout.write(`${lines.join('\n')}\n`)
+}
+
+/** Creates a business account owned by the signed-in account user; does not switch to it. */
+async function business(legalName: string, country: string) {
+  const created = (await call(
+    'POST',
+    '/v1/account/accounts',
+    { legalName, country },
+    await session(),
+  )) as unknown as AccountView
+  process.stdout.write(
+    `Created business account ${created.reference} (${created.displayName}). ` +
+      `Act in it: pnpm agent:connect switch ${created.reference}\n`,
+  )
+}
+
+/** A new session in another account, after a live membership check. */
+async function switchTo(accountRef: string) {
+  const switched = await call('POST', '/v1/account/auth/sessions', { accountRef }, await session())
+  const saved = await readSession()
+  const next = await saveSession(switched, new Date(saved.authTime))
+  const account = switched.account as AccountView
+  process.stdout.write(
+    `Acting in ${account.reference} (${account.type}, ${account.displayName}) until ${next.expiresAt}.\n`,
+  )
+}
+
+/**
+ * Creates an agent in the active account. Its credential goes to
+ * data/agents/<agt_…>, never over data/agent-credential, which is the one
+ * apiKeyHelper uses.
+ */
+async function agentNew(name: string) {
+  const created = await call('POST', '/v1/account/agents', { providerRef, name }, await session())
+  const agent = created.agent as SavedAgent
+  await mkdir(files.agents, { recursive: true })
+  await writeFile(join(files.agents, agent.reference), created.credential as string, {
+    mode: 0o600,
+  })
+  process.stdout.write(
+    `Created agent ${agent.reference}, principal ${agent.principalRef} at ${providerRef}; ` +
+      `credential saved to data/agents/${agent.reference}.\n`,
   )
 }
 
@@ -163,7 +273,7 @@ async function savedAgentOf(token: string): Promise<SavedAgent | null> {
 async function card(amountMinor: number) {
   if (!Number.isInteger(amountMinor)) fail('The amount is in cents, for example 250')
   const token = await session()
-  const agent = await readSavedAgent()
+  const agent = await activeAgent(token, { required: false })
 
   const setup = await call('POST', `/v1/account/merchants/${providerRef}/card`, {}, token)
   const port = Number(process.env.CARD_PAGE_PORT ?? 3041)
@@ -254,7 +364,7 @@ interface PolicyView {
 /** Compiles the agent's spend policy from a monthly budget; flags override single limits. */
 async function policyCreate(args: string[]) {
   const token = await session()
-  const agent = await requireSavedAgent()
+  const agent = await activeAgent(token)
   let budget = '5'
   const limits: Record<string, unknown> = {}
   for (let i = 0; i < args.length; i++) {
@@ -318,9 +428,9 @@ async function policyShow() {
   printPolicy(await policyInForce(await session()))
 }
 
-/** The saved agent's active or paused policy: at most one, by a unique index on the platform. */
+/** The agent's active or paused policy: at most one, by a unique index on the platform. */
 async function policyInForce(token: string): Promise<PolicyView> {
-  const agent = await requireSavedAgent()
+  const agent = await activeAgent(token)
   const policies = (await call(
     'GET',
     `/v1/account/spend-policies?agentRef=${agent.reference}`,
@@ -375,20 +485,92 @@ function usd(amount: string) {
   return `$${whole}.${fraction.padEnd(2, '0')}`
 }
 
-async function requireSavedAgent(): Promise<SavedAgent> {
-  const agent = await readSavedAgent()
-  if (!agent) fail('No agent saved. Run: pnpm agent:connect verify <email> <code>')
-  return agent
+/**
+ * The agent a command acts on, in the active account at this merchant:
+ * --agent, else the saved agent if it belongs here, else the only one.
+ */
+async function activeAgent(token: string): Promise<SavedAgent>
+async function activeAgent(token: string, options: { required: false }): Promise<SavedAgent | null>
+async function activeAgent(
+  token: string,
+  { required = true }: { required?: boolean } = {},
+): Promise<SavedAgent | null> {
+  const agents = (
+    (await call('GET', '/v1/account/agents', undefined, token)) as unknown as Array<
+      SavedAgent & { providerRef: string; status: string; name: string }
+    >
+  ).filter(agent => agent.providerRef === providerRef && agent.status === 'active')
+  const pick = (agent: SavedAgent) => ({
+    reference: agent.reference,
+    principalRef: agent.principalRef,
+  })
+  if (explicitAgent) {
+    const chosen = agents.find(agent => agent.reference === explicitAgent)
+    if (!chosen) fail(`${explicitAgent} is not an active agent of the active account here`)
+    return pick(chosen)
+  }
+  const saved = await readSavedAgent()
+  const savedHere = saved && agents.find(agent => agent.reference === saved.reference)
+  if (savedHere) return pick(savedHere)
+  if (agents.length === 1) return pick(agents[0])
+  if (!required) return null
+  if (agents.length === 0) {
+    fail(
+      'The active account has no agent at this merchant. Run: pnpm agent:connect agent new <name>',
+    )
+  }
+  fail(
+    `The active account has ${agents.length} agents here; pass --agent with one of: ` +
+      agents.map(agent => `${agent.reference} (${agent.name})`).join(', '),
+  )
 }
 
+/**
+ * The saved session's token, renewed first once it is 15 minutes old while
+ * the sign-in is under 12 hours old.
+ */
 async function session(): Promise<string> {
-  const saved = await readFile(files.session, 'utf8').catch(() => null)
-  if (!saved) fail('Not signed in. Run: pnpm agent:connect login <email>')
-  const value = JSON.parse(saved) as Session
-  if (Date.parse(value.expiresAt) <= Date.now()) {
+  const saved = await readSession()
+  const now = Date.now()
+  if (Date.parse(saved.expiresAt) <= now) {
     fail('The account session has expired. Run: pnpm agent:connect login <email>')
   }
-  return value.token
+  const signInAge = now - Date.parse(saved.authTime)
+  if (now - Date.parse(saved.issuedAt) < RENEW_AFTER_MS || signInAge >= SIGN_IN_MAX_AGE_MS)
+    return saved.token
+  const renewed = await request(
+    'POST',
+    '/v1/account/auth/sessions',
+    { accountRef: saved.accountRef },
+    saved.token,
+  )
+  if (!renewed.ok) return saved.token // still valid; the call itself reports a real problem
+  return (await saveSession(renewed.body, new Date(saved.authTime))).token
+}
+
+async function readSession(): Promise<Session> {
+  const saved = await readFile(files.session, 'utf8').catch(() => null)
+  if (!saved) fail('Not signed in. Run: pnpm agent:connect login <email>')
+  const value = JSON.parse(saved) as Partial<Session>
+  if (!value.accountUserRef || !value.authTime || !value.issuedAt) {
+    fail('The saved session is from before account users. Run: pnpm agent:connect login <email>')
+  }
+  return value as Session
+}
+
+/** Saves a session response (sign-in, switch or renewal) with the sign-in time. */
+async function saveSession(response: Record<string, unknown>, authTime: Date): Promise<Session> {
+  const now = Date.now()
+  const value: Session = {
+    token: response.token as string,
+    issuedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + (response.expiresIn as number) * 1000).toISOString(),
+    accountRef: (response.account as AccountView).reference,
+    accountUserRef: (response.accountUser as { reference: string }).reference,
+    authTime: authTime.toISOString(),
+  }
+  await save(files.session, JSON.stringify(value))
+  return value
 }
 
 async function readSavedAgent(): Promise<SavedAgent | null> {
