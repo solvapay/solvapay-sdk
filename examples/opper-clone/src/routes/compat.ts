@@ -137,7 +137,9 @@ export function compatRoutes(deps: CompatDeps): Hono {
         principalRef: userRef,
         agentRef: identity.agent.agentRef,
       })
-      if (outcome instanceof Response) return outcome
+      // Not `instanceof Response`: @hono/node-server swaps the global Response, so a
+      // Response.json() refusal is not an instance of it under the real server.
+      if (!('decided' in outcome)) return outcome
       metered = outcome
     }
     let account

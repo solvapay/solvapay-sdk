@@ -1,3 +1,5 @@
+import type { AddressInfo } from 'node:net'
+import { serve } from '@hono/node-server'
 import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createAgentLayer, createPolicy } from '../agent-layer'
@@ -447,6 +449,28 @@ describe('spend policy', () => {
       requestId: body.request_id,
       tier: 'M',
     })
+  })
+
+  it('denies over a real node server too, where the global Response is swapped', async () => {
+    const { app, seen, agentApi } = await setup(streamed)
+    agentApi.action = 'deny'
+    agentApi.reasonText = 'Blocked by the policy.'
+    const server = serve({ fetch: app.fetch, port: 0 })
+    await new Promise(resolve => server.once('listening', resolve))
+    try {
+      const { port } = server.address() as AddressInfo
+      const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+      const response = await fetch(`http://127.0.0.1:${port}/v3/compat/v1/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', messages: [] }),
+      })
+      expect(response.status).toBe(422)
+      expect((await response.json()).error.message).toBe('Blocked by the policy.')
+      expect(seen).toHaveLength(0)
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
   })
 
   it('asks with an Anthropic 402, and never calls Opper', async () => {
