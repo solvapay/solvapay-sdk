@@ -1,3 +1,4 @@
+import { createSolvaPay, type TrackUsageRequest, type TrackUsageResponse } from '@solvapay/server'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import type {
   MintedKey,
@@ -115,4 +116,77 @@ export function signAgentToken(
     .setIssuedAt()
     .setExpirationTime(overrides.expiresIn ?? '15m')
     .sign(key)
+}
+
+/**
+ * In-memory stand-in for SolvaPay's API, as `@solvapay/server` sees it: one
+ * linked customer with a balance, and the usage events it receives.
+ */
+export class FakeSolvaPayApi {
+  /** principal (externalRef) → customer reference */
+  readonly customers = new Map<string, string>([['ppl_ABCDEFGHIJKLMNOP', 'cus_TESTCUST']])
+  credits = 30_000
+  balanceUsd = '3'
+  readonly usages: TrackUsageRequest[] = []
+  readonly lookups: string[] = []
+
+  async getCustomer(params: { externalRef?: string }) {
+    this.lookups.push(params.externalRef ?? '')
+    const customerRef = params.externalRef ? this.customers.get(params.externalRef) : undefined
+    if (!customerRef) {
+      // As the SDK client throws for a 404: a SolvaPayError carrying the status.
+      throw Object.assign(new Error(`Get customer failed (404): not found`), { status: 404 })
+    }
+    return { customerRef, email: '', externalRef: params.externalRef, purchases: [] }
+  }
+
+  async getCustomerBalance(params: { customerRef: string }) {
+    return {
+      customerRef: params.customerRef,
+      credits: this.credits,
+      creditsPerMinorUnit: 100,
+      displayCurrency: 'USD',
+      displayExchangeRate: 1,
+      display: {
+        amountMajor: this.credits / 10_000,
+        currency: 'USD',
+        exchangeRate: 1,
+        formatted: '',
+        rateSource: 'parity' as const,
+      },
+    }
+  }
+
+  async trackUsage(params: TrackUsageRequest): Promise<TrackUsageResponse> {
+    this.usages.push(params)
+    const amount = params.cost?.amount ?? '0'
+    return {
+      success: true,
+      reference: `usage_${this.usages.length}`,
+      creditDebit: {
+        debited: true,
+        costSource: params.cost?.source ?? 'reported',
+        amount: 0,
+        amountUsd: amount,
+        balanceCredits: this.credits,
+        balanceUsd: this.balanceUsd,
+      },
+    }
+  }
+
+  async checkLimits(): Promise<never> {
+    throw new Error('cost mode never calls /limits')
+  }
+
+  async createCheckoutSession(): Promise<never> {
+    throw new Error('not used')
+  }
+
+  async createCustomerSession(): Promise<never> {
+    throw new Error('not used')
+  }
+
+  solvaPay() {
+    return createSolvaPay({ apiClient: this })
+  }
 }

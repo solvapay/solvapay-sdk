@@ -1,6 +1,6 @@
 // The SolvaPay agent layer: the one interface the clone's handler imports
-// (prototype spec §2.1 rule 4). S2: identity only. Policy, top-up, errors and
-// metering join as sub-modules in later slices.
+// (prototype spec §2.1 rule 4). Identity is here (S2); metering is in
+// `./metering` (S4). Policy, top-up and errors join as sub-modules in later slices.
 import {
   looksLikeJwt,
   type AgentTokenResult,

@@ -1,8 +1,10 @@
 import 'dotenv/config'
 import { join } from 'node:path'
 import { serve } from '@hono/node-server'
+import { createSolvaPay } from '@solvapay/server'
 import { createRemoteJWKSet } from 'jose'
 import { createAgentLayer } from './agent-layer'
+import { createMetering } from './agent-layer/metering'
 import { createAgentTokenVerifier } from './agent-layer/identity/verify-agent-token'
 import { createApp } from './app'
 import { loadConfig } from './config'
@@ -34,6 +36,14 @@ const app = createApp({
     new FileKvStore(join(config.dataDir, 'kv.json')),
     await importEncryptionKey(config.keyEncryptionKey),
   ),
+  metering: createMetering({
+    solvaPay: createSolvaPay({
+      apiKey: config.solvapaySecretKey,
+      apiBaseUrl: config.solvapayApiBaseUrl,
+    }),
+    productRef: config.productRef,
+    estimateUsd: config.estimateUsd,
+  }),
   upstream: createOpperUpstream({ baseUrl: config.opperBaseUrl }),
   log: consoleLogger,
 })
@@ -43,6 +53,8 @@ serve({ fetch: app.fetch, port: config.port }, info => {
     port: info.port,
     merchantKeys: entries.length,
     providerRef: config.providerRef,
+    productRef: config.productRef,
+    estimateUsd: config.estimateUsd,
     agentIssuer: config.agentIssuer,
     anthropicBaseUrl: `http://localhost:${info.port}/v3/compat`,
   })

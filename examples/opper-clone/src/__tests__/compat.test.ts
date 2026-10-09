@@ -1,6 +1,7 @@
 import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createAgentLayer } from '../agent-layer'
+import { createMetering } from '../agent-layer/metering'
 import { createAgentTokenVerifier } from '../agent-layer/identity/verify-agent-token'
 import { createApp } from '../app'
 import { importEncryptionKey } from '../lib/crypto'
@@ -13,6 +14,7 @@ import {
   agentKeys,
   chunkedResponse,
   FakeOpperManagement,
+  FakeSolvaPayApi,
   ISSUER,
   PROVIDER,
   signAgentToken,
@@ -46,7 +48,7 @@ interface Seen {
   body: string
 }
 
-async function setup(reply: (seen: Seen) => Response) {
+async function setup(reply: (seen: Seen) => Response, api = new FakeSolvaPayApi()) {
   const seen: Seen[] = []
   const events: { event: string; fields?: Record<string, unknown> }[] = []
   const log: Logger = {
@@ -79,10 +81,15 @@ async function setup(reply: (seen: Seen) => Response) {
       new MemoryKvStore(),
       await importEncryptionKey(TEST_ENCRYPTION_KEY),
     ),
+    metering: createMetering({
+      solvaPay: api.solvaPay(),
+      productRef: 'prd_TEST',
+      estimateUsd: '0.50',
+    }),
     upstream: createOpperUpstream({ baseUrl: 'https://opper.test', fetchImpl }),
     log,
   })
-  return { app, seen, events, opper }
+  return { app, seen, events, opper, api }
 }
 
 function messages(headers: Record<string, string>) {
@@ -261,11 +268,106 @@ describe('agent tokens', () => {
     })
   })
 
-  it('keeps the merchant key path for non-agent callers', async () => {
-    const { app, events } = await setup(() => new Response('{}'))
+  it('keeps the merchant key path for non-agent callers, unbilled', async () => {
+    const { app, events, api } = await setup(() => new Response('{}'))
     const response = await app.request(messages({ 'x-api-key': MERCHANT_KEY }))
     await response.text()
     expect(await completed(events)).toMatchObject({ auth: 'merchant_key', agentRef: null })
+    expect(api.usages).toHaveLength(0)
+  })
+})
+
+describe('agent billing', () => {
+  const streamed = () => chunkedResponse(SSE, { headers: { 'content-type': 'text/event-stream' } })
+
+  async function agentCall(app: Awaited<ReturnType<typeof setup>>['app'], principal = PRINCIPAL) {
+    const token = await signAgentToken(agentKey, { principal })
+    return app.request(messages({ authorization: `Bearer ${token}` }))
+  }
+
+  it("debits an agent's streamed call at the cost in message_delta", async () => {
+    const { app, events, api } = await setup(streamed)
+    api.balanceUsd = '2.999957'
+    const response = await agentCall(app)
+    expect(await response.text()).toBe(SSE.join(''))
+
+    expect(await completed(events)).toMatchObject({
+      auth: 'agent',
+      costUsd: 0.000043,
+      settled: true,
+      settleSource: 'reported',
+      amountUsd: '0.000043',
+      balanceUsd: '2.999957',
+    })
+    expect(api.usages).toHaveLength(1)
+    expect(api.usages[0]).toMatchObject({
+      customerRef: 'cus_TESTCUST',
+      cost: { amount: '0.000043', currency: 'USD', source: 'reported' },
+    })
+  })
+
+  it('refuses an agent whose principal has no customer here with a 402, without calling Opper', async () => {
+    const { app, seen, events, api } = await setup(streamed)
+    const response = await agentCall(app, 'ppl_UNLINKEDUNLINKED')
+    expect(response.status).toBe(402)
+    expect(await response.json()).toMatchObject({ reason: 'customer_not_linked' })
+    expect(seen).toHaveLength(0)
+    expect(api.usages).toHaveLength(0)
+    expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
+      reason: 'customer_not_linked',
+    })
+  })
+
+  it('refuses an agent below the estimate with a 402, without calling Opper', async () => {
+    const api = new FakeSolvaPayApi()
+    api.credits = 100
+    const { app, seen } = await setup(streamed, api)
+    const response = await agentCall(app)
+    expect(response.status).toBe(402)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('does not bill unpaid paths', async () => {
+    const { app, events, api } = await setup(() => new Response('{"data":[]}'))
+    const token = await signAgentToken(agentKey)
+    const response = await app.request(
+      new Request('http://clone.test/v3/compat/v1/models', {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    )
+    await response.text()
+    expect((await completed(events)).paid).toBe(false)
+    expect(api.usages).toHaveLength(0)
+  })
+
+  it('does not settle a call Opper refused', async () => {
+    const { app, events, api } = await setup(
+      () => new Response('{"type":"error"}', { status: 529 }),
+    )
+    const response = await agentCall(app)
+    await response.text()
+    expect(await completed(events)).toMatchObject({ status: 529, settled: false })
+    expect(api.usages).toHaveLength(0)
+  })
+
+  it('settles a stream the caller dropped after the cost arrived at that cost', async () => {
+    const { app, events, api } = await setup(streamed)
+    const response = await agentCall(app)
+    if (!response.body) throw new Error('expected a streamed body')
+    const reader = response.body.getReader()
+    let text = ''
+    while (!text.includes('message_delta') || !text.includes('"usage"')) {
+      const { value } = await reader.read()
+      text += new TextDecoder().decode(value)
+    }
+    await reader.cancel('client went away')
+
+    expect(await completed(events)).toMatchObject({
+      interrupted: expect.any(String),
+      costUsd: 0.000043,
+      settleSource: 'reported',
+    })
+    expect(api.usages[0]).toMatchObject({ outcome: 'fail', cost: { amount: '0.000043' } })
   })
 })
 

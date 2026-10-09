@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import type { AgentLayer } from '../agent-layer'
+import type { Metering, Opened, Settled } from '../agent-layer/metering'
 import type { Logger } from '../log'
 import { presentedKey, type MerchantKeys } from '../merchant/merchant-keys'
 import type { ProviderAccount } from '../merchant/opper-accounts'
-import type { OpperUpstream } from '../upstream/opper'
+import type { Completion, OpperUpstream } from '../upstream/opper'
 
 const PREFIX = '/v3/compat'
 /** The paid route. Everything else under the prefix is forwarded as is. */
@@ -13,6 +14,8 @@ export interface CompatDeps {
   agentLayer: AgentLayer
   merchantKeys: MerchantKeys
   accounts: ProviderAccount
+  /** Bills an agent's paid calls. Calls made with the merchant's own keys stay unbilled. */
+  metering: Metering
   upstream: OpperUpstream
   log: Logger
 }
@@ -71,6 +74,28 @@ export function compatRoutes(deps: CompatDeps): Hono {
       )
     }
 
+    let metered: Extract<Opened, { kind: 'allow' }> | null = null
+    if (paid && identity.kind === 'agent') {
+      let opened: Opened
+      try {
+        opened = await deps.metering.open({ request, principalRef: userRef })
+      } catch (error) {
+        deps.log.error('call.metering_failed', { requestId, userRef, error: errorMessage(error) })
+        return c.json(opperError('Billing is unavailable. Try again shortly.'), 502)
+      }
+      if (opened.kind === 'refused') {
+        deps.log.info('call.refused', {
+          requestId,
+          subpath,
+          userRef,
+          agentRef,
+          reason: opened.reason,
+        })
+        return opened.response
+      }
+      metered = opened
+    }
+
     let account
     try {
       account = await deps.accounts.open(userRef)
@@ -89,6 +114,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
       agentRef,
       tokenId,
       project: account.projectName,
+      metered,
     })
   })
 
@@ -102,6 +128,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     agentRef?: string | null
     tokenId?: string | null
     project?: string
+    metered?: Extract<Opened, { kind: 'allow' }> | null
   }): Promise<Response> {
     const started = Date.now()
     const tags: Record<string, string> = { request_id: call.requestId }
@@ -115,7 +142,8 @@ export function compatRoutes(deps: CompatDeps): Hono {
     })
 
     completion
-      .then(done =>
+      .then(async done => {
+        const settled = call.metered ? await settle(call.metered, done, call.requestId) : undefined
         deps.log.info(call.userRef ? 'call.completed' : 'call.anonymous', {
           requestId: call.requestId,
           userRef: call.userRef,
@@ -131,13 +159,15 @@ export function compatRoutes(deps: CompatDeps): Hono {
           bytes: done.bytes,
           costUsd: done.cost.usd,
           costSource: done.cost.source,
+          ...(done.interrupted ? { interrupted: done.interrupted } : {}),
+          ...(settled !== undefined ? settleFields(settled) : {}),
           opperHeaders: done.opperHeaders,
           traceId: done.traceId,
           ms: Date.now() - started,
-        }),
-      )
+        })
+      })
       .catch(error =>
-        deps.log.error('call.stream_failed', {
+        deps.log.error('call.log_failed', {
           requestId: call.requestId,
           userRef: call.userRef,
           error: errorMessage(error),
@@ -147,7 +177,49 @@ export function compatRoutes(deps: CompatDeps): Hono {
     return response
   }
 
+  /** A failed settle is logged and the call goes on: the caller already has its answer. */
+  async function settle(
+    metered: Extract<Opened, { kind: 'allow' }>,
+    done: Completion,
+    requestId: string,
+  ): Promise<Settled | null> {
+    try {
+      return await metered.settle({
+        status: done.status,
+        costUsd: done.cost.usd,
+        ...(done.interrupted ? { interrupted: done.interrupted } : {}),
+      })
+    } catch (error) {
+      deps.log.error('call.settle_failed', {
+        requestId,
+        customerRef: metered.customerRef,
+        costUsd: done.cost.usd,
+        error: errorMessage(error),
+      })
+      return null
+    }
+  }
+
   return app
+}
+
+function settleFields(settled: Settled | null): Record<string, unknown> {
+  if (!settled) return { settled: false, settleError: true }
+  if (!settled.settled) return { settled: false, settleSkipped: settled.reason }
+  const { debit } = settled
+  return {
+    settled: true,
+    settleSource: settled.source,
+    amountUsd: settled.amountUsd,
+    debited: debit.debited,
+    ...(debit.debited
+      ? {
+          creditsDebited: debit.amount,
+          balanceUsd: debit.balanceUsd,
+          balanceCredits: debit.balanceCredits,
+        }
+      : { debitSkipped: debit.reason }),
+  }
 }
 
 function errorMessage(error: unknown): string {

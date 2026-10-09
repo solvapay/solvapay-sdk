@@ -2,7 +2,7 @@
 
 A stand-in for Opper's Anthropic-compatible API (`/v3/compat`), run by SolvaPay for the agent payments proof of concept. It forwards each call to the real Opper API with a key minted for that user in SolvaPay's Opper organisation, and streams the answer back unchanged. Claude Code cannot tell it from Opper.
 
-This is slice S1 of the build plan: pass-through only, no SolvaPay calls yet. The SolvaPay agent layer (agent token, `decide()`, cost reporting, agent-safe 402 and 422) arrives in later slices.
+Calls made with the clone's own merchant keys pass through unbilled. Calls made with a SolvaPay agent token are billed to the agent's customer at the cost Opper reports (S4). Mandates, `decide()` and agent-safe 402 and 422 arrive in later slices.
 
 ## Run it
 
@@ -47,13 +47,23 @@ pnpm agent:connect card          # 2.50 USD lot; pass an amount in cents to chan
 pnpm agent:connect merchant      # customer, card and balance at this merchant
 ```
 
-The lot is a direct charge on the merchant's account, with `lot_id`, `agent_id` and `mandate_id` in the PaymentIntent's metadata. The clone itself reads no balance yet.
+The lot is a direct charge on the merchant's account, with `lot_id`, `agent_id` and `mandate_id` in the PaymentIntent's metadata.
+
+## Debit by cost (S4)
+
+An agent's `POST /v3/compat/v1/messages` goes through `@solvapay/server`'s `payable.gate()` in cost mode:
+
+1. The clone finds the customer by the agent's principal (`externalRef`); it never creates one. No customer gives a 402 `customer_not_linked`.
+2. The call is allowed while the balance covers `CLONE_ESTIMATE_USD` (0.50 by default), else a 402 `topup_required`. Neither 402 reaches Opper.
+3. When the stream ends, the clone settles at `usage.cost` from the final `message_delta`, exact to 1e-8 USD, so a call below one credit is still debited exactly.
+
+A stream cut after the cost arrived is settled at that cost. A call Opper answered without a cost is settled once at the estimate, marked `provisional`. A call Opper refused (4xx or 5xx) is not settled. `call.completed` logs the debit and the balance after it.
 
 ## Layout
 
 | Path | What it does |
 |---|---|
-| `src/agent-layer/` | SolvaPay's part: agent token verification now; policy, top-ups and metering later |
+| `src/agent-layer/` | SolvaPay's part: agent token verification and metering; policy and top-ups later |
 | `src/routes/compat.ts` | `ALL /v3/compat/*`; `POST /v3/compat/v1/messages` is the paid route |
 | `src/upstream/opper.ts` | Forwards with the user's key and `X-Opper-Tags`, streams the body, reads the cost when the stream ends |
 | `src/merchant/merchant-keys.ts` | The clone's toy version of Opper's own API keys |

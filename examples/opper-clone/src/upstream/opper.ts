@@ -40,6 +40,8 @@ export interface Completion {
   bytes: number
   /** `x-opper-trace-id`, the handle for reconciling against Opper's logs. */
   traceId: string | null
+  /** Why the stream broke before it finished, when it did (the caller went away, or Opper's stream failed). */
+  interrupted?: string
 }
 
 export interface ForwardInput {
@@ -53,7 +55,11 @@ export interface ForwardInput {
 
 export interface Forwarded {
   response: Response
-  /** Resolves once the body has been fully sent to the caller. */
+  /**
+   * Resolves once the body has been sent to the caller, or the stream broke.
+   * A broken stream still resolves, with any cost read before the break, so
+   * a cost already reported is never lost.
+   */
   completion: Promise<Completion>
 }
 
@@ -104,10 +110,8 @@ export function createOpperUpstream(options: {
       let bytes = 0
       const scanner = streamed ? new StreamCostScanner() : null
       let finish: (completion: Completion) => void = () => undefined
-      let fail: (error: unknown) => void = () => undefined
-      const completion = new Promise<Completion>((resolve, reject) => {
+      const completion = new Promise<Completion>(resolve => {
         finish = resolve
-        fail = reject
       })
       const counter = new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, controller) {
@@ -119,7 +123,14 @@ export function createOpperUpstream(options: {
           finish({ ...base, bytes, cost: scanner ? scanner.finish() : base.cost })
         },
       })
-      upstream.body.pipeTo(counter.writable).catch(fail)
+      upstream.body.pipeTo(counter.writable).catch((error: unknown) =>
+        finish({
+          ...base,
+          bytes,
+          cost: scanner ? scanner.finish() : base.cost,
+          interrupted: error instanceof Error ? error.message : String(error),
+        }),
+      )
 
       return {
         response: new Response(counter.readable, {
