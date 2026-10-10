@@ -44,8 +44,8 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
       if (typeof principal !== 'string' || !principal.startsWith('ppl_')) {
         return { ok: false, reason: 'invalid', detail: 'principal is missing' }
       }
-      if (scope !== 'inference') {
-        return { ok: false, reason: 'invalid', detail: 'scope is not inference' }
+      if (scope !== 'usage') {
+        return { ok: false, reason: 'invalid', detail: 'scope is not usage' }
       }
       return {
         ok: true,

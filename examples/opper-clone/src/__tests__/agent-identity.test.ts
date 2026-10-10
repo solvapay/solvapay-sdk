@@ -29,7 +29,7 @@ describe('agent token verification', () => {
   })
 
   it('reports an expired token as expired', async () => {
-    const token = await new SignJWT({ principal: 'ppl_ABCDEFGHIJKLMNOP', scope: 'inference' })
+    const token = await new SignJWT({ principal: 'ppl_ABCDEFGHIJKLMNOP', scope: 'usage' })
       .setProtectedHeader({ alg: 'ES256', kid: 'k1' })
       .setIssuer(ISSUER)
       .setAudience(PROVIDER)
@@ -53,8 +53,13 @@ describe('agent token verification', () => {
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
   })
 
+  it("refuses a token with the old scope 'inference'", async () => {
+    const result = await verifier()(await signAgentToken(privateKey, { scope: 'inference' }))
+    expect(result).toEqual({ ok: false, reason: 'invalid', detail: 'scope is not usage' })
+  })
+
   it('refuses an HS256 token and one signed by another key', async () => {
-    const hs = await new SignJWT({ principal: 'ppl_X', scope: 'inference' })
+    const hs = await new SignJWT({ principal: 'ppl_X', scope: 'usage' })
       .setProtectedHeader({ alg: 'HS256', kid: 'k1' })
       .setIssuer(ISSUER)
       .setAudience(PROVIDER)

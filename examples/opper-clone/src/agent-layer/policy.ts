@@ -7,7 +7,6 @@
 // A sub-module beside `./metering` rather than a hook in the SDK's cost mode;
 // it moves into `payable` at promotion.
 import { amountToSettle, type CallResult } from './metering'
-import type { ModelTier } from './pricing'
 import type { PromptFacts } from './prompt'
 import type {
   DecideResponse,
@@ -53,7 +52,6 @@ export interface Policy {
     agentToken: string
     requestId: string
     model: string
-    tier: ModelTier
     estimateUsd: string
     /** The agent the call is for: the excerpt opt-in is remembered per agent. */
     agentRef: string
@@ -69,15 +67,14 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
   const excerptWanted = new Map<string, boolean>()
 
   return {
-    async decide({ agentToken, requestId, model, tier, estimateUsd, agentRef, prompt }) {
+    async decide({ agentToken, requestId, model, estimateUsd, agentRef, prompt }) {
       const sendExcerpt = prompt !== null && excerptWanted.get(agentRef) === true
       const started = performance.now()
       const decision = await deps.client.decide({
         agentToken,
         requestId,
-        kind: 'inference',
-        model,
-        tier,
+        kind: 'usage',
+        item: model,
         estimatedCost: estimateUsd,
         ...(prompt ? { promptHash: prompt.promptHash, toolError: prompt.toolError } : {}),
         ...(sendExcerpt ? { promptExcerpt: prompt.excerpt } : {}),

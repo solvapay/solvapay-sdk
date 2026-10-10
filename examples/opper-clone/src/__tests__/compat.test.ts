@@ -454,7 +454,7 @@ describe('spend policy', () => {
     })
   }
 
-  it('decides with the agent token, the model, its tier and the estimate from the body', async () => {
+  it('decides with the agent token, kind usage, the model id as item and the estimate from the body', async () => {
     const { app, agentApi } = await setup(streamed)
     const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
     const body = JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [] })
@@ -465,10 +465,11 @@ describe('spend policy', () => {
     const [decide] = agentApi.decides
     expect(decide).toMatchObject({
       agentToken: token,
-      kind: 'inference',
-      model: 'claude-sonnet-4-6',
-      tier: 'M',
+      kind: 'usage',
+      item: 'claude-sonnet-4-6',
     })
+    expect(decide).not.toHaveProperty('model')
+    expect(decide).not.toHaveProperty('tier')
     // ceil(bytes ÷ 4) × 3 USD/MTok + 1,000 × 15 USD/MTok
     const expected = (Math.ceil(body.length / 4) * 300 + 1_000 * 1_500) / 1e8
     expect(Number(decide.estimatedCost)).toBeCloseTo(expected, 8)
@@ -477,9 +478,9 @@ describe('spend policy', () => {
   it('denies with an Anthropic 422 carrying the reason text, and never calls Opper', async () => {
     const { app, seen, events, api, agentApi } = await setup(streamed)
     agentApi.action = 'deny'
-    agentApi.reasonCode = 'tier_not_allowed'
+    agentApi.reasonCode = 'per_call_cap'
     agentApi.reasonText =
-      "claude-sonnet-4-6 is a tier M model, which this spend policy doesn't cover. Use a model in tier S."
+      'This call could cost about $0.12, over the per-call cap of $0.10. Make a smaller request, or ask your owner to raise the cap.'
     const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
     const response = await app.request(messages({ authorization: `Bearer ${token}` }))
 
@@ -494,11 +495,11 @@ describe('spend policy', () => {
     expect(api.usages).toHaveLength(0)
     expect(agentApi.settles).toHaveLength(0)
     expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
-      reason: 'tier_not_allowed',
+      reason: 'per_call_cap',
       action: 'deny',
       decisionRef: 'dec_TEST0001',
       requestId: body.request_id,
-      tier: 'M',
+      model: 'claude-sonnet-4-6',
     })
   })
 
@@ -569,7 +570,7 @@ describe('spend policy', () => {
       decisionRef: 'dec_TEST0001',
       policyRef: 'pol_TESTPOL1',
       policyVersion: 2,
-      tier: 'M',
+      model: 'claude-sonnet-4-6',
       policySettled: true,
       policySource: 'reported',
       settled: true,

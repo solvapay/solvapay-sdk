@@ -130,7 +130,7 @@ export function signAgentToken(
     kid?: string
   } = {},
 ): Promise<string> {
-  const claims: Record<string, unknown> = { scope: overrides.scope ?? 'inference' }
+  const claims: Record<string, unknown> = { scope: overrides.scope ?? 'usage' }
   if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
   return new SignJWT(claims)
     .setProtectedHeader({ alg: 'ES256', kid: overrides.kid ?? 'k1' })

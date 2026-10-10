@@ -10,7 +10,7 @@ import {
 } from './identity/verify-agent-token'
 
 export { createPolicy, type Decided, type Policy, type PolicySettled } from './policy'
-export { estimateCall, type Estimate, type ModelTier } from './pricing'
+export { estimateCall, type Estimate } from './pricing'
 export { lastUserTurn, type PromptFacts } from './prompt'
 export * as agentErrors from './errors'
 

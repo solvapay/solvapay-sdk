@@ -1,14 +1,12 @@
 // The estimate a paid call is decided on before Opper is called (build plan
 // §7e, decision 3). Only the merchant knows its prices, so the clone estimates:
 // input tokens ≈ body bytes ÷ 4, output = min(max_tokens, 2,000), priced from
-// the table below. The tier groups models by family for the spend policy's
-// allowed tiers: Haiku S, Sonnet M, Opus L, anything else XL.
+// the table below. The model id goes to SolvaPay only as the call's `item`, a
+// label: what a model costs is the merchant's own knowledge (build plan §7n).
 //
 // [Assumption] Opper passes Anthropic's list prices through (USD per million
 // tokens, first-party rates as of Oct 2026). Calibrated against the reported
 // cost in the live run (5.7).
-
-export type ModelTier = 'S' | 'M' | 'L' | 'XL'
 
 /** USD per million tokens. */
 interface Price {
@@ -42,19 +40,10 @@ export const OUTPUT_TOKENS_CAP = 2_000
 
 export interface Estimate {
   model: string
-  tier: ModelTier
   inputTokens: number
   outputTokens: number
   /** USD decimal string with up to 8 places. */
   estimateUsd: string
-}
-
-export function tierOf(model: string): ModelTier {
-  const name = normalise(model)
-  if (name.includes('haiku')) return 'S'
-  if (name.includes('sonnet')) return 'M'
-  if (name.includes('opus')) return 'L'
-  return 'XL'
 }
 
 export function priceOf(model: string): Price {
@@ -75,7 +64,6 @@ export function estimateCall(input: {
     inputTokens * Math.round(price.input * 100) + outputTokens * Math.round(price.output * 100)
   return {
     model: input.model,
-    tier: tierOf(input.model),
     inputTokens,
     outputTokens,
     estimateUsd: unitsToUsd(units),

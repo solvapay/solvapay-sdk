@@ -8,7 +8,6 @@ const INPUT = {
   agentToken: 'eyJ.agent.token',
   requestId: 'req-1',
   model: 'claude-sonnet-4-6',
-  tier: 'M' as const,
   estimateUsd: '0.0912',
   agentRef: 'agt_TEST0001',
   prompt: null,
@@ -20,19 +19,20 @@ function allowed(decided: Decided) {
 }
 
 describe('policy', () => {
-  it('sends the token, model, tier and estimate, and returns the decision', async () => {
+  it('sends the token, kind usage, the model id as item and the estimate, and returns the decision', async () => {
     const api = new FakeAgentApi()
     const decided = await createPolicy({ client: api }).decide(INPUT)
     expect(api.decides).toEqual([
       {
         agentToken: 'eyJ.agent.token',
         requestId: 'req-1',
-        kind: 'inference',
-        model: 'claude-sonnet-4-6',
-        tier: 'M',
+        kind: 'usage',
+        item: 'claude-sonnet-4-6',
         estimatedCost: '0.0912',
       },
     ])
+    expect(api.decides[0]).not.toHaveProperty('model')
+    expect(api.decides[0]).not.toHaveProperty('tier')
     expect(decided).toMatchObject({
       action: 'allow',
       decisionRef: 'dec_TEST0001',
@@ -46,7 +46,7 @@ describe('policy', () => {
     async action => {
       const api = new FakeAgentApi()
       api.action = action
-      api.reasonCode = action === 'ask' ? 'budget_exhausted_ask' : 'tier_not_allowed'
+      api.reasonCode = action === 'ask' ? 'budget_exhausted_ask' : 'per_call_cap'
       api.reasonText = 'Reason for the human.'
       const decided = await createPolicy({ client: api }).decide(INPUT)
       expect(decided).toMatchObject({ action, reasonText: 'Reason for the human.' })
@@ -111,15 +111,27 @@ describe('SolvaPayAgentClient', () => {
       fetchImpl,
     })
 
-    expect(
-      (await client.decide({ ...INPUT, kind: 'inference', estimatedCost: '0.1' })).decisionRef,
-    ).toBe('dec_X')
+    const decision = await client.decide({
+      agentToken: INPUT.agentToken,
+      requestId: INPUT.requestId,
+      kind: 'usage',
+      item: INPUT.model,
+      estimatedCost: '0.1',
+    })
+    expect(decision.decisionRef).toBe('dec_X')
     const failed = client.settle({ decisionRef: 'dec_X', source: 'none' })
     await expect(failed).rejects.toBeInstanceOf(AgentApiError)
     await expect(failed).rejects.toMatchObject({ status: 404 })
     expect(seen[0]).toMatchObject({
       url: 'http://solvapay.test/v1/sdk/agent/decide',
       auth: 'Bearer sk_sandbox_x',
+      body: {
+        agentToken: 'eyJ.agent.token',
+        requestId: 'req-1',
+        kind: 'usage',
+        item: 'claude-sonnet-4-6',
+        estimatedCost: '0.1',
+      },
     })
     expect(seen[1].url).toBe('http://solvapay.test/v1/sdk/agent/settle')
   })

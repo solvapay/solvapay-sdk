@@ -13,12 +13,12 @@
 //   pnpm agent:connect agent new <name>
 //   pnpm agent:connect card [amount in cents, default 250] [--agent agt_…]
 //   pnpm agent:connect merchant
-//   pnpm agent:connect policy create [monthly budget USD, default 5] [--tiers S,M,L]
+//   pnpm agent:connect policy create [monthly budget USD, default 5]
 //                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
 //                                    [--max-topup x] [--low-water x] [--purpose "…"]
 //                                    [--excerpt] [--agent agt_…]
 //   pnpm agent:connect policy update <field=value…> [--agent agt_…]   budget, ceiling,
-//                                    per-call, daily, max-topup, low-water, tiers, rate,
+//                                    per-call, daily, max-topup, low-water, rate,
 //                                    timezone, status, purpose (empty clears it),
 //                                    excerpt=on|off
 //   pnpm agent:connect policy show [--agent agt_…]
@@ -92,7 +92,6 @@ const POLICY_FIELDS: Record<string, (value: string) => Record<string, unknown>> 
   'max-topup': value => ({ maxTopupAmountUsd: value }),
   /** A balance below this after an agent's debit decides a top-up of one `max-topup` lot. */
   'low-water': value => ({ lowWaterUsd: value }),
-  tiers: value => ({ allowedTiers: value.split(',').map(tier => tier.trim().toUpperCase()) }),
   rate: value => ({ maxCallsPerMinute: Number(value) }),
   timezone: value => ({ timezone: value }),
 }
@@ -152,7 +151,7 @@ try {
         '       pnpm agent:connect card [amount in cents, default 250]\n' +
         '       pnpm agent:connect merchant\n' +
         '       pnpm agent:connect statement [YYYY-MM, default this month]\n' +
-        '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
+        '       pnpm agent:connect policy create [budget, default 5] [--per-call x]\n' +
         '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
         '                                        [--max-topup x] [--low-water x]\n' +
         '                                        [--purpose "…"] [--excerpt]\n' +
@@ -434,7 +433,6 @@ interface PolicyView {
     dailyCapUsd: string
     maxTopupAmountUsd: string
     lowWaterUsd: string
-    allowedTiers: string[]
     maxCallsPerMinute: number
     timezone: string
   }
@@ -571,7 +569,6 @@ function printPolicy(policy: PolicyView) {
     `  per call    ${usd(limits.perCallCapUsd)}`,
     `  daily cap   ${usd(limits.dailyCapUsd)}`,
     `  max top-up  ${usd(limits.maxTopupAmountUsd)}, decided when the balance falls below ${usd(limits.lowWaterUsd)}`,
-    `  tiers       ${limits.allowedTiers.join(', ')}`,
     `  rate        ${limits.maxCallsPerMinute} calls a minute (stored, not enforced yet)`,
     `  time zone   ${limits.timezone}`,
     `  spent       ${usd(counters.spentPeriodUsd)} in ${counters.periodKey}, ${usd(counters.spentDayUsd)} on ${counters.dayKey}; ` +

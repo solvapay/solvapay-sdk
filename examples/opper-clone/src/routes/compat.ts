@@ -208,7 +208,6 @@ export function compatRoutes(deps: CompatDeps): Hono {
     })
     const estimateFields = {
       model: estimate.model,
-      tier: estimate.tier,
       estimateUsd: estimate.estimateUsd,
     }
 
@@ -232,7 +231,6 @@ export function compatRoutes(deps: CompatDeps): Hono {
         agentToken: call.agentToken,
         requestId,
         model: estimate.model,
-        tier: estimate.tier,
         estimateUsd: estimate.estimateUsd,
         agentRef: call.agentRef,
         prompt: read.prompt,
@@ -443,7 +441,6 @@ function decisionFields(decided: Decided, estimate: Estimate): Record<string, un
     policyRef: decided.policy?.reference ?? null,
     policyVersion: decided.policy?.version ?? null,
     model: estimate.model,
-    tier: estimate.tier,
     estimateUsd: estimate.estimateUsd,
     decideMs: decided.decideMs,
     promptHash8: decided.promptHash8,

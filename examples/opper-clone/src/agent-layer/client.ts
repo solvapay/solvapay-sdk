@@ -2,16 +2,15 @@
 // has no generic request yet, so this is a small REST client of its own
 // (prototype spec §2.1 rule 4); it moves into `@solvapay/server` at promotion.
 import { isRecord, requireBoolean, requireString } from '../lib/guards'
-import type { ModelTier } from './pricing'
 
 export interface DecideInput {
   /** The agent token the call came with; SolvaPay verifies it again. */
   agentToken: string
   /** The clone's id for the call; a repeat returns the first decision. */
   requestId: string
-  kind: 'inference'
-  model: string
-  tier: ModelTier
+  kind: 'usage'
+  /** The merchant's own label for what is used, at most 200 characters; the clone sends the model id. */
+  item?: string
   /** USD decimal string. */
   estimatedCost: string
   /** `sha256:` over the call's last user turn; repeats of it show loops. */

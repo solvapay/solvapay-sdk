@@ -1,20 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateCall, OUTPUT_TOKENS_CAP, priceOf, tierOf } from '../agent-layer/pricing'
-
-describe('tierOf', () => {
-  it.each([
-    ['claude-haiku-4-5', 'S'],
-    ['claude-haiku-4-5-20251001', 'S'],
-    ['claude-sonnet-4-6', 'M'],
-    ['claude-sonnet-5-5', 'M'],
-    ['anthropic/Claude-Opus-4-6', 'L'],
-    ['claude-opus-5-5', 'L'],
-    ['claude-fable-5-1', 'XL'],
-    ['gpt-5', 'XL'],
-  ])('%s is tier %s', (model, tier) => {
-    expect(tierOf(model)).toBe(tier)
-  })
-})
+import { estimateCall, OUTPUT_TOKENS_CAP, priceOf } from '../agent-layer/pricing'
 
 describe('priceOf', () => {
   it('finds a model by prefix, the most specific entry first', () => {
@@ -38,7 +23,6 @@ describe('estimateCall', () => {
       estimateCall({ model: 'claude-sonnet-4-6', bodyBytes: 4_000, maxTokens: 1_000 }),
     ).toEqual({
       model: 'claude-sonnet-4-6',
-      tier: 'M',
       inputTokens: 1_000,
       outputTokens: 1_000,
       estimateUsd: '0.018',
