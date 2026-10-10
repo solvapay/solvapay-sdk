@@ -57,4 +57,18 @@ describe('OpperAccounts', () => {
     expect(opper.projects.has('sp-alice')).toBe(true)
     expect(await store.get('account:alice')).toBeNull()
   })
+
+  it('reads usage with the user key', async () => {
+    const { opper, accounts } = await setup()
+    await accounts.open('alice')
+    const row = {
+      timeBucket: '2026-10-10T00:00:00Z',
+      cost: '0.01',
+      groups: { decision_id: 'dec_A' },
+    }
+    opper.usage.set('op-secret-1', [row])
+    const query = { groupBy: ['decision_id'], granularity: 'month' as const }
+    expect(await accounts.readUsage('alice', query)).toEqual([row])
+    expect(opper.usageQueries).toEqual([query])
+  })
 })

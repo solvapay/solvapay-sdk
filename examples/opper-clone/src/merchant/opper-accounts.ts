@@ -10,7 +10,7 @@ import {
 } from '../lib/crypto'
 import { isRecord, requireInteger, requireString } from '../lib/guards'
 import type { KvStore } from '../lib/kv-store'
-import type { OpperManagement, ProjectSpend } from './opper-client'
+import type { OpperManagement, ProjectSpend, UsageQuery, UsageRow } from './opper-client'
 
 const KEY_NAME = 'opper-clone'
 
@@ -24,6 +24,7 @@ export interface OpenAccount {
 export interface ProviderAccount {
   open(userRef: string): Promise<OpenAccount>
   readSpend(userRef: string): Promise<ProjectSpend>
+  readUsage(userRef: string, query: UsageQuery): Promise<UsageRow[]>
   close(userRef: string): Promise<void>
 }
 
@@ -57,6 +58,12 @@ export class OpperAccounts implements ProviderAccount {
   async readSpend(userRef: string): Promise<ProjectSpend> {
     const record = await this.requireRecord(userRef)
     return this.opper.getMe(await decryptString(this.encryptionKey, record.key))
+  }
+
+  /** Opper's usage on the user's key, split by tag (reconciliation reads it). */
+  async readUsage(userRef: string, query: UsageQuery): Promise<UsageRow[]> {
+    const record = await this.requireRecord(userRef)
+    return this.opper.getUsage(await decryptString(this.encryptionKey, record.key), query)
   }
 
   /** Revokes the key and keeps the project, so Opper's spend history stays visible. */

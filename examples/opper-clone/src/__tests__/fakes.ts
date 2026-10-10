@@ -13,6 +13,8 @@ import type {
   OpperManagement,
   OpperProject,
   ProjectSpend,
+  UsageQuery,
+  UsageRow,
 } from '../merchant/opper-client'
 
 /** In-memory stand-in for Opper's Management API. */
@@ -57,6 +59,19 @@ export class FakeOpperManagement implements OpperManagement {
       throw new Error('unknown runtime key')
     }
     return { spentCents: 12, limitCents: null, blocked: false, blockReason: null }
+  }
+
+  /** Usage rows Opper returns, per runtime key secret. */
+  readonly usage = new Map<string, UsageRow[]>()
+  readonly usageQueries: UsageQuery[] = []
+
+  async getUsage(runtimeKey: string, query: UsageQuery): Promise<UsageRow[]> {
+    this.calls.push('getUsage')
+    if (![...this.keys.values()].some(key => key.secret === runtimeKey)) {
+      throw new Error('unknown runtime key')
+    }
+    this.usageQueries.push(query)
+    return this.usage.get(runtimeKey) ?? []
   }
 
   /** Simulates a previous run that minted a key and crashed before storing it. */

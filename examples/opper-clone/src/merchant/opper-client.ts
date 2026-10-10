@@ -1,6 +1,8 @@
 // Ported from solvapay/opper-mcp src/opper/client.ts: the project, key and
 // spend calls only. Budget rules are left out: SolvaPay credits decide, with
-// no cap mirror at Opper (prototype spec §8.2a).
+// no cap mirror at Opper (prototype spec §8.2a). The usage read-back
+// (`GET /v2/analytics/usage`) is live but missing from Opper's OpenAPI; its
+// shape follows docs.opper.ai/build/gateway/usage-attribution.
 import { isRecord, requireInteger, requireString } from '../lib/guards'
 
 export class OpperUpstreamError extends Error {
@@ -35,12 +37,31 @@ export interface ProjectSpend {
   blockReason: string | null
 }
 
+export interface UsageQuery {
+  /** Tag keys to split by; untagged usage comes back with the key `null`. */
+  groupBy: string[]
+  granularity: 'minute' | 'hour' | 'day' | 'month' | 'year'
+  /** Inclusive, ISO 8601. Opper defaults to the start of the current month. */
+  from?: string
+  /** Exclusive, ISO 8601. */
+  to?: string
+}
+
+export interface UsageRow {
+  timeBucket: string
+  /** USD as Opper sends it, a decimal string. */
+  cost: string
+  /** One value per `groupBy` key; null for usage without that tag. */
+  groups: Record<string, string | null>
+}
+
 /** What the per-user accounts need from Opper's Management API. */
 export interface OpperManagement {
   createProject(name: string): Promise<OpperProject>
   mintKey(projectUuid: string, name: string, idempotencyKey: string): Promise<MintedKey>
   deleteKey(projectUuid: string, id: number): Promise<void>
   getMe(runtimeKey: string): Promise<ProjectSpend>
+  getUsage(runtimeKey: string, query: UsageQuery): Promise<UsageRow[]>
 }
 
 export class OpperClient implements OpperManagement {
@@ -116,6 +137,20 @@ export class OpperClient implements OpperManagement {
     }
   }
 
+  async getUsage(runtimeKey: string, query: UsageQuery): Promise<UsageRow[]> {
+    const params = new URLSearchParams({
+      group_by: query.groupBy.join(','),
+      granularity: query.granularity,
+    })
+    if (query.from) params.set('from_date', query.from)
+    if (query.to) params.set('to_date', query.to)
+    const { data } = await this.request('GET', `/v2/analytics/usage?${params}`, runtimeKey)
+    if (!Array.isArray(data)) {
+      throw new OpperUpstreamError('GET /v2/analytics/usage did not return a list', 200)
+    }
+    return data.map(row => parseUsageRow(row, query.groupBy))
+  }
+
   private async request(
     method: string,
     path: string,
@@ -178,5 +213,22 @@ function parseProject(data: Record<string, unknown>): OpperProject {
   return {
     uuid: requireString(data.uuid, 'project uuid'),
     name: requireString(data.name, 'project name'),
+  }
+}
+
+function parseUsageRow(row: unknown, groupBy: string[]): UsageRow {
+  if (!isRecord(row)) throw new OpperUpstreamError('Usage row was not an object', 200)
+  const groups: Record<string, string | null> = {}
+  for (const key of groupBy) {
+    const value = row[key]
+    if (value !== null && typeof value !== 'string') {
+      throw new OpperUpstreamError(`Usage row ${key} was neither a string nor null`, 200)
+    }
+    groups[key] = value
+  }
+  return {
+    timeBucket: requireString(row.time_bucket, 'usage time_bucket'),
+    cost: requireString(row.cost, 'usage cost'),
+    groups,
   }
 }
