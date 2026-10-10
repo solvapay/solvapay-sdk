@@ -243,7 +243,9 @@ describe('agent tokens', () => {
     expect(opper.projects.has(`sp-${PRINCIPAL}`)).toBe(true)
     expect(seen[0].headers.get('authorization')).toBe('Bearer op-secret-1')
     expect(seen[0].headers.get('x-opper-tags')).toMatch(
-      new RegExp(`clone_user:${PRINCIPAL},agent_id:agt_TESTAGNT,decision_id:dec_TEST0001$`),
+      new RegExp(
+        `clone_user:${PRINCIPAL},agent_id:agt_TESTAGNT,decision_id:dec_TEST0001,policy_id:pol_TESTPOL1$`,
+      ),
     )
     expect(await completed(events)).toMatchObject({
       auth: 'agent',
@@ -544,7 +546,7 @@ describe('spend policy', () => {
     expect((await app.request(messages({ authorization: `Bearer ${token}` }))).status).toBe(422)
   })
 
-  it('settles the policy first, then the credit debit with decision_ref, and tags the call', async () => {
+  it('settles the policy first, then the credit debit with the decision, agent and policy, and tags the call', async () => {
     const { app, seen, events, api, agentApi } = await setup(streamed)
     const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
     const response = await app.request(messages({ authorization: `Bearer ${token}` }))
@@ -555,8 +557,14 @@ describe('spend policy', () => {
       { decisionRef: 'dec_TEST0001', source: 'reported', amountUsd: '0.000043', usagesBefore: 0 },
     ])
     expect(api.usages).toHaveLength(1)
-    expect(api.usages[0].metadata).toMatchObject({ decision_ref: 'dec_TEST0001' })
-    expect(seen[0].headers.get('x-opper-tags')).toMatch(/,decision_id:dec_TEST0001$/)
+    expect(api.usages[0].metadata).toMatchObject({
+      decision_ref: 'dec_TEST0001',
+      agent_id: expect.stringMatching(/^agt_/),
+      policy_id: 'pol_TESTPOL1',
+    })
+    expect(seen[0].headers.get('x-opper-tags')).toMatch(
+      /,agent_id:agt_\w+,decision_id:dec_TEST0001,policy_id:pol_TESTPOL1$/,
+    )
     expect(fields).toMatchObject({
       decisionRef: 'dec_TEST0001',
       policyRef: 'pol_TESTPOL1',

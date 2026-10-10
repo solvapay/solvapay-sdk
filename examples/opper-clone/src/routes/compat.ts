@@ -268,7 +268,13 @@ export function compatRoutes(deps: CompatDeps): Hono {
         request: call.request,
         customerRef,
         estimateUsd: estimate.estimateUsd,
-        metadata: { decision_ref: decided.decisionRef },
+        // What the merchant's usage event says about the agent's call: the decision,
+        // the agent and the spend policy. SolvaPay's statement and provider view read it.
+        metadata: {
+          decision_ref: decided.decisionRef,
+          agent_id: call.agentRef,
+          ...(decided.policy ? { policy_id: decided.policy.reference } : {}),
+        },
       })
     } catch (error) {
       deps.log.error('call.metering_failed', { requestId, error: errorMessage(error) })
@@ -321,6 +327,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     if (call.userRef) tags.clone_user = call.userRef
     if (call.agentRef) tags.agent_id = call.agentRef
     if (call.metered) tags.decision_id = call.metered.decided.decisionRef
+    if (call.metered?.decided.policy) tags.policy_id = call.metered.decided.policy.reference
     let forwarded
     try {
       forwarded = await deps.upstream.forward({
