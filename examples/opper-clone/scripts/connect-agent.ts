@@ -125,6 +125,16 @@ try {
     await card(args[0] ? Number(args[0]) : 250)
   } else if (command === 'merchant') {
     print(await call('GET', `/v1/account/merchants/${providerRef}`, undefined, await session()))
+  } else if (command === 'statement') {
+    const period = args[0] ?? new Date().toISOString().slice(0, 7)
+    print(
+      await call(
+        'GET',
+        `/v1/account/statement?period=${period}&limit=200`,
+        undefined,
+        await session(),
+      ),
+    )
   } else if (command === 'policy' && args[0] === 'create') {
     await policyCreate(args.slice(1))
   } else if (command === 'policy' && args[0] === 'update' && args.length > 1) {
@@ -141,6 +151,7 @@ try {
         '       pnpm agent:connect agent new <name>\n' +
         '       pnpm agent:connect card [amount in cents, default 250]\n' +
         '       pnpm agent:connect merchant\n' +
+        '       pnpm agent:connect statement [YYYY-MM, default this month]\n' +
         '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
         '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
         '                                        [--max-topup x] [--low-water x]\n' +
