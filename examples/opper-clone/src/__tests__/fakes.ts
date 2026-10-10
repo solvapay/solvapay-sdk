@@ -7,6 +7,8 @@ import {
   type SettleInput,
   type SettleResponse,
   type SolvaPayAgentClient,
+  type UsageReport,
+  type UsageReportResponse,
 } from '../agent-layer/client'
 import type {
   MintedKey,
@@ -215,9 +217,11 @@ export class FakeSolvaPayApi {
 }
 
 /**
- * In-memory stand-in for SolvaPay's agent endpoints (decide, settle). Every
- * decision has the action set on `action`; each settle records how many usage
- * rows the credit side had written by then, to check the order.
+ * In-memory stand-in for SolvaPay's agent endpoints (decide, settle, usage
+ * reports). Every decision has the action set on `action`; each settle
+ * records how many usage rows the credit side had written by then, to check
+ * the order. A usage report is answered by `respond`, by default every call
+ * matched and nothing flagged.
  */
 export class FakeAgentApi implements SolvaPayAgentClient {
   action: 'allow' | 'ask' | 'deny' = 'allow'
@@ -231,6 +235,21 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   promptExcerptWanted: boolean | null = null
   readonly decides: DecideInput[] = []
   readonly settles: (SettleInput & { usagesBefore: number })[] = []
+  readonly reports: UsageReport[] = []
+  respond: (report: UsageReport) => UsageReportResponse = report => ({
+    reference: `urp_TEST${String(this.reports.length).padStart(4, '0')}`,
+    duplicate: false,
+    results: report.calls.map(call => ({
+      decisionRef: call.decisionRef,
+      result: 'matched',
+      reportedUsd: call.costUsd,
+      bookedPolicyUsd: call.costUsd,
+      bookedCreditUsd: call.costUsd,
+      policyDeltaUsd: '0',
+      creditDeltaUsd: '0',
+    })),
+    untagged: { totalUsd: '0', beforePolicyUsd: '0', flagged: false },
+  })
   private next = 1
 
   constructor(private readonly api?: FakeSolvaPayApi) {}
@@ -279,5 +298,10 @@ export class FakeAgentApi implements SolvaPayAgentClient {
       policy: { spentPeriodUsd: input.amountUsd ?? '0', spentDayUsd: '0', reservedUsd: '0' },
       flags: input.source === 'provisional' ? ['provisional'] : [],
     }
+  }
+
+  async reportUsage(report: UsageReport): Promise<UsageReportResponse> {
+    this.reports.push(report)
+    return this.respond(report)
   }
 }

@@ -8,6 +8,7 @@
     "merchant-key": "tsx scripts/add-merchant-key.ts",
     "agent:connect": "tsx scripts/connect-agent.ts",
     "opper-usage": "tsx scripts/opper-usage.ts",
+    "reconcile": "tsx scripts/reconcile.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

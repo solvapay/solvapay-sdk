@@ -79,7 +79,7 @@ export function createMetering(deps: {
   function customerOf(principalRef: string): Promise<string | null> {
     const known = customers.get(principalRef)
     if (known) return known
-    const lookup = findCustomer(principalRef)
+    const lookup = findCustomerRef(deps.solvaPay, principalRef)
     customers.set(principalRef, lookup)
     // Only a found customer is kept: an unlinked principal may link later.
     lookup.then(
@@ -87,17 +87,6 @@ export function createMetering(deps: {
       () => customers.delete(principalRef),
     )
     return lookup
-  }
-
-  /** Lookup only: the customer is created when the consumer links the agent, never here. */
-  async function findCustomer(principalRef: string): Promise<string | null> {
-    try {
-      const customer = await deps.solvaPay.getCustomer({ externalRef: principalRef })
-      return customer.customerRef ?? null
-    } catch (error) {
-      if (isNotFound(error)) return null
-      throw error
-    }
   }
 
   return {
@@ -132,6 +121,23 @@ export function createMetering(deps: {
         },
       }
     },
+  }
+}
+
+/**
+ * The customer a principal is at this merchant, or null when it never linked.
+ * Lookup only: the customer is created when the consumer links the agent, never here.
+ */
+export async function findCustomerRef(
+  solvaPay: Pick<SolvaPay, 'getCustomer'>,
+  principalRef: string,
+): Promise<string | null> {
+  try {
+    const customer = await solvaPay.getCustomer({ externalRef: principalRef })
+    return customer.customerRef ?? null
+  } catch (error) {
+    if (isNotFound(error)) return null
+    throw error
   }
 }
 

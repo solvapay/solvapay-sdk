@@ -13,6 +13,7 @@ import type { KvStore } from '../lib/kv-store'
 import type { OpperManagement, ProjectSpend, UsageQuery, UsageRow } from './opper-client'
 
 const KEY_NAME = 'opper-clone'
+const RECORD_PREFIX = 'account:'
 
 export interface OpenAccount {
   projectUuid: string
@@ -25,7 +26,13 @@ export interface ProviderAccount {
   open(userRef: string): Promise<OpenAccount>
   readSpend(userRef: string): Promise<ProjectSpend>
   readUsage(userRef: string, query: UsageQuery): Promise<UsageRow[]>
+  rotate(userRef: string): Promise<RotatedKey>
   close(userRef: string): Promise<void>
+}
+
+export interface RotatedKey {
+  oldKeyId: number
+  newKeyId: number
 }
 
 interface AccountRecord {
@@ -66,6 +73,42 @@ export class OpperAccounts implements ProviderAccount {
     return this.opper.getUsage(await decryptString(this.encryptionKey, record.key), query)
   }
 
+  /** The users with an account, from the stored records. */
+  async userRefs(): Promise<string[]> {
+    const keys = await this.store.keys(RECORD_PREFIX)
+    return keys.map(key => key.slice(RECORD_PREFIX.length))
+  }
+
+  /**
+   * The user's Opper project. Opper's usage is organisation-wide on any key,
+   * so reconciliation keeps the rows of this project only.
+   */
+  async projectUuid(userRef: string): Promise<string> {
+    return (await this.requireRecord(userRef)).projectUuid
+  }
+
+  /**
+   * Replaces the user's key: mints a new one, stores it, then revokes the old
+   * one, so the stored record never points at a revoked key. A failure after
+   * the mint leaves a spare key at Opper, never a user without one.
+   */
+  async rotate(userRef: string): Promise<RotatedKey> {
+    const record = await this.requireRecord(userRef)
+    const minted = await this.opper.mintKey(
+      record.projectUuid,
+      KEY_NAME,
+      `${userRef}:key:${crypto.randomUUID()}`,
+    )
+    if (!minted.key) throw new Error('Opper minted a key without returning the secret')
+    await this.writeRecord({
+      ...record,
+      keyId: minted.id,
+      key: await encryptString(this.encryptionKey, minted.key),
+    })
+    await this.opper.deleteKey(record.projectUuid, record.keyId)
+    return { oldKeyId: record.keyId, newKeyId: minted.id }
+  }
+
   /** Revokes the key and keeps the project, so Opper's spend history stays visible. */
   async close(userRef: string): Promise<void> {
     const record = await this.requireRecord(userRef)
@@ -84,17 +127,14 @@ export class OpperAccounts implements ProviderAccount {
     }
     const project = await this.opper.createProject(`sp-${userRef}`)
     const minted = await this.mint(project.uuid, userRef)
-    await this.store.put(
-      recordKey(userRef),
-      JSON.stringify({
-        version: 1,
-        userRef,
-        projectUuid: project.uuid,
-        projectName: project.name,
-        keyId: minted.id,
-        key: await encryptString(this.encryptionKey, minted.key),
-      } satisfies AccountRecord),
-    )
+    await this.writeRecord({
+      version: 1,
+      userRef,
+      projectUuid: project.uuid,
+      projectName: project.name,
+      keyId: minted.id,
+      key: await encryptString(this.encryptionKey, minted.key),
+    })
     return { projectUuid: project.uuid, projectName: project.name, runtimeKey: minted.key }
   }
 
@@ -114,6 +154,10 @@ export class OpperAccounts implements ProviderAccount {
     )
     if (!second.key) throw new Error('Opper minted a key without returning the secret')
     return { id: second.id, key: second.key }
+  }
+
+  private writeRecord(record: AccountRecord): Promise<void> {
+    return this.store.put(recordKey(record.userRef), JSON.stringify(record))
   }
 
   private async requireRecord(userRef: string): Promise<AccountRecord> {
@@ -141,5 +185,5 @@ export class OpperAccounts implements ProviderAccount {
 }
 
 function recordKey(userRef: string): string {
-  return `account:${userRef}`
+  return `${RECORD_PREFIX}${userRef}`
 }

@@ -7,6 +7,8 @@ export interface KvStore {
   get(key: string): Promise<string | null>
   put(key: string, value: string): Promise<void>
   delete(key: string): Promise<void>
+  /** The keys that start with `prefix`, sorted. */
+  keys(prefix: string): Promise<string[]>
 }
 
 export class MemoryKvStore implements KvStore {
@@ -22,6 +24,10 @@ export class MemoryKvStore implements KvStore {
 
   async delete(key: string): Promise<void> {
     this.entries.delete(key)
+  }
+
+  async keys(prefix: string): Promise<string[]> {
+    return [...this.entries.keys()].filter(key => key.startsWith(prefix)).sort()
   }
 }
 
@@ -50,6 +56,14 @@ export class FileKvStore implements KvStore {
     return this.mutate(entries => {
       delete entries[key]
     })
+  }
+
+  async keys(prefix: string): Promise<string[]> {
+    await this.queue
+    const entries = await this.readAll()
+    return Object.keys(entries)
+      .filter(key => key.startsWith(prefix))
+      .sort()
   }
 
   private mutate(change: (entries: Record<string, string>) => void): Promise<void> {

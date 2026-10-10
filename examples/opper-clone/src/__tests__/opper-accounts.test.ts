@@ -71,4 +71,47 @@ describe('OpperAccounts', () => {
     expect(await accounts.readUsage('alice', query)).toEqual([row])
     expect(opper.usageQueries).toEqual([query])
   })
+
+  it('lists the users with an account and reads a user project', async () => {
+    const { accounts, store } = await setup()
+    await accounts.open('bob')
+    await accounts.open('alice')
+    await store.put('reconcile:alice', '{}')
+    expect(await accounts.userRefs()).toEqual(['alice', 'bob'])
+    expect(await accounts.projectUuid('alice')).toBe('uuid-sp-alice')
+    await expect(accounts.projectUuid('carol')).rejects.toThrow('No Opper account for carol')
+  })
+
+  it('rotates: mints a new key, stores it, then revokes the old one', async () => {
+    const { opper, store, accounts } = await setup()
+    await accounts.open('alice')
+    opper.calls.length = 0
+    let storedWhenRevoked: string | null = null
+    const deleteKey = opper.deleteKey.bind(opper)
+    opper.deleteKey = async (projectUuid, id) => {
+      storedWhenRevoked = await store.get('account:alice')
+      return deleteKey(projectUuid, id)
+    }
+
+    expect(await accounts.rotate('alice')).toEqual({ oldKeyId: 1, newKeyId: 2 })
+    expect(opper.calls).toEqual([
+      expect.stringMatching(/^mintKey alice:key:[0-9a-f-]{36}$/),
+      'deleteKey 1',
+    ])
+    expect(storedWhenRevoked).toBe(await store.get('account:alice'))
+    expect([...opper.keys.keys()]).toEqual([2])
+    expect((await accounts.open('alice')).runtimeKey).toBe('op-secret-2')
+    expect(await accounts.projectUuid('alice')).toBe('uuid-sp-alice')
+  })
+
+  it('keeps the old key stored when the mint fails', async () => {
+    const { opper, accounts } = await setup()
+    await accounts.open('alice')
+    opper.mintKey = async () => {
+      throw new Error('Opper down')
+    }
+    await expect(accounts.rotate('alice')).rejects.toThrow('Opper down')
+    expect((await accounts.open('alice')).runtimeKey).toBe('op-secret-1')
+    expect(opper.keys.has(1)).toBe(true)
+  })
 })

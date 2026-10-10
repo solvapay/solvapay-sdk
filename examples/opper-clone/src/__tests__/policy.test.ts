@@ -124,6 +124,81 @@ describe('SolvaPayAgentClient', () => {
     expect(seen[1].url).toBe('http://solvapay.test/v1/sdk/agent/settle')
   })
 
+  it('posts a usage report and reads the results field by field', async () => {
+    const seen: { url: string; auth: string | null; body: unknown }[] = []
+    const answer = {
+      reference: 'urp_TEST0001',
+      duplicate: false,
+      results: [
+        {
+          decisionRef: 'dec_A',
+          result: 'adjusted',
+          reason: 'provisional',
+          reportedUsd: '0.0062612',
+          bookedPolicyUsd: '0.0912',
+          bookedCreditUsd: '0.0912',
+          policyDeltaUsd: '-0.0849388',
+          creditDeltaUsd: '-0.0849388',
+        },
+        {
+          decisionRef: 'dec_B',
+          result: 'matched',
+          reason: null,
+          reportedUsd: '0.01',
+          bookedPolicyUsd: '0.01',
+          bookedCreditUsd: '0.01',
+          policyDeltaUsd: '0',
+          creditDeltaUsd: '0',
+        },
+      ],
+      untagged: { totalUsd: '0.04', beforePolicyUsd: '0', flagged: true },
+    }
+    let reply: Response = Response.json(answer)
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      seen.push({
+        url,
+        auth: new Headers(init.headers).get('authorization'),
+        body: JSON.parse(String(init.body)),
+      })
+      return reply
+    }) as unknown as typeof fetch
+    const client = createSolvaPayAgentClient({
+      apiBaseUrl: 'http://solvapay.test',
+      secretKey: 'sk_sandbox_x',
+      fetchImpl,
+    })
+    const report = {
+      reportId: 'alice:2026-09-01T00:00:00Z:2026-10-10T11:45:00Z',
+      customerRef: 'cus_TESTCUST',
+      source: 'opper:/v2/analytics/usage',
+      window: { from: '2026-09-01T00:00:00Z', to: '2026-10-10T11:45:00Z' },
+      calls: [{ decisionRef: 'dec_A', costUsd: '0.0062612' }],
+      untagged: [{ at: '2026-10-10T11:00:00.000Z', costUsd: '0.04' }],
+    }
+
+    const response = await client.reportUsage(report)
+    expect(seen).toEqual([
+      {
+        url: 'http://solvapay.test/v1/sdk/agent/usage-reports',
+        auth: 'Bearer sk_sandbox_x',
+        body: report,
+      },
+    ])
+    expect(response.results[0]).toEqual(answer.results[0])
+    expect(response.results[1]).not.toHaveProperty('reason')
+    expect(response.untagged).toEqual({ totalUsd: '0.04', beforePolicyUsd: '0', flagged: true })
+
+    reply = new Response('{"message":"to must be at least 10 minutes ago"}', { status: 422 })
+    const refused = client.reportUsage(report)
+    await expect(refused).rejects.toBeInstanceOf(AgentApiError)
+    await expect(refused).rejects.toMatchObject({ status: 422 })
+
+    reply = Response.json({ ...answer, untagged: { ...answer.untagged, flagged: 'yes' } })
+    await expect(client.reportUsage(report)).rejects.toThrow('untagged.flagged must be a boolean')
+    reply = Response.json({ ...answer, results: [{ ...answer.results[0], result: 'fixed' }] })
+    await expect(client.reportUsage(report)).rejects.toThrow(/result must be one of/)
+  })
+
   it('sends the prompt hash and tool error, and the excerpt only once SolvaPay wants it', async () => {
     const api = new FakeAgentApi()
     const policy = createPolicy({ client: api })

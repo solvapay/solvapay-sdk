@@ -14,6 +14,8 @@ export interface CloneConfig {
   solvapayApiBaseUrl: string
   solvapaySecretKey: string
   productRef: string
+  /** Minutes between reconciliation runs; 0 turns the in-process runs off. */
+  reconcileEveryMinutes: number
   dataDir: string
 }
 
@@ -32,6 +34,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CloneConfig {
     solvapayApiBaseUrl: required(env, 'SOLVAPAY_API_BASE_URL').replace(/\/+$/, ''),
     solvapaySecretKey: required(env, 'SOLVAPAY_SECRET_KEY'),
     productRef: required(env, 'SOLVAPAY_PRODUCT_REF'),
+    reconcileEveryMinutes: reconcileEveryMinutes(env),
     dataDir: fileURLToPath(new URL('../data/', import.meta.url)),
   }
 }
@@ -40,4 +43,15 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]?.trim()
   if (!value) throw new Error(`${name} is not set. Copy .env.example to .env and fill it in.`)
   return value
+}
+
+/** Optional, default 60; 0 disables. Anything else but a whole number of minutes fails. */
+function reconcileEveryMinutes(env: NodeJS.ProcessEnv): number {
+  const raw = env.RECONCILE_EVERY_MINUTES?.trim()
+  if (!raw) return 60
+  const minutes = Number(raw)
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(minutes)) {
+    throw new Error('RECONCILE_EVERY_MINUTES must be a whole number of minutes (0 turns it off)')
+  }
+  return minutes
 }

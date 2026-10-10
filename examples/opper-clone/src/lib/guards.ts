@@ -15,3 +15,8 @@ export function requireInteger(value: unknown, label: string): number {
   }
   return value
 }
+
+export function requireBoolean(value: unknown, label: string): boolean {
+  if (typeof value !== 'boolean') throw new Error(`${label} must be a boolean`)
+  return value
+}

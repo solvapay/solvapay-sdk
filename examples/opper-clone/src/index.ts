@@ -15,6 +15,7 @@ import { consoleLogger } from './log'
 import { merchantKeysFrom, readMerchantKeyFile } from './merchant/merchant-keys'
 import { OpperAccounts } from './merchant/opper-accounts'
 import { OpperClient } from './merchant/opper-client'
+import { createReconciler } from './merchant/reconciler'
 import { createOpperUpstream } from './upstream/opper'
 
 const config = loadConfig()
@@ -22,6 +23,21 @@ const entries = await readMerchantKeyFile(join(config.dataDir, 'merchant-keys.js
 if (entries.length === 0) {
   consoleLogger.info('merchant_keys.none', { hint: 'pnpm merchant-key <userRef> <label>' })
 }
+
+const store = new FileKvStore(join(config.dataDir, 'kv.json'))
+const accounts = new OpperAccounts(
+  new OpperClient(config.opperBaseUrl, config.opperManagementKey),
+  store,
+  await importEncryptionKey(config.keyEncryptionKey),
+)
+const solvaPay = createSolvaPay({
+  apiKey: config.solvapaySecretKey,
+  apiBaseUrl: config.solvapayApiBaseUrl,
+})
+const agentClient = createSolvaPayAgentClient({
+  apiBaseUrl: config.solvapayApiBaseUrl,
+  secretKey: config.solvapaySecretKey,
+})
 
 const app = createApp({
   agentLayer: createAgentLayer({
@@ -32,24 +48,9 @@ const app = createApp({
     }),
   }),
   merchantKeys: merchantKeysFrom(entries),
-  accounts: new OpperAccounts(
-    new OpperClient(config.opperBaseUrl, config.opperManagementKey),
-    new FileKvStore(join(config.dataDir, 'kv.json')),
-    await importEncryptionKey(config.keyEncryptionKey),
-  ),
-  metering: createMetering({
-    solvaPay: createSolvaPay({
-      apiKey: config.solvapaySecretKey,
-      apiBaseUrl: config.solvapayApiBaseUrl,
-    }),
-    productRef: config.productRef,
-  }),
-  policy: createPolicy({
-    client: createSolvaPayAgentClient({
-      apiBaseUrl: config.solvapayApiBaseUrl,
-      secretKey: config.solvapaySecretKey,
-    }),
-  }),
+  accounts,
+  metering: createMetering({ solvaPay, productRef: config.productRef }),
+  policy: createPolicy({ client: agentClient }),
   upstream: createOpperUpstream({ baseUrl: config.opperBaseUrl }),
   log: consoleLogger,
 })
@@ -63,4 +64,14 @@ serve({ fetch: app.fetch, port: config.port }, info => {
     agentIssuer: config.agentIssuer,
     anthropicBaseUrl: `http://localhost:${info.port}/v3/compat`,
   })
+  if (config.reconcileEveryMinutes === 0) {
+    consoleLogger.info('reconcile.off', {
+      hint: 'RECONCILE_EVERY_MINUTES=0; pnpm reconcile runs once',
+    })
+    return
+  }
+  createReconciler({ accounts, store, solvaPay, agentClient, log: consoleLogger }).start(
+    config.reconcileEveryMinutes,
+  )
+  consoleLogger.info('reconcile.scheduled', { everyMinutes: config.reconcileEveryMinutes })
 })
