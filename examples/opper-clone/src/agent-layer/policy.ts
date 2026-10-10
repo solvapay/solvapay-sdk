@@ -29,6 +29,8 @@ interface DecisionFields {
   budget: DecideResponse['budget'] | null
   /** The month's approval, when SolvaPay reports one; shown to the human, never acted on. */
   approval: DecideResponse['approval'] | null
+  /** How long SolvaPay took to decide, round trip, in milliseconds. */
+  decideMs: number
 }
 
 export type Decided =
@@ -54,6 +56,7 @@ export interface Policy {
 export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
   return {
     async decide({ agentToken, requestId, model, tier, estimateUsd }) {
+      const started = performance.now()
       const decision = await deps.client.decide({
         agentToken,
         requestId,
@@ -62,6 +65,7 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
         tier,
         estimatedCost: estimateUsd,
       })
+      const decideMs = Math.round((performance.now() - started) * 10) / 10
       const fields: DecisionFields = {
         decisionRef: decision.decisionRef,
         reasonCode: decision.reasonCode,
@@ -69,6 +73,7 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
         policy: decision.policy ?? null,
         budget: decision.budget ?? null,
         approval: decision.approval ?? null,
+        decideMs,
       }
       if (decision.action !== 'allow') return { ...fields, action: decision.action }
 

@@ -35,6 +35,7 @@ describe('policy', () => {
       decisionRef: 'dec_TEST0001',
       policy: { reference: 'pol_TESTPOL1', version: 2 },
     })
+    expect(decided.decideMs).toBeGreaterThanOrEqual(0)
   })
 
   it.each(['ask', 'deny'] as const)(

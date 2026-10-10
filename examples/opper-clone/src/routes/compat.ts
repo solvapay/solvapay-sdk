@@ -431,6 +431,7 @@ function decisionFields(decided: Decided, estimate: Estimate): Record<string, un
     model: estimate.model,
     tier: estimate.tier,
     estimateUsd: estimate.estimateUsd,
+    decideMs: decided.decideMs,
     ...(decided.budget ? { budget: decided.budget } : {}),
   }
 }

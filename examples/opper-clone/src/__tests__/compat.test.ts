@@ -345,6 +345,7 @@ describe('agent billing', () => {
     expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
       reason: 'topup_required',
       decisionRef: 'dec_TEST0001',
+      decideMs: expect.any(Number),
     })
   })
 
