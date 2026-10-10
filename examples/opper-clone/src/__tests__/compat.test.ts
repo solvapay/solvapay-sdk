@@ -289,6 +289,31 @@ describe('agent billing', () => {
     return app.request(messages({ authorization: `Bearer ${token}` }))
   }
 
+  it('sends the hash of the last user turn to decide, and logs its first 8 digits', async () => {
+    const { app, events, agentApi } = await setup(streamed)
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const response = await app.request(
+      new Request('http://clone.test/v3/compat/v1/messages?beta=true', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          stream: true,
+          messages: [{ role: 'user', content: 'In one sentence, what is a spend policy?' }],
+        }),
+      }),
+    )
+    await response.text()
+    const sent = agentApi.decides[0]
+    expect(sent.promptHash).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(sent.toolError).toBe(false)
+    expect(sent).not.toHaveProperty('promptExcerpt')
+    expect(await completed(events)).toMatchObject({
+      promptHash8: sent.promptHash?.slice(7, 15),
+      excerptSent: false,
+    })
+  })
+
   it("debits an agent's streamed call at the cost in message_delta", async () => {
     const { app, events, api } = await setup(streamed)
     api.balanceUsd = '2.999957'

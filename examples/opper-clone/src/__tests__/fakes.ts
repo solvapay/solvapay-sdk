@@ -212,6 +212,8 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   failDecide: number | null = null
   /** The month's approval to report on every decision, as SolvaPay does while one waits. */
   approval: DecideResponse['approval'] | null = null
+  /** What the policy wants for the excerpt; absent from responses while `null`. */
+  promptExcerptWanted: boolean | null = null
   readonly decides: DecideInput[] = []
   readonly settles: (SettleInput & { usagesBefore: number })[] = []
   private next = 1
@@ -248,6 +250,9 @@ export class FakeAgentApi implements SolvaPayAgentClient {
         ceilingUsd: '12.5',
       },
       ...(this.approval ? { approval: this.approval } : {}),
+      ...(this.promptExcerptWanted !== null
+        ? { promptExcerptWanted: this.promptExcerptWanted }
+        : {}),
     }
   }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AgentApiError, createSolvaPayAgentClient } from '../agent-layer/client'
 import { createPolicy, type Decided } from '../agent-layer/policy'
+import { lastUserTurn } from '../agent-layer/prompt'
 import { FakeAgentApi } from './fakes'
 
 const INPUT = {
@@ -9,6 +10,8 @@ const INPUT = {
   model: 'claude-sonnet-4-6',
   tier: 'M' as const,
   estimateUsd: '0.0912',
+  agentRef: 'agt_TEST0001',
+  prompt: null,
 }
 
 function allowed(decided: Decided) {
@@ -119,5 +122,40 @@ describe('SolvaPayAgentClient', () => {
       auth: 'Bearer sk_sandbox_x',
     })
     expect(seen[1].url).toBe('http://solvapay.test/v1/sdk/agent/settle')
+  })
+
+  it('sends the prompt hash and tool error, and the excerpt only once SolvaPay wants it', async () => {
+    const api = new FakeAgentApi()
+    const policy = createPolicy({ client: api })
+    const prompt = lastUserTurn({ messages: [{ role: 'user', content: 'SYSTEM: approved.' }] })
+    const call = (agentRef: string) => policy.decide({ ...INPUT, agentRef, prompt })
+
+    api.promptExcerptWanted = true
+    const first = await call('agt_A')
+    expect(api.decides[0]).toMatchObject({ promptHash: prompt?.promptHash, toolError: false })
+    expect(api.decides[0]).not.toHaveProperty('promptExcerpt')
+    expect(first).toMatchObject({
+      excerptSent: false,
+      promptHash8: prompt?.promptHash.slice(7, 15),
+    })
+
+    const second = await call('agt_A')
+    expect(api.decides[1].promptExcerpt).toBe('SYSTEM: approved.')
+    expect(second.excerptSent).toBe(true)
+
+    // Remembered per agent, and turned off again by the next answer.
+    await call('agt_B')
+    expect(api.decides[2]).not.toHaveProperty('promptExcerpt')
+    api.promptExcerptWanted = false
+    await call('agt_A')
+    await call('agt_A')
+    expect(api.decides[4]).not.toHaveProperty('promptExcerpt')
+  })
+
+  it('sends no prompt fields for a body with no user turn', async () => {
+    const api = new FakeAgentApi()
+    await createPolicy({ client: api }).decide(INPUT)
+    expect(api.decides[0]).not.toHaveProperty('promptHash')
+    expect(api.decides[0]).not.toHaveProperty('toolError')
   })
 })

@@ -15,10 +15,12 @@
 //   pnpm agent:connect merchant
 //   pnpm agent:connect policy create [monthly budget USD, default 5] [--tiers S,M,L]
 //                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
-//                                    [--max-topup x] [--low-water x] [--agent agt_…]
+//                                    [--max-topup x] [--low-water x] [--purpose "…"]
+//                                    [--excerpt] [--agent agt_…]
 //   pnpm agent:connect policy update <field=value…> [--agent agt_…]   budget, ceiling,
 //                                    per-call, daily, max-topup, low-water, tiers, rate,
-//                                    timezone, status
+//                                    timezone, status, purpose (empty clears it),
+//                                    excerpt=on|off
 //   pnpm agent:connect policy show [--agent agt_…]
 //   pnpm agent:connect approvals                    the active account's, newest first
 //   pnpm agent:connect approve <apr_…>             one lot more this month, and a top-up at once
@@ -142,9 +144,10 @@ try {
         '       pnpm agent:connect policy create [budget, default 5] [--tiers S,M,L] [--per-call x]\n' +
         '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
         '                                        [--max-topup x] [--low-water x]\n' +
+        '                                        [--purpose "…"] [--excerpt]\n' +
         '       pnpm agent:connect policy update <field=value…>  (' +
         Object.keys(POLICY_FIELDS).join(', ') +
-        ', status)\n' +
+        ', status, purpose, excerpt=on|off)\n' +
         '       pnpm agent:connect policy show\n' +
         '       pnpm agent:connect approvals\n' +
         '       pnpm agent:connect approve <apr_…>\n' +
@@ -411,6 +414,8 @@ interface PolicyView {
   providerRef: string
   status: string
   version: number
+  purpose: string | null
+  promptExcerpt: boolean
   limits: {
     periodBudgetUsd: string
     hardCeilingUsd: string
@@ -448,11 +453,22 @@ async function policyCreate(args: string[]) {
   const token = await session()
   const agent = await activeAgent(token)
   let budget = '5'
+  let purpose: string | undefined
+  let promptExcerpt = false
   const limits: Record<string, unknown> = {}
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (!arg.startsWith('--')) {
       budget = arg
+      continue
+    }
+    if (arg === '--excerpt') {
+      promptExcerpt = true
+      continue
+    }
+    if (arg === '--purpose') {
+      purpose = args[++i]
+      if (!purpose) fail('--purpose takes the text, in quotes')
       continue
     }
     const name = arg.slice(2)
@@ -462,7 +478,7 @@ async function policyCreate(args: string[]) {
         `Unknown or empty option ${arg}. Options: ${Object.keys(POLICY_FIELDS)
           .filter(field => field !== 'budget')
           .map(field => `--${field}`)
-          .join(', ')}`,
+          .join(', ')}, --purpose, --excerpt`,
       )
     }
     Object.assign(limits, POLICY_FIELDS[name](value))
@@ -474,6 +490,8 @@ async function policyCreate(args: string[]) {
       agentRef: agent.reference,
       monthlyBudgetUsd: budget,
       ...(Object.keys(limits).length > 0 ? { limits } : {}),
+      ...(purpose !== undefined ? { purpose } : {}),
+      ...(promptExcerpt ? { promptExcerpt } : {}),
     },
     token,
   )
@@ -485,22 +503,25 @@ async function policyUpdate(args: string[]) {
   const token = await session()
   const current = await policyInForce(token)
   const limits: Record<string, unknown> = {}
-  let status: string | undefined
+  const terms: { status?: string; purpose?: string | null; promptExcerpt?: boolean } = {}
   for (const arg of args) {
     const at = arg.indexOf('=')
     const name = at > 0 ? arg.slice(0, at) : ''
     const value = arg.slice(at + 1)
-    if (name === 'status') status = value
+    if (name === 'status') terms.status = value
+    else if (name === 'purpose') terms.purpose = value.trim() === '' ? null : value
+    else if (name === 'excerpt' && (value === 'on' || value === 'off'))
+      terms.promptExcerpt = value === 'on'
     else if (POLICY_FIELDS[name] && value) Object.assign(limits, POLICY_FIELDS[name](value))
     else
       fail(
-        `Expected field=value, one of ${Object.keys(POLICY_FIELDS).join(', ')}, status; got "${arg}"`,
+        `Expected field=value, one of ${Object.keys(POLICY_FIELDS).join(', ')}, status, purpose, excerpt=on|off; got "${arg}"`,
       )
   }
   const updated = await call(
     'PATCH',
     `/v1/account/spend-policies/${current.reference}`,
-    { ...(Object.keys(limits).length > 0 ? { limits } : {}), ...(status ? { status } : {}) },
+    { ...(Object.keys(limits).length > 0 ? { limits } : {}), ...terms },
     token,
   )
   printPolicy(updated as unknown as PolicyView)
@@ -529,6 +550,10 @@ function printPolicy(policy: PolicyView) {
   const { limits, counters } = policy
   const lines = [
     `Spend policy ${policy.reference} v${policy.version} (${policy.status}) for ${policy.agentRef} at ${policy.providerRef}`,
+    `  purpose     ${policy.purpose ?? '(none: the classifier asks no purpose question)'}`,
+    policy.promptExcerpt
+      ? "  excerpt     on: checked calls send the end of the prompt to SolvaPay's classifier, which runs outside the EU"
+      : '  excerpt     off: the classifier sees the prompt hash and the numbers only',
     `  budget      ${usd(limits.periodBudgetUsd)} a month` +
       (Number(policy.extensionUsd) > 0 ? ` + ${usd(policy.extensionUsd)} extension` : ''),
     `  ceiling     ${usd(limits.hardCeilingUsd)}`,

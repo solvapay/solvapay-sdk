@@ -13,6 +13,12 @@ export interface DecideInput {
   tier: ModelTier
   /** USD decimal string. */
   estimatedCost: string
+  /** `sha256:` over the call's last user turn; repeats of it show loops. */
+  promptHash?: string
+  /** The last user turn carries a tool result marked as an error. */
+  toolError?: boolean
+  /** The end of the last user turn, only once SolvaPay said the policy wants it. */
+  promptExcerpt?: string
 }
 
 export type DecisionAction = 'allow' | 'ask' | 'deny'
@@ -35,6 +41,8 @@ export interface DecideResponse {
    * owner or a decline holds. Its status URL grants nothing.
    */
   approval?: DecideApproval
+  /** Whether the spend policy wants the prompt excerpt with this agent's next calls. */
+  promptExcerptWanted?: boolean
 }
 
 export interface DecideApproval {

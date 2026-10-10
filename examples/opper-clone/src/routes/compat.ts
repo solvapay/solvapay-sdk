@@ -2,11 +2,13 @@ import { Hono } from 'hono'
 import {
   agentErrors,
   estimateCall,
+  lastUserTurn,
   type AgentLayer,
   type Decided,
   type Estimate,
   type Policy,
   type PolicySettled,
+  type PromptFacts,
 } from '../agent-layer'
 import { AgentApiError } from '../agent-layer/client'
 import type { Metering, Opened, Settled } from '../agent-layer/metering'
@@ -48,9 +50,11 @@ interface MeteredCall {
   estimate: Estimate
 }
 
-type ReadCall = { ok: true; model: string; maxTokens?: number } | { ok: false; message: string }
+type ReadCall =
+  | { ok: true; model: string; maxTokens?: number; prompt: PromptFacts | null }
+  | { ok: false; message: string }
 
-/** The two fields the estimate needs from an Anthropic Messages body. */
+/** The fields the estimate needs from an Anthropic Messages body, and the last user turn. */
 export function readCall(body: ArrayBuffer | undefined): ReadCall {
   let parsed: unknown
   try {
@@ -63,9 +67,10 @@ export function readCall(body: ArrayBuffer | undefined): ReadCall {
   if (typeof model !== 'string' || model.trim() === '') {
     return { ok: false, message: 'model: Field required' }
   }
+  const prompt = lastUserTurn(parsed)
   return typeof maxTokens === 'number' && Number.isInteger(maxTokens) && maxTokens > 0
-    ? { ok: true, model, maxTokens }
-    : { ok: true, model }
+    ? { ok: true, model, maxTokens, prompt }
+    : { ok: true, model, prompt }
 }
 
 export function compatRoutes(deps: CompatDeps): Hono {
@@ -229,6 +234,8 @@ export function compatRoutes(deps: CompatDeps): Hono {
         model: estimate.model,
         tier: estimate.tier,
         estimateUsd: estimate.estimateUsd,
+        agentRef: call.agentRef,
+        prompt: read.prompt,
       })
     } catch (error) {
       deps.log.error('call.decide_failed', {
@@ -432,6 +439,8 @@ function decisionFields(decided: Decided, estimate: Estimate): Record<string, un
     tier: estimate.tier,
     estimateUsd: estimate.estimateUsd,
     decideMs: decided.decideMs,
+    promptHash8: decided.promptHash8,
+    excerptSent: decided.excerptSent,
     ...(decided.budget ? { budget: decided.budget } : {}),
   }
 }

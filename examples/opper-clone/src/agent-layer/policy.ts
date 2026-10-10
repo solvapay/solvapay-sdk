@@ -8,6 +8,7 @@
 // it moves into `payable` at promotion.
 import { amountToSettle, type CallResult } from './metering'
 import type { ModelTier } from './pricing'
+import type { PromptFacts } from './prompt'
 import type {
   DecideResponse,
   PolicySettleSource,
@@ -31,6 +32,10 @@ interface DecisionFields {
   approval: DecideResponse['approval'] | null
   /** How long SolvaPay took to decide, round trip, in milliseconds. */
   decideMs: number
+  /** The first 8 hex digits of the prompt hash sent, for the log; `null` when none. */
+  promptHash8: string | null
+  /** Whether the prompt excerpt went with the decide. */
+  excerptSent: boolean
 }
 
 export type Decided =
@@ -50,12 +55,22 @@ export interface Policy {
     model: string
     tier: ModelTier
     estimateUsd: string
+    /** The agent the call is for: the excerpt opt-in is remembered per agent. */
+    agentRef: string
+    /** From the last user turn; `null` when the body has none. */
+    prompt: PromptFacts | null
   }): Promise<Decided>
 }
 
 export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
+  // What SolvaPay last said each agent's policy wants. The agent token carries
+  // no policy, so the first call after the owner changes it follows the old
+  // setting; SolvaPay drops an excerpt the policy has not opted in to.
+  const excerptWanted = new Map<string, boolean>()
+
   return {
-    async decide({ agentToken, requestId, model, tier, estimateUsd }) {
+    async decide({ agentToken, requestId, model, tier, estimateUsd, agentRef, prompt }) {
+      const sendExcerpt = prompt !== null && excerptWanted.get(agentRef) === true
       const started = performance.now()
       const decision = await deps.client.decide({
         agentToken,
@@ -64,7 +79,12 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
         model,
         tier,
         estimatedCost: estimateUsd,
+        ...(prompt ? { promptHash: prompt.promptHash, toolError: prompt.toolError } : {}),
+        ...(sendExcerpt ? { promptExcerpt: prompt.excerpt } : {}),
       })
+      if (typeof decision.promptExcerptWanted === 'boolean') {
+        excerptWanted.set(agentRef, decision.promptExcerptWanted)
+      }
       const decideMs = Math.round((performance.now() - started) * 10) / 10
       const fields: DecisionFields = {
         decisionRef: decision.decisionRef,
@@ -74,6 +94,10 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
         budget: decision.budget ?? null,
         approval: decision.approval ?? null,
         decideMs,
+        promptHash8: prompt
+          ? prompt.promptHash.slice('sha256:'.length, 'sha256:'.length + 8)
+          : null,
+        excerptSent: sendExcerpt,
       }
       if (decision.action !== 'allow') return { ...fields, action: decision.action }
 
