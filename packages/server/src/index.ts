@@ -19,7 +19,14 @@ export type {
   PayableGateResult,
   PayablePaywallResult,
   PayableAllowResult,
+  PayableCostGateResult,
 } from './factory'
+export type {
+  PayableCostOptions,
+  PayableCostAllowResult,
+  CostSettleInput,
+  CostSettlement,
+} from './payable-cost'
 
 // Re-export client creation (for advanced use cases)
 export { createSolvaPayClient } from './client'
@@ -217,6 +224,8 @@ export type {
   GetHistoryResult,
   CreditDebitSkipReason,
   CreditDebitResult,
+  CostDebitResult,
+  UsageCost,
   TrackUsageRequest,
   TrackUsageResponse,
   TrackUsageBulkRequest,

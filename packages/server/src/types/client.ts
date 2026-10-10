@@ -207,6 +207,18 @@ export type CreditDebitResult =
  */
 export type CreditDebitSuccess = components['schemas']['CreditDebitSuccessResponse']
 
+/**
+ * Result of a debit by reported cost (`trackUsage` with `cost`). A cost below
+ * one credit is `debited: true` with `amount: 0`; the exact figures are the
+ * USD decimal strings `amountUsd` and `balanceUsd`.
+ */
+export type CostDebitResult =
+  | components['schemas']['CostDebitSuccessResponse']
+  | components['schemas']['CostDebitSkippedResponse']
+
+/** A cost on a usage event: a USD decimal string with up to 8 places. */
+export type UsageCost = NonNullable<components['schemas']['CreateUsageRequest']['cost']>
+
 export type TrackUsageRequest = Omit<
   Partial<components['schemas']['CreateUsageRequest']>,
   'customerRef' | 'metadata'

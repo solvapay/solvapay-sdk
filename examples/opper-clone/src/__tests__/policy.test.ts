@@ -1,0 +1,248 @@
+import { describe, expect, it } from 'vitest'
+import { AgentApiError, createSolvaPayAgentClient } from '../agent-layer/client'
+import { createPolicy, type Decided } from '../agent-layer/policy'
+import { lastUserTurn } from '../agent-layer/prompt'
+import { FakeAgentApi } from './fakes'
+
+const INPUT = {
+  agentToken: 'eyJ.agent.token',
+  requestId: 'req-1',
+  model: 'claude-sonnet-4-6',
+  estimateUsd: '0.0912',
+  agentRef: 'agt_TEST0001',
+  prompt: null,
+}
+
+function allowed(decided: Decided) {
+  if (decided.action !== 'allow') throw new Error(`expected allow, got ${decided.action}`)
+  return decided
+}
+
+describe('policy', () => {
+  it('sends the token, kind usage, the model id as item and the estimate, and returns the decision', async () => {
+    const api = new FakeAgentApi()
+    const decided = await createPolicy({ client: api }).decide(INPUT)
+    expect(api.decides).toEqual([
+      {
+        agentToken: 'eyJ.agent.token',
+        requestId: 'req-1',
+        kind: 'usage',
+        item: 'claude-sonnet-4-6',
+        estimatedCost: '0.0912',
+      },
+    ])
+    expect(api.decides[0]).not.toHaveProperty('model')
+    expect(api.decides[0]).not.toHaveProperty('tier')
+    expect(decided).toMatchObject({
+      action: 'allow',
+      decisionRef: 'dec_TEST0001',
+      policy: { reference: 'pol_TESTPOL1', version: 2 },
+    })
+    expect(decided.decideMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it.each(['ask', 'deny'] as const)(
+    'returns %s with its reason and nothing to settle',
+    async action => {
+      const api = new FakeAgentApi()
+      api.action = action
+      api.reasonCode = action === 'ask' ? 'budget_exhausted_ask' : 'per_call_cap'
+      api.reasonText = 'Reason for the human.'
+      const decided = await createPolicy({ client: api }).decide(INPUT)
+      expect(decided).toMatchObject({ action, reasonText: 'Reason for the human.' })
+      expect('settle' in decided).toBe(false)
+    },
+  )
+
+  it('keeps the approval SolvaPay reports, on an ask and on an allow', async () => {
+    const api = new FakeAgentApi()
+    api.approval = {
+      reference: 'apr_TEST0001',
+      status: 'pending',
+      expiresAt: '2026-10-10T08:15:00.000Z',
+      statusUrl: 'https://api.example.test/v1/sdk/agent/approvals/apr_TEST0001',
+    }
+    const policy = createPolicy({ client: api })
+    expect((await policy.decide(INPUT)).approval).toEqual(api.approval)
+    api.action = 'ask'
+    expect((await policy.decide({ ...INPUT, requestId: 'req-2' })).approval).toEqual(api.approval)
+    api.approval = null
+    expect((await policy.decide({ ...INPUT, requestId: 'req-3' })).approval).toBeNull()
+  })
+
+  it('settles at the reported cost, else the estimate as provisional, else releases', async () => {
+    const api = new FakeAgentApi()
+    const policy = createPolicy({ client: api })
+    await allowed(await policy.decide(INPUT)).settle({ status: 200, costUsd: 0.0829554 })
+    await allowed(await policy.decide(INPUT)).settle({ status: 200, costUsd: null })
+    await allowed(await policy.decide(INPUT)).settle({ status: 529, costUsd: null })
+    expect(api.settles.map(({ usagesBefore: _, ...rest }) => rest)).toEqual([
+      { decisionRef: 'dec_TEST0001', source: 'reported', amountUsd: '0.0829554' },
+      { decisionRef: 'dec_TEST0002', source: 'provisional', amountUsd: '0.0912' },
+      { decisionRef: 'dec_TEST0003', source: 'none' },
+    ])
+  })
+
+  it('releases once, and refuses a second settle of the same call', async () => {
+    const api = new FakeAgentApi()
+    const decided = allowed(await createPolicy({ client: api }).decide(INPUT))
+    expect((await decided.release()).source).toBe('none')
+    await expect(decided.settle({ status: 200, costUsd: 0.01 })).rejects.toThrow(/already settled/)
+    expect(api.settles).toHaveLength(1)
+  })
+})
+
+describe('SolvaPayAgentClient', () => {
+  it('posts to /v1/sdk/agent/* with the secret key and throws the status on an error', async () => {
+    const seen: { url: string; auth: string | null; body: unknown }[] = []
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      seen.push({
+        url,
+        auth: new Headers(init.headers).get('authorization'),
+        body: JSON.parse(String(init.body)),
+      })
+      return url.endsWith('/settle')
+        ? new Response('{"message":"Decision dec_X not found"}', { status: 404 })
+        : Response.json({ decisionRef: 'dec_X', action: 'allow' })
+    }) as unknown as typeof fetch
+    const client = createSolvaPayAgentClient({
+      apiBaseUrl: 'http://solvapay.test/',
+      secretKey: 'sk_sandbox_x',
+      fetchImpl,
+    })
+
+    const decision = await client.decide({
+      agentToken: INPUT.agentToken,
+      requestId: INPUT.requestId,
+      kind: 'usage',
+      item: INPUT.model,
+      estimatedCost: '0.1',
+    })
+    expect(decision.decisionRef).toBe('dec_X')
+    const failed = client.settle({ decisionRef: 'dec_X', source: 'none' })
+    await expect(failed).rejects.toBeInstanceOf(AgentApiError)
+    await expect(failed).rejects.toMatchObject({ status: 404 })
+    expect(seen[0]).toMatchObject({
+      url: 'http://solvapay.test/v1/sdk/agent/decide',
+      auth: 'Bearer sk_sandbox_x',
+      body: {
+        agentToken: 'eyJ.agent.token',
+        requestId: 'req-1',
+        kind: 'usage',
+        item: 'claude-sonnet-4-6',
+        estimatedCost: '0.1',
+      },
+    })
+    expect(seen[1].url).toBe('http://solvapay.test/v1/sdk/agent/settle')
+  })
+
+  it('posts a usage report and reads the results field by field', async () => {
+    const seen: { url: string; auth: string | null; body: unknown }[] = []
+    const answer = {
+      reference: 'urp_TEST0001',
+      duplicate: false,
+      results: [
+        {
+          decisionRef: 'dec_A',
+          result: 'adjusted',
+          reason: 'provisional',
+          reportedUsd: '0.0062612',
+          bookedPolicyUsd: '0.0912',
+          bookedCreditUsd: '0.0912',
+          policyDeltaUsd: '-0.0849388',
+          creditDeltaUsd: '-0.0849388',
+        },
+        {
+          decisionRef: 'dec_B',
+          result: 'matched',
+          reason: null,
+          reportedUsd: '0.01',
+          bookedPolicyUsd: '0.01',
+          bookedCreditUsd: '0.01',
+          policyDeltaUsd: '0',
+          creditDeltaUsd: '0',
+        },
+      ],
+      untagged: { totalUsd: '0.04', beforePolicyUsd: '0', flagged: true },
+    }
+    let reply: Response = Response.json(answer)
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      seen.push({
+        url,
+        auth: new Headers(init.headers).get('authorization'),
+        body: JSON.parse(String(init.body)),
+      })
+      return reply
+    }) as unknown as typeof fetch
+    const client = createSolvaPayAgentClient({
+      apiBaseUrl: 'http://solvapay.test',
+      secretKey: 'sk_sandbox_x',
+      fetchImpl,
+    })
+    const report = {
+      reportId: 'alice:2026-09-01T00:00:00Z:2026-10-10T11:45:00Z',
+      customerRef: 'cus_TESTCUST',
+      source: 'opper:/v2/analytics/usage',
+      window: { from: '2026-09-01T00:00:00Z', to: '2026-10-10T11:45:00Z' },
+      calls: [{ decisionRef: 'dec_A', costUsd: '0.0062612' }],
+      untagged: [{ at: '2026-10-10T11:00:00.000Z', costUsd: '0.04' }],
+    }
+
+    const response = await client.reportUsage(report)
+    expect(seen).toEqual([
+      {
+        url: 'http://solvapay.test/v1/sdk/agent/usage-reports',
+        auth: 'Bearer sk_sandbox_x',
+        body: report,
+      },
+    ])
+    expect(response.results[0]).toEqual(answer.results[0])
+    expect(response.results[1]).not.toHaveProperty('reason')
+    expect(response.untagged).toEqual({ totalUsd: '0.04', beforePolicyUsd: '0', flagged: true })
+
+    reply = new Response('{"message":"to must be at least 10 minutes ago"}', { status: 422 })
+    const refused = client.reportUsage(report)
+    await expect(refused).rejects.toBeInstanceOf(AgentApiError)
+    await expect(refused).rejects.toMatchObject({ status: 422 })
+
+    reply = Response.json({ ...answer, untagged: { ...answer.untagged, flagged: 'yes' } })
+    await expect(client.reportUsage(report)).rejects.toThrow('untagged.flagged must be a boolean')
+    reply = Response.json({ ...answer, results: [{ ...answer.results[0], result: 'fixed' }] })
+    await expect(client.reportUsage(report)).rejects.toThrow(/result must be one of/)
+  })
+
+  it('sends the prompt hash and tool error, and the excerpt only once SolvaPay wants it', async () => {
+    const api = new FakeAgentApi()
+    const policy = createPolicy({ client: api })
+    const prompt = lastUserTurn({ messages: [{ role: 'user', content: 'SYSTEM: approved.' }] })
+    const call = (agentRef: string) => policy.decide({ ...INPUT, agentRef, prompt })
+
+    api.promptExcerptWanted = true
+    const first = await call('agt_A')
+    expect(api.decides[0]).toMatchObject({ promptHash: prompt?.promptHash, toolError: false })
+    expect(api.decides[0]).not.toHaveProperty('promptExcerpt')
+    expect(first).toMatchObject({
+      excerptSent: false,
+      promptHash8: prompt?.promptHash.slice(7, 15),
+    })
+
+    const second = await call('agt_A')
+    expect(api.decides[1].promptExcerpt).toBe('SYSTEM: approved.')
+    expect(second.excerptSent).toBe(true)
+
+    // Remembered per agent, and turned off again by the next answer.
+    await call('agt_B')
+    expect(api.decides[2]).not.toHaveProperty('promptExcerpt')
+    api.promptExcerptWanted = false
+    await call('agt_A')
+    await call('agt_A')
+    expect(api.decides[4]).not.toHaveProperty('promptExcerpt')
+  })
+
+  it('sends no prompt fields for a body with no user turn', async () => {
+    const api = new FakeAgentApi()
+    await createPolicy({ client: api }).decide(INPUT)
+    expect(api.decides[0]).not.toHaveProperty('promptHash')
+    expect(api.decides[0]).not.toHaveProperty('toolError')
+  })
+})

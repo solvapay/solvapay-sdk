@@ -29,7 +29,14 @@ export type {
   PayableGateResult,
   PayablePaywallResult,
   PayableAllowResult,
+  PayableCostGateResult,
 } from './factory'
+export type {
+  PayableCostOptions,
+  PayableCostAllowResult,
+  CostSettleInput,
+  CostSettlement,
+} from './payable-cost'
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'
