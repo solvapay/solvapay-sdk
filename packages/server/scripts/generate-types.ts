@@ -21,7 +21,9 @@ const DEFAULT_LOCAL_SOURCES = [
 const OUTPUT_FILE = './src/types/generated.ts'
 const TEMP_SPEC_FILE = './temp-filtered-openapi.json'
 const PATH_PREFIX = '/v1/sdk/'
-const EXCLUDED_PATH_PREFIXES = ['/v1/sdk/agents']
+// Agent payments PoC routes stay out of the published types until promotion:
+// /v1/sdk/agents (S2) and /v1/sdk/agent/decide, /settle (S5).
+const EXCLUDED_PATH_PREFIXES = ['/v1/sdk/agents', '/v1/sdk/agent/']
 
 interface OpenAPISpec {
   paths?: Record<string, any>

@@ -40,6 +40,12 @@ import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
 import {
+  createCostMeter,
+  type CostMeter,
+  type PayableCostAllowResult,
+  type PayableCostOptions,
+} from './payable-cost'
+import {
   registerVirtualToolsMcpImpl,
   type McpServerLike,
   type RegisterVirtualToolsMcpOptions,
@@ -181,7 +187,21 @@ export interface PayableGateOptions {
    * omitted.
    */
   metadata?: import('./types').PaywallMetadata
+  /**
+   * Settle the call at the cost it reports instead of counting it against a
+   * plan. See {@link PayableCostOptions}. Requires a `cus_…` customer ref.
+   *
+   * @since 2.11.0
+   */
+  cost?: PayableCostOptions
 }
+
+/**
+ * Result of `payable.gate(req, { cost })`.
+ *
+ * @since 2.11.0
+ */
+export type PayableCostGateResult = PayablePaywallResult | PayableCostAllowResult
 
 /**
  * Payable function that provides explicit adapters for different frameworks.
@@ -348,6 +368,10 @@ export interface PayableFunction {
    *
    * @since 1.2.0
    */
+  gate(
+    req: Request,
+    options: PayableGateOptions & { cost: PayableCostOptions },
+  ): Promise<PayableCostGateResult>
   gate(req: Request, options?: PayableGateOptions): Promise<PayableGateResult>
 }
 
@@ -1032,6 +1056,123 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         ...(options.freeLimit ? { freeLimit: options.freeLimit } : {}),
       }
 
+      let costMeter: CostMeter | undefined
+      const costMeterFor = (): CostMeter =>
+        (costMeter ??= createCostMeter({
+          apiClient,
+          productRef: requireProductRef(product),
+          meterName: usageType,
+          ...(options.toolName ? { toolName: options.toolName } : {}),
+        }))
+
+      function gate(
+        req: Request,
+        options: PayableGateOptions & { cost: PayableCostOptions },
+      ): Promise<PayableCostGateResult>
+      function gate(req: Request, options?: PayableGateOptions): Promise<PayableGateResult>
+      async function gate(
+        req: Request,
+        gateOptions: PayableGateOptions = {},
+      ): Promise<PayableGateResult | PayableCostGateResult> {
+        const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
+        if (gateOptions.cost) {
+          return costMeterFor().gate({
+            customerRef: inputCustomerRef,
+            cost: gateOptions.cost,
+            ...(gateOptions.ctx ? { ctx: gateOptions.ctx } : {}),
+          })
+        }
+        const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
+
+        const decideMetadata = gateOptions.metadata ?? metadata
+        const decision = await paywall.decide(
+          args,
+          decideMetadata,
+          (a: PaywallArgs) => a.auth?.customer_ref || 'anonymous',
+        )
+
+        if (decision.outcome === 'gate') {
+          const errorMessage =
+            decision.gate.kind === 'activation_required'
+              ? 'Activation required'
+              : 'Payment required'
+          const body = paywallErrorToClientPayload(new PaywallError(errorMessage, decision.gate))
+          const response = new Response(JSON.stringify(body), {
+            status: 402,
+            headers: { 'content-type': 'application/json' },
+          })
+          return { kind: 'paywall', response, content: decision.gate }
+        }
+
+        const productRef = requireProductRef(decideMetadata.product || metadata.product || product)
+        const meterName =
+          decision.limits.meterName ||
+          decideMetadata.meterName ||
+          decideMetadata.usageType ||
+          'requests'
+        const customerRef = decision.customerRef
+        const ctx = gateOptions.ctx
+
+        const keepAlive = (p: Promise<unknown>) => {
+          const guarded = p.catch(() => undefined)
+          if (ctx) {
+            ctx.waitUntil(guarded)
+          } else {
+            void guarded
+          }
+        }
+
+        const trackOnce = (
+          outcome: 'success' | 'fail',
+          opts?: { duration?: number; metadata?: Record<string, unknown>; error?: unknown },
+        ) => {
+          const requestId = decision.requestId
+          const errMeta =
+            opts?.error !== undefined
+              ? {
+                  error: opts.error instanceof Error ? opts.error.message : String(opts.error),
+                }
+              : {}
+          const isFree = Boolean(decideMetadata.freeLimit)
+          const usageClass =
+            !isFree && outcome === 'success'
+              ? decision.consequence === 'overage'
+                ? 'overage'
+                : 'included'
+              : undefined
+          const trackPromise = apiClient.trackUsage({
+            customerRef,
+            productRef,
+            actionType: 'api_call',
+            units: 1,
+            outcome,
+            ...(opts?.duration !== undefined ? { duration: opts.duration } : {}),
+            idempotencyKey: `${requestId}:${outcome}`,
+            metadata: {
+              action: meterName,
+              requestId,
+              ...(decideMetadata.toolName ? { toolName: decideMetadata.toolName } : {}),
+              ...(isFree && decideMetadata.freeLimit
+                ? { meterName: decideMetadata.freeLimit.meter }
+                : {}),
+              ...(usageClass ? { usageClass } : {}),
+              ...errMeta,
+              ...(opts?.metadata ?? {}),
+            },
+            timestamp: new Date().toISOString(),
+          })
+          keepAlive(trackPromise)
+        }
+
+        return {
+          kind: 'allow',
+          decision,
+          customerRef,
+          trackSuccess: opts => trackOnce('success', opts),
+          trackFail: (err, opts) => trackOnce('fail', { ...opts, error: err }),
+        }
+      }
+
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         http<T = any>(
@@ -1104,100 +1245,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
 
-        async gate(req: Request, gateOptions: PayableGateOptions = {}): Promise<PayableGateResult> {
-          const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
-          const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
-
-          const decideMetadata = gateOptions.metadata ?? metadata
-          const decision = await paywall.decide(
-            args,
-            decideMetadata,
-            (a: PaywallArgs) => a.auth?.customer_ref || 'anonymous',
-          )
-
-          if (decision.outcome === 'gate') {
-            const errorMessage =
-              decision.gate.kind === 'activation_required'
-                ? 'Activation required'
-                : 'Payment required'
-            const body = paywallErrorToClientPayload(new PaywallError(errorMessage, decision.gate))
-            const response = new Response(JSON.stringify(body), {
-              status: 402,
-              headers: { 'content-type': 'application/json' },
-            })
-            return { kind: 'paywall', response, content: decision.gate }
-          }
-
-          const productRef = requireProductRef(
-            decideMetadata.product || metadata.product || product,
-          )
-          const meterName =
-            decision.limits.meterName ||
-            decideMetadata.meterName ||
-            decideMetadata.usageType ||
-            'requests'
-          const customerRef = decision.customerRef
-          const ctx = gateOptions.ctx
-
-          const keepAlive = (p: Promise<unknown>) => {
-            const guarded = p.catch(() => undefined)
-            if (ctx) {
-              ctx.waitUntil(guarded)
-            } else {
-              void guarded
-            }
-          }
-
-          const trackOnce = (
-            outcome: 'success' | 'fail',
-            opts?: { duration?: number; metadata?: Record<string, unknown>; error?: unknown },
-          ) => {
-            const requestId = decision.requestId
-            const errMeta =
-              opts?.error !== undefined
-                ? {
-                    error: opts.error instanceof Error ? opts.error.message : String(opts.error),
-                  }
-                : {}
-            const isFree = Boolean(decideMetadata.freeLimit)
-            const usageClass =
-              !isFree && outcome === 'success'
-                ? decision.consequence === 'overage'
-                  ? 'overage'
-                  : 'included'
-                : undefined
-            const trackPromise = apiClient.trackUsage({
-              customerRef,
-              productRef,
-              actionType: 'api_call',
-              units: 1,
-              outcome,
-              ...(opts?.duration !== undefined ? { duration: opts.duration } : {}),
-              idempotencyKey: `${requestId}:${outcome}`,
-              metadata: {
-                action: meterName,
-                requestId,
-                ...(decideMetadata.toolName ? { toolName: decideMetadata.toolName } : {}),
-                ...(isFree && decideMetadata.freeLimit
-                  ? { meterName: decideMetadata.freeLimit.meter }
-                  : {}),
-                ...(usageClass ? { usageClass } : {}),
-                ...errMeta,
-                ...(opts?.metadata ?? {}),
-              },
-              timestamp: new Date().toISOString(),
-            })
-            keepAlive(trackPromise)
-          }
-
-          return {
-            kind: 'allow',
-            decision,
-            customerRef,
-            trackSuccess: opts => trackOnce('success', opts),
-            trackFail: (err, opts) => trackOnce('fail', { ...opts, error: err }),
-          }
-        },
+        gate,
       }
     },
   }

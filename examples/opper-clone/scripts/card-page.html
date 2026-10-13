@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Save a card</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 28rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        color: #1a1a1a;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      p.note {
+        color: #555;
+      }
+      button {
+        margin-top: 1rem;
+        width: 100%;
+        padding: 0.7rem;
+        font: inherit;
+        border: 0;
+        border-radius: 6px;
+        background: #1a1a1a;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #message {
+        margin-top: 1rem;
+        min-height: 1.5rem;
+      }
+      #message.error {
+        color: #b42318;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Save a card at <span id="merchant"></span></h1>
+    <p class="note">
+      Test mode. The card is saved on the merchant's own Stripe account for charges your agent makes
+      later; nothing is charged here. Test card with 3DS: 4000 0025 0000 3155.
+    </p>
+    <form id="form">
+      <div id="payment-element"></div>
+      <button id="submit" type="submit" disabled>Save card</button>
+    </form>
+    <div id="message"></div>
+    <script>
+      const config = /*CARD_PAGE_CONFIG*/ null
+      const message = document.getElementById('message')
+      const submit = document.getElementById('submit')
+      document.getElementById('merchant').textContent = config.merchant
+
+      const stripe = Stripe(config.publishableKey, { stripeAccount: config.stripeAccountId })
+      const elements = stripe.elements({ clientSecret: config.clientSecret })
+      const paymentElement = elements.create('payment', {
+        layout: 'tabs',
+        wallets: { link: 'never' },
+      })
+      paymentElement.on('ready', () => {
+        submit.disabled = false
+      })
+      paymentElement.mount('#payment-element')
+
+      function show(text, isError) {
+        message.textContent = text
+        message.className = isError ? 'error' : ''
+      }
+
+      document.getElementById('form').addEventListener('submit', async event => {
+        event.preventDefault()
+        submit.disabled = true
+        show('Confirming…', false)
+        // 3DS opens in a modal; redirect only for methods that need one.
+        const { error, setupIntent } = await stripe.confirmSetup({
+          elements,
+          redirect: 'if_required',
+          confirmParams: { return_url: window.location.origin + '/' },
+        })
+        if (error) {
+          show(error.message || 'The card was not saved.', true)
+          submit.disabled = false
+          return
+        }
+        await fetch('/done', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            setupIntentId: setupIntent.id,
+            status: setupIntent.status,
+            paymentMethodId:
+              typeof setupIntent.payment_method === 'string'
+                ? setupIntent.payment_method
+                : setupIntent.payment_method && setupIntent.payment_method.id,
+          }),
+        })
+        show(
+          setupIntent.status === 'succeeded'
+            ? 'Card saved. You can close this tab; the terminal takes it from here.'
+            : 'Status: ' + setupIntent.status + '. Check the terminal.',
+          setupIntent.status !== 'succeeded',
+        )
+      })
+    </script>
+  </body>
+</html>

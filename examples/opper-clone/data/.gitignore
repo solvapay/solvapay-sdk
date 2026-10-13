@@ -1,0 +1,3 @@
+# Local state: toy merchant keys and encrypted per-user Opper keys. Never commit.
+*
+!.gitignore
