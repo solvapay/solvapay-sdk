@@ -150,3 +150,15 @@ The session lasts an hour. Each command renews it once it is 15 minutes old, up 
 
 - A call with no key is forwarded to Opper without credentials, so Opper gives its own 401 (or 404 for an unknown path). An unknown key gets a 401 in Opper's shape from the clone. See `FIDELITY.md`.
 - Cost comes from `X-Opper-Cost` on a plain call and from the final `message_delta` event on a streamed call; Opper sends no cost header on streams.
+
+## Remote launch
+
+`shell/launch-claude-with-solvapay.sh` is our stand-in for `opper launch claude --pay-with solvapay`: one command on any machine with `curl` and `claude`. The first run signs the owner in by email code in the terminal, creates an agent named after the host and saves its credential in `~/.solvapay/opper/` (mode 600; the account session is not kept). Then it starts Claude Code with a key helper, as `claude-as-agent.sh` does. Later runs launch straight away; `--reset` forgets the agent locally.
+
+`shell/serve.sh` serves the script with this clone's public URLs filled in from `.env` (`SOLVAPAY_API_BASE_URL`, `SOLVAPAY_PROVIDER_REF`, `CLONE_PUBLIC_URL`, `ACCOUNT_CONSOLE_URL`) on `SHELL_PORT` (3050). Tunnel the clone's port and the shell port, then on the target machine:
+
+```bash
+sh -c "$(curl -fsSL https://shell.<you>.ngrok.app/launch-claude-with-solvapay.sh)"
+```
+
+A new agent has no card or spend policy; the script prints the `agent:connect card` and `policy create` commands to run here for it. The tunnel exposes the clone, merchant keys included: stop it between test sessions. Test plan: research repo `poc/launch-claude-with-solvapay-test-spec.md`.
