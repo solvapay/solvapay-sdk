@@ -734,8 +734,62 @@ describe('useCheckoutFlow — Recurring branch', () => {
       branch: 'recurring',
       currency: 'USD',
       chargedTodayMinor: 1800,
+      creditNote: null,
     })
     expect(onPurchaseSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  const hybridAllowance: Plan = {
+    reference: 'pln_hybrid',
+    name: 'Pro',
+    price: 1900,
+    currency: 'usd',
+    requiresPayment: true,
+    type: 'hybrid',
+    options: [
+      { kind: 'billingCycle', interval: 'month' },
+      { kind: 'charge', per: 'flat', amountMinor: 1900, currency: 'usd' },
+      { kind: 'charge', per: 'unit', amountMinor: 2, currency: 'usd', meter: 'requests' },
+      {
+        kind: 'limit',
+        cap: 10,
+        scope: 'billing_period',
+        meter: 'requests',
+        onExceed: 'draw_credits',
+      },
+    ],
+  }
+
+  async function activateHybrid(credits: number) {
+    const { Wrapper } = makeWrapper({ plans: [hybridAllowance], credits })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.selectPlan('pln_hybrid')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_hybrid'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    return result
+  }
+
+  it('records a credit note for a hybrid plan when the wallet is empty', async () => {
+    const result = await activateHybrid(0)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'recurring',
+      creditNote: 'Usage past your 10 included requests is paid from credits. Your balance is 0.',
+    })
+  })
+
+  it('omits the credit note when the hybrid wallet is funded', async () => {
+    const result = await activateHybrid(500)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'recurring',
+      creditNote: null,
+    })
   })
 })
 

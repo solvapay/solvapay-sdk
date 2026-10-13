@@ -160,10 +160,7 @@ function asTier(option: PricingOptionLike): TierLike | null {
  *
  * Empty when the plan has no bands (for that meter).
  */
-export function tierBands(
-  priced: PricedLike | null | undefined,
-  meter?: string,
-): TierLike[] {
+export function tierBands(priced: PricedLike | null | undefined, meter?: string): TierLike[] {
   const all = optionsOf(priced)
     .map(asTier)
     .filter((tier): tier is TierLike => tier !== null)
@@ -205,10 +202,7 @@ export interface UsageRate extends ChargeLike {
  * `perUnitCharge` alone answers `null` for a tiered plan, which is why
  * tiered plans rendered no price at all.
  */
-export function usageRate(
-  priced: PricedLike | null | undefined,
-  meter?: string,
-): UsageRate | null {
+export function usageRate(priced: PricedLike | null | undefined, meter?: string): UsageRate | null {
   // A ZERO-rate per-unit charge does not price the meter — it exists to anchor
   // an allowance to one — so it must not short-circuit the bands. A plan
   // carrying both (authorable through the API, though the builder now blocks
@@ -337,6 +331,61 @@ function isMetered(priced: PricedLike | null | undefined): boolean {
   return perUnitCharge(priced) != null || tierBands(priced).length > 0
 }
 
+function meterKeys(priced: PricedLike | null | undefined): string[] {
+  const seen: string[] = []
+  const add = (meter: unknown) => {
+    if (typeof meter !== 'string' || meter.length === 0 || seen.includes(meter)) return
+    seen.push(meter)
+  }
+  for (const option of optionsOf(priced)) {
+    if (option.kind === 'charge' && option.per === 'unit') add(option.meter)
+    if (option.kind === 'tier' && isRecord(option.charge)) add(option.charge.meter)
+    if (option.kind === 'limit') add(option.meter)
+  }
+  return seen
+}
+
+function meterBills(priced: PricedLike | null | undefined, meter: string): boolean {
+  if (
+    charges(priced).some(
+      charge => charge.per === 'unit' && charge.meter === meter && charge.amountMinor > 0,
+    )
+  ) {
+    return true
+  }
+  return tierBands(priced, meter).some(band => band.charge.amountMinor > 0)
+}
+
+function limitForMeter(
+  priced: PricedLike | null | undefined,
+  meter: string,
+): { cap: number; onExceed: string } | null {
+  for (const option of optionsOf(priced)) {
+    if (option.kind !== 'limit' || option.meter !== meter) continue
+    if (typeof option.cap !== 'number') continue
+    return {
+      cap: option.cap,
+      onExceed: typeof option.onExceed === 'string' ? option.onExceed : '',
+    }
+  }
+  return null
+}
+
+/**
+ * The meters a recurring plan pays from prepaid credits. Mirrors
+ * `creditDrawnMeters` in the platform pricing derive module: a meter counts
+ * when the plan is recurring, the meter bills, and it has no limit or a
+ * capped `draw_credits` limit. Empty for a non-recurring plan.
+ */
+export function creditDrawnMeters(priced: PricedLike | null | undefined): string[] {
+  if (billingCycle(priced) == null) return []
+  return meterKeys(priced).filter(meter => {
+    if (!meterBills(priced, meter)) return false
+    const limit = limitForMeter(priced, meter)
+    return !limit || (limit.onExceed === 'draw_credits' && limit.cap > 0)
+  })
+}
+
 /** True when metered usage bills at a positive rate. */
 function isBillableMetered(priced: PricedLike | null | undefined): boolean {
   const rate = usageRate(priced)
@@ -406,7 +455,13 @@ export function planPricingShape(
 ): PlanPricingShape {
   const currencyFallback = (priced?.currency ?? 'USD').toUpperCase()
   if (!priced) {
-    return { shape: 'oneTime', headlineMinor: 0, currency: currencyFallback, cycle: null, rate: null }
+    return {
+      shape: 'oneTime',
+      headlineMinor: 0,
+      currency: currencyFallback,
+      cycle: null,
+      rate: null,
+    }
   }
 
   if (priced.requiresPayment === false) {

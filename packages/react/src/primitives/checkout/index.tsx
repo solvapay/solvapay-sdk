@@ -866,9 +866,7 @@ function Success({ className, children }: SuccessProps) {
         ✓
       </div>
       <h2 className="solvapay-checkout-success-heading">{meta.plan.name ?? 'Plan'} active</h2>
-      <p className="solvapay-checkout-success-subheading">
-        Subscription is live and credits are ready.
-      </p>
+      <p className="solvapay-checkout-success-subheading">Subscription is live.</p>
       <dl className="solvapay-checkout-receipt" data-variant="recurring">
         <div className="solvapay-checkout-receipt-row">
           <dt>Plan</dt>
@@ -893,6 +891,9 @@ function Success({ className, children }: SuccessProps) {
           </div>
         ) : null}
       </dl>
+      {meta.creditNote ? (
+        <p className="solvapay-checkout-success-subheading">{meta.creditNote}</p>
+      ) : null}
     </div>
   )
 }

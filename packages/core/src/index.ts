@@ -119,6 +119,7 @@ export {
   billingCycle,
   charges,
   countsUsage,
+  creditDrawnMeters,
   creditsPerUnitFromBalance,
   headlineCharges,
   includedUnits,

@@ -70,7 +70,7 @@ export const SuccessStep = memo(function SuccessStep({ meta, cx }: SuccessStepPr
         ✓
       </div>
       <h2 className={cx.heading}>{meta.plan.name ?? 'Plan'} active</h2>
-      <p className={cx.muted}>Subscription is live and credits are ready.</p>
+      <p className={cx.muted}>Subscription is live.</p>
 
       <dl className="solvapay-mcp-checkout-receipt" data-variant="recurring">
         <div className="solvapay-mcp-checkout-receipt-row">
@@ -96,6 +96,8 @@ export const SuccessStep = memo(function SuccessStep({ meta, cx }: SuccessStepPr
           </div>
         ) : null}
       </dl>
+
+      {meta.creditNote ? <p className={cx.muted}>{meta.creditNote}</p> : null}
 
       <p className={`${cx.muted} solvapay-mcp-checkout-manage-pointer`.trim()}>
         Manage from <code>/manage_account</code>

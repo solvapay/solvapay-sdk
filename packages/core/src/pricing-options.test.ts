@@ -8,6 +8,7 @@ import {
   meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
+  creditDrawnMeters,
   planPricingShape,
   tierBands,
   tierMeters,
@@ -305,11 +306,15 @@ describe('tier readers (DEV-816)', () => {
   const singleBandPlan = { options: [band(0, null, 3, 'requests')] }
 
   it('groups bands by meter and orders them by floor', () => {
-    expect(tierBands(twoMeterPlan, 'requests').map(t => [t.from, t.to, t.charge.amountMinor])).toEqual([
+    expect(
+      tierBands(twoMeterPlan, 'requests').map(t => [t.from, t.to, t.charge.amountMinor]),
+    ).toEqual([
       [0, 1000, 2],
       [1000, null, 1],
     ])
-    expect(tierBands(twoMeterPlan, 'tokens').map(t => [t.from, t.to, t.charge.amountMinor])).toEqual([
+    expect(
+      tierBands(twoMeterPlan, 'tokens').map(t => [t.from, t.to, t.charge.amountMinor]),
+    ).toEqual([
       [0, 500, 9],
       [500, null, 7],
     ])
@@ -334,7 +339,13 @@ describe('tier readers (DEV-816)', () => {
   it('ignores a malformed band rather than inventing a rate', () => {
     const broken = {
       options: [
-        { kind: 'tier', from: 0, to: null, mode: 'sideways', charge: { per: 'unit', amountMinor: 5, currency: 'USD' } },
+        {
+          kind: 'tier',
+          from: 0,
+          to: null,
+          mode: 'sideways',
+          charge: { per: 'unit', amountMinor: 5, currency: 'USD' },
+        },
         { kind: 'tier', from: 0, to: null, mode: 'graduated' },
       ],
     }
@@ -352,7 +363,11 @@ describe('tier readers (DEV-816)', () => {
   })
 
   it('usageRate reports the entry band and flags it as a floor', () => {
-    expect(usageRate(twoMeterPlan)).toMatchObject({ amountMinor: 2, meter: 'requests', tiered: true })
+    expect(usageRate(twoMeterPlan)).toMatchObject({
+      amountMinor: 2,
+      meter: 'requests',
+      tiered: true,
+    })
     expect(usageRate(twoMeterPlan, 'tokens')).toMatchObject({ amountMinor: 9, tiered: true })
   })
 
@@ -448,5 +463,71 @@ describe('planPricingShape', () => {
       cycle: { interval: 'month' },
       rate: expect.objectContaining({ amountMinor: 2 }),
     })
+  })
+})
+
+describe('creditDrawnMeters', () => {
+  const cycle = { kind: 'billingCycle', interval: 'month' }
+  const flat = { kind: 'charge', per: 'flat', amountMinor: 1900, currency: 'usd' }
+  const requests = {
+    kind: 'charge',
+    per: 'unit',
+    amountMinor: 2,
+    currency: 'usd',
+    meter: 'requests',
+  }
+
+  it('includes a capped draw_credits meter on a recurring plan', () => {
+    expect(
+      creditDrawnMeters({
+        options: [
+          cycle,
+          flat,
+          requests,
+          {
+            kind: 'limit',
+            cap: 10,
+            scope: 'billing_period',
+            meter: 'requests',
+            onExceed: 'draw_credits',
+          },
+        ],
+      }),
+    ).toEqual(['requests'])
+  })
+
+  it('includes a billing meter that has no limit', () => {
+    expect(creditDrawnMeters({ options: [cycle, flat, requests] })).toEqual(['requests'])
+  })
+
+  it('skips a block limit and an unlimited cap', () => {
+    expect(
+      creditDrawnMeters({
+        options: [
+          cycle,
+          requests,
+          { kind: 'limit', cap: 10, meter: 'requests', onExceed: 'block' },
+        ],
+      }),
+    ).toEqual([])
+    expect(
+      creditDrawnMeters({
+        options: [
+          cycle,
+          requests,
+          { kind: 'limit', cap: 0, meter: 'requests', onExceed: 'draw_credits' },
+        ],
+      }),
+    ).toEqual([])
+  })
+
+  it('is empty when the plan is not recurring or the meter does not bill', () => {
+    expect(creditDrawnMeters({ options: [requests] })).toEqual([])
+    expect(
+      creditDrawnMeters({
+        options: [cycle, { ...requests, amountMinor: 0 }],
+      }),
+    ).toEqual([])
+    expect(creditDrawnMeters(proPlan)).toEqual([])
   })
 })

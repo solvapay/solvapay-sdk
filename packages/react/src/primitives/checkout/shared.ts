@@ -9,6 +9,7 @@
 
 import {
   billingCycle as readBillingCycle,
+  creditDrawnMeters,
   creditsPerUnitFromBalance,
   includedUnits,
   meterName,
@@ -75,6 +76,11 @@ export type SuccessMeta =
       chargedTodayMinor: number
       currency: string
       nextRenewalLabel: string | null
+      /**
+       * Set when usage past the allowance is paid from credits and the wallet
+       * is empty. `null` when the plan does not draw credits or the wallet is funded.
+       */
+      creditNote: string | null
     }
 
 export function isPayg(plan: BootstrapPlanLike | null | undefined): boolean {
@@ -254,6 +260,21 @@ export function inferIncludedUnits(plan: BootstrapPlanLike): number | null {
 /** The meter a plan counts against, for labelling an allowance. */
 export function planMeterName(plan: BootstrapPlanLike): string | null {
   return meterName(plan)
+}
+
+/**
+ * Sentence for a recurring plan whose usage is paid from credits, told while
+ * the wallet is empty. `null` when no meter draws credits.
+ */
+export function recurringCreditNote(plan: BootstrapPlanLike): string | null {
+  const [meter] = creditDrawnMeters(plan)
+  if (!meter) return null
+  const cap = includedUnits(plan, meter)
+  if (cap != null && cap > 0) {
+    return `Usage past your ${cap.toLocaleString()} included ${meter} is paid from credits. Your balance is 0.`
+  }
+  const noun = meter.charAt(0).toUpperCase() + meter.slice(1)
+  return `${noun} are paid from credits. Your balance is 0.`
 }
 
 export function shortCycle(cycle: string | null | undefined): string {
