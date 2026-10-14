@@ -1075,37 +1075,45 @@ describe('McpAccountView', () => {
   })
 
   it('restyles cancelled notice on state J with a date status and secondary Reactivate', () => {
-    seedLimits({ remaining: 3800, withinLimits: true })
-    const reactivateRenewal = vi.fn().mockResolvedValue({ success: true })
-    const cancelled: PurchaseInfo = {
-      ...starterPurchase,
-      cancelledAt: '2026-09-04T00:00:00Z',
-      endDate: '2026-10-12T00:00:00Z',
+    // State J requires a future end date. The fixture is 12 Oct 2026, so pin
+    // the clock or the case falls through once that day has passed.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-06T00:00:00Z'))
+    try {
+      seedLimits({ remaining: 3800, withinLimits: true })
+      const reactivateRenewal = vi.fn().mockResolvedValue({ success: true })
+      const cancelled: PurchaseInfo = {
+        ...starterPurchase,
+        cancelledAt: '2026-09-04T00:00:00Z',
+        endDate: '2026-10-12T00:00:00Z',
+      }
+      const ctx = buildCtx({ reactivateRenewal }, [cancelled], 0)
+      renderAccount(ctx, {
+        plans: catalogPlans,
+        product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+        productRef: 'prd_widget',
+        onChangePlan: vi.fn(),
+      })
+      expect(screen.getByText('Active until Oct 12')).toBeTruthy()
+      expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
+      expect(screen.getByText(/days left on this plan/)).toBeTruthy()
+      expect(
+        screen.getByText(
+          'Calls keep working until Oct 12, then stop. You will not be charged again.',
+        ),
+      ).toBeTruthy()
+      expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
+      expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
+      const reactivate = screen.getByRole('button', { name: 'Reactivate Starter' })
+      expect(reactivate).toHaveAttribute('data-variant', 'secondary')
+      fireEvent.click(reactivate)
+      expect(reactivateRenewal).toHaveBeenCalledWith({ purchaseRef: 'pur_starter' })
+      expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
+      expect(screen.queryByText('Undo Cancellation')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    } finally {
+      vi.useRealTimers()
     }
-    const ctx = buildCtx({ reactivateRenewal }, [cancelled], 0)
-    renderAccount(ctx, {
-      plans: catalogPlans,
-      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
-      productRef: 'prd_widget',
-      onChangePlan: vi.fn(),
-    })
-    expect(screen.getByText('Active until Oct 12')).toBeTruthy()
-    expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
-    expect(screen.getByText(/days left on this plan/)).toBeTruthy()
-    expect(
-      screen.getByText(
-        'Calls keep working until Oct 12, then stop. You will not be charged again.',
-      ),
-    ).toBeTruthy()
-    expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
-    const reactivate = screen.getByRole('button', { name: 'Reactivate Starter' })
-    expect(reactivate).toHaveAttribute('data-variant', 'secondary')
-    fireEvent.click(reactivate)
-    expect(reactivateRenewal).toHaveBeenCalledWith({ purchaseRef: 'pur_starter' })
-    expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
-    expect(screen.queryByText('Undo Cancellation')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
   })
 
   const creditHistory = {
