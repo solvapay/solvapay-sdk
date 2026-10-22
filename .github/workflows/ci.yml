@@ -33,6 +33,12 @@ jobs:
         with:
           node-version: '20'
 
+      # Node 20 bundles npm 10, whose peer resolver crashes ("Cannot read properties of null
+      # (reading 'edgesOut')") on Vite 8's optional peers on Linux. create-solvapay's template
+      # resolve test runs `npm install`, so it checks what users on current npm get: npm 11.
+      - name: Upgrade npm
+        run: npm install -g npm@11 && npm --version
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
