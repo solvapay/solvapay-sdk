@@ -10,6 +10,7 @@ description: "Manual setup for SolvaPay SDK packages and environment variables."
 ## Prerequisites
 
 - Node.js 20 or later (`@solvapay/server` and `@solvapay/mcp` require it)
+  - On Node.js 20, update npm to version 11 first (`npm install -g npm@11`), or use Node.js 22. Node 20's bundled npm 10 can't install Vite 8 projects on Linux, including the MCP template from `npm create solvapay@latest -- --type mcp`.
 - npm, yarn, or pnpm
 - TypeScript 5.0+ (recommended)
 
