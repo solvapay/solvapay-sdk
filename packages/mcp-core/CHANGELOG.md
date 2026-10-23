@@ -1,5 +1,12 @@
 # @solvapay/mcp-core changelog
 
+## 0.4.8
+
+### Patch Changes
+
+- Updated dependencies [b3edfd8]
+  - @solvapay/core@1.8.0
+
 ## 0.4.7
 
 ### Patch Changes

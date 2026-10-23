@@ -1,5 +1,12 @@
 # @solvapay/server changelog
 
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies [b3edfd8]
+  - @solvapay/core@1.8.0
+
 ## 2.10.0
 
 ### Minor Changes
