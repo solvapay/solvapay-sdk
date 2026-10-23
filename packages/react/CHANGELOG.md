@@ -1,5 +1,11 @@
 # @solvapay/react changelog
 
+## 2.7.1
+
+### Patch Changes
+
+- a90cfea: The optional `@solvapay/mcp-core` peer range now also accepts `^0.5.0`.
+
 ## 2.7.0
 
 ### Minor Changes
