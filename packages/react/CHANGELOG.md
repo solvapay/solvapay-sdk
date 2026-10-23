@@ -1,5 +1,22 @@
 # @solvapay/react changelog
 
+## 2.7.1
+
+### Patch Changes
+
+- a90cfea: The optional `@solvapay/mcp-core` peer range now also accepts `^0.5.0`.
+
+## 2.7.0
+
+### Minor Changes
+
+- b3edfd8: Hybrid checkout tells the customer when usage past the included allowance is paid from credits, and the success step no longer says credits are ready before any are added.
+
+### Patch Changes
+
+- Updated dependencies [b3edfd8]
+  - @solvapay/core@1.8.0
+
 ## 2.6.0
 
 ### Minor Changes

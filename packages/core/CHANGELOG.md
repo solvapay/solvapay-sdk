@@ -1,5 +1,11 @@
 # @solvapay/core
 
+## 1.8.0
+
+### Minor Changes
+
+- b3edfd8: Hybrid checkout tells the customer when usage past the included allowance is paid from credits, and the success step no longer says credits are ready before any are added.
+
 ## 1.7.1
 
 ### Patch Changes

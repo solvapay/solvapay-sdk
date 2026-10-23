@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/next",
-  "version": "1.3.13",
+  "version": "1.4.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -30,7 +30,7 @@
     "directory": "packages/next"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22"
   },
   "sideEffects": false,
   "scripts": {
