@@ -8,7 +8,7 @@ Please also review our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributi
 
 ### Prerequisites
 
-- **Node.js** >= 18.17
+- **Node.js** >= 22
 - **pnpm** (package manager)
 - **TypeScript** >= 5.0
 
