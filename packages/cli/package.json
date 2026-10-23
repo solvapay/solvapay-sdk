@@ -19,7 +19,7 @@
     "directory": "packages/cli"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsup --config tsup.config.ts",

@@ -34,7 +34,7 @@
     "directory": "packages/mcp-core"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "sideEffects": false,
   "scripts": {

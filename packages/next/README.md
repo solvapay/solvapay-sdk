@@ -87,7 +87,7 @@ Next.js 16 renamed middleware to proxy — use `@solvapay/next/middleware` and e
 ## Requirements
 
 - Next.js >= 13.0.0
-- Node.js >= 18.17
+- Node.js >= 22
 
 ## See also
 

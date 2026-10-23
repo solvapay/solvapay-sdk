@@ -45,7 +45,7 @@ This example is the **canonical web reference** for mapping Auth0 users to Solva
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - pnpm (from repo root)
 - An [Auth0](https://auth0.com) account
 - A SolvaPay account with a product that has a Pay As You Go plan
