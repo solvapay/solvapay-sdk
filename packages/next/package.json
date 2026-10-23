@@ -30,7 +30,7 @@
     "directory": "packages/next"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22"
   },
   "sideEffects": false,
   "scripts": {

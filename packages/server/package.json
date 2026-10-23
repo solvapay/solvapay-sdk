@@ -59,7 +59,7 @@
     "directory": "packages/server"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "sideEffects": false,
   "scripts": {
