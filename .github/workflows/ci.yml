@@ -42,6 +42,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+          # Without check-latest, setup-node uses the runner's cached release for the line, which
+          # can lag the newest patch (24.21.0 instead of the 24.22.1 security release on 2026-10-23).
+          check-latest: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -131,6 +134,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          check-latest: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
