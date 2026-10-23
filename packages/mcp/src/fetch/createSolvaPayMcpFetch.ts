@@ -5,6 +5,7 @@
 
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
 import { defaultIsChatGptRequest } from '@solvapay/mcp-core'
+import type { SolvaPay } from '@solvapay/server'
 import {
   applyHideToolsByAudience,
   buildSolvaPayMcpServer,
@@ -16,9 +17,44 @@ import {
   createSolvaPayMcpFetchHandler,
   type CreateSolvaPayMcpFetchHandlerOptions,
   type McpRequestContext,
+  type VerifyBearerToken,
 } from './handler'
 
 export type { AdditionalToolsContext } from '../server'
+
+/**
+ * Resolve a verified external identity to a SolvaPay customer.
+ *
+ * Wraps a `verifyToken` hook so that, after a non-null result, a subject
+ * that is not already a `cus_` reference is passed through
+ * `solvaPay.ensureCustomer(subject, subject, …)` — which looks the
+ * customer up by `externalRef` and creates one on first sight — and the
+ * returned `VerifiedBearer` carries the resulting `customerRef`.
+ *
+ * `email` reaches `ensureCustomer` only when the issuer asserted
+ * `emailVerified === true`. `ensureCustomer` links to an existing customer
+ * by email on a conflict, so an unverified email would let anyone claim
+ * another customer's account by registering their address.
+ */
+export function bridgeVerifiedBearerToCustomer(
+  verifyToken: VerifyBearerToken,
+  solvaPay: Pick<SolvaPay, 'ensureCustomer'>,
+): VerifyBearerToken {
+  return async (token, req) => {
+    const verified = await verifyToken(token, req)
+    if (!verified) return null
+    if (verified.customerRef) return verified
+    if (verified.subject.startsWith('cus_')) {
+      return { ...verified, customerRef: verified.subject }
+    }
+
+    const customerRef = await solvaPay.ensureCustomer(verified.subject, verified.subject, {
+      ...(verified.emailVerified === true && verified.email ? { email: verified.email } : {}),
+      ...(verified.name ? { name: verified.name } : {}),
+    })
+    return { ...verified, customerRef }
+  }
+}
 
 export interface CreateSolvaPayMcpFetchOptions
   extends
@@ -109,6 +145,7 @@ export function createSolvaPayMcpFetch(
     registerDocsResources = true,
     serverName,
     serverVersion = '1.0.0',
+    verifyToken,
     ...handlerRest
   } = options
 
@@ -147,5 +184,6 @@ export function createSolvaPayMcpFetch(
     productRef,
     responseMode: handlerRest.responseMode ?? 'json',
     ...handlerRest,
+    ...(verifyToken ? { verifyToken: bridgeVerifiedBearerToCustomer(verifyToken, solvaPay) } : {}),
   })
 }

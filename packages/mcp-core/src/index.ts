@@ -50,6 +50,7 @@ export type {
   ContentBlock,
   CustomerSnapshot,
   McpAdapterOptions,
+  McpAuthInfo,
   McpToolExtra,
   NudgeSpec,
   PayableHandler,
@@ -132,10 +133,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export {
-  applyHideToolsByAudience,
-  defaultIsChatGptRequest,
-} from './hideToolsByAudience'
+export { applyHideToolsByAudience, defaultIsChatGptRequest } from './hideToolsByAudience'
 export type {
   ApplyHideToolsByAudienceContext,
   ApplyHideToolsByAudienceExtra,
@@ -143,15 +141,9 @@ export type {
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
-export type {
-  BuildSolvaPayDescriptorsOptions,
-  SolvaPayDescriptorBundle,
-} from './descriptors'
+export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 
-export {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,
@@ -179,6 +171,7 @@ export type { DcrFailureDiagnosticInput } from './dcr-diagnostics'
 // ---- OAuth discovery (pure JSON, framework-neutral) ----
 export {
   DEFAULT_OAUTH_PATHS,
+  DEFAULT_OAUTH_SCOPES_SUPPORTED,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
   resolveOAuthPaths,
@@ -187,11 +180,17 @@ export {
 export type {
   OAuthAuthorizationServerOptions,
   OAuthBridgePaths,
+  OAuthProtectedResourceOptions,
 } from './oauth-discovery'
 
 // ---- Auth info + bearer helpers ----
-export { buildAuthInfoFromBearer } from './auth-bridge'
-export type { BuildAuthInfoFromBearerOptions } from './auth-bridge'
+export {
+  DEFAULT_MCP_CLIENT_ID,
+  buildAuthInfoFromBearer,
+  buildAuthInfoFromVerifiedBearer,
+  toAuthInfo,
+} from './auth-bridge'
+export type { AuthInfoFields, BuildAuthInfoFromBearerOptions, VerifiedBearer } from './auth-bridge'
 
 export {
   McpBearerAuthError,
