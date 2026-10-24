@@ -11,7 +11,8 @@
     "reconcile": "tsx scripts/reconcile.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "agent:ask": "tsx scripts/ask-for-budget.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.13",
