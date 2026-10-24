@@ -1,29 +1,32 @@
-// Plays the SolvaPay console for this clone until the console exists: signs in
-// to a SolvaPay account by email code, connects an agent to this merchant,
-// saves a card at the merchant, opens the first credit lot and sets the
-// agent's spend policy. Signing in opens the personal account; a business
-// account is created and switched to here too, and every other command acts
-// in the active account.
+// The terminal side of the SolvaPay console for this clone: signs in to a
+// SolvaPay account by email code, saves a card at the merchant, opens the
+// first credit lot, reads and tightens the agent's spend policy. Signing in
+// opens the personal account; a business account is created and switched to
+// here too, and every other command acts in the active account.
+//
+// Anything that lets an agent spend more needs the owner's passkey (Face ID
+// or Touch ID, DEV-1107), which a terminal session cannot give: connecting an
+// agent, setting or loosening its policy and approving more budget happen in
+// the console (ACCOUNT_CONSOLE_URL), and these commands print the page. A
+// session alone can still pause, lower limits, revoke and decline.
 //
 //   pnpm agent:connect login <email>
-//   pnpm agent:connect verify <email> <code> [agent name]
+//   pnpm agent:connect verify <email> <code> [agent name]   signs in; links to connect an agent
+//   pnpm agent:connect use <credential>             the credential the console showed once
 //   pnpm agent:connect accounts
 //   pnpm agent:connect business <legal name> <country>
 //   pnpm agent:connect switch <acc_…>
-//   pnpm agent:connect agent new <name>
+//   pnpm agent:connect agent new <name>              links to connect another agent
 //   pnpm agent:connect card [amount in cents, default 250] [--agent agt_…]
 //   pnpm agent:connect merchant
-//   pnpm agent:connect policy create [monthly budget USD, default 5]
-//                                    [--per-call x] [--ceiling x] [--daily x] [--timezone tz]
-//                                    [--max-topup x] [--low-water x] [--purpose "…"]
-//                                    [--excerpt] [--agent agt_…]
-//   pnpm agent:connect policy update <field=value…> [--agent agt_…]   budget, ceiling,
+//   pnpm agent:connect policy create [--agent agt_…]   links to the console
+//   pnpm agent:connect policy update <field=value…> [--agent agt_…]   tightens: budget, ceiling,
 //                                    per-call, daily, max-topup, low-water, rate,
 //                                    timezone, status, purpose (empty clears it),
 //                                    excerpt=on|off
 //   pnpm agent:connect policy show [--agent agt_…]
 //   pnpm agent:connect approvals                    the active account's, newest first
-//   pnpm agent:connect approve <apr_…>             one lot more this month, and a top-up at once
+//   pnpm agent:connect approve <apr_…>             links to the approval: Face ID in the console
 //   pnpm agent:connect decline <apr_…>
 //
 // card and policy act on --agent, else the saved agent if it belongs to the
@@ -114,6 +117,8 @@ try {
     await business(args.slice(0, -1).join(' '), args[args.length - 1])
   } else if (command === 'switch' && args[0]) {
     await switchTo(args[0])
+  } else if (command === 'use' && args[0]) {
+    await useCredential(args[0])
   } else if (command === 'agent' && args[0] === 'new' && args.length > 1) {
     await agentNew(args.slice(1).join(' '))
   } else if (command === 'approvals') {
@@ -147,14 +152,12 @@ try {
         '       pnpm agent:connect accounts\n' +
         '       pnpm agent:connect business <legal name> <country>\n' +
         '       pnpm agent:connect switch <acc_…>\n' +
+        '       pnpm agent:connect use <credential>\n' +
         '       pnpm agent:connect agent new <name>\n' +
         '       pnpm agent:connect card [amount in cents, default 250]\n' +
         '       pnpm agent:connect merchant\n' +
         '       pnpm agent:connect statement [YYYY-MM, default this month]\n' +
-        '       pnpm agent:connect policy create [budget, default 5] [--per-call x]\n' +
-        '                                        [--ceiling x] [--daily x] [--timezone tz]\n' +
-        '                                        [--max-topup x] [--low-water x]\n' +
-        '                                        [--purpose "…"] [--excerpt]\n' +
+        '       pnpm agent:connect policy create   (links to the console)\n' +
         '       pnpm agent:connect policy update <field=value…>  (' +
         Object.keys(POLICY_FIELDS).join(', ') +
         ', status, purpose, excerpt=on|off)\n' +
@@ -182,28 +185,55 @@ async function verify(email: string, code: string, agentName: string) {
   const signedIn = await call('POST', '/v1/account/auth/logins/verifications', { email, code })
   const { token, accountRef, expiresAt } = await saveSession(signedIn, new Date())
 
-  let agent = await savedAgentOf(token)
+  process.stdout.write(`Account ${accountRef}. Session saved until ${expiresAt}.\n`)
+  const agent = await savedAgentOf(token)
   if (agent) {
-    process.stdout.write(`Keeping agent ${agent.reference} (data/agent-credential).\n`)
-  } else {
-    const created = await call(
-      'POST',
-      '/v1/account/agents',
-      { providerRef, name: agentName },
-      token,
-    )
-    await save(files.credential, created.credential as string)
-    const view = created.agent as SavedAgent
-    agent = { reference: view.reference, principalRef: view.principalRef }
+    await save(files.agent, JSON.stringify(agent))
     process.stdout.write(
-      `Created agent ${agent.reference}; credential saved to data/agent-credential.\n`,
+      `Keeping agent ${agent.reference}, principal ${agent.principalRef} at ${providerRef} (data/agent-credential).\n`,
     )
+    return
   }
+  // A new agent is a credential that can spend: the owner signs it in the console.
+  process.stdout.write(connectLink(agentName))
+}
+
+/** Where to connect an agent to this merchant, and what to do with its credential. */
+function connectLink(agentName: string): string {
+  const url = consoleUrl(
+    `/agents/connect?merchant=${providerRef}&name=${encodeURIComponent(agentName)}`,
+  )
+  return (
+    `Connect the agent in the SolvaPay console (Face ID or Touch ID):\n  ${url}\n` +
+    `Then save the credential it shows once: pnpm agent:connect use <credential>\n`
+  )
+}
+
+/**
+ * Saves the credential the console showed once as this clone's agent: mints a
+ * token with it to learn which agent it is, and checks it is for this merchant.
+ */
+async function useCredential(credential: string) {
+  const minted = await call('POST', '/v1/agent/tokens', undefined, credential.trim())
+  const claims = decodeJwtPayload(minted.token as string)
+  if (claims.aud !== providerRef) {
+    fail(`That credential is for ${String(claims.aud)}, not this merchant (${providerRef}).`)
+  }
+  const agent: SavedAgent = {
+    reference: claims.sub as string,
+    principalRef: claims.principal as string,
+  }
+  await save(files.credential, credential.trim())
   await save(files.agent, JSON.stringify(agent))
   process.stdout.write(
-    `Account ${accountRef}, principal ${agent.principalRef} at ${providerRef}. ` +
-      `Session saved until ${expiresAt}.\n`,
+    `Saved agent ${agent.reference}, principal ${agent.principalRef}, to data/agent-credential.\n` +
+      `Set its spend policy: ${consoleUrl(`/agents/${agent.reference}/policy`)}\n`,
   )
+}
+
+/** A page in the SolvaPay console. */
+function consoleUrl(path: string): string {
+  return `${required('ACCOUNT_CONSOLE_URL').replace(/\/+$/, '')}${path}`
 }
 
 /** The signed-in account user's accounts, the active one marked. */
@@ -254,16 +284,7 @@ async function switchTo(accountRef: string) {
  * apiKeyHelper uses.
  */
 async function agentNew(name: string) {
-  const created = await call('POST', '/v1/account/agents', { providerRef, name }, await session())
-  const agent = created.agent as SavedAgent
-  await mkdir(files.agents, { recursive: true })
-  await writeFile(join(files.agents, agent.reference), created.credential as string, {
-    mode: 0o600,
-  })
-  process.stdout.write(
-    `Created agent ${agent.reference}, principal ${agent.principalRef} at ${providerRef}; ` +
-      `credential saved to data/agents/${agent.reference}.\n`,
-  )
+  process.stdout.write(connectLink(name))
 }
 
 /**
@@ -381,6 +402,13 @@ async function approvals() {
  * this month and decides a top-up at once.
  */
 async function decideApproval(action: 'approve' | 'decline', reference: string) {
+  if (action === 'approve') {
+    // Approving moves money: Face ID or Touch ID on the approval page (DEV-1105).
+    process.stdout.write(
+      `Approve with Face ID or Touch ID in the console:\n  ${consoleUrl(`/approvals/${reference}`)}\n`,
+    )
+    return
+  }
   const result = await call(
     'POST',
     `/v1/account/approvals/${reference}/${action}`,
@@ -459,52 +487,13 @@ interface PolicyView {
 
 /** Compiles the agent's spend policy from a monthly budget; flags override single limits. */
 async function policyCreate(args: string[]) {
+  if (args.length > 0) fail('policy create takes no options now: set them in the console.')
   const token = await session()
   const agent = await activeAgent(token)
-  let budget = '5'
-  let purpose: string | undefined
-  let promptExcerpt = false
-  const limits: Record<string, unknown> = {}
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
-    if (!arg.startsWith('--')) {
-      budget = arg
-      continue
-    }
-    if (arg === '--excerpt') {
-      promptExcerpt = true
-      continue
-    }
-    if (arg === '--purpose') {
-      purpose = args[++i]
-      if (!purpose) fail('--purpose takes the text, in quotes')
-      continue
-    }
-    const name = arg.slice(2)
-    const value = args[++i]
-    if (!POLICY_FIELDS[name] || name === 'budget' || value === undefined) {
-      fail(
-        `Unknown or empty option ${arg}. Options: ${Object.keys(POLICY_FIELDS)
-          .filter(field => field !== 'budget')
-          .map(field => `--${field}`)
-          .join(', ')}, --purpose, --excerpt`,
-      )
-    }
-    Object.assign(limits, POLICY_FIELDS[name](value))
-  }
-  const created = await call(
-    'POST',
-    '/v1/account/spend-policies',
-    {
-      agentRef: agent.reference,
-      monthlyBudgetUsd: budget,
-      ...(Object.keys(limits).length > 0 ? { limits } : {}),
-      ...(purpose !== undefined ? { purpose } : {}),
-      ...(promptExcerpt ? { promptExcerpt } : {}),
-    },
-    token,
+  // A new policy lets the agent spend: the owner signs it in the console (DEV-1107).
+  process.stdout.write(
+    `Set the spend policy with Face ID or Touch ID in the console:\n  ${consoleUrl(`/agents/${agent.reference}/policy`)}\n`,
   )
-  printPolicy(created as unknown as PolicyView)
 }
 
 /** Changes the policy in force: limits make a new version; status pauses, resumes or revokes. */
@@ -527,13 +516,20 @@ async function policyUpdate(args: string[]) {
         `Expected field=value, one of ${Object.keys(POLICY_FIELDS).join(', ')}, status, purpose, excerpt=on|off; got "${arg}"`,
       )
   }
-  const updated = await call(
+  const result = await request(
     'PATCH',
     `/v1/account/spend-policies/${current.reference}`,
     { ...(Object.keys(limits).length > 0 ? { limits } : {}), ...terms },
     token,
   )
-  printPolicy(updated as unknown as PolicyView)
+  // Tightening goes through on the session; loosening needs the owner's passkey (DEV-1107).
+  if (result.status === 403 && String(result.body.code ?? '').startsWith('passkey_')) {
+    fail(
+      `That change lets the agent spend more, so it needs Face ID or Touch ID. Make it in the console:\n  ${consoleUrl(`/agents/${current.agentRef}/policy`)}`,
+    )
+  }
+  if (!result.ok) fail(`PATCH spend policy failed with HTTP ${result.status}: ${result.text}`)
+  printPolicy(result.body as unknown as PolicyView)
 }
 
 async function policyShow() {
