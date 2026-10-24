@@ -12,9 +12,27 @@ const ENV = {
   SOLVAPAY_API_BASE_URL: 'http://localhost:3010',
   SOLVAPAY_SECRET_KEY: 'sk_sandbox_test',
   SOLVAPAY_PRODUCT_REF: 'prd_TEST',
+  APPROVAL_WAIT_SECONDS: '300',
 }
 
 describe('loadConfig', () => {
+  it.each([
+    ['300', 300],
+    ['0', 0],
+    ['600', 600],
+  ])('reads APPROVAL_WAIT_SECONDS=%j as %d', (value, seconds) => {
+    expect(loadConfig({ ...ENV, APPROVAL_WAIT_SECONDS: value }).approvalWaitSeconds).toBe(seconds)
+  })
+
+  it.each([[undefined], [''], ['601'], ['-1'], ['1.5'], ['five']])(
+    'refuses APPROVAL_WAIT_SECONDS=%j',
+    value => {
+      expect(() => loadConfig({ ...ENV, APPROVAL_WAIT_SECONDS: value })).toThrow(
+        /APPROVAL_WAIT_SECONDS (is not set|must be a whole number)/,
+      )
+    },
+  )
+
   it('reads the settings and fails on a missing one', () => {
     expect(loadConfig(ENV)).toMatchObject({ port: 3040, opperBaseUrl: 'https://api.opper.test' })
     expect(() => loadConfig({ ...ENV, SOLVAPAY_SECRET_KEY: ' ' })).toThrow(

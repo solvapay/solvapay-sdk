@@ -14,6 +14,12 @@ export interface CloneConfig {
   solvapayApiBaseUrl: string
   solvapaySecretKey: string
   productRef: string
+  /**
+   * How long a paid call waits for the owner when SolvaPay asks with a
+   * pending approval, in seconds; 0 refuses at once. Claude Code waits up to
+   * 10 minutes for a response, and an approval lives 15.
+   */
+  approvalWaitSeconds: number
   /** Minutes between reconciliation runs; 0 turns the in-process runs off. */
   reconcileEveryMinutes: number
   dataDir: string
@@ -34,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CloneConfig {
     solvapayApiBaseUrl: required(env, 'SOLVAPAY_API_BASE_URL').replace(/\/+$/, ''),
     solvapaySecretKey: required(env, 'SOLVAPAY_SECRET_KEY'),
     productRef: required(env, 'SOLVAPAY_PRODUCT_REF'),
+    approvalWaitSeconds: approvalWaitSeconds(env),
     reconcileEveryMinutes: reconcileEveryMinutes(env),
     dataDir: fileURLToPath(new URL('../data/', import.meta.url)),
   }
@@ -43,6 +50,16 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]?.trim()
   if (!value) throw new Error(`${name} is not set. Copy .env.example to .env and fill it in.`)
   return value
+}
+
+/** Required: a whole number of seconds up to 600 (Claude Code's own wait); 0 holds nothing. */
+function approvalWaitSeconds(env: NodeJS.ProcessEnv): number {
+  const raw = required(env, 'APPROVAL_WAIT_SECONDS')
+  const seconds = Number(raw)
+  if (!/^\d+$/.test(raw) || seconds > 600) {
+    throw new Error('APPROVAL_WAIT_SECONDS must be a whole number of seconds from 0 to 600')
+  }
+  return seconds
 }
 
 /** Optional, default 60; 0 disables. Anything else but a whole number of minutes fails. */

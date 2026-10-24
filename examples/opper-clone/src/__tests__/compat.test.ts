@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server'
 import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createAgentLayer, createPolicy } from '../agent-layer'
+import { createApprovalWait } from '../agent-layer/approval-wait'
 import { createMetering } from '../agent-layer/metering'
 import { createAgentTokenVerifier } from '../agent-layer/identity/verify-agent-token'
 import { createApp } from '../app'
@@ -55,6 +56,8 @@ async function setup(
   reply: (seen: Seen) => Response,
   api = new FakeSolvaPayApi(),
   agentApi = new FakeAgentApi(api),
+  /** Seconds a held call waits; 0 (the default) refuses an ask at once. */
+  waitSeconds = 0,
 ) {
   const seen: Seen[] = []
   const events: { event: string; fields?: Record<string, unknown> }[] = []
@@ -90,6 +93,7 @@ async function setup(
     ),
     metering: createMetering({ solvaPay: api.solvaPay(), productRef: 'prd_TEST' }),
     policy: createPolicy({ client: agentApi }),
+    approvalWait: createApprovalWait({ client: agentApi, maxSeconds: waitSeconds, pollMs: 1 }),
     upstream: createOpperUpstream({ baseUrl: 'https://opper.test', fetchImpl }),
     log,
   })
@@ -657,5 +661,168 @@ describe('tags and cost', () => {
     })
     expect(readCost(new Headers())).toEqual({ usd: null, source: 'missing' })
     expect(readCost(new Headers({ 'x-opper-cost': 'abc' })).source).toBe('unparseable')
+  })
+})
+
+describe('holding a call for its approval', () => {
+  const streamed = () => chunkedResponse(SSE, { headers: { 'content-type': 'text/event-stream' } })
+  const APPROVAL = {
+    reference: 'apr_TEST0001',
+    status: 'pending' as const,
+    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    statusUrl: 'https://api.example.test/v1/sdk/agent/approvals/apr_TEST0001',
+  }
+
+  async function heldSetup(opts: { waitSeconds?: number; balanceShort?: boolean } = {}) {
+    const api = new FakeSolvaPayApi()
+    if (opts.balanceShort) api.credits = 100
+    const ctx = await setup(streamed, api, undefined, opts.waitSeconds ?? 60)
+    ctx.agentApi.approval = APPROVAL
+    if (!opts.balanceShort) {
+      ctx.agentApi.action = 'ask'
+      ctx.agentApi.reasonCode = 'budget_exhausted_ask'
+      ctx.agentApi.reasonText = "Stopped: this call would pass this month's $7.00 budget."
+    }
+    return ctx
+  }
+
+  async function call(app: Awaited<ReturnType<typeof setup>>['app'], signal?: AbortSignal) {
+    const token = await signAgentToken(agentKey, { principal: PRINCIPAL })
+    const request = messages({ authorization: `Bearer ${token}` })
+    return app.request(signal ? new Request(request, { signal }) : request)
+  }
+
+  it('waits while the owner decides, then decides again and forwards the call', async () => {
+    const { app, seen, events, agentApi } = await heldSetup()
+    agentApi.statuses = ['pending', 'pending', 'approved']
+
+    const response = await call(app)
+    expect(response.status).toBe(200)
+    await response.text()
+
+    expect(agentApi.statusReads).toEqual(Array(3).fill(APPROVAL.statusUrl))
+    // The retry is a new decision: SolvaPay would return the ask again for the same id.
+    expect(agentApi.decides).toHaveLength(2)
+    expect(agentApi.decides[1].requestId).toBe(
+      `${agentApi.decides[0].requestId}:after-apr_TEST0001`,
+    )
+    expect(seen).toHaveLength(1)
+    const fields = await completed(events)
+    expect(events.map(e => e.event)).toEqual(
+      expect.arrayContaining(['call.held', 'call.approval_wait', 'call.completed']),
+    )
+    expect(events.find(e => e.event === 'call.held')?.fields).toMatchObject({
+      reason: 'budget_exhausted_ask',
+      approvalRef: 'apr_TEST0001',
+    })
+    expect(events.find(e => e.event === 'call.approval_wait')?.fields).toMatchObject({
+      approvalRef: 'apr_TEST0001',
+      outcome: 'approved',
+      waitedMs: expect.any(Number),
+    })
+    expect(events.some(e => e.event === 'call.refused')).toBe(false)
+    expect(fields.decisionRef).toBe('dec_TEST0002')
+  })
+
+  it.each([
+    ['declined', 'Your owner declined approval apr_TEST0001 for more budget this month.'],
+    [
+      'expired',
+      'Approval apr_TEST0001 for more budget expired before your owner answered. Retry to ask again.',
+    ],
+  ] as const)(
+    'refuses with a 402 when the owner %s, and never calls Opper',
+    async (status, text) => {
+      const { app, seen, events, agentApi } = await heldSetup()
+      agentApi.statuses = ['pending', status]
+
+      const response = await call(app)
+      expect(response.status).toBe(402)
+      expect((await response.json()).error.message).toBe(text)
+      expect(seen).toHaveLength(0)
+      expect(agentApi.decides).toHaveLength(1)
+      expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
+        reason: `approval_${status}`,
+        approvalRef: 'apr_TEST0001',
+        held: 'budget_exhausted_ask',
+      })
+    },
+  )
+
+  it('stops waiting after APPROVAL_WAIT_SECONDS and says the approval is still waiting', async () => {
+    const { app, seen, agentApi } = await heldSetup({ waitSeconds: 0.05 })
+    agentApi.statuses = ['pending']
+
+    const response = await call(app)
+    expect(response.status).toBe(402)
+    expect((await response.json()).error.message).toBe(
+      'Approval apr_TEST0001 for more budget is still waiting for your owner. Retry once they answer.',
+    )
+    expect(agentApi.statusReads.length).toBeGreaterThan(1)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('stops waiting when the caller goes away', async () => {
+    const { app, seen, events, agentApi } = await heldSetup()
+    agentApi.statuses = ['pending']
+    const caller = new AbortController()
+    setTimeout(() => caller.abort(), 20)
+
+    const response = await call(app, caller.signal)
+    expect(response.status).toBe(402)
+    expect(seen).toHaveLength(0)
+    expect(events.find(e => e.event === 'call.approval_wait')?.fields).toMatchObject({
+      outcome: 'client_closed',
+    })
+  })
+
+  it('refuses as unavailable, never forwards, when the status cannot be read', async () => {
+    const { app, seen, events, agentApi } = await heldSetup()
+    agentApi.approvalStatus = async () => {
+      throw new Error('GET status failed (500)')
+    }
+
+    const response = await call(app)
+    expect(response.status).toBe(502)
+    expect(await response.json()).toEqual({
+      error: 'Spend policy check is unavailable. Try again shortly.',
+    })
+    expect(seen).toHaveLength(0)
+    expect(events.find(e => e.event === 'call.approval_wait_failed')?.fields).toMatchObject({
+      approvalRef: 'apr_TEST0001',
+      error: 'GET status failed (500)',
+    })
+  })
+
+  it('holds a call the balance gate stopped while a top-up waits for approval, releasing the reservation first', async () => {
+    const { app, agentApi } = await heldSetup({ balanceShort: true })
+    agentApi.statuses = ['declined']
+
+    const response = await call(app)
+    expect(response.status).toBe(402)
+    expect((await response.json()).error.message).toBe(
+      'Your owner declined approval apr_TEST0001 for more budget this month.',
+    )
+    expect(agentApi.settles).toEqual([
+      expect.objectContaining({ decisionRef: 'dec_TEST0001', source: 'none' }),
+    ])
+  })
+
+  it('refuses at once, as SolvaPay put it, when holding is off', async () => {
+    const { app, agentApi } = await heldSetup({ waitSeconds: 0 })
+
+    const response = await call(app)
+    expect(response.status).toBe(402)
+    expect((await response.json()).error.message).toBe(agentApi.reasonText)
+    expect(agentApi.statusReads).toHaveLength(0)
+  })
+
+  it('does not hold an ask that has no approval waiting', async () => {
+    const { app, agentApi } = await heldSetup()
+    agentApi.approval = { ...APPROVAL, status: 'declined' }
+
+    const response = await call(app)
+    expect(response.status).toBe(402)
+    expect(agentApi.statusReads).toHaveLength(0)
   })
 })

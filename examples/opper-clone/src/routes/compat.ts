@@ -10,7 +10,8 @@ import {
   type PolicySettled,
   type PromptFacts,
 } from '../agent-layer'
-import { AgentApiError } from '../agent-layer/client'
+import type { ApprovalWait, WaitOutcome } from '../agent-layer/approval-wait'
+import { AgentApiError, type DecideApproval } from '../agent-layer/client'
 import type { Metering, Opened, Settled } from '../agent-layer/metering'
 import { isRecord } from '../lib/guards'
 import type { Logger } from '../log'
@@ -30,6 +31,8 @@ export interface CompatDeps {
   metering: Metering
   /** Decides an agent's paid calls against its spend policy, before the balance gate. */
   policy: Policy
+  /** Holds a call SolvaPay asks about while its approval waits for the owner. */
+  approvalWait: ApprovalWait
   upstream: OpperUpstream
   log: Logger
 }
@@ -48,6 +51,23 @@ interface MeteredCall {
   decided: Extract<Decided, { action: 'allow' }>
   opened: Extract<Opened, { kind: 'allow' }>
   estimate: Estimate
+}
+
+/** SolvaPay asked with a pending approval: the call can wait for the owner's answer. */
+interface Held {
+  held: DecideApproval
+  /** Why it asked: `budget_exhausted_ask`, or the balance gate's `topup_required`. */
+  reason: string
+}
+
+interface MeterCall {
+  request: Request
+  body: ArrayBuffer | undefined
+  requestId: string
+  subpath: string
+  agentToken: string
+  principalRef: string
+  agentRef: string
 }
 
 type ReadCall =
@@ -133,7 +153,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
 
     let metered: MeteredCall | null = null
     if (paid && identity.kind === 'agent') {
-      const outcome = await meterAgentCall({
+      const call: MeterCall = {
         request,
         body,
         requestId,
@@ -141,7 +161,12 @@ export function compatRoutes(deps: CompatDeps): Hono {
         agentToken: presented,
         principalRef: userRef,
         agentRef: identity.agent.agentRef,
+      }
+      const first = await meterAgentCall(call, {
+        decideRequestId: requestId,
+        canHold: deps.approvalWait.maxMs > 0,
       })
+      const outcome = 'held' in first ? await holdForOwner(first, call) : first
       // Not `instanceof Response`: @hono/node-server swaps the global Response, so a
       // Response.json() refusal is not an instance of it under the real server.
       if (!('decided' in outcome)) return outcome
@@ -176,25 +201,22 @@ export function compatRoutes(deps: CompatDeps): Hono {
    * Permission before money, so a deny or ask wins over topup_required. Every
    * refusal is an Anthropic-shaped error and never reaches Opper.
    */
-  async function meterAgentCall(call: {
-    request: Request
-    body: ArrayBuffer | undefined
-    requestId: string
-    subpath: string
-    agentToken: string
-    principalRef: string
-    agentRef: string
-  }): Promise<MeteredCall | Response> {
+  async function meterAgentCall(
+    call: MeterCall,
+    attempt: {
+      /** SolvaPay's idempotency key: a repeat returns the first decision, so a retry needs its own. */
+      decideRequestId: string
+      /** Whether an ask with a pending approval may be held instead of refused. */
+      canHold: boolean
+    },
+  ): Promise<MeteredCall | Response | Held> {
     const { requestId } = call
     const refused = (reason: string, fields: Record<string, unknown> = {}) =>
-      deps.log.info('call.refused', {
-        requestId,
-        subpath: call.subpath,
-        userRef: call.principalRef,
-        agentRef: call.agentRef,
-        reason,
-        ...fields,
-      })
+      logCall('call.refused', call, reason, fields)
+    const held = (reason: string, fields: Record<string, unknown>, approval: DecideApproval) => {
+      logCall('call.held', call, reason, { ...fields, approvalRef: approval.reference })
+      return { held: approval, reason }
+    }
 
     const read = readCall(call.body)
     if (!read.ok) {
@@ -229,7 +251,7 @@ export function compatRoutes(deps: CompatDeps): Hono {
     try {
       decided = await deps.policy.decide({
         agentToken: call.agentToken,
-        requestId,
+        requestId: attempt.decideRequestId,
         model: estimate.model,
         estimateUsd: estimate.estimateUsd,
         agentRef: call.agentRef,
@@ -254,6 +276,9 @@ export function compatRoutes(deps: CompatDeps): Hono {
       return Response.json(opperError('Spend policy check is unavailable. Try again shortly.'), {
         status: 502,
       })
+    }
+    if (decided.action === 'ask' && attempt.canHold && decided.approval?.status === 'pending') {
+      return held(decided.reasonCode, decisionFields(decided, estimate), decided.approval)
     }
     if (decided.action !== 'allow') {
       refused(decided.reasonCode, { ...decisionFields(decided, estimate), action: decided.action })
@@ -283,11 +308,69 @@ export function compatRoutes(deps: CompatDeps): Hono {
     }
     if (opened.kind === 'refused') {
       await releaseDecision(decided, requestId)
+      if (attempt.canHold && decided.approval?.status === 'pending') {
+        return held(opened.reason, decisionFields(decided, estimate), decided.approval)
+      }
       refused(opened.reason, decisionFields(decided, estimate))
       return agentErrors.topupRequired(withApproval(opened.message, decided.approval), requestId)
     }
 
     return { decided, opened, estimate }
+  }
+
+  /**
+   * Waits for the owner to answer the approval SolvaPay asked with, then
+   * decides the call again. An approved call goes on like any allowed one; a
+   * declined, expired or unanswered one is refused with a 402 saying which.
+   * A second ask is refused as SolvaPay put it: one hold per call.
+   */
+  async function holdForOwner(held: Held, call: MeterCall): Promise<MeteredCall | Response> {
+    const { requestId } = call
+    const approvalRef = held.held.reference
+    let waited
+    try {
+      waited = await deps.approvalWait.until(held.held, call.request.signal)
+    } catch (error) {
+      deps.log.error('call.approval_wait_failed', {
+        requestId,
+        approvalRef,
+        status: error instanceof AgentApiError ? error.status : null,
+        error: errorMessage(error),
+      })
+      return Response.json(opperError('Spend policy check is unavailable. Try again shortly.'), {
+        status: 502,
+      })
+    }
+    deps.log.info('call.approval_wait', { requestId, approvalRef, ...waited })
+    if (waited.outcome !== 'approved') {
+      logCall('call.refused', call, `approval_${waited.outcome}`, {
+        approvalRef,
+        held: held.reason,
+      })
+      return agentErrors.decisionError('ask', afterWait(approvalRef, waited.outcome), requestId)
+    }
+    const again = await meterAgentCall(call, {
+      decideRequestId: `${requestId}:after-${approvalRef}`,
+      canHold: false,
+    })
+    if ('held' in again) throw new Error('A retry that cannot hold returned a hold')
+    return again
+  }
+
+  function logCall(
+    event: 'call.refused' | 'call.held',
+    call: MeterCall,
+    reason: string,
+    fields: Record<string, unknown>,
+  ) {
+    deps.log.info(event, {
+      requestId: call.requestId,
+      subpath: call.subpath,
+      userRef: call.principalRef,
+      agentRef: call.agentRef,
+      reason,
+      ...fields,
+    })
   }
 
   /** Off the reservation at once, so a refused call holds no budget. A failure is logged; the reservation then expires. */
@@ -481,6 +564,20 @@ function settleFields(settled: Settled | null): Record<string, unknown> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/** What the human reads when a held call is refused: how the owner's approval ended. */
+function afterWait(approvalRef: string, outcome: Exclude<WaitOutcome, 'approved'>): string {
+  switch (outcome) {
+    case 'declined':
+      return `Your owner declined approval ${approvalRef} for more budget this month.`
+    case 'expired':
+      return `Approval ${approvalRef} for more budget expired before your owner answered. Retry to ask again.`
+    case 'timed_out':
+      return `Approval ${approvalRef} for more budget is still waiting for your owner. Retry once they answer.`
+    case 'client_closed':
+      return `The request closed while approval ${approvalRef} was waiting for your owner.`
+  }
 }
 
 /**

@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server'
 import { createSolvaPay } from '@solvapay/server'
 import { createRemoteJWKSet } from 'jose'
 import { createAgentLayer, createPolicy } from './agent-layer'
+import { createApprovalWait } from './agent-layer/approval-wait'
 import { createSolvaPayAgentClient } from './agent-layer/client'
 import { createMetering } from './agent-layer/metering'
 import { createAgentTokenVerifier } from './agent-layer/identity/verify-agent-token'
@@ -17,6 +18,9 @@ import { OpperAccounts } from './merchant/opper-accounts'
 import { OpperClient } from './merchant/opper-client'
 import { createReconciler } from './merchant/reconciler'
 import { createOpperUpstream } from './upstream/opper'
+
+/** How often a held call reads its approval's status. */
+const APPROVAL_POLL_MS = 2_000
 
 const config = loadConfig()
 const entries = await readMerchantKeyFile(join(config.dataDir, 'merchant-keys.json'))
@@ -51,6 +55,11 @@ const app = createApp({
   accounts,
   metering: createMetering({ solvaPay, productRef: config.productRef }),
   policy: createPolicy({ client: agentClient }),
+  approvalWait: createApprovalWait({
+    client: agentClient,
+    maxSeconds: config.approvalWaitSeconds,
+    pollMs: APPROVAL_POLL_MS,
+  }),
   upstream: createOpperUpstream({ baseUrl: config.opperBaseUrl }),
   log: consoleLogger,
 })

@@ -2,6 +2,8 @@ import { createSolvaPay, type TrackUsageRequest, type TrackUsageResponse } from 
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import {
   AgentApiError,
+  type ApprovalStatus,
+  type ApprovalStatusResponse,
   type DecideInput,
   type DecideResponse,
   type SettleInput,
@@ -233,6 +235,13 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   approval: DecideResponse['approval'] | null = null
   /** What the policy wants for the excerpt; absent from responses while `null`. */
   promptExcerptWanted: boolean | null = null
+  /**
+   * What each read of an approval's status answers, in order; the last one
+   * repeats. Setting it to approved lets the next decide allow, as SolvaPay's
+   * extension would.
+   */
+  statuses: ApprovalStatus[] = ['pending']
+  readonly statusReads: string[] = []
   readonly decides: DecideInput[] = []
   readonly settles: (SettleInput & { usagesBefore: number })[] = []
   readonly reports: UsageReport[] = []
@@ -297,6 +306,21 @@ export class FakeAgentApi implements SolvaPayAgentClient {
       duplicate: false,
       policy: { spentPeriodUsd: input.amountUsd ?? '0', spentDayUsd: '0', reservedUsd: '0' },
       flags: input.source === 'provisional' ? ['provisional'] : [],
+    }
+  }
+
+  async approvalStatus(statusUrl: string): Promise<ApprovalStatusResponse> {
+    this.statusReads.push(statusUrl)
+    const status = this.statuses[Math.min(this.statusReads.length, this.statuses.length) - 1]
+    if (status === 'approved') {
+      this.action = 'allow'
+      this.reasonCode = 'within_limits'
+      this.approval = null
+    }
+    return {
+      reference: statusUrl.split('/').pop() as string,
+      status,
+      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
     }
   }
 

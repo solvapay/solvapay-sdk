@@ -52,6 +52,16 @@ export interface DecideApproval {
   statusUrl: string
 }
 
+export const APPROVAL_STATUSES = ['pending', 'approved', 'declined', 'expired'] as const
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number]
+
+/** What an approval's status URL answers: no more than its state and expiry. */
+export interface ApprovalStatusResponse {
+  reference: string
+  status: ApprovalStatus
+  expiresAt: string
+}
+
 export type PolicySettleSource = 'reported' | 'provisional' | 'none'
 
 export interface SettleInput {
@@ -128,6 +138,8 @@ export interface SolvaPayAgentClient {
   decide(input: DecideInput): Promise<DecideResponse>
   settle(input: SettleInput): Promise<SettleResponse>
   reportUsage(body: UsageReport): Promise<UsageReportResponse>
+  /** Reads an approval at the status URL a decision named; it grants nothing. */
+  approvalStatus(statusUrl: string): Promise<ApprovalStatusResponse>
 }
 
 export class AgentApiError extends Error {
@@ -167,11 +179,45 @@ export function createSolvaPayAgentClient(options: {
     return JSON.parse(text) as T
   }
 
+  async function getStatus(statusUrl: string): Promise<ApprovalStatusResponse> {
+    // The URL comes from SolvaPay's own decision; the secret key goes nowhere else.
+    if (!statusUrl.startsWith(`${baseUrl}/`)) {
+      throw new Error(`Approval status URL ${statusUrl} is not on ${baseUrl}`)
+    }
+    const response = await fetchImpl(statusUrl, {
+      headers: { authorization: `Bearer ${options.secretKey}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    })
+    const text = await response.text()
+    if (!response.ok) {
+      throw new AgentApiError(
+        `GET ${statusUrl} failed (${response.status}): ${text}`,
+        response.status,
+      )
+    }
+    return parseApprovalStatus(JSON.parse(text))
+  }
+
   return {
+    approvalStatus: getStatus,
     decide: input => post<DecideResponse>('/v1/sdk/agent/decide', input),
     settle: input => post<SettleResponse>('/v1/sdk/agent/settle', input),
     reportUsage: async body =>
       parseUsageReportResponse(await post<unknown>('/v1/sdk/agent/usage-reports', body)),
+  }
+}
+
+/** Checked field by field: the clone holds a paid call on it, so a misread must throw. */
+export function parseApprovalStatus(value: unknown): ApprovalStatusResponse {
+  if (!isRecord(value)) throw new Error('Approval status response was not an object')
+  const status = requireString(value.status, 'status')
+  if (!(APPROVAL_STATUSES as readonly string[]).includes(status)) {
+    throw new Error(`Approval status "${status}" is not one of ${APPROVAL_STATUSES.join(', ')}`)
+  }
+  return {
+    reference: requireString(value.reference, 'reference'),
+    status: status as ApprovalStatus,
+    expiresAt: requireString(value.expiresAt, 'expiresAt'),
   }
 }
 
