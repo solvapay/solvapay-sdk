@@ -200,6 +200,58 @@ describe('agent calls', () => {
     })
   })
 
+  describe('a hold on a card confirmation (the bank asked the owner to confirm the card)', () => {
+    const CARD_TEXT =
+      'Your owner needs to confirm Visa •••• 3184 for Opper: the bank asked to approve the last top-up. Request apr_TEST0001 is waiting for them; retry once they have confirmed it.'
+
+    function askingForCard(opts: { waitSeconds: number }) {
+      const harness = setup(opts)
+      harness.agentApi.action = 'ask'
+      harness.agentApi.reasonCode = 'card_confirmation_required'
+      harness.agentApi.reasonText = CARD_TEXT
+      harness.agentApi.approval = APPROVAL
+      return harness
+    }
+
+    it("refuses with SolvaPay's text, naming the card, when the hold runs out", async () => {
+      const { calls } = askingForCard({ waitSeconds: 0.01 })
+      expect(await calls.begin(call())).toEqual({
+        kind: 'refused',
+        reason: 'approval_timed_out',
+        message: CARD_TEXT,
+      })
+    })
+
+    it("refuses with SolvaPay's text when the request expires unanswered", async () => {
+      const { agentApi, calls } = askingForCard({ waitSeconds: 60 })
+      agentApi.statuses = ['expired']
+      expect(await calls.begin(call())).toEqual({
+        kind: 'refused',
+        reason: 'approval_expired',
+        message: CARD_TEXT,
+      })
+    })
+
+    it('says the owner declined to confirm the card, not budget', async () => {
+      const { agentApi, calls } = askingForCard({ waitSeconds: 60 })
+      agentApi.statuses = ['declined']
+      expect(await calls.begin(call())).toEqual({
+        kind: 'refused',
+        reason: 'approval_declined',
+        message:
+          'Your owner declined to confirm the card (request apr_TEST0001), so this agent cannot buy more credit here.',
+      })
+    })
+
+    it('goes on once the owner confirmed the card', async () => {
+      const { agentApi, calls } = askingForCard({ waitSeconds: 60 })
+      agentApi.statuses = ['pending', 'approved']
+      const outcome = await calls.begin(call())
+      expect(outcome.kind).toBe('allow')
+      expect(agentApi.decides.map(d => d.requestId)).toEqual(['req-1', 'req-1:after-apr_TEST0001'])
+    })
+  })
+
   it('stops holding when the caller goes away', async () => {
     const { agentApi, calls } = setup({ waitSeconds: 60 })
     agentApi.action = 'ask'

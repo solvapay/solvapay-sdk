@@ -94,7 +94,16 @@ interface Held {
   held: DecideApproval
   /** Why it asked: the policy's reason code, or the balance gate's `topup_required`. */
   reason: string
+  /** What it said, for the human: SolvaPay's reason text, or the balance gate's message. */
+  text: string
 }
+
+/**
+ * SolvaPay's reason when the bank asked the owner to confirm the card for a
+ * top-up: the approval is a card confirmation, not more budget, and its
+ * reason text names the card and the merchant.
+ */
+const CARD_CONFIRMATION_REQUIRED = 'card_confirmation_required'
 
 const NOT_LINKED =
   'This agent has no payment set up with this merchant. Connect it in SolvaPay, then retry.'
@@ -162,9 +171,14 @@ export function createAgentCalls(deps: {
   ): Promise<Allowed | Refused | Held> {
     const { requestId } = call
     const estimate = { item: call.item, estimateUsd: call.estimateUsd }
-    const held = (reason: string, fields: Record<string, unknown>, approval: DecideApproval) => {
+    const held = (
+      reason: string,
+      text: string,
+      fields: Record<string, unknown>,
+      approval: DecideApproval,
+    ): Held => {
       logCall('call.held', call, reason, { ...fields, approvalRef: approval.reference })
-      return { held: approval, reason }
+      return { held: approval, reason, text }
     }
 
     let customerRef: string | null
@@ -202,7 +216,12 @@ export function createAgentCalls(deps: {
       return { kind: 'refused', reason: 'unavailable', message: POLICY_UNAVAILABLE }
     }
     if (decided.action === 'ask' && attempt.canHold && decided.approval?.status === 'pending') {
-      return held(decided.reasonCode, decisionFields(decided, estimate), decided.approval)
+      return held(
+        decided.reasonCode,
+        decided.reasonText,
+        decisionFields(decided, estimate),
+        decided.approval,
+      )
     }
     if (decided.action !== 'allow') {
       return refuse(call, decided.action, decided.reasonText, decided.reasonCode, {
@@ -233,7 +252,12 @@ export function createAgentCalls(deps: {
     if (opened.kind === 'refused') {
       await releaseDecision(decided, requestId)
       if (attempt.canHold && decided.approval?.status === 'pending') {
-        return held(opened.reason, decisionFields(decided, estimate), decided.approval)
+        return held(
+          opened.reason,
+          opened.message,
+          decisionFields(decided, estimate),
+          decided.approval,
+        )
       }
       return refuse(
         call,
@@ -313,13 +337,14 @@ export function createAgentCalls(deps: {
     }
     log.info('call.approval_wait', { requestId, approvalRef, ...waited })
     if (waited.outcome !== 'approved') {
-      return refuse(
-        call,
-        `approval_${waited.outcome}`,
-        afterWait(approvalRef, waited.outcome),
-        `approval_${waited.outcome}`,
-        { approvalRef, held: held.reason },
-      )
+      const message =
+        held.reason === CARD_CONFIRMATION_REQUIRED
+          ? afterCardConfirmationWait(approvalRef, waited.outcome, held.text)
+          : afterWait(approvalRef, waited.outcome)
+      return refuse(call, `approval_${waited.outcome}`, message, `approval_${waited.outcome}`, {
+        approvalRef,
+        held: held.reason,
+      })
     }
     const again = await meter(call, {
       decideRequestId: `${requestId}:after-${approvalRef}`,
@@ -410,6 +435,22 @@ function afterWait(approvalRef: string, outcome: Exclude<WaitOutcome, 'approved'
     case 'client_closed':
       return `The request closed while approval ${approvalRef} was waiting for your owner.`
   }
+}
+
+/**
+ * How a hold on a card confirmation ended without it: SolvaPay's own text,
+ * which names the card and the merchant, while nobody has answered; the
+ * owner's no when they declined.
+ */
+function afterCardConfirmationWait(
+  approvalRef: string,
+  outcome: Exclude<WaitOutcome, 'approved'>,
+  text: string,
+): string {
+  if (outcome === 'declined') {
+    return `Your owner declined to confirm the card (request ${approvalRef}), so this agent cannot buy more credit here.`
+  }
+  return text
 }
 
 /**
