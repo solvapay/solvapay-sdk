@@ -1,0 +1,25 @@
+{
+  "name": "@solvapay/agent-layer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SolvaPay agent payments for a merchant: agent tokens, spend policy decisions, approval holds and cost-mode settles. Moves into @solvapay/server once proven (DEV-1109).",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solvapay/server": "workspace:*",
+    "jose": "^6.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.3"
+  }
+}
