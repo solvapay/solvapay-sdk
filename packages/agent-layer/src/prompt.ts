@@ -1,9 +1,9 @@
 // What SolvaPay's classifier gets from a call's prompt (agent payments PoC,
 // slice SC; build plan §7k, decision 9): a hash of the text, whether it
 // carries a failed tool result, and its end, which goes only once the owner
-// opted in. Each merchant picks the text from its own protocol (the Opper
-// clone: an Anthropic body's last user turn; the Opper MCP server: the tool's
-// input), so repeats of the same text show loops.
+// opted in. Each merchant picks the text from its own protocol (an LLM
+// proxy: the last user turn; an MCP tool: its input), so repeats of the same
+// text show loops.
 import { createHash } from 'node:crypto'
 
 /** The most of a prompt SolvaPay accepts, and only when the owner opted in. */

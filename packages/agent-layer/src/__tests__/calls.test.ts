@@ -44,11 +44,11 @@ function call(overrides: Partial<AgentCall> = {}): AgentCall {
       tokenId: 'jti-1',
       expiresAt: new Date(Date.now() + 15 * 60_000),
     },
-    item: 'ask_opper',
+    item: 'summarize',
     estimateUsd: '0.05',
     prompt: null,
     signal: new AbortController().signal,
-    logFields: { tool: 'ask_opper' },
+    logFields: { tool: 'summarize' },
     ...overrides,
   }
 }
@@ -62,7 +62,7 @@ describe('agent calls', () => {
   it('allows a call within the policy and the balance, then settles the policy before the credits at the reported cost', async () => {
     const { api, agentApi, calls } = setup()
     const outcome = allowed(await calls.begin(call()))
-    expect(agentApi.decides[0]).toMatchObject({ requestId: 'req-1', item: 'ask_opper' })
+    expect(agentApi.decides[0]).toMatchObject({ requestId: 'req-1', item: 'summarize' })
 
     const finished = await outcome.finish({ status: 200, costUsd: 0.0123 })
     expect(agentApi.settles).toEqual([
@@ -113,7 +113,7 @@ describe('agent calls', () => {
     expect(agentApi.decides).toHaveLength(0)
     expect(events.find(e => e.event === 'call.refused')?.fields).toMatchObject({
       reason: 'customer_not_linked',
-      tool: 'ask_opper',
+      tool: 'summarize',
       agentRef: 'agt_TESTAGNT',
     })
   })
@@ -160,7 +160,7 @@ describe('agent calls', () => {
     expect(outcome.decided.decisionRef).toBe('dec_TEST0002')
     expect(events.find(e => e.event === 'call.held')?.fields).toMatchObject({
       approvalRef: 'apr_TEST0001',
-      tool: 'ask_opper',
+      tool: 'summarize',
     })
     expect(events.find(e => e.event === 'call.approval_wait')?.fields).toMatchObject({
       outcome: 'approved',
@@ -235,7 +235,7 @@ describe('agent calls', () => {
     })
     expect(events.find(e => e.event === 'call.decide_failed')?.fields).toMatchObject({
       status: 503,
-      item: 'ask_opper',
+      item: 'summarize',
     })
   })
 })

@@ -1,6 +1,6 @@
-// One agent's paid call, start to finish, whatever the protocol: the Opper
-// clone's Anthropic route and the Opper MCP server's tools both run it, and
-// each turns a refusal into its own wire format.
+// One agent's paid call, start to finish, whatever the protocol: an HTTP
+// route and an MCP tool run it the same way, and each turns a refusal into
+// its own wire format.
 //
 // Order (build plan §7e): customer, spend policy, balance. Permission before
 // money, so a deny or ask wins over topup_required. When SolvaPay asks with a

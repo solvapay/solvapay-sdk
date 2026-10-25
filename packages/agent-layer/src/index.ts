@@ -4,9 +4,9 @@
  * policy, hold while an approval waits for the owner, gate on the balance and
  * settle at the cost the upstream reported.
  *
- * Private for now: the Opper clone (HTTP) and the Opper MCP server (MCP) both
- * run on it, and it moves into `@solvapay/server` once both have proven its
- * shape (DEV-1109). Protocol-neutral: no route, no Anthropic or MCP types.
+ * Private for now: it moves into `@solvapay/server` once an HTTP merchant and
+ * an MCP merchant have proven its shape (DEV-1109). Protocol-neutral: no
+ * route, no Anthropic or MCP types.
  */
 export {
   createAgentLayer,

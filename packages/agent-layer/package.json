@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "SolvaPay agent payments for a merchant: agent tokens, spend policy decisions, approval holds and cost-mode settles. Moves into @solvapay/server once both examples run on it (DEV-1109).",
+  "description": "SolvaPay agent payments for a merchant: agent tokens, spend policy decisions, approval holds and cost-mode settles. Moves into @solvapay/server once proven (DEV-1109).",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
