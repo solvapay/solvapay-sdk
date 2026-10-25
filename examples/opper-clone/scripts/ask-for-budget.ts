@@ -13,7 +13,7 @@
 import 'dotenv/config'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { createSolvaPayAgentClient, type DecideResponse } from '../src/agent-layer/client'
+import { createSolvaPayAgentClient, type DecideResponse } from '@solvapay/agent-layer'
 
 const POLL_MS = 2_000
 

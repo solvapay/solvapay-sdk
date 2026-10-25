@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { amountToSettle, createMetering, usdString, type Metering } from '../agent-layer/metering'
-import { FakeSolvaPayApi } from './fakes'
+import { amountToSettle, createMetering, usdString, type Metering } from '../metering'
+import { FakeSolvaPayApi } from '../testing'
 
 const PRINCIPAL = 'ppl_ABCDEFGHIJKLMNOP'
 const CUSTOMER = 'cus_TESTCUST'

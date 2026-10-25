@@ -6,7 +6,7 @@
 import 'dotenv/config'
 import { join } from 'node:path'
 import { createSolvaPay } from '@solvapay/server'
-import { createSolvaPayAgentClient } from '../src/agent-layer/client'
+import { createSolvaPayAgentClient } from '@solvapay/agent-layer'
 import { loadConfig } from '../src/config'
 import { importEncryptionKey } from '../src/lib/crypto'
 import { FileKvStore } from '../src/lib/kv-store'

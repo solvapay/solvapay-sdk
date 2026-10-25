@@ -1,7 +1,7 @@
 // Metering for an agent's paid calls (agent payments PoC, S4): gate each call
-// on the customer's balance, then settle it at the cost Opper reported. Since
-// S5 the spend policy decides first (`./policy`), and the gate takes that
-// call's estimate.
+// on the customer's balance with `payable.gate()` in cost mode, then settle it
+// at the cost the upstream reported. The spend policy decides first
+// (`./policy`), and the gate takes that call's estimate.
 //
 // Settle rules (build plan §7d, decision 8; the spend policy settles by the same rules):
 // - the upstream reported a cost: settle at that cost, also when the stream
@@ -13,11 +13,11 @@
 import type { CostSettlement, SolvaPay } from '@solvapay/server'
 
 export interface CallResult {
-  /** Status Opper answered with. */
+  /** Status the upstream answered with. */
   status: number
-  /** The cost Opper reported, or null when none arrived. */
+  /** The cost the upstream reported, or null when none arrived. */
   costUsd: number | null
-  /** Set when the stream to the caller broke before it finished. */
+  /** Set when the answer to the caller broke before it finished. */
   interrupted?: string
 }
 

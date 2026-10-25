@@ -3,7 +3,7 @@
 // on any key, so only the rows of the user's project count. Costs arrive as
 // decimal strings with float error ("0.006261200000000001"); they are summed
 // and rounded half-up to 1e-8 in integer arithmetic, never through a float.
-import type { UsageReport } from '../agent-layer/client'
+import type { UsageReport } from '@solvapay/agent-layer'
 import type { UsageRow } from './opper-client'
 
 export const USAGE_SOURCE = 'opper:/v2/analytics/usage'

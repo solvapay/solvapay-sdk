@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createApprovalWait } from '../agent-layer/approval-wait'
-import type { ApprovalStatus } from '../agent-layer/client'
+import { createApprovalWait } from '../approval-wait'
+import type { ApprovalStatus } from '../client'
 
 const STATUS_URL = 'https://api.solvapay.test/v1/sdk/agent/approvals/apr_TEST0001'
 

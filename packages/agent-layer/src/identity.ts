@@ -1,6 +1,7 @@
-// Verifies SolvaPay agent tokens: ES256 JWTs signed by SolvaPay's agent
-// service, published at `<issuer>/jwks.json`. Moves into @solvapay/server
-// with the rest of the agent layer once proven (prototype spec §2.1).
+// Who is calling: SolvaPay agent tokens are ES256 JWTs signed by SolvaPay's
+// agent service, published at `<issuer>/jwks.json`, issued for one merchant
+// (`aud` = its provider reference). Anything else a caller presents is the
+// merchant's own auth.
 import { errors, jwtVerify, type JWTVerifyGetKey } from 'jose'
 
 export interface VerifiedAgent {
@@ -72,4 +73,28 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
 /** A JWS compact token, as opposed to a merchant API key. */
 export function looksLikeJwt(value: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
+}
+
+export type Identification =
+  | { kind: 'agent'; agent: VerifiedAgent }
+  /** Not an agent token; the merchant's own auth decides. */
+  | { kind: 'not_agent' }
+  | { kind: 'rejected'; reason: 'expired' | 'invalid'; detail: string }
+
+export interface AgentLayer {
+  identify(presentedKey: string): Promise<Identification>
+}
+
+export function createAgentLayer(deps: {
+  verifyAgentToken: (token: string) => Promise<AgentTokenResult>
+}): AgentLayer {
+  return {
+    async identify(presentedKey) {
+      if (!looksLikeJwt(presentedKey)) return { kind: 'not_agent' }
+      const result = await deps.verifyAgentToken(presentedKey)
+      return result.ok
+        ? { kind: 'agent', agent: result.agent }
+        : { kind: 'rejected', reason: result.reason, detail: result.detail }
+    },
+  }
 }

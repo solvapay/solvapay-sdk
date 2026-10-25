@@ -3,11 +3,14 @@ import { join } from 'node:path'
 import { serve } from '@hono/node-server'
 import { createSolvaPay } from '@solvapay/server'
 import { createRemoteJWKSet } from 'jose'
-import { createAgentLayer, createPolicy } from './agent-layer'
-import { createApprovalWait } from './agent-layer/approval-wait'
-import { createSolvaPayAgentClient } from './agent-layer/client'
-import { createMetering } from './agent-layer/metering'
-import { createAgentTokenVerifier } from './agent-layer/identity/verify-agent-token'
+import {
+  createAgentLayer,
+  createAgentTokenVerifier,
+  createApprovalWait,
+  createMetering,
+  createPolicy,
+  createSolvaPayAgentClient,
+} from '@solvapay/agent-layer'
 import { createApp } from './app'
 import { loadConfig } from './config'
 import { importEncryptionKey } from './lib/crypto'

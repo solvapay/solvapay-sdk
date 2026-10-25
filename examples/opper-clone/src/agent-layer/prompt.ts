@@ -4,20 +4,10 @@
 // does: the prompt on the first request, then the tool results. A retried
 // failing tool call sends the same result each time, apart from its
 // `tool_use_id`, which is left out.
-import { createHash } from 'node:crypto'
+import { promptFacts, type PromptFacts } from '@solvapay/agent-layer'
 import { isRecord } from '../lib/guards'
 
-/** The most of a prompt SolvaPay accepts, and only when the owner opted in. */
-export const PROMPT_EXCERPT_MAX = 1500
-
-export interface PromptFacts {
-  /** `sha256:` over the last user turn's normalised content. */
-  promptHash: string
-  /** That turn carries a tool result marked as an error. */
-  toolError: boolean
-  /** Its last 1,500 characters; sent only when the owner opted in. */
-  excerpt: string
-}
+export { PROMPT_EXCERPT_MAX } from '@solvapay/agent-layer'
 
 /** The last user turn of an Anthropic Messages body, or `null` when it has none. */
 export function lastUserTurn(body: Record<string, unknown>): PromptFacts | null {
@@ -44,12 +34,7 @@ export function lastUserTurn(body: Record<string, unknown>): PromptFacts | null 
       }
     }
   }
-  const text = parts.join('\n\n')
-  return {
-    promptHash: `sha256:${createHash('sha256').update(text).digest('hex')}`,
-    toolError,
-    excerpt: text.slice(-PROMPT_EXCERPT_MAX),
-  }
+  return promptFacts(parts.join('\n\n'), toolError)
 }
 
 /** A tool result's content as text: a string, or its text blocks, other blocks named. */

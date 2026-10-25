@@ -1,8 +1,7 @@
 import { createLocalJWKSet, SignJWT, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createAgentLayer } from '../agent-layer'
-import { createAgentTokenVerifier, looksLikeJwt } from '../agent-layer/identity/verify-agent-token'
-import { agentKeys, ISSUER, PROVIDER, signAgentToken } from './fakes'
+import { createAgentLayer, createAgentTokenVerifier, looksLikeJwt } from '../identity'
+import { agentKeys, ISSUER, PROVIDER, signAgentToken } from '../testing'
 
 let privateKey: CryptoKey
 let publicJwk: JWK

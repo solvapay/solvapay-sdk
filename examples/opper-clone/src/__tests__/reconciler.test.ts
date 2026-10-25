@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { UsageReportResponse } from '../agent-layer/client'
+import type { UsageReportResponse } from '@solvapay/agent-layer'
 import { importEncryptionKey } from '../lib/crypto'
 import { MemoryKvStore } from '../lib/kv-store'
 import type { Logger } from '../log'

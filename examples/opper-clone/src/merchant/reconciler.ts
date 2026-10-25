@@ -7,13 +7,13 @@
 // read as absent.
 import type { SolvaPay } from '@solvapay/server'
 import {
+  findCustomerRef,
   RECONCILIATION_RESULTS,
   type ReconciledCall,
   type ReconciliationResult,
   type SolvaPayAgentClient,
   type UsageReportResponse,
-} from '../agent-layer/client'
-import { findCustomerRef } from '../agent-layer/metering'
+} from '@solvapay/agent-layer'
 import { isRecord, requireString } from '../lib/guards'
 import type { KvStore } from '../lib/kv-store'
 import type { Logger } from '../log'

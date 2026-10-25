@@ -1,11 +1,8 @@
 // The spend policy check for an agent's paid calls (agent payments PoC, S5):
-// SolvaPay decides each call against the agent's spend policy before Opper is
-// called, and an allow reserves the estimate. After the call the reservation
-// is settled at what the credit debit uses, or released when nothing ran.
-// Build plan §7e, decisions 4, 8 and 10.
-//
-// A sub-module beside `./metering` rather than a hook in the SDK's cost mode;
-// it moves into `payable` at promotion.
+// SolvaPay decides each call against the agent's spend policy before the
+// merchant does the work, and an allow reserves the estimate. After the call
+// the reservation is settled at what the credit debit uses, or released when
+// nothing ran. Build plan §7e, decisions 4, 8 and 10.
 import { amountToSettle, type CallResult } from './metering'
 import type { PromptFacts } from './prompt'
 import type {
@@ -51,11 +48,12 @@ export interface Policy {
   decide(input: {
     agentToken: string
     requestId: string
-    model: string
+    /** The merchant's label for what is used, sent as the decision's `item`. */
+    item: string
     estimateUsd: string
     /** The agent the call is for: the excerpt opt-in is remembered per agent. */
     agentRef: string
-    /** From the last user turn; `null` when the body has none. */
+    /** From the call's prompt; `null` when it has none. */
     prompt: PromptFacts | null
   }): Promise<Decided>
 }
@@ -67,14 +65,14 @@ export function createPolicy(deps: { client: SolvaPayAgentClient }): Policy {
   const excerptWanted = new Map<string, boolean>()
 
   return {
-    async decide({ agentToken, requestId, model, estimateUsd, agentRef, prompt }) {
+    async decide({ agentToken, requestId, item, estimateUsd, agentRef, prompt }) {
       const sendExcerpt = prompt !== null && excerptWanted.get(agentRef) === true
       const started = performance.now()
       const decision = await deps.client.decide({
         agentToken,
         requestId,
         kind: 'usage',
-        item: model,
+        item,
         estimatedCost: estimateUsd,
         ...(prompt ? { promptHash: prompt.promptHash, toolError: prompt.toolError } : {}),
         ...(sendExcerpt ? { promptExcerpt: prompt.excerpt } : {}),

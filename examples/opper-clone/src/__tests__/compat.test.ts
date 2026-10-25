@@ -2,10 +2,13 @@ import type { AddressInfo } from 'node:net'
 import { serve } from '@hono/node-server'
 import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createAgentLayer, createPolicy } from '../agent-layer'
-import { createApprovalWait } from '../agent-layer/approval-wait'
-import { createMetering } from '../agent-layer/metering'
-import { createAgentTokenVerifier } from '../agent-layer/identity/verify-agent-token'
+import {
+  createAgentLayer,
+  createAgentTokenVerifier,
+  createApprovalWait,
+  createMetering,
+  createPolicy,
+} from '@solvapay/agent-layer'
 import { createApp } from '../app'
 import { importEncryptionKey } from '../lib/crypto'
 import { MemoryKvStore } from '../lib/kv-store'
@@ -503,7 +506,7 @@ describe('spend policy', () => {
       action: 'deny',
       decisionRef: 'dec_TEST0001',
       requestId: body.request_id,
-      model: 'claude-sonnet-4-6',
+      item: 'claude-sonnet-4-6',
     })
   })
 
@@ -574,7 +577,7 @@ describe('spend policy', () => {
       decisionRef: 'dec_TEST0001',
       policyRef: 'pol_TESTPOL1',
       policyVersion: 2,
-      model: 'claude-sonnet-4-6',
+      item: 'claude-sonnet-4-6',
       policySettled: true,
       policySource: 'reported',
       settled: true,

@@ -1,23 +1,23 @@
 // SolvaPay's agent endpoints, called with the merchant's secret key. The SDK
-// has no generic request yet, so this is a small REST client of its own
-// (prototype spec §2.1 rule 4); it moves into `@solvapay/server` at promotion.
-import { isRecord, requireBoolean, requireString } from '../lib/guards'
+// has no generic request yet, so this is a small REST client of its own; it
+// moves into `@solvapay/server` with the rest of this package.
+import { isRecord, requireBoolean, requireString } from './guards'
 
 export interface DecideInput {
   /** The agent token the call came with; SolvaPay verifies it again. */
   agentToken: string
-  /** The clone's id for the call; a repeat returns the first decision. */
+  /** The merchant's id for the call; a repeat returns the first decision. */
   requestId: string
   kind: 'usage'
-  /** The merchant's own label for what is used, at most 200 characters; the clone sends the model id. */
+  /** The merchant's own label for what is used, at most 200 characters (a model id, a tool name). */
   item?: string
   /** USD decimal string. */
   estimatedCost: string
-  /** `sha256:` over the call's last user turn; repeats of it show loops. */
+  /** `sha256:` over the call's prompt; repeats of it show loops. */
   promptHash?: string
-  /** The last user turn carries a tool result marked as an error. */
+  /** The prompt carries a tool result marked as an error. */
   toolError?: boolean
-  /** The end of the last user turn, only once SolvaPay said the policy wants it. */
+  /** The end of the prompt, only once SolvaPay said the policy wants it. */
   promptExcerpt?: string
 }
 
@@ -207,7 +207,7 @@ export function createSolvaPayAgentClient(options: {
   }
 }
 
-/** Checked field by field: the clone holds a paid call on it, so a misread must throw. */
+/** Checked field by field: a paid call is held on it, so a misread must throw. */
 export function parseApprovalStatus(value: unknown): ApprovalStatusResponse {
   if (!isRecord(value)) throw new Error('Approval status response was not an object')
   const status = requireString(value.status, 'status')
@@ -221,7 +221,7 @@ export function parseApprovalStatus(value: unknown): ApprovalStatusResponse {
   }
 }
 
-/** Checked field by field: the clone rotates a key on `flagged`, so a misread must throw. */
+/** Checked field by field: a merchant acts on `flagged`, so a misread must throw. */
 export function parseUsageReportResponse(value: unknown): UsageReportResponse {
   if (!isRecord(value)) throw new Error('Usage report response was not an object')
   if (!Array.isArray(value.results)) throw new Error('Usage report results must be a list')
