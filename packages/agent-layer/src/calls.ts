@@ -2,15 +2,20 @@
 // route and an MCP tool run it the same way, and each turns a refusal into
 // its own wire format.
 //
-// Order (build plan §7e): customer, spend policy, balance. Permission before
-// money, so a deny or ask wins over topup_required. When SolvaPay asks with a
-// pending approval and holding is on, the call waits for the owner (DEV-1104)
-// and is decided again once approved; one hold per call.
-import type { ApprovalWait, WaitOutcome } from './approval-wait'
-import { AgentApiError, type DecideApproval } from './client'
+// SolvaPay decides everything (DEV-1126): `authorize` before the upstream
+// call finds the customer, checks the spend policy, holds the estimate
+// against the budget and the balance, and waits for the owner when they
+// must approve; `complete` after it settles at the cost the upstream
+// reported. This file only drives those two requests.
+import {
+  AUTHORIZE_WAIT_MAX_SECONDS,
+  AgentApiError,
+  type AuthorizeResponse,
+  type CompleteResponse,
+  type ServerRefusalReason,
+  type SolvaPayAgentClient,
+} from './client'
 import type { VerifiedAgent } from './identity'
-import type { CallResult, Metering, Opened, Settled } from './metering'
-import type { Decided, Policy, PolicySettled } from './policy'
 import type { PromptFacts } from './prompt'
 
 /** One JSON line per event. Never pass keys or secrets in `fields`. */
@@ -20,19 +25,17 @@ export interface Logger {
 }
 
 export interface AgentCall {
-  /** The request the call came in on. The balance gate takes it; the customer comes from the agent. */
-  request: Request
-  /** The merchant's id for the call, also SolvaPay's idempotency key for the decision. */
+  /** The merchant's id for the call; SolvaPay keys the call on it. */
   requestId: string
-  /** The token as presented: SolvaPay verifies it again when it decides. */
+  /** The token as presented: SolvaPay verifies it again. */
   agentToken: string
   agent: VerifiedAgent
   /** The merchant's label for what is used (a model id, a tool name). */
   item: string
-  /** What this call may cost, USD decimal string; also the provisional amount. */
+  /** What this call may cost, USD decimal string. */
   estimateUsd: string
   prompt: PromptFacts | null
-  /** Ends a hold when the caller goes away. */
+  /** Ends a wait for the owner when the caller goes away. */
   signal: AbortSignal
   /** Added to every log line about this call, for example the route or the tool. */
   logFields?: Record<string, unknown>
@@ -40,19 +43,13 @@ export interface AgentCall {
 
 /** Why a call was refused. `message` is the sentence for the human, in every case. */
 export type RefusalReason =
-  /** The agent's account has no customer at this merchant: nothing to bill. */
-  | 'customer_not_linked'
-  /** SolvaPay did not accept the agent on decide: revoked, or not for this merchant. */
+  /** SolvaPay's own refusals, with its sentence. */
+  | ServerRefusalReason
+  /** SolvaPay did not accept the agent token: revoked, or not for this merchant. */
   | 'agent_not_accepted'
-  /** The spend policy asks the owner; no hold (off, or nothing pending). */
-  | 'ask'
-  | 'deny'
-  /** The customer's balance is under this call's estimate. */
-  | 'topup_required'
-  | 'approval_declined'
-  | 'approval_expired'
-  /** The hold ended with the approval still waiting. */
+  /** The owner had not answered when this merchant stopped waiting. */
   | 'approval_timed_out'
+  /** The caller went away while the owner was deciding. */
   | 'approval_client_closed'
   /** SolvaPay could not be reached or answered with an error; never let through. */
   | 'unavailable'
@@ -63,406 +60,182 @@ export interface Refused {
   message: string
 }
 
-export interface Finished {
-  /** `null` when the policy settle failed: logged, and the reservation expires at its estimate. */
-  policySettled: PolicySettled | null
-  /** `null` when the credit settle failed: logged; the caller already has its answer. */
-  settled: Settled | null
+/** How the upstream answered, as the merchant read it. */
+export interface CallResult {
+  status: number
+  /** The cost the upstream reported, or null when none arrived. */
+  costUsd: number | null
+  /** Set when the answer to the caller broke before it finished. */
+  interrupted?: string
 }
 
 export interface Allowed {
   kind: 'allow'
-  decided: Extract<Decided, { action: 'allow' }>
-  opened: Extract<Opened, { kind: 'allow' }>
+  /** SolvaPay's reference for the call: tag the upstream usage with it, and report usage by it. */
+  callRef: string
   item: string
   estimateUsd: string
+  reservation: { amountUsd: string; expiresAt: string }
   /**
-   * Settles the spend policy, then debits the credits, by the metering rules.
-   * Policy first: spend counted but not debited is the safe failure. Once per call.
+   * Completes the call at how the upstream answered. Once per call. `null`
+   * when SolvaPay could not be told: logged, and the call's reservations
+   * lapse at the estimate.
    */
-  finish(result: CallResult): Promise<Finished>
-  /** Drops the reservation: the call never reached the upstream. A failure is logged. */
-  release(): Promise<void>
+  finish(result: CallResult): Promise<CompleteResponse | null>
+  /** The call never reached the upstream: completed as an upstream failure, so nothing is charged. */
+  release(reason: string): Promise<void>
 }
 
 export interface AgentCalls {
   begin(call: AgentCall): Promise<Allowed | Refused>
 }
 
-/** SolvaPay asked with a pending approval: the call can wait for the owner's answer. */
-interface Held {
-  held: DecideApproval
-  /** Why it asked: the policy's reason code, or the balance gate's `topup_required`. */
-  reason: string
-  /** What it said, for the human: SolvaPay's reason text, or the balance gate's message. */
-  text: string
-}
-
-/**
- * SolvaPay's reason when the bank asked the owner to confirm the card for a
- * top-up: the approval is a card confirmation, not more budget, and its
- * reason text names the card and the merchant.
- */
-const CARD_CONFIRMATION_REQUIRED = 'card_confirmation_required'
-
-const NOT_LINKED =
-  'This agent has no payment set up with this merchant. Connect it in SolvaPay, then retry.'
 const NOT_ACCEPTED = 'SolvaPay did not accept this agent (revoked or not for this merchant).'
-const POLICY_UNAVAILABLE = 'Spend policy check is unavailable. Try again shortly.'
-const BILLING_UNAVAILABLE = 'Billing is unavailable. Try again shortly.'
+const UNAVAILABLE = 'SolvaPay could not be reached to authorize this call. Try again shortly.'
 
 export function createAgentCalls(deps: {
-  metering: Metering
-  policy: Policy
-  /** Holds a call SolvaPay asks about while its approval waits for the owner. */
-  approvalWait: ApprovalWait
+  client: Pick<SolvaPayAgentClient, 'authorize' | 'complete'>
+  /** How long a call may wait for its owner's answer, in seconds; 0 refuses at once. */
+  maxWaitSeconds: number
   log: Logger
+  now?: () => number
+  sleep?: (ms: number, signal: AbortSignal) => Promise<void>
 }): AgentCalls {
-  const { log } = deps
+  const { client, log } = deps
+  const now = deps.now ?? Date.now
+  const sleep = deps.sleep ?? abortableSleep
 
-  function logCall(
-    event: 'call.refused' | 'call.held',
-    call: AgentCall,
-    reason: string,
-    fields: Record<string, unknown>,
-  ) {
-    log.info(event, {
-      requestId: call.requestId,
-      ...call.logFields,
-      userRef: call.agent.principalRef,
-      agentRef: call.agent.agentRef,
-      reason,
-      ...fields,
-    })
-  }
-
-  function refuse(
-    call: AgentCall,
-    reason: RefusalReason,
-    message: string,
-    logReason: string,
-    fields: Record<string, unknown> = {},
-  ): Refused {
-    logCall('call.refused', call, logReason, fields)
+  function refuse(call: AgentCall, reason: RefusalReason, message: string, fields = {}): Refused {
+    log.info('call.refused', { ...callFields(call), reason, ...fields })
     return { kind: 'refused', reason, message }
   }
 
-  /** Off the reservation at once, so a refused call holds no budget. A failure is logged; the reservation then expires. */
-  async function releaseDecision(decided: Allowed['decided'], requestId: string) {
-    try {
-      await decided.release()
-    } catch (error) {
-      log.error('call.release_failed', {
-        requestId,
-        decisionRef: decided.decisionRef,
-        error: errorMessage(error),
-      })
-    }
-  }
-
-  async function meter(
-    call: AgentCall,
-    attempt: {
-      /** SolvaPay's idempotency key: a repeat returns the first decision, so a retry needs its own. */
-      decideRequestId: string
-      /** Whether an ask with a pending approval may be held instead of refused. */
-      canHold: boolean
-    },
-  ): Promise<Allowed | Refused | Held> {
-    const { requestId } = call
-    const estimate = { item: call.item, estimateUsd: call.estimateUsd }
-    const held = (
-      reason: string,
-      text: string,
-      fields: Record<string, unknown>,
-      approval: DecideApproval,
-    ): Held => {
-      logCall('call.held', call, reason, { ...fields, approvalRef: approval.reference })
-      return { held: approval, reason, text }
-    }
-
-    let customerRef: string | null
-    try {
-      customerRef = await deps.metering.customer(call.agent.principalRef)
-    } catch (error) {
-      log.error('call.metering_failed', { requestId, error: errorMessage(error) })
-      return { kind: 'refused', reason: 'unavailable', message: BILLING_UNAVAILABLE }
-    }
-    if (!customerRef) {
-      return refuse(call, 'customer_not_linked', NOT_LINKED, 'customer_not_linked', estimate)
-    }
-
-    let decided: Decided
-    try {
-      decided = await deps.policy.decide({
-        agentToken: call.agentToken,
-        requestId: attempt.decideRequestId,
-        item: call.item,
-        estimateUsd: call.estimateUsd,
-        agentRef: call.agent.agentRef,
-        prompt: call.prompt,
-      })
-    } catch (error) {
-      log.error('call.decide_failed', {
-        requestId,
-        ...estimate,
-        status: error instanceof AgentApiError ? error.status : null,
-        error: errorMessage(error),
-      })
-      // SolvaPay verifies the token again: a revoked agent, or one for another merchant.
-      if (error instanceof AgentApiError && (error.status === 401 || error.status === 403)) {
-        return { kind: 'refused', reason: 'agent_not_accepted', message: NOT_ACCEPTED }
+  function allowed(call: AgentCall, answer: Extract<AuthorizeResponse, { status: 'allowed' }>) {
+    const { callRef } = answer
+    let completed = false
+    async function complete(body: Parameters<SolvaPayAgentClient['complete']>[1]) {
+      if (completed) throw new Error(`Call ${callRef} was already completed`)
+      completed = true
+      try {
+        return await client.complete(callRef, body)
+      } catch (error) {
+        log.error('call.complete_failed', {
+          ...callFields(call),
+          callRef,
+          status: error instanceof AgentApiError ? error.status : null,
+          error: errorMessage(error),
+        })
+        return null
       }
-      return { kind: 'refused', reason: 'unavailable', message: POLICY_UNAVAILABLE }
     }
-    if (decided.action === 'ask' && attempt.canHold && decided.approval?.status === 'pending') {
-      return held(
-        decided.reasonCode,
-        decided.reasonText,
-        decisionFields(decided, estimate),
-        decided.approval,
-      )
-    }
-    if (decided.action !== 'allow') {
-      return refuse(call, decided.action, decided.reasonText, decided.reasonCode, {
-        ...decisionFields(decided, estimate),
-        action: decided.action,
-      })
-    }
-
-    let opened: Opened
-    try {
-      opened = await deps.metering.open({
-        request: call.request,
-        customerRef,
-        estimateUsd: call.estimateUsd,
-        // What the merchant's usage event says about the agent's call: the decision,
-        // the agent and the spend policy. SolvaPay's statement and provider view read it.
-        metadata: {
-          decision_ref: decided.decisionRef,
-          agent_id: call.agent.agentRef,
-          ...(decided.policy ? { policy_id: decided.policy.reference } : {}),
-        },
-      })
-    } catch (error) {
-      log.error('call.metering_failed', { requestId, error: errorMessage(error) })
-      await releaseDecision(decided, requestId)
-      return { kind: 'refused', reason: 'unavailable', message: BILLING_UNAVAILABLE }
-    }
-    if (opened.kind === 'refused') {
-      await releaseDecision(decided, requestId)
-      if (attempt.canHold && decided.approval?.status === 'pending') {
-        return held(
-          opened.reason,
-          opened.message,
-          decisionFields(decided, estimate),
-          decided.approval,
-        )
-      }
-      return refuse(
-        call,
-        'topup_required',
-        withApproval(opened.message, decided.approval),
-        opened.reason,
-        decisionFields(decided, estimate),
-      )
-    }
-
-    return allowed(call, decided, opened)
-  }
-
-  function allowed(
-    call: AgentCall,
-    decided: Allowed['decided'],
-    opened: Allowed['opened'],
-  ): Allowed {
-    const { requestId } = call
-    return {
+    const result: Allowed = {
       kind: 'allow',
-      decided,
-      opened,
+      callRef,
       item: call.item,
       estimateUsd: call.estimateUsd,
-      async finish(result) {
-        let policySettled: PolicySettled | null
-        try {
-          policySettled = await decided.settle(result)
-        } catch (error) {
-          log.error('call.policy_settle_failed', {
-            requestId,
-            decisionRef: decided.decisionRef,
-            costUsd: result.costUsd,
-            error: errorMessage(error),
-          })
-          policySettled = null
-        }
-        let settled: Settled | null
-        try {
-          settled = await opened.settle(result)
-        } catch (error) {
-          log.error('call.settle_failed', {
-            requestId,
-            customerRef: opened.customerRef,
-            costUsd: result.costUsd,
-            error: errorMessage(error),
-          })
-          settled = null
-        }
-        return { policySettled, settled }
+      reservation: answer.reservation,
+      finish: result =>
+        complete({
+          status: result.status,
+          costUsd: result.costUsd === null ? null : usdString(result.costUsd),
+          ...(result.interrupted ? { interrupted: result.interrupted } : {}),
+        }),
+      release: async reason => {
+        await complete({ status: 502, costUsd: null, interrupted: reason })
       },
-      release: () => releaseDecision(decided, requestId),
     }
-  }
-
-  /**
-   * Waits for the owner to answer the approval SolvaPay asked with, then
-   * decides the call again. An approved call goes on like any allowed one; a
-   * declined, expired or unanswered one is refused saying which. A second ask
-   * is refused as SolvaPay put it: one hold per call.
-   */
-  async function holdForOwner(held: Held, call: AgentCall): Promise<Allowed | Refused> {
-    const { requestId } = call
-    const approvalRef = held.held.reference
-    let waited
-    try {
-      waited = await deps.approvalWait.until(held.held, call.signal)
-    } catch (error) {
-      log.error('call.approval_wait_failed', {
-        requestId,
-        approvalRef,
-        status: error instanceof AgentApiError ? error.status : null,
-        error: errorMessage(error),
-      })
-      return { kind: 'refused', reason: 'unavailable', message: POLICY_UNAVAILABLE }
-    }
-    log.info('call.approval_wait', { requestId, approvalRef, ...waited })
-    if (waited.outcome !== 'approved') {
-      const message =
-        held.reason === CARD_CONFIRMATION_REQUIRED
-          ? afterCardConfirmationWait(approvalRef, waited.outcome, held.text)
-          : afterWait(approvalRef, waited.outcome)
-      return refuse(call, `approval_${waited.outcome}`, message, `approval_${waited.outcome}`, {
-        approvalRef,
-        held: held.reason,
-      })
-    }
-    const again = await meter(call, {
-      decideRequestId: `${requestId}:after-${approvalRef}`,
-      canHold: false,
-    })
-    if ('held' in again) throw new Error('A retry that cannot hold returned a hold')
-    return again
+    return result
   }
 
   return {
     async begin(call) {
-      const first = await meter(call, {
-        decideRequestId: call.requestId,
-        canHold: deps.approvalWait.maxMs > 0,
-      })
-      return 'held' in first ? holdForOwner(first, call) : first
+      const deadline = now() + deps.maxWaitSeconds * 1000
+      const facts = call.prompt
+      for (;;) {
+        const wait = Math.max(
+          0,
+          Math.min(AUTHORIZE_WAIT_MAX_SECONDS, Math.floor((deadline - now()) / 1000)),
+        )
+        let answer: AuthorizeResponse
+        try {
+          answer = await client.authorize({
+            agentToken: call.agentToken,
+            requestId: call.requestId,
+            item: call.item,
+            estimatedCost: call.estimateUsd,
+            ...(facts
+              ? {
+                  promptHash: facts.promptHash,
+                  toolError: facts.toolError,
+                  // Only when the token SolvaPay minted says the owner opted in.
+                  ...(call.agent.promptExcerpt ? { promptExcerpt: facts.excerpt } : {}),
+                }
+              : {}),
+            wait,
+          })
+        } catch (error) {
+          const status = error instanceof AgentApiError ? error.status : null
+          log.error('call.authorize_failed', {
+            ...callFields(call),
+            status,
+            error: errorMessage(error),
+          })
+          // SolvaPay verifies the token again: a revoked agent, or one for another merchant.
+          if (status === 401 || status === 403)
+            return refuse(call, 'agent_not_accepted', NOT_ACCEPTED)
+          return refuse(call, 'unavailable', UNAVAILABLE)
+        }
+
+        if (answer.status === 'allowed') {
+          log.info('call.allowed', { ...callFields(call), callRef: answer.callRef })
+          return allowed(call, answer)
+        }
+        if (answer.status === 'refused') {
+          return refuse(call, answer.reason, answer.message, { callRef: answer.callRef })
+        }
+        const held = { callRef: answer.callRef, approvalRef: answer.approval.reference }
+        if (deps.maxWaitSeconds === 0) return refuse(call, 'ask', answer.message, held)
+        if (call.signal.aborted) {
+          return refuse(call, 'approval_client_closed', answer.message, held)
+        }
+        if (now() >= deadline) return refuse(call, 'approval_timed_out', answer.message, held)
+        log.info('call.waiting', { ...callFields(call), ...held })
+        await sleep(answer.retryAfterSeconds * 1000, call.signal)
+      }
     },
   }
 }
 
-/** The decision, for a log line about the call. */
-export function decisionFields(
-  decided: Decided,
-  estimate: { item: string; estimateUsd: string },
-): Record<string, unknown> {
+function callFields(call: AgentCall): Record<string, unknown> {
   return {
-    decisionRef: decided.decisionRef,
-    reasonCode: decided.reasonCode,
-    policyRef: decided.policy?.reference ?? null,
-    policyVersion: decided.policy?.version ?? null,
-    item: estimate.item,
-    estimateUsd: estimate.estimateUsd,
-    decideMs: decided.decideMs,
-    promptHash8: decided.promptHash8,
-    excerptSent: decided.excerptSent,
-    ...(decided.budget ? { budget: decided.budget } : {}),
+    requestId: call.requestId,
+    ...call.logFields,
+    agentRef: call.agent.agentRef,
+    userRef: call.agent.principalRef,
+    item: call.item,
+    estimateUsd: call.estimateUsd,
   }
 }
 
-/** How a finished call settled, for its log line. */
-export function finishedFields(finished: Finished): Record<string, unknown> {
-  return { ...policySettleFields(finished.policySettled), ...settleFields(finished.settled) }
-}
-
-function policySettleFields(settled: PolicySettled | null): Record<string, unknown> {
-  if (!settled) return { policySettled: false }
-  return {
-    policySettled: true,
-    policySource: settled.source,
-    spentPeriodUsd: settled.response.policy.spentPeriodUsd,
-    reservedUsd: settled.response.policy.reservedUsd,
-    ...(settled.response.flags.length > 0 ? { policyFlags: settled.response.flags } : {}),
-  }
-}
-
-function settleFields(settled: Settled | null): Record<string, unknown> {
-  if (!settled) return { settled: false, settleError: true }
-  if (!settled.settled) return { settled: false, settleSkipped: settled.reason }
-  const { debit } = settled
-  return {
-    settled: true,
-    settleSource: settled.source,
-    amountUsd: settled.amountUsd,
-    debited: debit.debited,
-    ...(debit.debited
-      ? {
-          creditsDebited: debit.amount,
-          balanceUsd: debit.balanceUsd,
-          balanceCredits: debit.balanceCredits,
-        }
-      : { debitSkipped: debit.reason }),
-  }
+/** A cost as a USD decimal string with up to 8 places, trailing zeros trimmed. */
+export function usdString(usd: number): string {
+  const fixed = usd.toFixed(8).replace(/0+$/, '').replace(/\.$/, '')
+  return fixed === '' ? '0' : fixed
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** What the human reads when a held call is refused: how the owner's approval ended. */
-function afterWait(approvalRef: string, outcome: Exclude<WaitOutcome, 'approved'>): string {
-  switch (outcome) {
-    case 'declined':
-      return `Your owner declined approval ${approvalRef} for more budget this month.`
-    case 'expired':
-      return `Approval ${approvalRef} for more budget expired before your owner answered. Retry to ask again.`
-    case 'timed_out':
-      return `Approval ${approvalRef} for more budget is still waiting for your owner. Retry once they answer.`
-    case 'client_closed':
-      return `The request closed while approval ${approvalRef} was waiting for your owner.`
-  }
-}
-
-/**
- * How a hold on a card confirmation ended without it: SolvaPay's own text,
- * which names the card and the merchant, while nobody has answered; the
- * owner's no when they declined.
- */
-function afterCardConfirmationWait(
-  approvalRef: string,
-  outcome: Exclude<WaitOutcome, 'approved'>,
-  text: string,
-): string {
-  if (outcome === 'declined') {
-    return `Your owner declined to confirm the card (request ${approvalRef}), so this agent cannot buy more credit here.`
-  }
-  return text
-}
-
-/**
- * The SDK's balance text, plus what SolvaPay said about the month's approval:
- * the human then knows a request is with the owner, or was declined.
- */
-function withApproval(message: string, approval: Decided['approval']): string {
-  if (approval?.status === 'pending') {
-    return `${message} Approval ${approval.reference} for more budget is waiting for your owner.`
-  }
-  if (approval?.status === 'declined') {
-    return `${message} Your owner declined more budget this month.`
-  }
-  return message
+/** Resolves after `ms`, or at once when the caller goes away. */
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    const timer = setTimeout(done, ms)
+    signal.addEventListener('abort', done, { once: true })
+    function done() {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', done)
+      resolve()
+    }
+  })
 }

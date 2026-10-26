@@ -1,14 +1,24 @@
-// SolvaPay's agent endpoints, called with the merchant's secret key. The SDK
-// has no generic request yet, so this is a small REST client of its own; it
-// moves into `@solvapay/server` with the rest of this package.
-import { isRecord, requireBoolean, requireString } from './guards'
+// SolvaPay's agent endpoints, called with the merchant's secret key: authorize
+// before a paid call, complete after it, and usage reports for reconciliation.
+// Everything between runs in SolvaPay (DEV-1126); this is transport and types.
+import { isRecord, requireBoolean, requireInteger, requireString } from './guards'
 
-export interface DecideInput {
+/** Why SolvaPay refused a call; the sentence for the human comes with it. */
+export const SERVER_REFUSAL_REASONS = [
+  'customer_not_linked',
+  'ask',
+  'deny',
+  'topup_required',
+  'approval_declined',
+  'approval_expired',
+] as const
+export type ServerRefusalReason = (typeof SERVER_REFUSAL_REASONS)[number]
+
+export interface AuthorizeInput {
   /** The agent token the call came with; SolvaPay verifies it again. */
   agentToken: string
-  /** The merchant's id for the call; a repeat returns the first decision. */
+  /** The merchant's id for the call; a repeat continues the same call. */
   requestId: string
-  kind: 'usage'
   /** The merchant's own label for what is used, at most 200 characters (a model id, a tool name). */
   item?: string
   /** USD decimal string. */
@@ -17,65 +27,47 @@ export interface DecideInput {
   promptHash?: string
   /** The prompt carries a tool result marked as an error. */
   toolError?: boolean
-  /** The end of the prompt, only once SolvaPay said the policy wants it. */
+  /** The end of the prompt, only when the agent token allows it (`px`). */
   promptExcerpt?: string
+  /** Seconds this request may hold while the owner decides, 0 to 55. */
+  wait: number
 }
 
-export type DecisionAction = 'allow' | 'ask' | 'deny'
+/** What SolvaPay answers: go ahead, refused with why, or still waiting for the owner. */
+export type AuthorizeResponse =
+  | {
+      status: 'allowed'
+      callRef: string
+      reservation: { amountUsd: string; expiresAt: string }
+    }
+  | { status: 'refused'; callRef: string; reason: ServerRefusalReason; message: string }
+  | {
+      status: 'waiting'
+      callRef: string
+      message: string
+      approval: { reference: string; expiresAt: string }
+      retryAfterSeconds: number
+    }
 
-export interface DecideResponse {
-  decisionRef: string
-  action: DecisionAction
-  reasonCode: string
-  reasonText: string
-  policy?: { reference: string; version: number }
-  reservation?: { amountUsd: string; expiresAt: string }
-  budget?: {
-    spentUsd: string
-    reservedUsd: string
-    effectiveBudgetUsd: string
-    ceilingUsd: string
-  }
-  /**
-   * The spend policy's approval this month, while one is waiting for the
-   * owner or a decline holds. Its status URL grants nothing.
-   */
-  approval?: DecideApproval
-  /** Whether the spend policy wants the prompt excerpt with this agent's next calls. */
-  promptExcerptWanted?: boolean
+/** The longest one authorize request may hold; a longer wait is a series of requests. */
+export const AUTHORIZE_WAIT_MAX_SECONDS = 55
+
+export interface CompleteInput {
+  /** The status the upstream answered with. */
+  status: number
+  /** The cost the upstream reported, USD decimal string; `null` when none arrived. */
+  costUsd: string | null
+  /** Set when the answer broke before it finished, with why. */
+  interrupted?: string
 }
 
-export interface DecideApproval {
-  reference: string
-  status: 'pending' | 'declined'
-  expiresAt: string
-  statusUrl: string
-}
-
-export const APPROVAL_STATUSES = ['pending', 'approved', 'declined', 'expired'] as const
-export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number]
-
-/** What an approval's status URL answers: no more than its state and expiry. */
-export interface ApprovalStatusResponse {
-  reference: string
-  status: ApprovalStatus
-  expiresAt: string
-}
-
-export type PolicySettleSource = 'reported' | 'provisional' | 'none'
-
-export interface SettleInput {
-  decisionRef: string
-  /** Required unless the source is `none`. */
-  amountUsd?: string
-  source: PolicySettleSource
-}
-
-export interface SettleResponse {
-  settled: true
+export interface CompleteResponse {
+  callRef: string
+  /** `false` when nothing was charged (the upstream answered an error). */
+  settled: boolean
+  source: 'reported' | 'provisional' | 'none'
+  amountUsd: string
   duplicate: boolean
-  policy: { spentPeriodUsd: string; spentDayUsd: string; reservedUsd: string }
-  flags: string[]
 }
 
 /**
@@ -90,8 +82,8 @@ export interface UsageReport {
   source: string
   /** ISO 8601, `[from, to)`, in decision times. */
   window: { from: string; to: string }
-  /** USD decimal strings with up to 8 places. */
-  calls: { decisionRef: string; costUsd: string }[]
+  /** USD decimal strings with up to 8 places, by the call reference authorize returned. */
+  calls: { callRef: string; costUsd: string }[]
   untagged: { at: string; costUsd: string }[]
 }
 
@@ -112,16 +104,18 @@ export const RECONCILIATION_REASONS = [
 ] as const
 export type ReconciliationReason = (typeof RECONCILIATION_REASONS)[number]
 
-/** One decision of a usage report, as SolvaPay reconciled it (build plan §7m, decision 3). */
+/** One call of a usage report, as SolvaPay reconciled it (build plan §7m, decision 3). */
 export interface ReconciledCall {
-  decisionRef: string
+  /** Absent only for a call SolvaPay does not know, which is `ignored`. */
+  callRef?: string
   result: ReconciliationResult
   reason?: ReconciliationReason
-  reportedUsd: string
-  bookedPolicyUsd: string
-  bookedCreditUsd: string
-  policyDeltaUsd: string
-  creditDeltaUsd: string
+  /** Absent for `ignored`. */
+  reportedUsd?: string
+  bookedPolicyUsd?: string
+  bookedCreditUsd?: string
+  policyDeltaUsd?: string
+  creditDeltaUsd?: string
 }
 
 export interface UsageReportResponse {
@@ -135,11 +129,9 @@ export interface UsageReportResponse {
 }
 
 export interface SolvaPayAgentClient {
-  decide(input: DecideInput): Promise<DecideResponse>
-  settle(input: SettleInput): Promise<SettleResponse>
+  authorize(input: AuthorizeInput): Promise<AuthorizeResponse>
+  complete(callRef: string, input: CompleteInput): Promise<CompleteResponse>
   reportUsage(body: UsageReport): Promise<UsageReportResponse>
-  /** Reads an approval at the status URL a decision named; it grants nothing. */
-  approvalStatus(statusUrl: string): Promise<ApprovalStatusResponse>
 }
 
 export class AgentApiError extends Error {
@@ -162,7 +154,7 @@ export function createSolvaPayAgentClient(options: {
   const fetchImpl = options.fetchImpl ?? fetch
   const baseUrl = options.apiBaseUrl.replace(/\/+$/, '')
 
-  async function post<T>(path: string, body: unknown): Promise<T> {
+  async function post<T>(path: string, body: unknown, timeoutMs = TIMEOUT_MS): Promise<T> {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method: 'POST',
       headers: {
@@ -170,7 +162,7 @@ export function createSolvaPayAgentClient(options: {
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     const text = await response.text()
     if (!response.ok) {
@@ -179,45 +171,70 @@ export function createSolvaPayAgentClient(options: {
     return JSON.parse(text) as T
   }
 
-  async function getStatus(statusUrl: string): Promise<ApprovalStatusResponse> {
-    // The URL comes from SolvaPay's own decision; the secret key goes nowhere else.
-    if (!statusUrl.startsWith(`${baseUrl}/`)) {
-      throw new Error(`Approval status URL ${statusUrl} is not on ${baseUrl}`)
-    }
-    const response = await fetchImpl(statusUrl, {
-      headers: { authorization: `Bearer ${options.secretKey}` },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    })
-    const text = await response.text()
-    if (!response.ok) {
-      throw new AgentApiError(
-        `GET ${statusUrl} failed (${response.status}): ${text}`,
-        response.status,
-      )
-    }
-    return parseApprovalStatus(JSON.parse(text))
-  }
-
   return {
-    approvalStatus: getStatus,
-    decide: input => post<DecideResponse>('/v1/sdk/agent/decide', input),
-    settle: input => post<SettleResponse>('/v1/sdk/agent/settle', input),
+    // A held request answers when the owner does or its wait ends, so it may take that long.
+    authorize: async input =>
+      parseAuthorizeResponse(
+        await post<unknown>('/v1/sdk/agent/calls', input, input.wait * 1000 + TIMEOUT_MS),
+      ),
+    complete: async (callRef, input) =>
+      parseCompleteResponse(
+        await post<unknown>(`/v1/sdk/agent/calls/${encodeURIComponent(callRef)}/complete`, input),
+      ),
     reportUsage: async body =>
       parseUsageReportResponse(await post<unknown>('/v1/sdk/agent/usage-reports', body)),
   }
 }
 
-/** Checked field by field: a paid call is held on it, so a misread must throw. */
-export function parseApprovalStatus(value: unknown): ApprovalStatusResponse {
-  if (!isRecord(value)) throw new Error('Approval status response was not an object')
+/** Checked field by field: a paid call goes ahead on it, so a misread must throw. */
+export function parseAuthorizeResponse(value: unknown): AuthorizeResponse {
+  if (!isRecord(value)) throw new Error('Authorize response was not an object')
+  const callRef = requireString(value.callRef, 'callRef')
   const status = requireString(value.status, 'status')
-  if (!(APPROVAL_STATUSES as readonly string[]).includes(status)) {
-    throw new Error(`Approval status "${status}" is not one of ${APPROVAL_STATUSES.join(', ')}`)
+  if (status === 'allowed') {
+    if (!isRecord(value.reservation)) throw new Error('reservation must be an object')
+    return {
+      status,
+      callRef,
+      reservation: {
+        amountUsd: requireString(value.reservation.amountUsd, 'reservation.amountUsd'),
+        expiresAt: requireString(value.reservation.expiresAt, 'reservation.expiresAt'),
+      },
+    }
   }
+  if (status === 'refused') {
+    return {
+      status,
+      callRef,
+      reason: requireOneOf(SERVER_REFUSAL_REASONS, value.reason, 'reason'),
+      message: requireString(value.message, 'message'),
+    }
+  }
+  if (status === 'waiting') {
+    if (!isRecord(value.approval)) throw new Error('approval must be an object')
+    return {
+      status,
+      callRef,
+      message: requireString(value.message, 'message'),
+      approval: {
+        reference: requireString(value.approval.reference, 'approval.reference'),
+        expiresAt: requireString(value.approval.expiresAt, 'approval.expiresAt'),
+      },
+      retryAfterSeconds: requireInteger(value.retryAfterSeconds, 'retryAfterSeconds'),
+    }
+  }
+  throw new Error(`Authorize status "${status}" is not allowed, refused or waiting`)
+}
+
+/** Checked field by field: the call's books are settled on it. */
+export function parseCompleteResponse(value: unknown): CompleteResponse {
+  if (!isRecord(value)) throw new Error('Complete response was not an object')
   return {
-    reference: requireString(value.reference, 'reference'),
-    status: status as ApprovalStatus,
-    expiresAt: requireString(value.expiresAt, 'expiresAt'),
+    callRef: requireString(value.callRef, 'callRef'),
+    settled: requireBoolean(value.settled, 'settled'),
+    source: requireOneOf(['reported', 'provisional', 'none'] as const, value.source, 'source'),
+    amountUsd: requireString(value.amountUsd, 'amountUsd'),
+    duplicate: requireBoolean(value.duplicate, 'duplicate'),
   }
 }
 
@@ -241,17 +258,21 @@ export function parseUsageReportResponse(value: unknown): UsageReportResponse {
 function parseReconciledCall(value: unknown): ReconciledCall {
   if (!isRecord(value)) throw new Error('Usage report result was not an object')
   const result = requireOneOf(RECONCILIATION_RESULTS, value.result, 'result')
+  const optional = (field: string) =>
+    value[field] === undefined || value[field] === null
+      ? {}
+      : { [field]: requireString(value[field], field) }
   return {
-    decisionRef: requireString(value.decisionRef, 'decisionRef'),
+    ...optional('callRef'),
     result,
     ...(value.reason === undefined || value.reason === null
       ? {}
       : { reason: requireOneOf(RECONCILIATION_REASONS, value.reason, 'reason') }),
-    reportedUsd: requireString(value.reportedUsd, 'reportedUsd'),
-    bookedPolicyUsd: requireString(value.bookedPolicyUsd, 'bookedPolicyUsd'),
-    bookedCreditUsd: requireString(value.bookedCreditUsd, 'bookedCreditUsd'),
-    policyDeltaUsd: requireString(value.policyDeltaUsd, 'policyDeltaUsd'),
-    creditDeltaUsd: requireString(value.creditDeltaUsd, 'creditDeltaUsd'),
+    ...optional('reportedUsd'),
+    ...optional('bookedPolicyUsd'),
+    ...optional('bookedCreditUsd'),
+    ...optional('policyDeltaUsd'),
+    ...optional('creditDeltaUsd'),
   }
 }
 

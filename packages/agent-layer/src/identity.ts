@@ -4,6 +4,12 @@
 // merchant's own auth.
 import { errors, jwtVerify, type JWTVerifyGetKey } from 'jose'
 
+/**
+ * Agent token claim: the agent's spend policy lets the classifier read the
+ * end of the prompt. Set by SolvaPay when it mints the token (DEV-1124).
+ */
+export const AGENT_TOKEN_EXCERPT_CLAIM = 'px'
+
 export interface VerifiedAgent {
   /** The agent, `agt_…` (token `sub`). */
   agentRef: string
@@ -11,6 +17,8 @@ export interface VerifiedAgent {
   principalRef: string
   tokenId: string
   expiresAt: Date
+  /** The prompt's end may go to SolvaPay with this agent's calls (`px` claim). */
+  promptExcerpt: boolean
 }
 
 export type AgentTokenResult =
@@ -55,6 +63,7 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
           principalRef: principal,
           tokenId: jti as string,
           expiresAt: new Date((exp as number) * 1000),
+          promptExcerpt: payload[AGENT_TOKEN_EXCERPT_CLAIM] === true,
         },
       }
     } catch (error) {
