@@ -27,6 +27,13 @@ describe('agent token verification', () => {
     })
   })
 
+  it('reads whether the prompt excerpt may go from the px claim (DEV-1124)', async () => {
+    const off = await verifier()(await signAgentToken(privateKey))
+    const on = await verifier()(await signAgentToken(privateKey, { promptExcerpt: true }))
+    expect(off).toMatchObject({ ok: true, agent: { promptExcerpt: false } })
+    expect(on).toMatchObject({ ok: true, agent: { promptExcerpt: true } })
+  })
+
   it('reports an expired token as expired', async () => {
     const token = await new SignJWT({ principal: 'ppl_ABCDEFGHIJKLMNOP', scope: 'usage' })
       .setProtectedHeader({ alg: 'ES256', kid: 'k1' })

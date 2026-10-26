@@ -1,15 +1,16 @@
 // Test doubles for SolvaPay's side of agent payments: agent tokens signed with
-// a local key, the API as `@solvapay/server` sees it, and the agent endpoints.
+// a local key, the API as `@solvapay/server` sees it (customers, for a
+// merchant's own reads), and the agent endpoints (authorize, complete, usage
+// reports).
 import { createSolvaPay, type TrackUsageRequest, type TrackUsageResponse } from '@solvapay/server'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import {
   AgentApiError,
-  type ApprovalStatus,
-  type ApprovalStatusResponse,
-  type DecideInput,
-  type DecideResponse,
-  type SettleInput,
-  type SettleResponse,
+  type AuthorizeInput,
+  type AuthorizeResponse,
+  type CompleteInput,
+  type CompleteResponse,
+  type ServerRefusalReason,
   type SolvaPayAgentClient,
   type UsageReport,
   type UsageReportResponse,
@@ -35,9 +36,12 @@ export function signAgentToken(
     scope?: string
     expiresIn?: string
     kid?: string
+    /** The owner lets the classifier read the prompt's end (`px`). */
+    promptExcerpt?: boolean
   } = {},
 ): Promise<string> {
   const claims: Record<string, unknown> = { scope: overrides.scope ?? 'usage' }
+  if (overrides.promptExcerpt) claims.px = true
   if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
   return new SignJWT(claims)
     .setProtectedHeader({ alg: 'ES256', kid: overrides.kid ?? 'k1' })
@@ -124,37 +128,33 @@ export class FakeSolvaPayApi {
 }
 
 /**
- * In-memory stand-in for SolvaPay's agent endpoints (decide, settle, usage
- * reports). Every decision has the action set on `action`; each settle
- * records how many usage rows the credit side had written by then, to check
- * the order. A usage report is answered by `respond`, by default every call
- * matched and nothing flagged.
+ * In-memory stand-in for SolvaPay's agent endpoints. Each authorize answers
+ * by `outcome`: allowed, refused with `refusal`, or waiting for the owner
+ * `waitingAnswers` times before allowing (`approve`) or refusing. A complete
+ * is recorded and answered as SolvaPay settles it. A usage report is answered
+ * by `respond`, by default every call matched and nothing flagged.
  */
 export class FakeAgentApi implements SolvaPayAgentClient {
-  action: 'allow' | 'ask' | 'deny' = 'allow'
-  reasonCode = 'within_limits'
-  reasonText = 'Within limits.'
-  /** An HTTP status for decide to fail with. */
-  failDecide: number | null = null
-  /** The month's approval to report on every decision, as SolvaPay does while one waits. */
-  approval: DecideResponse['approval'] | null = null
-  /** What the policy wants for the excerpt; absent from responses while `null`. */
-  promptExcerptWanted: boolean | null = null
-  /**
-   * What each read of an approval's status answers, in order; the last one
-   * repeats. Setting it to approved lets the next decide allow, as SolvaPay's
-   * extension would.
-   */
-  statuses: ApprovalStatus[] = ['pending']
-  readonly statusReads: string[] = []
-  readonly decides: DecideInput[] = []
-  readonly settles: (SettleInput & { usagesBefore: number })[] = []
+  outcome: 'allowed' | 'refused' = 'allowed'
+  refusal: { reason: ServerRefusalReason; message: string } = {
+    reason: 'deny',
+    message: 'This call could cost about $0.31, over the per-call cap of $0.25.',
+  }
+  /** How many authorize answers say `waiting` before `outcome` applies. */
+  waitingAnswers = 0
+  waitingMessage = 'Approval apr_TESTAPR1 for more budget is waiting for your owner.'
+  /** An HTTP status for authorize to fail with. */
+  failAuthorize: number | null = null
+  /** An HTTP status for complete to fail with. */
+  failComplete: number | null = null
+  readonly authorizes: AuthorizeInput[] = []
+  readonly completes: (CompleteInput & { callRef: string })[] = []
   readonly reports: UsageReport[] = []
   respond: (report: UsageReport) => UsageReportResponse = report => ({
     reference: `urp_TEST${String(this.reports.length).padStart(4, '0')}`,
     duplicate: false,
     results: report.calls.map(call => ({
-      decisionRef: call.decisionRef,
+      callRef: call.callRef,
       result: 'matched',
       reportedUsd: call.costUsd,
       bookedPolicyUsd: call.costUsd,
@@ -164,68 +164,60 @@ export class FakeAgentApi implements SolvaPayAgentClient {
     })),
     untagged: { totalUsd: '0', beforePolicyUsd: '0', flagged: false },
   })
-  private next = 1
+  /** request id → call reference, as SolvaPay keys a call on the merchant's id. */
+  private readonly calls = new Map<string, string>()
 
-  constructor(private readonly api?: FakeSolvaPayApi) {}
-
-  async decide(input: DecideInput): Promise<DecideResponse> {
-    this.decides.push(input)
-    if (this.failDecide !== null) {
+  async authorize(input: AuthorizeInput): Promise<AuthorizeResponse> {
+    this.authorizes.push(input)
+    if (this.failAuthorize !== null) {
       throw new AgentApiError(
-        `POST /v1/sdk/agent/decide failed (${this.failDecide})`,
-        this.failDecide,
+        `POST /v1/sdk/agent/calls failed (${this.failAuthorize})`,
+        this.failAuthorize,
       )
     }
-    const decisionRef = `dec_TEST${String(this.next++).padStart(4, '0')}`
+    const callRef =
+      this.calls.get(input.requestId) ?? `call_TEST${String(this.calls.size + 1).padStart(4, '0')}`
+    this.calls.set(input.requestId, callRef)
+    if (this.waitingAnswers > 0) {
+      this.waitingAnswers -= 1
+      return {
+        status: 'waiting',
+        callRef,
+        message: this.waitingMessage,
+        approval: {
+          reference: 'apr_TESTAPR1',
+          expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+        },
+        retryAfterSeconds: 1,
+      }
+    }
+    if (this.outcome === 'refused') return { status: 'refused', callRef, ...this.refusal }
     return {
-      decisionRef,
-      action: this.action,
-      reasonCode: this.reasonCode,
-      reasonText: this.reasonText,
-      policy: { reference: 'pol_TESTPOL1', version: 2 },
-      ...(this.action === 'allow'
-        ? {
-            reservation: {
-              amountUsd: input.estimatedCost,
-              expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
-            },
-          }
-        : {}),
-      budget: {
-        spentUsd: '0.10',
-        reservedUsd: '0',
-        effectiveBudgetUsd: '5',
-        ceilingUsd: '12.5',
+      status: 'allowed',
+      callRef,
+      reservation: {
+        amountUsd: input.estimatedCost,
+        expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
       },
-      ...(this.approval ? { approval: this.approval } : {}),
-      ...(this.promptExcerptWanted !== null
-        ? { promptExcerptWanted: this.promptExcerptWanted }
-        : {}),
     }
   }
 
-  async settle(input: SettleInput): Promise<SettleResponse> {
-    this.settles.push({ ...input, usagesBefore: this.api?.usages.length ?? 0 })
+  async complete(callRef: string, input: CompleteInput): Promise<CompleteResponse> {
+    this.completes.push({ callRef, ...input })
+    if (this.failComplete !== null) {
+      throw new AgentApiError(
+        `POST /v1/sdk/agent/calls/${callRef}/complete failed (${this.failComplete})`,
+        this.failComplete,
+      )
+    }
+    const source =
+      input.status >= 400 ? 'none' : input.costUsd !== null ? 'reported' : 'provisional'
     return {
-      settled: true,
+      callRef,
+      settled: source !== 'none',
+      source,
+      amountUsd: source === 'reported' ? (input.costUsd as string) : '0',
       duplicate: false,
-      policy: { spentPeriodUsd: input.amountUsd ?? '0', spentDayUsd: '0', reservedUsd: '0' },
-      flags: input.source === 'provisional' ? ['provisional'] : [],
-    }
-  }
-
-  async approvalStatus(statusUrl: string): Promise<ApprovalStatusResponse> {
-    this.statusReads.push(statusUrl)
-    const status = this.statuses[Math.min(this.statusReads.length, this.statuses.length) - 1]
-    if (status === 'approved') {
-      this.action = 'allow'
-      this.reasonCode = 'within_limits'
-      this.approval = null
-    }
-    return {
-      reference: statusUrl.split('/').pop() as string,
-      status,
-      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
     }
   }
 

@@ -1,14 +1,15 @@
 /**
  * `@solvapay/agent-layer` — what a merchant needs to be paid by SolvaPay
- * agents: verify the agent token, decide each call against its owner's spend
- * policy, hold while an approval waits for the owner, gate on the balance and
- * settle at the cost the upstream reported.
+ * agents, as a thin client (DEV-1126): verify the agent token, ask SolvaPay to
+ * authorize each call, complete it at the cost the upstream reported, and
+ * report usage for reconciliation. The spend policy, the classifier, the
+ * approval hold, the balance and the settle rules all run in SolvaPay.
  *
- * Private for now: it moves into `@solvapay/server` once an HTTP merchant and
- * an MCP merchant have proven its shape (DEV-1109). Protocol-neutral: no
- * route, no Anthropic or MCP types.
+ * Private for now; it becomes the preview package once the lab runs on it.
+ * Protocol-neutral: no route, no Anthropic or MCP types.
  */
 export {
+  AGENT_TOKEN_EXCERPT_CLAIM,
   createAgentLayer,
   createAgentTokenVerifier,
   looksLikeJwt,
@@ -20,52 +21,34 @@ export {
 } from './identity'
 export {
   AgentApiError,
-  APPROVAL_STATUSES,
+  AUTHORIZE_WAIT_MAX_SECONDS,
   createSolvaPayAgentClient,
-  parseApprovalStatus,
+  parseAuthorizeResponse,
+  parseCompleteResponse,
   parseUsageReportResponse,
   RECONCILIATION_REASONS,
   RECONCILIATION_RESULTS,
-  type ApprovalStatus,
-  type ApprovalStatusResponse,
-  type DecideApproval,
-  type DecideInput,
-  type DecideResponse,
+  SERVER_REFUSAL_REASONS,
+  type AuthorizeInput,
+  type AuthorizeResponse,
+  type CompleteInput,
+  type CompleteResponse,
   type ReconciledCall,
   type ReconciliationReason,
   type ReconciliationResult,
-  type SettleInput,
-  type SettleResponse,
+  type ServerRefusalReason,
   type SolvaPayAgentClient,
   type UsageReport,
   type UsageReportResponse,
 } from './client'
-export { createPolicy, type Decided, type Policy, type PolicySettled } from './policy'
-export {
-  createApprovalWait,
-  type ApprovalWait,
-  type WaitOutcome,
-  type WaitResult,
-} from './approval-wait'
-export {
-  amountToSettle,
-  createMetering,
-  findCustomerRef,
-  usdString,
-  type CallResult,
-  type Metering,
-  type Opened,
-  type Settled,
-} from './metering'
 export { PROMPT_EXCERPT_MAX, promptFacts, type PromptFacts } from './prompt'
 export {
   createAgentCalls,
-  decisionFields,
-  finishedFields,
+  usdString,
   type AgentCall,
   type AgentCalls,
   type Allowed,
-  type Finished,
+  type CallResult,
   type Logger,
   type RefusalReason,
   type Refused,
