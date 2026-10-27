@@ -1,0 +1,91 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Int64 Widgets", "version": "1.0.0" },
+  "servers": [{ "url": "https://api.example.com/v1" }],
+  "paths": {
+    "/widgets/{widgetId}": {
+      "get": {
+        "operationId": "getWidget",
+        "summary": "Get a widget",
+        "parameters": [
+          {
+            "name": "widgetId",
+            "in": "path",
+            "required": true,
+            "description": "Widget ID",
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Widget" } } }
+          }
+        }
+      }
+    },
+    "/widgets": {
+      "post": {
+        "operationId": "createWidget",
+        "summary": "Create a widget",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Widget" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Widget" } } }
+          }
+        }
+      }
+    },
+    "/widgets/{widgetId}/label": {
+      "put": {
+        "operationId": "setWidgetLabel",
+        "summary": "Set a widget label",
+        "parameters": [
+          {
+            "name": "widgetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "label": { "type": "string" } } }
+            }
+          }
+        },
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Widget": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "phone": { "type": "string" },
+          "owner": {
+            "type": "object",
+            "properties": { "accountId": { "type": "integer", "format": "int64" } }
+          },
+          "parts": {
+            "type": "array",
+            "items": { "type": "object", "properties": { "partId": { "type": "integer" } } }
+          }
+        }
+      }
+    }
+  }
+}

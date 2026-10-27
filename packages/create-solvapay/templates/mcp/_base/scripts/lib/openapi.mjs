@@ -93,7 +93,9 @@ export function listOperations(spec) {
       const op = pathItem[method]
       if (!op || typeof op !== 'object') continue
       const operationId = op.operationId ?? defaultOperationId(method, path)
-      const parameters = mergeParameters(pathLevelParams, op.parameters ?? [])
+      const parameters = mergeParameters(pathLevelParams, op.parameters ?? []).filter(
+        p => p.in !== 'body',
+      )
       operations.push({
         operationId,
         method: method.toUpperCase(),
@@ -103,7 +105,9 @@ export function listOperations(spec) {
         deprecated: op.deprecated === true,
         tags: Array.isArray(op.tags) ? op.tags : [],
         parameters,
-        requestBody: extractRequestBody(op.requestBody),
+        requestBody:
+          extractRequestBody(op.requestBody) ??
+          extractSwagger2Body(spec, op, pathLevelParams),
         security: op.security ?? spec.security ?? null,
         raw: op,
       })
@@ -252,7 +256,9 @@ function mergeParameters(pathLevel, opLevel) {
 }
 
 function normaliseParameter(param) {
-  const schema = param.schema ?? {}
+  // Swagger 2.0 non-body parameters declare type / format / enum /
+  // default on the parameter itself rather than under `schema`.
+  const schema = param.schema ?? param
   return {
     name: param.name,
     in: param.in,
@@ -265,6 +271,20 @@ function normaliseParameter(param) {
     default: schema.default,
     schemaExample: schema.example,
   }
+}
+
+// Swagger 2.0 carries the JSON body as an `in: body` parameter instead
+// of `requestBody`. Lift it into the same shape so codegen sends it.
+// Skipped when the operation only consumes non-JSON media types.
+function extractSwagger2Body(spec, op, pathLevelParams) {
+  const params = [...(op.parameters ?? []), ...pathLevelParams]
+  const body = params.find(p => p && typeof p === 'object' && p.in === 'body')
+  if (!body) return null
+  const consumes = op.consumes ?? spec.consumes
+  if (Array.isArray(consumes) && consumes.length > 0 && !consumes.some(c => /json/i.test(c))) {
+    return null
+  }
+  return { required: body.required === true, schema: body.schema ?? null, example: undefined }
 }
 
 function extractRequestBody(requestBody) {
