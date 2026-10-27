@@ -625,7 +625,8 @@ function deriveServerNameFromWorkerName(workerName) {
   return cleaned || 'solvapay-mcp-server'
 }
 
-function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLimit }) {
+function renderToolFile({ operation: specOperation, schemes, tier, auth, serverBaseUrl, freeLimit }) {
+  const operation = withoutReservedHeaderParams(specOperation, auth)
   const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
@@ -765,7 +766,7 @@ function shortenDescription(text) {
 function renderUrlTemplate(baseUrl, operation) {
   let path = operation.path
   for (const param of operation.parameters.filter(p => p.in === 'path')) {
-    path = path.replace(`{${param.name}}`, `\${input.${jsAccessor(param.name)}}`)
+    path = path.replace(`{${param.name}}`, `\${${inputAccess(param.name)}}`)
   }
   return `\`${joinUrl(baseUrl, path)}\``
 }
@@ -783,7 +784,7 @@ function renderFormAssign(operation) {
   const ctor = operation.formEncoding === 'multipart' ? 'FormData' : 'URLSearchParams'
   const lines = [`      const form = new ${ctor}()`]
   for (const field of fields) {
-    const access = `input.${jsAccessor(field.name)}`
+    const access = inputAccess(field.name)
     lines.push(`      if (${access} !== undefined) form.set('${field.name}', String(${access}))`)
   }
   return lines.join('\n')
@@ -795,7 +796,7 @@ function renderFetchInit(operation, headerLines) {
   const queryAssign = operation.parameters
     .filter(p => p.in === 'query')
     .map(p => {
-      const access = `input.${jsAccessor(p.name)}`
+      const access = inputAccess(p.name)
       return `      if (${access} !== undefined) url.searchParams.set('${p.name}', String(${access}))`
     })
     .concat(renderFormAssign(operation) || [])
@@ -821,6 +822,22 @@ function renderFetchInit(operation, headerLines) {
   return { method, queryAssign, headersBlock, bodyBlock, methodBlock, usesStringifyLossless }
 }
 
+// OpenAPI ignores `in: header` params named Accept, Content-Type or
+// Authorization, and a header param that names the upstream credential
+// header would let the LLM supply (or overwrite) the secret. Drop both
+// from the tool input.
+function withoutReservedHeaderParams(operation, auth) {
+  const reserved = new Set(['accept', 'content-type', 'authorization'])
+  if (auth.kind === 'apiKey' && auth.name) reserved.add(auth.name.toLowerCase())
+  if (auth.kind === 'apiKey-multi') {
+    for (const header of auth.headers ?? []) reserved.add(String(header.name).toLowerCase())
+  }
+  const parameters = operation.parameters.filter(
+    p => p.in !== 'header' || !reserved.has(String(p.name).toLowerCase()),
+  )
+  return parameters.length === operation.parameters.length ? operation : { ...operation, parameters }
+}
+
 function renderHeaderLines(auth, schemes, operation) {
   // Pick the first supported scheme this operation requires; fall back
   // to the top-level auth kind when the spec has no operation-level
@@ -838,7 +855,14 @@ function renderHeaderLines(auth, schemes, operation) {
   // handler body (see renderPayableBody / renderFreeCappedBody /
   // renderFreeBody) via
   // `const token = await getAccessToken(env)`.
-  const headerEntries = []
+  // `in: header` params go first so the upstream credential (added below)
+  // always wins over a caller-supplied value.
+  const headerEntries = operation.parameters
+    .filter(p => p.in === 'header')
+    .map(p => {
+      const access = inputAccess(p.name)
+      return `...(${access} !== undefined ? { ${JSON.stringify(p.name.toLowerCase())}: String(${access}) } : {})`
+    })
   if (auth.kind === 'bearer') {
     headerEntries.push("authorization: `Bearer ${env.UPSTREAM_API_KEY}`")
   } else if (auth.kind === 'apiKey') {
@@ -1124,6 +1148,12 @@ function jsKey(name) {
 
 function jsAccessor(name) {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : `[${JSON.stringify(name)}]`
+}
+
+// `input.foo` for identifier-safe names, `input["page-size"]` otherwise.
+function inputAccess(name) {
+  const accessor = jsAccessor(name)
+  return accessor.startsWith('[') ? `input${accessor}` : `input.${accessor}`
 }
 
 function capitalize(s) {
