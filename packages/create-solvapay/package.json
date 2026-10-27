@@ -1,6 +1,6 @@
 {
   "name": "create-solvapay",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Scaffold SolvaPay-monetized projects — MCP servers on Cloudflare Workers and more.",
   "type": "module",
   "bin": {
