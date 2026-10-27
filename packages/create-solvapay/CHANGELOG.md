@@ -1,5 +1,11 @@
 # create-solvapay
 
+## 0.8.2
+
+### Patch Changes
+
+- 9e79637: Generated MCP tools send `in: header` parameters as request headers. Header params named `Accept`, `Content-Type`, `Authorization` or the upstream API key header are left out of the tool input, so the LLM can't supply or overwrite the credential. Parameters whose names aren't valid JavaScript identifiers (e.g. `page-size`, `X-Request-Id`) no longer generate invalid `input.["…"]` code.
+
 ## 0.8.1
 
 ### Patch Changes
