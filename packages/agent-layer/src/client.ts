@@ -14,6 +14,16 @@ export const SERVER_REFUSAL_REASONS = [
 ] as const
 export type ServerRefusalReason = (typeof SERVER_REFUSAL_REASONS)[number]
 
+/**
+ * Money on the wire: a decimal amount with up to 8 places and its ISO 4217
+ * currency, always together (DEV-1129). SolvaPay counts credits in USD and
+ * refuses a currency it can't price yet (`currency_not_supported`).
+ */
+export interface MoneyAmount {
+  amount: string
+  currency: string
+}
+
 export interface AuthorizeInput {
   /** The agent token the call came with; SolvaPay verifies it again. */
   agentToken: string
@@ -21,8 +31,8 @@ export interface AuthorizeInput {
   requestId: string
   /** The merchant's own label for what is used, at most 200 characters (a model id, a tool name). */
   item?: string
-  /** USD decimal string. */
-  estimatedCost: string
+  /** What this call may cost, in the merchant's currency. */
+  estimate: MoneyAmount
   /** `sha256:` over the call's prompt; repeats of it show loops. */
   promptHash?: string
   /** The prompt carries a tool result marked as an error. */
@@ -38,7 +48,7 @@ export type AuthorizeResponse =
   | {
       status: 'allowed'
       callRef: string
-      reservation: { amountUsd: string; expiresAt: string }
+      reservation: { held: MoneyAmount; expiresAt: string }
     }
   | { status: 'refused'; callRef: string; reason: ServerRefusalReason; message: string }
   | {
@@ -55,8 +65,8 @@ export const AUTHORIZE_WAIT_MAX_SECONDS = 55
 export interface CompleteInput {
   /** The status the upstream answered with. */
   status: number
-  /** The cost the upstream reported, USD decimal string; `null` when none arrived. */
-  costUsd: string | null
+  /** The cost the upstream reported, in its currency; `null` when none arrived. */
+  cost: MoneyAmount | null
   /** Set when the answer broke before it finished, with why. */
   interrupted?: string
 }
@@ -66,7 +76,8 @@ export interface CompleteResponse {
   /** `false` when nothing was charged (the upstream answered an error). */
   settled: boolean
   source: 'reported' | 'provisional' | 'none'
-  amountUsd: string
+  /** What was settled, in USD credits. */
+  amount: MoneyAmount
   duplicate: boolean
 }
 
@@ -82,9 +93,11 @@ export interface UsageReport {
   source: string
   /** ISO 8601, `[from, to)`, in decision times. */
   window: { from: string; to: string }
-  /** USD decimal strings with up to 8 places, by the call reference authorize returned. */
-  calls: { callRef: string; costUsd: string }[]
-  untagged: { at: string; costUsd: string }[]
+  /** The currency every cost below is in: one upstream bills in one currency. */
+  currency: string
+  /** Decimal strings with up to 8 places, by the call reference authorize returned. */
+  calls: { callRef: string; cost: string }[]
+  untagged: { at: string; cost: string }[]
 }
 
 export const RECONCILIATION_RESULTS = [
@@ -111,21 +124,23 @@ export interface ReconciledCall {
   result: ReconciliationResult
   reason?: ReconciliationReason
   /** Absent for `ignored`. */
-  reportedUsd?: string
-  bookedPolicyUsd?: string
-  bookedCreditUsd?: string
-  policyDeltaUsd?: string
-  creditDeltaUsd?: string
+  reported?: string
+  bookedPolicy?: string
+  bookedCredit?: string
+  policyDelta?: string
+  creditDelta?: string
 }
 
 export interface UsageReportResponse {
   /** SolvaPay's record of the report (`urp_…`). */
   reference: string
+  /** The currency of every amount below: credits are counted in USD. */
+  currency: string
   /** The report id was seen before; the first report's results are returned. */
   duplicate: boolean
   results: ReconciledCall[]
   /** Usage without a decision; `flagged` when some of it came after the spend policy. */
-  untagged: { totalUsd: string; beforePolicyUsd: string; flagged: boolean }
+  untagged: { total: string; beforePolicy: string; flagged: boolean }
 }
 
 export interface SolvaPayAgentClient {
@@ -197,7 +212,7 @@ export function parseAuthorizeResponse(value: unknown): AuthorizeResponse {
       status,
       callRef,
       reservation: {
-        amountUsd: requireString(value.reservation.amountUsd, 'reservation.amountUsd'),
+        held: parseMoney(value.reservation.held, 'reservation.held'),
         expiresAt: requireString(value.reservation.expiresAt, 'reservation.expiresAt'),
       },
     }
@@ -233,7 +248,7 @@ export function parseCompleteResponse(value: unknown): CompleteResponse {
     callRef: requireString(value.callRef, 'callRef'),
     settled: requireBoolean(value.settled, 'settled'),
     source: requireOneOf(['reported', 'provisional', 'none'] as const, value.source, 'source'),
-    amountUsd: requireString(value.amountUsd, 'amountUsd'),
+    amount: parseMoney(value.amount, 'amount'),
     duplicate: requireBoolean(value.duplicate, 'duplicate'),
   }
 }
@@ -245,11 +260,12 @@ export function parseUsageReportResponse(value: unknown): UsageReportResponse {
   if (!isRecord(value.untagged)) throw new Error('Usage report untagged must be an object')
   return {
     reference: requireString(value.reference, 'reference'),
+    currency: requireString(value.currency, 'currency'),
     duplicate: requireBoolean(value.duplicate, 'duplicate'),
     results: value.results.map(parseReconciledCall),
     untagged: {
-      totalUsd: requireString(value.untagged.totalUsd, 'untagged.totalUsd'),
-      beforePolicyUsd: requireString(value.untagged.beforePolicyUsd, 'untagged.beforePolicyUsd'),
+      total: requireString(value.untagged.total, 'untagged.total'),
+      beforePolicy: requireString(value.untagged.beforePolicy, 'untagged.beforePolicy'),
       flagged: requireBoolean(value.untagged.flagged, 'untagged.flagged'),
     },
   }
@@ -268,11 +284,11 @@ function parseReconciledCall(value: unknown): ReconciledCall {
     ...(value.reason === undefined || value.reason === null
       ? {}
       : { reason: requireOneOf(RECONCILIATION_REASONS, value.reason, 'reason') }),
-    ...optional('reportedUsd'),
-    ...optional('bookedPolicyUsd'),
-    ...optional('bookedCreditUsd'),
-    ...optional('policyDeltaUsd'),
-    ...optional('creditDeltaUsd'),
+    ...optional('reported'),
+    ...optional('bookedPolicy'),
+    ...optional('bookedCredit'),
+    ...optional('policyDelta'),
+    ...optional('creditDelta'),
   }
 }
 
@@ -281,4 +297,13 @@ function requireOneOf<T extends string>(allowed: readonly T[], value: unknown, l
     throw new Error(`${label} must be one of ${allowed.join(', ')}, got ${JSON.stringify(value)}`)
   }
   return value as T
+}
+
+/** An amount and its currency, both required. */
+function parseMoney(value: unknown, label: string): MoneyAmount {
+  if (!isRecord(value)) throw new Error(`${label} must be an object with amount and currency`)
+  return {
+    amount: requireString(value.amount, `${label}.amount`),
+    currency: requireString(value.currency, `${label}.currency`),
+  }
 }

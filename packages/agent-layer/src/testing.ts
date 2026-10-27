@@ -152,17 +152,18 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   readonly reports: UsageReport[] = []
   respond: (report: UsageReport) => UsageReportResponse = report => ({
     reference: `urp_TEST${String(this.reports.length).padStart(4, '0')}`,
+    currency: 'USD',
     duplicate: false,
     results: report.calls.map(call => ({
       callRef: call.callRef,
       result: 'matched',
-      reportedUsd: call.costUsd,
-      bookedPolicyUsd: call.costUsd,
-      bookedCreditUsd: call.costUsd,
-      policyDeltaUsd: '0',
-      creditDeltaUsd: '0',
+      reported: call.cost,
+      bookedPolicy: call.cost,
+      bookedCredit: call.cost,
+      policyDelta: '0',
+      creditDelta: '0',
     })),
-    untagged: { totalUsd: '0', beforePolicyUsd: '0', flagged: false },
+    untagged: { total: '0', beforePolicy: '0', flagged: false },
   })
   /** request id → call reference, as SolvaPay keys a call on the merchant's id. */
   private readonly calls = new Map<string, string>()
@@ -196,7 +197,7 @@ export class FakeAgentApi implements SolvaPayAgentClient {
       status: 'allowed',
       callRef,
       reservation: {
-        amountUsd: input.estimatedCost,
+        held: input.estimate,
         expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
       },
     }
@@ -210,13 +211,15 @@ export class FakeAgentApi implements SolvaPayAgentClient {
         this.failComplete,
       )
     }
-    const source =
-      input.status >= 400 ? 'none' : input.costUsd !== null ? 'reported' : 'provisional'
+    const source = input.status >= 400 ? 'none' : input.cost !== null ? 'reported' : 'provisional'
     return {
       callRef,
       settled: source !== 'none',
       source,
-      amountUsd: source === 'reported' ? (input.costUsd as string) : '0',
+      amount: {
+        amount: source === 'reported' ? (input.cost as { amount: string }).amount : '0',
+        currency: 'USD',
+      },
       duplicate: false,
     }
   }

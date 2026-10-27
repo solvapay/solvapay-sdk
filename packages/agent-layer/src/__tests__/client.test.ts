@@ -7,7 +7,10 @@ describe('parseAuthorizeResponse', () => {
       parseAuthorizeResponse({
         status: 'allowed',
         callRef: 'call_A',
-        reservation: { amountUsd: '0.05', expiresAt: '2026-10-26T22:00:00.000Z' },
+        reservation: {
+          held: { amount: '0.05', currency: 'USD' },
+          expiresAt: '2026-10-26T22:00:00.000Z',
+        },
       }),
     ).toMatchObject({ status: 'allowed', callRef: 'call_A' })
     expect(
@@ -40,6 +43,13 @@ describe('parseAuthorizeResponse', () => {
       }),
     ).toThrow('reason must be one of')
     expect(() => parseAuthorizeResponse({ status: 'allowed', callRef: 'call_A' })).toThrow()
+    expect(() =>
+      parseAuthorizeResponse({
+        status: 'allowed',
+        callRef: 'call_A',
+        reservation: { held: { amount: '0.05' }, expiresAt: '2026-10-26T22:00:00.000Z' },
+      }),
+    ).toThrow('reservation.held.currency')
   })
 })
 
@@ -58,19 +68,27 @@ describe('createSolvaPayAgentClient', () => {
                 callRef: 'call_A',
                 settled: true,
                 source: 'reported',
-                amountUsd: '0.01',
+                amount: { amount: '0.01', currency: 'USD' },
                 duplicate: false,
               })
             : JSON.stringify({
                 status: 'allowed',
                 callRef: 'call_A',
-                reservation: { amountUsd: '0.05', expiresAt: '2026-10-26T22:00:00.000Z' },
+                reservation: {
+                  held: { amount: '0.05', currency: 'USD' },
+                  expiresAt: '2026-10-26T22:00:00.000Z',
+                },
               }),
         )
       }) as typeof fetch,
     })
-    await client.authorize({ agentToken: 't', requestId: 'r', estimatedCost: '0.05', wait: 55 })
-    await client.complete('call_A', { status: 200, costUsd: '0.01' })
+    await client.authorize({
+      agentToken: 't',
+      requestId: 'r',
+      estimate: { amount: '0.05', currency: 'USD' },
+      wait: 55,
+    })
+    await client.complete('call_A', { status: 200, cost: { amount: '0.01', currency: 'USD' } })
     expect(seen.map(s => s.url)).toEqual([
       'https://api.solvapay.test/v1/sdk/agent/calls',
       'https://api.solvapay.test/v1/sdk/agent/calls/call_A/complete',

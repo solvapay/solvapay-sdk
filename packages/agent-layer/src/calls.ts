@@ -12,6 +12,7 @@ import {
   AgentApiError,
   type AuthorizeResponse,
   type CompleteResponse,
+  type MoneyAmount,
   type ServerRefusalReason,
   type SolvaPayAgentClient,
 } from './client'
@@ -32,8 +33,8 @@ export interface AgentCall {
   agent: VerifiedAgent
   /** The merchant's label for what is used (a model id, a tool name). */
   item: string
-  /** What this call may cost, USD decimal string. */
-  estimateUsd: string
+  /** What this call may cost, in the merchant's currency. */
+  estimate: MoneyAmount
   prompt: PromptFacts | null
   /** Ends a wait for the owner when the caller goes away. */
   signal: AbortSignal
@@ -63,8 +64,8 @@ export interface Refused {
 /** How the upstream answered, as the merchant read it. */
 export interface CallResult {
   status: number
-  /** The cost the upstream reported, or null when none arrived. */
-  costUsd: number | null
+  /** The cost the upstream reported, in its currency, or null when none arrived. */
+  cost: { amount: number; currency: string } | null
   /** Set when the answer to the caller broke before it finished. */
   interrupted?: string
 }
@@ -74,8 +75,9 @@ export interface Allowed {
   /** SolvaPay's reference for the call: tag the upstream usage with it, and report usage by it. */
   callRef: string
   item: string
-  estimateUsd: string
-  reservation: { amountUsd: string; expiresAt: string }
+  estimate: MoneyAmount
+  /** What SolvaPay holds for the call, in USD credits, until `expiresAt`. */
+  reservation: { held: MoneyAmount; expiresAt: string }
   /**
    * Completes the call at how the upstream answered. Once per call. `null`
    * when SolvaPay could not be told: logged, and the call's reservations
@@ -132,16 +134,19 @@ export function createAgentCalls(deps: {
       kind: 'allow',
       callRef,
       item: call.item,
-      estimateUsd: call.estimateUsd,
+      estimate: call.estimate,
       reservation: answer.reservation,
       finish: result =>
         complete({
           status: result.status,
-          costUsd: result.costUsd === null ? null : usdString(result.costUsd),
+          cost:
+            result.cost === null
+              ? null
+              : { amount: amountString(result.cost.amount), currency: result.cost.currency },
           ...(result.interrupted ? { interrupted: result.interrupted } : {}),
         }),
       release: async reason => {
-        await complete({ status: 502, costUsd: null, interrupted: reason })
+        await complete({ status: 502, cost: null, interrupted: reason })
       },
     }
     return result
@@ -162,7 +167,7 @@ export function createAgentCalls(deps: {
             agentToken: call.agentToken,
             requestId: call.requestId,
             item: call.item,
-            estimatedCost: call.estimateUsd,
+            estimate: call.estimate,
             ...(facts
               ? {
                   promptHash: facts.promptHash,
@@ -213,13 +218,13 @@ function callFields(call: AgentCall): Record<string, unknown> {
     agentRef: call.agent.agentRef,
     userRef: call.agent.principalRef,
     item: call.item,
-    estimateUsd: call.estimateUsd,
+    estimate: `${call.estimate.amount} ${call.estimate.currency}`,
   }
 }
 
-/** A cost as a USD decimal string with up to 8 places, trailing zeros trimmed. */
-export function usdString(usd: number): string {
-  const fixed = usd.toFixed(8).replace(/0+$/, '').replace(/\.$/, '')
+/** An amount as a decimal string with up to 8 places, trailing zeros trimmed. */
+export function amountString(amount: number): string {
+  const fixed = amount.toFixed(8).replace(/0+$/, '').replace(/\.$/, '')
   return fixed === '' ? '0' : fixed
 }
 

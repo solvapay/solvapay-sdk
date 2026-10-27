@@ -33,6 +33,7 @@ export {
   type AuthorizeResponse,
   type CompleteInput,
   type CompleteResponse,
+  type MoneyAmount,
   type ReconciledCall,
   type ReconciliationReason,
   type ReconciliationResult,
@@ -44,7 +45,7 @@ export {
 export { PROMPT_EXCERPT_MAX, promptFacts, type PromptFacts } from './prompt'
 export {
   createAgentCalls,
-  usdString,
+  amountString,
   type AgentCall,
   type AgentCalls,
   type Allowed,

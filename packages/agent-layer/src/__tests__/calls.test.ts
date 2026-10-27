@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAgentCalls, usdString, type AgentCall, type Allowed } from '../calls'
+import { amountString, createAgentCalls, type AgentCall, type Allowed } from '../calls'
 import { promptFacts } from '../prompt'
 import { FakeAgentApi } from '../testing'
 
@@ -36,7 +36,7 @@ function call(overrides: Partial<AgentCall> = {}): AgentCall {
       promptExcerpt: false,
     },
     item: 'claude-haiku-4-5',
-    estimateUsd: '0.005142',
+    estimate: { amount: '0.005142', currency: 'USD' },
     prompt: null,
     signal: new AbortController().signal,
     ...overrides,
@@ -54,16 +54,19 @@ describe('createAgentCalls', () => {
         agentToken: 'eyJ.agent.token',
         requestId: 'req-1',
         item: 'claude-haiku-4-5',
-        estimatedCost: '0.005142',
+        estimate: { amount: '0.005142', currency: 'USD' },
         wait: 0,
       },
     ])
-    expect(await begun.finish({ status: 200, costUsd: 0.0000407 })).toMatchObject({
-      source: 'reported',
-      amountUsd: '0.0000407',
-    })
+    expect(
+      await begun.finish({ status: 200, cost: { amount: 0.0000407, currency: 'USD' } }),
+    ).toMatchObject({ source: 'reported', amount: { amount: '0.0000407', currency: 'USD' } })
     expect(agentApi.completes).toEqual([
-      { callRef: 'call_TEST0001', status: 200, costUsd: '0.0000407' },
+      {
+        callRef: 'call_TEST0001',
+        status: 200,
+        cost: { amount: '0.0000407', currency: 'USD' },
+      },
     ])
   })
 
@@ -143,7 +146,7 @@ describe('createAgentCalls', () => {
     const begun = (await calls.begin(call())) as Allowed
     await begun.release('upstream_unreachable')
     expect(agentApi.completes).toEqual([
-      { callRef: 'call_TEST0001', status: 502, costUsd: null, interrupted: 'upstream_unreachable' },
+      { callRef: 'call_TEST0001', status: 502, cost: null, interrupted: 'upstream_unreachable' },
     ])
   })
 
@@ -151,16 +154,16 @@ describe('createAgentCalls', () => {
     const { agentApi, calls, events } = setup()
     agentApi.failComplete = 503
     const begun = (await calls.begin(call())) as Allowed
-    expect(await begun.finish({ status: 200, costUsd: null })).toBeNull()
+    expect(await begun.finish({ status: 200, cost: null })).toBeNull()
     expect(events.map(e => e.event)).toContain('call.complete_failed')
-    await expect(begun.finish({ status: 200, costUsd: null })).rejects.toThrow('already completed')
+    await expect(begun.finish({ status: 200, cost: null })).rejects.toThrow('already completed')
   })
 })
 
-describe('usdString', () => {
-  it('writes a cost with up to 8 places and no float noise', () => {
-    expect(usdString(0.0000407)).toBe('0.0000407')
-    expect(usdString(0.1 + 0.2)).toBe('0.3')
-    expect(usdString(0)).toBe('0')
+describe('amountString', () => {
+  it('writes an amount with up to 8 places and no float noise', () => {
+    expect(amountString(0.0000407)).toBe('0.0000407')
+    expect(amountString(0.1 + 0.2)).toBe('0.3')
+    expect(amountString(0)).toBe('0')
   })
 })
