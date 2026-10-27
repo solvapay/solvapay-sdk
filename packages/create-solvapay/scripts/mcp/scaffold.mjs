@@ -629,7 +629,8 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLim
   const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
-  const includesEnv = headerLines.length > 0
+  // Matches the aggregator, which passes `env` whenever auth isn't `none`.
+  const includesEnv = auth.kind !== 'none'
   const needsAccessToken = auth.kind === 'oauth2-client-credentials'
   const signature = includesEnv
     ? `${fnName}(ctx: AdditionalToolsContext, env: Env)`
@@ -654,11 +655,15 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLim
   // carries `{ status, contentType, bodySnippet }` on the thrown
   // error so the MCP `isError` envelope tells the LLM (and the
   // human) exactly why upstream rejected the call.
+  const fetchImports = fetchInit.usesStringifyLossless
+    ? 'upstreamFetchJson, stringifyLossless'
+    : 'upstreamFetchJson'
   const importLines = [
     "import { z } from 'zod'",
     "import type { AdditionalToolsContext } from '@solvapay/mcp'",
-    "import { upstreamFetchJson } from '../lib/upstreamFetch'",
+    `import { ${fetchImports} } from '../lib/upstreamFetch'`,
   ]
+  if (operation.parameters.some(isInt64Param)) importLines.push("import { int64 } from '../lib/int64'")
   if (needsAccessToken) importLines.push("import { getAccessToken } from '../lib/upstreamOAuth'")
   if (includesEnv) importLines.push("import type { Env } from '../worker'")
 
@@ -672,7 +677,10 @@ function renderSchemaFields(operation, indent) {
     lines.push(`${pad}${jsKey(param.name)}: ${zodForParam(param)},`)
   }
   if (operation.requestBody?.schema) {
-    lines.push(`${pad}body: z.record(z.string(), z.unknown()).optional(),`)
+    const bodySchema = isArrayBody(operation)
+      ? 'z.array(z.unknown())'
+      : 'z.record(z.string(), z.unknown())'
+    lines.push(`${pad}body: ${bodySchema}.optional(),`)
   }
   if (lines.length === 0) return ''
   return lines.join('\n')
@@ -694,7 +702,8 @@ function renderSchemaFields(operation, indent) {
 function zodForParam(param) {
   const { type, format, required, enum: enumValues, description } = param
   let z
-  if (type === 'integer') z = 'z.number().int()'
+  if (isInt64Param(param)) z = 'int64'
+  else if (type === 'integer') z = 'z.number().int()'
   else if (type === 'number') z = 'z.number()'
   else if (type === 'boolean') z = 'z.boolean()'
   else if (type === 'array') z = 'z.array(z.unknown())'
@@ -711,6 +720,35 @@ function zodForParam(param) {
     z = `${z}.describe(${JSON.stringify(shortened)})`
   }
   return required ? z : `${z}.optional()`
+}
+
+// 64-bit integers exceed JavaScript's exact range (2^53 - 1), so they use
+// the template's `int64` schema (safe number or digit string) instead of
+// `z.number().int()`.
+function isInt64Param(param) {
+  return param.type === 'integer' && (param.format === 'int64' || param.format === 'uint64')
+}
+
+// Names of every integer-typed property in a (dereferenced) request body
+// schema, walking nested objects, array items and composition keywords.
+// The generated tool passes them to `stringifyLossless` so int64 values
+// the LLM sends as digit strings go upstream as exact JSON numbers.
+// Collecting all integers (not only `int64`) is safe: the serializer only
+// rewrites values that are already digit strings.
+function collectIntegerPropertyNames(schema, names = new Set(), seen = new Set()) {
+  if (!schema || typeof schema !== 'object' || seen.has(schema)) return names
+  seen.add(schema)
+  for (const [name, prop] of Object.entries(schema.properties ?? {})) {
+    if (prop && typeof prop === 'object' && prop.type === 'integer') names.add(name)
+    collectIntegerPropertyNames(prop, names, seen)
+  }
+  collectIntegerPropertyNames(schema.items, names, seen)
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    for (const sub of Array.isArray(schema[key]) ? schema[key] : []) {
+      collectIntegerPropertyNames(sub, names, seen)
+    }
+  }
+  return names
 }
 
 function isScalarStringEnum(enumValues, type) {
@@ -732,6 +770,25 @@ function renderUrlTemplate(baseUrl, operation) {
   return `\`${joinUrl(baseUrl, path)}\``
 }
 
+function isArrayBody(operation) {
+  return operation.requestBody?.schema?.type === 'array'
+}
+
+// Swagger 2.0 `in: formData` fields, sent as URLSearchParams or FormData
+// per `operation.formEncoding`. fetch sets the matching content-type
+// (including the multipart boundary) from the body type.
+function renderFormAssign(operation) {
+  const fields = operation.parameters.filter(p => p.in === 'formData')
+  if (fields.length === 0 || !operation.formEncoding) return ''
+  const ctor = operation.formEncoding === 'multipart' ? 'FormData' : 'URLSearchParams'
+  const lines = [`      const form = new ${ctor}()`]
+  for (const field of fields) {
+    const access = `input.${jsAccessor(field.name)}`
+    lines.push(`      if (${access} !== undefined) form.set('${field.name}', String(${access}))`)
+  }
+  return lines.join('\n')
+}
+
 function renderFetchInit(operation, headerLines) {
   const method = operation.method
   const hasBody = !!operation.requestBody?.schema && method !== 'GET' && method !== 'HEAD'
@@ -741,19 +798,30 @@ function renderFetchInit(operation, headerLines) {
       const access = `input.${jsAccessor(p.name)}`
       return `      if (${access} !== undefined) url.searchParams.set('${p.name}', String(${access}))`
     })
+    .concat(renderFormAssign(operation) || [])
     .join('\n')
 
   const headersBlock = headerLines.length > 0
     ? `        headers: { ${headerLines.join(', ')} },\n`
     : ''
-  const bodyBlock = hasBody ? '        body: JSON.stringify(input.body ?? {}),\n' : ''
+  const integerKeys = hasBody
+    ? [...collectIntegerPropertyNames(operation.requestBody.schema)].sort()
+    : []
+  const usesStringifyLossless = integerKeys.length > 0
+  const emptyBody = isArrayBody(operation) ? '[]' : '{}'
+  const bodyBlock = !hasBody
+    ? operation.formEncoding
+      ? '        body: form,\n'
+      : ''
+    : usesStringifyLossless
+      ? `        body: stringifyLossless(input.body ?? ${emptyBody}, new Set(${JSON.stringify(integerKeys)})),\n`
+      : `        body: JSON.stringify(input.body ?? ${emptyBody}),\n`
   const methodBlock = `        method: '${method}',\n`
 
-  return { method, queryAssign, headersBlock, bodyBlock, methodBlock }
+  return { method, queryAssign, headersBlock, bodyBlock, methodBlock, usesStringifyLossless }
 }
 
 function renderHeaderLines(auth, schemes, operation) {
-  if (auth.kind === 'none') return []
   // Pick the first supported scheme this operation requires; fall back
   // to the top-level auth kind when the spec has no operation-level
   // security override.
