@@ -1,5 +1,13 @@
 # create-solvapay
 
+## 0.8.1
+
+### Patch Changes
+
+- 8c831f7: Generated MCP servers keep 64-bit integer IDs exact. `upstreamFetchJson` returns integers beyond `Number.MAX_SAFE_INTEGER` as exact decimal strings instead of rounding them, `int64` params get a schema that accepts a safe number or a digit string, and request bodies with integer properties are sent with the new `stringifyLossless` helper so those strings go back upstream as exact numbers.
+- 66e8a0f: Swagger 2.0 specs generate working tools. Parameters are typed from their own `type` / `format` instead of all becoming strings, `in: body` parameters are sent upstream as the JSON request body, and tools with a body always send `content-type: application/json`, including when the upstream needs no auth.
+- fd4b825: Swagger 2.0 form operations generate working tools: `in: formData` fields are sent URL-encoded (or as multipart when the operation only accepts multipart), and `type: file` fields are left out of the tool input, with `describe.mjs` suggesting `skip` for those operations. Array request bodies are typed as arrays. `describe.mjs` and the project's `test.mjs` now put sample request bodies under `body`, matching the generated tool input.
+
 ## 0.8.0
 
 ### Minor Changes
