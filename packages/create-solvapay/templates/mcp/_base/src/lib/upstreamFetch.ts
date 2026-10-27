@@ -12,6 +12,9 @@
  *  - Throws `UpstreamError` on non-2xx OR JSON parse failure. The
  *    error message names the method, URL, status, content-type, and
  *    a body snippet so the LLM has enough context to recover or stop.
+ *  - Keeps integers beyond `Number.MAX_SAFE_INTEGER` (int64 IDs,
+ *    snowflakes) as their exact decimal string instead of silently
+ *    rounding them. Send them back with `stringifyLossless`.
  *
  * The free-tool path (`ctx.server.registerTool`), the free-capped path
  * (`ctx.registerFree`), and the paid-tool path (`ctx.registerPayable`)
@@ -26,6 +29,41 @@
  */
 
 const BODY_SNIPPET_MAX_CHARS = 500
+
+/**
+ * `JSON.parse` reviver that returns the exact source text for integers
+ * `JSON.parse` would round. Relies on JSON.parse source access (V8 11.4+:
+ * workerd, Node 21+); on older runtimes `context` is undefined and values
+ * pass through unchanged.
+ */
+function losslessIntReviver(_key: string, value: unknown, context?: { source?: string }): unknown {
+  if (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    !Number.isSafeInteger(value) &&
+    context?.source &&
+    /^-?\d+$/.test(context.source)
+  ) {
+    return context.source
+  }
+  return value
+}
+
+const rawJSON = (JSON as unknown as { rawJSON?: (text: string) => unknown }).rawJSON
+
+/**
+ * `JSON.stringify` that writes digit strings back as bare JSON numbers for
+ * the given keys (the spec's integer properties), so int64 values returned
+ * as strings by `upstreamFetchJson` round-trip exactly. Keys not listed are
+ * left alone, so digit-only strings such as phone numbers stay strings.
+ */
+export function stringifyLossless(body: unknown, integerKeys: ReadonlySet<string>): string {
+  return JSON.stringify(body, (key, value) =>
+    integerKeys.has(key) && typeof value === 'string' && /^-?\d+$/.test(value) && rawJSON
+      ? rawJSON(value)
+      : value,
+  )
+}
 
 export interface UpstreamErrorInit {
   method: string
@@ -100,7 +138,7 @@ export async function upstreamFetchJson<T = unknown>(
   }
 
   try {
-    return JSON.parse(text) as T
+    return JSON.parse(text, losslessIntReviver as Parameters<typeof JSON.parse>[1]) as T
   } catch (err) {
     throw new UpstreamError({
       method,
