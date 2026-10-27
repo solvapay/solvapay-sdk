@@ -1,5 +1,5 @@
 /**
- * `@solvapay/agent-layer` — what a merchant needs to be paid by SolvaPay
+ * `@solvapay/agents` — what a merchant needs to be paid by SolvaPay
  * agents, as a thin client (DEV-1126): verify the agent token, ask SolvaPay to
  * authorize each call, complete it at the cost the upstream reported, and
  * report usage for reconciliation. The spend policy, the classifier, the
