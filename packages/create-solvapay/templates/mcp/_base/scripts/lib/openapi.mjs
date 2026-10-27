@@ -93,8 +93,13 @@ export function listOperations(spec) {
       const op = pathItem[method]
       if (!op || typeof op !== 'object') continue
       const operationId = op.operationId ?? defaultOperationId(method, path)
-      const parameters = mergeParameters(pathLevelParams, op.parameters ?? []).filter(
-        p => p.in !== 'body',
+      const merged = mergeParameters(pathLevelParams, op.parameters ?? [])
+      // Swagger 2.0 `type: file` form fields carry raw bytes the LLM can't
+      // supply, so they never become tool inputs; the operation is flagged
+      // instead (suggestTier skips it).
+      const hasFileUpload = merged.some(p => p.in === 'formData' && p.type === 'file')
+      const parameters = merged.filter(
+        p => p.in !== 'body' && !(p.in === 'formData' && p.type === 'file'),
       )
       operations.push({
         operationId,
@@ -108,6 +113,8 @@ export function listOperations(spec) {
         requestBody:
           extractRequestBody(op.requestBody) ??
           extractSwagger2Body(spec, op, pathLevelParams),
+        formEncoding: formEncodingFor(spec, op, parameters, hasFileUpload),
+        hasFileUpload,
         security: op.security ?? spec.security ?? null,
         raw: op,
       })
@@ -163,6 +170,7 @@ export function resolveSecuritySchemes(spec) {
 export function suggestTier(operation) {
   if (operation.deprecated) return 'skip'
   if (operation.raw?.['x-internal'] === true) return 'skip'
+  if (operation.hasFileUpload) return 'skip'
   if (operation.method === 'GET' || operation.method === 'HEAD') return 'free'
   if (MUTATING_METHODS.has(operation.method)) return 'paid'
   return 'free'
@@ -192,10 +200,10 @@ export function synthesizeExamples(operation) {
     if (operation.requestBody.example !== undefined) {
       // Media-type-level example takes precedence over schema synthesis.
       const value = operation.requestBody.example
-      Object.assign(inputs, isPlainObject(value) ? value : { body: value })
+      inputs.body = value
     } else if (operation.requestBody.schema) {
       const { value, source } = pickSchemaValue(operation.requestBody.schema)
-      Object.assign(inputs, isPlainObject(value) ? value : { body: value })
+      inputs.body = value
       if (source === 'placeholder') quality = 'placeholder'
     }
   }
@@ -285,6 +293,17 @@ function extractSwagger2Body(spec, op, pathLevelParams) {
     return null
   }
   return { required: body.required === true, schema: body.schema ?? null, example: undefined }
+}
+
+// How Swagger 2.0 `in: formData` fields are sent: `multipart` when the
+// operation only accepts multipart (or uploads a file), otherwise
+// `urlencoded`. Null when there are no form fields.
+function formEncodingFor(spec, op, parameters, hasFileUpload) {
+  if (!parameters.some(p => p.in === 'formData')) return null
+  const consumes = op.consumes ?? spec.consumes ?? []
+  const urlencoded = consumes.some(c => /x-www-form-urlencoded/i.test(c))
+  const multipart = consumes.some(c => /multipart\/form-data/i.test(c))
+  return multipart && (hasFileUpload || !urlencoded) ? 'multipart' : 'urlencoded'
 }
 
 function extractRequestBody(requestBody) {
