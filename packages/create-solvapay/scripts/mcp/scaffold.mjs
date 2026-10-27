@@ -629,7 +629,8 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLim
   const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
-  const includesEnv = headerLines.length > 0
+  // Matches the aggregator, which passes `env` whenever auth isn't `none`.
+  const includesEnv = auth.kind !== 'none'
   const needsAccessToken = auth.kind === 'oauth2-client-credentials'
   const signature = includesEnv
     ? `${fnName}(ctx: AdditionalToolsContext, env: Env)`
@@ -795,7 +796,6 @@ function renderFetchInit(operation, headerLines) {
 }
 
 function renderHeaderLines(auth, schemes, operation) {
-  if (auth.kind === 'none') return []
   // Pick the first supported scheme this operation requires; fall back
   // to the top-level auth kind when the spec has no operation-level
   // security override.
