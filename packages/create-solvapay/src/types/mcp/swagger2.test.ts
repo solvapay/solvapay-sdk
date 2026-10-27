@@ -19,11 +19,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  listOperations,
-  // @ts-expect-error — `scripts/mcp/lib/openapi.mjs` is a plain ESM module
-  // with no .d.ts; the shape consumed here is pinned by the assertions.
-} from '../../../scripts/mcp/lib/openapi.mjs'
+// @ts-expect-error — `scripts/mcp/lib/openapi.mjs` is a plain ESM module
+// with no .d.ts; the shape consumed here is pinned by the assertions.
+import * as scaffolderOpenapi from '../../../scripts/mcp/lib/openapi.mjs'
+// The project's `test.mjs` ships its own copy of the parser; both must agree.
+// @ts-expect-error — same plain ESM module, no .d.ts.
+import * as projectOpenapi from '../../../templates/mcp/_base/scripts/lib/openapi.mjs'
+
+const { listOperations } = scaffolderOpenapi
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURES_DIR = path.join(HERE, '__fixtures__')
@@ -31,6 +34,7 @@ const SCRIPTS_DIR = path.resolve(HERE, '..', '..', '..', 'scripts', 'mcp')
 
 const SPEC = path.join(FIXTURES_DIR, 'petstore-v2.spec.json')
 const SELECTIONS = path.join(FIXTURES_DIR, 'petstore-v2.selections.json')
+const FORMS_SELECTIONS = path.join(FIXTURES_DIR, 'petstore-v2-forms.selections.json')
 
 type Operation = {
   operationId: string
@@ -97,6 +101,76 @@ describe('listOperations — Swagger 2.0', () => {
   })
 })
 
+const formSpec = {
+  swagger: '2.0',
+  paths: {
+    '/pet/{petId}': {
+      post: {
+        operationId: 'updatePetWithForm',
+        consumes: ['application/x-www-form-urlencoded'],
+        parameters: [
+          { name: 'petId', in: 'path', required: true, type: 'integer', format: 'int64' },
+          { name: 'name', in: 'formData', type: 'string' },
+        ],
+      },
+    },
+    '/pet/{petId}/uploadImage': {
+      post: {
+        operationId: 'uploadFile',
+        consumes: ['multipart/form-data'],
+        parameters: [
+          { name: 'petId', in: 'path', required: true, type: 'integer', format: 'int64' },
+          { name: 'additionalMetadata', in: 'formData', type: 'string' },
+          { name: 'file', in: 'formData', type: 'file' },
+        ],
+      },
+    },
+    '/pet': {
+      post: {
+        operationId: 'addPet',
+        parameters: [
+          {
+            name: 'body',
+            in: 'body',
+            required: true,
+            schema: { type: 'object', properties: { name: { type: 'string', example: 'doggie' } } },
+          },
+        ],
+      },
+    },
+  },
+}
+
+describe.each([
+  ['scaffolder', scaffolderOpenapi],
+  ['project test.mjs', projectOpenapi],
+])('openapi.mjs (%s copy) — Swagger 2.0 forms and samples', (_label, lib) => {
+  const ops = Object.fromEntries(
+    lib.listOperations(formSpec).map((op: Operation) => [op.operationId, op]),
+  ) as Record<string, Operation & { formEncoding: string | null; hasFileUpload: boolean }>
+
+  it('sends url-encoded form fields as urlencoded', () => {
+    expect(ops.updatePetWithForm.formEncoding).toBe('urlencoded')
+    expect(ops.updatePetWithForm.parameters.map(p => p.name)).toEqual(['petId', 'name'])
+  })
+
+  it('drops file fields, keeps the rest as multipart, and suggests skip', () => {
+    expect(ops.uploadFile.formEncoding).toBe('multipart')
+    expect(ops.uploadFile.hasFileUpload).toBe(true)
+    expect(ops.uploadFile.parameters.map(p => p.name)).toEqual(['petId', 'additionalMetadata'])
+    expect(lib.suggestTier(ops.uploadFile)).toBe('skip')
+  })
+
+  it('has no form encoding when there are no form fields', () => {
+    expect(ops.addPet.formEncoding).toBeNull()
+  })
+
+  it('nests sample request bodies under `body`, matching the generated tool input', () => {
+    const { inputs } = lib.synthesizeExamples(ops.addPet)
+    expect(inputs).toEqual({ body: { name: 'doggie' } })
+  })
+})
+
 describe('scaffold.mjs — end-to-end Swagger 2.0 Petstore', () => {
   const cleanup: string[] = []
 
@@ -127,6 +201,30 @@ describe('scaffold.mjs — end-to-end Swagger 2.0 Petstore', () => {
     // upstreamAuth.kind is `none`, so the aggregator calls register*(ctx).
     expect(addPet).toContain('export function registerAddPet(ctx: AdditionalToolsContext) {')
     expect(addPet).not.toContain("import type { Env } from '../worker'")
+  })
+
+  it('sends form fields and array bodies', async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), 'create-solvapay-swagger2-forms-'))
+    cleanup.push(parent)
+    const target = path.join(parent, 'petstore-v2-forms')
+
+    const result = await spawnScript('scaffold.mjs', [SPEC, target, '--selections', FORMS_SELECTIONS])
+    expect(result.exitCode, `scaffold.mjs failed:\n--stderr--\n${result.stderr}`).toBe(0)
+
+    const withForm = await readFile(path.join(target, 'src', 'tools', 'updatePetWithForm.ts'), 'utf8')
+    expect(withForm).toContain('const form = new URLSearchParams()')
+    expect(withForm).toContain("if (input.name !== undefined) form.set('name', String(input.name))")
+    expect(withForm).toContain('        body: form,')
+    expect(withForm).not.toContain("'content-type': 'application/json'")
+
+    const upload = await readFile(path.join(target, 'src', 'tools', 'uploadFile.ts'), 'utf8')
+    expect(upload).toContain('const form = new FormData()')
+    expect(upload).toContain("form.set('additionalMetadata'")
+    expect(upload).not.toMatch(/\bfile:/)
+
+    const arrayBody = await readFile(path.join(target, 'src', 'tools', 'createUsersWithArrayInput.ts'), 'utf8')
+    expect(arrayBody).toContain('body: z.array(z.unknown()).optional(),')
+    expect(arrayBody).toContain('stringifyLossless(input.body ?? [], new Set(["id","userStatus"]))')
   })
 })
 

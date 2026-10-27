@@ -677,7 +677,10 @@ function renderSchemaFields(operation, indent) {
     lines.push(`${pad}${jsKey(param.name)}: ${zodForParam(param)},`)
   }
   if (operation.requestBody?.schema) {
-    lines.push(`${pad}body: z.record(z.string(), z.unknown()).optional(),`)
+    const bodySchema = isArrayBody(operation)
+      ? 'z.array(z.unknown())'
+      : 'z.record(z.string(), z.unknown())'
+    lines.push(`${pad}body: ${bodySchema}.optional(),`)
   }
   if (lines.length === 0) return ''
   return lines.join('\n')
@@ -767,6 +770,25 @@ function renderUrlTemplate(baseUrl, operation) {
   return `\`${joinUrl(baseUrl, path)}\``
 }
 
+function isArrayBody(operation) {
+  return operation.requestBody?.schema?.type === 'array'
+}
+
+// Swagger 2.0 `in: formData` fields, sent as URLSearchParams or FormData
+// per `operation.formEncoding`. fetch sets the matching content-type
+// (including the multipart boundary) from the body type.
+function renderFormAssign(operation) {
+  const fields = operation.parameters.filter(p => p.in === 'formData')
+  if (fields.length === 0 || !operation.formEncoding) return ''
+  const ctor = operation.formEncoding === 'multipart' ? 'FormData' : 'URLSearchParams'
+  const lines = [`      const form = new ${ctor}()`]
+  for (const field of fields) {
+    const access = `input.${jsAccessor(field.name)}`
+    lines.push(`      if (${access} !== undefined) form.set('${field.name}', String(${access}))`)
+  }
+  return lines.join('\n')
+}
+
 function renderFetchInit(operation, headerLines) {
   const method = operation.method
   const hasBody = !!operation.requestBody?.schema && method !== 'GET' && method !== 'HEAD'
@@ -776,6 +798,7 @@ function renderFetchInit(operation, headerLines) {
       const access = `input.${jsAccessor(p.name)}`
       return `      if (${access} !== undefined) url.searchParams.set('${p.name}', String(${access}))`
     })
+    .concat(renderFormAssign(operation) || [])
     .join('\n')
 
   const headersBlock = headerLines.length > 0
@@ -785,11 +808,14 @@ function renderFetchInit(operation, headerLines) {
     ? [...collectIntegerPropertyNames(operation.requestBody.schema)].sort()
     : []
   const usesStringifyLossless = integerKeys.length > 0
+  const emptyBody = isArrayBody(operation) ? '[]' : '{}'
   const bodyBlock = !hasBody
-    ? ''
+    ? operation.formEncoding
+      ? '        body: form,\n'
+      : ''
     : usesStringifyLossless
-      ? `        body: stringifyLossless(input.body ?? {}, new Set(${JSON.stringify(integerKeys)})),\n`
-      : '        body: JSON.stringify(input.body ?? {}),\n'
+      ? `        body: stringifyLossless(input.body ?? ${emptyBody}, new Set(${JSON.stringify(integerKeys)})),\n`
+      : `        body: JSON.stringify(input.body ?? ${emptyBody}),\n`
   const methodBlock = `        method: '${method}',\n`
 
   return { method, queryAssign, headersBlock, bodyBlock, methodBlock, usesStringifyLossless }
