@@ -2,7 +2,7 @@
 // a local key, the API as `@solvapay/server` sees it (customers, for a
 // merchant's own reads), and the agent endpoints (authorize, complete, usage
 // reports).
-import { createSolvaPay, type TrackUsageRequest, type TrackUsageResponse } from '@solvapay/server'
+import { createSolvaPay } from '@solvapay/server'
 import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 import {
   AgentApiError,
@@ -55,15 +55,13 @@ export function signAgentToken(
 }
 
 /**
- * In-memory stand-in for SolvaPay's API, as `@solvapay/server` sees it: one
- * linked customer with a balance, and the usage events it receives.
+ * In-memory stand-in for SolvaPay's API, as `@solvapay/server` sees it: the
+ * customers a merchant looks up for its own reads (for example the
+ * reconciler's untagged usage).
  */
 export class FakeSolvaPayApi {
   /** principal (externalRef) → customer reference */
   readonly customers = new Map<string, string>([['ppl_ABCDEFGHIJKLMNOP', 'cus_TESTCUST']])
-  credits = 30_000
-  balanceUsd = '3'
-  readonly usages: TrackUsageRequest[] = []
   readonly lookups: string[] = []
 
   async getCustomer(params: { externalRef?: string }) {
@@ -76,42 +74,12 @@ export class FakeSolvaPayApi {
     return { customerRef, email: '', externalRef: params.externalRef, purchases: [] }
   }
 
-  async getCustomerBalance(params: { customerRef: string }) {
-    return {
-      customerRef: params.customerRef,
-      credits: this.credits,
-      creditsPerMinorUnit: 100,
-      displayCurrency: 'USD',
-      displayExchangeRate: 1,
-      display: {
-        amountMajor: this.credits / 10_000,
-        currency: 'USD',
-        exchangeRate: 1,
-        formatted: '',
-        rateSource: 'parity' as const,
-      },
-    }
-  }
-
-  async trackUsage(params: TrackUsageRequest): Promise<TrackUsageResponse> {
-    this.usages.push(params)
-    const amount = params.cost?.amount ?? '0'
-    return {
-      success: true,
-      reference: `usage_${this.usages.length}`,
-      creditDebit: {
-        debited: true,
-        costSource: params.cost?.source ?? 'reported',
-        amount: 0,
-        amountUsd: amount,
-        balanceCredits: this.credits,
-        balanceUsd: this.balanceUsd,
-      },
-    }
+  async trackUsage(): Promise<never> {
+    throw new Error('not used: agent calls are completed through the agent API')
   }
 
   async checkLimits(): Promise<never> {
-    throw new Error('cost mode never calls /limits')
+    throw new Error('not used')
   }
 
   async createCheckoutSession(): Promise<never> {
