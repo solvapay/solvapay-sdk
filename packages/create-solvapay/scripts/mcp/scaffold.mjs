@@ -625,11 +625,13 @@ function deriveServerNameFromWorkerName(workerName) {
   return cleaned || 'solvapay-mcp-server'
 }
 
-function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLimit }) {
+function renderToolFile({ operation: specOperation, schemes, tier, auth, serverBaseUrl, freeLimit }) {
+  const operation = withoutReservedHeaderParams(specOperation, auth)
   const fnName = `register${toPascalIdentifier(operation.operationId)}`
   const urlTemplate = renderUrlTemplate(serverBaseUrl, operation)
   const headerLines = renderHeaderLines(auth, schemes, operation)
-  const includesEnv = headerLines.length > 0
+  // Matches the aggregator, which passes `env` whenever auth isn't `none`.
+  const includesEnv = auth.kind !== 'none'
   const needsAccessToken = auth.kind === 'oauth2-client-credentials'
   const signature = includesEnv
     ? `${fnName}(ctx: AdditionalToolsContext, env: Env)`
@@ -654,11 +656,15 @@ function renderToolFile({ operation, schemes, tier, auth, serverBaseUrl, freeLim
   // carries `{ status, contentType, bodySnippet }` on the thrown
   // error so the MCP `isError` envelope tells the LLM (and the
   // human) exactly why upstream rejected the call.
+  const fetchImports = fetchInit.usesStringifyLossless
+    ? 'upstreamFetchJson, stringifyLossless'
+    : 'upstreamFetchJson'
   const importLines = [
     "import { z } from 'zod'",
     "import type { AdditionalToolsContext } from '@solvapay/mcp'",
-    "import { upstreamFetchJson } from '../lib/upstreamFetch'",
+    `import { ${fetchImports} } from '../lib/upstreamFetch'`,
   ]
+  if (operation.parameters.some(isInt64Param)) importLines.push("import { int64 } from '../lib/int64'")
   if (needsAccessToken) importLines.push("import { getAccessToken } from '../lib/upstreamOAuth'")
   if (includesEnv) importLines.push("import type { Env } from '../worker'")
 
@@ -672,7 +678,10 @@ function renderSchemaFields(operation, indent) {
     lines.push(`${pad}${jsKey(param.name)}: ${zodForParam(param)},`)
   }
   if (operation.requestBody?.schema) {
-    lines.push(`${pad}body: z.record(z.string(), z.unknown()).optional(),`)
+    const bodySchema = isArrayBody(operation)
+      ? 'z.array(z.unknown())'
+      : 'z.record(z.string(), z.unknown())'
+    lines.push(`${pad}body: ${bodySchema}.optional(),`)
   }
   if (lines.length === 0) return ''
   return lines.join('\n')
@@ -694,7 +703,8 @@ function renderSchemaFields(operation, indent) {
 function zodForParam(param) {
   const { type, format, required, enum: enumValues, description } = param
   let z
-  if (type === 'integer') z = 'z.number().int()'
+  if (isInt64Param(param)) z = 'int64'
+  else if (type === 'integer') z = 'z.number().int()'
   else if (type === 'number') z = 'z.number()'
   else if (type === 'boolean') z = 'z.boolean()'
   else if (type === 'array') z = 'z.array(z.unknown())'
@@ -713,6 +723,35 @@ function zodForParam(param) {
   return required ? z : `${z}.optional()`
 }
 
+// 64-bit integers exceed JavaScript's exact range (2^53 - 1), so they use
+// the template's `int64` schema (safe number or digit string) instead of
+// `z.number().int()`.
+function isInt64Param(param) {
+  return param.type === 'integer' && (param.format === 'int64' || param.format === 'uint64')
+}
+
+// Names of every integer-typed property in a (dereferenced) request body
+// schema, walking nested objects, array items and composition keywords.
+// The generated tool passes them to `stringifyLossless` so int64 values
+// the LLM sends as digit strings go upstream as exact JSON numbers.
+// Collecting all integers (not only `int64`) is safe: the serializer only
+// rewrites values that are already digit strings.
+function collectIntegerPropertyNames(schema, names = new Set(), seen = new Set()) {
+  if (!schema || typeof schema !== 'object' || seen.has(schema)) return names
+  seen.add(schema)
+  for (const [name, prop] of Object.entries(schema.properties ?? {})) {
+    if (prop && typeof prop === 'object' && prop.type === 'integer') names.add(name)
+    collectIntegerPropertyNames(prop, names, seen)
+  }
+  collectIntegerPropertyNames(schema.items, names, seen)
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    for (const sub of Array.isArray(schema[key]) ? schema[key] : []) {
+      collectIntegerPropertyNames(sub, names, seen)
+    }
+  }
+  return names
+}
+
 function isScalarStringEnum(enumValues, type) {
   if (!Array.isArray(enumValues) || enumValues.length === 0) return false
   if (type !== undefined && type !== 'string') return false
@@ -727,9 +766,28 @@ function shortenDescription(text) {
 function renderUrlTemplate(baseUrl, operation) {
   let path = operation.path
   for (const param of operation.parameters.filter(p => p.in === 'path')) {
-    path = path.replace(`{${param.name}}`, `\${input.${jsAccessor(param.name)}}`)
+    path = path.replace(`{${param.name}}`, `\${${inputAccess(param.name)}}`)
   }
   return `\`${joinUrl(baseUrl, path)}\``
+}
+
+function isArrayBody(operation) {
+  return operation.requestBody?.schema?.type === 'array'
+}
+
+// Swagger 2.0 `in: formData` fields, sent as URLSearchParams or FormData
+// per `operation.formEncoding`. fetch sets the matching content-type
+// (including the multipart boundary) from the body type.
+function renderFormAssign(operation) {
+  const fields = operation.parameters.filter(p => p.in === 'formData')
+  if (fields.length === 0 || !operation.formEncoding) return ''
+  const ctor = operation.formEncoding === 'multipart' ? 'FormData' : 'URLSearchParams'
+  const lines = [`      const form = new ${ctor}()`]
+  for (const field of fields) {
+    const access = inputAccess(field.name)
+    lines.push(`      if (${access} !== undefined) form.set('${field.name}', String(${access}))`)
+  }
+  return lines.join('\n')
 }
 
 function renderFetchInit(operation, headerLines) {
@@ -738,22 +796,49 @@ function renderFetchInit(operation, headerLines) {
   const queryAssign = operation.parameters
     .filter(p => p.in === 'query')
     .map(p => {
-      const access = `input.${jsAccessor(p.name)}`
+      const access = inputAccess(p.name)
       return `      if (${access} !== undefined) url.searchParams.set('${p.name}', String(${access}))`
     })
+    .concat(renderFormAssign(operation) || [])
     .join('\n')
 
   const headersBlock = headerLines.length > 0
     ? `        headers: { ${headerLines.join(', ')} },\n`
     : ''
-  const bodyBlock = hasBody ? '        body: JSON.stringify(input.body ?? {}),\n' : ''
+  const integerKeys = hasBody
+    ? [...collectIntegerPropertyNames(operation.requestBody.schema)].sort()
+    : []
+  const usesStringifyLossless = integerKeys.length > 0
+  const emptyBody = isArrayBody(operation) ? '[]' : '{}'
+  const bodyBlock = !hasBody
+    ? operation.formEncoding
+      ? '        body: form,\n'
+      : ''
+    : usesStringifyLossless
+      ? `        body: stringifyLossless(input.body ?? ${emptyBody}, new Set(${JSON.stringify(integerKeys)})),\n`
+      : `        body: JSON.stringify(input.body ?? ${emptyBody}),\n`
   const methodBlock = `        method: '${method}',\n`
 
-  return { method, queryAssign, headersBlock, bodyBlock, methodBlock }
+  return { method, queryAssign, headersBlock, bodyBlock, methodBlock, usesStringifyLossless }
+}
+
+// OpenAPI ignores `in: header` params named Accept, Content-Type or
+// Authorization, and a header param that names the upstream credential
+// header would let the LLM supply (or overwrite) the secret. Drop both
+// from the tool input.
+function withoutReservedHeaderParams(operation, auth) {
+  const reserved = new Set(['accept', 'content-type', 'authorization'])
+  if (auth.kind === 'apiKey' && auth.name) reserved.add(auth.name.toLowerCase())
+  if (auth.kind === 'apiKey-multi') {
+    for (const header of auth.headers ?? []) reserved.add(String(header.name).toLowerCase())
+  }
+  const parameters = operation.parameters.filter(
+    p => p.in !== 'header' || !reserved.has(String(p.name).toLowerCase()),
+  )
+  return parameters.length === operation.parameters.length ? operation : { ...operation, parameters }
 }
 
 function renderHeaderLines(auth, schemes, operation) {
-  if (auth.kind === 'none') return []
   // Pick the first supported scheme this operation requires; fall back
   // to the top-level auth kind when the spec has no operation-level
   // security override.
@@ -770,7 +855,14 @@ function renderHeaderLines(auth, schemes, operation) {
   // handler body (see renderPayableBody / renderFreeCappedBody /
   // renderFreeBody) via
   // `const token = await getAccessToken(env)`.
-  const headerEntries = []
+  // `in: header` params go first so the upstream credential (added below)
+  // always wins over a caller-supplied value.
+  const headerEntries = operation.parameters
+    .filter(p => p.in === 'header')
+    .map(p => {
+      const access = inputAccess(p.name)
+      return `...(${access} !== undefined ? { ${JSON.stringify(p.name.toLowerCase())}: String(${access}) } : {})`
+    })
   if (auth.kind === 'bearer') {
     headerEntries.push("authorization: `Bearer ${env.UPSTREAM_API_KEY}`")
   } else if (auth.kind === 'apiKey') {
@@ -1056,6 +1148,12 @@ function jsKey(name) {
 
 function jsAccessor(name) {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : `[${JSON.stringify(name)}]`
+}
+
+// `input.foo` for identifier-safe names, `input["page-size"]` otherwise.
+function inputAccess(name) {
+  const accessor = jsAccessor(name)
+  return accessor.startsWith('[') ? `input${accessor}` : `input.${accessor}`
 }
 
 function capitalize(s) {
