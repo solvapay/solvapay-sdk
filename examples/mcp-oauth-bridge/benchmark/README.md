@@ -6,7 +6,7 @@ All scripts output markdown to stdout, ready to paste into documentation.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - `tsx` (already a dev dependency)
 - A deployed MCP server (with and/or without paywall enabled)
 - `ANTHROPIC_API_KEY` env var (for `agent.ts` and `agent-compare.ts`)

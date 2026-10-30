@@ -16,9 +16,19 @@ on:
         default: false
 
 jobs:
-  lint-build-test:
-    name: Lint, Build & Test
+  # Build and test on every supported Node line (engines.node is >=22). Each leg keeps
+  # the npm its Node line bundles (22: npm 10, 24 and 26: npm 11), so create-solvapay's
+  # template resolve test runs `npm install` with what users on that line actually get.
+  # Lint, dependency health and the Deno gate don't depend on the Node line: they run
+  # once, on 24.
+  test:
+    name: Build & Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24', '26']
 
     permissions:
       contents: read
@@ -31,7 +41,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
+          # Without check-latest, setup-node uses the runner's cached release for the line, which
+          # can lag the newest patch (24.21.0 instead of the 24.22.1 security release on 2026-10-23).
+          check-latest: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -39,6 +52,7 @@ jobs:
           version: 9.6.0
 
       - name: Setup Deno
+        if: matrix.node == '24'
         run: |
           DENO_VERSION=2.7.4
           curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" -o /tmp/deno.zip
@@ -64,9 +78,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check dependency health
+        if: matrix.node == '24'
         run: pnpm deps:check
 
       - name: Run lint
+        if: matrix.node == '24'
         run: pnpm lint
 
       - name: Build packages
@@ -82,7 +98,22 @@ jobs:
       # type-checks under Deno *before* it merges, rather than finding
       # out from a post-publish gate one commit later.
       - name: Deno gate (supabase-edge-mcp type-check against workspace source)
+        if: matrix.node == '24'
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
+
+  # Branch protection requires a check named "Lint, Build & Test". A matrix reports one
+  # check per leg instead, so this job carries the required name and passes only when
+  # every leg passed (a skipped or cancelled leg fails it too).
+  lint-build-test:
+    name: Lint, Build & Test
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Require every Node leg to pass
+        run: |
+          echo "matrix result: ${{ needs.test.result }}"
+          test "${{ needs.test.result }}" = "success"
 
   documentation:
     name: Documentation Validation
@@ -102,7 +133,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+          check-latest: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
