@@ -14,6 +14,7 @@ import {
   type SolvaPayAgentClient,
   type UsageReport,
   type UsageReportResponse,
+  type VerifiedAgentKey,
 } from './client'
 
 /** SolvaPay agent token test fixtures. */
@@ -102,6 +103,14 @@ export class FakeSolvaPayApi {
  * is recorded and answered as SolvaPay settles it. A usage report is answered
  * by `respond`, by default every call matched and nothing flagged.
  */
+/** An agent key the fake knows, for the test agent. */
+export const TEST_AGENT_KEY = 'agk_TESTKEY0000000000000000000000000000000000'
+export const TEST_AGENT_KEY_AGENT: VerifiedAgentKey = {
+  agentRef: 'agt_TESTAGNT',
+  principalRef: 'ppl_ABCDEFGHIJKLMNOP',
+  promptExcerpt: false,
+}
+
 export class FakeAgentApi implements SolvaPayAgentClient {
   outcome: 'allowed' | 'refused' = 'allowed'
   refusal: { reason: ServerRefusalReason; message: string } = {
@@ -135,6 +144,16 @@ export class FakeAgentApi implements SolvaPayAgentClient {
   })
   /** request id → call reference, as SolvaPay keys a call on the merchant's id. */
   private readonly calls = new Map<string, string>()
+  /** Agent keys SolvaPay knows for this merchant; any other key is a 401. */
+  readonly agentKeys = new Map<string, VerifiedAgentKey>([[TEST_AGENT_KEY, TEST_AGENT_KEY_AGENT]])
+  readonly keyVerifications: string[] = []
+
+  async verifyAgentKey(agentKey: string): Promise<VerifiedAgentKey> {
+    this.keyVerifications.push(agentKey)
+    const agent = this.agentKeys.get(agentKey)
+    if (!agent) throw new AgentApiError('POST /v1/sdk/agent/keys/verifications failed (401)', 401)
+    return agent
+  }
 
   async authorize(input: AuthorizeInput): Promise<AuthorizeResponse> {
     this.authorizes.push(input)

@@ -11,13 +11,17 @@
     "./http": "./src/http.ts",
     "./testing": "./src/testing.ts"
   },
+  "bin": {
+    "solvapay-agents": "./bin/solvapay-agents.mjs"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@solvapay/server": "workspace:*",
-    "jose": "^6.2.2"
+    "jose": "^6.2.2",
+    "yaml": "2.8.1"
   },
   "devDependencies": {
     "@modelcontextprotocol/core": "2.0.0",

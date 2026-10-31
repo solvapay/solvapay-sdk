@@ -1,7 +1,20 @@
 import { createLocalJWKSet, SignJWT, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createAgentLayer, createAgentTokenVerifier, looksLikeJwt } from '../identity'
-import { agentKeys, ISSUER, PROVIDER, signAgentToken } from '../testing'
+import { AgentApiError } from '../client'
+import {
+  createAgentKeyVerifier,
+  createAgentLayer,
+  createAgentTokenVerifier,
+  looksLikeJwt,
+} from '../identity'
+import {
+  agentKeys,
+  FakeAgentApi,
+  ISSUER,
+  PROVIDER,
+  signAgentToken,
+  TEST_AGENT_KEY,
+} from '../testing'
 
 let privateKey: CryptoKey
 let publicJwk: JWK
@@ -94,5 +107,48 @@ describe('agent layer', () => {
     ).toBe('rejected')
     expect(looksLikeJwt('a.b.c')).toBe(true)
     expect(looksLikeJwt('op-clone-a.b')).toBe(false)
+  })
+})
+
+describe('agent keys', () => {
+  it('reads an agent key through SolvaPay, reusing the answer for 30 seconds', async () => {
+    const api = new FakeAgentApi()
+    let clock = 0
+    const layer = createAgentLayer({
+      verifyAgentToken: async () => {
+        throw new Error('not a token')
+      },
+      verifyAgentKey: createAgentKeyVerifier({ client: api, now: () => clock }),
+    })
+
+    expect(await layer.identify(TEST_AGENT_KEY)).toEqual({
+      kind: 'agent',
+      agent: { agentRef: 'agt_TESTAGNT', principalRef: 'ppl_ABCDEFGHIJKLMNOP', promptExcerpt: false },
+    })
+    await layer.identify(TEST_AGENT_KEY)
+    expect(api.keyVerifications).toHaveLength(1)
+    clock = 30_001
+    await layer.identify(TEST_AGENT_KEY)
+    expect(api.keyVerifications).toHaveLength(2)
+  })
+
+  it('rejects a key SolvaPay does not know, and throws when SolvaPay is out of reach', async () => {
+    const api = new FakeAgentApi()
+    const verify = createAgentKeyVerifier({ client: api })
+    expect(await verify('agk_UNKNOWN')).toMatchObject({ ok: false, reason: 'invalid' })
+
+    const down = createAgentKeyVerifier({
+      client: {
+        verifyAgentKey: async () => {
+          throw new AgentApiError('POST /v1/sdk/agent/keys/verifications failed (503)', 503)
+        },
+      },
+    })
+    await expect(down('agk_ANY')).rejects.toThrow('503')
+  })
+
+  it('leaves an agent key to the merchant when the layer takes no keys', async () => {
+    const layer = createAgentLayer({ verifyAgentToken: async () => ({ ok: false, reason: 'invalid', detail: '' }) })
+    expect(await layer.identify(TEST_AGENT_KEY)).toEqual({ kind: 'not_agent' })
   })
 })

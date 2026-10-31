@@ -11,7 +11,7 @@ import { createMcpHandler, McpServer, type CallToolResult } from '@modelcontextp
 import { decodeJwt } from 'jose'
 import type { MoneyAmount } from './client'
 import type { AgentCalls, CallResult, Logger } from './calls'
-import type { AgentLayer, VerifiedAgent } from './identity'
+import { isAgentKey, type AgentLayer, type VerifiedAgent } from './identity'
 import { promptFacts } from './prompt'
 
 /** The agent a request was verified as, and the token it presented. */
@@ -95,7 +95,11 @@ export function createAgentMcpRoute(
       return agentTokenRejected(identity.reason)
     }
     if (identity.kind !== 'agent') {
-      throw new Error('A token from the agent issuer was not read as one')
+      throw new Error(
+        isAgentKey(token)
+          ? 'An agent key reached the agent route, but its agent layer has no verifyAgentKey'
+          : 'A token from the agent issuer was not read as one',
+      )
     }
     const call: AgentRequest = { request, agent: identity.agent, agentToken: token }
     const handler = createMcpHandler(() => buildServer(options, call), { responseMode: 'json' })
@@ -189,10 +193,14 @@ export function registerPaidTool<Args>(
   )
 }
 
-/** The bearer token, when SolvaPay's agent issuer signed it (read unverified, only to route). */
+/**
+ * The bearer token, when it is an agent key or SolvaPay's agent issuer signed
+ * it (read unverified, only to route).
+ */
 function agentBearer(request: Request, issuer: string): string | null {
   const match = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '')
   if (!match) return null
+  if (isAgentKey(match[1])) return match[1]
   try {
     return decodeJwt(match[1]).iss === issuer ? match[1] : null
   } catch {

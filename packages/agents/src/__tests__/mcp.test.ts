@@ -4,9 +4,16 @@ import { createLocalJWKSet, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { createAgentCalls, type Logger } from '../calls'
-import { createAgentLayer, createAgentTokenVerifier } from '../identity'
+import { createAgentKeyVerifier, createAgentLayer, createAgentTokenVerifier } from '../identity'
 import { createAgentMcpRoute, type PaidToolRun } from '../mcp'
-import { agentKeys, FakeAgentApi, ISSUER, PROVIDER, signAgentToken } from '../testing'
+import {
+  agentKeys,
+  FakeAgentApi,
+  ISSUER,
+  PROVIDER,
+  signAgentToken,
+  TEST_AGENT_KEY,
+} from '../testing'
 
 const MCP_URL = 'http://merchant.test/mcp'
 let agentKey: CryptoKey
@@ -33,6 +40,7 @@ function setup(upstream: () => Promise<PaidToolRun>, waitSeconds = 0) {
         providerRef: PROVIDER,
         keys: createLocalJWKSet({ keys: [agentJwk] }),
       }),
+      verifyAgentKey: createAgentKeyVerifier({ client: agentApi }),
     }),
     calls: createAgentCalls({
       client: agentApi,
@@ -145,5 +153,32 @@ describe('createAgentMcpRoute', () => {
       await route(post(await signAgentToken(agentKey, { iss: 'https://auth.example.test' }))),
     ).toBeNull()
     expect(await route(new Request('http://merchant.test/other'))).toBeNull()
+  })
+
+  it('serves an agent that sends its agent key, and passes the key to SolvaPay on each call', async () => {
+    const { agentApi, route } = setup(ok)
+    const client = await connect(route, TEST_AGENT_KEY)
+    const result = (await client.callTool({ name: 'answer', arguments: { question: 'Why?' } })) as {
+      isError?: boolean
+      content: { text: string }[]
+    }
+    expect(result.isError).toBeFalsy()
+    expect(result.content[0].text).toBe('42')
+    expect(agentApi.authorizes[0].agentToken).toBe(TEST_AGENT_KEY)
+  })
+
+  it('answers 401 for an agent key SolvaPay does not know', async () => {
+    const { route } = setup(ok)
+    const response = await route(
+      new Request(MCP_URL, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer agk_UNKNOWN000000000000000000000000000000000',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+      }),
+    )
+    expect(response?.status).toBe(401)
   })
 })
