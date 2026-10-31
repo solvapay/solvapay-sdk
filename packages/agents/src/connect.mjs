@@ -35,7 +35,7 @@ export function keyEnvName(providerRef) {
   return `SOLVAPAY_KEY_${providerRef.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`
 }
 
-/** A name Hermes can use for the MCP server, e.g. `opper`. */
+/** A name Hermes can use for the merchant's MCP server and model provider, e.g. `opper`. */
 export function serverName(merchantName) {
   const slug = merchantName
     .toLowerCase()
@@ -80,8 +80,14 @@ async function start({ positional, flags }, env, out) {
     throw new Error(`--client must be one of: ${CLIENTS.join(', ')} (got ${client ?? 'nothing'})`)
   }
   const base = flags.api ?? DEFAULT_API
+  const modelUrl = flags['model-url']
+  const model = flags.model
+  if (Boolean(modelUrl) !== Boolean(model)) {
+    throw new Error('--model-url and --model go together: the merchant\'s Anthropic-compatible API and the model to use on it')
+  }
+  // With neither an MCP nor a model URL, the merchant's MCP server comes from its catalog listing.
   let mcpUrl = flags['mcp-url']
-  if (!mcpUrl) {
+  if (!mcpUrl && !modelUrl) {
     const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
     mcpUrl = listing.mcpUrl
   }
@@ -93,7 +99,7 @@ async function start({ positional, flags }, env, out) {
   await mkdir(dirname(path), { recursive: true })
   await writeFile(
     path,
-    `${JSON.stringify({ api: base, mcpUrl, client, ...opened }, null, 2)}\n`,
+    `${JSON.stringify({ api: base, mcpUrl, modelUrl, model, client, ...opened }, null, 2)}\n`,
     { mode: 0o600 },
   )
   out(
@@ -132,8 +138,19 @@ async function finish({ positional, flags }, env, out, sleep) {
         [
           `Connected to ${answer.merchantName} as agent ${answer.agentRef}.`,
           `The agent key is saved in ${saved.envFile} as ${saved.envName} (not shown here).`,
-          `Hermes has a new MCP server "${saved.server}" at ${state.mcpUrl}.`,
-          `Run /reload-mcp to load its tools (Hermes also picks it up by itself within about 30 seconds).`,
+          ...(state.mcpUrl
+            ? [
+                `Hermes has a new MCP server "${saved.server}" at ${state.mcpUrl}.`,
+                `Run /reload-mcp to load its tools (Hermes also picks it up by itself within about 30 seconds).`,
+              ]
+            : []),
+          ...(state.modelUrl
+            ? [
+                `Hermes has a new model provider "${saved.server}" at ${state.modelUrl}, paid with the key.`,
+                `A session keeps the providers it started with, so start a new one on it:`,
+                `  hermes chat --model custom:${saved.server}:${state.model}`,
+              ]
+            : []),
         ].join('\n'),
       )
       return 0
@@ -156,7 +173,7 @@ async function finish({ positional, flags }, env, out, sleep) {
   }
 }
 
-/** The key into Hermes's `.env`, the merchant's MCP server into its `config.yaml`. */
+/** The key into Hermes's `.env`; the merchant's MCP server and model provider into its `config.yaml`. */
 export async function saveForHermes(env, state, answer) {
   const home = hermesHome(env)
   await mkdir(home, { recursive: true })
@@ -171,11 +188,21 @@ export async function saveForHermes(env, state, answer) {
   const doc = parseDocument(existsSync(configFile) ? await readFile(configFile, 'utf8') : '')
   if (doc.errors.length) throw new Error(`${configFile} is not valid YAML: ${doc.errors[0].message}`)
   const server = serverName(answer.merchantName)
-  doc.setIn(['mcp_servers', server], doc.createNode({
-    url: state.mcpUrl,
-    headers: { Authorization: `Bearer \${${envName}}` },
-    timeout: 120,
-  }))
+  if (state.mcpUrl) {
+    doc.setIn(['mcp_servers', server], doc.createNode({
+      url: state.mcpUrl,
+      headers: { Authorization: `Bearer \${${envName}}` },
+      timeout: 120,
+    }))
+  }
+  if (state.modelUrl) {
+    doc.setIn(['providers', server], doc.createNode({
+      api: state.modelUrl,
+      transport: 'anthropic_messages',
+      key_env: envName,
+      default_model: state.model,
+    }))
+  }
   await writeFile(configFile, doc.toString())
   return { envFile, envName, configFile, server }
 }
@@ -186,7 +213,7 @@ export async function main(argv, deps = {}) {
   const sleep = deps.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)))
   const [command, sub, ...rest] = argv
   if (command !== 'connect' || (sub !== 'start' && sub !== 'finish')) {
-    out('Usage:\n  solvapay-agents connect start <providerRef> --client hermes [--name <name>] [--api <url>] [--mcp-url <url>]\n  solvapay-agents connect finish <providerRef> [--timeout <seconds>]')
+    out('Usage:\n  solvapay-agents connect start <providerRef> --client hermes [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>]\n  solvapay-agents connect finish <providerRef> [--timeout <seconds>]')
     return 64
   }
   const args = parseArgs(rest)

@@ -93,6 +93,30 @@ describe('connect', () => {
     expect(await readFile(join(home, 'config.yaml'), 'utf8')).toContain('url: https://site.test/mcp')
   })
 
+  it('adds the merchant as a model provider paid with the key, without its MCP server', async () => {
+    claims.push({ status: 'approved', agentKey: 'agk_X', agentRef: 'agt_A', providerRef: PROV, merchantName: 'Opper' })
+    await run([
+      'connect', 'start', PROV, '--client', 'hermes', '--api', API,
+      '--model-url', 'https://opper.test/v3/compat', '--model', 'aws/claude-sonnet-4-6-eu',
+    ])
+    expect(await run(['connect', 'finish', PROV])).toBe(0)
+
+    const config = await readFile(join(home, 'config.yaml'), 'utf8')
+    expect(config).toContain(
+      'providers:\n  opper:\n    api: https://opper.test/v3/compat\n    transport: anthropic_messages\n' +
+        `    key_env: ${keyEnvName(PROV)}\n    default_model: aws/claude-sonnet-4-6-eu`,
+    )
+    expect(config).not.toContain('mcp_servers')
+    expect(lines.at(-1)).toContain('hermes chat --model custom:opper:aws/claude-sonnet-4-6-eu')
+    expect(lines.at(-1)).not.toContain('/reload-mcp')
+  })
+
+  it('needs the model with the model URL', async () => {
+    await expect(
+      run(['connect', 'start', PROV, '--client', 'hermes', '--api', API, '--model-url', 'https://opper.test/v3/compat']),
+    ).rejects.toThrow('--model-url and --model go together')
+  })
+
   it('says so when the owner turned it down, or has not answered in time', async () => {
     await run(['connect', 'start', PROV, '--client', 'hermes', '--api', API])
     claims.splice(0, claims.length, { status: 'denied' })

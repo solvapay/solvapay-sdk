@@ -3,10 +3,12 @@
 // that takes SolvaPay agent payments, and its owner approves on their phone.
 //
 //   connect start <providerRef> --client hermes [--name Hermes] [--api <url>] [--mcp-url <url>]
+//                 [--model-url <anthropic-compatible url> --model <id>]
 //       Opens a connect request and prints the page and code for the owner.
 //   connect finish <providerRef> [--timeout <seconds>]
 //       Waits for the owner's answer and, once approved, saves the agent key
-//       where the agent host reads it and adds the merchant's MCP server.
+//       where the agent host reads it and adds the merchant's MCP server, its
+//       model provider, or both.
 //
 // The key never goes to stdout: the model reading this output never sees it.
 import { main } from '../src/connect.mjs'
