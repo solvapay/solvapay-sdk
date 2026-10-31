@@ -1,0 +1,218 @@
+// Test doubles for SolvaPay's side of agent payments: agent tokens signed with
+// a local key, the API as `@solvapay/server` sees it (customers, for a
+// merchant's own reads), and the agent endpoints (authorize, complete, usage
+// reports).
+import { createSolvaPay } from '@solvapay/server'
+import { exportJWK, generateKeyPair, SignJWT } from 'jose'
+import {
+  AgentApiError,
+  type AuthorizeInput,
+  type AuthorizeResponse,
+  type CompleteInput,
+  type CompleteResponse,
+  type ServerRefusalReason,
+  type SolvaPayAgentClient,
+  type UsageReport,
+  type UsageReportResponse,
+  type VerifiedAgentKey,
+} from './client'
+
+/** SolvaPay agent token test fixtures. */
+export const ISSUER = 'https://api.solvapay.test/v1/agent'
+export const PROVIDER = 'prov_W3TLPNOA'
+
+export async function agentKeys() {
+  const pair = await generateKeyPair('ES256', { extractable: true })
+  const jwk = { ...(await exportJWK(pair.publicKey)), kid: 'k1', alg: 'ES256', use: 'sig' }
+  return { privateKey: pair.privateKey, publicJwk: jwk }
+}
+
+export function signAgentToken(
+  key: CryptoKey,
+  overrides: {
+    iss?: string
+    aud?: string
+    sub?: string
+    principal?: string | null
+    scope?: string
+    expiresIn?: string
+    kid?: string
+    /** The owner lets the classifier read the prompt's end (`px`). */
+    promptExcerpt?: boolean
+  } = {},
+): Promise<string> {
+  const claims: Record<string, unknown> = { scope: overrides.scope ?? 'usage' }
+  if (overrides.promptExcerpt) claims.px = true
+  if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
+  return new SignJWT(claims)
+    .setProtectedHeader({ alg: 'ES256', kid: overrides.kid ?? 'k1' })
+    .setIssuer(overrides.iss ?? ISSUER)
+    .setAudience(overrides.aud ?? PROVIDER)
+    .setSubject(overrides.sub ?? 'agt_TESTAGNT')
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime(overrides.expiresIn ?? '15m')
+    .sign(key)
+}
+
+/**
+ * In-memory stand-in for SolvaPay's API, as `@solvapay/server` sees it: the
+ * customers a merchant looks up for its own reads (for example the
+ * reconciler's untagged usage).
+ */
+export class FakeSolvaPayApi {
+  /** principal (externalRef) → customer reference */
+  readonly customers = new Map<string, string>([['ppl_ABCDEFGHIJKLMNOP', 'cus_TESTCUST']])
+  readonly lookups: string[] = []
+
+  async getCustomer(params: { externalRef?: string }) {
+    this.lookups.push(params.externalRef ?? '')
+    const customerRef = params.externalRef ? this.customers.get(params.externalRef) : undefined
+    if (!customerRef) {
+      // As the SDK client throws for a 404: a SolvaPayError carrying the status.
+      throw Object.assign(new Error(`Get customer failed (404): not found`), { status: 404 })
+    }
+    return { customerRef, email: '', externalRef: params.externalRef, purchases: [] }
+  }
+
+  async trackUsage(): Promise<never> {
+    throw new Error('not used: agent calls are completed through the agent API')
+  }
+
+  async checkLimits(): Promise<never> {
+    throw new Error('not used')
+  }
+
+  async createCheckoutSession(): Promise<never> {
+    throw new Error('not used')
+  }
+
+  async createCustomerSession(): Promise<never> {
+    throw new Error('not used')
+  }
+
+  solvaPay() {
+    return createSolvaPay({ apiClient: this })
+  }
+}
+
+/**
+ * In-memory stand-in for SolvaPay's agent endpoints. Each authorize answers
+ * by `outcome`: allowed, refused with `refusal`, or waiting for the owner
+ * `waitingAnswers` times before allowing (`approve`) or refusing. A complete
+ * is recorded and answered as SolvaPay settles it. A usage report is answered
+ * by `respond`, by default every call matched and nothing flagged.
+ */
+/** An agent key the fake knows, for the test agent. */
+export const TEST_AGENT_KEY = 'agk_TESTKEY0000000000000000000000000000000000'
+export const TEST_AGENT_KEY_AGENT: VerifiedAgentKey = {
+  agentRef: 'agt_TESTAGNT',
+  principalRef: 'ppl_ABCDEFGHIJKLMNOP',
+  promptExcerpt: false,
+}
+
+export class FakeAgentApi implements SolvaPayAgentClient {
+  outcome: 'allowed' | 'refused' = 'allowed'
+  refusal: { reason: ServerRefusalReason; message: string } = {
+    reason: 'deny',
+    message: 'This call could cost about $0.31, over the per-call cap of $0.25.',
+  }
+  /** How many authorize answers say `waiting` before `outcome` applies. */
+  waitingAnswers = 0
+  waitingMessage = 'Approval apr_TESTAPR1 for more budget is waiting for your owner.'
+  /** An HTTP status for authorize to fail with. */
+  failAuthorize: number | null = null
+  /** An HTTP status for complete to fail with. */
+  failComplete: number | null = null
+  readonly authorizes: AuthorizeInput[] = []
+  readonly completes: (CompleteInput & { callRef: string })[] = []
+  readonly reports: UsageReport[] = []
+  respond: (report: UsageReport) => UsageReportResponse = report => ({
+    reference: `urp_TEST${String(this.reports.length).padStart(4, '0')}`,
+    currency: 'USD',
+    duplicate: false,
+    results: report.calls.map(call => ({
+      callRef: call.callRef,
+      result: 'matched',
+      reported: call.cost,
+      bookedPolicy: call.cost,
+      bookedCredit: call.cost,
+      policyDelta: '0',
+      creditDelta: '0',
+    })),
+    untagged: { total: '0', beforePolicy: '0', flagged: false },
+  })
+  /** request id → call reference, as SolvaPay keys a call on the merchant's id. */
+  private readonly calls = new Map<string, string>()
+  /** Agent keys SolvaPay knows for this merchant; any other key is a 401. */
+  readonly agentKeys = new Map<string, VerifiedAgentKey>([[TEST_AGENT_KEY, TEST_AGENT_KEY_AGENT]])
+  readonly keyVerifications: string[] = []
+
+  async verifyAgentKey(agentKey: string): Promise<VerifiedAgentKey> {
+    this.keyVerifications.push(agentKey)
+    const agent = this.agentKeys.get(agentKey)
+    if (!agent) throw new AgentApiError('POST /v1/sdk/agent/keys/verifications failed (401)', 401)
+    return agent
+  }
+
+  async authorize(input: AuthorizeInput): Promise<AuthorizeResponse> {
+    this.authorizes.push(input)
+    if (this.failAuthorize !== null) {
+      throw new AgentApiError(
+        `POST /v1/sdk/agent/calls failed (${this.failAuthorize})`,
+        this.failAuthorize,
+      )
+    }
+    const callRef =
+      this.calls.get(input.requestId) ?? `call_TEST${String(this.calls.size + 1).padStart(4, '0')}`
+    this.calls.set(input.requestId, callRef)
+    if (this.waitingAnswers > 0) {
+      this.waitingAnswers -= 1
+      return {
+        status: 'waiting',
+        callRef,
+        message: this.waitingMessage,
+        approval: {
+          reference: 'apr_TESTAPR1',
+          expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+        },
+        retryAfterSeconds: 1,
+      }
+    }
+    if (this.outcome === 'refused') return { status: 'refused', callRef, ...this.refusal }
+    return {
+      status: 'allowed',
+      callRef,
+      reservation: {
+        held: input.estimate,
+        expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      },
+    }
+  }
+
+  async complete(callRef: string, input: CompleteInput): Promise<CompleteResponse> {
+    this.completes.push({ callRef, ...input })
+    if (this.failComplete !== null) {
+      throw new AgentApiError(
+        `POST /v1/sdk/agent/calls/${callRef}/complete failed (${this.failComplete})`,
+        this.failComplete,
+      )
+    }
+    const source = input.status >= 400 ? 'none' : input.cost !== null ? 'reported' : 'provisional'
+    return {
+      callRef,
+      settled: source !== 'none',
+      source,
+      amount: {
+        amount: source === 'reported' ? (input.cost as { amount: string }).amount : '0',
+        currency: 'USD',
+      },
+      duplicate: false,
+    }
+  }
+
+  async reportUsage(report: UsageReport): Promise<UsageReportResponse> {
+    this.reports.push(report)
+    return this.respond(report)
+  }
+}
