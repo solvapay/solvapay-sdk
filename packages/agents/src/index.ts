@@ -10,8 +10,10 @@
  */
 export {
   AGENT_TOKEN_EXCERPT_CLAIM,
+  createAgentKeyVerifier,
   createAgentLayer,
   createAgentTokenVerifier,
+  isAgentKey,
   looksLikeJwt,
   type AgentLayer,
   type AgentTokenResult,
@@ -20,12 +22,14 @@ export {
   type VerifiedAgent,
 } from './identity'
 export {
+  AGENT_KEY_PREFIX,
   AgentApiError,
   AUTHORIZE_WAIT_MAX_SECONDS,
   createSolvaPayAgentClient,
   parseAuthorizeResponse,
   parseCompleteResponse,
   parseUsageReportResponse,
+  parseVerifiedAgentKey,
   RECONCILIATION_REASONS,
   RECONCILIATION_RESULTS,
   SERVER_REFUSAL_REASONS,
@@ -38,6 +42,7 @@ export {
   type ReconciliationReason,
   type ReconciliationResult,
   type ServerRefusalReason,
+  type VerifiedAgentKey,
   type SolvaPayAgentClient,
   type UsageReport,
   type UsageReportResponse,

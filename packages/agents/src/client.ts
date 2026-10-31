@@ -143,7 +143,21 @@ export interface UsageReportResponse {
   untagged: { total: string; beforePolicy: string; flagged: boolean }
 }
 
+/** Prefix of an agent key: long-lived, for one merchant, sent in place of an agent token. */
+export const AGENT_KEY_PREFIX = 'agk_'
+
+/** The agent behind an agent key, as SolvaPay answers for this merchant. */
+export interface VerifiedAgentKey {
+  agentRef: string
+  /** Pairwise reference of the account at this merchant, `ppl_…`. */
+  principalRef: string
+  /** The agent's spend policy lets the classifier read the end of the prompt. */
+  promptExcerpt: boolean
+}
+
 export interface SolvaPayAgentClient {
+  /** 401 for an unknown or revoked key, 403 for another merchant's. */
+  verifyAgentKey(agentKey: string): Promise<VerifiedAgentKey>
   authorize(input: AuthorizeInput): Promise<AuthorizeResponse>
   complete(callRef: string, input: CompleteInput): Promise<CompleteResponse>
   reportUsage(body: UsageReport): Promise<UsageReportResponse>
@@ -187,6 +201,8 @@ export function createSolvaPayAgentClient(options: {
   }
 
   return {
+    verifyAgentKey: async agentKey =>
+      parseVerifiedAgentKey(await post<unknown>('/v1/sdk/agent/keys/verifications', { agentKey })),
     // A held request answers when the owner does or its wait ends, so it may take that long.
     authorize: async input =>
       parseAuthorizeResponse(
@@ -198,6 +214,16 @@ export function createSolvaPayAgentClient(options: {
       ),
     reportUsage: async body =>
       parseUsageReportResponse(await post<unknown>('/v1/sdk/agent/usage-reports', body)),
+  }
+}
+
+/** Checked field by field: the agent is served on it. */
+export function parseVerifiedAgentKey(value: unknown): VerifiedAgentKey {
+  if (!isRecord(value)) throw new Error('Agent key verification was not an object')
+  return {
+    agentRef: requireString(value.agentRef, 'agentRef'),
+    principalRef: requireString(value.principalRef, 'principalRef'),
+    promptExcerpt: requireBoolean(value.promptExcerpt, 'promptExcerpt'),
   }
 }
 
