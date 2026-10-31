@@ -133,7 +133,7 @@ async function finish({ positional, flags }, env, out, sleep) {
           `Connected to ${answer.merchantName} as agent ${answer.agentRef}.`,
           `The agent key is saved in ${saved.envFile} as ${saved.envName} (not shown here).`,
           `Hermes has a new MCP server "${saved.server}" at ${state.mcpUrl}.`,
-          `Start a new session (or run /reload-mcp) to use its tools.`,
+          `Run /reload-mcp to load its tools (Hermes also picks it up by itself within about 30 seconds).`,
         ].join('\n'),
       )
       return 0
