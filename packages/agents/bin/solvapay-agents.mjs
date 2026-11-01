@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // `npx @solvapay/agents launch|connect …`: an agent pays a merchant that
 // takes SolvaPay agent payments with an agent key its owner approved on their
-// phone. Keys are saved one per merchant in ~/.solvapay/agents (mode 600).
+// phone or in a browser. Keys are saved one per merchant in ~/.solvapay/agents (mode 600).
 //
 //   launch <claude|hermes> <merchant> [--model-url <url>] [--model <id>] [--api <url>] [-- <agent args>]
 //       The merchant is its name in the SolvaPay catalog (e.g. opper) or its
