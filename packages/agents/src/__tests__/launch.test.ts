@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -134,6 +134,7 @@ describe('launch claude', () => {
       CLAUDE_CONFIG_DIR: join(env.SOLVAPAY_HOME, 'agents', 'claude', PROV),
     })
     expect(claude.env).not.toHaveProperty('ANTHROPIC_API_KEY')
+    expect(said.join('\n')).toContain('Approve this connection on your phone or in a browser:')
     expect(spendReads).toBe(3)
     expect(said.at(-1)).toBe('This session: 2 paid calls, 0.0042 USD, paid by agent agt_CLAUDE01 through SolvaPay.')
   })
@@ -143,6 +144,18 @@ describe('launch claude', () => {
     expect(started[0].env).toMatchObject({ ANTHROPIC_BASE_URL: MODEL_URL, ANTHROPIC_MODEL: 'claude-haiku-4-5' })
     expect(await launch(['claude', PROV, '--api', API, '--model', 'claude-sonnet-4-6'])).toBe(0)
     expect(started[1].env.ANTHROPIC_MODEL).toBe('claude-sonnet-4-6')
+  })
+
+  it("marks Claude Code's first-run setup done in its own config, keeping what Claude Code saved", async () => {
+    const configDir = join(env.SOLVAPAY_HOME, 'agents', 'claude', PROV)
+    await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])
+    const file = join(configDir, '.claude.json')
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ hasCompletedOnboarding: true })
+    expect((await stat(file)).mode & 0o777).toBe(0o600)
+
+    await writeFile(file, JSON.stringify({ hasCompletedOnboarding: true, theme: 'dark', projects: { '/x': {} } }))
+    await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ hasCompletedOnboarding: true, theme: 'dark', projects: { '/x': {} } })
   })
 
   it('launches straight away with a saved key, without connecting again', async () => {

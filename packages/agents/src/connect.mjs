@@ -82,7 +82,7 @@ async function start({ positional, flags }, env, out) {
   await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...opened })
   out(
     [
-      `Ask your user to approve this connection on their phone:`,
+      `Ask your user to approve this connection on their phone or in a browser:`,
       `  ${opened.verificationUrl}`,
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
@@ -182,7 +182,7 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
     })
     say(
       [
-        `No agent key for ${providerRef} on this machine yet. Approve this connection on your phone:`,
+        `No agent key for ${providerRef} on this machine yet. Approve this connection on your phone or in a browser:`,
         `  ${opened.verificationUrl}`,
         `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
         `Waiting for your approval…`,
