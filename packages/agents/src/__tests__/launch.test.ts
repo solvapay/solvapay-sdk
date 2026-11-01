@@ -176,9 +176,19 @@ describe('launch claude', () => {
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')
   })
 
+  it('says to launch again when the connection expires', async () => {
+    claims = [{ status: 'expired' }]
+    await expect(launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])).rejects.toThrow(
+      'The connection expired before it was approved. Launch again for a new link.',
+    )
+    expect(started).toEqual([])
+  })
+
   it('stops when the owner turns the connection down', async () => {
     claims = [{ status: 'denied' }]
-    await expect(launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])).rejects.toThrow('turned this connection down')
+    await expect(launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])).rejects.toThrow(
+      'You turned this connection down, so nothing was started. Launch again to ask once more.',
+    )
     expect(started).toEqual([])
     expect(await readKey(env, PROV)).toBeNull()
   })
