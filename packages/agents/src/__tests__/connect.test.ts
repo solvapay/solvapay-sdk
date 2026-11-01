@@ -14,7 +14,7 @@ let claims: unknown[]
 
 function run(argv: string[]) {
   return main(argv, {
-    env: { HERMES_HOME: home },
+    env: { HERMES_HOME: home, SOLVAPAY_HOME: join(home, '.solvapay') },
     out: (text: string) => lines.push(text),
     sleep: async () => undefined,
   }) as Promise<number>
