@@ -158,11 +158,17 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
   let saved = await readKey(env, providerRef)
   const base = flags.api ?? saved?.api ?? DEFAULT_API
 
-  const modelUrl = flags['model-url']
-  const model = flags.model
+  // The merchant's listing says where its model API is and which model to start on; flags override it.
+  let modelUrl = flags['model-url']
+  let model = flags.model
+  if (!modelUrl || !model) {
+    const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
+    modelUrl ??= listing.anthropicBaseUrl
+    model ??= listing.defaultModel
+  }
   if (!modelUrl || !model) {
     throw new Error(
-      `No model URL for ${providerRef}: pass --model-url <the merchant's Anthropic-compatible API> --model <id>`,
+      `${providerRef}'s catalog listing names no ${modelUrl ? 'default model' : 'model API'}: pass --model-url <the merchant's Anthropic-compatible API> --model <id>`,
     )
   }
 
@@ -190,26 +196,31 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
   }
 
   // Fails here, not inside the agent, when the owner revoked it.
-  await checkKey(modelUrl, saved.agentKey, keyPath(env, providerRef))
+  const startedAt = new Date().toISOString()
+  await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
 
   const started = agent.launch({ env, providerRef, agentKey: saved.agentKey, modelUrl, model, args: rest })
   say(`Starting ${agent.displayName} on ${modelUrl} with ${model}, paid by agent ${saved.agentRef} through SolvaPay…`)
-  return run(started)
+  const exitCode = await run(started)
+  const spent = await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
+  say(`This session: ${spent.calls} paid ${spent.calls === 1 ? 'call' : 'calls'}, ${spent.spent.amount} ${spent.spent.currency}, paid by agent ${spent.agentRef} through SolvaPay.`)
+  return exitCode
 }
 
-/** Lists the models with the key: free, and refused when the key is unknown or revoked. */
-async function checkKey(modelUrl, agentKey, file) {
-  const response = await fetch(`${modelUrl.replace(/\/+$/, '')}/v1/models`, {
-    headers: { authorization: `Bearer ${agentKey}`, 'anthropic-version': '2023-06-01' },
+/** What the agent has spent since `since`, read with its key; refused when the key is unknown or revoked. */
+async function spendSince(base, agentKey, since, file) {
+  const response = await fetch(`${base.replace(/\/+$/, '')}/agent/spend?since=${encodeURIComponent(since)}`, {
+    headers: { authorization: `Bearer ${agentKey}` },
   })
-  if (response.status === 401 || response.status === 403) {
-    const text = (await response.text()).slice(0, 300)
+  const text = await response.text()
+  if (response.status === 401) {
     throw new Error(
-      `${modelUrl} refused this machine's agent key (${response.status}: ${text}). ` +
+      `SolvaPay refused this machine's agent key (401: ${text.slice(0, 300)}). ` +
         `Its owner may have revoked it in their SolvaPay account. To connect a new one, remove ${file} and launch again.`,
     )
   }
-  if (!response.ok) throw new Error(`${modelUrl}/v1/models answered ${response.status}: ${(await response.text()).slice(0, 300)}`)
+  if (!response.ok) throw new Error(`GET /agent/spend answered ${response.status}: ${text.slice(0, 300)}`)
+  return JSON.parse(text)
 }
 
 /** Starts the agent attached to this terminal and resolves with its exit code. */
@@ -225,7 +236,7 @@ function runAttached({ command, args, env }) {
 
 const USAGE = [
   'Usage:',
-  '  solvapay-agents launch <claude> <providerRef> --model-url <anthropic-compatible url> --model <id> [--api <url>] [--name <name>] [-- <agent args>]',
+  '  solvapay-agents launch <claude> <providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
   '  solvapay-agents connect start <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>]',
   '  solvapay-agents connect finish <providerRef> [--timeout <seconds>]',
 ].join('\n')

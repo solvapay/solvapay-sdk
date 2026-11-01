@@ -3,9 +3,10 @@
 // takes SolvaPay agent payments with an agent key its owner approved on their
 // phone. Keys are saved one per merchant in ~/.solvapay/agents (mode 600).
 //
-//   launch claude <providerRef> --model-url <url> --model <id> [--api <url>] [-- <claude args>]
+//   launch claude <providerRef> [--model-url <url>] [--model <id>] [--api <url>] [-- <claude args>]
 //       Connects first when no key is saved for the merchant, then starts
-//       Claude Code on the merchant's model API, paying with the key. Its
+//       Claude Code on the merchant's model API (from its catalog listing
+//       unless given), paying with the key, and shows the spend on exit. Its
 //       settings are for that launch only.
 //   connect start <providerRef> --client <hermes|claude-code> [--name Hermes] [--api <url>] [--mcp-url <url>]
 //                 [--model-url <anthropic-compatible url> --model <id>]
