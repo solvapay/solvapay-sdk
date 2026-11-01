@@ -1,4 +1,4 @@
-import { mkdtemp, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -148,8 +148,33 @@ describe('launch claude', () => {
     listing = { providerRef: PROV }
     await expect(launch(['claude', PROV, '--api', API])).rejects.toThrow("listing names no model API: pass --model-url")
     await expect(launch(['claude', PROV, '--api', API, '--model-url', MODEL_URL])).rejects.toThrow('listing names no default model')
-    await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow('launch needs the agent, one of: claude')
+    await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow('launch needs the agent, one of: claude, hermes')
     expect(opened).toEqual([])
+  })
+})
+
+describe('launch hermes', () => {
+  it("puts the key and the merchant's model provider in Hermes's home, then starts a chat on it", async () => {
+    env.HERMES_HOME = join(env.SOLVAPAY_HOME, '..', '.hermes')
+    expect(await launch(['hermes', PROV, '--api', API, '--', '-q', 'say hi'])).toBe(0)
+
+    expect(opened).toEqual([{ providerRef: PROV, name: 'Hermes', client: 'hermes' }])
+    const [hermes] = started
+    expect(hermes.command).toBe('hermes')
+    expect(hermes.args).toEqual(['chat', '--model', 'custom:opper:claude-haiku-4-5', '-q', 'say hi'])
+    expect(await readFile(join(env.HERMES_HOME, '.env'), 'utf8')).toBe('SOLVAPAY_KEY_PROV_E4YWS8H8=agk_SECRET\n')
+    expect(await readFile(join(env.HERMES_HOME, 'config.yaml'), 'utf8')).toContain(
+      `providers:\n  opper:\n    api: ${MODEL_URL}\n    transport: anthropic_messages\n    key_env: SOLVAPAY_KEY_PROV_E4YWS8H8`,
+    )
+    expect(said.join('\n')).not.toContain('agk_SECRET')
+  })
+
+  it('runs another command in place of the agent when SOLVAPAY_AGENT_BIN is set', async () => {
+    env.HERMES_HOME = join(env.SOLVAPAY_HOME, '..', '.hermes')
+    env.SOLVAPAY_AGENT_BIN = '/lab/hermes-sandbox.sh'
+    await launch(['hermes', PROV, '--api', API])
+    expect(started[0].command).toBe('/lab/hermes-sandbox.sh')
+    expect(started[0].args[0]).toBe('chat')
   })
 })
 

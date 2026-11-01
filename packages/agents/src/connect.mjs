@@ -11,7 +11,7 @@ export const DEFAULT_API = 'https://api.solvapay.com/v1'
 /** The agents `connect` can set up, by the client name a connect request carries. */
 const CLIENTS = { hermes, 'claude-code': claudeCode }
 /** The agents `launch` can start, by the name on the command line. */
-const LAUNCHERS = { claude: claudeCode }
+const LAUNCHERS = { claude: claudeCode, hermes }
 
 /** `--name value` pairs and positional arguments; everything after `--` is the agent's own. */
 export function parseArgs(argv) {
@@ -199,7 +199,17 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
   const startedAt = new Date().toISOString()
   await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
 
-  const started = agent.launch({ env, providerRef, agentKey: saved.agentKey, modelUrl, model, args: rest })
+  const started = await agent.launch({
+    env,
+    providerRef,
+    agentKey: saved.agentKey,
+    merchantName: saved.merchantName,
+    modelUrl,
+    model,
+    args: rest,
+  })
+  // Another way to run the same agent, e.g. a sandbox wrapper; its arguments are the agent's.
+  if (env.SOLVAPAY_AGENT_BIN) started.command = env.SOLVAPAY_AGENT_BIN
   say(`Starting ${agent.displayName} on ${modelUrl} with ${model}, paid by agent ${saved.agentRef} through SolvaPay…`)
   const exitCode = await run(started)
   const spent = await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
@@ -236,7 +246,7 @@ function runAttached({ command, args, env }) {
 
 const USAGE = [
   'Usage:',
-  '  solvapay-agents launch <claude> <providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
+  '  solvapay-agents launch <claude|hermes> <providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
   '  solvapay-agents connect start <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>]',
   '  solvapay-agents connect finish <providerRef> [--timeout <seconds>]',
 ].join('\n')

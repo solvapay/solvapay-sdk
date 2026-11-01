@@ -83,5 +83,17 @@ export const hermes = {
           ]
         : []),
     ]
+  },  /**
+   * Hermes reads its model providers from its own config, so the key and the
+   * merchant's model API go there (as `connect finish` puts them), and the
+   * session starts on that provider.
+   */
+  async launch({ env, providerRef, agentKey, merchantName, modelUrl, model, args }) {
+    const saved = await saveForHermes(env, { modelUrl, model }, { providerRef, agentKey, merchantName })
+    return {
+      command: 'hermes',
+      args: ['chat', '--model', `custom:${saved.server}:${model}`, ...args],
+      env,
+    }
   },
 }
