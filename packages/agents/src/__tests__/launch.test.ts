@@ -25,6 +25,8 @@ let claims: unknown[]
 let revoked: boolean
 let spendReads: number
 let listing: Record<string, unknown>
+let searches: string[]
+let searchResults: { providerRef: string; merchantName: string }[]
 
 const MODEL_FLAGS = ['--model-url', MODEL_URL, '--model', 'aws/claude-sonnet-4-6-eu']
 
@@ -54,6 +56,8 @@ beforeEach(async () => {
   opened = []
   revoked = false
   spendReads = 0
+  searches = []
+  searchResults = [{ providerRef: PROV, merchantName: 'Opper MCP (agent payments lab)' }]
   listing = { providerRef: PROV, anthropicBaseUrl: MODEL_URL, defaultModel: 'claude-haiku-4-5' }
   claims = [
     { status: 'pending', retryAfterSeconds: 3 },
@@ -75,6 +79,10 @@ beforeEach(async () => {
             inFlight: spendReads === 2 ? 1 : 0,
             spent: { amount: spendReads === 2 ? '0.0012' : '0.0042', currency: 'USD' },
           })
+    }
+    if (path.startsWith('/catalog/search?')) {
+      searches.push(new URL(url).searchParams.get('q') ?? '')
+      return Response.json({ query: 'x', results: searchResults })
     }
     if (path === `/catalog/listings/${PROV}`) {
       return Response.json(listing)
@@ -164,6 +172,41 @@ describe('launch claude', () => {
     await expect(launch(['claude', PROV, '--api', API])).rejects.toThrow("listing names no model API: pass --model-url")
     await expect(launch(['claude', PROV, '--api', API, '--model-url', MODEL_URL])).rejects.toThrow('listing names no default model')
     await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow('launch needs the agent, one of: claude, hermes')
+    expect(opened).toEqual([])
+  })
+})
+
+describe('the merchant by name', () => {
+  it("finds the one listed merchant whose name starts with the user's words", async () => {
+    searchResults.push({ providerRef: 'prov_OPPERTUN1', merchantName: 'Opportunity Labs' })
+    expect(await launch(['claude', 'opper', '--api', API])).toBe(0)
+    expect(searches).toEqual(['opper'])
+    expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude-code' }])
+    expect(await readKey(env, PROV)).not.toBeNull()
+
+    expect(await launch(['claude', 'Opper MCP', '--api', API])).toBe(0)
+    expect(opened).toHaveLength(1)
+  })
+
+  it('takes a providerRef as it is, without searching', async () => {
+    expect(await launch(['claude', PROV, '--api', API])).toBe(0)
+    expect(searches).toEqual([])
+  })
+
+  it('refuses a name that matches no merchant word for word, naming what the search found', async () => {
+    await expect(launch(['claude', 'opp', '--api', API])).rejects.toThrow(
+      `No merchant in the SolvaPay catalog is called "opp". The search found:\n  Opper MCP (agent payments lab) (${PROV})`,
+    )
+    searchResults = []
+    await expect(launch(['claude', 'nobody', '--api', API])).rejects.toThrow('No merchant in the SolvaPay catalog is called "nobody".')
+    expect(opened).toEqual([])
+  })
+
+  it('refuses a name that matches more than one merchant', async () => {
+    searchResults.push({ providerRef: 'prov_OPPER0EU', merchantName: 'Opper EU' })
+    await expect(launch(['claude', 'opper', '--api', API])).rejects.toThrow(
+      `"opper" matches more than one merchant in the SolvaPay catalog:\n  Opper MCP (agent payments lab) (${PROV})\n  Opper EU (prov_OPPER0EU)`,
+    )
     expect(opened).toEqual([])
   })
 })

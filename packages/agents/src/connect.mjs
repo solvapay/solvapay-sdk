@@ -2,7 +2,7 @@
 // no build step, so it runs from a linked or installed package as it is.
 import { spawn } from 'node:child_process'
 import { claudeCode } from './agents/claude-code.mjs'
-import { hermes } from './agents/hermes.mjs'
+import { hermes, serverName } from './agents/hermes.mjs'
 import { dropPending, keyPath, readKey, readPending, saveKey, savePending } from './key-store.mjs'
 
 export { keyEnvName, saveForHermes, serverName } from './agents/hermes.mjs'
@@ -153,10 +153,11 @@ async function waitForApproval(state, deadline, sleep) {
  * Status goes to stderr, so the agent's own output stays clean on stdout.
  */
 async function launch({ positional, flags, rest }, env, say, sleep, run) {
-  const [name, providerRef] = positional
+  const [name, merchant] = positional
   const agent = LAUNCHERS[name]
   if (!agent) throw new Error(`launch needs the agent, one of: ${Object.keys(LAUNCHERS).join(', ')} (got ${name ?? 'nothing'})`)
-  if (!providerRef) throw new Error(`launch needs the merchant: launch ${name} <providerRef>`)
+  if (!merchant) throw new Error(`launch needs the merchant: launch ${name} <merchant name or providerRef>`)
+  const providerRef = PROVIDER_REF.test(merchant) ? merchant : await merchantByName(flags.api ?? DEFAULT_API, merchant)
   let saved = await readKey(env, providerRef)
   const base = flags.api ?? saved?.api ?? DEFAULT_API
 
@@ -228,6 +229,34 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
   return exitCode
 }
 
+const PROVIDER_REF = /^prov_[A-Za-z0-9]+$/
+
+/**
+ * The one listed merchant a name means, from the SolvaPay catalog. The name
+ * must match the merchant's name or its first words, word for word: `opper`
+ * matches "Opper MCP", `opp` does not. None or several is an error naming
+ * what was found, so a launch never pays a merchant the user did not mean.
+ */
+async function merchantByName(base, name) {
+  const wanted = serverName(name)
+  const found = await api(base, `/catalog/search?q=${encodeURIComponent(name)}&limit=10`)
+  const byRef = new Map(found.results.map(result => [result.providerRef, result]))
+  const matches = [...byRef.values()].filter(result => {
+    const slug = serverName(result.merchantName)
+    return slug === wanted || slug.startsWith(`${wanted}-`)
+  })
+  const listed = results => results.map(result => `  ${result.merchantName} (${result.providerRef})`).join('\n')
+  if (matches.length === 1) return matches[0].providerRef
+  if (matches.length === 0) {
+    throw new Error(
+      byRef.size
+        ? `No merchant in the SolvaPay catalog is called "${name}". The search found:\n${listed([...byRef.values()])}\nLaunch with one of their names or references.`
+        : `No merchant in the SolvaPay catalog is called "${name}".`,
+    )
+  }
+  throw new Error(`"${name}" matches more than one merchant in the SolvaPay catalog:\n${listed(matches)}\nLaunch with the reference of the one you mean.`)
+}
+
 /** What the agent has spent since `since`, read with its key; refused when the key is unknown or revoked. */
 async function spendSince(base, agentKey, since, file) {
   const response = await fetch(`${base.replace(/\/+$/, '')}/agent/spend?since=${encodeURIComponent(since)}`, {
@@ -257,7 +286,7 @@ function runAttached({ command, args, env }) {
 
 const USAGE = [
   'Usage:',
-  '  solvapay-agents launch <claude|hermes> <providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
+  '  solvapay-agents launch <claude|hermes> <merchant name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
   '  solvapay-agents connect start <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>]',
   '  solvapay-agents connect finish <providerRef> [--timeout <seconds>]',
 ].join('\n')
