@@ -193,7 +193,13 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
     const deadline = Date.parse(opened.expiresAt)
     const answer = await waitForApproval({ api: base, ...opened }, Number.isFinite(deadline) ? deadline : Date.now() + 600_000, sleep)
     if (answer.status !== 'approved') {
-      throw new Error(answer.status === 'pending' ? 'The connection was not approved in time.' : notApproved(answer.status))
+      throw new Error(
+        {
+          pending: 'The connection was not approved in time. Launch again for a new link.',
+          denied: 'You turned this connection down, so nothing was started. Launch again to ask once more.',
+          expired: 'The connection expired before it was approved. Launch again for a new link.',
+        }[answer.status] ?? `Unexpected answer: ${answer.status}`,
+      )
     }
     const file = await saveKey(env, { ...answer, api: base })
     say(`Connected to ${answer.merchantName} as agent ${answer.agentRef}. The key is saved in ${file}.`)
