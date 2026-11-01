@@ -66,7 +66,15 @@ beforeEach(async () => {
       spendReads++
       return revoked
         ? Response.json({ message: 'Unknown or revoked agent key' }, { status: 401 })
-        : Response.json({ agentRef: 'agt_CLAUDE01', providerRef: PROV, since: 'x', calls: 2, spent: { amount: '0.0042', currency: 'USD' } })
+        : Response.json({
+            agentRef: 'agt_CLAUDE01',
+            providerRef: PROV,
+            since: 'x',
+            // The check before launch, then one read while the last call is still settling.
+            calls: spendReads === 2 ? 1 : 2,
+            inFlight: spendReads === 2 ? 1 : 0,
+            spent: { amount: spendReads === 2 ? '0.0012' : '0.0042', currency: 'USD' },
+          })
     }
     if (path === `/catalog/listings/${PROV}`) {
       return Response.json(listing)
@@ -101,7 +109,14 @@ describe('launch claude', () => {
 
     const [claude] = started
     expect(claude.command).toBe('claude')
-    expect(claude.args).toEqual(['--setting-sources', 'project,local', '-p', 'say hi'])
+    expect(claude.args).toEqual([
+      '--setting-sources',
+      'project,local',
+      '--settings',
+      '{"env":{"ANTHROPIC_API_KEY":""}}',
+      '-p',
+      'say hi',
+    ])
     expect(claude.env).toMatchObject({
       PATH: '/usr/bin',
       ANTHROPIC_BASE_URL: MODEL_URL,
@@ -111,7 +126,7 @@ describe('launch claude', () => {
       CLAUDE_CONFIG_DIR: join(env.SOLVAPAY_HOME, 'agents', 'claude', PROV),
     })
     expect(claude.env).not.toHaveProperty('ANTHROPIC_API_KEY')
-    expect(spendReads).toBe(2)
+    expect(spendReads).toBe(3)
     expect(said.at(-1)).toBe('This session: 2 paid calls, 0.0042 USD, paid by agent agt_CLAUDE01 through SolvaPay.')
   })
 
@@ -150,6 +165,23 @@ describe('launch claude', () => {
     await expect(launch(['claude', PROV, '--api', API, '--model-url', MODEL_URL])).rejects.toThrow('listing names no default model')
     await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow('launch needs the agent, one of: claude, hermes')
     expect(opened).toEqual([])
+  })
+})
+
+describe('the spend on exit', () => {
+  it('says how many calls had not settled when it stopped waiting', async () => {
+    await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
+    vi.stubGlobal('fetch', async (url: string) =>
+      Response.json({ agentRef: 'agt_A', providerRef: PROV, since: url, calls: 1, inFlight: 2, spent: { amount: '0.001', currency: 'USD' } }),
+    )
+    const now = vi.spyOn(Date, 'now')
+    let clock = 0
+    now.mockImplementation(() => (clock += 1_000))
+    expect(await launch(['claude', PROV, ...MODEL_FLAGS])).toBe(0)
+    now.mockRestore()
+    expect(said.at(-1)).toBe(
+      'This session: 1 paid call, 0.001 USD, paid by agent agt_A through SolvaPay. 2 more not settled yet, so not in this total.',
+    )
   })
 })
 

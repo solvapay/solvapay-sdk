@@ -8,6 +8,8 @@ import { dropPending, keyPath, readKey, readPending, saveKey, savePending } from
 export { keyEnvName, saveForHermes, serverName } from './agents/hermes.mjs'
 
 export const DEFAULT_API = 'https://api.solvapay.com/v1'
+/** How long launch waits on exit for the session's last calls to settle before it shows the spend. */
+const SETTLE_MS = 15_000
 /** The agents `connect` can set up, by the client name a connect request carries. */
 const CLIENTS = { hermes, 'claude-code': claudeCode }
 /** The agents `launch` can start, by the name on the command line. */
@@ -212,8 +214,17 @@ async function launch({ positional, flags, rest }, env, say, sleep, run) {
   if (env.SOLVAPAY_AGENT_BIN) started.command = env.SOLVAPAY_AGENT_BIN
   say(`Starting ${agent.displayName} on ${modelUrl} with ${model}, paid by agent ${saved.agentRef} through SolvaPay…`)
   const exitCode = await run(started)
-  const spent = await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
-  say(`This session: ${spent.calls} paid ${spent.calls === 1 ? 'call' : 'calls'}, ${spent.spent.amount} ${spent.spent.currency}, paid by agent ${spent.agentRef} through SolvaPay.`)
+  // The merchant completes a call after its answer ends, which can be after the agent exits.
+  const deadline = Date.now() + SETTLE_MS
+  let spent = await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
+  while (spent.inFlight > 0 && Date.now() < deadline) {
+    await sleep(500)
+    spent = await spendSince(base, saved.agentKey, startedAt, keyPath(env, providerRef))
+  }
+  say(
+    `This session: ${spent.calls} paid ${spent.calls === 1 ? 'call' : 'calls'}, ${spent.spent.amount} ${spent.spent.currency}, paid by agent ${spent.agentRef} through SolvaPay.` +
+      (spent.inFlight > 0 ? ` ${spent.inFlight} more not settled yet, so not in this total.` : ''),
+  )
   return exitCode
 }
 

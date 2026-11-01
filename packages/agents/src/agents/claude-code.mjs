@@ -5,6 +5,8 @@ import { agentDir } from '../key-store.mjs'
 /** Claude Code would send these beside the agent key, and the merchant may read them first. */
 const DROPPED = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL', 'CLAUDE_CONFIG_DIR']
 
+const CLEARED_KEY = JSON.stringify({ env: { ANTHROPIC_API_KEY: '' } })
+
 export const claudeCode = {
   name: 'claude',
   client: 'claude-code',
@@ -23,8 +25,10 @@ export const claudeCode = {
     const child = Object.fromEntries(Object.entries(env).filter(([name]) => !DROPPED.includes(name)))
     return {
       command: 'claude',
-      // The user's own settings can set ANTHROPIC_API_KEY, which beats the agent key.
-      args: ['--setting-sources', 'project,local', ...args],
+      // The user's own settings can set ANTHROPIC_API_KEY, which beats the agent key. Started
+      // from the home folder, ~/.claude/settings.json is also the project's, so --settings
+      // (which outranks project and local) clears the key as well.
+      args: ['--setting-sources', 'project,local', '--settings', CLEARED_KEY, ...args],
       env: {
         ...child,
         ANTHROPIC_BASE_URL: modelUrl,
