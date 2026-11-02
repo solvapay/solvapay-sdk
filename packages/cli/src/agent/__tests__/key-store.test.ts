@@ -2,9 +2,7 @@ import { chmod, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-// @ts-expect-error plain ESM without types: the helper runs with no build step
 import { keyPath, readKey, saveKey } from '../key-store.mjs'
-// @ts-expect-error plain ESM without types
 import { main } from '../connect.mjs'
 
 const PROV = 'prov_E4YWS8H8'
@@ -50,7 +48,7 @@ describe('key store', () => {
     expect(() => keyPath(env, '../etc')).toThrow('Not a merchant reference')
   })
 
-  it('never prints the key on connect finish', async () => {
+  it('never prints the key on connect', async () => {
     const printed: string[] = []
     vi.stubGlobal('fetch', async (url: string) =>
       url.endsWith('/claims')
@@ -60,8 +58,8 @@ describe('key store', () => {
           : new Response('not found', { status: 404 }),
     )
     const deps = { env: { ...env, HERMES_HOME: env.SOLVAPAY_HOME }, out: (t: string) => printed.push(t), sleep: async () => undefined }
-    await main(['connect', 'start', PROV, '--client', 'hermes', '--api', 'https://api.example.test/v1', '--mcp-url', 'https://m.test/mcp'], deps)
-    expect(await main(['connect', 'finish', PROV], deps)).toBe(0)
+    await main(['connect', PROV, '--client', 'hermes', '--api', 'https://api.example.test/v1', '--mcp-url', 'https://m.test/mcp'], deps)
+    expect(await main(['connect', PROV], deps)).toBe(0)
     expect(printed.join('\n')).not.toContain('agk_SECRET')
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')
   })

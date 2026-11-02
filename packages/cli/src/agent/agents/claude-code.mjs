@@ -17,7 +17,7 @@ export const claudeCode = {
   async connected(env, state, answer) {
     return [
       `Start Claude Code paying with it:`,
-      `  npx @solvapay/agents launch claude ${answer.providerRef}${state.modelUrl ? ` --model-url ${state.modelUrl} --model ${state.model}` : ''}`,
+      `  npx solvapay launch claude ${answer.providerRef}${state.modelUrl ? ` --model-url ${state.modelUrl} --model ${state.model}` : ''}`,
     ]
   },
   /**

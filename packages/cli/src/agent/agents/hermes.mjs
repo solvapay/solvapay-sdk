@@ -64,7 +64,7 @@ export const hermes = {
   name: 'hermes',
   client: 'hermes',
   displayName: 'Hermes',
-  /** After `connect finish`: set Hermes up and say what changed. */
+  /** Once `connect` is approved: set Hermes up and say what changed. */
   async connected(env, state, answer) {
     const saved = await saveForHermes(env, state, answer)
     return [
@@ -85,7 +85,7 @@ export const hermes = {
     ]
   },  /**
    * Hermes reads its model providers from its own config, so the key and the
-   * merchant's model API go there (as `connect finish` puts them), and the
+   * merchant's model API go there (as `connect` puts them), and the
    * session starts on that provider.
    */
   async launch({ env, providerRef, agentKey, merchantName, modelUrl, model, args }) {

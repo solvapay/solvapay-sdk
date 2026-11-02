@@ -89,6 +89,22 @@ See [`create-solvapay` on npm](https://www.npmjs.com/package/create-solvapay) fo
 | [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) | Supabase Edge | One-liner `@solvapay/server/fetch` handlers |
 | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge) | Node MCP | OAuth bridge + `payable.mcp()` |
 
+## Paying as an agent: `launch` and `connect`
+
+The other side of SolvaPay: a person (or their agent) paying a merchant that takes agent payments.
+
+```bash
+# Start Claude Code on Opper, paying with an agent key. The first time, it shows a
+# /c/<code> link to approve on your phone; after that it starts straight away and
+# prints the session's spend on exit.
+npx solvapay launch claude opper
+
+# The same for Hermes, with a prompt passed through to the agent
+npx solvapay launch hermes opper -- -q "What changed in agent payments this week?"
+```
+
+An agent connecting itself runs `npx solvapay connect <providerRef> --client <hermes|claude-code>` and shows its user the link it prints. Once they have approved, it runs the same command again, which saves the key and sets the agent up; until then it says they have not answered yet. A declined or expired request is dropped, so the same command asks again; when already connected it says so (`--new` asks again anyway). Keys are kept one per merchant in `~/.solvapay/agents` (mode 600) and never printed.
+
 ## Flags
 
 | Flag | Description |

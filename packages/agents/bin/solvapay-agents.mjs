@@ -1,31 +1,13 @@
 #!/usr/bin/env node
-// `npx @solvapay/agents launch|connect …`: an agent pays a merchant that
-// takes SolvaPay agent payments with an agent key its owner approved on their
-// phone or in a browser. Keys are saved one per merchant in ~/.solvapay/agents (mode 600).
-//
-//   launch <claude|hermes> <merchant> [--model-url <url>] [--model <id>] [--api <url>] [-- <agent args>]
-//       The merchant is its name in the SolvaPay catalog (e.g. opper) or its
-//       providerRef. Connects first when no key is saved for it, then starts the
-//       agent on the merchant's model API (from its catalog listing unless
-//       given), paying with the key, and shows the spend on exit. Claude
-//       Code's settings are for that launch only; Hermes keeps the key and the
-//       merchant's model provider in its own home, as `connect finish` does.
-//       SOLVAPAY_AGENT_BIN runs another command in place of the agent's.
-//   connect start <providerRef> --client <hermes|claude-code> [--name Hermes] [--api <url>] [--mcp-url <url>]
-//                 [--model-url <anthropic-compatible url> --model <id>]
-//       Opens a connect request and prints the page and code for the owner.
-//   connect finish <providerRef> [--timeout <seconds>]
-//       Waits for the owner's answer and, once approved, saves the agent key
-//       where the agent host reads it and adds the merchant's MCP server, its
-//       model provider, or both.
-//
-// The key never goes to stdout: the model reading this output never sees it.
-import { main } from '../src/connect.mjs'
+// `npx @solvapay/agents launch|connect …` is now `npx solvapay launch|connect …`
+// (the `solvapay` CLI). This bin stays for one release and runs the same code.
+import { main } from 'solvapay/agent'
 
+console.error('solvapay-agents: this command moved to the solvapay CLI. Run `npx solvapay ' + process.argv.slice(2).join(' ') + '` instead.')
 main(process.argv.slice(2)).then(
   code => process.exit(code),
   error => {
-    console.error(`solvapay-agents: ${error instanceof Error ? error.message : String(error)}`)
+    console.error(`solvapay: ${error instanceof Error ? error.message : String(error)}`)
     process.exit(1)
   },
 )

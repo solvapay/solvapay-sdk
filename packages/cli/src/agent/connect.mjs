@@ -1,5 +1,5 @@
-// The helper behind `npx @solvapay/agents connect` and `launch`. Plain ESM,
-// no build step, so it runs from a linked or installed package as it is.
+// The helper behind `npx solvapay connect` and `launch`. Plain ESM: tsup
+// bundles it into dist/cli.js, and the tests import it as it is.
 import { spawn } from 'node:child_process'
 import { claudeCode } from './agents/claude-code.mjs'
 import { hermes } from './agents/hermes.mjs'
@@ -15,7 +15,10 @@ const CLIENTS = { hermes, 'claude-code': claudeCode }
 /** The agents `launch` can start, by the name on the command line. */
 const LAUNCHERS = { claude: claudeCode, hermes }
 
-/** `--name value` pairs and positional arguments; everything after `--` is the agent's own. */
+/** Flags that take no value. */
+const SWITCHES = new Set(['new'])
+
+/** `--name value` pairs, switches and positional arguments; everything after `--` is the agent's own. */
 export function parseArgs(argv) {
   const positional = []
   const flags = {}
@@ -27,6 +30,10 @@ export function parseArgs(argv) {
       continue
     }
     const name = arg.slice(2)
+    if (SWITCHES.has(name)) {
+      flags[name] = true
+      continue
+    }
     const value = argv[i + 1]
     if (value === undefined || value.startsWith('--')) {
       throw new Error(`--${name} needs a value`)
@@ -58,9 +65,71 @@ async function api(base, path, init) {
   return body
 }
 
-async function start({ positional, flags }, env, out) {
+/** The sub-commands `connect` had before it became one command run until it is done. */
+const OLD_SUBCOMMANDS = ['start', 'complete', 'finish']
+/** Flags that shape a request, by the name the waiting request keeps them under. */
+const REQUEST_FLAGS = { client: 'client', name: 'name', api: 'api', 'mcp-url': 'mcpUrl', 'model-url': 'modelUrl', model: 'model' }
+
+/**
+ * `connect <providerRef> --client <host>`, run until it says connected. With
+ * nothing waiting it asks the owner and prints where they approve; with a
+ * request waiting it waits for their answer and, once approved, saves the key
+ * and sets the host up. A dead request (declined, expired) is dropped, so the
+ * same command asks again. Already connected, it says so unless `--new`.
+ * Exits 0 when asked or connected, 2 while the owner has not answered, 1 when
+ * they did not approve.
+ */
+async function connect({ positional, flags }, env, out, sleep) {
   const [providerRef] = positional
-  if (!providerRef) throw new Error('connect start needs the merchant: connect start <providerRef> --client hermes')
+  if (OLD_SUBCOMMANDS.includes(providerRef)) {
+    throw new Error(
+      `connect takes the merchant now and is run again until it is done: connect <providerRef> --client <${Object.keys(CLIENTS).join('|')}> (got connect ${providerRef})`,
+    )
+  }
+  if (!providerRef) {
+    throw new Error(`connect needs the merchant: connect <providerRef> --client <${Object.keys(CLIENTS).join('|')}>`)
+  }
+  if (flags.new) await dropPending(env, providerRef)
+  const waiting = await readPending(env, providerRef)
+  if (waiting) {
+    refuseOtherFlags(providerRef, waiting, flags)
+    return collect(providerRef, waiting, flags, env, out, sleep)
+  }
+  const saved = await readKey(env, providerRef)
+  if (saved && !flags.new) {
+    out(
+      [
+        `Already connected to ${saved.merchantName} as agent ${saved.agentRef}; the key is in ${keyPath(env, providerRef)} (not shown here).`,
+        `To connect again, add --new.`,
+      ].join('\n'),
+    )
+    return 0
+  }
+  return ask(providerRef, flags, env, out)
+}
+
+/** A re-run that names a flag differently from the waiting request would set up something else: refuse it. */
+function refuseOtherFlags(providerRef, waiting, flags) {
+  const differ = Object.entries(REQUEST_FLAGS)
+    .filter(([flag, kept]) => flags[flag] !== undefined && flags[flag] !== waiting[kept])
+    .map(([flag, kept]) => `--${flag} was ${waiting[kept] ?? 'not given'}, now ${flags[flag]}`)
+  if (differ.length > 0) {
+    throw new Error(
+      `A connect request for ${providerRef} is already waiting, made differently (${differ.join('; ')}). Run the same command as before, or add --new to ask again.`,
+    )
+  }
+}
+
+/** The command that carries on this request: the one the agent ran, without `--new` or `--timeout`. */
+function againCommand(providerRef, flags) {
+  const kept = Object.keys(REQUEST_FLAGS)
+    .filter(flag => flags[flag] !== undefined)
+    .map(flag => ` --${flag} ${flags[flag]}`)
+    .join('')
+  return `npx solvapay connect ${providerRef}${kept}`
+}
+
+async function ask(providerRef, flags, env, out) {
   const client = flags.client
   if (!Object.hasOwn(CLIENTS, client)) {
     throw new Error(`--client must be one of: ${Object.keys(CLIENTS).join(', ')} (got ${client ?? 'nothing'})`)
@@ -77,31 +146,27 @@ async function start({ positional, flags }, env, out) {
     const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
     mcpUrl = listing.mcpUrl
   }
+  const name = flags.name ?? CLIENTS[client].displayName
   const opened = await api(base, '/agent/connect-requests', {
     method: 'POST',
-    body: JSON.stringify({ providerRef, name: flags.name ?? CLIENTS[client].displayName, client }),
+    body: JSON.stringify({ providerRef, name, client }),
   })
-  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...opened })
+  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...opened, name })
   out(
     [
       `Ask your user to approve this connection on their phone or in a browser:`,
       `  ${opened.verificationUrl}`,
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
-      `When they have approved, run:`,
-      `  npx @solvapay/agents connect finish ${providerRef}`,
+      `When they have approved, run the same command again:`,
+      `  ${againCommand(providerRef, flags)}`,
     ].join('\n'),
   )
   return 0
 }
 
-async function finish({ positional, flags }, env, out, sleep) {
-  const [providerRef] = positional
-  if (!providerRef) throw new Error('connect finish needs the merchant: connect finish <providerRef>')
-  const state = await readPending(env, providerRef)
-  if (!state) {
-    throw new Error(`No connect request for ${providerRef} here: run connect start ${providerRef} first`)
-  }
+/** Waits for the owner's answer to the waiting request and acts on it. */
+async function collect(providerRef, state, flags, env, out, sleep) {
   const timeoutSeconds = Number(flags.timeout ?? 120)
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0) throw new Error('--timeout must be seconds')
   const deadline = Date.now() + timeoutSeconds * 1000
@@ -120,9 +185,10 @@ async function finish({ positional, flags }, env, out, sleep) {
     return 0
   }
   if (answer.status === 'pending') {
-    out(`Your user has not approved yet. Ask them to open ${state.verificationUrl}, then run connect finish again.`)
+    out(`Your user has not approved yet. Ask them to open ${state.verificationUrl}, then run the same command again.`)
     return 2
   }
+  await dropPending(env, providerRef)
   out(notApproved(answer.status))
   return 1
 }
@@ -130,9 +196,9 @@ async function finish({ positional, flags }, env, out, sleep) {
 function notApproved(status) {
   return (
     {
-      denied: 'Your user turned this connection down.',
-      expired: 'The request expired before your user answered. Run connect start again.',
-      claimed: 'This request was already finished; its key was saved then.',
+      denied: 'Your user turned this connection down. If they change their mind, run the same command again to ask again.',
+      expired: 'The request expired before your user answered. Run the same command again to ask again.',
+      claimed: 'This request was already completed; its key was saved then.',
     }[status] ?? `Unexpected answer: ${status}`
   )
 }
@@ -286,9 +352,9 @@ function runAttached({ command, args, env }) {
 
 const USAGE = [
   'Usage:',
-  '  solvapay-agents launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
-  '  solvapay-agents connect start <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>]',
-  '  solvapay-agents connect finish <providerRef> [--timeout <seconds>]',
+  '  solvapay launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
+  '  solvapay connect <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--timeout <seconds>] [--new]',
+  '      Run it again until it says connected: the first run asks the owner, a later one waits for their answer.',
 ].join('\n')
 
 export async function main(argv, deps = {}) {
@@ -299,11 +365,7 @@ export async function main(argv, deps = {}) {
   const run = deps.run ?? runAttached
   const [command, ...rest] = argv
   if (command === 'launch') return launch(parseArgs(rest), env, say, sleep, run)
-  const [sub, ...after] = rest
-  if (command !== 'connect' || (sub !== 'start' && sub !== 'finish')) {
-    out(USAGE)
-    return 64
-  }
-  const args = parseArgs(after)
-  return sub === 'start' ? start(args, env, out) : finish(args, env, out, sleep)
+  if (command === 'connect') return connect(parseArgs(rest), env, out, sleep)
+  out(USAGE)
+  return 64
 }
