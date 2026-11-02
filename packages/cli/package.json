@@ -29,11 +29,18 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "@solvapay/init": "workspace:^"
+    "@solvapay/init": "workspace:^",
+    "yaml": "2.8.1"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"
+  },
+  "exports": {
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    }
   }
 }

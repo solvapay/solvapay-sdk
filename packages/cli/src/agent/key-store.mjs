@@ -24,7 +24,7 @@ export function keyPath(env, providerRef) {
   return join(agentsDir(env), `${providerRef}.json`)
 }
 
-/** A connect request waiting for its owner, kept until `finish` claims it. */
+/** A connect request waiting for its owner, kept until a later `connect` claims it or finds it dead. */
 export function pendingPath(env, providerRef) {
   checkRef(providerRef)
   return join(agentsDir(env), 'pending', `${providerRef}.json`)

@@ -23,6 +23,20 @@ export default tseslint.config(
     },
   },
   {
+    // Plain ESM helpers (the solvapay CLI's launcher) run on Node without types.
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     ignores: [
       'dist',
       'node_modules',

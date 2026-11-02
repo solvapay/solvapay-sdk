@@ -2,9 +2,7 @@ import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-// @ts-expect-error plain ESM without types: the helper runs with no build step
 import { main } from '../connect.mjs'
-// @ts-expect-error plain ESM without types
 import { keyPath, readKey, saveKey } from '../key-store.mjs'
 
 const API = 'https://api.example.test/v1'
@@ -273,10 +271,10 @@ describe('connect --client claude-code', () => {
   it('saves the key and says how to launch', async () => {
     const out: string[] = []
     const deps = { env, out: (t: string) => out.push(t), sleep: async () => undefined }
-    await main(['connect', 'start', PROV, '--client', 'claude-code', '--api', API, ...MODEL_FLAGS], deps)
-    expect(await main(['connect', 'finish', PROV], deps)).toBe(0)
+    await main(['connect', PROV, '--client', 'claude-code', '--api', API, ...MODEL_FLAGS], deps)
+    expect(await main(['connect', PROV], deps)).toBe(0)
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')
-    expect(out.at(-1)).toContain(`npx @solvapay/agents launch claude ${PROV} --model-url ${MODEL_URL}`)
+    expect(out.at(-1)).toContain(`npx solvapay launch claude ${PROV} --model-url ${MODEL_URL}`)
     expect(out.join('\n')).not.toContain('agk_SECRET')
   })
 })
