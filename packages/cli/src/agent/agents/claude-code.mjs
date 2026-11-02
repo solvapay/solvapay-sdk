@@ -12,7 +12,7 @@ const CLEARED_KEY = JSON.stringify({ env: { ANTHROPIC_API_KEY: '' } })
 
 export const claudeCode = {
   name: 'claude',
-  client: 'claude-code',
+  client: 'claude',
   displayName: 'Claude Code',
   async connected(env, state, answer) {
     return [

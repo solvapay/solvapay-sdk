@@ -10,10 +10,13 @@ export { keyEnvName, saveForHermes, serverName } from './agents/hermes.mjs'
 export const DEFAULT_API = 'https://api.solvapay.com/v1'
 /** How long launch waits on exit for the session's last calls to settle before it shows the spend. */
 const SETTLE_MS = 15_000
-/** The agents `connect` can set up, by the client name a connect request carries. */
-const CLIENTS = { hermes, 'claude-code': claudeCode }
-/** The agents `launch` can start, by the name on the command line. */
-const LAUNCHERS = { claude: claudeCode, hermes }
+/**
+ * The agents, by the one name a person types in `launch <agent>` and
+ * `--client`, which is also the client name a connect request carries.
+ * `claude` is Claude Code, the Claude a terminal reaches; another Claude host
+ * would get its own name.
+ */
+const CLIENTS = { claude: claudeCode, hermes }
 
 /** Flags that take no value. */
 const SWITCHES = new Set(['new'])
@@ -71,7 +74,9 @@ const OLD_SUBCOMMANDS = ['start', 'complete', 'finish']
 const REQUEST_FLAGS = { client: 'client', name: 'name', api: 'api', 'mcp-url': 'mcpUrl', 'model-url': 'modelUrl', model: 'model' }
 
 /**
- * `connect <providerRef> --client <host>`, run until it says connected. With
+ * `connect <merchant> --client <host>`, run until it says connected. The
+ * merchant is its launch name in the catalog (`opper`) or its `prov_…`
+ * reference; the printed re-run keeps whichever the agent used. With
  * nothing waiting it asks the owner and prints where they approve; with a
  * request waiting it waits for their answer and, once approved, saves the key
  * and sets the host up. A dead request (declined, expired) is dropped, so the
@@ -80,15 +85,16 @@ const REQUEST_FLAGS = { client: 'client', name: 'name', api: 'api', 'mcp-url': '
  * they did not approve.
  */
 async function connect({ positional, flags }, env, out, sleep) {
-  const [providerRef] = positional
-  if (OLD_SUBCOMMANDS.includes(providerRef)) {
+  const [merchant] = positional
+  if (OLD_SUBCOMMANDS.includes(merchant)) {
     throw new Error(
-      `connect takes the merchant now and is run again until it is done: connect <providerRef> --client <${Object.keys(CLIENTS).join('|')}> (got connect ${providerRef})`,
+      `connect takes the merchant now and is run again until it is done: connect <merchant launch name or providerRef> --client <${Object.keys(CLIENTS).join('|')}> (got connect ${merchant})`,
     )
   }
-  if (!providerRef) {
-    throw new Error(`connect needs the merchant: connect <providerRef> --client <${Object.keys(CLIENTS).join('|')}>`)
+  if (!merchant) {
+    throw new Error(`connect needs the merchant: connect <merchant launch name or providerRef> --client <${Object.keys(CLIENTS).join('|')}>`)
   }
+  const providerRef = PROVIDER_REF.test(merchant) ? merchant : await merchantByName(flags.api ?? DEFAULT_API, merchant)
   if (flags.new) await dropPending(env, providerRef)
   const waiting = await readPending(env, providerRef)
   if (waiting) {
@@ -105,7 +111,7 @@ async function connect({ positional, flags }, env, out, sleep) {
     )
     return 0
   }
-  return ask(providerRef, flags, env, out)
+  return ask(providerRef, merchant, flags, env, out)
 }
 
 /** A re-run that names a flag differently from the waiting request would set up something else: refuse it. */
@@ -121,15 +127,15 @@ function refuseOtherFlags(providerRef, waiting, flags) {
 }
 
 /** The command that carries on this request: the one the agent ran, without `--new` or `--timeout`. */
-function againCommand(providerRef, flags) {
+function againCommand(merchant, flags) {
   const kept = Object.keys(REQUEST_FLAGS)
     .filter(flag => flags[flag] !== undefined)
     .map(flag => ` --${flag} ${flags[flag]}`)
     .join('')
-  return `npx solvapay connect ${providerRef}${kept}`
+  return `npx solvapay connect ${merchant}${kept}`
 }
 
-async function ask(providerRef, flags, env, out) {
+async function ask(providerRef, merchant, flags, env, out) {
   const client = flags.client
   if (!Object.hasOwn(CLIENTS, client)) {
     throw new Error(`--client must be one of: ${Object.keys(CLIENTS).join(', ')} (got ${client ?? 'nothing'})`)
@@ -159,7 +165,7 @@ async function ask(providerRef, flags, env, out) {
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
       `When they have approved, run the same command again:`,
-      `  ${againCommand(providerRef, flags)}`,
+      `  ${againCommand(merchant, flags)}`,
     ].join('\n'),
   )
   return 0
@@ -222,8 +228,8 @@ async function waitForApproval(state, deadline, sleep) {
  */
 async function launch({ positional, flags, rest }, env, say, sleep, run) {
   const [name, merchant] = positional
-  const agent = LAUNCHERS[name]
-  if (!agent) throw new Error(`launch needs the agent, one of: ${Object.keys(LAUNCHERS).join(', ')} (got ${name ?? 'nothing'})`)
+  const agent = CLIENTS[name]
+  if (!agent) throw new Error(`launch needs the agent, one of: ${Object.keys(CLIENTS).join(', ')} (got ${name ?? 'nothing'})`)
   if (!merchant) throw new Error(`launch needs the merchant: launch ${name} <merchant launch name or providerRef>`)
   const providerRef = PROVIDER_REF.test(merchant) ? merchant : await merchantByName(flags.api ?? DEFAULT_API, merchant)
   let saved = await readKey(env, providerRef)
@@ -317,7 +323,7 @@ async function merchantByName(base, name) {
     return (await api(base, `/catalog/merchants/${encodeURIComponent(handle)}`)).providerRef
   } catch (error) {
     if (error.status === 404) {
-      throw new Error(`No merchant in the SolvaPay catalog is called "${handle}". Launch with its launch name or its prov_… reference.`)
+      throw new Error(`No merchant in the SolvaPay catalog is called "${handle}". Use its launch name or its prov_… reference.`)
     }
     throw error
   }
@@ -353,7 +359,7 @@ function runAttached({ command, args, env }) {
 const USAGE = [
   'Usage:',
   '  solvapay launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
-  '  solvapay connect <providerRef> --client <hermes|claude-code> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--timeout <seconds>] [--new]',
+  '  solvapay connect <merchant launch name or providerRef> --client <claude|hermes> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--timeout <seconds>] [--new]',
   '      Run it again until it says connected: the first run asks the owner, a later one waits for their answer.',
 ].join('\n')
 

@@ -13,7 +13,7 @@ Commands:
   doctor   Verify secret key, API URL, product ref, and product readiness
   launch   Start Claude Code or Hermes on a merchant, paying with an agent key
            its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
-  connect  For an agent connecting itself: connect <providerRef> --client <hermes|claude-code>,
+  connect  For an agent connecting itself: connect <merchant> --client <claude|hermes>,
            run again until it says connected (the first run asks the owner)
 
 Flags for init:

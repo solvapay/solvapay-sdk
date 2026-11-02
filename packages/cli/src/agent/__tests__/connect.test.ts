@@ -27,6 +27,12 @@ beforeEach(async () => {
   opens = 0
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const path = url.slice(API.length)
+    if (path === '/catalog/merchants/opp') {
+      return Response.json({ message: 'No merchant in the catalog is called opp' }, { status: 404 })
+    }
+    if (path === '/catalog/merchants/opper') {
+      return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
+    }
     if (path === `/catalog/listings/${PROV}`) {
       return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
     }
@@ -61,6 +67,25 @@ describe('connect', () => {
     expect(lines.join('\n')).toContain('https://account.example.test/c/KQ7M-RX4D')
     expect(lines.join('\n')).toContain(`run the same command again:\n  npx solvapay connect ${PROV} --client hermes --api ${API}`)
     expect(lines.join('\n')).not.toContain('poll-secret')
+  })
+
+  it("takes the merchant's launch name, and keeps it in the command to run again", async () => {
+    expect(await run(['connect', 'opper', '--client', 'hermes', '--api', API])).toBe(0)
+    expect(lines.join('\n')).toContain(`run the same command again:\n  npx solvapay connect opper --client hermes --api ${API}`)
+    expect(opens).toBe(1)
+
+    // The re-run finds the waiting request under the merchant the name resolved to.
+    claims.splice(0, claims.length, { status: 'pending', retryAfterSeconds: 3 })
+    expect(await run(['connect', 'opper', '--client', 'hermes', '--api', API, '--timeout', '0'])).toBe(2)
+    expect(lines.at(-1)).toContain('has not approved yet')
+    expect(opens).toBe(1)
+  })
+
+  it('refuses a launch name no merchant in the catalog has', async () => {
+    await expect(run(['connect', 'opp', '--client', 'hermes', '--api', API])).rejects.toThrow(
+      'No merchant in the SolvaPay catalog is called "opp". Use its launch name or its prov_… reference.',
+    )
+    expect(opens).toBe(0)
   })
 
   it('waits for the approval, then saves the key for Hermes without printing it', async () => {
@@ -163,8 +188,8 @@ describe('connect', () => {
 
   it('refuses a re-run that would set up something else, until --new', async () => {
     await run(['connect', PROV, '--client', 'hermes', '--api', API])
-    await expect(run(['connect', PROV, '--client', 'claude-code'])).rejects.toThrow(
-      '--client was hermes, now claude-code',
+    await expect(run(['connect', PROV, '--client', 'claude'])).rejects.toThrow(
+      '--client was hermes, now claude',
     )
     await expect(run(['connect', PROV, '--mcp-url', 'https://elsewhere.test/mcp'])).rejects.toThrow(
       '--mcp-url was https://mcp.opper.test/mcp, now https://elsewhere.test/mcp',
@@ -175,7 +200,7 @@ describe('connect', () => {
 
   it('refuses a host it cannot set up, a missing merchant, and the old sub-commands', async () => {
     await expect(run(['connect', PROV, '--client', 'cursor', '--api', API])).rejects.toThrow(
-      '--client must be one of: hermes',
+      '--client must be one of: claude, hermes',
     )
     await expect(run(['connect'])).rejects.toThrow('connect needs the merchant')
     for (const old of ['start', 'complete', 'finish']) {

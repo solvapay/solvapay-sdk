@@ -111,7 +111,7 @@ describe('launch claude', () => {
   it('connects when no key is saved, then starts Claude Code paying with the key', async () => {
     expect(await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS, '--', '-p', 'say hi'])).toBe(0)
 
-    expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude-code' }])
+    expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude' }])
     expect(said.join('\n')).toContain('https://account.example.test/c/KQ7M-RX4D')
     expect(said.join('\n')).not.toContain('agk_SECRET')
     expect((await stat(keyPath(env, PROV))).mode & 0o777).toBe(0o600)
@@ -204,7 +204,7 @@ describe('the merchant by its launch name', () => {
   it('finds the merchant whose launch name it is, exactly', async () => {
     expect(await launch(['claude', 'opper', '--api', API])).toBe(0)
     expect(lookups).toEqual(['opper'])
-    expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude-code' }])
+    expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude' }])
     expect(await readKey(env, PROV)).not.toBeNull()
 
     expect(await launch(['claude', 'Opper.AI', '--api', API])).toBe(0)
@@ -219,7 +219,7 @@ describe('the merchant by its launch name', () => {
 
   it('refuses a name no merchant claimed, even one that starts like it', async () => {
     await expect(launch(['claude', 'opp', '--api', API])).rejects.toThrow(
-      'No merchant in the SolvaPay catalog is called "opp". Launch with its launch name or its prov_… reference.',
+      'No merchant in the SolvaPay catalog is called "opp". Use its launch name or its prov_… reference.',
     )
     expect(opened).toEqual([])
   })
@@ -267,11 +267,11 @@ describe('launch hermes', () => {
   })
 })
 
-describe('connect --client claude-code', () => {
+describe('connect --client claude', () => {
   it('saves the key and says how to launch', async () => {
     const out: string[] = []
     const deps = { env, out: (t: string) => out.push(t), sleep: async () => undefined }
-    await main(['connect', PROV, '--client', 'claude-code', '--api', API, ...MODEL_FLAGS], deps)
+    await main(['connect', PROV, '--client', 'claude', '--api', API, ...MODEL_FLAGS], deps)
     expect(await main(['connect', PROV], deps)).toBe(0)
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')
     expect(out.at(-1)).toContain(`npx solvapay launch claude ${PROV} --model-url ${MODEL_URL}`)
