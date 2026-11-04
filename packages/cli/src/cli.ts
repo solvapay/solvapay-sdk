@@ -1,5 +1,6 @@
 import { runDoctorCommand } from './commands/doctor'
 import { runInitCommand } from './commands/init'
+import { main as runAgentCommand } from './agent/index'
 import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 const HELP_TEXT = `SolvaPay CLI
@@ -8,8 +9,12 @@ Usage:
   solvapay <command> [flags]
 
 Commands:
-  init    Authenticate, configure .env, and install SolvaPay SDK packages
-  doctor  Verify secret key, API URL, product ref, and product readiness
+  init     Authenticate, configure .env, and install SolvaPay SDK packages
+  doctor   Verify secret key, API URL, product ref, and product readiness
+  launch   Start Claude Code or Hermes on a merchant, paying with an agent key
+           its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
+  connect  For an agent connecting itself: connect <merchant> --client <claude|hermes>,
+           run again until it says connected (the first run asks the owner)
 
 Flags for init:
   -y, --yes         Auto-create package.json and skip browser confirmation prompt
@@ -79,12 +84,18 @@ const main = async () => {
     return
   }
 
+  // No banner: an agent reads this output, and the launcher decides what reaches stdout.
+  if (command === 'launch' || command === 'connect') {
+    process.exitCode = await runAgentCommand(process.argv.slice(2))
+    return
+  }
+
   process.stderr.write(`Unknown command: ${command}\n\n${HELP_TEXT}\n`)
   process.exitCode = 1
 }
 
 main().catch(error => {
   const message = error instanceof Error ? error.message : 'Unknown error'
-  process.stderr.write(`Error: ${message}\n`)
+  process.stderr.write(`solvapay: ${message}\n`)
   process.exitCode = 1
 })
