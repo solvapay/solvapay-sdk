@@ -9,6 +9,7 @@
  * Protocol-neutral: no route, no Anthropic or MCP types.
  */
 export {
+  AGENT_TOKEN_ENV_CLAIM,
   AGENT_TOKEN_EXCERPT_CLAIM,
   createAgentKeyVerifier,
   createAgentLayer,
@@ -16,12 +17,14 @@ export {
   isAgentKey,
   looksLikeJwt,
   type AgentLayer,
+  type AgentRejectionReason,
   type AgentTokenResult,
   type AgentTokenVerifierOptions,
   type Identification,
   type VerifiedAgent,
 } from './identity'
 export {
+  AGENT_ENVIRONMENTS,
   AGENT_KEY_PREFIX,
   AgentApiError,
   AUTHORIZE_WAIT_MAX_SECONDS,
@@ -31,8 +34,10 @@ export {
   parseUsageReportResponse,
   parseVerifiedAgentKey,
   RECONCILIATION_REASONS,
+  secretKeyEnvironment,
   RECONCILIATION_RESULTS,
   SERVER_REFUSAL_REASONS,
+  type AgentEnvironment,
   type AuthorizeInput,
   type AuthorizeResponse,
   type CompleteInput,

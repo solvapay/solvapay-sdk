@@ -1,6 +1,6 @@
 import { createLocalJWKSet, SignJWT, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { AgentApiError } from '../client'
+import { AgentApiError, createSolvaPayAgentClient, secretKeyEnvironment } from '../client'
 import {
   createAgentKeyVerifier,
   createAgentLayer,
@@ -23,11 +23,12 @@ beforeAll(async () => {
   ;({ privateKey, publicJwk } = await agentKeys())
 })
 
-function verifier() {
+function verifier(environment?: 'sandbox' | 'live') {
   return createAgentTokenVerifier({
     issuer: ISSUER,
     providerRef: PROVIDER,
     keys: createLocalJWKSet({ keys: [publicJwk] }),
+    ...(environment ? { environment } : {}),
   })
 }
 
@@ -45,6 +46,33 @@ describe('agent token verification', () => {
     const on = await verifier()(await signAgentToken(privateKey, { promptExcerpt: true }))
     expect(off).toMatchObject({ ok: true, agent: { promptExcerpt: false } })
     expect(on).toMatchObject({ ok: true, agent: { promptExcerpt: true } })
+  })
+
+  it('reads where the agent spends from the env claim', async () => {
+    const sandbox = await verifier()(await signAgentToken(privateKey))
+    const live = await verifier()(await signAgentToken(privateKey, { env: 'live' }))
+    expect(sandbox).toMatchObject({ ok: true, agent: { environment: 'sandbox' } })
+    expect(live).toMatchObject({ ok: true, agent: { environment: 'live' } })
+  })
+
+  it.each([
+    ['without an env claim', null],
+    ['with an unknown env', 'production'],
+  ])('refuses a token %s', async (_case, env) => {
+    const result = await verifier()(await signAgentToken(privateKey, { env }))
+    expect(result).toEqual({ ok: false, reason: 'invalid', detail: 'env is not sandbox or live' })
+  })
+
+  it("refuses an agent from the other environment when it knows the secret key's", async () => {
+    const live = await signAgentToken(privateKey, { env: 'live' })
+    expect(await verifier('sandbox')(live)).toEqual({
+      ok: false,
+      reason: 'environment_mismatch',
+      detail: 'This agent spends in live, and this secret key is for sandbox',
+    })
+    expect(await verifier('live')(live)).toMatchObject({ ok: true })
+    // Without the merchant's environment, SolvaPay refuses it at authorize.
+    expect(await verifier()(live)).toMatchObject({ ok: true })
   })
 
   it('reports an expired token as expired', async () => {
@@ -123,7 +151,12 @@ describe('agent keys', () => {
 
     expect(await layer.identify(TEST_AGENT_KEY)).toEqual({
       kind: 'agent',
-      agent: { agentRef: 'agt_TESTAGNT', principalRef: 'ppl_ABCDEFGHIJKLMNOP', promptExcerpt: false },
+      agent: {
+        agentRef: 'agt_TESTAGNT',
+        principalRef: 'ppl_ABCDEFGHIJKLMNOP',
+        promptExcerpt: false,
+        environment: 'sandbox',
+      },
     })
     await layer.identify(TEST_AGENT_KEY)
     expect(api.keyVerifications).toHaveLength(1)
@@ -147,8 +180,58 @@ describe('agent keys', () => {
     await expect(down('agk_ANY')).rejects.toThrow('503')
   })
 
+  it("takes a key's environment from SolvaPay's verification, and throws when it is missing", async () => {
+    const answer = (body: Record<string, unknown>) =>
+      createSolvaPayAgentClient({
+        apiBaseUrl: 'https://api.solvapay.test',
+        secretKey: 'sk_live_TEST',
+        fetchImpl: async () => Response.json(body),
+      })
+    const agent = {
+      agentRef: 'agt_TESTAGNT',
+      principalRef: 'ppl_ABCDEFGHIJKLMNOP',
+      promptExcerpt: false,
+    }
+    const live = createAgentKeyVerifier({ client: answer({ ...agent, environment: 'live' }) })
+    expect(await live('agk_live_KEY')).toMatchObject({ ok: true, agent: { environment: 'live' } })
+
+    const missing = createAgentKeyVerifier({ client: answer(agent) })
+    await expect(missing('agk_live_KEY')).rejects.toThrow('environment')
+  })
+
+  it('rejects a key from the other environment, whether it or SolvaPay notices', async () => {
+    const local = createAgentKeyVerifier({ client: new FakeAgentApi(), environment: 'live' })
+    expect(await local(TEST_AGENT_KEY)).toMatchObject({
+      ok: false,
+      reason: 'environment_mismatch',
+    })
+
+    const server = createAgentKeyVerifier({
+      client: {
+        verifyAgentKey: async () => {
+          throw new AgentApiError(
+            'POST /v1/sdk/agent/keys/verifications failed (403): {"code":"environment_mismatch"}',
+            403,
+          )
+        },
+      },
+    })
+    expect(await server(TEST_AGENT_KEY)).toMatchObject({
+      ok: false,
+      reason: 'environment_mismatch',
+    })
+  })
+
+  it("reads a secret key's environment from its prefix, and doesn't guess otherwise", () => {
+    expect(secretKeyEnvironment('sk_sandbox_abc')).toBe('sandbox')
+    expect(secretKeyEnvironment('sk_live_abc')).toBe('live')
+    expect(secretKeyEnvironment('sk_abc')).toBeUndefined()
+  })
+
   it('leaves an agent key to the merchant when the layer takes no keys', async () => {
-    const layer = createAgentLayer({ verifyAgentToken: async () => ({ ok: false, reason: 'invalid', detail: '' }) })
+    const layer = createAgentLayer({
+      verifyAgentToken: async () => ({ ok: false, reason: 'invalid', detail: '' }),
+    })
     expect(await layer.identify(TEST_AGENT_KEY)).toEqual({ kind: 'not_agent' })
   })
 })

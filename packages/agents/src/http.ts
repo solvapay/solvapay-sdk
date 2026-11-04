@@ -6,14 +6,17 @@
 // reached (`allowed.release`). Framework-neutral: Request in, plain results out.
 import type { MoneyAmount } from './client'
 import type { AgentCalls, Allowed, Logger, RefusalReason, Refused } from './calls'
-import type { AgentLayer, VerifiedAgent } from './identity'
+import type { AgentLayer, AgentRejectionReason, VerifiedAgent } from './identity'
 import type { PromptFacts } from './prompt'
 
 export type GateResult =
   /** Not a SolvaPay agent token: the merchant's own auth decides. */
   | { kind: 'not_agent' }
-  /** An agent token that did not verify (expired, forged, for another merchant). */
-  | { kind: 'rejected'; status: 401; reason: 'expired' | 'invalid'; detail: string }
+  /**
+   * An agent token or key that did not verify (expired, forged, for another
+   * merchant): 401. One from the other environment: 403, as SolvaPay answers.
+   */
+  | { kind: 'rejected'; status: 401 | 403; reason: AgentRejectionReason; detail: string }
   | { kind: 'refused'; status: RefusalStatus; refused: Refused; agent: VerifiedAgent }
   | { kind: 'allowed'; allowed: Allowed; agent: VerifiedAgent }
 
@@ -47,7 +50,12 @@ export function createAgentHttpGate(deps: {
         reason: `agent_token_${identity.reason}`,
         detail: identity.detail,
       })
-      return { kind: 'rejected', status: 401, reason: identity.reason, detail: identity.detail }
+      return {
+        kind: 'rejected',
+        status: identity.reason === 'environment_mismatch' ? 403 : 401,
+        reason: identity.reason,
+        detail: identity.detail,
+      }
     }
     const begun = await deps.calls.begin({
       requestId: call.requestId,

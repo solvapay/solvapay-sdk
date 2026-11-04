@@ -39,10 +39,13 @@ export function signAgentToken(
     kid?: string
     /** The owner lets the classifier read the prompt's end (`px`). */
     promptExcerpt?: boolean
+    /** Where the agent spends (`env`), `sandbox` unless set; `null` leaves the claim out. */
+    env?: string | null
   } = {},
 ): Promise<string> {
   const claims: Record<string, unknown> = { scope: overrides.scope ?? 'usage' }
   if (overrides.promptExcerpt) claims.px = true
+  if (overrides.env !== null) claims.env = overrides.env ?? 'sandbox'
   if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
   return new SignJWT(claims)
     .setProtectedHeader({ alg: 'ES256', kid: overrides.kid ?? 'k1' })
@@ -104,11 +107,12 @@ export class FakeSolvaPayApi {
  * by `respond`, by default every call matched and nothing flagged.
  */
 /** An agent key the fake knows, for the test agent. */
-export const TEST_AGENT_KEY = 'agk_TESTKEY0000000000000000000000000000000000'
+export const TEST_AGENT_KEY = 'agk_sandbox_TESTKEY0000000000000000000000000000000000'
 export const TEST_AGENT_KEY_AGENT: VerifiedAgentKey = {
   agentRef: 'agt_TESTAGNT',
   principalRef: 'ppl_ABCDEFGHIJKLMNOP',
   promptExcerpt: false,
+  environment: 'sandbox',
 }
 
 export class FakeAgentApi implements SolvaPayAgentClient {
