@@ -18,17 +18,18 @@ export const claudeCode = {
   client: 'claude',
   displayName: 'Claude Code',
   /** Once `connect` is approved: add the merchant's MCP server when asked, else say how to start a session. */
-  async connected(env, state, answer, { exec }) {
+  async connected(env, state, answer, { exec, npx }) {
     if (state.addMcp) {
       const added = await addToClaudeCode(env, { ...answer, mcpUrl: state.mcpUrl }, exec)
       return mcpAddedLines(added, state.mcpUrl)
     }
+    const addMcp = `add its MCP server to Claude Code, paying with the same key: run the same command with --add-mcp.`
+    // `launch` runs Claude Code on the merchant's model API, so it is offered only when there is one.
+    if (!state.modelUrl && !state.modelApi) return state.mcpUrl ? [`To use it, ${addMcp}`] : []
     return [
       `Start Claude Code paying with it:`,
-      `  npx solvapay launch claude ${answer.providerRef}${state.modelUrl ? ` --model-url ${state.modelUrl} --model ${state.model}` : ''}`,
-      ...(state.mcpUrl
-        ? [`Or add its MCP server to Claude Code, paying with the same key: run the same command with --add-mcp.`]
-        : []),
+      `  ${npx} launch claude ${answer.providerRef}${state.modelUrl ? ` --model-url ${state.modelUrl} --model ${state.model}` : ''}`,
+      ...(state.mcpUrl ? [`Or ${addMcp}`] : []),
     ]
   },
   /**

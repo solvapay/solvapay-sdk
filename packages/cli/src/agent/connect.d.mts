@@ -6,6 +6,8 @@ export interface LauncherDeps {
   say?: (text: string) => void
   sleep?: (ms: number) => Promise<void>
   run?: (command: string, args: string[], env: Record<string, string | undefined>, cwd?: string) => Promise<number>
+  /** How the printed commands run this CLI again, e.g. `npx solvapay@preview`; `npx solvapay` by default. */
+  npx?: string
 }
 export const DEFAULT_API: string
 export function parseArgs(argv: string[]): { positional: string[]; flags: Record<string, string>; rest?: string[] }
@@ -13,4 +15,5 @@ export function parseArgs(argv: string[]): { positional: string[]; flags: Record
 export function main(argv: string[], deps?: LauncherDeps): Promise<number>
 export function keyEnvName(providerRef: string): string
 export function serverName(merchantName: string): string
+export function shellQuote(value: string): string
 export function saveForHermes(env: Record<string, string | undefined>, state: unknown, answer: unknown): Promise<void>

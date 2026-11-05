@@ -92,7 +92,7 @@ const REQUEST_FLAGS = {
  * Exits 0 when asked or connected, 2 while the owner has not answered, 1 when
  * they did not approve.
  */
-async function connect({ positional, flags }, env, out, sleep, exec) {
+async function connect({ positional, flags }, env, out, sleep, exec, npx) {
   const [merchant] = positional
   if (OLD_SUBCOMMANDS.includes(merchant)) {
     throw new Error(
@@ -107,7 +107,7 @@ async function connect({ positional, flags }, env, out, sleep, exec) {
   const waiting = await readPending(env, providerRef)
   if (waiting) {
     refuseOtherFlags(providerRef, waiting, flags)
-    return collect(providerRef, waiting, flags, env, out, sleep, exec)
+    return collect(providerRef, waiting, flags, env, out, sleep, exec, npx)
   }
   refuseAddMcp(flags)
   const saved = await readKey(env, providerRef)
@@ -125,7 +125,7 @@ async function connect({ positional, flags }, env, out, sleep, exec) {
     out(lines.join('\n'))
     return 0
   }
-  return ask(providerRef, merchant, flags, env, out)
+  return ask(providerRef, merchant, flags, env, out, npx)
 }
 
 /** `--add-mcp` adds a merchant's MCP server to Claude Code; it means nothing for another host or a model API. */
@@ -158,15 +158,21 @@ function refuseOtherFlags(providerRef, waiting, flags) {
 }
 
 /** The command that carries on this request: the one the agent ran, without `--new` or `--timeout`. */
-function againCommand(merchant, flags) {
+function againCommand(npx, merchant, flags) {
   const kept = Object.keys(REQUEST_FLAGS)
     .filter(flag => flags[flag] !== undefined)
-    .map(flag => (SWITCHES.has(flag) ? ` --${flag}` : ` --${flag} ${flags[flag]}`))
+    .map(flag => (SWITCHES.has(flag) ? ` --${flag}` : ` --${flag} ${shellQuote(flags[flag])}`))
     .join('')
-  return `npx solvapay connect ${merchant}${kept}`
+  return `${npx} connect ${shellQuote(merchant)}${kept}`
 }
 
-async function ask(providerRef, merchant, flags, env, out) {
+/** A value as one shell word: as it is when it is safe, else in single quotes. */
+export function shellQuote(value) {
+  const text = String(value)
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(text) ? text : `'${text.replaceAll("'", `'\\''`)}'`
+}
+
+async function ask(providerRef, merchant, flags, env, out, npx) {
   const client = flags.client
   if (!Object.hasOwn(CLIENTS, client)) {
     throw new Error(`--client must be one of: ${Object.keys(CLIENTS).join(', ')} (got ${client ?? 'nothing'})`)
@@ -179,9 +185,12 @@ async function ask(providerRef, merchant, flags, env, out) {
   }
   // With neither an MCP nor a model URL, the merchant's MCP server comes from its catalog listing.
   let mcpUrl = flags['mcp-url']
+  // Whether `launch` can start an agent on the merchant's model API once connected.
+  let modelApi = Boolean(modelUrl)
   if (!mcpUrl && !modelUrl) {
     const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
     mcpUrl = listing.mcpUrl
+    modelApi = Boolean(listing.anthropicBaseUrl)
   }
   const addMcp = flags['add-mcp'] === true
   if (addMcp && !mcpUrl) throw new Error(`${providerRef}'s catalog listing names no MCP server to add: pass --mcp-url <url>`)
@@ -190,7 +199,7 @@ async function ask(providerRef, merchant, flags, env, out) {
     method: 'POST',
     body: JSON.stringify({ providerRef, name, client }),
   })
-  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...(addMcp ? { addMcp } : {}), ...opened, name })
+  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, modelApi, client, ...(addMcp ? { addMcp } : {}), ...opened, name })
   out(
     [
       `Ask your user to approve this connection on their phone or in a browser:`,
@@ -198,14 +207,14 @@ async function ask(providerRef, merchant, flags, env, out) {
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
       `When they have approved, run the same command again:`,
-      `  ${againCommand(merchant, flags)}`,
+      `  ${againCommand(npx, merchant, flags)}`,
     ].join('\n'),
   )
   return 0
 }
 
 /** Waits for the owner's answer to the waiting request and acts on it. */
-async function collect(providerRef, state, flags, env, out, sleep, exec) {
+async function collect(providerRef, state, flags, env, out, sleep, exec, npx) {
   const timeoutSeconds = Number(flags.timeout ?? 120)
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0) throw new Error('--timeout must be seconds')
   const deadline = Date.now() + timeoutSeconds * 1000
@@ -218,7 +227,7 @@ async function collect(providerRef, state, flags, env, out, sleep, exec) {
       [
         `Connected to ${answer.merchantName} as agent ${answer.agentRef}.`,
         `The agent key is saved in ${keyFile} (not shown here).`,
-        ...(await CLIENTS[state.client].connected(env, state, answer, { exec })),
+        ...(await CLIENTS[state.client].connected(env, state, answer, { exec, npx })),
       ].join('\n'),
     )
     return 0
@@ -418,9 +427,11 @@ export async function main(argv, deps = {}) {
   const sleep = deps.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)))
   const run = deps.run ?? runAttached
   const exec = deps.exec ?? runCaptured
+  // How the agent runs this CLI again, in the commands it prints: the preview build says so.
+  const npx = deps.npx ?? 'npx solvapay'
   const [command, ...rest] = argv
   if (command === 'launch') return launch(parseArgs(rest), env, say, sleep, run)
-  if (command === 'connect') return connect(parseArgs(rest), env, out, sleep, exec)
+  if (command === 'connect') return connect(parseArgs(rest), env, out, sleep, exec, npx)
   out(USAGE)
   return 64
 }
