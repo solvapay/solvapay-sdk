@@ -135,7 +135,8 @@ export function mcpAddedLines({ name, status }, mcpUrl) {
       updated: `Claude Code's MCP server "${name}" is updated: it is at ${mcpUrl}, paying with this key.`,
       unchanged: `Claude Code already has the MCP server "${name}" at ${mcpUrl}, paying with this key.`,
     }[status],
-    `Run /mcp in Claude Code to connect it (or start a new session), then check it with: claude mcp get ${name}`,
+    // A running Claude Code session does not reread its config, not even in /mcp (tested on 2.1.286).
+    `Start a new Claude Code session to use it; one already open will not see it. Check it with: claude mcp get ${name}`,
   ]
 }
 
