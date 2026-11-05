@@ -105,6 +105,14 @@ npx solvapay launch hermes opper -- -q "What changed in agent payments this week
 
 An agent connecting itself runs `npx solvapay connect <providerRef> --client <hermes|claude-code>` and shows its user the link it prints. Once they have approved, it runs the same command again, which saves the key and sets the agent up; until then it says they have not answered yet. A declined or expired request is dropped, so the same command asks again; when already connected it says so (`--new` asks again anyway). Keys are kept one per merchant in `~/.solvapay/agents` (mode 600) and never printed.
 
+For Claude Code, `--add-mcp` also adds the merchant's MCP server once the connection is approved, so its tools are there in Claude Code paying with that key:
+
+```bash
+npx solvapay connect opper --client claude --add-mcp
+```
+
+It runs `claude mcp add-json` at user scope with a `headersHelper` that reads the saved key on each connection, so the key never goes into Claude's config. Run `/mcp` in Claude Code to connect it. Run on a merchant already connected, it adds the server without asking the owner again.
+
 ## Flags
 
 | Flag | Description |
