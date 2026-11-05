@@ -331,4 +331,15 @@ describe('createAgentMcpRoute with OAuth on', () => {
     expect(agentApi.authorizes).toHaveLength(1)
     expect(listedFor).toContain('agt_TESTAGNT')
   })
+
+  it('keeps the free tools for a signed-in agent, and charges nothing for them', async () => {
+    const { route, agentApi } = oauthRoute()
+    const mcp = await client(route, await signAgentToken(agentKey, { aud: MCP_URL }))
+    const { tools } = await mcp.listTools()
+    expect(tools.map(tool => tool.name).sort()).toEqual(['answer', 'ping_merchant'])
+    expect(await mcp.callTool({ name: 'ping_merchant', arguments: {} })).toMatchObject({
+      content: [{ type: 'text', text: 'pong' }],
+    })
+    expect(agentApi.authorizes).toEqual([])
+  })
 })

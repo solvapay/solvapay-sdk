@@ -259,6 +259,7 @@ function buildServer(options: AgentMcpOptions, call: AgentRequest): McpServer {
     name: options.serverName,
     version: options.serverVersion ?? '0.1.0',
   })
+  options.freeTools?.(server)
   options.tools(server, tool => registerPaidTool(server, options, call, tool), call)
   return server
 }
