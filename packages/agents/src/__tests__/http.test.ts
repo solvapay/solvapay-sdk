@@ -14,7 +14,7 @@ beforeAll(async () => {
   agentJwk = keys.publicJwk
 })
 
-function setup() {
+function setup(environment?: 'sandbox' | 'live') {
   const agentApi = new FakeAgentApi()
   const log = { info: () => undefined, error: () => undefined }
   const gate = createAgentHttpGate({
@@ -23,6 +23,7 @@ function setup() {
         issuer: ISSUER,
         providerRef: PROVIDER,
         keys: createLocalJWKSet({ keys: [agentJwk] }),
+        ...(environment ? { environment } : {}),
       }),
     }),
     calls: createAgentCalls({ client: agentApi, maxWaitSeconds: 0, log }),
@@ -53,6 +54,16 @@ describe('createAgentHttpGate', () => {
       kind: 'rejected',
       status: 401,
       reason: 'expired',
+    })
+    expect(agentApi.authorizes).toHaveLength(0)
+  })
+
+  it('rejects an agent from the other environment with 403, as SolvaPay does', async () => {
+    const { agentApi, call } = setup('live')
+    expect(await call(await signAgentToken(agentKey))).toMatchObject({
+      kind: 'rejected',
+      status: 403,
+      reason: 'environment_mismatch',
     })
     expect(agentApi.authorizes).toHaveLength(0)
   })

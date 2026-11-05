@@ -11,7 +11,12 @@ import { createMcpHandler, McpServer, type CallToolResult } from '@modelcontextp
 import { decodeJwt } from 'jose'
 import type { MoneyAmount } from './client'
 import type { AgentCalls, CallResult, Logger } from './calls'
-import { isAgentKey, type AgentLayer, type VerifiedAgent } from './identity'
+import {
+  isAgentKey,
+  type AgentLayer,
+  type AgentRejectionReason,
+  type VerifiedAgent,
+} from './identity'
 import { promptFacts } from './prompt'
 
 /** The agent a request was verified as, and the token it presented. */
@@ -210,7 +215,8 @@ function agentBearer(request: Request, issuer: string): string | null {
 }
 
 /** A JSON-RPC error for an agent token that did not verify; the agent needs a new one. */
-function agentTokenRejected(reason: string): Response {
+/** 401 for a token that did not verify; 403 for one from the other environment, as SolvaPay answers. */
+function agentTokenRejected(reason: AgentRejectionReason): Response {
   return Response.json(
     {
       jsonrpc: '2.0',
@@ -218,7 +224,7 @@ function agentTokenRejected(reason: string): Response {
       error: { code: -32001, message: `The agent token was not accepted (${reason}).` },
     },
     {
-      status: 401,
+      status: reason === 'environment_mismatch' ? 403 : 401,
       headers: {
         'WWW-Authenticate': `Bearer error="invalid_token", error_description="${reason}"`,
       },

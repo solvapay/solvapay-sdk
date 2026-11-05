@@ -146,6 +146,17 @@ export interface UsageReportResponse {
 /** Prefix of an agent key: long-lived, for one merchant, sent in place of an agent token. */
 export const AGENT_KEY_PREFIX = 'agk_'
 
+/** Where an agent spends: sandbox agents at sandbox merchants, live at live. */
+export const AGENT_ENVIRONMENTS = ['sandbox', 'live'] as const
+export type AgentEnvironment = (typeof AGENT_ENVIRONMENTS)[number]
+
+/** The environment a merchant secret key is for, `undefined` when its prefix doesn't say. */
+export function secretKeyEnvironment(secretKey: string): AgentEnvironment | undefined {
+  if (secretKey.startsWith('sk_sandbox_')) return 'sandbox'
+  if (secretKey.startsWith('sk_live_')) return 'live'
+  return undefined
+}
+
 /** The agent behind an agent key, as SolvaPay answers for this merchant. */
 export interface VerifiedAgentKey {
   agentRef: string
@@ -153,10 +164,12 @@ export interface VerifiedAgentKey {
   principalRef: string
   /** The agent's spend policy lets the classifier read the end of the prompt. */
   promptExcerpt: boolean
+  /** Where the agent spends. */
+  environment: AgentEnvironment
 }
 
 export interface SolvaPayAgentClient {
-  /** 401 for an unknown or revoked key, 403 for another merchant's. */
+  /** 401 for an unknown or revoked key, 403 for another merchant's or the other environment's. */
   verifyAgentKey(agentKey: string): Promise<VerifiedAgentKey>
   authorize(input: AuthorizeInput): Promise<AuthorizeResponse>
   complete(callRef: string, input: CompleteInput): Promise<CompleteResponse>
@@ -224,6 +237,7 @@ export function parseVerifiedAgentKey(value: unknown): VerifiedAgentKey {
     agentRef: requireString(value.agentRef, 'agentRef'),
     principalRef: requireString(value.principalRef, 'principalRef'),
     promptExcerpt: requireBoolean(value.promptExcerpt, 'promptExcerpt'),
+    environment: requireOneOf(AGENT_ENVIRONMENTS, value.environment, 'environment'),
   }
 }
 

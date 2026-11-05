@@ -25,7 +25,11 @@ beforeAll(async () => {
   agentJwk = keys.publicJwk
 })
 
-function setup(upstream: () => Promise<PaidToolRun>, waitSeconds = 0) {
+function setup(
+  upstream: () => Promise<PaidToolRun>,
+  waitSeconds = 0,
+  environment?: 'sandbox' | 'live',
+) {
   const agentApi = new FakeAgentApi()
   const events: { event: string; fields?: Record<string, unknown> }[] = []
   const log: Logger = {
@@ -39,8 +43,12 @@ function setup(upstream: () => Promise<PaidToolRun>, waitSeconds = 0) {
         issuer: ISSUER,
         providerRef: PROVIDER,
         keys: createLocalJWKSet({ keys: [agentJwk] }),
+        ...(environment ? { environment } : {}),
       }),
-      verifyAgentKey: createAgentKeyVerifier({ client: agentApi }),
+      verifyAgentKey: createAgentKeyVerifier({
+        client: agentApi,
+        ...(environment ? { environment } : {}),
+      }),
     }),
     calls: createAgentCalls({
       client: agentApi,
@@ -153,6 +161,22 @@ describe('createAgentMcpRoute', () => {
       await route(post(await signAgentToken(agentKey, { iss: 'https://auth.example.test' }))),
     ).toBeNull()
     expect(await route(new Request('http://merchant.test/other'))).toBeNull()
+  })
+
+  it('answers 403 for an agent from the other environment', async () => {
+    const { route } = setup(ok, 0, 'live')
+    const post = (token: string) =>
+      new Request(MCP_URL, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+      })
+    const sandboxToken = await route(post(await signAgentToken(agentKey)))
+    expect(sandboxToken?.status).toBe(403)
+    expect(await sandboxToken?.json()).toMatchObject({
+      error: { message: 'The agent token was not accepted (environment_mismatch).' },
+    })
+    expect((await route(post(TEST_AGENT_KEY)))?.status).toBe(403)
   })
 
   it('serves an agent that sends its agent key, and passes the key to SolvaPay on each call', async () => {

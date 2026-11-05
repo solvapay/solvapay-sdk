@@ -34,6 +34,7 @@ function call(overrides: Partial<AgentCall> = {}): AgentCall {
       tokenId: 'jti-1',
       expiresAt: new Date(Date.now() + 15 * 60_000),
       promptExcerpt: false,
+      environment: 'sandbox',
     },
     item: 'claude-haiku-4-5',
     estimate: { amount: '0.005142', currency: 'USD' },
