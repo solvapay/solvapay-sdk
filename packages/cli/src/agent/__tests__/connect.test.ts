@@ -11,10 +11,13 @@ let home: string
 let lines: string[]
 let claims: unknown[]
 let opens: number
+/** The agent name the connect request should carry. */
+let requestedName: string
 
-function run(argv: string[]) {
+function run(argv: string[], npx?: string) {
   return main(argv, {
     env: { HERMES_HOME: home, SOLVAPAY_HOME: join(home, '.solvapay') },
+    ...(npx ? { npx } : {}),
     out: (text: string) => lines.push(text),
     sleep: async () => undefined,
   }) as Promise<number>
@@ -25,6 +28,7 @@ beforeEach(async () => {
   lines = []
   claims = [{ status: 'pending', retryAfterSeconds: 3 }]
   opens = 0
+  requestedName = 'Hermes'
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const path = url.slice(API.length)
     if (path === '/catalog/merchants/opp') {
@@ -37,7 +41,7 @@ beforeEach(async () => {
       return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
     }
     if (path === '/agent/connect-requests' && init?.method === 'POST') {
-      expect(JSON.parse(String(init.body))).toEqual({ providerRef: PROV, name: 'Hermes', client: 'hermes' })
+      expect(JSON.parse(String(init.body))).toEqual({ providerRef: PROV, name: requestedName, client: 'hermes' })
       opens++
       return Response.json(
         {
@@ -62,6 +66,14 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('connect', () => {
+  it('prints the command to run again as one the shell reads back: the preview CLI, a quoted name', async () => {
+    requestedName = "Erik's agent"
+    await run(['connect', 'opper', '--client', 'hermes', '--name', "Erik's agent", '--api', API], 'npx solvapay@preview')
+    expect(lines.join('\n')).toContain(
+      `run the same command again:\n  npx solvapay@preview connect opper --client hermes --name 'Erik'\\''s agent' --api ${API}`,
+    )
+  })
+
   it('asks the owner and tells the agent to run the same command again', async () => {
     expect(await run(['connect', PROV, '--client', 'hermes', '--api', API])).toBe(0)
     expect(lines.join('\n')).toContain('https://account.example.test/c/KQ7M-RX4D')

@@ -86,7 +86,9 @@ const main = async () => {
 
   // No banner: an agent reads this output, and the launcher decides what reaches stdout.
   if (command === 'launch' || command === 'connect') {
-    process.exitCode = await runAgentCommand(process.argv.slice(2))
+    process.exitCode = await runAgentCommand(process.argv.slice(2), {
+      npx: PACKAGE_VERSION.includes('-preview') ? 'npx solvapay@preview' : 'npx solvapay',
+    })
     return
   }
 

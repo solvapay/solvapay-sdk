@@ -17,10 +17,13 @@ let claims: unknown[]
 let opens: number
 let calls: { command: string; args: string[] }[]
 let answers: { code: number; output: string }[]
+/** The listing's model API, when the merchant has one. */
+let anthropicBaseUrl: string | undefined
 
-function run(argv: string[]) {
+function run(argv: string[], npx?: string) {
   return main(argv, {
     env,
+    ...(npx ? { npx } : {}),
     out: (text: string) => lines.push(text),
     sleep: async () => undefined,
     exec: async (command: string, args: string[]) => {
@@ -36,13 +39,14 @@ beforeEach(async () => {
   home = await mkdtemp(join(tmpdir(), 'claude-mcp-'))
   env = { SOLVAPAY_HOME: join(home, '.solvapay'), CLAUDE_CONFIG_DIR: join(home, 'claude') }
   lines = []
+  anthropicBaseUrl = undefined
   claims = [{ status: 'pending', retryAfterSeconds: 3 }]
   opens = 0
   calls = []
   answers = []
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const path = url.slice(API.length)
-    if (path === `/catalog/listings/${PROV}`) return Response.json({ providerRef: PROV, mcpUrl: MCP })
+    if (path === `/catalog/listings/${PROV}`) return Response.json({ providerRef: PROV, mcpUrl: MCP, ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}) })
     if (path === '/agent/connect-requests' && init?.method === 'POST') {
       expect(JSON.parse(String(init.body))).toEqual({ providerRef: PROV, name: 'Claude Code', client: 'claude' })
       opens++
@@ -145,13 +149,24 @@ describe('connect --add-mcp', () => {
     await expect(run(connect)).rejects.toThrow('claude mcp add-json opper failed (exit 1): Invalid configuration')
   })
 
+  it('offers launch, as the preview CLI, when the merchant has a model API', async () => {
+    anthropicBaseUrl = 'https://api.opper.test/v3/compat'
+    claims.push(approved)
+    const plain = ['connect', PROV, '--client', 'claude', '--api', API]
+    await run(plain, 'npx solvapay@preview')
+    expect(await run(plain, 'npx solvapay@preview')).toBe(0)
+    expect(lines.at(-1)).toContain(`Start Claude Code paying with it:\n  npx solvapay@preview launch claude ${PROV}`)
+    expect(lines.at(-1)).toContain('Or add its MCP server to Claude Code')
+  })
+
   it('adds the server for a merchant connected earlier without --add-mcp, without asking the owner again', async () => {
     claims.push(approved)
     const plain = ['connect', PROV, '--client', 'claude', '--api', API]
     await run(plain)
     expect(await run(plain)).toBe(0)
-    expect(lines.at(-1)).toContain('npx solvapay launch claude')
-    expect(lines.at(-1)).toContain('run the same command with --add-mcp')
+    // Opper's listing here has no model API, so there is nothing to launch on.
+    expect(lines.at(-1)).not.toContain('launch')
+    expect(lines.at(-1)).toContain('To use it, add its MCP server to Claude Code, paying with the same key: run the same command with --add-mcp.')
     expect(calls).toEqual([])
 
     expect(await run(connect)).toBe(0)
