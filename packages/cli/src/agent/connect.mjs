@@ -1,7 +1,7 @@
 // The helper behind `npx solvapay connect` and `launch`. Plain ESM: tsup
 // bundles it into dist/cli.js, and the tests import it as it is.
 import { spawn } from 'node:child_process'
-import { claudeCode } from './agents/claude-code.mjs'
+import { addToClaudeCode, claudeCode, mcpAddedLines } from './agents/claude-code.mjs'
 import { hermes } from './agents/hermes.mjs'
 import { dropPending, keyPath, readKey, readPending, saveKey, savePending } from './key-store.mjs'
 
@@ -19,7 +19,7 @@ const SETTLE_MS = 15_000
 const CLIENTS = { claude: claudeCode, hermes }
 
 /** Flags that take no value. */
-const SWITCHES = new Set(['new'])
+const SWITCHES = new Set(['new', 'add-mcp'])
 
 /** `--name value` pairs, switches and positional arguments; everything after `--` is the agent's own. */
 export function parseArgs(argv) {
@@ -71,7 +71,15 @@ async function api(base, path, init) {
 /** The sub-commands `connect` had before it became one command run until it is done. */
 const OLD_SUBCOMMANDS = ['start', 'complete', 'finish']
 /** Flags that shape a request, by the name the waiting request keeps them under. */
-const REQUEST_FLAGS = { client: 'client', name: 'name', api: 'api', 'mcp-url': 'mcpUrl', 'model-url': 'modelUrl', model: 'model' }
+const REQUEST_FLAGS = {
+  client: 'client',
+  name: 'name',
+  api: 'api',
+  'mcp-url': 'mcpUrl',
+  'model-url': 'modelUrl',
+  model: 'model',
+  'add-mcp': 'addMcp',
+}
 
 /**
  * `connect <merchant> --client <host>`, run until it says connected. The
@@ -84,7 +92,7 @@ const REQUEST_FLAGS = { client: 'client', name: 'name', api: 'api', 'mcp-url': '
  * Exits 0 when asked or connected, 2 while the owner has not answered, 1 when
  * they did not approve.
  */
-async function connect({ positional, flags }, env, out, sleep) {
+async function connect({ positional, flags }, env, out, sleep, exec) {
   const [merchant] = positional
   if (OLD_SUBCOMMANDS.includes(merchant)) {
     throw new Error(
@@ -99,19 +107,42 @@ async function connect({ positional, flags }, env, out, sleep) {
   const waiting = await readPending(env, providerRef)
   if (waiting) {
     refuseOtherFlags(providerRef, waiting, flags)
-    return collect(providerRef, waiting, flags, env, out, sleep)
+    return collect(providerRef, waiting, flags, env, out, sleep, exec)
   }
+  refuseAddMcp(flags)
   const saved = await readKey(env, providerRef)
   if (saved && !flags.new) {
-    out(
-      [
-        `Already connected to ${saved.merchantName} as agent ${saved.agentRef}; the key is in ${keyPath(env, providerRef)} (not shown here).`,
-        `To connect again, add --new.`,
-      ].join('\n'),
-    )
+    const lines = [
+      `Already connected to ${saved.merchantName} as agent ${saved.agentRef}; the key is in ${keyPath(env, providerRef)} (not shown here).`,
+    ]
+    // Connected before without --add-mcp: the saved key is enough to add the MCP server now.
+    if (flags['add-mcp']) {
+      const mcpUrl = flags['mcp-url'] ?? (await listingMcpUrl(flags.api ?? saved.api ?? DEFAULT_API, providerRef))
+      lines.push(...mcpAddedLines(await addToClaudeCode(env, { ...saved, mcpUrl }, exec), mcpUrl))
+    } else {
+      lines.push(`To connect again, add --new.`)
+    }
+    out(lines.join('\n'))
     return 0
   }
   return ask(providerRef, merchant, flags, env, out)
+}
+
+/** `--add-mcp` adds a merchant's MCP server to Claude Code; it means nothing for another host or a model API. */
+function refuseAddMcp(flags) {
+  if (!flags['add-mcp']) return
+  if (flags.client !== 'claude') {
+    throw new Error(`--add-mcp adds the merchant's MCP server to Claude Code, so it goes with --client claude (got --client ${flags.client ?? 'nothing'})`)
+  }
+  if (flags['model-url']) {
+    throw new Error(`--add-mcp adds the merchant's MCP server, and --model-url connects its model API: run them as separate connects`)
+  }
+}
+
+async function listingMcpUrl(base, providerRef) {
+  const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
+  if (!listing.mcpUrl) throw new Error(`${providerRef}'s catalog listing names no MCP server: pass --mcp-url <url>`)
+  return listing.mcpUrl
 }
 
 /** A re-run that names a flag differently from the waiting request would set up something else: refuse it. */
@@ -130,7 +161,7 @@ function refuseOtherFlags(providerRef, waiting, flags) {
 function againCommand(merchant, flags) {
   const kept = Object.keys(REQUEST_FLAGS)
     .filter(flag => flags[flag] !== undefined)
-    .map(flag => ` --${flag} ${flags[flag]}`)
+    .map(flag => (SWITCHES.has(flag) ? ` --${flag}` : ` --${flag} ${flags[flag]}`))
     .join('')
   return `npx solvapay connect ${merchant}${kept}`
 }
@@ -152,12 +183,14 @@ async function ask(providerRef, merchant, flags, env, out) {
     const listing = await api(base, `/catalog/listings/${encodeURIComponent(providerRef)}`)
     mcpUrl = listing.mcpUrl
   }
+  const addMcp = flags['add-mcp'] === true
+  if (addMcp && !mcpUrl) throw new Error(`${providerRef}'s catalog listing names no MCP server to add: pass --mcp-url <url>`)
   const name = flags.name ?? CLIENTS[client].displayName
   const opened = await api(base, '/agent/connect-requests', {
     method: 'POST',
     body: JSON.stringify({ providerRef, name, client }),
   })
-  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...opened, name })
+  await savePending(env, providerRef, { api: base, mcpUrl, modelUrl, model, client, ...(addMcp ? { addMcp } : {}), ...opened, name })
   out(
     [
       `Ask your user to approve this connection on their phone or in a browser:`,
@@ -172,7 +205,7 @@ async function ask(providerRef, merchant, flags, env, out) {
 }
 
 /** Waits for the owner's answer to the waiting request and acts on it. */
-async function collect(providerRef, state, flags, env, out, sleep) {
+async function collect(providerRef, state, flags, env, out, sleep, exec) {
   const timeoutSeconds = Number(flags.timeout ?? 120)
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0) throw new Error('--timeout must be seconds')
   const deadline = Date.now() + timeoutSeconds * 1000
@@ -185,7 +218,7 @@ async function collect(providerRef, state, flags, env, out, sleep) {
       [
         `Connected to ${answer.merchantName} as agent ${answer.agentRef}.`,
         `The agent key is saved in ${keyFile} (not shown here).`,
-        ...(await CLIENTS[state.client].connected(env, state, answer)),
+        ...(await CLIENTS[state.client].connected(env, state, answer, { exec })),
       ].join('\n'),
     )
     return 0
@@ -356,11 +389,26 @@ function runAttached({ command, args, env }) {
   })
 }
 
+/** Runs a command to its end and resolves with its exit code and everything it printed. */
+function runCaptured(command, args, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
+    let output = ''
+    child.stdout.on('data', chunk => (output += chunk))
+    child.stderr.on('data', chunk => (output += chunk))
+    child.on('error', error =>
+      reject(error.code === 'ENOENT' ? new Error(`${command} is not installed or not on PATH`) : error),
+    )
+    child.on('close', code => resolve({ code: code ?? 1, output }))
+  })
+}
+
 const USAGE = [
   'Usage:',
   '  solvapay launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
-  '  solvapay connect <merchant launch name or providerRef> --client <claude|hermes> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--timeout <seconds>] [--new]',
+  '  solvapay connect <merchant launch name or providerRef> --client <claude|hermes> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--add-mcp] [--timeout <seconds>] [--new]',
   '      Run it again until it says connected: the first run asks the owner, a later one waits for their answer.',
+  "      --add-mcp (with --client claude) adds the merchant's MCP server to Claude Code at user scope, paying with the key.",
 ].join('\n')
 
 export async function main(argv, deps = {}) {
@@ -369,9 +417,10 @@ export async function main(argv, deps = {}) {
   const say = deps.say ?? (text => console.error(text))
   const sleep = deps.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)))
   const run = deps.run ?? runAttached
+  const exec = deps.exec ?? runCaptured
   const [command, ...rest] = argv
   if (command === 'launch') return launch(parseArgs(rest), env, say, sleep, run)
-  if (command === 'connect') return connect(parseArgs(rest), env, out, sleep)
+  if (command === 'connect') return connect(parseArgs(rest), env, out, sleep, exec)
   out(USAGE)
   return 64
 }
