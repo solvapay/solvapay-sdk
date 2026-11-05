@@ -19,6 +19,18 @@ describe('logMcpConfigOnce', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('prd_abc')
   })
 
+  it('names the external auth mode and its issuers', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    logMcpConfigOnce({
+      apiBaseUrl: 'https://api.solvapay.com',
+      productRef: 'prd_abc',
+      publicBaseUrl: 'https://mcp.example.com',
+      authMode: 'external',
+      authorizationServers: ['https://tenant.eu.auth0.com/'],
+    })
+    expect(warn.mock.calls[0]?.[0]).toContain('auth=external issuers=https://tenant.eu.auth0.com/')
+  })
+
   it('logs only once per process even when called repeatedly', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     logMcpConfigOnce({

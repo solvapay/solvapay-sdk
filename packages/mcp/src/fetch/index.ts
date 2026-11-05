@@ -50,6 +50,7 @@
 
 export {
   createAuthorizationServerHandler,
+  createExternalDiscoveryRouter,
   createOAuthAuthorizeHandler,
   createOAuthFetchRouter,
   createOAuthRegisterHandler,
@@ -58,7 +59,7 @@ export {
   createOpenidNotFoundHandler,
   createProtectedResourceHandler,
 } from './oauth-bridge'
-export type { FetchOAuthOptions } from './oauth-bridge'
+export type { ExternalDiscoveryOptions, FetchOAuthOptions } from './oauth-bridge'
 
 export {
   applyNativeCors,
@@ -67,12 +68,18 @@ export {
   isNativeClientOrigin,
   resolveBearer,
 } from './cors'
+export type { BearerChallengeError } from './cors'
 
 export { createSolvaPayMcpFetchHandler } from './handler'
-export type { CreateSolvaPayMcpFetchHandlerOptions, McpResponseMode } from './handler'
+export type {
+  CreateSolvaPayMcpFetchHandlerOptions,
+  ExternalAuthorizationServerOptions,
+  McpResponseMode,
+  VerifyBearerToken,
+} from './handler'
 export type { McpRequestContext, McpServerFactory } from './handler'
 
-export { createSolvaPayMcpFetch } from './createSolvaPayMcpFetch'
+export { bridgeVerifiedBearerToCustomer, createSolvaPayMcpFetch } from './createSolvaPayMcpFetch'
 export type { CreateSolvaPayMcpFetchOptions } from './createSolvaPayMcpFetch'
 export type { AdditionalToolsContext, HideToolsByAudienceConfig } from '../server'
 
@@ -81,10 +88,13 @@ export {
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
   buildAuthInfoFromBearer,
+  buildAuthInfoFromVerifiedBearer,
   McpBearerAuthError,
 } from '@solvapay/mcp-core'
 export type {
   BuildAuthInfoFromBearerOptions,
   OAuthAuthorizationServerOptions,
   OAuthBridgePaths,
+  OAuthProtectedResourceOptions,
+  VerifiedBearer,
 } from '@solvapay/mcp-core'
