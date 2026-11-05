@@ -11,12 +11,16 @@ import {
   type AgentEnvironment,
   type SolvaPayAgentClient,
 } from './client'
+import { canonicalResource } from './oauth'
 
 /**
  * Agent token claim: the agent's spend policy lets the classifier read the
  * end of the prompt. Set by SolvaPay when it mints the token (DEV-1124).
  */
 export const AGENT_TOKEN_EXCERPT_CLAIM = 'px'
+
+/** Agent token claim: the OAuth client a host got the token as (`cid`), on OAuth tokens only. */
+export const AGENT_TOKEN_CLIENT_CLAIM = 'cid'
 
 /** Agent token claim: where the agent spends, `sandbox` or `live`. */
 export const AGENT_TOKEN_ENV_CLAIM = 'env'
@@ -34,6 +38,8 @@ export interface VerifiedAgent {
   promptExcerpt: boolean
   /** Where the agent spends (`env` claim, or the key verification's answer). */
   environment: AgentEnvironment
+  /** The OAuth client the token was issued to (`cid` claim): a CIMD URL or `oac_…`. */
+  clientId?: string
 }
 
 /** Why an agent was turned away: `environment_mismatch` when it spends in the other environment. */
@@ -48,6 +54,12 @@ export interface AgentTokenVerifierOptions {
   issuer: string
   /** This merchant's provider reference; tokens for any other provider are refused. */
   providerRef: string
+  /**
+   * This server's OAuth resource (its MCP or API URL). A token a host got by
+   * OAuth names it as `aud`, so it is accepted beside the provider reference;
+   * any other URL is refused.
+   */
+  resource?: string
   /** Key resolver: `createRemoteJWKSet(new URL(jwksUrl))` in production. */
   keys: JWTVerifyGetKey
   /**
@@ -64,12 +76,18 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
     try {
       const { payload } = await jwtVerify(token, options.keys, {
         issuer: options.issuer,
-        audience: options.providerRef,
+        audience: options.resource
+          ? [options.providerRef, canonicalResource(options.resource)]
+          : options.providerRef,
         algorithms: ['ES256'],
         clockTolerance: CLOCK_TOLERANCE_SECONDS,
         requiredClaims: ['sub', 'exp', 'iat', 'jti'],
       })
       const { sub, jti, exp, principal, scope } = payload
+      const clientId = payload[AGENT_TOKEN_CLIENT_CLAIM]
+      if (clientId !== undefined && typeof clientId !== 'string') {
+        return { ok: false, reason: 'invalid', detail: 'cid is not a string' }
+      }
       if (typeof sub !== 'string' || !sub.startsWith('agt_')) {
         return { ok: false, reason: 'invalid', detail: 'sub is not an agent reference' }
       }
@@ -91,6 +109,7 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
           expiresAt: new Date((exp as number) * 1000),
           promptExcerpt: payload[AGENT_TOKEN_EXCERPT_CLAIM] === true,
           environment,
+          ...(clientId ? { clientId } : {}),
         },
         options.environment,
       )

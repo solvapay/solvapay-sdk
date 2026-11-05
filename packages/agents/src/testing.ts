@@ -41,10 +41,13 @@ export function signAgentToken(
     promptExcerpt?: boolean
     /** Where the agent spends (`env`), `sandbox` unless set; `null` leaves the claim out. */
     env?: string | null
+    /** The OAuth client (`cid`), on tokens a host got by OAuth. */
+    cid?: string
   } = {},
 ): Promise<string> {
   const claims: Record<string, unknown> = { scope: overrides.scope ?? 'usage' }
   if (overrides.promptExcerpt) claims.px = true
+  if (overrides.cid) claims.cid = overrides.cid
   if (overrides.env !== null) claims.env = overrides.env ?? 'sandbox'
   if (overrides.principal !== null) claims.principal = overrides.principal ?? 'ppl_ABCDEFGHIJKLMNOP'
   return new SignJWT(claims)

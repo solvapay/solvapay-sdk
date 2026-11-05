@@ -7,6 +7,7 @@
 import type { MoneyAmount } from './client'
 import type { AgentCalls, Allowed, Logger, RefusalReason, Refused } from './calls'
 import type { AgentLayer, AgentRejectionReason, VerifiedAgent } from './identity'
+import { challengeHeaders, type ProtectedResource } from './oauth'
 import type { PromptFacts } from './prompt'
 
 export type GateResult =
@@ -16,8 +17,22 @@ export type GateResult =
    * An agent token or key that did not verify (expired, forged, for another
    * merchant): 401. One from the other environment: 403, as SolvaPay answers.
    */
-  | { kind: 'rejected'; status: 401 | 403; reason: AgentRejectionReason; detail: string }
-  | { kind: 'refused'; status: RefusalStatus; refused: Refused; agent: VerifiedAgent }
+  | {
+      kind: 'rejected'
+      status: 401 | 403
+      reason: AgentRejectionReason
+      detail: string
+      /** With `protectedResource`, on a 401: the headers that send a host to sign in again. */
+      challenge?: Headers
+    }
+  | {
+      kind: 'refused'
+      status: RefusalStatus
+      refused: Refused
+      agent: VerifiedAgent
+      /** With `protectedResource`, on a 401 (`agent_not_accepted`). */
+      challenge?: Headers
+    }
   | { kind: 'allowed'; allowed: Allowed; agent: VerifiedAgent }
 
 export interface GateCall {
@@ -39,7 +54,13 @@ export function createAgentHttpGate(deps: {
   agentLayer: AgentLayer
   calls: AgentCalls
   log: Logger
+  /** Turns the OAuth challenge on: 401 results carry the headers that send a host to sign in. */
+  protectedResource?: ProtectedResource
 }): (call: GateCall) => Promise<GateResult> {
+  const challenge = (description: string) =>
+    deps.protectedResource
+      ? { challenge: challengeHeaders(deps.protectedResource, description) }
+      : {}
   return async call => {
     const identity = await deps.agentLayer.identify(call.presentedKey)
     if (identity.kind === 'not_agent') return { kind: 'not_agent' }
@@ -50,11 +71,13 @@ export function createAgentHttpGate(deps: {
         reason: `agent_token_${identity.reason}`,
         detail: identity.detail,
       })
+      const status = identity.reason === 'environment_mismatch' ? 403 : 401
       return {
         kind: 'rejected',
-        status: identity.reason === 'environment_mismatch' ? 403 : 401,
+        status,
         reason: identity.reason,
         detail: identity.detail,
+        ...(status === 401 ? challenge('The agent token was not accepted: sign in again') : {}),
       }
     }
     const begun = await deps.calls.begin({
@@ -68,11 +91,13 @@ export function createAgentHttpGate(deps: {
       ...(call.logFields ? { logFields: call.logFields } : {}),
     })
     if (begun.kind === 'refused') {
+      const status = refusalStatus(begun.reason)
       return {
         kind: 'refused',
-        status: refusalStatus(begun.reason),
+        status,
         refused: begun,
         agent: identity.agent,
+        ...(status === 401 ? challenge(begun.message) : {}),
       }
     }
     return { kind: 'allowed', allowed: begun, agent: identity.agent }
@@ -110,10 +135,14 @@ export function refusalStatus(reason: RefusalReason): RefusalStatus {
   }
 }
 
-/** A plain JSON refusal, for a merchant with no error format of its own. */
-export function refusalResponse(refused: Refused): Response {
+/**
+ * A plain JSON refusal, for a merchant with no error format of its own. Pass
+ * the gate's `challenge` and a 401 carries it, so a host signs in again.
+ */
+export function refusalResponse(refused: Refused, challenge?: Headers): Response {
+  const status = refusalStatus(refused.reason)
   return Response.json(
     { error: { type: refused.reason, message: refused.message } },
-    { status: refusalStatus(refused.reason) },
+    { status, ...(status === 401 && challenge ? { headers: challenge } : {}) },
   )
 }
