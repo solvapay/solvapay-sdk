@@ -9,6 +9,7 @@
  * Protocol-neutral: no route, no Anthropic or MCP types.
  */
 export {
+  AGENT_TOKEN_CLIENT_CLAIM,
   AGENT_TOKEN_ENV_CLAIM,
   AGENT_TOKEN_EXCERPT_CLAIM,
   createAgentKeyVerifier,
@@ -52,6 +53,17 @@ export {
   type UsageReport,
   type UsageReportResponse,
 } from './client'
+export {
+  AGENT_SCOPE,
+  authChallenge,
+  canonicalResource,
+  challengeHeaders,
+  protectedResourceHandler,
+  protectedResourceMetadata,
+  protectedResourceMetadataPath,
+  protectedResourceMetadataUrl,
+  type ProtectedResource,
+} from './oauth'
 export { PROMPT_EXCERPT_MAX, promptFacts, type PromptFacts } from './prompt'
 export {
   createAgentCalls,
