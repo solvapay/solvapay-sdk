@@ -111,7 +111,7 @@ For Claude Code, `--add-mcp` also adds the merchant's MCP server once the connec
 npx solvapay connect opper --client claude --add-mcp
 ```
 
-It runs `claude mcp add-json` at user scope with a `headersHelper` that reads the saved key on each connection, so the key never goes into Claude's config. Run `/mcp` in Claude Code to connect it. Run on a merchant already connected, it adds the server without asking the owner again.
+It runs `claude mcp add-json` at user scope with a `headersHelper` that reads the saved key on each connection, so the key never goes into Claude's config. Start a new Claude Code session to use it: one already open does not reread its config, not even in `/mcp`. Run on a merchant already connected, it adds the server without asking the owner again.
 
 ## Flags
 

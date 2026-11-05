@@ -86,7 +86,8 @@ describe('connect --add-mcp', () => {
     expect(json).not.toContain('agk_SECRET')
     expect(lines.join('\n')).not.toContain('agk_SECRET')
     expect(lines.at(-1)).toContain(`Claude Code has a new MCP server "opper" at ${MCP} (user scope)`)
-    expect(lines.at(-1)).toContain('Run /mcp in Claude Code')
+    expect(lines.at(-1)).toContain('Start a new Claude Code session to use it; one already open will not see it.')
+    expect(lines.at(-1)).not.toContain('Run /mcp')
   })
 
   it('writes a helper that prints the Authorization header from the saved key, and fails without one', async () => {
