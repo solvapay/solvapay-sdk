@@ -40,6 +40,8 @@ export interface VerifiedAgent {
   environment: AgentEnvironment
   /** The OAuth client the token was issued to (`cid` claim): a CIMD URL or `oac_…`. */
   clientId?: string
+  /** `mpp` for an agent key SolvaPay gave a buyer that paid with MPP: it has no owner. */
+  payer?: 'mpp'
 }
 
 /** Why an agent was turned away: `environment_mismatch` when it spends in the other environment. */
@@ -193,6 +195,7 @@ export function createAgentKeyVerifier(deps: {
           principalRef: verified.principalRef,
           promptExcerpt: verified.promptExcerpt,
           environment: verified.environment,
+          ...(verified.payer ? { payer: verified.payer } : {}),
         },
         deps.environment,
       )
