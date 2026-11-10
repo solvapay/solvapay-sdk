@@ -10,7 +10,8 @@ Usage:
 
 Commands:
   init     Authenticate, configure .env, and install SolvaPay SDK packages
-  doctor   Verify secret key, API URL, product ref, and product readiness
+  doctor   Verify secret key, API URL, product ref, product readiness, and that
+           the project's @solvapay/* packages match npm
   launch   Start Claude Code or Hermes on a merchant, paying with an agent key
            its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
   connect  For an agent connecting itself: connect <merchant> --client <claude|hermes>,

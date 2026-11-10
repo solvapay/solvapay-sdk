@@ -59,6 +59,7 @@ async function run(opts: RunOptions): Promise<void> {
       nonInteractive,
       skipInstall: common.skipInstall,
       skipInit: common.skipInit,
+      offline: common.offline,
       dev: common.dev,
     })
     return
@@ -73,6 +74,7 @@ async function run(opts: RunOptions): Promise<void> {
     productRef: common.product,
     skipInstall: common.skipInstall,
     skipInit: common.skipInit,
+    offline: common.offline,
     dev: common.dev,
   })
 }

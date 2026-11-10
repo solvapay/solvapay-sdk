@@ -47,6 +47,8 @@ export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'
 
 export { runDoctorInDirectory } from './run-doctor'
+export { compareStable, findOutdatedSolvapayPackages, solvapayDependencies, upgradeCommand } from './sdk-versions'
+export type { DistTags, FetchDistTags, OutdatedPackage } from './sdk-versions'
 export type {
   DoctorCheckResult,
   DoctorCommandOptions,

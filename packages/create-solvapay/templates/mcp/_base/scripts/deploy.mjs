@@ -25,14 +25,20 @@
  * has a secret), then redeploy.
  *
  * Pass-through: any extra CLI args (e.g. `--dry-run`) are forwarded to
- * `wrangler deploy`. `--yes` / `-y` are consumed by this script (to skip
- * the URL confirm prompt) and stripped before the wrangler call.
+ * `wrangler deploy`. `--yes` / `-y` (skip the URL confirm prompt),
+ * `--force` and `--allow-outdated` are consumed by this script and
+ * stripped before the wrangler call.
  *
  * Pre-flight (before deploy): verifies `wrangler login` and, on accounts
  * that still need it, that a workers.dev subdomain is registered.
  * When `MCP_PUBLIC_BASE_URL` is still the localhost placeholder, resolves
  * the live `*.workers.dev` URL pre-deploy, writes it to `.env`, and
  * verifies wrangler's deploy output matches (defence in depth).
+ *
+ * SDK versions: before anything else, stops when an installed `@solvapay/*`
+ * package is behind npm (`latest`, or `preview` for a preview build), with
+ * the exact upgrade command. `--allow-outdated` skips the check on purpose.
+ * See `scripts/lib/sdk-versions.mjs`.
  *
  * URL confirm: prompts the user to confirm the resolved `*.workers.dev`
  * URL before running `wrangler deploy`. Skipped when `wrangler.jsonc`
@@ -48,6 +54,7 @@ import { homedir } from 'node:os'
 import { resolve, dirname, join } from 'node:path'
 import * as readline from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
+import { findOutdatedSolvapayPackages, upgradeCommand } from './lib/sdk-versions.mjs'
 
 const CF_API_BASE = 'https://api.cloudflare.com/client/v4'
 const MCP_PUBLIC_BASE_URL_PLACEHOLDERS = [
@@ -862,6 +869,29 @@ function uploadWorkerSecrets(localEnv, { dryRun, force }) {
   ensureUpstreamApiHeadersSecret(localEnv, { dryRun, force })
 }
 
+/**
+ * Why this deploy must stop, or `null`: an `@solvapay/*` package behind npm.
+ * `allowOutdated` (`--allow-outdated`) skips the check on purpose.
+ */
+export async function outdatedSolvapayMessage(root, { allowOutdated = false, distTags } = {}) {
+  if (allowOutdated) {
+    console.warn('⚠  --allow-outdated: deploying without checking @solvapay/* versions against npm.')
+    return null
+  }
+  const outdated = await findOutdatedSolvapayPackages(root, distTags ? { distTags } : {})
+  if (outdated.length === 0) return null
+  return [
+    '',
+    '✗ These @solvapay/* packages are behind npm, so this deploy would ship an SDK that has since been fixed:',
+    ...outdated.map(o => `   ${o.name}: installed ${o.installed}, npm ${o.tag} ${o.wanted}`),
+    '',
+    '   Upgrade, run your tests, then deploy again:',
+    `     ${upgradeCommand(root, outdated)}`,
+    '   To deploy these versions on purpose, pass --allow-outdated.',
+    '',
+  ].join('\n')
+}
+
 function runProjectBuild() {
   const result = spawnSync('npm', ['run', 'build'], { cwd: projectRoot, stdio: 'inherit' })
   if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1)
@@ -890,6 +920,14 @@ async function main() {
     process.env.SOLVAPAY_DEPLOY_YES === '1'
   const forceFlag = passthrough.includes('--force')
 
+  const outdated = await outdatedSolvapayMessage(projectRoot, {
+    allowOutdated: passthrough.includes('--allow-outdated'),
+  })
+  if (outdated) {
+    console.error(outdated)
+    process.exit(1)
+  }
+
   const preflight = await runDeployPreflight({ dryRun })
   runProjectBuild()
   const resolvedPublicUrl = ensureMcpPublicBaseUrl(localEnv, preflight, { dryRun })
@@ -915,7 +953,7 @@ async function main() {
   }
 
   const wranglerPassthrough = passthrough.filter(
-    arg => arg !== '--yes' && arg !== '-y' && arg !== '--force',
+    arg => arg !== '--yes' && arg !== '-y' && arg !== '--force' && arg !== '--allow-outdated',
   )
   const wranglerArgs = ['deploy']
   for (const name of OVERRIDABLE_VARS) {
