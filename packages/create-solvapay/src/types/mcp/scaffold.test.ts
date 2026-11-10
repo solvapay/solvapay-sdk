@@ -204,6 +204,15 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     // dev.mjs should have copied into scripts/.
     const dev = await readFile(path.join(target, 'scripts', 'dev.mjs'), 'utf8')
     expect(dev).toContain('wrangler')
+
+    // The project keeps its SDK current: Dependabot groups @solvapay/*, and deploy checks versions.
+    const dependabot = await readFile(path.join(target, '.github', 'dependabot.yml'), 'utf8')
+    expect(dependabot).toContain("'@solvapay/*'")
+    const deploy = await readFile(path.join(target, 'scripts', 'deploy.mjs'), 'utf8')
+    expect(deploy).toContain('outdatedSolvapayMessage(projectRoot')
+    expect(await readFile(path.join(target, 'scripts', 'lib', 'sdk-versions.mjs'), 'utf8')).toContain(
+      'findOutdatedSolvapayPackages',
+    )
   })
 
   it('appends overlay payloads onto matching base files', async () => {
