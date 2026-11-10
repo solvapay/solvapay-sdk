@@ -20,7 +20,7 @@ import {
   installProjectDependencies,
   patchSolvapayVersions,
   printConnectionSnippets,
-  resolveLatestSolvapayVersions,
+  resolveSolvapayVersions,
   writeBootstrapEnv,
 } from './scaffold'
 
@@ -32,6 +32,8 @@ export type FromScratchInput = {
   productRef?: string
   skipInstall?: boolean
   skipInit?: boolean
+  /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
+  offline?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env`. Propagated separately from `options.dev`
@@ -42,7 +44,17 @@ export type FromScratchInput = {
 }
 
 export async function runFromScratch(input: FromScratchInput): Promise<void> {
-  const { target, projectName, toolName, options, productRef, skipInstall, skipInit, dev } = input
+  const {
+    target,
+    projectName,
+    toolName,
+    options,
+    productRef,
+    skipInstall,
+    skipInit,
+    offline,
+    dev,
+  } = input
 
   await assertTargetDirAbsent(target)
 
@@ -69,8 +81,12 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
 
   await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF, { dev })
 
-  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
-  const versionMap = await resolveLatestSolvapayVersions()
+  process.stdout.write(
+    offline
+      ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
+      : '🔄 Resolving latest @solvapay/* versions from npm registry…\n',
+  )
+  const versionMap = await resolveSolvapayVersions(undefined, { offline })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)

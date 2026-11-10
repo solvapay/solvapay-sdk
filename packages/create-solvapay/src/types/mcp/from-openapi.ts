@@ -26,7 +26,7 @@ import {
   patchSolvapayVersions,
   PLACEHOLDERS,
   printConnectionSnippets,
-  resolveLatestSolvapayVersions,
+  resolveSolvapayVersions,
   SCAFFOLD_SCRIPT_PATH,
 } from './scaffold'
 
@@ -39,6 +39,8 @@ export type FromOpenapiInput = {
   nonInteractive: boolean
   skipInstall?: boolean
   skipInit?: boolean
+  /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
+  offline?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env` (via the `apiBaseUrl` field in
@@ -97,6 +99,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     nonInteractive,
     skipInstall,
     skipInit,
+    offline,
     dev,
   } = input
 
@@ -159,8 +162,12 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     await rm(tmpSelectionsPath, { force: true })
   }
 
-  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
-  const versionMap = await resolveLatestSolvapayVersions()
+  process.stdout.write(
+    offline
+      ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
+      : '🔄 Resolving latest @solvapay/* versions from npm registry…\n',
+  )
+  const versionMap = await resolveSolvapayVersions(undefined, { offline })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)

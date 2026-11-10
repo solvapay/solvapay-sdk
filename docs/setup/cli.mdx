@@ -76,8 +76,9 @@ npm create solvapay@latest my-app -- --type next-auth0
 | `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type |
 
 Useful flags: `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
-`--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
-skip it). Run `npm create solvapay@latest -- --list-types` to see available templates.
+`--skip-install`, `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
+skip it), and `--offline` (pin `@solvapay/*` to the versions the scaffolder ships with instead of
+npm's latest; without it, a failed registry lookup stops the scaffold). Run `npm create solvapay@latest -- --list-types` to see available templates.
 
 ## Re-run setup safely
 

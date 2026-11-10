@@ -21,6 +21,7 @@ export type ParsedCommonArgs = {
   listTypes: boolean
   skipInstall: boolean
   skipInit: boolean
+  offline: boolean
   unknownFlag?: string
 }
 
@@ -56,6 +57,7 @@ const COMMON_SKIP_FLAGS = new Set([
   '--product',
   '--skip-install',
   '--skip-init',
+  '--offline',
   '--dev',
 ])
 
@@ -68,6 +70,7 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--list-types',
   '--skip-install',
   '--skip-init',
+  '--offline',
   '--dev',
 ])
 
@@ -86,6 +89,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
     listTypes: false,
     skipInstall: false,
     skipInit: false,
+    offline: false,
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -126,6 +130,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--list-types') out.listTypes = true
       if (arg === '--skip-install') out.skipInstall = true
       if (arg === '--skip-init') out.skipInit = true
+      if (arg === '--offline') out.offline = true
       if (arg === '--dev') out.dev = true
       continue
     }
@@ -262,6 +267,8 @@ Common flags:
   --list-types           List available project types and exit
   --skip-install         Skip the post-scaffold dependency install (run \`npm install\` manually)
   --skip-init            Skip the post-scaffold \`solvapay init\` step (no browser OAuth)
+  --offline              Pin @solvapay/* to the versions this release ships with instead of
+                         npm's latest (without it, a failed registry lookup stops the scaffold)
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only — production keys are rejected
                          by api-dev. Seeds .env and forwards through to
