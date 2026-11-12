@@ -214,11 +214,13 @@ async def test_account_reads_the_customer_and_narrates() -> None:
     assert [p["reference"] for p in customer["purchase"]["purchases"]] == ["pur_1"]
     assert customer["purchase"]["purchases"][0]["priceDisplay"] == "$29.00"
     assert customer["usage"] == {
-        "meterRef": "requests", "total": 5000.0, "used": 800.0, "remaining": 4200.0,
+        "meterRef": "requests", "total": 5000, "used": 800, "remaining": 4200,
         "percentUsed": 16, "periodStart": "2026-11-01T00:00:00Z",
         "periodEnd": "2026-12-01T00:00:00Z", "purchaseRef": "pur_1",
     }  # fmt: skip
     assert "nextAction" not in customer
+    # Whole numbers stay ints on the wire, as TypeScript sends them.
+    assert all(type(customer["usage"][k]) is int for k in ("total", "used", "remaining"))
     assert json.loads(routes["limits"].calls.last.request.content) == {
         "customerRef": "cus_1",
         "productRef": "prd_1",
