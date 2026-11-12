@@ -1,0 +1,31 @@
+{
+  "name": "@solvapay/mcp-app-bundle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Builds the SolvaPay MCP App widget (checkout, account, top-up) as one self-contained mcp-app.html. The Python SDK ships the built file in its wheel.",
+  "scripts": {
+    "build": "vite build",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@solvapay/auth": "workspace:*",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "@stripe/stripe-js": "^9.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.6",
+    "vite-plugin-singlefile": "^2.3.2"
+  }
+}
