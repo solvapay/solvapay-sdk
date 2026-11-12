@@ -1,0 +1,55 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "unlimited-sentinel-omits-included",
+  "description": "freeUnits 0 means unlimited, so the gate carries no included counters.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "plan_pro",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "plans": [
+          {
+            "reference": "plan_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "freeUnits": 0
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You've reached the included usage for this period. [Open checkout](https://pay.example.com/checkout) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "planRef": "plan_pro",
+      "plans": [
+        {
+          "reference": "plan_pro",
+          "name": "Pro",
+          "type": "recurring",
+          "price": 2900,
+          "currency": "USD",
+          "requiresPayment": true,
+          "freeUnits": 0
+        }
+      ],
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

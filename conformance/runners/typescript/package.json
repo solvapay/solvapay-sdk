@@ -1,0 +1,21 @@
+{
+  "name": "@solvapay/conformance-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs the SDK conformance cases (conformance/cases) against the TypeScript SDK, the reference implementation.",
+  "scripts": {
+    "test": "vitest run",
+    "record": "tsx src/record.ts",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@solvapay/server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
+  }
+}

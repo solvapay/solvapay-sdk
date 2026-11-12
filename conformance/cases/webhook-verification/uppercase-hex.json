@@ -1,0 +1,20 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "webhook-verification",
+  "case": "uppercase-hex",
+  "description": "The signature is compared as lowercase hex: the same digits in uppercase do not verify.",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"id\":\"evt_0123456789abcdef\",\"type\":\"purchase.created\",\"created\":1794484800,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"reference\":\"pur_ABC12345\",\"status\":\"active\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1794484800,v1=03E8EC9EDA800007798C8243E74FF07D4DE72FE0E5E08D358D6DEDBBC1F7B05A",
+      "secret": "whsec_conformance_0123456789abcdef0123456789abcdef"
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "error": {
+      "code": "webhook_signature_invalid"
+    }
+  }
+}

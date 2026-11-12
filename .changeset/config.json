@@ -12,6 +12,7 @@
   },
   "ignore": [
     "@example/*",
+    "@solvapay/conformance-typescript",
     "@solvapay/demo-services",
     "@solvapay/examples-shared",
     "@solvapay/test-utils",

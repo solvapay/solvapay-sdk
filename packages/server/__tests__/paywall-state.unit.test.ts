@@ -632,6 +632,8 @@ describe('buildGateMessage copy rewrite', () => {
     expect(msg).toMatch(
       /\[Plan \\\[beta\\\]\]\(https:\/\/example\.test\/checkout&plan=pln_payg\) · \[Unlimited\]\(https:\/\/example\.test\/checkout&plan=pln_unl\) \(first link used closes the rest; links expire in 15 minutes\)/,
     )
+    // The ladder states the expiry once; the sentence around it must not repeat it.
+    expect(msg.match(/expire in 15 minutes/g)).toHaveLength(1)
   })
 
   it('is byte-identical to the post-rewrite copy when no plan has a checkoutUrl', () => {

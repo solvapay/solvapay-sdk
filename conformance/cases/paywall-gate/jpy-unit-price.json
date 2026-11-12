@@ -1,0 +1,66 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "jpy-unit-price",
+  "description": "A zero-decimal currency is quoted as is: a 150 JPY unit price reads ¥150, not ¥1.50.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "plan_free",
+        "meterName": "api_requests",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "plans": [
+          {
+            "reference": "plan_free",
+            "name": "Free",
+            "type": "hybrid",
+            "price": 0,
+            "currency": "JPY",
+            "requiresPayment": false,
+            "freeUnits": 3,
+            "perUnitChargeMinor": 150
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You've used 3 of 3 included api requests this period. The next call is ¥150. [Open checkout](https://pay.example.com/checkout) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "planRef": "plan_free",
+      "plans": [
+        {
+          "reference": "plan_free",
+          "name": "Free",
+          "type": "hybrid",
+          "price": 0,
+          "currency": "JPY",
+          "requiresPayment": false,
+          "freeUnits": 3,
+          "perUnitChargeMinor": 150
+        }
+      ],
+      "meterName": "api_requests",
+      "unitPriceMinor": 150,
+      "currency": "JPY",
+      "included": {
+        "total": 3,
+        "used": 3,
+        "remaining": 0
+      },
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solvapay.com/schemas/sdk-conformance-case.json",
+  "title": "SDK conformance case",
+  "description": "One input and its expected outcome. Every SolvaPay SDK runs every case and must produce the same outcome.",
+  "type": "object",
+  "required": ["suite", "case", "description", "input", "expect"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "suite": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "The folder the case lives in, under cases/."
+    },
+    "case": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "The file name, without .json."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the case pins down, and why, for a person reading a failure."
+    },
+    "input": {
+      "type": "object",
+      "required": ["fn", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "fn": {
+          "type": "string",
+          "description": "The operation, by its language-neutral name (camelCase). Each runner maps it to its own library's function."
+        },
+        "args": {
+          "type": "object",
+          "description": "The operation's arguments, as one JSON object with camelCase keys."
+        },
+        "clock": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the operation runs at, for anything that reads the clock."
+        }
+      }
+    },
+    "expect": {
+      "description": "Either the result, compared as JSON (a missing key and an undefined value are the same; null is not), or the error.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["result"],
+          "additionalProperties": false,
+          "properties": { "result": {} }
+        },
+        {
+          "type": "object",
+          "required": ["error"],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "type": "object",
+              "required": ["code"],
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "The error's stable code. Messages are not compared."
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

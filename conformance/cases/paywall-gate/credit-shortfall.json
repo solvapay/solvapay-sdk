@@ -1,0 +1,71 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "credit-shortfall",
+  "description": "A PAYG customer short of credits gets activation_required with reason topup_required, next action topup, and the shortfall in credits with thousands separators.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_topup",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "",
+        "planRef": "pln_payg",
+        "purchaseRef": "pur_1",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "plans": [
+          {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "price": 1000,
+            "currency": "USD",
+            "requiresPayment": true
+          }
+        ],
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000,
+        "balance": {
+          "creditBalance": 91000,
+          "creditsPerUnit": 100000,
+          "currency": "USD"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_topup",
+      "message": "Out of credits for this call. Balance 91,000 credits; this call costs 100,000 credits — 9,000 short. [Add credits](https://pay.example.com/checkout) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "balance": {
+        "creditBalance": 91000,
+        "creditsPerUnit": 100000,
+        "currency": "USD"
+      },
+      "planRef": "pln_payg",
+      "plans": [
+        {
+          "reference": "pln_payg",
+          "name": "Pay as you go",
+          "type": "usage-based",
+          "price": 1000,
+          "currency": "USD",
+          "requiresPayment": true
+        }
+      ],
+      "creditBalance": 91000,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 100000,
+      "shortfallCredits": 9000,
+      "remainingCalls": 0,
+      "purchaseRef": "pur_1",
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}
