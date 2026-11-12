@@ -44,7 +44,8 @@ async def call(mcp: Any, name: str, args: dict[str, Any]) -> dict[str, Any]:
 
 async def test_every_tool_is_paid_and_has_its_schema(mcp: Any) -> None:
     tools = {t.name: t for t in await mcp.server.list_tools()}
-    assert set(tools) == set(TOOLS)
+    # SolvaPay's built-in tools sit next to the research tools.
+    assert set(tools) == {*TOOLS, "account", "activate_plan"}
     for name, required in TOOLS.items():
         assert tools[name].input_schema.get("required", []) == required
         assert "Paid tool" in (tools[name].description or "")

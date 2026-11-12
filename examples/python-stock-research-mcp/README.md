@@ -23,6 +23,11 @@ paywall, with a checkout link.
 
 Every call bills one unit, whatever its upstream fan-out.
 
+`create_solvapay_mcp_server` adds SolvaPay's built-in tools next to these, free
+to call: `account` (the customer's plan, balance and checkout or top-up link)
+and `activate_plan`, plus the `/upgrade`, `/manage_account`, `/topup` and
+`/activate_plan` prompts. A paywall message names `account` as the way to pay.
+
 ## Run it
 
 ```bash

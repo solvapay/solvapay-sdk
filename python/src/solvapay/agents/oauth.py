@@ -45,12 +45,16 @@ def protected_resource_metadata(
     return out
 
 
-def challenge_header(*, resource: str, description: str) -> str:
+def challenge_header(*, resource: str, description: str, metadata_url: str | None = None) -> str:
     """The ``WWW-Authenticate`` value hosts look for, with ``error``, ``error_description``,
-    the metadata URL and the one scope."""
+    the metadata URL (default: the path-suffixed form on the resource's origin) and the
+    one scope."""
     path = urlsplit(canonical_resource(resource)).path
     parts = urlsplit(resource)
-    metadata = f"{parts.scheme}://{parts.netloc}/.well-known/oauth-protected-resource{path}"
+    metadata = (
+        metadata_url
+        or f"{parts.scheme}://{parts.netloc}/.well-known/oauth-protected-resource{path}"
+    )
     quoted = description.replace("\\", "\\\\").replace('"', '\\"')
     return (
         f'Bearer error="invalid_token", error_description="{quoted}", '

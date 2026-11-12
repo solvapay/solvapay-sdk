@@ -67,6 +67,21 @@ with SolvaPay. A call over the customer's limit returns the paywall: a message
 naming the next step, with a checkout link. See
 [`examples/python-stock-research-mcp`](../examples/python-stock-research-mcp).
 
+The server also comes with SolvaPay's built-in tools, as the TypeScript server
+does: `account` shows the customer's plan, balance and usage with a checkout,
+top-up or account link (`view`: `checkout`, `account` or `topup`), and
+`activate_plan` activates a plan by `planRef`. The `/upgrade`,
+`/manage_account`, `/topup` and `/activate_plan` prompts and the
+`docs://solvapay/overview.md` resource come with them. Pass `views=[...]` to
+choose the views, or `views=[]` to leave `account` out.
+
+### Paid by agents
+
+`solvapay.agents.mcp.create_agent_mcp_route` serves an MCP server that SolvaPay
+agents pay for per call: each paid tool call is authorized with SolvaPay before
+it runs and completed at the cost the upstream reports. Install
+`solvapay[agents,mcp]`.
+
 ## Verify webhooks
 
 ```python
@@ -99,7 +114,7 @@ and the HTTP `status`; branch on those, not on the message.
 
 ## Same behaviour as the TypeScript SDK
 
-The paywall, its messages and webhook verification are checked against the
-TypeScript SDK on every change by a shared conformance suite
+The paywall, its messages, the `account` and `activate_plan` narration and
+webhook verification are checked against the TypeScript SDK on every change by a shared conformance suite
 ([`conformance/`](../conformance)). The API client is generated from the same
 spec as the TypeScript types ([`openapi/`](../openapi)).
