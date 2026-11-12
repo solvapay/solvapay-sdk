@@ -9,7 +9,7 @@ Normative payable-adapter behavior:
 
 ## Corpus
 
-22 suites, 140 JSON files. Counts below are the files on disk.
+22 suites, 146 JSON files. Counts below are the files on disk.
 
 The frozen replay lists are the authority for which of those files each
 language runner must include. They live in the sources named by
@@ -31,8 +31,8 @@ HTTP engine runners (`HTTP_ENGINE_FILES` in the same module) skip
 | `allow` | 8 | `registerPayable` |
 | `auth-gate` | 4 | `mcpAuthGate` |
 | `bearer-verify` | 6 | `mcpVerifyBearer` |
-| `bootstrap` | 2 | `mcpBootstrap` |
-| `builtin-tools` | 25 | `mcpCallBuiltinTool` |
+| `bootstrap` | 5 | `mcpBootstrap` |
+| `builtin-tools` | 28 | `mcpCallBuiltinTool` |
 | `config-log` | 1 | `mcpConfigLog` |
 | `csp` | 2 | `mcpMergeCsp` |
 | `customer-ref` | 2 | `registerPayable` |

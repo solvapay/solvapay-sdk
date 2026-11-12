@@ -10,7 +10,6 @@
           "isMetered": true
         },
         "usage": {
-          "used": 25,
           "periodStart": "2026-07-01T00:00:00Z",
           "periodEnd": "2026-08-01T00:00:00Z"
         }

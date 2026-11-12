@@ -5,10 +5,7 @@
     "fn": "projectUsageSnapshot",
     "args": {
       "activePurchase": {
-        "reference": "pur_1",
-        "usage": {
-          "used": 50
-        }
+        "reference": "pur_1"
       },
       "limits": {
         "meterName": "mtr_requests",

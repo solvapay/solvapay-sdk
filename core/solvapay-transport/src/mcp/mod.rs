@@ -627,9 +627,11 @@ impl SolvaPayClient {
                     purchase.get("purchases"),
                     Some(&params.product_ref),
                 );
-                let usage =
-                    serde_json::to_value(project_usage_snapshot(active_purchase.as_ref(), limits_ok))
-                        .unwrap_or(Value::Null);
+                let usage = serde_json::to_value(project_usage_snapshot(
+                    active_purchase.as_ref(),
+                    limits_ok,
+                ))
+                .unwrap_or(Value::Null);
                 let mut customer = json!({
                     "ref": customer_ref,
                     "email": trimmed_or_null(&purchase, "email"),

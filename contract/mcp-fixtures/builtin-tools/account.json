@@ -72,12 +72,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Upgrade — Demo**\n\nPlans available:\nPro · recurring\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)\nTo continue, call `account` with view: \"account\"."
-        },
-        {
-          "type": "resource_link",
-          "uri": "https://checkout.example/s",
-          "name": "Open checkout"
+          "text": "**Upgrade — Demo**\n\nPlans available:\nPro · recurring\nTo continue, call `account` with view: \"account\"."
         }
       ],
       "structuredContent": {
@@ -262,7 +257,7 @@
             "helperText": "Enter your EIN, e.g. 12-3456789"
           }
         },
-        "checkoutUrl": "https://checkout.example/s",
+        "checkoutUrl": null,
         "checkoutPurpose": null,
         "portalUrl": null,
         "autoRechargeUrl": null

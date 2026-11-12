@@ -1831,15 +1831,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -1847,13 +1840,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -1918,9 +1904,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -1933,8 +1916,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -2000,56 +1982,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -2539,15 +2471,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -2555,13 +2480,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -2626,9 +2544,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -2641,8 +2556,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -2708,56 +2622,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -3183,15 +3047,8 @@
                     "onExceed": {
                       "enum": [
                         "block",
-                        "throttle",
-                        "charge",
-                        "notify",
-                        "top_up",
-                        "auto_upgrade"
+                        "draw_credits"
                       ],
-                      "type": "string"
-                    },
-                    "onExceedPricingId": {
                       "type": "string"
                     },
                     "scope": {
@@ -3199,13 +3056,6 @@
                         "billing_period",
                         "lifetime",
                         "rolling_window"
-                      ],
-                      "type": "string"
-                    },
-                    "uiHint": {
-                      "enum": [
-                        "upgrade_prompt",
-                        "soft_warning"
                       ],
                       "type": "string"
                     },
@@ -3270,9 +3120,6 @@
                       "minimum": 1,
                       "type": "integer"
                     },
-                    "downgradeToPricingId": {
-                      "type": "string"
-                    },
                     "kind": {
                       "enum": [
                         "trial"
@@ -3285,8 +3132,7 @@
                     "onEnd": {
                       "enum": [
                         "convert",
-                        "cancel",
-                        "downgrade"
+                        "cancel"
                       ],
                       "type": "string"
                     }
@@ -3352,56 +3198,6 @@
                     "mode",
                     "value",
                     "duration"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "capUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "enum": [
-                        "rollover"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "maxCycles": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "meter": {
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "rateMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "treatment": {
-                      "enum": [
-                        "forfeit",
-                        "carry_forward",
-                        "credit_units",
-                        "credit_money"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "meter",
-                    "treatment"
                   ],
                   "type": "object"
                 },
@@ -4024,7 +3820,8 @@
               "customer_not_found",
               "no_active_purchase",
               "plan_not_credit_based",
-              "plan_billed_at_period_end"
+              "not_credit_drawn",
+              "within_included"
             ],
             "example": "duplicate",
             "type": "string"
@@ -4629,15 +4426,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -4645,13 +4435,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -4716,9 +4499,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -4731,8 +4511,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -4798,56 +4577,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -5433,15 +5162,11 @@
             "type": "string"
           },
           "needsTopUp": {
-            "description": "Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`.",
-            "type": "boolean"
-          },
-          "needsUpgrade": {
-            "description": "Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`.",
+            "description": "Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit.",
             "type": "boolean"
           },
           "overage": {
-            "description": "Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`.",
+            "description": "Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`.",
             "type": "boolean"
           },
           "paywallReason": {
@@ -5485,14 +5210,6 @@
             "description": "Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).",
             "example": 997,
             "type": "number"
-          },
-          "throttled": {
-            "description": "Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`.",
-            "type": "boolean"
-          },
-          "upgraded": {
-            "description": "The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded.",
-            "type": "boolean"
           },
           "used": {
             "description": "Consumed usage units this period. Present only when the backend measured a finite cap.",
@@ -5733,15 +5450,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -5749,13 +5459,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -5820,9 +5523,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -5835,8 +5535,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -5902,56 +5601,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -6899,15 +6548,8 @@
                         "onExceed": {
                           "enum": [
                             "block",
-                            "throttle",
-                            "charge",
-                            "notify",
-                            "top_up",
-                            "auto_upgrade"
+                            "draw_credits"
                           ],
-                          "type": "string"
-                        },
-                        "onExceedPricingId": {
                           "type": "string"
                         },
                         "scope": {
@@ -6915,13 +6557,6 @@
                             "billing_period",
                             "lifetime",
                             "rolling_window"
-                          ],
-                          "type": "string"
-                        },
-                        "uiHint": {
-                          "enum": [
-                            "upgrade_prompt",
-                            "soft_warning"
                           ],
                           "type": "string"
                         },
@@ -6986,9 +6621,6 @@
                           "minimum": 1,
                           "type": "integer"
                         },
-                        "downgradeToPricingId": {
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "trial"
@@ -7001,8 +6633,7 @@
                         "onEnd": {
                           "enum": [
                             "convert",
-                            "cancel",
-                            "downgrade"
+                            "cancel"
                           ],
                           "type": "string"
                         }
@@ -7068,56 +6699,6 @@
                         "mode",
                         "value",
                         "duration"
-                      ],
-                      "type": "object"
-                    },
-                    {
-                      "properties": {
-                        "capUnits": {
-                          "exclusiveMinimum": false,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "kind": {
-                          "enum": [
-                            "rollover"
-                          ],
-                          "type": "string"
-                        },
-                        "label": {
-                          "type": "string"
-                        },
-                        "maxCycles": {
-                          "exclusiveMinimum": false,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "meter": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
-                        "rateMinor": {
-                          "exclusiveMinimum": false,
-                          "minimum": 0,
-                          "type": "integer"
-                        },
-                        "treatment": {
-                          "enum": [
-                            "forfeit",
-                            "carry_forward",
-                            "credit_units",
-                            "credit_money"
-                          ],
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "kind",
-                        "meter",
-                        "treatment"
                       ],
                       "type": "object"
                     },
@@ -9173,10 +8754,10 @@
           "usage": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/UsageBillingDto"
+                "$ref": "#/components/schemas/SdkUsagePeriodDto"
               }
             ],
-            "description": "Usage billing state for usage-based plans"
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`"
           }
         },
         "required": [
@@ -9189,6 +8770,21 @@
           "isRecurring",
           "createdAt"
         ],
+        "type": "object"
+      },
+      "SdkUsagePeriodDto": {
+        "properties": {
+          "periodEnd": {
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`",
+            "example": "2025-11-01T00:00:00Z",
+            "type": "string"
+          },
+          "periodStart": {
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`",
+            "example": "2025-10-01T00:00:00Z",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "SelectCustomerSessionProductDto": {
@@ -10687,15 +10283,8 @@
                     "onExceed": {
                       "enum": [
                         "block",
-                        "throttle",
-                        "charge",
-                        "notify",
-                        "top_up",
-                        "auto_upgrade"
+                        "draw_credits"
                       ],
-                      "type": "string"
-                    },
-                    "onExceedPricingId": {
                       "type": "string"
                     },
                     "scope": {
@@ -10703,13 +10292,6 @@
                         "billing_period",
                         "lifetime",
                         "rolling_window"
-                      ],
-                      "type": "string"
-                    },
-                    "uiHint": {
-                      "enum": [
-                        "upgrade_prompt",
-                        "soft_warning"
                       ],
                       "type": "string"
                     },
@@ -10774,9 +10356,6 @@
                       "minimum": 1,
                       "type": "integer"
                     },
-                    "downgradeToPricingId": {
-                      "type": "string"
-                    },
                     "kind": {
                       "enum": [
                         "trial"
@@ -10789,8 +10368,7 @@
                     "onEnd": {
                       "enum": [
                         "convert",
-                        "cancel",
-                        "downgrade"
+                        "cancel"
                       ],
                       "type": "string"
                     }
@@ -10856,56 +10434,6 @@
                     "mode",
                     "value",
                     "duration"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "capUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "enum": [
-                        "rollover"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "maxCycles": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "meter": {
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "rateMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "treatment": {
-                      "enum": [
-                        "forfeit",
-                        "carry_forward",
-                        "credit_units",
-                        "credit_money"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "meter",
-                    "treatment"
                   ],
                   "type": "object"
                 },
@@ -14349,7 +13877,7 @@
         ]
       },
       "post": {
-        "description": "Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.",
+        "description": "Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.",
         "operationId": "PlanSdkController_createPlan",
         "parameters": [
           {

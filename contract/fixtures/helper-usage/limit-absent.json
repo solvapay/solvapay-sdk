@@ -8,9 +8,6 @@
         "reference": "pur_1",
         "planSnapshot": {
           "isMetered": false
-        },
-        "usage": {
-          "used": 5
         }
       }
     }
@@ -19,7 +16,7 @@
     "result": {
       "meterRef": null,
       "total": null,
-      "used": 5,
+      "used": null,
       "remaining": null,
       "percentUsed": null,
       "purchaseRef": "pur_1"

@@ -14,31 +14,46 @@
       "method": "GET",
       "path": "/v1/sdk/platform-config",
       "status": 200,
-      "body": { "stripePublishableKey": "pk_test" }
+      "body": {
+        "stripePublishableKey": "pk_test"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/merchant",
       "status": 200,
-      "body": { "displayName": "Acme" }
+      "body": {
+        "displayName": "Acme"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/products/prd_demo",
       "status": 200,
-      "body": { "name": "Demo" }
+      "body": {
+        "name": "Demo"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/products/prd_demo/plans",
       "status": 200,
-      "body": { "plans": [{ "name": "Pro" }] }
+      "body": {
+        "plans": [
+          {
+            "name": "Pro"
+          }
+        ]
+      }
     },
     {
       "method": "POST",
       "path": "/v1/sdk/checkout-sessions",
       "status": 200,
-      "body": { "checkoutUrl": "https://checkout.example/s", "sessionId": "cs_1" }
+      "body": {
+        "checkoutUrl": "https://checkout.example/s",
+        "sessionId": "cs_1"
+      }
     }
   ],
   "expect": {
@@ -72,10 +87,6 @@
         }
       ],
       "customer": null,
-      "checkoutUrl": "https://checkout.example/s",
-      "checkoutPurpose": null,
-      "portalUrl": null,
-      "autoRechargeUrl": null,
       "taxIdFields": {
         "AT": {
           "label": "VAT ID",
@@ -153,7 +164,7 @@
           "helperText": "Enter your full VAT ID including the country code, e.g. IT12345678912"
         },
         "JP": {
-          "label": "Registration number (T\u014droku Bang\u014d)",
+          "label": "Registration number (Tōroku Bangō)",
           "example": "T1234567891234",
           "helperText": "Enter your tax ID, e.g. T1234567891234"
         },
@@ -227,7 +238,11 @@
           "example": "12-3456789",
           "helperText": "Enter your EIN, e.g. 12-3456789"
         }
-      }
+      },
+      "checkoutUrl": null,
+      "checkoutPurpose": null,
+      "portalUrl": null,
+      "autoRechargeUrl": null
     }
   }
 }
