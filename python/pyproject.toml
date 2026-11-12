@@ -28,7 +28,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-mcp = ["mcp>=2.3,<3", "starlette>=0.40"]
+mcp = [
+    "mcp>=2.3,<3",
+    "starlette>=0.40",
+]
 agents = ["pyjwt[crypto]>=2.9,<3"]
 
 [project.urls]

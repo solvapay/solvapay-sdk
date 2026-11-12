@@ -56,12 +56,13 @@ class FreeLimit:
     ``window_days``.
     """
 
-    meter: str
     cap: int
     scope: Literal["rolling_window", "lifetime"]
+    meter: str = "free-requests"
     window_days: int | None = None
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "meter", self.meter.lower())
         if not re.fullmatch(FREE_METER_PATTERN, self.meter):
             raise SolvaPayError(
                 f"Free meter {self.meter!r} must match {FREE_METER_PATTERN}",
