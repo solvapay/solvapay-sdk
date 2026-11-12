@@ -172,6 +172,9 @@ impl ClientShell {
     /// Builds a shell with the contract retry policy (2 retries / 500 ms / fixed),
     /// a real sleeper, the default base URL, and real clock/RNG.
     ///
+    /// The policy applies only to requests that are safe to replay: reads, and
+    /// writes that carry an `Idempotency-Key`. Other writes make one attempt.
+    ///
     /// # Arguments
     ///
     /// * `transport` - Dyn transport handle.
@@ -349,6 +352,7 @@ impl ClientShell {
         }
 
         let http_req = self.build_http_request(&req)?;
+        let replay_safe = is_replay_safe(&req);
         let mut attempt: u32 = 0;
 
         loop {
@@ -362,7 +366,10 @@ impl ClientShell {
                             ..
                         }
                     );
-                    if !retryable {
+                    // A transport error does not say whether the backend acted on
+                    // the request. Replaying a write that carries no idempotency
+                    // key can double-charge or double-meter, so it gets one attempt.
+                    if !retryable || !replay_safe {
                         return Err(err);
                     }
                     match self.retry_policy.next_delay(attempt) {
@@ -458,6 +465,16 @@ pub fn mulberry32(seed: u32) -> impl Fn() -> f64 + Send + Sync {
         t ^= t.wrapping_add(js_imul(t ^ (t >> 7), t | 61));
         f64::from(t ^ (t >> 14)) / 4_294_967_296.0
     }
+}
+
+/// Whether a request may be sent again after a retryable transport error.
+///
+/// True for reads (`GET`), which have no side effect, and for any request that
+/// carries an `Idempotency-Key`: the header is rendered once and every attempt
+/// resends the same key, so the backend deduplicates. A write without a key
+/// (`trackUsage`, `processPaymentIntent`, `activatePlan`, …) is never replayed.
+fn is_replay_safe(req: &ShellRequest) -> bool {
+    matches!(req.method, Method::Get) || !matches!(req.idempotency, Idempotency::None)
 }
 
 /// Renders an auto idempotency key from a manifest format.
@@ -1196,6 +1213,93 @@ mod tests {
                 }
                 other => panic!("expected Api error, got {other:?}"),
             }
+        }
+
+        /// Regression: the shell replayed every request on a retryable transport
+        /// error, so a write whose response was lost could be charged or metered
+        /// twice. A write without an idempotency key makes exactly one attempt.
+        #[tokio::test]
+        async fn unkeyed_write_is_never_replayed() {
+            for method in [Method::Post, Method::Put, Method::Patch, Method::Delete] {
+                let mock = MockTransport::new(vec![
+                    Err(SdkError::transport("connection reset", true)),
+                    Ok(HttpResponse {
+                        status: 200,
+                        body: br#"{"ok":true}"#.to_vec(),
+                        content_type: None,
+                    }),
+                ]);
+                let delays = Arc::new(Mutex::new(Vec::new()));
+                let shell = shell_with_mock(Arc::clone(&mock), "sk_test")
+                    .with_base_url("http://mock")
+                    .with_retry_policy(RetryPolicy::default())
+                    .with_sleeper(recording_sleeper(Arc::clone(&delays)));
+                let err = shell
+                    .execute(ShellRequest {
+                        method,
+                        path: "/v1/sdk/usages".to_owned(),
+                        query: BTreeMap::new(),
+                        body: Some(json!({ "units": 1 })),
+                        idempotency: Idempotency::None,
+                        error_template: "failed ({status}): {body}",
+                    })
+                    .await
+                    .expect_err("first transport error must surface");
+                assert!(matches!(
+                    err,
+                    SdkError::Transport {
+                        retryable: true,
+                        ..
+                    }
+                ));
+                assert_eq!(mock.recorded().len(), 1, "{method:?} was replayed");
+                assert!(delays.lock().expect("lock").is_empty());
+            }
+        }
+
+        /// A write that carries an idempotency key is replayed, and every attempt
+        /// sends the same key so the backend can deduplicate.
+        #[tokio::test]
+        async fn keyed_write_is_replayed_with_the_same_key() {
+            let mock = MockTransport::new(vec![
+                Err(SdkError::transport("connection reset", true)),
+                Ok(HttpResponse {
+                    status: 200,
+                    body: br#"{"ok":true}"#.to_vec(),
+                    content_type: None,
+                }),
+            ]);
+            let delays = Arc::new(Mutex::new(Vec::new()));
+            let shell = shell_with_mock(Arc::clone(&mock), "sk_test")
+                .with_base_url("http://mock")
+                .with_retry_policy(RetryPolicy::default())
+                .with_sleeper(recording_sleeper(Arc::clone(&delays)));
+            let value = shell
+                .execute(ShellRequest {
+                    method: Method::Post,
+                    path: "/v1/sdk/payment-intents".to_owned(),
+                    query: BTreeMap::new(),
+                    body: Some(json!({ "planRef": "pln_1" })),
+                    idempotency: Idempotency::Auto {
+                        format: "payment-{planRef}-{epochMs}-{random9}",
+                        vars: BTreeMap::from([("planRef", "pln_1".to_owned())]),
+                    },
+                    error_template: "failed ({status}): {body}",
+                })
+                .await
+                .expect("replayed to success");
+            assert_eq!(value, json!({"ok": true}));
+            let recorded = mock.recorded();
+            assert_eq!(recorded.len(), 2);
+            let key_of = |req: &crate::http::HttpRequest| {
+                req.headers
+                    .iter()
+                    .find(|(n, _)| n.as_str() == "idempotency-key")
+                    .map(|(_, v)| v.clone())
+            };
+            let first = key_of(&recorded[0]).expect("first attempt carries a key");
+            assert_eq!(key_of(&recorded[1]).as_deref(), Some(first.as_str()));
+            assert_eq!(*delays.lock().expect("lock"), vec![500]);
         }
 
         #[tokio::test]

@@ -29,7 +29,10 @@ pub(crate) struct CachedVerdict {
 pub(crate) struct AuthCaches {
     /// JWKS URL → (document, expiry ms).
     jwks: Mutex<HashMap<String, (Value, u64)>>,
-    /// JWT `jti` → cached allow verdict.
+    /// Verified token (bound to its issuer and audience) → cached allow verdict.
+    ///
+    /// Keyed by the whole presented token, never by a claim decoded from it:
+    /// claims are attacker-controlled until the signature has been checked.
     verdicts: Mutex<HashMap<String, CachedVerdict>>,
 }
 
@@ -68,10 +71,10 @@ impl AuthCaches {
         Ok(())
     }
 
-    /// Returns a cached allow verdict for `jti` when it has not expired.
+    /// Returns a cached allow verdict for `key` when it has not expired.
     pub(crate) fn get_verdict(
         &self,
-        jti: &str,
+        key: &str,
         now_ms: u64,
     ) -> Result<Option<CachedVerdict>, SdkError> {
         let guard = self
@@ -79,14 +82,14 @@ impl AuthCaches {
             .lock()
             .map_err(|_| SdkError::transport("auth verdict cache poisoned", false))?;
         Ok(guard
-            .get(jti)
+            .get(key)
             .and_then(|hit| (hit.expires_at_ms > now_ms).then(|| hit.clone())))
     }
 
     /// Caches an allow verdict, capped by [`VERDICT_TTL_CEILING_MS`] and JWT `exp`.
     pub(crate) fn put_verdict(
         &self,
-        jti: String,
+        key: String,
         customer_ref: String,
         claims: Value,
         now_ms: u64,
@@ -105,8 +108,10 @@ impl AuthCaches {
             .verdicts
             .lock()
             .map_err(|_| SdkError::transport("auth verdict cache poisoned", false))?;
+        // Drop expired verdicts so the map stays bounded by live tokens.
+        guard.retain(|_, hit| hit.expires_at_ms > now_ms);
         guard.insert(
-            jti,
+            key,
             CachedVerdict {
                 customer_ref,
                 claims,

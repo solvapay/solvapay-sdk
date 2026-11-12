@@ -40,10 +40,14 @@ pub(crate) async fn resolve(
     let expected_issuer = origin.to_owned();
     let expected_audience = mcp_resource_identifier(origin, params.mcp_path.as_deref());
 
-    if let Some(jti) = structural_jti(&token) {
-        if let Some(hit) = client.auth_caches().get_verdict(&jti, now_ms)? {
-            return Ok(allow_from_claims(&token, hit.claims, hit.customer_ref));
-        }
+    // A verdict is reused only for the exact token that was verified, in the
+    // exact issuer / audience context it was verified against. The key is the
+    // presented token itself, never an unverified claim read out of it: a forged
+    // token that copies a cached `jti` differs in its signature bytes, misses
+    // the cache, and goes through full verification.
+    let verdict_key = verdict_cache_key(&token, &expected_issuer, &expected_audience);
+    if let Some(hit) = client.auth_caches().get_verdict(&verdict_key, now_ms)? {
+        return Ok(allow_from_claims(&token, hit.claims, hit.customer_ref));
     }
 
     let material = resolve_material(client, &params, origin, now_ms).await?;
@@ -61,7 +65,7 @@ pub(crate) async fn resolve(
                 claims,
                 customer_ref,
             } => {
-                cache_verdict(client, &claims, &customer_ref, now_ms)?;
+                cache_verdict(client, &verdict_key, &claims, &customer_ref, now_ms)?;
                 return Ok(allow_from_claims(&token, claims, customer_ref));
             }
             VerifyBearerResult::Unauthorized { .. } => {
@@ -81,7 +85,7 @@ pub(crate) async fn resolve(
                 return Ok(challenge_value(&params));
             }
             let customer_ref = customer_ref_from_claims(&claims, None).unwrap_or(sub);
-            cache_verdict(client, &claims, &customer_ref, now_ms)?;
+            cache_verdict(client, &verdict_key, &claims, &customer_ref, now_ms)?;
             Ok(allow_from_claims(&token, claims, customer_ref))
         }
     }
@@ -198,22 +202,22 @@ fn remote_claims_ok(
     claims.get("token_use").and_then(Value::as_str) == Some(TOKEN_USE_MCP_ACCESS)
 }
 
+/// Cache key for a verified bearer: the full token bound to the issuer and
+/// audience it was verified against. NUL cannot appear in a JWT or a URL, so
+/// the three parts cannot run into each other.
+fn verdict_cache_key(token: &str, expected_issuer: &str, expected_audience: &str) -> String {
+    format!("{token}\0{expected_issuer}\0{expected_audience}")
+}
+
 fn cache_verdict(
     client: &SolvaPayClient,
+    verdict_key: &str,
     claims: &Value,
     customer_ref: &str,
     now_ms: u64,
 ) -> Result<(), SdkError> {
-    let Some(jti) = claims
-        .get("jti")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    else {
-        return Ok(());
-    };
     client.auth_caches().put_verdict(
-        jti.to_owned(),
+        verdict_key.to_owned(),
         customer_ref.to_owned(),
         claims.clone(),
         now_ms,
@@ -334,15 +338,6 @@ fn scopes_from_claims(claims: &Value) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn structural_jti(token: &str) -> Option<String> {
-    decode_jwt_payload(token)?
-        .get("jti")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
 }
 
 fn decode_jwt_payload(token: &str) -> Option<Value> {

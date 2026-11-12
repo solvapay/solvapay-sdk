@@ -28,6 +28,9 @@ type wireRequest struct {
 type wireResponse struct {
 	Status uint16 `json:"status"`
 	Body   string `json:"body"`
+	// ContentType is the response Content-Type header; the guest reads it to
+	// tell JSON bodies from text ones. Omitted when the backend sent none.
+	ContentType string `json:"contentType,omitempty"`
 }
 
 // registerHost instantiates the `solvapay_host` module exporting transport_send.
@@ -104,7 +107,8 @@ func performRequest(ctx context.Context, reqJSON []byte) ([]byte, error) {
 	}
 
 	return json.Marshal(wireResponse{
-		Status: uint16(resp.StatusCode),
-		Body:   string(payload),
+		Status:      uint16(resp.StatusCode),
+		Body:        string(payload),
+		ContentType: resp.Header.Get("Content-Type"),
 	})
 }

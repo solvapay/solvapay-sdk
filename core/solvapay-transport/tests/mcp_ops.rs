@@ -14,7 +14,8 @@ use serde_json::{json, Value};
 use solvapay_mcp_core::{EngineConfig, McpAuthMode};
 use solvapay_transport::{
     ClientShell, McpBootstrapParams, McpDispatchParams, McpOauthConfig, McpOauthRequestParams,
-    McpReadResourceParams, McpToolConfig, ReqwestTransport, SharedTransport, SolvaPayClient,
+    McpReadResourceParams, McpResolveAuthParams, McpToolConfig, ReqwestTransport, SharedTransport,
+    SolvaPayClient,
 };
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -238,4 +239,81 @@ async fn fetch_jwks_is_unauthenticated_get_and_requires_keys() {
         "{}",
         missing.message()
     );
+}
+
+const HS256_SECRET: &str = "solvapay-mcp-fixture-hs256-secret-32b!!";
+/// Signed with [`HS256_SECRET`]; `sub: cus_1`, `jti: jti_shared`.
+const VALID_JTI_TOKEN: &str = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDAsImp0aSI6Imp0aV9zaGFyZWQifQ.nb-j3Afl9NIVcN8GunYH7QuWcJzGOduTG-t5ipVvIy0";
+/// Same `jti`, `sub: cus_attacker`, and a signature the secret never produced.
+const FORGED_JTI_TOKEN: &str = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfYXR0YWNrZXIiLCJpc3MiOiJodHRwczovL21jcC5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiZXhwIjo0MTAyNDQ0ODAwLCJqdGkiOiJqdGlfc2hhcmVkIn0.Zm9yZ2VkLXNpZ25hdHVyZS1ub3QtZnJvbS10aGUtc2VjcmV0";
+
+fn resolve_auth_params(token: &str) -> McpResolveAuthParams {
+    McpResolveAuthParams {
+        rpc_method: Some("tools/call".to_owned()),
+        auth_header: Some(format!("Bearer {token}")),
+        auth_mode: Some(McpAuthMode::ToolsCall),
+        public_base_url: "https://mcp.example.com".to_owned(),
+        mcp_path: None,
+        json_rpc_id: Some(json!(1)),
+        hs256_secret: Some(HS256_SECRET.to_owned()),
+        jwks_json: None,
+    }
+}
+
+/// Regression: the verdict cache was keyed by the token's unverified `jti`, so
+/// a forged token that copied a cached `jti` was allowed for up to 60 seconds
+/// as the customer of the genuine token.
+#[tokio::test]
+async fn forged_token_reusing_a_cached_jti_is_rejected() {
+    let server = MockServer::start().await;
+    let sp = client(&server);
+
+    let first = sp
+        .mcp_resolve_auth(resolve_auth_params(VALID_JTI_TOKEN))
+        .await
+        .expect("valid token resolves");
+    assert_eq!(first["kind"], "allow", "{first}");
+    assert_eq!(first["customerRef"], "cus_1", "{first}");
+
+    let forged = sp
+        .mcp_resolve_auth(resolve_auth_params(FORGED_JTI_TOKEN))
+        .await
+        .expect("forged token resolves to a verdict");
+    assert_ne!(
+        forged["kind"], "allow",
+        "forged token must not be allowed: {forged}"
+    );
+    assert!(
+        forged.get("customerRef").is_none_or(Value::is_null),
+        "{forged}"
+    );
+
+    // The genuine token is still served, now from the cache.
+    let again = sp
+        .mcp_resolve_auth(resolve_auth_params(VALID_JTI_TOKEN))
+        .await
+        .expect("valid token resolves again");
+    assert_eq!(again["kind"], "allow", "{again}");
+    assert_eq!(again["customerRef"], "cus_1", "{again}");
+}
+
+/// A cached verdict is bound to the audience it was verified against.
+#[tokio::test]
+async fn cached_verdict_does_not_cross_audiences() {
+    let server = MockServer::start().await;
+    let sp = client(&server);
+
+    let first = sp
+        .mcp_resolve_auth(resolve_auth_params(VALID_JTI_TOKEN))
+        .await
+        .expect("valid token resolves");
+    assert_eq!(first["kind"], "allow", "{first}");
+
+    let mut other = resolve_auth_params(VALID_JTI_TOKEN);
+    other.public_base_url = "https://other.example.com".to_owned();
+    let crossed = sp
+        .mcp_resolve_auth(other)
+        .await
+        .expect("token resolves to a verdict");
+    assert_ne!(crossed["kind"], "allow", "{crossed}");
 }
