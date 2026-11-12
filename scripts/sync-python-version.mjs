@@ -9,7 +9,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const version = JSON.parse(readFileSync(join(root, 'packages/server/package.json'), 'utf-8')).version
+const version = JSON.parse(
+  readFileSync(join(root, 'packages/server/package.json'), 'utf-8'),
+).version
 
 function replaceOnce(file, pattern, replacement) {
   const path = join(root, file)

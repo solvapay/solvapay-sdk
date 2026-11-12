@@ -31,7 +31,9 @@ const lines = [
   '"""',
   '',
   'PREFIXES: dict[str, str] = {',
-  ...Object.entries(prefixes).map(([code, prefix]) => `    ${JSON.stringify(code)}: ${JSON.stringify(prefix)},`),
+  ...Object.entries(prefixes).map(
+    ([code, prefix]) => `    ${JSON.stringify(code)}: ${JSON.stringify(prefix)},`,
+  ),
   '}',
   '',
 ]
