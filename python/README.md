@@ -26,14 +26,16 @@ from solvapay import PaywallError, create_solvapay
 
 solvapay = create_solvapay()
 
+
 @solvapay.payable()
 async def summarise(text: str, *, customer_ref: str) -> str:
     return text[:100]
 
+
 try:
     summary = await summarise("...", customer_ref="user_123")
 except PaywallError as error:
-    print(error.gate["message"])   # what the customer should see, with a checkout link
+    print(error.gate["message"])  # what the customer should see, with a checkout link
 ```
 
 `customer_ref` is your own user id: SolvaPay creates the customer on first use.
@@ -50,12 +52,14 @@ mcp = create_solvapay_mcp_server(
     public_base_url="https://research.example.com",
 )
 
+
 async def quote(symbol: str, ctx: ResponseContext):
     return ctx.respond({"symbol": symbol, "price": 101.5})
 
+
 mcp.register_payable("quote", handler=quote, description="Latest price for a symbol.")
 
-app = mcp.http_app()   # serve with uvicorn; the MCP endpoint is /mcp
+app = mcp.http_app()  # serve with uvicorn; the MCP endpoint is /mcp
 ```
 
 Customers sign in with SolvaPay over OAuth, and every bearer token is verified
@@ -70,7 +74,7 @@ from solvapay import SolvaPayError, verify_webhook
 
 try:
     event = verify_webhook(
-        body=raw_body,                                  # bytes or str, exactly as received
+        body=raw_body,  # bytes or str, exactly as received
         signature=request.headers["sv-signature"],
         secret=os.environ["SOLVAPAY_WEBHOOK_SECRET"],
     )
