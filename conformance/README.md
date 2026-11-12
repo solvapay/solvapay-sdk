@@ -17,6 +17,7 @@ conformance/
   case.schema.json           # the format of a case
   cases/<suite>/<case>.json  # one input and its expected outcome
   runners/typescript/        # runs every case against @solvapay/server
+python/conformance_runner/   # runs every case against the Python package
 ```
 
 Each language has a thin runner that reads `cases/`, maps each case's `fn` to
@@ -79,5 +80,14 @@ change shows in review.
 
 ## Known divergences
 
-None yet. A deliberate difference between SDKs is listed here with its reason,
-never left as a failing or skipped case.
+A deliberate difference between SDKs is listed here with its reason, never left
+as a failing or skipped case. None of these changes a conformance case's
+outcome; they are in code the cases do not reach (customer resolution, errors).
+
+| Python does                                                                                               | TypeScript does                                                                      | Why                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tells errors apart by `status` and `code`                                                                 | Matches on message text (`includes('404')`, `'already exists'`, `'email'`)           | Messages are for people and change.                                                                                                                                                                              |
+| Fails on a customer lookup error other than 404                                                           | Logs it and goes on to create a customer                                             | A failed lookup followed by a create can duplicate the customer.                                                                                                                                                 |
+| Resolves a 409 on customer creation with one lookup by `externalRef`, else fails with `customer_conflict` | Also looks up by email, backfills `externalRef`, then retries with a generated email | The platform now links an email-matched customer itself when `externalRef` is sent, so a 409 means the email belongs to another account. A retry with a new email creates a second customer for the same person. |
+| Keeps the customer cache on the client instance                                                           | Shares one process-wide cache keyed by `externalRef` alone                           | Two clients with different keys in one process must never share a customer.                                                                                                                                      |
+| Retries a usage event only on 404                                                                         | Retries only when the message says "Customer not found"                              | Same intent, read from the status.                                                                                                                                                                               |
