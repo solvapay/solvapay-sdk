@@ -68,11 +68,11 @@ fn client_symbols(ir: &Ir) -> Vec<&dto_gen::ir::IrBindingSymbol> {
 }
 
 #[test]
-fn go_client_exports_full_45_op_surface() {
+fn go_client_exports_full_54_op_surface() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::Go).expect("emit go");
     let symbols = client_symbols(&ir);
-    assert_eq!(symbols.len(), 45, "expected 45 client binding symbols");
+    assert_eq!(symbols.len(), 54, "expected 54 client binding symbols");
 
     for sym in &symbols {
         let export = format!("sv_{}(", sym.rust_fn_name);

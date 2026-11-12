@@ -254,7 +254,7 @@ High-level groups:
 | Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`)                                               |
 | Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                                                                                                   |
 | Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`)            |
-| C ABI                | Generated 45-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
+| C ABI                | Generated 54-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
 
 Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`).
 

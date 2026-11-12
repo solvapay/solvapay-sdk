@@ -890,7 +890,7 @@ describe('contract fixtures', () => {
       operations: Record<string, { names: { ts: string } }>
     }
     const operationIds = Object.keys(manifest.operations)
-    expect(operationIds.length).toBe(45)
+    expect(operationIds.length).toBe(54)
 
     const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
     const missing: string[] = []
