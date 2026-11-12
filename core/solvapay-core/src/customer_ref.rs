@@ -47,10 +47,55 @@ pub fn resolve_customer_ref(
     .unwrap_or_else(|| ANONYMOUS_CUSTOMER_REF.to_owned())
 }
 
+/// Narrow a resolved ref to a signed-in customer, or `None`.
+///
+/// `anonymous` is the sentinel [`resolve_customer_ref`] yields when no
+/// identity was supplied. The backend has no such customer, so the MCP
+/// surfaces must not let it reach a customer-scoped read or a checkout
+/// session. Empty and whitespace-only refs are rejected the same way; a
+/// real ref is returned trimmed.
+///
+/// # Arguments
+///
+/// * `customer_ref` - Resolved ref, an integrator-supplied ref, or `None`.
+///
+/// # Returns
+///
+/// The trimmed ref of a signed-in customer, else `None`.
+#[must_use]
+pub fn signed_in_customer_ref(customer_ref: Option<&str>) -> Option<String> {
+    let trimmed = customer_ref?.trim();
+    if trimmed.is_empty() || trimmed == ANONYMOUS_CUSTOMER_REF {
+        return None;
+    }
+    Some(trimmed.to_owned())
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn signed_in_ref_is_trimmed() {
+        assert_eq!(
+            signed_in_customer_ref(Some("  cus_42 ")).as_deref(),
+            Some("cus_42")
+        );
+    }
+
+    #[test]
+    fn anonymous_sentinel_is_not_signed_in() {
+        assert_eq!(signed_in_customer_ref(Some("anonymous")), None);
+        assert_eq!(signed_in_customer_ref(Some(" anonymous ")), None);
+    }
+
+    #[test]
+    fn empty_or_absent_ref_is_not_signed_in() {
+        assert_eq!(signed_in_customer_ref(None), None);
+        assert_eq!(signed_in_customer_ref(Some("")), None);
+        assert_eq!(signed_in_customer_ref(Some("   ")), None);
+    }
 
     #[test]
     fn hook_wins() {

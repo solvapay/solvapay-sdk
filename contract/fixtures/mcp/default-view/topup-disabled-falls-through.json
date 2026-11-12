@@ -1,0 +1,20 @@
+{
+  "suite": "mcp",
+  "case": "default-view-topup-disabled-falls-through",
+  "input": {
+    "fn": "deriveDefaultView",
+    "args": {
+      "input": {
+        "hasActivePlan": true,
+        "nextAction": "topup",
+        "enabledViews": [
+          "checkout",
+          "account"
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": "checkout"
+  }
+}

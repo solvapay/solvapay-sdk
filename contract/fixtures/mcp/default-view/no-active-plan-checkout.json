@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "default-view-no-active-plan-checkout",
+  "input": {
+    "fn": "deriveDefaultView",
+    "args": {
+      "input": {
+        "hasActivePlan": false,
+        "nextAction": "topup"
+      }
+    }
+  },
+  "expect": {
+    "result": "checkout"
+  }
+}

@@ -307,6 +307,94 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('To continue, call `account` with view: "checkout".')
     expect(text).not.toMatch(/Commands:\s*`\//)
   })
+
+  it('names the signed-in email and customer ref when there is no plan', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: 'demo@acme.test',
+          purchase: { customerRef: 'cus_1', purchases: [] },
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: demo@acme.test · cus_1')
+  })
+
+  it('names the signed-in email and customer ref on an active plan', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: 'demo@acme.test',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                status: 'active',
+                productRef: 'prd_x',
+                planSnapshot: {
+                  name: 'Unlimited',
+                  isMetered: false,
+                  price: 50000,
+                  currency: 'USD',
+                  options: [cycle(), flat(50000)],
+                },
+                billingCycle: 'monthly',
+                endDate: '2026-05-01T00:00:00Z',
+              },
+            ],
+          },
+          paymentMethod: null,
+          balance: { ...usdBalance, credits: 100 },
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: demo@acme.test · cus_1')
+  })
+
+  it('names the customer ref alone when the purchase snapshot has no email', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: cus_1')
+    expect(text).not.toContain('·')
+  })
+
+  it('omits the identity row when there is no customer', () => {
+    const { text } = narrateManageAccount(basePayload())
+    expect(text).not.toContain('Signed in as')
+  })
+
+  it('names the customer ref when the email is null', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          email: null,
+          name: null,
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+        } as never,
+      }),
+    )
+    expect(text).toContain('Signed in as: cus_1')
+    expect(text).not.toContain('null')
+  })
 })
 
 describe('narrateUpgrade', () => {

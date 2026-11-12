@@ -54,7 +54,7 @@ def billing_cycle(priced: Any | None = None) -> Any:
 
 def build_customer_snapshot(customer_ref: str, limits: Any | None = None) -> Any:
     """Build the merchant-facing customer snapshot from a limits body.
-    @returns Customer snapshot with defaults applied, including throttled and overage.
+    @returns Customer snapshot with defaults applied, including overage.
     """
     payload: dict[str, Any] = {}
     payload["customerRef"] = customer_ref

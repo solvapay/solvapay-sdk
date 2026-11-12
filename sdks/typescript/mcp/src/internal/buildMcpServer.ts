@@ -458,7 +458,7 @@ export function installEngineHandlers(
     const uiMeta = {
       ui: {
         csp: bundle.csp,
-        prefersBorder: false,
+        prefersBorder: true,
       },
     }
     const resources = listed.resources.map(item => {
@@ -490,7 +490,7 @@ export function installEngineHandlers(
             _meta: {
               ui: {
                 ...(options.resourceCsp !== undefined ? { csp: options.resourceCsp } : {}),
-                prefersBorder: false,
+                prefersBorder: true,
               },
             },
           },

@@ -414,7 +414,7 @@ export class SolvaPayPaywall {
         driverState: state,
         requestId: String(action.requestId),
         ...(action.consequence !== undefined
-          ? { consequence: action.consequence as 'throttled' | 'overage' }
+          ? { consequence: action.consequence as 'overage' }
           : {}),
       }
     }

@@ -628,7 +628,7 @@ def billing_cycle(priced: object | None = None) -> object | None:
     ...
 def build_customer_snapshot(customer_ref: str, limits: object | None = None) -> object:
     """Build the merchant-facing customer snapshot from a limits body.
-    @returns Customer snapshot with defaults applied, including throttled and overage.
+    @returns Customer snapshot with defaults applied, including overage.
     """
     ...
 def build_gate_message(state: object, gate: object) -> str:

@@ -1,0 +1,15 @@
+{
+  "suite": "mcp",
+  "case": "default-view-active-plan-account",
+  "input": {
+    "fn": "deriveDefaultView",
+    "args": {
+      "input": {
+        "hasActivePlan": true
+      }
+    }
+  },
+  "expect": {
+    "result": "account"
+  }
+}

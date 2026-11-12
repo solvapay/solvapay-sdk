@@ -85,7 +85,6 @@ function snapshotFromLimits(params: {
     balance: number
     remaining: number | null
     withinLimits: boolean
-    throttled: boolean
     overage: boolean
     isCreditBased: boolean
   }>('buildCustomerSnapshot', { customerRef, limits })

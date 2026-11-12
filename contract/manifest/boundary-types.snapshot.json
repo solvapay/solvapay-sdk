@@ -132,7 +132,7 @@
     },
     "AllowConsequence": {
       "module": "gate_driver",
-      "rustdoc": "Degraded allow reason. Absent on a plain allow.",
+      "rustdoc": "Allow consequence. Absent on a plain allow.",
       "serde": "both",
       "cfgFeature": null,
       "shape": {
@@ -140,16 +140,9 @@
         "renameAll": "camelCase",
         "variants": [
           {
-            "rustName": "Throttled",
-            "wireName": "throttled",
-            "rustdoc": "Served under `onExceed: throttle`.",
-            "cfgFeature": null,
-            "fields": []
-          },
-          {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Served under `onExceed: charge` past the included cap.",
+            "rustdoc": "Served past the included cap and paid from prepaid credits\n(`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -1427,19 +1420,6 @@
             }
           },
           {
-            "rustName": "throttled",
-            "wireName": "throttled",
-            "rustdoc": "`throttled` from limits, or `false` when absent.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "overage",
             "wireName": "overage",
             "rustdoc": "`overage` from limits, or `false` when absent.",
@@ -2443,7 +2423,7 @@
               {
                 "rustName": "consequence",
                 "wireName": "consequence",
-                "rustdoc": "Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.",
+                "rustdoc": "Set when the call is served past the included cap (`overage`). Omitted on a plain allow.",
                 "optional": true,
                 "skipSerializingIf": "Option::is_none",
                 "serdeDefault": false,
@@ -5716,19 +5696,6 @@
             }
           },
           {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "meter_name",
             "wireName": "meterName",
             "rustdoc": "Meter name used in included-usage copy and recovery fields.",
@@ -6075,19 +6042,6 @@
             "rustName": "needs_top_up",
             "wireName": "needsTopUp",
             "rustdoc": "Authoritative backend deny reason: prepaid top-up required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -8089,7 +8043,7 @@
           {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Past the included cap under `onExceed: charge`.",
+            "rustdoc": "Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -8264,11 +8218,11 @@
           {
             "rustName": "used",
             "wireName": "used",
-            "rustdoc": "Units used (defaults to `0`).",
-            "optional": false,
+            "rustdoc": "Consumed units this period: `limits.used` when the backend measured it,\nelse `total - remaining` when both are finite. `null` means this\nresponse did not measure consumption (`limits` null, unlimited, or\ncredit-based).",
+            "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
-            "serializeWith": "serialize_whole_f64",
+            "serializeWith": "serialize_opt_whole_f64",
             "cfgFeature": null,
             "ty": {
               "kind": "f64"
@@ -8290,7 +8244,7 @@
           {
             "rustName": "percent_used",
             "wireName": "percentUsed",
-            "rustdoc": "0–100 rounded to 2dp; `null` when `total` is unknown or zero.",
+            "rustdoc": "0–100 rounded to 2dp; `null` when `total` is unknown or zero, or `used` is unknown.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
@@ -9451,6 +9405,28 @@
       ],
       "return": {
         "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::customer_ref::signed_in_customer_ref": {
+      "name": "signed_in_customer_ref",
+      "module": "customer_ref",
+      "implTy": null,
+      "rustdoc": "Narrow a resolved ref to a signed-in customer, or `None`.\n\n`anonymous` is the sentinel [`resolve_customer_ref`] yields when no\nidentity was supplied. The backend has no such customer, so the MCP\nsurfaces must not let it reach a customer-scoped read or a checkout\nsession. Empty and whitespace-only refs are rejected the same way; a\nreal ref is returned trimmed.\n\n# Arguments\n\n* `customer_ref` - Resolved ref, an integrator-supplied ref, or `None`.\n\n# Returns\n\nThe trimmed ref of a signed-in customer, else `None`.",
+      "params": [
+        {
+          "rustName": "customer_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
         "ty": {
           "kind": "string"
         }
@@ -10878,7 +10854,7 @@
       "name": "derive_default_view",
       "module": "mcp::account_state",
       "implTy": null,
-      "rustdoc": "Default MCP widget view from account facts and enabled views.",
+      "rustdoc": "Default MCP widget view from account facts and enabled views.\n\nRule: no active plan → `checkout`; active plan and blocked by a top-up\ngate (`nextAction == \"topup\"`) → `topup`; otherwise → `account`. A zero\ncredit balance alone does not send the customer to `topup`: a plan that\ndoes not spend credits is still usable at zero. When the preferred view\nis disabled, fall through `checkout`, `topup`, `account` in that order.",
       "params": [
         {
           "rustName": "input",
@@ -12331,7 +12307,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` when the backend sent `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",
@@ -13576,7 +13552,7 @@
       "name": "project_usage_snapshot",
       "module": "usage",
       "implTy": null,
-      "rustdoc": "Project an active purchase (and optional limits) into [`UsageSnapshot`].\n\nConsumption comes from `limits.used` when present, else\n`max(0, total - remaining)` when both are known, else the purchase `used`.\nThe cap (`total`) is `limits.limit` when `> 0` — never `used + remaining`.\n`limits` absent means the cap is unknown, not unlimited. Unlimited is only\n`limits.remaining == -1`.\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n* `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.\n\n# Returns\n\nNormalized usage snapshot. A null purchase still honors `limits`\n(dev `deriveUsageSnapshot` contract).",
+      "rustdoc": "Project an active purchase (and optional limits) into [`UsageSnapshot`].\n\nConsumption comes from `limits.used` when present, else\n`max(0, total - remaining)` when both are known, else it is unknown\n(`null`). The purchase's own `usage.used` counter is retired and never\nread: the backend only ever reset it to zero.\nThe cap (`total`) is `limits.limit` when `> 0` — never `used + remaining`.\n`limits` absent means the cap is unknown, not unlimited. Unlimited is only\n`limits.remaining == -1`.\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n* `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.\n\n# Returns\n\nNormalized usage snapshot. A null purchase still honors `limits`\n(dev `deriveUsageSnapshot` contract).",
       "params": [
         {
           "rustName": "active_purchase",
@@ -13776,7 +13752,7 @@
       "name": "resolve_usage_extra",
       "module": "usage_request",
       "implTy": null,
-      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage` / `throttled`); unused on free tools.",
+      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage`); unused on free tools.",
       "params": [
         {
           "rustName": "free_limit",

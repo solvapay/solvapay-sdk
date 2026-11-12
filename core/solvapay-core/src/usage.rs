@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::serde_util::{serialize_opt_whole_f64, serialize_whole_f64};
+use crate::serde_util::serialize_opt_whole_f64;
 
 /// Usage snapshot projected from an active purchase (or none).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -14,13 +14,16 @@ pub struct UsageSnapshot {
     /// `limits.limit` when that value is `> 0`; else `null`. Never `used + remaining`.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub total: Option<f64>,
-    /// Units used (defaults to `0`).
-    #[serde(serialize_with = "serialize_whole_f64")]
-    pub used: f64,
+    /// Consumed units this period: `limits.used` when the backend measured it,
+    /// else `total - remaining` when both are finite. `null` means this
+    /// response did not measure consumption (`limits` null, unlimited, or
+    /// credit-based).
+    #[serde(serialize_with = "serialize_opt_whole_f64")]
+    pub used: Option<f64>,
     /// `max(0, total - used)` when `total` is known; else `null`.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub remaining: Option<f64>,
-    /// 0–100 rounded to 2dp; `null` when `total` is unknown or zero.
+    /// 0–100 rounded to 2dp; `null` when `total` is unknown or zero, or `used` is unknown.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub percent_used: Option<f64>,
     /// Billing period start (skip-absent).
@@ -37,7 +40,9 @@ pub struct UsageSnapshot {
 /// Project an active purchase (and optional limits) into [`UsageSnapshot`].
 ///
 /// Consumption comes from `limits.used` when present, else
-/// `max(0, total - remaining)` when both are known, else the purchase `used`.
+/// `max(0, total - remaining)` when both are known, else it is unknown
+/// (`null`). The purchase's own `usage.used` counter is retired and never
+/// read: the backend only ever reset it to zero.
 /// The cap (`total`) is `limits.limit` when `> 0` — never `used + remaining`.
 /// `limits` absent means the cap is unknown, not unlimited. Unlimited is only
 /// `limits.remaining == -1`.
@@ -63,10 +68,6 @@ pub fn project_usage_snapshot(
 ) -> UsageSnapshot {
     let purchase = active_purchase.filter(|v| !v.is_null());
     let usage = purchase.and_then(|p| p.get("usage"));
-    let caller_used = usage
-        .and_then(|u| u.get("used"))
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
     let limits = limits.filter(|v| !v.is_null());
     let remaining_raw = limits
         .and_then(|l| l.get("remaining"))
@@ -80,18 +81,17 @@ pub fn project_usage_snapshot(
     let used = limits
         .and_then(|l| l.get("used"))
         .and_then(Value::as_f64)
-        .unwrap_or_else(|| match (total, remaining) {
-            (Some(total), Some(remaining)) => (total - remaining).max(0.0),
-            _ => caller_used,
+        .or_else(|| match (total, remaining) {
+            (Some(total), Some(remaining)) => Some((total - remaining).max(0.0)),
+            _ => None,
         });
-    let percent_used = total.and_then(|t| {
-        if t > 0.0 {
-            let pct = ((used / t) * 10_000.0).round() / 100.0;
+    let percent_used = match (total, used) {
+        (Some(t), Some(u)) if t > 0.0 => {
+            let pct = ((u / t) * 10_000.0).round() / 100.0;
             Some(pct.min(100.0))
-        } else {
-            None
         }
-    });
+        _ => None,
+    };
     let meter_ref = limits
         .and_then(|l| l.get("meterName").or_else(|| l.get("meterRef")))
         .and_then(Value::as_str)
@@ -218,7 +218,7 @@ mod tests {
         let snap = project_usage_snapshot(None, None);
         assert_eq!(snap.meter_ref, None);
         assert_eq!(snap.total, None);
-        assert_eq!(snap.used, 0.0);
+        assert_eq!(snap.used, None);
         assert_eq!(snap.remaining, None);
         assert_eq!(snap.percent_used, None);
         assert_eq!(snap.purchase_ref, None);
@@ -235,7 +235,7 @@ mod tests {
         let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.meter_ref.as_deref(), Some("mtr_legacy"));
         assert_eq!(snap.total, Some(10.0));
-        assert_eq!(snap.used, 2.0);
+        assert_eq!(snap.used, Some(2.0));
         assert_eq!(snap.remaining, Some(8.0));
         assert_eq!(snap.percent_used, Some(20.0));
         assert_eq!(snap.purchase_ref.as_deref(), Some("pur_1"));
@@ -253,7 +253,9 @@ mod tests {
         assert_eq!(snap.total, None);
         assert_eq!(snap.remaining, None);
         assert_eq!(snap.percent_used, None);
-        assert_eq!(snap.used, 5.0);
+        // Unlimited: consumption was not measured, and the retired purchase
+        // counter must not stand in for it.
+        assert_eq!(snap.used, None);
     }
 
     #[test]
@@ -349,7 +351,43 @@ mod tests {
         let snap = project_usage_snapshot(Some(&purchase), None);
         assert_eq!(snap.meter_ref, None);
         assert_eq!(snap.total, None);
-        assert_eq!(snap.used, 5.0);
+        // `limits` absent: consumption was not measured.
+        assert_eq!(snap.used, None);
+        assert_eq!(snap.percent_used, None);
         assert_eq!(snap.purchase_ref.as_deref(), Some("pur_1"));
+        let value = serde_json::to_value(&snap).unwrap();
+        assert!(value["used"].is_null());
+    }
+
+    #[test]
+    fn used_derives_from_cap_minus_remaining() {
+        let limits = json!({ "remaining": 1, "limit": 3 });
+        let snap = project_usage_snapshot(None, Some(&limits));
+        assert_eq!(snap.total, Some(3.0));
+        assert_eq!(snap.used, Some(2.0));
+        assert_eq!(snap.percent_used, Some(66.67));
+    }
+
+    #[test]
+    fn used_unknown_when_backend_supplied_neither_used_nor_limit() {
+        // Credit-based and uncapped responses carry `remaining` only.
+        let limits = json!({ "remaining": 3800, "meterName": "requests" });
+        let snap = project_usage_snapshot(None, Some(&limits));
+        assert_eq!(snap.meter_ref.as_deref(), Some("requests"));
+        assert_eq!(snap.total, None);
+        assert_eq!(snap.used, None);
+        assert_eq!(snap.remaining, Some(3800.0));
+        assert_eq!(snap.percent_used, None);
+    }
+
+    #[test]
+    fn measured_used_wins_and_serializes_whole() {
+        let limits = json!({ "remaining": 3800, "meterName": "requests", "used": 6200, "limit": 10000 });
+        let snap = project_usage_snapshot(None, Some(&limits));
+        assert_eq!(snap.used, Some(6200.0));
+        assert_eq!(snap.percent_used, Some(62.0));
+        let value = serde_json::to_value(&snap).unwrap();
+        assert_eq!(value["used"], json!(6200));
+        assert!(value["used"].as_i64().is_some());
     }
 }

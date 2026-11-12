@@ -43,14 +43,11 @@ describe('SolvaPayClient ↔ SolvaPayClientGenerated API-diff', () => {
   it('LimitResponse carries onExceed outcome flags', () => {
     type Flags = Pick<
       components['schemas']['LimitResponse'],
-      'throttled' | 'overage' | 'needsTopUp' | 'needsUpgrade' | 'upgraded'
+      'overage' | 'needsTopUp'
     >
     expectTypeOf<Flags>().toEqualTypeOf<{
-      throttled?: boolean
       overage?: boolean
       needsTopUp?: boolean
-      needsUpgrade?: boolean
-      upgraded?: boolean
     }>()
   })
 

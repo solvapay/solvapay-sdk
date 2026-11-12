@@ -57,7 +57,6 @@ type CustomerSnapshot struct {
 	Remaining     any
 	WithinLimits  any
 	Plan          any
-	Throttled     bool
 	Overage       bool
 	IsCreditBased bool
 }
@@ -78,7 +77,7 @@ func (a *Allow) Customer() CustomerSnapshot {
 	return a.customer
 }
 
-// Consequence is the degraded allow reason (`throttled` or `overage`). Empty on a plain allow.
+// Consequence is `overage` when the call is served past the included cap. Empty on a plain allow.
 func (a *Allow) Consequence() string {
 	if a == nil {
 		return ""
@@ -110,7 +109,6 @@ func customerSnapshotFromAction(action map[string]any, backendRef string) (Custo
 		Remaining:     raw["remaining"],
 		WithinLimits:  raw["withinLimits"],
 		Plan:          raw["plan"],
-		Throttled:     asBool(raw["throttled"]),
 		Overage:       asBool(raw["overage"]),
 		IsCreditBased: asBool(raw["isCreditBased"]),
 	}, nil

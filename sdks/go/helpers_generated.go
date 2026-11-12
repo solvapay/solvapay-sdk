@@ -137,7 +137,7 @@ func BillingCycle(ctx context.Context, priced any) (any, error) {
 }
 
 // BuildCustomerSnapshot build the merchant-facing customer snapshot from a limits body.
-// Returns Customer snapshot with defaults applied, including throttled and overage.
+// Returns Customer snapshot with defaults applied, including overage.
 func BuildCustomerSnapshot(ctx context.Context, customerRef any, limits any) (any, error) {
 	payload, err := json.Marshal(map[string]any{
 		"customerRef": customerRef,

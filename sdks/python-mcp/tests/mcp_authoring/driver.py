@@ -34,7 +34,6 @@ def _compile_handler(scenario: Scenario):
             data = spec.data
             if isinstance(data, Mapping) and data.get("echo") == "customer":
                 data = {
-                    "throttled": ctx.customer["throttled"],
                     "overage": ctx.customer["overage"],
                 }
             return ctx.respond(data, options)

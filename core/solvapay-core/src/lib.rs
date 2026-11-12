@@ -89,7 +89,7 @@ pub use credit_display::{
     credits_to_display_minor_units, is_zero_decimal_currency, minor_units_per_major,
     CreditsToDisplayInput,
 };
-pub use customer_ref::{resolve_customer_ref, ANONYMOUS_CUSTOMER_REF};
+pub use customer_ref::{resolve_customer_ref, signed_in_customer_ref, ANONYMOUS_CUSTOMER_REF};
 pub use customer_sync::{
     build_create_customer_params, classify_create_error, classify_customer_ref,
     classify_lookup_error, coerce_customer_options, extract_backend_customer_ref,

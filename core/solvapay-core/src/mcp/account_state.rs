@@ -223,6 +223,12 @@ pub fn resolve_account_state(input: Option<&Value>) -> String {
 }
 
 /// Default MCP widget view from account facts and enabled views.
+///
+/// Rule: no active plan → `checkout`; active plan and blocked by a top-up
+/// gate (`nextAction == "topup"`) → `topup`; otherwise → `account`. A zero
+/// credit balance alone does not send the customer to `topup`: a plan that
+/// does not spend credits is still usable at zero. When the preferred view
+/// is disabled, fall through `checkout`, `topup`, `account` in that order.
 #[crate::solvapay_export(
     artifact = "decisions",
     catalog = "none",
@@ -252,7 +258,7 @@ pub fn derive_default_view(input: Option<&Value>) -> Result<String, HelperErrorR
         });
     let preferred = if !has_active_plan {
         "checkout"
-    } else if input.get("credits").and_then(Value::as_f64) == Some(0.0) {
+    } else if input.get("nextAction").and_then(Value::as_str) == Some("topup") {
         "topup"
     } else {
         "account"
@@ -267,4 +273,60 @@ pub fn derive_default_view(input: Option<&Value>) -> Result<String, HelperErrorR
         "No MCP views are enabled",
         400,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::missing_docs_in_private_items
+    )]
+
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn default_view_is_checkout_without_an_active_plan() {
+        let input = json!({ "hasActivePlan": false, "nextAction": "topup" });
+        assert_eq!(derive_default_view(Some(&input)).unwrap(), "checkout");
+    }
+
+    #[test]
+    fn default_view_is_topup_on_a_topup_gate() {
+        let input = json!({ "hasActivePlan": true, "nextAction": "topup" });
+        assert_eq!(derive_default_view(Some(&input)).unwrap(), "topup");
+    }
+
+    #[test]
+    fn zero_credits_within_limits_stays_on_account() {
+        // The retired rule keyed on `credits == 0`; a customer who is within
+        // limits has no next action and must land on `account`.
+        let input = json!({ "hasActivePlan": true, "credits": 0 });
+        assert_eq!(derive_default_view(Some(&input)).unwrap(), "account");
+    }
+
+    #[test]
+    fn other_next_actions_stay_on_account() {
+        let input = json!({ "hasActivePlan": true, "nextAction": "checkout" });
+        assert_eq!(derive_default_view(Some(&input)).unwrap(), "account");
+    }
+
+    #[test]
+    fn disabled_preferred_view_falls_through() {
+        let input = json!({
+            "hasActivePlan": true,
+            "nextAction": "topup",
+            "enabledViews": ["checkout", "account"]
+        });
+        assert_eq!(derive_default_view(Some(&input)).unwrap(), "checkout");
+    }
+
+    #[test]
+    fn no_enabled_views_is_an_error() {
+        let input = json!({ "hasActivePlan": true, "enabledViews": [] });
+        let err = derive_default_view(Some(&input)).unwrap_err();
+        assert_eq!(err.status, 400);
+    }
 }

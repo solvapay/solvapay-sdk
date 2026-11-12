@@ -1,6 +1,6 @@
 {
   "suite": "paywall",
-  "case": "needs-upgrade-flag",
+  "case": "retired-needs-upgrade-flag-ignored",
   "input": {
     "fn": "classifyPaywallState",
     "args": {
@@ -13,5 +13,5 @@
       }
     }
   },
-  "expect": { "result": { "kind": "upgrade_required" } }
+  "expect": { "result": { "kind": "topup_required" } }
 }

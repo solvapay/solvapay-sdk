@@ -106,7 +106,7 @@ pub use solvapay_core::pricing_options::billing_cycle;
 ///
 /// # Returns
 ///
-/// Customer snapshot with defaults applied, including throttled and overage.
+/// Customer snapshot with defaults applied, including overage.
 pub use solvapay_core::gate_driver::build_customer_snapshot;
 
 /// Build the human-readable paywall gate message from state and gate content.

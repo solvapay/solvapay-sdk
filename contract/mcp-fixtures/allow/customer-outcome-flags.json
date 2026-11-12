@@ -18,7 +18,6 @@
         "remaining": 0,
         "plan": "pl_pro",
         "creditBalance": 0,
-        "throttled": true,
         "overage": false
       },
       "handler": {
@@ -33,11 +32,10 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"throttled\":true,\"overage\":false}"
+            "text": "{\"overage\":false}"
           }
         ],
         "structuredContent": {
-          "throttled": true,
           "overage": false
         }
       },

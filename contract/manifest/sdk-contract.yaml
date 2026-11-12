@@ -87,7 +87,6 @@ boundaryTypesTs:
         limit?: number
         autoRecharge?: unknown
         needsTopUp?: boolean
-        needsUpgrade?: boolean
         meterName?: string
         currency?: string
       }
@@ -2907,7 +2906,7 @@ topLevel:
       summary: 'Build the merchant-facing customer snapshot from a limits body.'
       params:
         options: 'Customer ref and last checkLimits body (or null).'
-      returns: 'Customer snapshot with defaults applied, including throttled and overage.'
+      returns: 'Customer snapshot with defaults applied, including overage.'
     sync:
       ts: sync
       py: sync

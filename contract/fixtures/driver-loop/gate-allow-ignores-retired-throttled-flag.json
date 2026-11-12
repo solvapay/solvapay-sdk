@@ -1,6 +1,6 @@
 {
   "suite": "driver-loop",
-  "case": "gate-allow-throttled-consequence",
+  "case": "gate-allow-ignores-retired-throttled-flag",
   "input": {
     "fn": "gateNext",
     "args": {
@@ -19,8 +19,7 @@
         "limits": {
           "withinLimits": true,
           "remaining": 0,
-          "throttled": true,
-          "overage": true
+          "throttled": true
         },
         "nowMs": 1100
       }
@@ -36,8 +35,7 @@
         "startedMs": 1000,
         "requestId": "solvapay_1000_i",
         "limitsKey": "cus_abc:prd_1:requests",
-        "limitsCacheTTLMs": 10000,
-        "lastConsequence": "throttled"
+        "limitsCacheTTLMs": 10000
       },
       "action": {
         "kind": "allow",
@@ -47,19 +45,16 @@
         "limits": {
           "withinLimits": true,
           "remaining": 0,
-          "throttled": true,
-          "overage": true
+          "throttled": true
         },
         "customer": {
           "ref": "cus_abc",
           "balance": 0,
           "remaining": 0,
           "withinLimits": true,
-          "throttled": true,
-          "overage": true,
+          "overage": false,
           "isCreditBased": false
         },
-        "consequence": "throttled",
         "requestId": "solvapay_1000_i"
       }
     }

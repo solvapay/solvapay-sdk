@@ -74,7 +74,7 @@ module SolvaPay
   end
 
   # Build the merchant-facing customer snapshot from a limits body.
-  # @return Customer snapshot with defaults applied, including throttled and overage.
+  # @return Customer snapshot with defaults applied, including overage.
   def self.build_customer_snapshot(input:)
     args = {} #: Hash[String, untyped]
     args["input"] = input

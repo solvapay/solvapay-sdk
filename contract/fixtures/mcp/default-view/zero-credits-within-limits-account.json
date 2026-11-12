@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "default-view-zero-credits-within-limits-account",
+  "input": {
+    "fn": "deriveDefaultView",
+    "args": {
+      "input": {
+        "hasActivePlan": true,
+        "credits": 0
+      }
+    }
+  },
+  "expect": {
+    "result": "account"
+  }
+}

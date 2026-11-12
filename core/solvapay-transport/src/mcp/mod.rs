@@ -18,11 +18,11 @@ use solvapay_core::{
     is_error_result, meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
     normalize_reactivate_response, per_unit_charge, project_topup_process_outcome,
     project_usage_snapshot, resolve_purchase_customer_ref, resolve_seller_identity_display,
-    select_active_plan_purchase, select_active_purchases, trial_days,
+    select_active_plan_purchase, select_active_purchases, signed_in_customer_ref, trial_days,
     validate_activate_plan_params, validate_attach_business_details_params,
     validate_create_payment_intent_params, validate_process_payment_intent_params,
     validate_purchase_ref, validate_topup_payment_intent_params, CreditsToDisplayInput,
-    GetHistoryAction, PaywallLimits, SdkError, SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
+    GetHistoryAction, PaywallLimits, SdkError, SellerIdentityInput,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, AutoRechargeInput, CancelPurchaseParams,
@@ -247,7 +247,7 @@ fn default_view_input(payload: &Value, enabled: &[String]) -> Value {
         "hasActivePlan": select_active_plan_purchase(purchases, payload.get("productRef").and_then(Value::as_str)).is_some(),
         "purchases": purchases,
         "productRef": payload.get("productRef"),
-        "credits": payload.pointer("/customer/balance/credits"),
+        "nextAction": payload.pointer("/customer/nextAction"),
         "enabledViews": enabled,
     })
 }
@@ -472,20 +472,24 @@ fn format_money_intl_opt(amount_minor: f64, currency: &str) -> Option<String> {
     Some(format_money_intl(amount_minor, currency))
 }
 
-/// Attach `canCall` / remaining-call / next-action fields from a limits body.
+/// Attach `canCall` / remaining-call / credit / next-action fields from a
+/// limits body.
+///
+/// `nextAction` is present only when this limits response blocked the call
+/// (`withinLimits == false`): it names the recovery the gate would name. A
+/// customer who is within limits has no next action, so the default view
+/// stays on `account` even at a zero credit balance.
 fn attach_customer_credit_fields(customer: &mut Value, limits_value: &Value) {
     let Some(obj) = customer.as_object_mut() else {
         return;
     };
-    if let Some(can_call) = limits_value.get("withinLimits") {
-        if !can_call.is_null() {
-            obj.insert("canCall".to_owned(), can_call.clone());
-        }
-    }
+    let within_limits = limits_value.get("withinLimits").and_then(Value::as_bool);
+    obj.insert("canCall".to_owned(), json!(within_limits == Some(true)));
     let Ok(limits) = serde_json::from_value::<PaywallLimits>(limits_value.clone()) else {
         return;
     };
     let signals = credit_signals(Some(&limits));
+    obj.insert("isCreditBased".to_owned(), json!(signals.is_credit_based));
     if let Some(remaining) = signals.remaining_calls {
         obj.insert("remainingCalls".to_owned(), json!(remaining));
     }
@@ -500,10 +504,23 @@ fn attach_customer_credit_fields(customer: &mut Value, limits_value: &Value) {
             obj.insert("autoRecharge".to_owned(), value);
         }
     }
-    if let Ok(value) = serde_json::to_value(next_action_for(&classify_paywall_state(Some(&limits))))
-    {
-        obj.insert("nextAction".to_owned(), value);
+    if within_limits == Some(false) {
+        if let Ok(value) =
+            serde_json::to_value(next_action_for(&classify_paywall_state(Some(&limits))))
+        {
+            obj.insert("nextAction".to_owned(), value);
+        }
     }
+}
+
+/// Trimmed non-empty string field of a JSON object, else JSON `null`.
+fn trimmed_or_null(source: &Value, key: &str) -> Value {
+    source
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map_or(Value::Null, |s| Value::String(s.to_owned()))
 }
 
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {
@@ -526,11 +543,10 @@ impl SolvaPayClient {
         dto_type = "solvapay_transport::McpBootstrapParams"
     )]
     pub async fn mcp_bootstrap(&self, params: McpBootstrapParams) -> Result<Value, SdkError> {
-        let customer_ref = params
-            .customer_ref
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty());
+        // Only a signed-in customer reaches the customer-scoped reads and the
+        // checkout session. The `anonymous` sentinel is not a backend customer.
+        let signed_in = signed_in_customer_ref(params.customer_ref.as_deref());
+        let customer_ref = signed_in.as_deref();
 
         let platform = self.get_platform_config_json().await.ok();
         let stripe_publishable_key = platform.and_then(|p| {
@@ -593,11 +609,7 @@ impl SolvaPayClient {
                         }
                     }
                 }
-                let usage = match &limits_result {
-                    Ok(limits) => serde_json::to_value(project_usage_snapshot(None, Some(limits)))
-                        .unwrap_or(Value::Null),
-                    Err(err) => sdk_error_placeholder(err),
-                };
+                let limits_ok = limits_result.as_ref().ok();
                 let balance_value = if is_error_result(&balance) {
                     Value::Null
                 } else {
@@ -608,12 +620,25 @@ impl SolvaPayClient {
                 } else {
                     enrich_purchase(purchase_result)
                 };
+                // Period window and purchase ref come from the active purchase;
+                // consumption and the cap come from `checkLimits` alone. A failed
+                // limits fetch leaves them unknown (`null`), never zero.
+                let active_purchase = select_active_plan_purchase(
+                    purchase.get("purchases"),
+                    Some(&params.product_ref),
+                );
+                let usage =
+                    serde_json::to_value(project_usage_snapshot(active_purchase.as_ref(), limits_ok))
+                        .unwrap_or(Value::Null);
                 let mut customer = json!({
                     "ref": customer_ref,
+                    "email": trimmed_or_null(&purchase, "email"),
+                    "name": trimmed_or_null(&purchase, "name"),
                     "purchase": purchase,
                     "paymentMethod": if is_error_result(&payment_method) { Value::Null } else { payment_method },
                     "balance": balance_value,
-                    "usage": if is_error_result(&usage) { Value::Null } else { usage },
+                    "usage": usage,
+                    "limits": limits_ok.cloned().unwrap_or(Value::Null),
                 });
                 if let Ok(limits_value) = &limits_result {
                     paywall_reason = limits_value
@@ -635,24 +660,30 @@ impl SolvaPayClient {
             .map(|plan| enrich_plan(plan, balance_for_plans))
             .collect();
 
-        let checkout_customer = customer_ref.unwrap_or(ANONYMOUS_CUSTOMER_REF);
         let checkout_purpose = (params.view == "topup"
             || (params.view != "checkout"
                 && params.view != "auto-recharge"
                 && paywall_reason.as_deref() == Some("topup_required")))
         .then_some(CreateCheckoutSessionRequestPurpose::CreditTopup);
-        let checkout_req = CreateCheckoutSessionRequest {
-            customer_ref: Some(checkout_customer.to_owned()),
+        // A hosted checkout session belongs to a customer record; the backend
+        // rejects any ref it cannot find. Without a signed-in customer there is
+        // no session to mint. MCP has no browsable page to return to, so
+        // `returnUrl` is always omitted.
+        let checkout_req = customer_ref.map(|customer_ref| CreateCheckoutSessionRequest {
+            customer_ref: Some(customer_ref.to_owned()),
             plan_ref: None,
             product_ref: Some(params.product_ref.clone()),
             purpose: checkout_purpose.clone(),
             return_url: None,
-        };
+        });
         let portal_req = customer_ref.map(|customer_ref| CreateCustomerSessionRequest {
             customer_ref: Some(customer_ref.to_owned()),
             product_ref: Some(params.product_ref.clone()),
         });
-        let checkout_session = self.create_checkout_session_json(checkout_req).await.ok();
+        let checkout_session = match checkout_req {
+            Some(req) => self.create_checkout_session_json(req).await.ok(),
+            None => None,
+        };
         let portal_session = match portal_req {
             Some(req) => self.create_customer_session_json(req).await.ok(),
             None => None,
@@ -691,6 +722,28 @@ impl SolvaPayClient {
         }))
     }
 
+    /// Bootstrap snapshot with the server-derived default view stamped on it.
+    ///
+    /// The build argument stays `account`: it steers `checkoutPurpose`, so the
+    /// viewer tool without a `view` argument and the bootstrap resource must
+    /// pass the same value to produce the same `checkoutUrl`.
+    /// [`derive_default_view`] then stamps the surface.
+    async fn mcp_default_bootstrap(
+        &self,
+        params: McpBootstrapParams,
+        enabled: &[String],
+    ) -> Result<Result<(String, Value), solvapay_core::HelperErrorResult>, SdkError> {
+        let mut payload = self.mcp_bootstrap(params).await?;
+        let view = match derive_default_view(Some(&default_view_input(&payload, enabled))) {
+            Ok(view) => view,
+            Err(err) => return Ok(Err(err)),
+        };
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("view".to_owned(), Value::String(view.clone()));
+        }
+        Ok(Ok((view, payload)))
+    }
+
     /// Run one builtin MCP tool (`mcpCallBuiltinTool`).
     #[solvapay_core::solvapay_export(
         catalog = "operation",
@@ -711,11 +764,8 @@ impl SolvaPayClient {
             .get("productRef")
             .and_then(Value::as_str)
             .unwrap_or(&params.config.product_ref);
-        let customer_ref = params
-            .customer_ref
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty());
+        let signed_in = signed_in_customer_ref(params.customer_ref.as_deref());
+        let customer_ref = signed_in.as_deref();
         let mode = parse_mode(args.get("mode").and_then(Value::as_str));
         let session = params
             .widget_session_id
@@ -746,26 +796,27 @@ impl SolvaPayClient {
                         ));
                     }
                 }
-                let bootstrap_view = requested.unwrap_or("account");
-                let mut payload: Value = self
-                    .mcp_bootstrap(McpBootstrapParams {
-                        view: bootstrap_view.to_owned(),
-                        product_ref: product_ref.to_owned(),
-                        public_base_url: params.config.public_base_url.clone(),
-                        customer_ref: params.customer_ref.clone(),
-                    })
-                    .await?;
-                let view = if let Some(view) = requested {
-                    view.to_owned()
+                let bootstrap_params = |view: &str| McpBootstrapParams {
+                    view: view.to_owned(),
+                    product_ref: product_ref.to_owned(),
+                    public_base_url: params.config.public_base_url.clone(),
+                    customer_ref: params.customer_ref.clone(),
+                };
+                let (view, payload) = if let Some(view) = requested {
+                    let mut payload = self.mcp_bootstrap(bootstrap_params(view)).await?;
+                    if let Some(obj) = payload.as_object_mut() {
+                        obj.insert("view".to_owned(), Value::String(view.to_owned()));
+                    }
+                    (view.to_owned(), payload)
                 } else {
-                    match derive_default_view(Some(&default_view_input(&payload, &enabled))) {
-                        Ok(view) => view,
+                    match self
+                        .mcp_default_bootstrap(bootstrap_params("account"), &enabled)
+                        .await?
+                    {
+                        Ok(pair) => pair,
                         Err(err) => return Ok(helper_error_tool(&err)),
                     }
                 };
-                if let Some(obj) = payload.as_object_mut() {
-                    obj.insert("view".to_owned(), Value::String(view.clone()));
-                }
                 Ok(narrated_tool_result(
                     &view,
                     &payload,
@@ -803,7 +854,8 @@ impl SolvaPayClient {
                                 plan_ref,
                                 product_ref: Some(product_ref.to_owned()),
                                 purpose: None,
-                                return_url: Some(params.config.public_base_url.clone()),
+                                // MCP has no browsable page to return to.
+                                return_url: None,
                             })
                             .await?;
                         Ok(wrap_ok(session))
@@ -1220,13 +1272,30 @@ impl SolvaPayClient {
             "docs://solvapay/overview.md" => serde_json::to_value(mcp_overview_resource())
                 .map_err(|err| SdkError::transport(format!("serialize: {err}"), false)),
             "solvapay://bootstrap.json" => {
-                self.mcp_bootstrap(McpBootstrapParams {
-                    view: "account".to_owned(),
-                    product_ref: params.config.product_ref.clone(),
-                    public_base_url: params.config.public_base_url.clone(),
-                    customer_ref: params.customer_ref.clone(),
-                })
-                .await
+                // `view` is the server's default for this customer (checkout
+                // with no active plan, topup on a top-up gate, account
+                // otherwise): the same choice the viewer tool makes when
+                // `view` is omitted. The widget trusts this field.
+                let enabled = params
+                    .config
+                    .views
+                    .clone()
+                    .unwrap_or_else(default_mcp_views);
+                let built = self
+                    .mcp_default_bootstrap(
+                        McpBootstrapParams {
+                            view: "account".to_owned(),
+                            product_ref: params.config.product_ref.clone(),
+                            public_base_url: params.config.public_base_url.clone(),
+                            customer_ref: params.customer_ref.clone(),
+                        },
+                        &enabled,
+                    )
+                    .await?;
+                match built {
+                    Ok((_, payload)) => Ok(payload),
+                    Err(err) => Err(SdkError::transport(err.error, false)),
+                }
             }
             uri if params.config.resource_uri.as_deref() == Some(uri) => {
                 let desc = mcp_descriptors(&McpDescriptorsInput {

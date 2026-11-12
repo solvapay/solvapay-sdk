@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "default-view-topup-gate-topup",
+  "input": {
+    "fn": "deriveDefaultView",
+    "args": {
+      "input": {
+        "hasActivePlan": true,
+        "nextAction": "topup"
+      }
+    }
+  },
+  "expect": {
+    "result": "topup"
+  }
+}

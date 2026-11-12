@@ -69,7 +69,7 @@ pub fn mcp_widget_resource(input: &McpWidgetResourceInput) -> Result<Option<Valu
             "mimeType": MCP_APP_MIME_TYPE,
             "_meta": {
                 "ui": {
-                    "prefersBorder": false,
+                    "prefersBorder": true,
                     "csp": csp,
                 }
             }
@@ -132,7 +132,7 @@ mod tests {
         let content = &got["result"]["contents"][0];
         assert_eq!(content["uri"], RESOURCE_URI);
         assert_eq!(content["mimeType"], "text/html;profile=mcp-app");
-        assert_eq!(content["_meta"]["ui"]["prefersBorder"], false);
+        assert_eq!(content["_meta"]["ui"]["prefersBorder"], true);
         assert!(content["_meta"]["ui"]["csp"].is_object());
         assert!(
             content.get("text").is_none(),

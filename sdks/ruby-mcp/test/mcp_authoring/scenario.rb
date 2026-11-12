@@ -21,7 +21,7 @@ module McpAuthoring
 
   LIMITS_KEYS = %w[
     withinLimits remaining plan creditBalance checkoutUrl activationRequired
-    throttled overage
+    overage
     confirmationUrl plans balance product meterName
   ].freeze
   TOOL_KEYS = %w[name title description inputSchema args].freeze

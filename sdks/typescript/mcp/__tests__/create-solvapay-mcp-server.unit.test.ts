@@ -627,12 +627,16 @@ describe('createSolvaPayMcpServer', () => {
       expect(ui?.resourceUri).toBe('ui://test/view.html')
     })
 
-    it('advertises prefersBorder: false on the app UI resource (widget paints its own frame)', async () => {
+    it('advertises prefersBorder: true on the app UI resource (host owns the frame)', async () => {
+      // Claude Desktop and ChatGPT frame the iframe regardless of the
+      // flag, so the widget paints no outer frame of its own. Asking
+      // compliant hosts for their border keeps exactly one frame
+      // everywhere instead of a host card nested around ours.
       const { server } = buildTestServer()
       const { resources } = await listedResources(server)
       const entry = resources.find(r => r.uri === 'ui://test/view.html')
       const metaUi = (entry?._meta ?? entry?.metadata?._meta)?.ui
-      expect(metaUi?.prefersBorder).toBe(false)
+      expect(metaUi?.prefersBorder).toBe(true)
     })
   })
 })
