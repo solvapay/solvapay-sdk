@@ -27,26 +27,29 @@ use solvapay_core::{
 
 #[cfg(feature = "edge")]
 use solvapay_core::{
-    append_paid_tool_description, build_create_customer_params, build_customer_snapshot,
-    build_gate_message, build_nudge_message, build_paywall_gate, classify_customer_ref,
-    classify_paywall_state, coerce_customer_options, compile_string_field_input_schema_json,
-    credit_signals, customer_ref_from_claims, decide_paywall_outcome,
-    decode_jwt_payload_unverified, default_mcp_bearer_expectations, ensure_customer_next,
-    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
-    extract_backend_customer_ref, extract_bearer_token, free_limits_agree,
-    free_tool_description_suffix, gate_next, get_history_next, is_error_result, link_label,
-    map_route_error, next_action_for, normalize_free_limit, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, plan_ladder,
+    agent_auth_challenge, agent_authorize_next, agent_authorize_request, agent_complete_body,
+    agent_credential_kind, agent_key_verification_result, agent_prompt_facts,
+    agent_protected_resource, agent_secret_key_environment, append_paid_tool_description,
+    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
+    build_paywall_gate, classify_customer_ref, classify_paywall_state, coerce_customer_options,
+    compile_string_field_input_schema_json, credit_signals, customer_ref_from_claims,
+    decide_paywall_outcome, decode_jwt_payload_unverified, default_mcp_bearer_expectations,
+    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
+    free_limits_agree, free_tool_description_suffix, gate_next, get_history_next, is_error_result,
+    link_label, map_route_error, next_action_for, normalize_free_limit, overlay_claimed_limits,
+    parse_agent_response, paywall_client_payload, paywall_structured_content_schema, plan_ladder,
     project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
     purchase_usage_is_metered, resolve_authenticated_user, resolve_check_limits_params,
     resolve_customer_ref, resolve_fallback_gate_limits, resolve_purchase_customer_ref,
     resolve_return_url, resolve_usage_extra, select_active_plan_purchase, select_active_purchases,
     should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
-    validate_activate_plan_params, validate_topup_payment_intent_params, AuthResolutionInput,
-    Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
-    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    validate_activate_plan_params, validate_topup_payment_intent_params, verify_agent_token,
+    AuthResolutionInput, Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource,
+    PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput,
+    RetryPolicy, RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS,
+    DEFAULT_MAX_RETRIES,
 };
 use wasm_bindgen::prelude::*;
 
@@ -1466,6 +1469,131 @@ pub fn credit_drawn_meters_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let priced = optional_value(&args, "priced");
         to_value(&credit_drawn_meters(priced.as_ref()))
+    })
+}
+
+// --- agents ---
+
+#[cfg(feature = "edge")]
+/// Binding for `agentSecretKeyEnvironment`.
+#[wasm_bindgen(js_name = "agentSecretKeyEnvironment")]
+pub fn agent_secret_key_environment_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let secret_key = require_string(&args, "secretKey")?;
+        to_value(&agent_secret_key_environment(&secret_key))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCredentialKind`.
+#[wasm_bindgen(js_name = "agentCredentialKind")]
+pub fn agent_credential_kind_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::String(agent_credential_kind(&value).to_owned()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `verifyAgentToken`.
+#[wasm_bindgen(js_name = "verifyAgentToken")]
+pub fn verify_agent_token_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(verify_agent_token(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentKeyVerificationResult`.
+#[wasm_bindgen(js_name = "agentKeyVerificationResult")]
+pub fn agent_key_verification_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_key_verification_result(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentPromptFacts`.
+#[wasm_bindgen(js_name = "agentPromptFacts")]
+pub fn agent_prompt_facts_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let text = require_string(&args, "text")?;
+        let tool_error = require_bool(&args, "toolError")?;
+        to_value(&agent_prompt_facts(&text, tool_error))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentProtectedResource`.
+#[wasm_bindgen(js_name = "agentProtectedResource")]
+pub fn agent_protected_resource_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_protected_resource(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentAuthChallenge`.
+#[wasm_bindgen(js_name = "agentAuthChallenge")]
+pub fn agent_auth_challenge_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_auth_challenge(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `parseAgentResponse`.
+#[wasm_bindgen(js_name = "parseAgentResponse")]
+pub fn parse_agent_response_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let kind = require_string(&args, "kind")?;
+        let value = optional_value(&args, "value");
+        result_as_value(parse_agent_response(&kind, value.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentAuthorizeRequest`.
+#[wasm_bindgen(js_name = "agentAuthorizeRequest")]
+pub fn agent_authorize_request_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_authorize_request(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentAuthorizeNext`.
+#[wasm_bindgen(js_name = "agentAuthorizeNext")]
+pub fn agent_authorize_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_authorize_next(input.as_ref()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCompleteBody`.
+#[wasm_bindgen(js_name = "agentCompleteBody")]
+pub fn agent_complete_body_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        result_as_value(agent_complete_body(input.as_ref()))
     })
 }
 

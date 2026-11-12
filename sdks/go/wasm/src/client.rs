@@ -11,15 +11,16 @@ use std::sync::Arc;
 
 use solvapay_core::SdkError;
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient as CoreClient};
@@ -785,6 +786,73 @@ pub unsafe extern "C" fn sv_fetch_jwks(args_ptr: *mut u8, args_len: usize) -> u6
         pollster::block_on(run_envelope(async move {
             let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
             client.fetch_jwks(params).await
+        }))
+    }))
+}
+
+/// `POST /v1/sdk/agent/keys/verifications`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_verify_agent_key(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: VerifyAgentKeyDto = parse_args_json(&args_json)?;
+            client.verify_agent_key(params).await
+        }))
+    }))
+}
+
+/// `POST /v1/sdk/agent/calls`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_authorize_agent_call(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: AuthorizeCallDto = parse_args_json(&args_json)?;
+            client.authorize_agent_call(params).await
+        }))
+    }))
+}
+
+/// `POST /v1/sdk/agent/calls/{callRef}/complete`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_complete_agent_call(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let (refs, body) = split_path_refs(&args_json, &["callRef"])?;
+            let params: CompleteCallDto = serde_json::from_value(body).map_err(|err| {
+                SdkError::transport(format!("invalid completeAgentCall body: {err}"), false)
+            })?;
+            client.complete_agent_call(&refs[0], params).await
+        }))
+    }))
+}
+
+/// `POST /v1/sdk/agent/usage-reports`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_report_agent_usage(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: UsageReportDto = parse_args_json(&args_json)?;
+            client.report_agent_usage(params).await
         }))
     }))
 }

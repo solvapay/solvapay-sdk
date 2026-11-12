@@ -25,7 +25,7 @@ function loadCorpus(): Array<{ rel: string; fn: string }> {
 describe('generated driver-loop corpus', () => {
   it('lists every driver-loop fixture and host fn', () => {
     const corpus = loadCorpus()
-    expect(corpus).toHaveLength(8)
+    expect(corpus).toHaveLength(7)
     expect(HOST_FNS).toEqual(expect.arrayContaining(['driveGate', 'drivePayable', 'withRetry']))
     expect(new Set(corpus.map(item => item.fn)).has('driveGate')).toBe(true)
     expect(new Set(corpus.map(item => item.fn)).has('drivePayable')).toBe(true)

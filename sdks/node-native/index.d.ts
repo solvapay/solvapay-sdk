@@ -110,7 +110,42 @@ export declare class NativeClient {
   mcpDispatch(argsJson: string): Promise<string>
   /** `fetchJwks` */
   fetchJwks(argsJson: string): Promise<string>
+  /** `POST /v1/sdk/agent/keys/verifications` */
+  verifyAgentKey(argsJson: string): Promise<string>
+  /** `POST /v1/sdk/agent/calls` */
+  authorizeAgentCall(argsJson: string): Promise<string>
+  /** `POST /v1/sdk/agent/calls/{callRef}/complete` */
+  completeAgentCall(argsJson: string): Promise<string>
+  /** `POST /v1/sdk/agent/usage-reports` */
+  reportAgentUsage(argsJson: string): Promise<string>
 }
+
+/** Binding for `agentAuthChallenge`. */
+export declare function agentAuthChallenge(argsJson: string): string
+
+/** Binding for `agentAuthorizeNext`. */
+export declare function agentAuthorizeNext(argsJson: string): string
+
+/** Binding for `agentAuthorizeRequest`. */
+export declare function agentAuthorizeRequest(argsJson: string): string
+
+/** Binding for `agentCompleteBody`. */
+export declare function agentCompleteBody(argsJson: string): string
+
+/** Binding for `agentCredentialKind`. */
+export declare function agentCredentialKind(argsJson: string): string
+
+/** Binding for `agentKeyVerificationResult`. */
+export declare function agentKeyVerificationResult(argsJson: string): string
+
+/** Binding for `agentPromptFacts`. */
+export declare function agentPromptFacts(argsJson: string): string
+
+/** Binding for `agentProtectedResource`. */
+export declare function agentProtectedResource(argsJson: string): string
+
+/** Binding for `agentSecretKeyEnvironment`. */
+export declare function agentSecretKeyEnvironment(argsJson: string): string
 
 /** Binding for `appendPaidToolDescription`. */
 export declare function appendPaidToolDescription(argsJson: string): string
@@ -401,6 +436,9 @@ export declare function normalizeReactivateResponse(argsJson: string): string
 /** Binding for `overlayClaimedLimits`. */
 export declare function overlayClaimedLimits(argsJson: string): string
 
+/** Binding for `parseAgentResponse`. */
+export declare function parseAgentResponse(argsJson: string): string
+
 /**
  * Binding for `paywallErrorToClientPayload`.
  *
@@ -612,6 +650,9 @@ export declare function validatePurchaseRef(argsJson: string): string
 
 /** Binding for `validateTopupPaymentIntentParams`. */
 export declare function validateTopupPaymentIntentParams(argsJson: string): string
+
+/** Binding for `verifyAgentToken`. */
+export declare function verifyAgentToken(argsJson: string): string
 
 /**
  * Verifies a SolvaPay webhook signature.

@@ -145,6 +145,168 @@ pub struct AuthorizeCallDtoEstimate {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
+pub enum AuthorizeCallResponseDto {
+    /// Variant `Allowed`.
+    Allowed(AuthorizeCallResponseDtoAllowed),
+    /// Variant `Refused`.
+    Refused(AuthorizeCallResponseDtoRefused),
+    /// Variant `Waiting`.
+    Waiting(AuthorizeCallResponseDtoWaiting),
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoAllowed {
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "reservation")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reservation: Option<AuthorizeCallResponseDtoAllowedReservation>,
+    /// Generated wire DTO.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<AuthorizeCallResponseDtoAllowedStatus>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoAllowedReservation {
+    /// Generated wire DTO.
+    #[serde(rename = "expiresAt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "held")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub held: Option<AuthorizeCallResponseDtoAllowedReservationHeld>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoAllowedReservationHeld {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthorizeCallResponseDtoAllowedStatus {
+    /// Wire value `allowed`.
+    #[serde(rename = "allowed")]
+    Allowed,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoRefused {
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "message")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "reason")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<AuthorizeCallResponseDtoRefusedReason>,
+    /// Generated wire DTO.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<AuthorizeCallResponseDtoRefusedStatus>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthorizeCallResponseDtoRefusedReason {
+    /// Wire value `approval_declined`.
+    #[serde(rename = "approval_declined")]
+    ApprovalDeclined,
+    /// Wire value `approval_expired`.
+    #[serde(rename = "approval_expired")]
+    ApprovalExpired,
+    /// Wire value `ask`.
+    #[serde(rename = "ask")]
+    Ask,
+    /// Wire value `customer_not_linked`.
+    #[serde(rename = "customer_not_linked")]
+    CustomerNotLinked,
+    /// Wire value `deny`.
+    #[serde(rename = "deny")]
+    Deny,
+    /// Wire value `topup_required`.
+    #[serde(rename = "topup_required")]
+    TopupRequired,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthorizeCallResponseDtoRefusedStatus {
+    /// Wire value `refused`.
+    #[serde(rename = "refused")]
+    Refused,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoWaiting {
+    /// Generated wire DTO.
+    #[serde(rename = "approval")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval: Option<AuthorizeCallResponseDtoWaitingApproval>,
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "message")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "retryAfterSeconds")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_after_seconds: Option<i64>,
+    /// Generated wire DTO.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<AuthorizeCallResponseDtoWaitingStatus>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallResponseDtoWaitingApproval {
+    /// Generated wire DTO.
+    #[serde(rename = "expiresAt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "reference")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthorizeCallResponseDtoWaitingStatus {
+    /// Wire value `waiting`.
+    #[serde(rename = "waiting")]
+    Waiting,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AutoRechargeConfigDto {
     /// Whether auto-recharge is enabled
     #[serde(rename = "enabled")]
@@ -957,6 +1119,58 @@ pub struct CompleteCallDtoCost {
     #[serde(rename = "currency")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompleteCallResponseDto {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<CompleteCallResponseDtoAmount>,
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "duplicate")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duplicate: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "settled")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settled: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "source")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<CompleteCallResponseDtoSource>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompleteCallResponseDtoAmount {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompleteCallResponseDtoSource {
+    /// Wire value `none`.
+    #[serde(rename = "none")]
+    None,
+    /// Wire value `provisional`.
+    #[serde(rename = "provisional")]
+    Provisional,
+    /// Wire value `reported`.
+    #[serde(rename = "reported")]
+    Reported,
 }
 
 /// Generated wire DTO.
@@ -5914,6 +6128,130 @@ pub struct UsageReportDtoWindow {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportResponseDto {
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<UsageReportResponseDtoCurrency>,
+    /// Generated wire DTO.
+    #[serde(rename = "duplicate")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duplicate: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "reference")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "results")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Vec<UsageReportResponseDtoResultsItem>>,
+    /// Generated wire DTO.
+    #[serde(rename = "untagged")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub untagged: Option<UsageReportResponseDtoUntagged>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UsageReportResponseDtoCurrency {
+    /// Wire value `USD`.
+    #[serde(rename = "USD")]
+    Usd,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportResponseDtoResultsItem {
+    /// Generated wire DTO.
+    #[serde(rename = "bookedCredit")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub booked_credit: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "bookedPolicy")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub booked_policy: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "creditDelta")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_delta: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "policyDelta")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_delta: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "reason")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<UsageReportResponseDtoResultsItemReason>,
+    /// Generated wire DTO.
+    #[serde(rename = "reported")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reported: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "result")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<UsageReportResponseDtoResultsItemResult>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UsageReportResponseDtoResultsItemReason {
+    /// Wire value `cost_differs`.
+    #[serde(rename = "cost_differs")]
+    CostDiffers,
+    /// Wire value `expired`.
+    #[serde(rename = "expired")]
+    Expired,
+    /// Wire value `no_debit`.
+    #[serde(rename = "no_debit")]
+    NoDebit,
+    /// Wire value `provisional`.
+    #[serde(rename = "provisional")]
+    Provisional,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UsageReportResponseDtoResultsItemResult {
+    /// Wire value `adjusted`.
+    #[serde(rename = "adjusted")]
+    Adjusted,
+    /// Wire value `already_reconciled`.
+    #[serde(rename = "already_reconciled")]
+    AlreadyReconciled,
+    /// Wire value `ignored`.
+    #[serde(rename = "ignored")]
+    Ignored,
+    /// Wire value `matched`.
+    #[serde(rename = "matched")]
+    Matched,
+    /// Wire value `pending`.
+    #[serde(rename = "pending")]
+    Pending,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportResponseDtoUntagged {
+    /// Generated wire DTO.
+    #[serde(rename = "beforePolicy")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before_policy: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "flagged")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flagged: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "total")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserInfoPlanDto {
     /// Generated wire DTO.
     #[serde(rename = "billingCycle")]
@@ -6060,6 +6398,38 @@ pub struct UserInfoUserDto {
     #[serde(rename = "reference")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VerifiedAgentKeyResponseDto {
+    /// Generated wire DTO.
+    #[serde(rename = "agentRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "environment")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<VerifiedAgentKeyResponseDtoEnvironment>,
+    /// Generated wire DTO.
+    #[serde(rename = "principalRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub principal_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "promptExcerpt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_excerpt: Option<bool>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VerifiedAgentKeyResponseDtoEnvironment {
+    /// Wire value `live`.
+    #[serde(rename = "live")]
+    Live,
+    /// Wire value `sandbox`.
+    #[serde(rename = "sandbox")]
+    Sandbox,
 }
 
 /// Generated wire DTO.

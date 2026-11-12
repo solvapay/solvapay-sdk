@@ -1,0 +1,41 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "verifyAgentKey",
+    "args": {
+      "agentKey": "agk_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "verify-agent-key-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/keys/verifications",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "agentKey": "agk_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "agentRef": "agt_fixture",
+        "principalRef": "ppl_fixture",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "agentRef": "agt_fixture",
+      "principalRef": "ppl_fixture",
+      "promptExcerpt": false,
+      "environment": "sandbox"
+    }
+  }
+}

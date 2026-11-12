@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { createLocalJWKSet, type JWK } from 'jose'
+import { type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { createAgentCalls, type Logger } from '../calls'
@@ -34,7 +34,7 @@ const verifier = (resource?: string) =>
   createAgentTokenVerifier({
     issuer: ISSUER,
     providerRef: PROVIDER,
-    keys: createLocalJWKSet({ keys: [agentJwk] }),
+    jwks: { keys: [agentJwk as Record<string, unknown>] },
     ...(resource ? { resource } : {}),
   })
 

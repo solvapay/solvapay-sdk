@@ -1,0 +1,67 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "authorizeAgentCall",
+    "args": {
+      "agentToken": "eyJ.fixture.token",
+      "requestId": "req_fixture",
+      "item": "gpt-5",
+      "estimate": {
+        "amount": "0.0125",
+        "currency": "USD"
+      },
+      "promptHash": "sha256:abc",
+      "wait": 30
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "authorize-agent-call-allowed",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/calls",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "agentToken": "eyJ.fixture.token",
+        "requestId": "req_fixture",
+        "item": "gpt-5",
+        "estimate": {
+          "amount": "0.0125",
+          "currency": "USD"
+        },
+        "promptHash": "sha256:abc",
+        "wait": 30
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "allowed",
+        "callRef": "acl_fixture",
+        "reservation": {
+          "held": {
+            "amount": "0.0125",
+            "currency": "USD"
+          },
+          "expiresAt": "2026-07-01T00:05:00Z"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "allowed",
+      "callRef": "acl_fixture",
+      "reservation": {
+        "held": {
+          "amount": "0.0125",
+          "currency": "USD"
+        },
+        "expiresAt": "2026-07-01T00:05:00Z"
+      }
+    }
+  }
+}

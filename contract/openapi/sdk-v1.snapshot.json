@@ -136,6 +136,134 @@
         ],
         "type": "object"
       },
+      "AuthorizeCallResponseDto": {
+        "oneOf": [
+          {
+            "properties": {
+              "callRef": {
+                "type": "string"
+              },
+              "reservation": {
+                "properties": {
+                  "expiresAt": {
+                    "type": "string"
+                  },
+                  "held": {
+                    "properties": {
+                      "amount": {
+                        "pattern": "^\\d+(\\.\\d{1,8})?$",
+                        "type": "string"
+                      },
+                      "currency": {
+                        "pattern": "^[A-Z]{3}$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount",
+                      "currency"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "held",
+                  "expiresAt"
+                ],
+                "type": "object"
+              },
+              "status": {
+                "enum": [
+                  "allowed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "reservation"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "callRef": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "enum": [
+                  "customer_not_linked",
+                  "ask",
+                  "deny",
+                  "topup_required",
+                  "approval_declined",
+                  "approval_expired"
+                ],
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "refused"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "approval": {
+                "properties": {
+                  "expiresAt": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reference",
+                  "expiresAt"
+                ],
+                "type": "object"
+              },
+              "callRef": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryAfterSeconds": {
+                "type": "integer"
+              },
+              "status": {
+                "enum": [
+                  "waiting"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "message",
+              "approval",
+              "retryAfterSeconds"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "AutoRechargeConfigDto": {
         "properties": {
           "enabled": {
@@ -815,6 +943,48 @@
         "required": [
           "status",
           "cost"
+        ],
+        "type": "object"
+      },
+      "CompleteCallResponseDto": {
+        "properties": {
+          "amount": {
+            "properties": {
+              "amount": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "currency": {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "callRef": {
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "settled": {
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "reported",
+              "provisional",
+              "none"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "callRef",
+          "settled",
+          "source",
+          "amount",
+          "duplicate"
         ],
         "type": "object"
       },
@@ -5174,6 +5344,93 @@
         ],
         "type": "object"
       },
+      "UsageReportResponseDto": {
+        "properties": {
+          "currency": {
+            "enum": [
+              "USD"
+            ],
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "properties": {
+                "bookedCredit": {
+                  "type": "string"
+                },
+                "bookedPolicy": {
+                  "type": "string"
+                },
+                "callRef": {
+                  "type": "string"
+                },
+                "creditDelta": {
+                  "type": "string"
+                },
+                "policyDelta": {
+                  "type": "string"
+                },
+                "reason": {
+                  "enum": [
+                    "provisional",
+                    "expired",
+                    "no_debit",
+                    "cost_differs"
+                  ],
+                  "type": "string"
+                },
+                "reported": {
+                  "type": "string"
+                },
+                "result": {
+                  "enum": [
+                    "matched",
+                    "adjusted",
+                    "pending",
+                    "already_reconciled",
+                    "ignored"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "callRef",
+                "result"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "untagged": {
+            "properties": {
+              "beforePolicy": {
+                "type": "string"
+              },
+              "flagged": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "reference",
+          "currency",
+          "duplicate",
+          "results",
+          "untagged"
+        ],
+        "type": "object"
+      },
       "UserInfoPlanDto": {
         "properties": {
           "billingCycle": {
@@ -5381,6 +5638,33 @@
         "required": [
           "reference",
           "email"
+        ],
+        "type": "object"
+      },
+      "VerifiedAgentKeyResponseDto": {
+        "properties": {
+          "agentRef": {
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "sandbox",
+              "live"
+            ],
+            "type": "string"
+          },
+          "principalRef": {
+            "type": "string"
+          },
+          "promptExcerpt": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agentRef",
+          "principalRef",
+          "promptExcerpt",
+          "environment"
         ],
         "type": "object"
       },
@@ -5684,6 +5968,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizeCallResponseDto"
+                }
+              }
+            },
             "description": "allowed, refused or waiting"
           },
           "401": {
@@ -5729,6 +6020,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteCallResponseDto"
+                }
+              }
+            },
             "description": "How the call was settled; a repeat returns the first result"
           },
           "404": {
@@ -5765,6 +6063,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifiedAgentKeyResponseDto"
+                }
+              }
+            },
             "description": "The agent, its principal and the excerpt setting"
           },
           "401": {
@@ -5801,6 +6106,13 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageReportResponseDto"
+                }
+              }
+            },
             "description": "Per decision: matched, adjusted, pending, already reconciled or ignored"
           },
           "404": {

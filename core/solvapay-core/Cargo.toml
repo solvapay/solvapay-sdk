@@ -18,12 +18,14 @@ default = ["server"]
 # Fixture / fuzz scaffolding. Off by default so it is not a published API.
 conformance = ["server"]
 # §7.1 capability composition
-server = ["client-full", "webhook-verify"]
+server = ["client-full", "webhook-verify", "agent-verify"]
 browser = ["client-public"]
 client-full = ["hmac-crypto"]
 client-public = []
 webhook-verify = ["hmac-crypto"]
 hmac-crypto = ["dep:hmac", "dep:sha2", "dep:subtle"]
+# ES256 agent tokens (P-256). Off the browser wasm graph.
+agent-verify = ["hmac-crypto", "dep:p256"]
 
 [dependencies]
 serde = { workspace = true }
@@ -31,6 +33,7 @@ serde_json = { workspace = true }
 hmac = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 subtle = { workspace = true, optional = true }
+p256 = { workspace = true, optional = true }
 solvapay-dto = { path = "../solvapay-dto", version = "2.6.0" }
 solvapay-export = { path = "../solvapay-export", version = "2.6.0" }
 

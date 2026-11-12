@@ -550,6 +550,94 @@ export function peggedCreditsPerUnit(
 }
 
 /**
+ * Read which environment a merchant secret key is for from its prefix.
+ * @returns `sandbox`, `live`, or null when the prefix says neither.
+ */
+export function agentSecretKeyEnvironment(secretKey: string): string | null {
+  return dispatchSync('agentSecretKeyEnvironment', { secretKey })
+}
+
+/**
+ * Classify a presented credential as an agent key, a JWT (agent token candidate) or something else.
+ * @returns `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+ */
+export function agentCredentialKind(value: string): string {
+  return dispatchSync('agentCredentialKind', { value })
+}
+
+/**
+ * Verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+ * @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+ */
+export function verifyAgentToken(input: unknown | null | undefined): unknown {
+  return dispatchSync('verifyAgentToken', { input: input ?? null })
+}
+
+/**
+ * Turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token gives.
+ * @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+ */
+export function agentKeyVerificationResult(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentKeyVerificationResult', { input: input ?? null })
+}
+
+/**
+ * Hash a call's prompt and take its end for SolvaPay's classifier.
+ * @returns `{ promptHash, toolError, excerpt }`.
+ */
+export function agentPromptFacts(text: string, toolError: boolean): unknown {
+  return dispatchSync('agentPromptFacts', { text, toolError })
+}
+
+/**
+ * Describe a merchant server as an OAuth protected resource (RFC 9728).
+ * @returns `{ resource, metadataPath, metadataUrl, metadata }`.
+ */
+export function agentProtectedResource(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentProtectedResource', { input: input ?? null })
+}
+
+/**
+ * Build the 401 that sends a host to sign the owner in and retry.
+ * @returns `{ status: 401, headers, body }`.
+ */
+export function agentAuthChallenge(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentAuthChallenge', { input: input ?? null })
+}
+
+/**
+ * Read one of SolvaPay's agent answers strictly, field by field.
+ * @returns The response with only its documented fields, each checked.
+ */
+export function parseAgentResponse(kind: string, value: unknown | null | undefined): unknown {
+  return dispatchSync('parseAgentResponse', { kind, value: value ?? null })
+}
+
+/**
+ * Build the body of one authorize request, with the wait left before the deadline.
+ * @returns The authorizeAgentCall body.
+ */
+export function agentAuthorizeRequest(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentAuthorizeRequest', { input: input ?? null })
+}
+
+/**
+ * Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+ * @returns `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+ */
+export function agentAuthorizeNext(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentAuthorizeNext', { input: input ?? null })
+}
+
+/**
+ * Build the body that completes an allowed call from how the upstream answered.
+ * @returns The completeAgentCall body.
+ */
+export function agentCompleteBody(input: unknown | null | undefined): unknown {
+  return dispatchSync('agentCompleteBody', { input: input ?? null })
+}
+
+/**
  * List the meters a recurring plan pays from prepaid credits.
  * @returns Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
  */

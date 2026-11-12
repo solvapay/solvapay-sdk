@@ -75,7 +75,7 @@ fn python_full_surface_matches_committed() {
         .expect("pythonBindings");
 
     let client_names = names_for(&ir, IrBindingArtifact::Client);
-    assert_eq!(client_names.len(), 45);
+    assert_eq!(client_names.len(), 49);
     for name in &client_names {
         assert!(
             emitted.client_rs.contains(&format!("fn {name}")),
@@ -89,7 +89,7 @@ fn python_full_surface_matches_committed() {
     }
 
     let decision_names = names_for(&ir, IrBindingArtifact::Decisions);
-    assert_eq!(decision_names.len(), 98);
+    assert_eq!(decision_names.len(), 109);
     for name in &decision_names {
         assert!(
             emitted

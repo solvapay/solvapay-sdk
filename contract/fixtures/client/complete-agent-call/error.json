@@ -1,0 +1,44 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "completeAgentCall",
+    "args": {
+      "callRef": "acl_fixture",
+      "status": 200,
+      "cost": {
+        "amount": "0.0100",
+        "currency": "USD"
+      }
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "complete-agent-call-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/calls/acl_fixture/complete",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "status": 200,
+        "cost": {
+          "amount": "0.0100",
+          "currency": "USD"
+        }
+      }
+    },
+    "response": {
+      "status": 409,
+      "body": "The call was refused or is still held"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "completeAgentCall failed (409): The call was refused or is still held",
+      "status": 409
+    }
+  }
+}

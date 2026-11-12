@@ -38,6 +38,14 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "attach_business_details", args)
     end
 
+    # Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance
+    # @param params The agent token, the merchant's request id, an optional item label, the estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55) this request may hold while the owner decides.
+    # @return `allowed` with the reservation held, `refused` with a reason and a sentence for the human, or `waiting` with the approval and when to ask again with the same request id.
+    def authorize_agent_call(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "authorize_agent_call", args)
+    end
+
     # Bootstrap an MCP product with default plans and tooling.
     # @param params MCP bootstrap request payload.
     # @return Bootstrap result including product and plan refs.
@@ -70,6 +78,19 @@ module SolvaPay
       args["productRef"] = product_ref
       args["overrides"] = overrides unless overrides.nil?
       NativeDispatch.call_client(@native_client, "clone_product", args)
+    end
+
+    # Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost
+    # @param call_ref The call reference `authorizeAgentCall` returned.
+    # @param params The status the upstream answered with, the cost it reported (or `null`), and `interrupted` when the answer broke before it finished.
+    # @return How the call was settled: `settled` is false when the upstream answered an error, `source` says whether the reported cost or the estimate was used, and a repeat returns the first result with `duplicate: true`.
+    def complete_agent_call(call_ref:, params:)
+      args = {} #: Hash[String, untyped]
+      args["callRef"] = call_ref
+      params.each do |key, value|
+        args[key.to_s] = value
+      end
+      NativeDispatch.call_client(@native_client, "complete_agent_call", args)
     end
 
     # Configure MCP plans for an existing product.
@@ -328,6 +349,14 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "reactivate_purchase", args)
     end
 
+    # Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it
+    # @param params The merchant's usage for one customer and window: a report id, the source, the window, the currency, each call's cost by call reference, and usage without a decision.
+    # @return Per call, how SolvaPay reconciled it (matched, adjusted, pending, already reconciled or ignored), plus the untagged totals and whether they are flagged.
+    def report_agent_usage(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "report_agent_usage", args)
+    end
+
     # Create or update auto-recharge configuration for a customer.
     # @param params Auto-recharge settings to persist.
     # @return Saved auto-recharge configuration.
@@ -387,6 +416,14 @@ module SolvaPay
         args[key.to_s] = value
       end
       NativeDispatch.call_client(@native_client, "update_product", args)
+    end
+
+    # Read the agent behind an agent key issued for this merchant
+    # @param params Body with `agentKey`: the agent key (`agk_…`) the caller presented in place of an agent token.
+    # @return The agent behind the key: `agentRef`, its pairwise `principalRef` at this merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown or revoked key, 403 for another merchant's key or the other environment's.
+    def verify_agent_key(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "verify_agent_key", args)
     end
   end
 end

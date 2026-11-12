@@ -17,11 +17,14 @@ export {
   createAgentTokenVerifier,
   isAgentKey,
   looksLikeJwt,
+  remoteAgentJwks,
+  type AgentJwks,
   type AgentLayer,
   type AgentRejectionReason,
   type AgentTokenResult,
   type AgentTokenVerifierOptions,
   type Identification,
+  type JwksDocument,
   type VerifiedAgent,
 } from './identity'
 export {

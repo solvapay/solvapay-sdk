@@ -4,7 +4,7 @@
 
 | Surface | Count | Source |
 | --- | ---: | --- |
-| Routed `SolvaPayClient` methods | 38 | `operations:` |
+| Routed `SolvaPayClient` methods | 42 | `operations:` |
 | MCP composites | 7 | routeless `operations:` |
 | MCP `syncOp` | 20 | `mcp:` `surface: syncOp` |
 
@@ -14,10 +14,12 @@
 - `activatePlan`
 - `assignCredits`
 - `attachBusinessDetails`
+- `authorizeAgentCall`
 - `bootstrapMcpProduct`
 - `cancelPurchase`
 - `checkLimits`
 - `cloneProduct`
+- `completeAgentCall`
 - `configureMcpPlans`
 - `createCheckoutSession`
 - `createCustomer`
@@ -43,12 +45,14 @@
 - `listPurchases`
 - `processPaymentIntent`
 - `reactivatePurchase`
+- `reportAgentUsage`
 - `saveAutoRecharge`
 - `trackUsage`
 - `trackUsageBulk`
 - `updateCustomer`
 - `updatePlan`
 - `updateProduct`
+- `verifyAgentKey`
 
 ## Composites
 

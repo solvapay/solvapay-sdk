@@ -77,6 +77,69 @@ pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_
 /// Frozen delay table.
 pub use solvapay_core::balance_poll::topup_balance_poll_delays_ms as TOPUP_BALANCE_POLL_DELAYS_MS;
 
+/// Build the 401 that sends a host to sign the owner in and retry.
+///
+/// # Returns
+///
+/// `{ status: 401, headers, body }`.
+pub use solvapay_core::agents::agent_auth_challenge;
+
+/// Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+///
+/// # Returns
+///
+/// `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+pub use solvapay_core::agents::agent_authorize_next;
+
+/// Build the body of one authorize request, with the wait left before the deadline.
+///
+/// # Returns
+///
+/// The authorizeAgentCall body.
+pub use solvapay_core::agents::agent_authorize_request;
+
+/// Build the body that completes an allowed call from how the upstream answered.
+///
+/// # Returns
+///
+/// The completeAgentCall body.
+pub use solvapay_core::agents::agent_complete_body;
+
+/// Classify a presented credential as an agent key, a JWT (agent token candidate) or something else.
+///
+/// # Returns
+///
+/// `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+pub use solvapay_core::agents::agent_credential_kind;
+
+/// Turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token gives.
+///
+/// # Returns
+///
+/// `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+pub use solvapay_core::agents::agent_key_verification_result;
+
+/// Hash a call's prompt and take its end for SolvaPay's classifier.
+///
+/// # Returns
+///
+/// `{ promptHash, toolError, excerpt }`.
+pub use solvapay_core::agents::agent_prompt_facts;
+
+/// Describe a merchant server as an OAuth protected resource (RFC 9728).
+///
+/// # Returns
+///
+/// `{ resource, metadataPath, metadataUrl, metadata }`.
+pub use solvapay_core::agents::agent_protected_resource;
+
+/// Read which environment a merchant secret key is for from its prefix.
+///
+/// # Returns
+///
+/// `sandbox`, `live`, or null when the prefix says neither.
+pub use solvapay_core::agents::agent_secret_key_environment;
+
 /// Append the paid-tool account hint to a merchant tool description.
 ///
 /// # Arguments
@@ -389,6 +452,13 @@ pub use solvapay_core::paywall_state::next_action_for;
 /// Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
 pub use solvapay_core::free_limit::normalize_free_limit;
 
+/// Read one of SolvaPay's agent answers strictly, field by field.
+///
+/// # Returns
+///
+/// The response with only its documented fields, each checked.
+pub use solvapay_core::agents::parse_agent_response;
+
 /// Project a PaywallError into the client-facing payload shape.
 ///
 /// # Returns
@@ -543,6 +613,13 @@ pub use solvapay_core::pricing_options::usage_rate;
 ///
 /// Validation issues when present.
 pub use solvapay_core::business_details::validate_business_details;
+
+/// Verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+///
+/// # Returns
+///
+/// `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+pub use solvapay_core::agents::verify_agent_token;
 
 // Internal cores (`catalog: none`) re-exported for facade parity.
 

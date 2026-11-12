@@ -2,16 +2,16 @@
 // agent service, published at `<issuer>/jwks.json`, issued for one merchant
 // (`aud` = its provider reference). Agent keys (`agk_…`) are long-lived and
 // opaque: SolvaPay says whose they are. Anything else a caller presents is
-// the merchant's own auth.
-import { errors, jwtVerify, type JWTVerifyGetKey } from 'jose'
+// the merchant's own auth. The checks run in the Rust core
+// (`verifyAgentToken`, `agentKeyVerificationResult`, `agentCredentialKind`);
+// fetching and caching the published keys is this file's job.
+import { AgentApiError, type AgentEnvironment, type SolvaPayAgentClient } from './client'
 import {
-  AGENT_ENVIRONMENTS,
-  AGENT_KEY_PREFIX,
-  AgentApiError,
-  type AgentEnvironment,
-  type SolvaPayAgentClient,
-} from './client'
-import { canonicalResource } from './oauth'
+  agentCredentialKind,
+  agentKeyVerificationResult,
+  unwrap,
+  verifyAgentToken as verifyAgentTokenInCore,
+} from './core'
 
 /**
  * Agent token claim: the agent's spend policy lets the classifier read the
@@ -60,94 +60,120 @@ export interface AgentTokenVerifierOptions {
    * any other URL is refused.
    */
   resource?: string
-  /** Key resolver: `createRemoteJWKSet(new URL(jwksUrl))` in production. */
-  keys: JWTVerifyGetKey
+  /** The issuer's published keys: `remoteAgentJwks(\`${issuer}/jwks.json\`)` in production. */
+  jwks: AgentJwks
   /**
    * The environment this merchant's secret key is for (`secretKeyEnvironment`);
    * an agent from the other is refused. Unset, SolvaPay refuses it at authorize.
    */
   environment?: AgentEnvironment
+  /** The clock, in milliseconds; tests set it. */
+  now?: () => number
 }
 
-const CLOCK_TOLERANCE_SECONDS = 30
+/** A JSON Web Key Set, as the issuer publishes it at `<issuer>/jwks.json`. */
+export interface JwksDocument {
+  keys: Record<string, unknown>[]
+}
+
+/**
+ * Where the verifier gets the issuer's keys: the document itself, or a loader.
+ * A loader is asked again with `{ refresh: true }` once when a token's
+ * signature does not verify, so a rotated key is picked up.
+ */
+export type AgentJwks = JwksDocument | ((options: { refresh: boolean }) => Promise<JwksDocument>)
+
+/** How long `remoteAgentJwks` keeps a fetched key set. */
+const JWKS_CACHE_MS = 5 * 60_000
+/** The least time between two fetches, so bad tokens cannot make it fetch on every call. */
+const JWKS_MIN_REFRESH_MS = 30_000
+
+/**
+ * Fetches the issuer's key set, keeps it five minutes, and fetches again on
+ * a refresh (at most every 30 seconds). A failed fetch throws: no token is
+ * accepted on keys that could not be read.
+ */
+export function remoteAgentJwks(
+  url: string,
+  options: { fetchImpl?: typeof fetch; now?: () => number } = {},
+): (options: { refresh: boolean }) => Promise<JwksDocument> {
+  const fetchImpl = options.fetchImpl ?? fetch
+  const now = options.now ?? Date.now
+  let cached: { document: JwksDocument; fetchedAt: number } | undefined
+  return async ({ refresh }) => {
+    const age = cached ? now() - cached.fetchedAt : Infinity
+    if (cached && (refresh ? age < JWKS_MIN_REFRESH_MS : age < JWKS_CACHE_MS)) {
+      return cached.document
+    }
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(10_000) })
+    if (!response.ok) throw new Error(`GET ${url} failed (${response.status})`)
+    const document = (await response.json()) as unknown
+    if (
+      typeof document !== 'object' ||
+      document === null ||
+      !Array.isArray((document as JwksDocument).keys)
+    ) {
+      throw new Error(`${url} is not a JSON Web Key Set`)
+    }
+    cached = { document: document as JwksDocument, fetchedAt: now() }
+    return cached.document
+  }
+}
+
+/** The core's detail when no published key verifies a signature. */
+const BAD_SIGNATURE = 'signature does not verify against the published keys'
+
+interface CoreAgent extends Omit<VerifiedAgent, 'expiresAt'> {
+  /** Unix seconds. */
+  expiresAt?: number
+}
+
+type CoreTokenResult =
+  | { ok: true; agent: CoreAgent }
+  | { ok: false; reason: AgentRejectionReason; detail: string }
+
+function fromCore(result: CoreTokenResult): AgentTokenResult {
+  if (!result.ok) return result
+  const { expiresAt, ...agent } = result.agent
+  return {
+    ok: true,
+    agent: {
+      ...agent,
+      ...(expiresAt === undefined ? {} : { expiresAt: new Date(expiresAt * 1000) }),
+    },
+  }
+}
 
 export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
+  const now = options.now ?? Date.now
+  const keys = async (refresh: boolean): Promise<JwksDocument> =>
+    typeof options.jwks === 'function' ? options.jwks({ refresh }) : options.jwks
+  const check = (token: string, jwks: JwksDocument) =>
+    fromCore(
+      unwrap<CoreTokenResult>(
+        verifyAgentTokenInCore({
+          token,
+          jwks,
+          issuer: options.issuer,
+          providerRef: options.providerRef,
+          ...(options.resource ? { resource: options.resource } : {}),
+          ...(options.environment ? { environment: options.environment } : {}),
+          nowUnixSecs: Math.floor(now() / 1000),
+        }),
+      ),
+    )
   return async function verifyAgentToken(token: string): Promise<AgentTokenResult> {
-    try {
-      const { payload } = await jwtVerify(token, options.keys, {
-        issuer: options.issuer,
-        audience: options.resource
-          ? [options.providerRef, canonicalResource(options.resource)]
-          : options.providerRef,
-        algorithms: ['ES256'],
-        clockTolerance: CLOCK_TOLERANCE_SECONDS,
-        requiredClaims: ['sub', 'exp', 'iat', 'jti'],
-      })
-      const { sub, jti, exp, principal, scope } = payload
-      const clientId = payload[AGENT_TOKEN_CLIENT_CLAIM]
-      if (clientId !== undefined && typeof clientId !== 'string') {
-        return { ok: false, reason: 'invalid', detail: 'cid is not a string' }
-      }
-      if (typeof sub !== 'string' || !sub.startsWith('agt_')) {
-        return { ok: false, reason: 'invalid', detail: 'sub is not an agent reference' }
-      }
-      if (typeof principal !== 'string' || !principal.startsWith('ppl_')) {
-        return { ok: false, reason: 'invalid', detail: 'principal is missing' }
-      }
-      if (scope !== 'usage') {
-        return { ok: false, reason: 'invalid', detail: 'scope is not usage' }
-      }
-      const environment = payload[AGENT_TOKEN_ENV_CLAIM]
-      if (!isAgentEnvironment(environment)) {
-        return { ok: false, reason: 'invalid', detail: 'env is not sandbox or live' }
-      }
-      return checkEnvironment(
-        {
-          agentRef: sub,
-          principalRef: principal,
-          tokenId: jti as string,
-          expiresAt: new Date((exp as number) * 1000),
-          promptExcerpt: payload[AGENT_TOKEN_EXCERPT_CLAIM] === true,
-          environment,
-          ...(clientId ? { clientId } : {}),
-        },
-        options.environment,
-      )
-    } catch (error) {
-      if (error instanceof errors.JWTExpired) {
-        return { ok: false, reason: 'expired', detail: error.message }
-      }
-      return {
-        ok: false,
-        reason: 'invalid',
-        detail: error instanceof Error ? error.message : String(error),
-      }
+    const result = check(token, await keys(false))
+    if (!result.ok && result.detail === BAD_SIGNATURE && typeof options.jwks === 'function') {
+      return check(token, await keys(true))
     }
+    return result
   }
-}
-
-function isAgentEnvironment(value: unknown): value is AgentEnvironment {
-  return AGENT_ENVIRONMENTS.includes(value as AgentEnvironment)
-}
-
-/** Refuses an agent from the other environment; with the merchant's unknown, SolvaPay does. */
-function checkEnvironment(
-  agent: VerifiedAgent,
-  merchant: AgentEnvironment | undefined,
-): AgentTokenResult {
-  if (merchant !== undefined && agent.environment !== merchant) {
-    return {
-      ok: false,
-      reason: 'environment_mismatch',
-      detail: `This agent spends in ${agent.environment}, and this secret key is for ${merchant}`,
-    }
-  }
-  return { ok: true, agent }
 }
 
 /** A JWS compact token, as opposed to a merchant API key. */
 export function looksLikeJwt(value: string): boolean {
-  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
+  return agentCredentialKind(value) === 'jwt'
 }
 
 export type Identification =
@@ -161,7 +187,7 @@ export interface AgentLayer {
 }
 
 export function isAgentKey(value: string): boolean {
-  return value.startsWith(AGENT_KEY_PREFIX) && value.length > AGENT_KEY_PREFIX.length
+  return agentCredentialKind(value) === 'agentKey'
 }
 
 /** How long an agent key's answer is reused; a revoked key stops within this. */
@@ -184,29 +210,23 @@ export function createAgentKeyVerifier(deps: {
   return async agentKey => {
     const cached = answers.get(agentKey)
     if (cached && cached.until > now()) return cached.result
-    let result: AgentTokenResult
+    let input: Record<string, unknown>
     try {
-      const verified = await deps.client.verifyAgentKey(agentKey)
-      result = checkEnvironment(
-        {
-          agentRef: verified.agentRef,
-          principalRef: verified.principalRef,
-          promptExcerpt: verified.promptExcerpt,
-          environment: verified.environment,
-        },
-        deps.environment,
-      )
+      input = { verified: await deps.client.verifyAgentKey(agentKey) }
     } catch (error) {
       if (!(error instanceof AgentApiError) || (error.status !== 401 && error.status !== 403)) {
         throw error
       }
-      // SolvaPay refuses a key from the other environment with this code in its 403.
-      const reason =
-        error.status === 403 && error.message.includes('environment_mismatch')
-          ? 'environment_mismatch'
-          : 'invalid'
-      result = { ok: false, reason, detail: error.message }
+      input = { errorStatus: error.status, errorMessage: error.message }
     }
+    const result = fromCore(
+      unwrap<CoreTokenResult>(
+        agentKeyVerificationResult({
+          ...input,
+          ...(deps.environment ? { environment: deps.environment } : {}),
+        }),
+      ),
+    )
     answers.set(agentKey, { result, until: now() + AGENT_KEY_CACHE_MS })
     return result
   }

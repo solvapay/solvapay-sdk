@@ -1,4 +1,4 @@
-import { createLocalJWKSet, type JWK } from 'jose'
+import { type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createAgentCalls, type RefusalReason } from '../calls'
 import { createAgentLayer, createAgentTokenVerifier } from '../identity'
@@ -22,7 +22,7 @@ function setup(environment?: 'sandbox' | 'live') {
       verifyAgentToken: createAgentTokenVerifier({
         issuer: ISSUER,
         providerRef: PROVIDER,
-        keys: createLocalJWKSet({ keys: [agentJwk] }),
+        jwks: { keys: [agentJwk as Record<string, unknown>] },
         ...(environment ? { environment } : {}),
       }),
     }),

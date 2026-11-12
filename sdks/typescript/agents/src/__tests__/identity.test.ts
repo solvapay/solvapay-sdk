@@ -1,4 +1,4 @@
-import { createLocalJWKSet, SignJWT, type JWK } from 'jose'
+import { SignJWT, type JWK } from 'jose'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { AgentApiError, createSolvaPayAgentClient, secretKeyEnvironment } from '../client'
 import {
@@ -6,6 +6,7 @@ import {
   createAgentLayer,
   createAgentTokenVerifier,
   looksLikeJwt,
+  remoteAgentJwks,
 } from '../identity'
 import {
   agentKeys,
@@ -27,7 +28,7 @@ function verifier(environment?: 'sandbox' | 'live') {
   return createAgentTokenVerifier({
     issuer: ISSUER,
     providerRef: PROVIDER,
-    keys: createLocalJWKSet({ keys: [publicJwk] }),
+    jwks: { keys: [publicJwk as Record<string, unknown>] },
     ...(environment ? { environment } : {}),
   })
 }
@@ -122,6 +123,58 @@ describe('agent token verification', () => {
       ok: false,
       reason: 'invalid',
     })
+  })
+})
+
+describe('remote agent keys', () => {
+  function jwksServer(documents: unknown[]) {
+    const fetched: string[] = []
+    const fetchImpl = (async (url: string) => {
+      fetched.push(url)
+      const document = documents.shift()
+      return document === undefined
+        ? new Response('down', { status: 503 })
+        : Response.json(document)
+    }) as unknown as typeof fetch
+    return { fetchImpl, fetched }
+  }
+
+  it('keeps the key set, and fetches again once when a token is signed by a new key', async () => {
+    const rotated = await agentKeys()
+    const server = jwksServer([
+      { keys: [publicJwk] },
+      { keys: [publicJwk, { ...rotated.publicJwk, kid: 'k2' }] },
+    ])
+    let clock = 0
+    const verify = createAgentTokenVerifier({
+      issuer: ISSUER,
+      providerRef: PROVIDER,
+      jwks: remoteAgentJwks(`${ISSUER}/jwks.json`, {
+        fetchImpl: server.fetchImpl,
+        now: () => clock,
+      }),
+    })
+    expect((await verify(await signAgentToken(privateKey))).ok).toBe(true)
+    expect((await verify(await signAgentToken(privateKey))).ok).toBe(true)
+    expect(server.fetched).toHaveLength(1)
+
+    clock = 60_000
+    const newKeyToken = await signAgentToken(rotated.privateKey, { kid: 'k2' })
+    expect((await verify(newKeyToken)).ok).toBe(true)
+    expect(server.fetched).toHaveLength(2)
+  })
+
+  it('throws when the key set cannot be read, and accepts nothing', async () => {
+    const server = jwksServer([{ notKeys: true }])
+    const verify = createAgentTokenVerifier({
+      issuer: ISSUER,
+      providerRef: PROVIDER,
+      jwks: remoteAgentJwks(`${ISSUER}/jwks.json`, { fetchImpl: server.fetchImpl }),
+    })
+    await expect(verify(await signAgentToken(privateKey))).rejects.toThrow(
+      'is not a JSON Web Key Set',
+    )
+    await expect(verify(await signAgentToken(privateKey))).rejects.toThrow('failed (503)')
   })
 })
 

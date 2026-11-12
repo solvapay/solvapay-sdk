@@ -13,18 +13,19 @@ use solvapay::{
 };
 use solvapay_dto::{
     ActivatePlanDto, ActivatePlanResponseDto, AssignCreditsRequest, AttachBusinessDetailsParams,
-    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CloneProductResult,
-    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse,
-    CreateCustomerRequest, CreateCustomerResult, CreateCustomerSessionRequest,
-    CreateCustomerSessionResponse, CreatePaymentIntentParams, CreatePaymentIntentResult,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    CreateTopupPaymentIntentResult, CustomerResponseMapped, DisableAutoRechargeParams,
-    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams,
-    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
-    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
+    AuthorizeCallDto, CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides,
+    CloneProductResult, CompleteCallDto, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
+    CreateCheckoutSessionResponse, CreateCustomerRequest, CreateCustomerResult,
+    CreateCustomerSessionRequest, CreateCustomerSessionResponse, CreatePaymentIntentParams,
+    CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
+    CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, CustomerResponseMapped,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams,
+    GetUserInfoParams, GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
+    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
+    UsageReportDto, UserInfoResponse, VerifyAgentKeyDto,
 };
 
 /// Catalogued client operation signatures: name → &[(param_name, required)].
@@ -32,12 +33,17 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("activate_plan", &[("params", true)]),
     ("assign_credits", &[("params", true)]),
     ("attach_business_details", &[("params", true)]),
+    ("authorize_agent_call", &[("params", true)]),
     ("bootstrap_mcp_product", &[("params", true)]),
     ("cancel_purchase", &[("params", true)]),
     ("check_limits", &[("params", true)]),
     (
         "clone_product",
         &[("product_ref", true), ("overrides", false)],
+    ),
+    (
+        "complete_agent_call",
+        &[("call_ref", true), ("params", true)],
     ),
     (
         "configure_mcp_plans",
@@ -74,6 +80,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("mcp_resolve_auth", &[("params", true)]),
     ("process_payment_intent", &[("params", true)]),
     ("reactivate_purchase", &[("params", true)]),
+    ("report_agent_usage", &[("params", true)]),
     ("save_auto_recharge", &[("params", true)]),
     ("track_usage", &[("params", true)]),
     ("track_usage_bulk", &[("params", true)]),
@@ -86,6 +93,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
         &[("product_ref", true), ("plan_ref", true), ("params", true)],
     ),
     ("update_product", &[("product_ref", true), ("params", true)]),
+    ("verify_agent_key", &[("params", true)]),
 ];
 
 /// Frozen limits-cache TTL from the contract manifest `defaults:`.
@@ -122,6 +130,9 @@ async fn _assert_typed_surface(c: &Client) {
         .attach_business_details(_parity_sink::<AttachBusinessDetailsParams>())
         .await;
     let _: Result<Value, SdkError> = c
+        .authorize_agent_call(_parity_sink::<AuthorizeCallDto>())
+        .await;
+    let _: Result<Value, SdkError> = c
         .bootstrap_mcp_product(_parity_sink::<McpBootstrapDto>())
         .await;
     let _: Result<Value, SdkError> = c
@@ -133,6 +144,9 @@ async fn _assert_typed_surface(c: &Client) {
             _parity_sink::<&str>(),
             _parity_sink::<Option<CloneProductOverrides>>(),
         )
+        .await;
+    let _: Result<Value, SdkError> = c
+        .complete_agent_call(_parity_sink::<&str>(), _parity_sink::<CompleteCallDto>())
         .await;
     let _: Result<Value, SdkError> = c
         .configure_mcp_plans(
@@ -217,6 +231,7 @@ async fn _assert_typed_surface(c: &Client) {
     let _: Result<Value, SdkError> = c
         .reactivate_purchase(_parity_sink::<ReactivatePurchaseParams>())
         .await;
+    let _: Result<Value, SdkError> = c.report_agent_usage(_parity_sink::<UsageReportDto>()).await;
     let _: Result<Value, SdkError> = c
         .save_auto_recharge(_parity_sink::<SaveAutoRechargeParams>())
         .await;
@@ -243,6 +258,9 @@ async fn _assert_typed_surface(c: &Client) {
             _parity_sink::<UpdateProductRequest>(),
         )
         .await;
+    let _: Result<Value, SdkError> = c
+        .verify_agent_key(_parity_sink::<VerifyAgentKeyDto>())
+        .await;
 }
 
 #[cfg(feature = "blocking")]
@@ -254,6 +272,7 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         c.assign_credits(_parity_sink::<AssignCreditsRequest>());
     let _: Result<Value, SdkError> =
         c.attach_business_details(_parity_sink::<AttachBusinessDetailsParams>());
+    let _: Result<Value, SdkError> = c.authorize_agent_call(_parity_sink::<AuthorizeCallDto>());
     let _: Result<Value, SdkError> = c.bootstrap_mcp_product(_parity_sink::<McpBootstrapDto>());
     let _: Result<Value, SdkError> = c.cancel_purchase(_parity_sink::<CancelPurchaseParams>());
     let _: Result<Value, SdkError> = c.check_limits(_parity_sink::<CheckLimitsRequest>());
@@ -261,6 +280,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         _parity_sink::<&str>(),
         _parity_sink::<Option<CloneProductOverrides>>(),
     );
+    let _: Result<Value, SdkError> =
+        c.complete_agent_call(_parity_sink::<&str>(), _parity_sink::<CompleteCallDto>());
     let _: Result<Value, SdkError> = c.configure_mcp_plans(
         _parity_sink::<&str>(),
         _parity_sink::<ConfigureMcpPlansDto>(),
@@ -315,6 +336,7 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         c.process_payment_intent(_parity_sink::<ProcessPaymentIntentParams>());
     let _: Result<Value, SdkError> =
         c.reactivate_purchase(_parity_sink::<ReactivatePurchaseParams>());
+    let _: Result<Value, SdkError> = c.report_agent_usage(_parity_sink::<UsageReportDto>());
     let _: Result<Value, SdkError> = c.save_auto_recharge(_parity_sink::<SaveAutoRechargeParams>());
     let _: Result<Value, SdkError> = c.track_usage(_parity_sink::<TrackUsageRequest>());
     let _: Result<Value, SdkError> = c.track_usage_bulk(_parity_sink::<TrackUsageBulkRequest>());
@@ -331,11 +353,12 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         _parity_sink::<&str>(),
         _parity_sink::<UpdateProductRequest>(),
     );
+    let _: Result<Value, SdkError> = c.verify_agent_key(_parity_sink::<VerifyAgentKeyDto>());
 }
 
 #[test]
-fn operation_signatures_count_is_45() {
-    assert_eq!(OPERATION_SIGNATURES.len(), 45);
+fn operation_signatures_count_is_49() {
+    assert_eq!(OPERATION_SIGNATURES.len(), 49);
 }
 
 #[test]

@@ -106,6 +106,28 @@ browserSafe:
   - validatePurchaseRef
 
 excluded:
+  - name: agentAuthChallenge
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentAuthorizeNext
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentAuthorizeRequest
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentCompleteBody
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentCredentialKind
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentKeyVerificationResult
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentPromptFacts
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentProtectedResource
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: agentSecretKeyEnvironment
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: parseAgentResponse
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
+  - name: verifyAgentToken
+    reason: agent payments run on merchant servers; edge-only (token verification needs P-256)
   - name: verifyWebhook
     reason: webhook verification is edge-only (secret + clock)
   - name: WasmClient

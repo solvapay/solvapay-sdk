@@ -1,0 +1,29 @@
+{
+  "suite": "agents",
+  "case": "key-verification-accepted",
+  "input": {
+    "fn": "agentKeyVerificationResult",
+    "args": {
+      "input": {
+        "verified": {
+          "agentRef": "agt_1",
+          "principalRef": "ppl_1",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "environment": "sandbox"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "agent": {
+        "agentRef": "agt_1",
+        "principalRef": "ppl_1",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      }
+    }
+  }
+}

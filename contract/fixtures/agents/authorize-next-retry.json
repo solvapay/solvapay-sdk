@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "authorize-next-retry",
+  "input": {
+    "fn": "agentAuthorizeNext",
+    "args": {
+      "input": {
+        "response": {
+          "status": "waiting",
+          "callRef": "acl_1",
+          "message": "Waiting for the owner.",
+          "approval": {
+            "reference": "apr_1",
+            "expiresAt": "2026-07-01T00:10:00Z"
+          },
+          "retryAfterSeconds": 2
+        },
+        "maxWaitSeconds": 30,
+        "nowMs": 0,
+        "deadlineMs": 30000,
+        "aborted": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "retry",
+      "sleepMs": 2000,
+      "callRef": "acl_1",
+      "approvalRef": "apr_1"
+    }
+  }
+}

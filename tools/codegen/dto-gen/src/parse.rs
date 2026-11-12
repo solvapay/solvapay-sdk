@@ -172,6 +172,10 @@ fn lower_named_schema(
         return Ok(IrType::Struct(lower_struct(name, obj, ctx, schemas)?));
     }
 
+    if let Some(one_of) = obj.get("oneOf").and_then(Value::as_array) {
+        return lower_named_one_of(name, obj, one_of, ctx, schemas);
+    }
+
     Err(GenError::Unsupported {
         name: name.to_string(),
         detail: format!(
@@ -179,6 +183,58 @@ fn lower_named_schema(
             obj.keys().collect::<Vec<_>>()
         ),
     })
+}
+
+/// A component schema that is a `oneOf` of inline objects (a response that is
+/// one of several shapes, e.g. `allowed | refused | waiting`).
+///
+/// Each branch becomes its own struct. A branch whose `status` is a single
+/// string value is named after it (`{name}Allowed`), otherwise by position.
+/// The union is untagged: the single-value `status` enum on each branch is
+/// what tells the shapes apart on the wire.
+fn lower_named_one_of(
+    name: &str,
+    obj: &Map<String, Value>,
+    one_of: &[Value],
+    ctx: &mut ParseCtx,
+    schemas: &Map<String, Value>,
+) -> GenResult<IrType> {
+    let mut variants = Vec::new();
+    for (idx, branch) in one_of.iter().enumerate() {
+        let branch_obj = branch.as_object().ok_or_else(|| {
+            GenError::Parse(format!("oneOf branch {idx} in {name} must be an object"))
+        })?;
+        if branch_obj.contains_key("$ref") {
+            return Err(GenError::Unsupported {
+                name: name.to_string(),
+                detail: "top-level oneOf with $ref branches".into(),
+            });
+        }
+        let status = branch_obj
+            .get("properties")
+            .and_then(|p| p.get("status"))
+            .and_then(|s| s.get("enum"))
+            .and_then(Value::as_array)
+            .filter(|values| values.len() == 1)
+            .and_then(|values| values.first())
+            .and_then(Value::as_str);
+        let variant = status.map_or_else(|| format!("Variant{idx}"), rust_type_name);
+        let branch_name = format!("{name}{variant}");
+        let st = lower_struct(&branch_name, branch_obj, ctx, schemas)?;
+        ctx.insert_type(branch_name.clone(), IrType::Struct(st));
+        variants.push(IrOneOfVariant {
+            rust_name: variant,
+            tag_value: None,
+            ty: IrTypeRef::Named(branch_name),
+        });
+    }
+    Ok(IrType::OneOf(IrOneOf {
+        name: name.to_string(),
+        doc: doc_of(obj),
+        strategy: OneOfStrategy::Untagged,
+        discriminator: None,
+        variants,
+    }))
 }
 
 fn lower_struct(

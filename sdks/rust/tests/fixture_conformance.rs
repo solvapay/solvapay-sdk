@@ -34,10 +34,12 @@ const ALL_OPS: &[&str] = &[
     "activatePlan",
     "assignCredits",
     "attachBusinessDetails",
+    "authorizeAgentCall",
     "bootstrapMcpProduct",
     "cancelPurchase",
     "checkLimits",
     "cloneProduct",
+    "completeAgentCall",
     "configureMcpPlans",
     "createCheckoutSession",
     "createCustomer",
@@ -63,21 +65,23 @@ const ALL_OPS: &[&str] = &[
     "listPurchases",
     "processPaymentIntent",
     "reactivatePurchase",
+    "reportAgentUsage",
     "saveAutoRecharge",
     "trackUsage",
     "trackUsageBulk",
     "updateCustomer",
     "updatePlan",
     "updateProduct",
+    "verifyAgentKey",
 ];
 
 #[tokio::test]
 async fn facade_inventory_has_success_and_error_per_operation() {
     let fixtures = load_all_client_fixtures(&client_fixtures_root());
-    assert_eq!(ALL_OPS.len(), 38);
+    assert_eq!(ALL_OPS.len(), 42);
     assert_eq!(
         GROUP_A_FNS.len() + GROUP_B_FNS.len() + GROUP_C_FNS.len(),
-        38
+        42
     );
 
     let mut success: BTreeSet<&str> = BTreeSet::new();

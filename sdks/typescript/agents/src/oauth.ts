@@ -2,7 +2,9 @@
 // 9728): the document that tells a host where to sign the owner in, and the
 // 401 challenge that sends it there. SolvaPay's agent issuer is the
 // authorization server; the access token it issues is an ordinary agent token
-// whose `aud` is this resource.
+// whose `aud` is this resource. The document and the challenge come from the
+// Rust core (`agentProtectedResource`, `agentAuthChallenge`).
+import { agentAuthChallenge, agentProtectedResource, unwrap } from './core'
 
 /** The one scope an agent token carries. */
 export const AGENT_SCOPE = 'usage'
@@ -18,28 +20,35 @@ export interface ProtectedResource {
   metadataPath?: string
 }
 
+interface DescribedResource {
+  resource: string
+  metadataPath: string
+  metadataUrl: string
+  metadata: Record<string, unknown>
+}
+
+function describe(resource: ProtectedResource & { serverName?: string }): DescribedResource {
+  return unwrap<DescribedResource>(agentProtectedResource(resource))
+}
+
 /**
  * The canonical form SolvaPay compares resources in: scheme and host
  * lowercased, default port dropped, no trailing slash. A fragment or
  * credentials make it unusable as a resource, so they throw.
  */
 export function canonicalResource(resource: string): string {
-  const url = new URL(resource)
-  if (url.hash || url.username || url.password) {
-    throw new Error(`${resource} cannot be an OAuth resource: no fragment or credentials`)
-  }
-  return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}${url.search}`
+  // The issuer is not part of the canonical form; the resource stands in for it.
+  return describe({ resource, authorizationServer: resource }).resource
 }
 
 /** The RFC 9728 path-suffixed form, which hosts try first: `/.well-known/oauth-protected-resource/mcp`. */
 export function protectedResourceMetadataPath(resource: ProtectedResource): string {
-  if (resource.metadataPath) return resource.metadataPath
-  return `/.well-known/oauth-protected-resource${new URL(canonicalResource(resource.resource)).pathname}`
+  return describe(resource).metadataPath
 }
 
 /** The absolute URL a challenge points hosts at. */
 export function protectedResourceMetadataUrl(resource: ProtectedResource): string {
-  return new URL(protectedResourceMetadataPath(resource), resource.resource).toString()
+  return describe(resource).metadataUrl
 }
 
 /**
@@ -49,18 +58,19 @@ export function protectedResourceMetadataUrl(resource: ProtectedResource): strin
 export function protectedResourceMetadata(
   resource: ProtectedResource & { serverName?: string },
 ): Record<string, unknown> {
-  return {
-    resource: canonicalResource(resource.resource),
-    authorization_servers: [resource.authorizationServer],
-    scopes_supported: [AGENT_SCOPE],
-    bearer_methods_supported: ['header'],
-    ...(resource.serverName ? { resource_name: resource.serverName } : {}),
-    ...(resource.documentation ? { resource_documentation: resource.documentation } : {}),
-  }
+  return describe(resource).metadata
 }
 
-function quoted(value: string): string {
-  return value.replace(/[\\"]/g, ch => `\\${ch}`)
+interface Challenge {
+  status: number
+  headers: Record<string, string>
+  body: unknown
+}
+
+function challenge(resource: ProtectedResource, description: string, jsonRpcId: unknown) {
+  return unwrap<Challenge>(
+    agentAuthChallenge({ ...resource, description, jsonRpcId: jsonRpcId ?? null }),
+  )
 }
 
 /**
@@ -69,12 +79,9 @@ function quoted(value: string): string {
  * so hosts ask for nothing broader.
  */
 export function challengeHeaders(resource: ProtectedResource, description: string): Headers {
-  return new Headers({
-    'WWW-Authenticate':
-      `Bearer error="invalid_token", error_description="${quoted(description)}", ` +
-      `resource_metadata="${protectedResourceMetadataUrl(resource)}", scope="${AGENT_SCOPE}"`,
-    'Access-Control-Expose-Headers': 'WWW-Authenticate',
-  })
+  const headers = new Headers(challenge(resource, description, null).headers)
+  headers.delete('Content-Type')
+  return headers
 }
 
 /** A 401 JSON-RPC error with the challenge: the host signs the owner in, or refreshes, and retries. */
@@ -83,16 +90,11 @@ export function authChallenge(options: {
   description: string
   jsonRpcId?: unknown
 }): Response {
-  const headers = challengeHeaders(options.protectedResource, options.description)
-  headers.set('Content-Type', 'application/json')
-  return new Response(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      id: options.jsonRpcId ?? null,
-      error: { code: -32001, message: options.description },
-    }),
-    { status: 401, headers },
-  )
+  const answer = challenge(options.protectedResource, options.description, options.jsonRpcId)
+  return new Response(JSON.stringify(answer.body), {
+    status: answer.status,
+    headers: new Headers(answer.headers),
+  })
 }
 
 /**
@@ -104,11 +106,12 @@ export function protectedResourceHandler(
   resource: ProtectedResource & { serverName?: string },
   extraPaths: string[] = [],
 ): (request: Request) => Response | null {
-  const paths = new Set([protectedResourceMetadataPath(resource), ...extraPaths])
+  const described = describe(resource)
+  const paths = new Set([described.metadataPath, ...extraPaths])
   return request => {
     if (request.method !== 'GET' && request.method !== 'HEAD') return null
     if (!paths.has(new URL(request.url).pathname)) return null
-    return Response.json(protectedResourceMetadata(resource), {
+    return Response.json(described.metadata, {
       headers: {
         'Cache-Control': 'public, max-age=300',
         'Access-Control-Allow-Origin': '*',

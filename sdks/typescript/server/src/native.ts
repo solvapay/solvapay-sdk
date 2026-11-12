@@ -66,6 +66,10 @@ export type NativeClientMethod =
   | 'mcpOauthRequest'
   | 'mcpDispatch'
   | 'fetchJwks'
+  | 'verifyAgentKey'
+  | 'authorizeAgentCall'
+  | 'completeAgentCall'
+  | 'reportAgentUsage'
 
 export type NativeClientConfig = {
   apiKey: string
@@ -178,6 +182,17 @@ export type NativeSyncMethod =
   | 'compileStringFieldInputSchemaJson'
   | 'ensureOutputSchemaObjectType'
   | 'creditDrawnMeters'
+  | 'agentSecretKeyEnvironment'
+  | 'agentCredentialKind'
+  | 'verifyAgentToken'
+  | 'agentKeyVerificationResult'
+  | 'agentPromptFacts'
+  | 'agentProtectedResource'
+  | 'agentAuthChallenge'
+  | 'parseAgentResponse'
+  | 'agentAuthorizeRequest'
+  | 'agentAuthorizeNext'
+  | 'agentCompleteBody'
   // Step 37R-d — @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

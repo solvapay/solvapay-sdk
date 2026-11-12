@@ -1543,6 +1543,9 @@ fn wasm_symbol_is_edge_only(sym: &IrBindingSymbol) -> bool {
         || sym.core.ends_with("resolve_authenticated_user")
         || sym.core.ends_with("verify_webhook")
         || sym.core.ends_with("verify_webhook_json")
+        // Agent payments run on merchant servers only, and token verification
+        // needs P-256: none of it belongs in the browser bundle.
+        || sym.core.contains("::agents::")
 }
 
 /// Drop the file-level `edge` cfg and move imports that only the edge-only

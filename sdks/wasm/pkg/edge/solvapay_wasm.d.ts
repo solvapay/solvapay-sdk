@@ -103,6 +103,10 @@ export class WasmClient {
      */
     attachBusinessDetails(args_json: string): Promise<string>;
     /**
+     * `POST /v1/sdk/agent/calls`
+     */
+    authorizeAgentCall(args_json: string): Promise<string>;
+    /**
      * `POST /v1/sdk/products/mcp/bootstrap`
      */
     bootstrapMcpProduct(args_json: string): Promise<string>;
@@ -118,6 +122,10 @@ export class WasmClient {
      * `POST /v1/sdk/products/{productRef}/clone`
      */
     cloneProduct(args_json: string): Promise<string>;
+    /**
+     * `POST /v1/sdk/agent/calls/{callRef}/complete`
+     */
+    completeAgentCall(args_json: string): Promise<string>;
     /**
      * `PUT /v1/sdk/products/{productRef}/mcp/plans`
      */
@@ -256,6 +264,10 @@ export class WasmClient {
      */
     reactivatePurchase(args_json: string): Promise<string>;
     /**
+     * `POST /v1/sdk/agent/usage-reports`
+     */
+    reportAgentUsage(args_json: string): Promise<string>;
+    /**
      * `PUT /v1/sdk/auto-recharge`
      */
     saveAutoRecharge(args_json: string): Promise<string>;
@@ -279,7 +291,56 @@ export class WasmClient {
      * `PUT /v1/sdk/products/{productRef}`
      */
     updateProduct(args_json: string): Promise<string>;
+    /**
+     * `POST /v1/sdk/agent/keys/verifications`
+     */
+    verifyAgentKey(args_json: string): Promise<string>;
 }
+
+/**
+ * Binding for `agentAuthChallenge`.
+ */
+export function agentAuthChallenge(args_json: string): string;
+
+/**
+ * Binding for `agentAuthorizeNext`.
+ */
+export function agentAuthorizeNext(args_json: string): string;
+
+/**
+ * Binding for `agentAuthorizeRequest`.
+ */
+export function agentAuthorizeRequest(args_json: string): string;
+
+/**
+ * Binding for `agentCompleteBody`.
+ */
+export function agentCompleteBody(args_json: string): string;
+
+/**
+ * Binding for `agentCredentialKind`.
+ */
+export function agentCredentialKind(args_json: string): string;
+
+/**
+ * Binding for `agentKeyVerificationResult`.
+ */
+export function agentKeyVerificationResult(args_json: string): string;
+
+/**
+ * Binding for `agentPromptFacts`.
+ */
+export function agentPromptFacts(args_json: string): string;
+
+/**
+ * Binding for `agentProtectedResource`.
+ */
+export function agentProtectedResource(args_json: string): string;
+
+/**
+ * Binding for `agentSecretKeyEnvironment`.
+ */
+export function agentSecretKeyEnvironment(args_json: string): string;
 
 /**
  * Binding for `appendPaidToolDescription`.
@@ -718,6 +779,11 @@ export function normalizeReactivateResponse(args_json: string): string;
 export function overlayClaimedLimits(args_json: string): string;
 
 /**
+ * Binding for `parseAgentResponse`.
+ */
+export function parseAgentResponse(args_json: string): string;
+
+/**
  * Binding for `paywallErrorToClientPayload`.
  */
 export function paywallErrorToClientPayload(args_json: string): string;
@@ -995,6 +1061,11 @@ export function validatePurchaseRef(args_json: string): string;
 export function validateTopupPaymentIntentParams(args_json: string): string;
 
 /**
+ * Binding for `verifyAgentToken`.
+ */
+export function verifyAgentToken(args_json: string): string;
+
+/**
  * Verifies a SolvaPay webhook signature with an explicit clock.
  *
  * Returns the parsed JSON body as a string on success. On failure throws a JS
@@ -1047,6 +1118,15 @@ export interface InitOutput {
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly TOPUP_BALANCE_POLL_DELAYS_MS: (a: number, b: number) => [number, number];
     readonly __wbg_wasmclient_free: (a: number, b: number) => void;
+    readonly agentAuthChallenge: (a: number, b: number) => [number, number];
+    readonly agentAuthorizeNext: (a: number, b: number) => [number, number];
+    readonly agentAuthorizeRequest: (a: number, b: number) => [number, number];
+    readonly agentCompleteBody: (a: number, b: number) => [number, number];
+    readonly agentCredentialKind: (a: number, b: number) => [number, number];
+    readonly agentKeyVerificationResult: (a: number, b: number) => [number, number];
+    readonly agentPromptFacts: (a: number, b: number) => [number, number];
+    readonly agentProtectedResource: (a: number, b: number) => [number, number];
+    readonly agentSecretKeyEnvironment: (a: number, b: number) => [number, number];
     readonly appendPaidToolDescription: (a: number, b: number) => [number, number];
     readonly assertResponseResult: (a: number, b: number) => [number, number];
     readonly assertValidProductRef: (a: number, b: number) => [number, number];
@@ -1134,6 +1214,7 @@ export interface InitOutput {
     readonly normalizeFreeLimit: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly overlayClaimedLimits: (a: number, b: number) => [number, number];
+    readonly parseAgentResponse: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
     readonly paywallStructuredContentSchema: (a: number, b: number) => [number, number];
     readonly paywallToolResult: (a: number, b: number) => [number, number];
@@ -1189,16 +1270,19 @@ export interface InitOutput {
     readonly validatePublicBaseUrl: (a: number, b: number) => [number, number];
     readonly validatePurchaseRef: (a: number, b: number) => [number, number];
     readonly validateTopupPaymentIntentParams: (a: number, b: number) => [number, number];
+    readonly verifyAgentToken: (a: number, b: number) => [number, number];
     readonly verifyWebhook: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly wasmclient_activatePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_assignCredits: (a: number, b: number, c: number) => any;
     readonly wasmclient_attachBusinessDetails: (a: number, b: number, c: number) => any;
+    readonly wasmclient_authorizeAgentCall: (a: number, b: number, c: number) => any;
     readonly wasmclient_bootstrapMcpProduct: (a: number, b: number, c: number) => any;
     readonly wasmclient_cancelPurchase: (a: number, b: number, c: number) => any;
     readonly wasmclient_checkLimits: (a: number, b: number, c: number) => any;
     readonly wasmclient_cloneProduct: (a: number, b: number, c: number) => any;
+    readonly wasmclient_completeAgentCall: (a: number, b: number, c: number) => any;
     readonly wasmclient_configureMcpPlans: (a: number, b: number, c: number) => any;
     readonly wasmclient_createCheckoutSession: (a: number, b: number, c: number) => any;
     readonly wasmclient_createCustomer: (a: number, b: number, c: number) => any;
@@ -1232,12 +1316,14 @@ export interface InitOutput {
     readonly wasmclient_new: (a: number, b: number, c: number, d: number) => number;
     readonly wasmclient_processPaymentIntent: (a: number, b: number, c: number) => any;
     readonly wasmclient_reactivatePurchase: (a: number, b: number, c: number) => any;
+    readonly wasmclient_reportAgentUsage: (a: number, b: number, c: number) => any;
     readonly wasmclient_saveAutoRecharge: (a: number, b: number, c: number) => any;
     readonly wasmclient_trackUsage: (a: number, b: number, c: number) => any;
     readonly wasmclient_trackUsageBulk: (a: number, b: number, c: number) => any;
     readonly wasmclient_updateCustomer: (a: number, b: number, c: number) => any;
     readonly wasmclient_updatePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_updateProduct: (a: number, b: number, c: number) => any;
+    readonly wasmclient_verifyAgentKey: (a: number, b: number, c: number) => any;
     readonly wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h23bdb694a7765c71: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

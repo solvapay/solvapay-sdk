@@ -8,6 +8,7 @@
 //! `browser` = `client-public` only (no webhook / no JWT HMAC).
 
 pub mod activation;
+pub mod agents;
 #[cfg(feature = "client-full")]
 pub mod auth_resolution;
 pub mod balance_poll;
@@ -31,6 +32,8 @@ pub mod history;
 #[cfg(feature = "hmac-crypto")]
 mod hmac_util;
 pub mod invoke_payable;
+#[cfg(feature = "agent-verify")]
+pub mod jwt_es256;
 pub mod jwt_util;
 pub mod limits;
 pub mod mandate_legal;
@@ -63,6 +66,15 @@ pub mod webhook;
 pub use solvapay_export::solvapay_export;
 
 pub use activation::validate_activate_plan_params;
+#[cfg(feature = "hmac-crypto")]
+pub use agents::agent_prompt_facts;
+#[cfg(feature = "agent-verify")]
+pub use agents::verify_agent_token;
+pub use agents::{
+    agent_auth_challenge, agent_authorize_next, agent_authorize_request, agent_complete_body,
+    agent_credential_kind, agent_key_verification_result, agent_protected_resource,
+    agent_secret_key_environment, parse_agent_response,
+};
 #[cfg(feature = "client-full")]
 pub use auth_resolution::{resolve_authenticated_user, AuthResolutionInput, AuthenticatedUser};
 pub use balance_poll::{

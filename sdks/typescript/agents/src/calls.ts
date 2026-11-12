@@ -6,16 +6,20 @@
 // call finds the customer, checks the spend policy, holds the estimate
 // against the budget and the balance, and waits for the owner when they
 // must approve; `complete` after it settles at the cost the upstream
-// reported. This file only drives those two requests.
+// reported. This file only drives those two requests; what each answer
+// means is the Rust core's (`agentAuthorizeRequest`, `agentAuthorizeNext`,
+// `agentCompleteBody`).
 import {
-  AUTHORIZE_WAIT_MAX_SECONDS,
   AgentApiError,
+  type AuthorizeInput,
   type AuthorizeResponse,
+  type CompleteInput,
   type CompleteResponse,
   type MoneyAmount,
   type ServerRefusalReason,
   type SolvaPayAgentClient,
 } from './client'
+import { agentAuthorizeNext, agentAuthorizeRequest, agentCompleteBody, unwrap } from './core'
 import type { VerifiedAgent } from './identity'
 import type { PromptFacts } from './prompt'
 
@@ -92,8 +96,21 @@ export interface AgentCalls {
   begin(call: AgentCall): Promise<Allowed | Refused>
 }
 
-const NOT_ACCEPTED = 'SolvaPay did not accept this agent (revoked or not for this merchant).'
-const UNAVAILABLE = 'SolvaPay could not be reached to authorize this call. Try again shortly.'
+/** What the core says to do with one authorize answer. */
+type Next =
+  | { kind: 'allow'; callRef: string; reservation: { held: MoneyAmount; expiresAt: string } }
+  | {
+      kind: 'refuse'
+      reason: RefusalReason
+      message: string
+      callRef?: string
+      approvalRef?: string
+    }
+  | { kind: 'retry'; sleepMs: number; callRef: string; approvalRef: string }
+
+function completeBody(result: CallResult): CompleteInput {
+  return unwrap<CompleteInput>(agentCompleteBody(result))
+}
 
 export function createAgentCalls(deps: {
   client: Pick<SolvaPayAgentClient, 'authorize' | 'complete'>
@@ -112,7 +129,7 @@ export function createAgentCalls(deps: {
     return { kind: 'refused', reason, message }
   }
 
-  function allowed(call: AgentCall, answer: Extract<AuthorizeResponse, { status: 'allowed' }>) {
+  function allowed(call: AgentCall, answer: Extract<Next, { kind: 'allow' }>) {
     const { callRef } = answer
     let completed = false
     async function complete(body: Parameters<SolvaPayAgentClient['complete']>[1]) {
@@ -136,17 +153,9 @@ export function createAgentCalls(deps: {
       item: call.item,
       estimate: call.estimate,
       reservation: answer.reservation,
-      finish: result =>
-        complete({
-          status: result.status,
-          cost:
-            result.cost === null
-              ? null
-              : { amount: amountString(result.cost.amount), currency: result.cost.currency },
-          ...(result.interrupted ? { interrupted: result.interrupted } : {}),
-        }),
+      finish: result => complete(completeBody(result)),
       release: async reason => {
-        await complete({ status: 502, cost: null, interrupted: reason })
+        await complete(completeBody({ status: 502, cost: null, interrupted: reason }))
       },
     }
     return result
@@ -155,29 +164,23 @@ export function createAgentCalls(deps: {
   return {
     async begin(call) {
       const deadline = now() + deps.maxWaitSeconds * 1000
-      const facts = call.prompt
       for (;;) {
-        const wait = Math.max(
-          0,
-          Math.min(AUTHORIZE_WAIT_MAX_SECONDS, Math.floor((deadline - now()) / 1000)),
-        )
-        let answer: AuthorizeResponse
-        try {
-          answer = await client.authorize({
+        const body = unwrap<AuthorizeInput>(
+          agentAuthorizeRequest({
             agentToken: call.agentToken,
             requestId: call.requestId,
             item: call.item,
             estimate: call.estimate,
-            ...(facts
-              ? {
-                  promptHash: facts.promptHash,
-                  toolError: facts.toolError,
-                  // Only when the token SolvaPay minted says the owner opted in.
-                  ...(call.agent.promptExcerpt ? { promptExcerpt: facts.excerpt } : {}),
-                }
-              : {}),
-            wait,
-          })
+            prompt: call.prompt,
+            // Only when the token SolvaPay minted says the owner opted in.
+            promptExcerptAllowed: call.agent.promptExcerpt,
+            nowMs: now(),
+            deadlineMs: deadline,
+          }),
+        )
+        let answer: { response: AuthorizeResponse } | { errorStatus: number | null }
+        try {
+          answer = { response: await client.authorize(body) }
         } catch (error) {
           const status = error instanceof AgentApiError ? error.status : null
           log.error('call.authorize_failed', {
@@ -185,27 +188,28 @@ export function createAgentCalls(deps: {
             status,
             error: errorMessage(error),
           })
-          // SolvaPay verifies the token again: a revoked agent, or one for another merchant.
-          if (status === 401 || status === 403)
-            return refuse(call, 'agent_not_accepted', NOT_ACCEPTED)
-          return refuse(call, 'unavailable', UNAVAILABLE)
+          answer = { errorStatus: status }
         }
-
-        if (answer.status === 'allowed') {
-          log.info('call.allowed', { ...callFields(call), callRef: answer.callRef })
-          return allowed(call, answer)
+        const next = unwrap<Next>(
+          agentAuthorizeNext({
+            ...answer,
+            maxWaitSeconds: deps.maxWaitSeconds,
+            nowMs: now(),
+            deadlineMs: deadline,
+            aborted: call.signal.aborted,
+          }),
+        )
+        if (next.kind === 'allow') {
+          log.info('call.allowed', { ...callFields(call), callRef: next.callRef })
+          return allowed(call, next)
         }
-        if (answer.status === 'refused') {
-          return refuse(call, answer.reason, answer.message, { callRef: answer.callRef })
+        const held = {
+          ...(next.callRef ? { callRef: next.callRef } : {}),
+          ...(next.approvalRef ? { approvalRef: next.approvalRef } : {}),
         }
-        const held = { callRef: answer.callRef, approvalRef: answer.approval.reference }
-        if (deps.maxWaitSeconds === 0) return refuse(call, 'ask', answer.message, held)
-        if (call.signal.aborted) {
-          return refuse(call, 'approval_client_closed', answer.message, held)
-        }
-        if (now() >= deadline) return refuse(call, 'approval_timed_out', answer.message, held)
+        if (next.kind === 'refuse') return refuse(call, next.reason, next.message, held)
         log.info('call.waiting', { ...callFields(call), ...held })
-        await sleep(answer.retryAfterSeconds * 1000, call.signal)
+        await sleep(next.sleepMs, call.signal)
       }
     },
   }
@@ -224,8 +228,10 @@ function callFields(call: AgentCall): Record<string, unknown> {
 
 /** An amount as a decimal string with up to 8 places, trailing zeros trimmed. */
 export function amountString(amount: number): string {
-  const fixed = amount.toFixed(8).replace(/0+$/, '').replace(/\.$/, '')
-  return fixed === '' ? '0' : fixed
+  // The core formats a completed call's cost; the currency does not change the amount.
+  const body = completeBody({ status: 200, cost: { amount, currency: 'USD' } })
+  if (!body.cost) throw new Error('agentCompleteBody dropped the cost')
+  return body.cost.amount
 }
 
 function errorMessage(error: unknown): string {

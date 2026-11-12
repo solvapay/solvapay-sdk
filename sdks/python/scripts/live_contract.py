@@ -270,6 +270,30 @@ SCENARIOS: list[Scenario] = [
         expect_error=True,
     ),
     Scenario(
+        "verifyAgentKey-bogus",
+        "verifyAgentKey",
+        {"agentKey": "agk_shadow_does_not_exist_zzzz"},
+        expect_error=True,
+    ),
+    Scenario(
+        "authorizeAgentCall-bogus",
+        "authorizeAgentCall",
+        {"agentToken": "agk_shadow_does_not_exist_zzzz", "requestId": "req_shadow_{sideTag}", "item": "shadow", "estimate": {"amount": "0.01", "currency": "USD"}, "wait": 0},
+        expect_error=True,
+    ),
+    Scenario(
+        "completeAgentCall-bogus",
+        "completeAgentCall",
+        {"callRef": "acl_shadow_does_not_exist_zzzz", "status": 200, "cost": {"amount": "0.01", "currency": "USD"}},
+        expect_error=True,
+    ),
+    Scenario(
+        "reportAgentUsage-bogus",
+        "reportAgentUsage",
+        {"reportId": "rep_shadow_{sideTag}", "customerRef": "cus_shadow_does_not_exist_zzzz", "source": "shadow", "window": {"from": "2026-01-01T00:00:00Z", "to": "2026-01-02T00:00:00Z"}, "currency": "USD", "calls": [{"callRef": "acl_shadow_does_not_exist_zzzz", "cost": "0.01"}], "untagged": []},
+        expect_error=True,
+    ),
+    Scenario(
         "deletePlan",
         "deletePlan",
         {"productRef": "{productRef}", "planRef": "{planRef}"},

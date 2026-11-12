@@ -17,15 +17,16 @@ use serde_json::Value;
 use solvapay_core::SdkError;
 pub use solvapay_dto::fixture_groups::{GROUP_A_FNS, GROUP_B_FNS, GROUP_C_FNS};
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 use solvapay_transport::SolvaPayClient;
 
@@ -36,7 +37,7 @@ pub const GROUP_A_FIXTURE_COUNT: usize = 33;
 pub const GROUP_B_FIXTURE_COUNT: usize = 21;
 
 /// Expected inventory: 71 wire fixtures (all Group C fixtures have wire).
-pub const GROUP_C_FIXTURE_COUNT: usize = 71;
+pub const GROUP_C_FIXTURE_COUNT: usize = 81;
 
 pub fn is_group_a_fixture(fixture: &Fixture) -> bool {
     GROUP_A_FNS.contains(&fixture.input.fn_name.as_str())
@@ -253,6 +254,25 @@ pub async fn dispatch_group_c(
         "getCreditActivity" => {
             let params: GetCreditActivityParams = parse_args(args)?;
             serialize_result(client.get_credit_activity(params).await?)
+        }
+        "verifyAgentKey" => {
+            let params: VerifyAgentKeyDto = parse_args(args)?;
+            client.verify_agent_key(params).await
+        }
+        "authorizeAgentCall" => {
+            let params: AuthorizeCallDto = parse_args(args)?;
+            client.authorize_agent_call(params).await
+        }
+        "completeAgentCall" => {
+            let call_ref = require_str(args, "callRef")?;
+            let mut body = args.clone();
+            body.remove("callRef");
+            let params: CompleteCallDto = parse_args(&body)?;
+            client.complete_agent_call(&call_ref, params).await
+        }
+        "reportAgentUsage" => {
+            let params: UsageReportDto = parse_args(args)?;
+            client.report_agent_usage(params).await
         }
         other => Err(SdkError::transport(
             format!("unsupported Group C fixture fn: {other}"),

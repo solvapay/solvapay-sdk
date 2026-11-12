@@ -4,18 +4,19 @@ use serde_json::Value;
 use solvapay_core::SdkError;
 use solvapay_dto::{
     ActivatePlanDto, ActivatePlanResponseDto, AssignCreditsRequest, AttachBusinessDetailsParams,
-    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CloneProductResult,
-    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse,
-    CreateCustomerRequest, CreateCustomerResult, CreateCustomerSessionRequest,
-    CreateCustomerSessionResponse, CreatePaymentIntentParams, CreatePaymentIntentResult,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    CreateTopupPaymentIntentResult, CustomerResponseMapped, DisableAutoRechargeParams,
-    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams,
-    GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams,
-    ReactivatePurchaseParams, SaveAutoRechargeParams, SdkMerchantResponseDto,
-    SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
+    AuthorizeCallDto, CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides,
+    CloneProductResult, CompleteCallDto, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
+    CreateCheckoutSessionResponse, CreateCustomerRequest, CreateCustomerResult,
+    CreateCustomerSessionRequest, CreateCustomerSessionResponse, CreatePaymentIntentParams,
+    CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
+    CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, CustomerResponseMapped,
+    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
+    GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams,
+    GetUserInfoParams, GrantCustomerCreditsResponse, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
+    UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
+    UsageReportDto, UserInfoResponse, VerifyAgentKeyDto,
 };
 
 use super::{runtime, BlockingClient};
@@ -68,6 +69,19 @@ impl BlockingClient {
         params: AttachBusinessDetailsParams,
     ) -> Result<Value, SdkError> {
         runtime().block_on(self.inner.attach_business_details(params))
+    }
+
+    /// Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — The agent token, the merchant's request id, an optional item label, the estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55) this request may hold while the owner decides.
+    ///
+    /// # Returns
+    ///
+    /// `allowed` with the reservation held, `refused` with a reason and a sentence for the human, or `waiting` with the approval and when to ask again with the same request id.
+    pub fn authorize_agent_call(&self, params: AuthorizeCallDto) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.authorize_agent_call(params))
     }
 
     /// Bootstrap an MCP product with default plans and tooling.
@@ -124,6 +138,24 @@ impl BlockingClient {
         overrides: Option<CloneProductOverrides>,
     ) -> Result<CloneProductResult, SdkError> {
         runtime().block_on(self.inner.clone_product(product_ref, overrides))
+    }
+
+    /// Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost
+    ///
+    /// # Arguments
+    ///
+    /// * `call_ref` — The call reference `authorizeAgentCall` returned.
+    /// * `params` — The status the upstream answered with, the cost it reported (or `null`), and `interrupted` when the answer broke before it finished.
+    ///
+    /// # Returns
+    ///
+    /// How the call was settled: `settled` is false when the upstream answered an error, `source` says whether the reported cost or the estimate was used, and a repeat returns the first result with `duplicate: true`.
+    pub fn complete_agent_call(
+        &self,
+        call_ref: &str,
+        params: CompleteCallDto,
+    ) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.complete_agent_call(call_ref, params))
     }
 
     /// Configure MCP plans for an existing product.
@@ -558,6 +590,19 @@ impl BlockingClient {
         runtime().block_on(self.inner.reactivate_purchase(params))
     }
 
+    /// Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — The merchant's usage for one customer and window: a report id, the source, the window, the currency, each call's cost by call reference, and usage without a decision.
+    ///
+    /// # Returns
+    ///
+    /// Per call, how SolvaPay reconciled it (matched, adjusted, pending, already reconciled or ignored), plus the untagged totals and whether they are flagged.
+    pub fn report_agent_usage(&self, params: UsageReportDto) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.report_agent_usage(params))
+    }
+
     /// Create or update auto-recharge configuration for a customer.
     ///
     /// # Arguments
@@ -647,5 +692,18 @@ impl BlockingClient {
         params: UpdateProductRequest,
     ) -> Result<Value, SdkError> {
         runtime().block_on(self.inner.update_product(product_ref, params))
+    }
+
+    /// Read the agent behind an agent key issued for this merchant
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Body with `agentKey`: the agent key (`agk_…`) the caller presented in place of an agent token.
+    ///
+    /// # Returns
+    ///
+    /// The agent behind the key: `agentRef`, its pairwise `principalRef` at this merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown or revoked key, 403 for another merchant's key or the other environment's.
+    pub fn verify_agent_key(&self, params: VerifyAgentKeyDto) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.verify_agent_key(params))
     }
 }

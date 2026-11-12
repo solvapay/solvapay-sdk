@@ -65,6 +65,26 @@ class SolvaPayClient:
         @returns Attached business details result.
         """
         ...
+    async def authorize_agent_call(self, args_json: str) -> str:
+        """Authorize a paid agent call: the customer, the agent's spend policy and the estimate
+        held against budget and balance
+        @param params The agent token, the merchant's request id, an optional item label, the
+        estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55)
+        this request may hold while the owner decides.
+        @returns `allowed` with the reservation held, `refused` with a reason and a sentence for
+        the human, or `waiting` with the approval and when to ask again with the same request id.
+        """
+        ...
+    def authorize_agent_call_blocking(self, args_json: str) -> str:
+        """Authorize a paid agent call: the customer, the agent's spend policy and the estimate
+        held against budget and balance
+        @param params The agent token, the merchant's request id, an optional item label, the
+        estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55)
+        this request may hold while the owner decides.
+        @returns `allowed` with the reservation held, `refused` with a reason and a sentence for
+        the human, or `waiting` with the approval and when to ask again with the same request id.
+        """
+        ...
     async def bootstrap_mcp_product(self, args_json: str) -> str:
         """Bootstrap an MCP product with default plans and tooling.
         @param params MCP bootstrap request payload.
@@ -111,6 +131,28 @@ class SolvaPayClient:
         """Clone a product, optionally applying field overrides.
         @param overrides Optional field overrides applied to the clone.
         @returns The cloned product projection.
+        """
+        ...
+    async def complete_agent_call(self, args_json: str) -> str:
+        """Complete an allowed agent call: settle the spend policy and debit the call's customer at
+        the reported cost
+        @param call_ref The call reference `authorizeAgentCall` returned.
+        @param params The status the upstream answered with, the cost it reported (or `null`), and
+        `interrupted` when the answer broke before it finished.
+        @returns How the call was settled: `settled` is false when the upstream answered an error,
+        `source` says whether the reported cost or the estimate was used, and a repeat returns the
+        first result with `duplicate: true`.
+        """
+        ...
+    def complete_agent_call_blocking(self, args_json: str) -> str:
+        """Complete an allowed agent call: settle the spend policy and debit the call's customer at
+        the reported cost
+        @param call_ref The call reference `authorizeAgentCall` returned.
+        @param params The status the upstream answered with, the cost it reported (or `null`), and
+        `interrupted` when the answer broke before it finished.
+        @returns How the call was settled: `settled` is false when the upstream answered an error,
+        `source` says whether the reported cost or the estimate was used, and a repeat returns the
+        first result with `duplicate: true`.
         """
         ...
     async def configure_mcp_plans(self, args_json: str) -> str:
@@ -479,6 +521,24 @@ class SolvaPayClient:
         @returns Updated purchase info after reactivation.
         """
         ...
+    async def report_agent_usage(self, args_json: str) -> str:
+        """Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend
+        policy and the credits to it
+        @param params The merchant's usage for one customer and window: a report id, the source,
+        the window, the currency, each call's cost by call reference, and usage without a decision.
+        @returns Per call, how SolvaPay reconciled it (matched, adjusted, pending, already
+        reconciled or ignored), plus the untagged totals and whether they are flagged.
+        """
+        ...
+    def report_agent_usage_blocking(self, args_json: str) -> str:
+        """Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend
+        policy and the credits to it
+        @param params The merchant's usage for one customer and window: a report id, the source,
+        the window, the currency, each call's cost by call reference, and usage without a decision.
+        @returns Per call, how SolvaPay reconciled it (matched, adjusted, pending, already
+        reconciled or ignored), plus the untagged totals and whether they are flagged.
+        """
+        ...
     async def save_auto_recharge(self, args_json: str) -> str:
         """Create or update auto-recharge configuration for a customer.
         @param params Auto-recharge settings to persist.
@@ -551,6 +611,24 @@ class SolvaPayClient:
         @returns The updated product projection.
         """
         ...
+    async def verify_agent_key(self, args_json: str) -> str:
+        """Read the agent behind an agent key issued for this merchant
+        @param params Body with `agentKey`: the agent key (`agk_…`) the caller presented in place
+        of an agent token.
+        @returns The agent behind the key: `agentRef`, its pairwise `principalRef` at this
+        merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown
+        or revoked key, 403 for another merchant's key or the other environment's.
+        """
+        ...
+    def verify_agent_key_blocking(self, args_json: str) -> str:
+        """Read the agent behind an agent key issued for this merchant
+        @param params Body with `agentKey`: the agent key (`agk_…`) the caller presented in place
+        of an agent token.
+        @returns The agent behind the key: `agentRef`, its pairwise `principalRef` at this
+        merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown
+        or revoked key, 403 for another merchant's key or the other environment's.
+        """
+        ...
 
 def version() -> str:
     """Return the installed solvapay package / native module version."""
@@ -610,6 +688,53 @@ TOPUP_BALANCE_POLL_DELAYS_MS: list[int]
 """Top-up payment-intent balance poll backoff, in milliseconds.
 @returns Frozen delay table.
 """
+def agent_auth_challenge(input: object | None = None) -> object:
+    """Build the 401 that sends a host to sign the owner in and retry.
+    @returns `{ status: 401, headers, body }`.
+    """
+    ...
+def agent_authorize_next(input: object | None = None) -> object:
+    """Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+    @returns `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+    """
+    ...
+def agent_authorize_request(input: object | None = None) -> object:
+    """Build the body of one authorize request, with the wait left before the deadline.
+    @returns The authorizeAgentCall body.
+    """
+    ...
+def agent_complete_body(input: object | None = None) -> object:
+    """Build the body that completes an allowed call from how the upstream answered.
+    @returns The completeAgentCall body.
+    """
+    ...
+def agent_credential_kind(value: str) -> str:
+    """Classify a presented credential as an agent key, a JWT (agent token candidate) or something
+    else.
+    @returns `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+    """
+    ...
+def agent_key_verification_result(input: object | None = None) -> object:
+    """Turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token
+    gives.
+    @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+    """
+    ...
+def agent_prompt_facts(text: str, tool_error: bool) -> object:
+    """Hash a call's prompt and take its end for SolvaPay's classifier.
+    @returns `{ promptHash, toolError, excerpt }`.
+    """
+    ...
+def agent_protected_resource(input: object | None = None) -> object:
+    """Describe a merchant server as an OAuth protected resource (RFC 9728).
+    @returns `{ resource, metadataPath, metadataUrl, metadata }`.
+    """
+    ...
+def agent_secret_key_environment(secret_key: str) -> str | None:
+    """Read which environment a merchant secret key is for from its prefix.
+    @returns `sandbox`, `live`, or null when the prefix says neither.
+    """
+    ...
 def append_paid_tool_description(description: str | None = None) -> str:
     """Append the paid-tool account hint to a merchant tool description.
     @param description Optional merchant-authored description; trailing whitespace is stripped.
@@ -839,6 +964,11 @@ def normalize_free_limit(limit: object) -> object:
     @returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
     """
     ...
+def parse_agent_response(kind: str, value: object | None = None) -> object:
+    """Read one of SolvaPay's agent answers strictly, field by field.
+    @returns The response with only its documented fields, each checked.
+    """
+    ...
 def paywall_error_to_client_payload(message: str, structured_content: object) -> object:
     """Project a PaywallError into the client-facing payload shape.
     @returns Client payload object for paywall responses.
@@ -953,5 +1083,10 @@ def usage_rate(priced: object | None = None, meter: str | None = None) -> object
 def validate_business_details() -> object:
     """Validate seller business-details fields before submission.
     @returns Validation issues when present.
+    """
+    ...
+def verify_agent_token(input: object | None = None) -> object:
+    """Verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+    @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
     """
     ...

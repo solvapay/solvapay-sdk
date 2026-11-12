@@ -1298,6 +1298,31 @@ export function createDefaultRegistry(): FixtureRegistry {
     }
     return client.getCreditActivity(coerceArgs(args))
   })
+  registerClient('verifyAgentKey', args => {
+    if (!client.verifyAgentKey) throw new Error('verifyAgentKey is not available on SolvaPayClient')
+    return client.verifyAgentKey(coerceArgs(args))
+  })
+  registerClient('authorizeAgentCall', args => {
+    if (!client.authorizeAgentCall) {
+      throw new Error('authorizeAgentCall is not available on SolvaPayClient')
+    }
+    return client.authorizeAgentCall(coerceArgs(args))
+  })
+  registerClient('completeAgentCall', args => {
+    if (!client.completeAgentCall) {
+      throw new Error('completeAgentCall is not available on SolvaPayClient')
+    }
+    return client.completeAgentCall(
+      reqStr(args, 'callRef'),
+      coerceArgs(omitKeys(args, ['callRef'])),
+    )
+  })
+  registerClient('reportAgentUsage', args => {
+    if (!client.reportAgentUsage) {
+      throw new Error('reportAgentUsage is not available on SolvaPayClient')
+    }
+    return client.reportAgentUsage(coerceArgs(args))
+  })
   registerClient('createProduct', args => {
     if (!client.createProduct) throw new Error('createProduct is not available on SolvaPayClient')
     return client.createProduct(coerceArgs(args))

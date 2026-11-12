@@ -918,6 +918,35 @@ export interface components {
             /** @default 0 */
             wait: number;
         };
+        AuthorizeCallResponseDto: {
+            callRef: string;
+            reservation: {
+                expiresAt: string;
+                held: {
+                    amount: string;
+                    currency: string;
+                };
+            };
+            /** @enum {string} */
+            status: "allowed";
+        } | {
+            callRef: string;
+            message: string;
+            /** @enum {string} */
+            reason: "customer_not_linked" | "ask" | "deny" | "topup_required" | "approval_declined" | "approval_expired";
+            /** @enum {string} */
+            status: "refused";
+        } | {
+            approval: {
+                expiresAt: string;
+                reference: string;
+            };
+            callRef: string;
+            message: string;
+            retryAfterSeconds: number;
+            /** @enum {string} */
+            status: "waiting";
+        };
         AutoRechargeConfigDto: {
             /**
              * Whether auto-recharge is enabled
@@ -1180,6 +1209,17 @@ export interface components {
             } | null;
             interrupted?: string;
             status: number;
+        };
+        CompleteCallResponseDto: {
+            amount: {
+                amount?: string;
+                currency?: string;
+            };
+            callRef: string;
+            duplicate: boolean;
+            settled: boolean;
+            /** @enum {string} */
+            source: "reported" | "provisional" | "none";
         };
         ConfigureMcpPlansDto: {
             plans?: {
@@ -2927,6 +2967,29 @@ export interface components {
                 to?: string;
             };
         };
+        UsageReportResponseDto: {
+            /** @enum {string} */
+            currency: "USD";
+            duplicate: boolean;
+            reference: string;
+            results: {
+                bookedCredit?: string;
+                bookedPolicy?: string;
+                callRef: string;
+                creditDelta?: string;
+                policyDelta?: string;
+                /** @enum {string} */
+                reason?: "provisional" | "expired" | "no_debit" | "cost_differs";
+                reported?: string;
+                /** @enum {string} */
+                result: "matched" | "adjusted" | "pending" | "already_reconciled" | "ignored";
+            }[];
+            untagged: {
+                beforePolicy?: string;
+                flagged?: boolean;
+                total?: string;
+            };
+        };
         UserInfoPlanDto: {
             /** @example monthly */
             billingCycle?: string | null;
@@ -3013,6 +3076,13 @@ export interface components {
             name?: string | null;
             /** @example cus_3C4D5E6F */
             reference: string;
+        };
+        VerifiedAgentKeyResponseDto: {
+            agentRef: string;
+            /** @enum {string} */
+            environment: "sandbox" | "live";
+            principalRef: string;
+            promptExcerpt: boolean;
         };
         VerifyAgentKeyDto: {
             agentKey: string;
@@ -3145,7 +3215,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthorizeCallResponseDto"];
+                };
             };
             /** @description The agent token is invalid or the agent is revoked */
             401: {
@@ -3183,7 +3255,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CompleteCallResponseDto"];
+                };
             };
             /** @description No such call for this merchant */
             404: {
@@ -3219,7 +3293,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VerifiedAgentKeyResponseDto"];
+                };
             };
             /** @description Unknown or revoked agent key */
             401: {
@@ -3255,7 +3331,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UsageReportResponseDto"];
+                };
             };
             /** @description Not an agent buyer of this merchant */
             404: {

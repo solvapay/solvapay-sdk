@@ -14,15 +14,16 @@ use magnus::{Error, Ruby, Value};
 use serde_json::{Map, Value as JsonValue};
 use solvapay_core::SdkError;
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 use solvapay_transport::{
     mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient as CoreClient,
@@ -763,6 +764,67 @@ impl SolvaPayClient {
                 run_envelope(async move {
                     let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
                     client.fetch_jwks(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    // --- Group C ---
+
+    /// `POST /v1/sdk/agent/keys/verifications`
+    pub(crate) fn verify_agent_key(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: VerifyAgentKeyDto = parse_args_json(&args_json)?;
+                    client.verify_agent_key(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `POST /v1/sdk/agent/calls`
+    pub(crate) fn authorize_agent_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: AuthorizeCallDto = parse_args_json(&args_json)?;
+                    client.authorize_agent_call(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `POST /v1/sdk/agent/calls/{callRef}/complete`
+    pub(crate) fn complete_agent_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let (refs, body) = split_path_refs(&args_json, &["callRef"])?;
+                    let params: CompleteCallDto = serde_json::from_value(body).map_err(|err| {
+                        SdkError::transport(format!("invalid completeAgentCall body: {err}"), false)
+                    })?;
+                    client.complete_agent_call(&refs[0], params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `POST /v1/sdk/agent/usage-reports`
+    pub(crate) fn report_agent_usage(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: UsageReportDto = parse_args_json(&args_json)?;
+                    client.report_agent_usage(params).await
                 })
                 .await
             })

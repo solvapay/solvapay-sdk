@@ -1,0 +1,35 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "verifyAgentKey",
+    "args": {
+      "agentKey": "agk_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "verify-agent-key-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/keys/verifications",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "agentKey": "agk_fixture"
+      }
+    },
+    "response": {
+      "status": 401,
+      "body": "Unknown or revoked agent key"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "verifyAgentKey failed (401): Unknown or revoked agent key",
+      "status": 401
+    }
+  }
+}

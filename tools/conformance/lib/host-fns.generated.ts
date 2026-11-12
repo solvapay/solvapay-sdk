@@ -59,6 +59,10 @@ export const GROUP_C_FNS = [
   'disableAutoRecharge',
   'listPurchases',
   'getCreditActivity',
+  'verifyAgentKey',
+  'authorizeAgentCall',
+  'completeAgentCall',
+  'reportAgentUsage',
 ] as const
 
 export const GROUP_MCP_FNS = [
@@ -171,6 +175,17 @@ export const FIXTURE_SYNC_FNS = [
   'compileStringFieldInputSchemaJson',
   'ensureOutputSchemaObjectType',
   'creditDrawnMeters',
+  'agentSecretKeyEnvironment',
+  'agentCredentialKind',
+  'verifyAgentToken',
+  'agentKeyVerificationResult',
+  'agentPromptFacts',
+  'agentProtectedResource',
+  'agentAuthChallenge',
+  'parseAgentResponse',
+  'agentAuthorizeRequest',
+  'agentAuthorizeNext',
+  'agentCompleteBody',
   'formatPrice',
   'shouldShowTaxRow',
   'solvapayTermsUrl',

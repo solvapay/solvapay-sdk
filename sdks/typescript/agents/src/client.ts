@@ -1,7 +1,8 @@
 // SolvaPay's agent endpoints, called with the merchant's secret key: authorize
 // before a paid call, complete after it, and usage reports for reconciliation.
 // Everything between runs in SolvaPay (DEV-1126); this is transport and types.
-import { isRecord, requireBoolean, requireInteger, requireString } from './guards'
+// Each answer is read strictly by the Rust core (`parseAgentResponse`).
+import { agentSecretKeyEnvironment, parseAgentResponse, unwrap } from './core'
 
 /** Why SolvaPay refused a call; the sentence for the human comes with it. */
 export const SERVER_REFUSAL_REASONS = [
@@ -152,9 +153,8 @@ export type AgentEnvironment = (typeof AGENT_ENVIRONMENTS)[number]
 
 /** The environment a merchant secret key is for, `undefined` when its prefix doesn't say. */
 export function secretKeyEnvironment(secretKey: string): AgentEnvironment | undefined {
-  if (secretKey.startsWith('sk_sandbox_')) return 'sandbox'
-  if (secretKey.startsWith('sk_live_')) return 'live'
-  return undefined
+  const environment = agentSecretKeyEnvironment(secretKey)
+  return environment === null ? undefined : (environment as AgentEnvironment)
 }
 
 /** The agent behind an agent key, as SolvaPay answers for this merchant. */
@@ -232,118 +232,20 @@ export function createSolvaPayAgentClient(options: {
 
 /** Checked field by field: the agent is served on it. */
 export function parseVerifiedAgentKey(value: unknown): VerifiedAgentKey {
-  if (!isRecord(value)) throw new Error('Agent key verification was not an object')
-  return {
-    agentRef: requireString(value.agentRef, 'agentRef'),
-    principalRef: requireString(value.principalRef, 'principalRef'),
-    promptExcerpt: requireBoolean(value.promptExcerpt, 'promptExcerpt'),
-    environment: requireOneOf(AGENT_ENVIRONMENTS, value.environment, 'environment'),
-  }
+  return unwrap<VerifiedAgentKey>(parseAgentResponse('verifiedKey', value))
 }
 
 /** Checked field by field: a paid call goes ahead on it, so a misread must throw. */
 export function parseAuthorizeResponse(value: unknown): AuthorizeResponse {
-  if (!isRecord(value)) throw new Error('Authorize response was not an object')
-  const callRef = requireString(value.callRef, 'callRef')
-  const status = requireString(value.status, 'status')
-  if (status === 'allowed') {
-    if (!isRecord(value.reservation)) throw new Error('reservation must be an object')
-    return {
-      status,
-      callRef,
-      reservation: {
-        held: parseMoney(value.reservation.held, 'reservation.held'),
-        expiresAt: requireString(value.reservation.expiresAt, 'reservation.expiresAt'),
-      },
-    }
-  }
-  if (status === 'refused') {
-    return {
-      status,
-      callRef,
-      reason: requireOneOf(SERVER_REFUSAL_REASONS, value.reason, 'reason'),
-      message: requireString(value.message, 'message'),
-    }
-  }
-  if (status === 'waiting') {
-    if (!isRecord(value.approval)) throw new Error('approval must be an object')
-    return {
-      status,
-      callRef,
-      message: requireString(value.message, 'message'),
-      approval: {
-        reference: requireString(value.approval.reference, 'approval.reference'),
-        expiresAt: requireString(value.approval.expiresAt, 'approval.expiresAt'),
-      },
-      retryAfterSeconds: requireInteger(value.retryAfterSeconds, 'retryAfterSeconds'),
-    }
-  }
-  throw new Error(`Authorize status "${status}" is not allowed, refused or waiting`)
+  return unwrap<AuthorizeResponse>(parseAgentResponse('authorize', value))
 }
 
 /** Checked field by field: the call's books are settled on it. */
 export function parseCompleteResponse(value: unknown): CompleteResponse {
-  if (!isRecord(value)) throw new Error('Complete response was not an object')
-  return {
-    callRef: requireString(value.callRef, 'callRef'),
-    settled: requireBoolean(value.settled, 'settled'),
-    source: requireOneOf(['reported', 'provisional', 'none'] as const, value.source, 'source'),
-    amount: parseMoney(value.amount, 'amount'),
-    duplicate: requireBoolean(value.duplicate, 'duplicate'),
-  }
+  return unwrap<CompleteResponse>(parseAgentResponse('complete', value))
 }
 
 /** Checked field by field: a merchant acts on `flagged`, so a misread must throw. */
 export function parseUsageReportResponse(value: unknown): UsageReportResponse {
-  if (!isRecord(value)) throw new Error('Usage report response was not an object')
-  if (!Array.isArray(value.results)) throw new Error('Usage report results must be a list')
-  if (!isRecord(value.untagged)) throw new Error('Usage report untagged must be an object')
-  return {
-    reference: requireString(value.reference, 'reference'),
-    currency: requireString(value.currency, 'currency'),
-    duplicate: requireBoolean(value.duplicate, 'duplicate'),
-    results: value.results.map(parseReconciledCall),
-    untagged: {
-      total: requireString(value.untagged.total, 'untagged.total'),
-      beforePolicy: requireString(value.untagged.beforePolicy, 'untagged.beforePolicy'),
-      flagged: requireBoolean(value.untagged.flagged, 'untagged.flagged'),
-    },
-  }
-}
-
-function parseReconciledCall(value: unknown): ReconciledCall {
-  if (!isRecord(value)) throw new Error('Usage report result was not an object')
-  const result = requireOneOf(RECONCILIATION_RESULTS, value.result, 'result')
-  const optional = (field: string) =>
-    value[field] === undefined || value[field] === null
-      ? {}
-      : { [field]: requireString(value[field], field) }
-  return {
-    ...optional('callRef'),
-    result,
-    ...(value.reason === undefined || value.reason === null
-      ? {}
-      : { reason: requireOneOf(RECONCILIATION_REASONS, value.reason, 'reason') }),
-    ...optional('reported'),
-    ...optional('bookedPolicy'),
-    ...optional('bookedCredit'),
-    ...optional('policyDelta'),
-    ...optional('creditDelta'),
-  }
-}
-
-function requireOneOf<T extends string>(allowed: readonly T[], value: unknown, label: string): T {
-  if (!allowed.includes(value as T)) {
-    throw new Error(`${label} must be one of ${allowed.join(', ')}, got ${JSON.stringify(value)}`)
-  }
-  return value as T
-}
-
-/** An amount and its currency, both required. */
-function parseMoney(value: unknown, label: string): MoneyAmount {
-  if (!isRecord(value)) throw new Error(`${label} must be an object with amount and currency`)
-  return {
-    amount: requireString(value.amount, `${label}.amount`),
-    currency: requireString(value.currency, `${label}.currency`),
-  }
+  return unwrap<UsageReportResponse>(parseAgentResponse('usageReport', value))
 }

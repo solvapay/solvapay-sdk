@@ -29,7 +29,7 @@ use wiremock::matchers::{body_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
-async fn group_c_inventory_is_sixty_seven_fixtures() {
+async fn group_c_inventory_matches_fixture_count() {
     let root = client_fixtures_root();
     let fixtures = load_group_c_fixtures(&root);
     assert_eq!(
@@ -69,6 +69,10 @@ async fn group_c_inventory_is_sixty_seven_fixtures() {
         ("disableAutoRecharge", 2),
         ("listPurchases", 2),
         ("getCreditActivity", 2),
+        ("verifyAgentKey", 2),
+        ("authorizeAgentCall", 4),
+        ("completeAgentCall", 2),
+        ("reportAgentUsage", 2),
     ]
     .into_iter()
     .collect();
@@ -82,7 +86,7 @@ async fn group_c_inventory_is_sixty_seven_fixtures() {
 }
 
 #[tokio::test]
-async fn all_thirty_eight_operations_are_dispatchable() {
+async fn all_routed_operations_are_dispatchable() {
     let mut covered: BTreeSet<&str> = BTreeSet::new();
     covered.extend(GROUP_A_FNS.iter().copied());
     covered.extend(GROUP_B_FNS.iter().copied());
@@ -97,7 +101,7 @@ async fn all_thirty_eight_operations_are_dispatchable() {
         covered, expected,
         "GROUP_A ∪ GROUP_B ∪ GROUP_C must equal routed OPERATION_NAMES"
     );
-    assert_eq!(covered.len(), 38, "expected 38 routed client methods");
+    assert_eq!(covered.len(), 42, "expected 42 routed client methods");
 
     let root = client_fixtures_root();
     let mut missing = Vec::new();
@@ -118,6 +122,17 @@ async fn all_thirty_eight_operations_are_dispatchable() {
         "client fixtures without dispatchable method:\n{}",
         missing.join("\n")
     );
+}
+
+#[tokio::test]
+async fn group_c_agent_fixtures() {
+    run_group_c_subset(&[
+        "verifyAgentKey",
+        "authorizeAgentCall",
+        "completeAgentCall",
+        "reportAgentUsage",
+    ])
+    .await;
 }
 
 #[tokio::test]

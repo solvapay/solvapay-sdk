@@ -225,6 +225,26 @@ var SCENARIOS = []Scenario{
 		ExpectError: true,
 	},
 	{
+		ID: "verifyAgentKey-bogus", Op: "verifyAgentKey",
+		Args:        map[string]any{"agentKey": "agk_shadow_does_not_exist_zzzz"},
+		ExpectError: true,
+	},
+	{
+		ID: "authorizeAgentCall-bogus", Op: "authorizeAgentCall",
+		Args:        map[string]any{"agentToken": "agk_shadow_does_not_exist_zzzz", "requestId": "req_shadow_{sideTag}", "item": "shadow", "estimate": map[string]any{"amount": "0.01", "currency": "USD"}, "wait": 0},
+		ExpectError: true,
+	},
+	{
+		ID: "completeAgentCall-bogus", Op: "completeAgentCall",
+		Args:        map[string]any{"callRef": "acl_shadow_does_not_exist_zzzz", "status": 200, "cost": map[string]any{"amount": "0.01", "currency": "USD"}},
+		ExpectError: true,
+	},
+	{
+		ID: "reportAgentUsage-bogus", Op: "reportAgentUsage",
+		Args:        map[string]any{"reportId": "rep_shadow_{sideTag}", "customerRef": "cus_shadow_does_not_exist_zzzz", "source": "shadow", "window": map[string]any{"from": "2026-01-01T00:00:00Z", "to": "2026-01-02T00:00:00Z"}, "currency": "USD", "calls": []any{map[string]any{"callRef": "acl_shadow_does_not_exist_zzzz", "cost": "0.01"}}, "untagged": []any{}},
+		ExpectError: true,
+	},
+	{
 		ID: "deletePlan", Op: "deletePlan",
 		Args: map[string]any{"productRef": "{productRef}", "planRef": "{planRef}"},
 	},

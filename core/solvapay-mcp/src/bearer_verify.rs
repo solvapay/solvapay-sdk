@@ -208,12 +208,14 @@ fn verify_compact(
             )?;
         }
         "ES256" => {
-            verify_es256(
+            if !solvapay_core::jwt_es256::verify_es256_signature(
                 jwks?,
                 header.get("kid").and_then(Value::as_str),
                 signing_input.as_bytes(),
                 &sig,
-            )?;
+            ) {
+                return None;
+            }
         }
         _ => return None,
     }
@@ -287,41 +289,6 @@ fn verify_rs256(jwks: &Value, kid: Option<&str>, signing_input: &[u8], sig: &[u8
             continue;
         };
         let vk = VerifyingKey::<Sha256>::new(pubkey);
-        if vk.verify(signing_input, &signature).is_ok() {
-            return Some(());
-        }
-    }
-    None
-}
-
-#[cfg(feature = "jwt-verify")]
-fn verify_es256(jwks: &Value, kid: Option<&str>, signing_input: &[u8], sig: &[u8]) -> Option<()> {
-    use p256::ecdsa::signature::Verifier;
-    use p256::ecdsa::{Signature, VerifyingKey};
-    use p256::EncodedPoint;
-    use p256::FieldBytes;
-
-    if sig.len() != 64 {
-        return None;
-    }
-    let signature = Signature::from_slice(sig).ok()?;
-    for key in jwk_candidates(jwks, kid, "EC") {
-        if key.get("crv").and_then(Value::as_str) != Some("P-256") {
-            continue;
-        }
-        let x = base64url_decode(key.get("x").and_then(Value::as_str)?)?;
-        let y = base64url_decode(key.get("y").and_then(Value::as_str)?)?;
-        if x.len() != 32 || y.len() != 32 {
-            continue;
-        }
-        let x_arr: [u8; 32] = x.try_into().ok()?;
-        let y_arr: [u8; 32] = y.try_into().ok()?;
-        let x = FieldBytes::from(x_arr);
-        let y = FieldBytes::from(y_arr);
-        let point = EncodedPoint::from_affine_coordinates(&x, &y, false);
-        let Ok(vk) = VerifyingKey::from_encoded_point(&point) else {
-            continue;
-        };
         if vk.verify(signing_input, &signature).is_ok() {
             return Some(());
         }

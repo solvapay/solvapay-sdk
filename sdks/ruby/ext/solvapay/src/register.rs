@@ -5,6 +5,15 @@ use magnus::prelude::*;
 use magnus::{function, method, Error, RClass, RModule};
 
 use crate::client::SolvaPayClient;
+use crate::decisions::agent_auth_challenge_binding;
+use crate::decisions::agent_authorize_next_binding;
+use crate::decisions::agent_authorize_request_binding;
+use crate::decisions::agent_complete_body_binding;
+use crate::decisions::agent_credential_kind_binding;
+use crate::decisions::agent_key_verification_result_binding;
+use crate::decisions::agent_prompt_facts_binding;
+use crate::decisions::agent_protected_resource_binding;
+use crate::decisions::agent_secret_key_environment_binding;
 use crate::decisions::append_paid_tool_description_binding;
 use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
@@ -62,6 +71,7 @@ use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_free_limit_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::overlay_claimed_limits_binding;
+use crate::decisions::parse_agent_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
@@ -103,6 +113,7 @@ use crate::decisions::validate_list_plans_params_binding;
 use crate::decisions::validate_process_payment_intent_params_binding;
 use crate::decisions::validate_purchase_ref_binding;
 use crate::decisions::validate_topup_payment_intent_params_binding;
+use crate::decisions::verify_agent_token_binding;
 use crate::payload_builders::assert_response_result_binding;
 use crate::payload_builders::balance_reconcile_delays_ms_binding;
 use crate::payload_builders::build_payable_tool_result_binding;
@@ -485,6 +496,50 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "credit_drawn_meters",
         function!(credit_drawn_meters_binding, 1),
     )?;
+    native.define_singleton_method(
+        "agent_secret_key_environment",
+        function!(agent_secret_key_environment_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_credential_kind",
+        function!(agent_credential_kind_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "verify_agent_token",
+        function!(verify_agent_token_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_key_verification_result",
+        function!(agent_key_verification_result_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_prompt_facts",
+        function!(agent_prompt_facts_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_protected_resource",
+        function!(agent_protected_resource_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_auth_challenge",
+        function!(agent_auth_challenge_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "parse_agent_response",
+        function!(parse_agent_response_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_authorize_request",
+        function!(agent_authorize_request_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_authorize_next",
+        function!(agent_authorize_next_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_complete_body",
+        function!(agent_complete_body_binding, 1),
+    )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
         "should_show_tax_row",
@@ -811,5 +866,21 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     client.define_method("mcp_dispatch", method!(SolvaPayClient::mcp_dispatch, 1))?;
     client.define_method("fetch_jwks", method!(SolvaPayClient::fetch_jwks, 1))?;
+    client.define_method(
+        "verify_agent_key",
+        method!(SolvaPayClient::verify_agent_key, 1),
+    )?;
+    client.define_method(
+        "authorize_agent_call",
+        method!(SolvaPayClient::authorize_agent_call, 1),
+    )?;
+    client.define_method(
+        "complete_agent_call",
+        method!(SolvaPayClient::complete_agent_call, 1),
+    )?;
+    client.define_method(
+        "report_agent_usage",
+        method!(SolvaPayClient::report_agent_usage, 1),
+    )?;
     Ok(())
 }

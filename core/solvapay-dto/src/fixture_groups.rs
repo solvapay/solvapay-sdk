@@ -50,6 +50,10 @@ pub const GROUP_C_FNS: &[&str] = &[
     "disableAutoRecharge",
     "listPurchases",
     "getCreditActivity",
+    "verifyAgentKey",
+    "authorizeAgentCall",
+    "completeAgentCall",
+    "reportAgentUsage",
 ];
 
 /// Binding symbols in section `MCP composite`.

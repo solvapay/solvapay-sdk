@@ -65,6 +65,25 @@ func (c *Client) AttachBusinessDetails(ctx context.Context, params map[string]an
 	return out, nil
 }
 
+// AuthorizeAgentCall authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance
+// The params parameter is The agent token, the merchant's request id, an optional item label, the estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55) this request may hold while the owner decides.
+// Returns `allowed` with the reservation held, `refused` with a reason and a sentence for the human, or `waiting` with the approval and when to ask again with the same request id.
+func (c *Client) AuthorizeAgentCall(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_authorize_agent_call", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BootstrapMcpProduct bootstrap an MCP product with default plans and tooling.
 // The params parameter is MCP bootstrap request payload.
 // Returns Bootstrap result including product and plan refs.
@@ -138,6 +157,31 @@ func (c *Client) CloneProduct(ctx context.Context, productRef string, overrides 
 		return nil, err
 	}
 	envelope, err := c.rt.CallEnvelope(ctx, "sv_clone_product", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CompleteAgentCall complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost
+// The callRef parameter is The call reference `authorizeAgentCall` returned.
+// The params parameter is The status the upstream answered with, the cost it reported (or `null`), and `interrupted` when the answer broke before it finished.
+// Returns How the call was settled: `settled` is false when the upstream answered an error, `source` says whether the reported cost or the estimate was used, and a repeat returns the first result with `duplicate: true`.
+func (c *Client) CompleteAgentCall(ctx context.Context, callRef string, params map[string]any) (any, error) {
+	payload := map[string]any{}
+	payload["callRef"] = callRef
+	for k, v := range params {
+		payload[k] = v
+	}
+	args, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_complete_agent_call", string(args))
 	if err != nil {
 		return nil, err
 	}
@@ -749,6 +793,25 @@ func (c *Client) ReactivatePurchase(ctx context.Context, params map[string]any) 
 	return out, nil
 }
 
+// ReportAgentUsage report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it
+// The params parameter is The merchant's usage for one customer and window: a report id, the source, the window, the currency, each call's cost by call reference, and usage without a decision.
+// Returns Per call, how SolvaPay reconciled it (matched, adjusted, pending, already reconciled or ignored), plus the untagged totals and whether they are flagged.
+func (c *Client) ReportAgentUsage(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_report_agent_usage", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SaveAutoRecharge create or update auto-recharge configuration for a customer.
 // The params parameter is Auto-recharge settings to persist.
 // Returns Saved auto-recharge configuration.
@@ -869,6 +932,25 @@ func (c *Client) UpdateProduct(ctx context.Context, productRef string, params ma
 		return nil, err
 	}
 	envelope, err := c.rt.CallEnvelope(ctx, "sv_update_product", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// VerifyAgentKey read the agent behind an agent key issued for this merchant
+// The params parameter is Body with `agentKey`: the agent key (`agk_…`) the caller presented in place of an agent token.
+// Returns The agent behind the key: `agentRef`, its pairwise `principalRef` at this merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown or revoked key, 403 for another merchant's key or the other environment's.
+func (c *Client) VerifyAgentKey(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_verify_agent_key", string(args))
 	if err != nil {
 		return nil, err
 	}

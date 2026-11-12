@@ -332,6 +332,34 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
     expect(await client.getCreditActivity!({ customerRef: 'cus_1' })).toEqual({
       fromWasm: 'getCreditActivity',
     })
+    expect(await client.verifyAgentKey!({ agentKey: 'agk_1' })).toEqual({
+      fromWasm: 'verifyAgentKey',
+    })
+    expect(
+      await client.authorizeAgentCall!({
+        agentToken: 'agk_1',
+        requestId: 'req_1',
+        item: 'gpt-5',
+        estimate: { amount: '0.01', currency: 'USD' },
+      }),
+    ).toEqual({ fromWasm: 'authorizeAgentCall' })
+    expect(
+      await client.completeAgentCall!('acl_1', {
+        status: 200,
+        cost: { amount: '0.01', currency: 'USD' },
+      }),
+    ).toEqual({ fromWasm: 'completeAgentCall' })
+    expect(
+      await client.reportAgentUsage!({
+        reportId: 'rep_1',
+        customerRef: 'cus_1',
+        source: 'test',
+        window: { from: '2026-01-01T00:00:00Z', to: '2026-01-02T00:00:00Z' },
+        currency: 'USD',
+        calls: [],
+        untagged: [],
+      }),
+    ).toEqual({ fromWasm: 'reportAgentUsage' })
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(calls.map(c => c.fn).sort()).toEqual([...groupBC].sort())
@@ -358,6 +386,9 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
       JSON.stringify({ productRef: 'prod_1', name: 'Clone' }),
     )
     expect(calls.find(c => c.fn === 'listProducts')?.args).toBe(JSON.stringify({}))
+    expect(calls.find(c => c.fn === 'completeAgentCall')?.args).toBe(
+      JSON.stringify({ callRef: 'acl_1', status: 200, cost: { amount: '0.01', currency: 'USD' } }),
+    )
   })
 
   it('deleteProduct/deletePlan return null from null-envelope value', async () => {
