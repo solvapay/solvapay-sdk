@@ -287,7 +287,9 @@ def generate_models(spec_path: Path) -> str:
     )
     if result.returncode != 0:
         raise SystemExit(f"datamodel-code-generator failed:\n{result.stderr}")
-    return result.stdout
+    # JSON has one number type. Typed `float`, pydantic turns 2 into 2.0 and the
+    # SDK sends 2.0 where TypeScript sends 2. `int | float` keeps each as sent.
+    return re.sub(r"\bfloat\b", "int | float", result.stdout)
 
 
 def main() -> None:

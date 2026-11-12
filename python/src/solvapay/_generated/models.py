@@ -23,8 +23,8 @@ class ActivatePlanResponseDto(BaseModel):
     )
     checkout_session_id: Annotated[str | None, Field(alias="checkoutSessionId")] = None
     checkout_url: Annotated[str | None, Field(alias="checkoutUrl")] = None
-    credit_balance: Annotated[float | None, Field(alias="creditBalance")] = None
-    credits_per_unit: Annotated[float | None, Field(alias="creditsPerUnit")] = None
+    credit_balance: Annotated[int | float | None, Field(alias="creditBalance")] = None
+    credits_per_unit: Annotated[int | float | None, Field(alias="creditsPerUnit")] = None
     currency: str | None = None
     message: str | None = None
     purchase_ref: Annotated[str | None, Field(alias="purchaseRef")] = None
@@ -193,7 +193,7 @@ class AutoRechargeTopupDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_minor: Annotated[float, Field(alias="amountMinor", examples=[2000])]
+    amount_minor: Annotated[int | float, Field(alias="amountMinor", examples=[2000])]
     """
     Top-up amount in currency minor units
     """
@@ -212,7 +212,7 @@ class AutoRechargeTriggerDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    threshold_amount_minor: Annotated[float, Field(alias="thresholdAmountMinor", examples=[500])]
+    threshold_amount_minor: Annotated[int | float, Field(alias="thresholdAmountMinor", examples=[500])]
     """
     Display-currency minor units for the balance threshold
     """
@@ -238,12 +238,12 @@ class AutoRechargeValidationMetaResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    max_amount_major: Annotated[float, Field(alias="maxAmountMajor", examples=[10000])]
+    max_amount_major: Annotated[int | float, Field(alias="maxAmountMajor", examples=[10000])]
     """
     Maximum display-currency major units accepted for threshold/top-up
     """
     stripe_minimum_minor_by_currency: Annotated[
-        dict[str, float],
+        dict[str, int | float],
         Field(alias="stripeMinimumMinorByCurrency", examples=[{"GBP": 30, "USD": 50}]),
     ]
     """
@@ -273,7 +273,7 @@ class Event(BaseModel):
     cost: Cost | None = None
     customer_ref: Annotated[str, Field(alias="customerRef", max_length=20, min_length=1)]
     description: str | None = None
-    duration: Annotated[float | None, Field(ge=0.0)] = None
+    duration: Annotated[int | float | None, Field(ge=0.0)] = None
     error_message: Annotated[str | None, Field(alias="errorMessage")] = None
     idempotency_key: Annotated[str | None, Field(alias="idempotencyKey", max_length=256)] = None
     metadata: dict[str, Any] | None = None
@@ -598,7 +598,7 @@ class Options4(BaseModel):
     kind: Literal["entitlement"]
     label: str | None = None
     scope: str | None = None
-    value: bool | float | str
+    value: bool | int | float | str
 
 
 class Options5(BaseModel):
@@ -711,7 +711,7 @@ class CostDebitSuccessResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[0])]
+    amount: Annotated[int | float, Field(examples=[0])]
     """
     Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)
     """
@@ -722,7 +722,7 @@ class CostDebitSuccessResponse(BaseModel):
     auto_recharge: Annotated[AutoRechargeTriggeredResponse | None, Field(alias="autoRecharge")] = (
         None
     )
-    balance_credits: Annotated[float, Field(alias="balanceCredits", examples=[30000])]
+    balance_credits: Annotated[int | float, Field(alias="balanceCredits", examples=[30000])]
     """
     Balance in whole credits after the debit
     """
@@ -833,13 +833,13 @@ class AutoRecharge(BaseModel):
     currency: str | None = None
     enabled: bool | None = None
     max_monthly_spend_major: Annotated[
-        float | None, Field(alias="maxMonthlySpendMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="maxMonthlySpendMajor", gt=0.0, le=10000.0)
     ] = None
     threshold_amount_major: Annotated[
-        float | None, Field(alias="thresholdAmountMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="thresholdAmountMajor", gt=0.0, le=10000.0)
     ] = None
     topup_amount_major: Annotated[
-        float | None, Field(alias="topupAmountMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="topupAmountMajor", gt=0.0, le=10000.0)
     ] = None
     trigger_type: Annotated[Literal["balance"] | None, Field(alias="triggerType")] = None
 
@@ -923,7 +923,7 @@ class Options13(BaseModel):
     kind: Literal["entitlement"]
     label: str | None = None
     scope: str | None = None
-    value: bool | float | str
+    value: bool | int | float | str
 
 
 class Options14(BaseModel):
@@ -1055,7 +1055,7 @@ class CreateUsageRequest(BaseModel):
     cost: Cost2 | None = None
     customer_ref: Annotated[str, Field(alias="customerRef", max_length=20, min_length=1)]
     description: str | None = None
-    duration: Annotated[float | None, Field(ge=0.0)] = None
+    duration: Annotated[int | float | None, Field(ge=0.0)] = None
     error_message: Annotated[str | None, Field(alias="errorMessage")] = None
     idempotency_key: Annotated[str | None, Field(alias="idempotencyKey", max_length=256)] = None
     metadata: dict[str, Any] | None = None
@@ -1071,11 +1071,11 @@ class CreditActivityEntryDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[-200])]
+    amount: Annotated[int | float, Field(examples=[-200])]
     """
     Signed credit units on the USD peg (100 credits = 1 USD cent)
     """
-    balance: Annotated[float, Field(examples=[599800])]
+    balance: Annotated[int | float, Field(examples=[599800])]
     """
     Running credit balance after this event
     """
@@ -1150,7 +1150,7 @@ class CreditDebitSuccessResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[100])]
+    amount: Annotated[int | float, Field(examples=[100])]
     """
     Credits debited for this usage event (credits are USD-pegged at 100 credits per minor unit, so a 1¢/unit charge debits 100 credits/unit)
     """
@@ -1158,11 +1158,11 @@ class CreditDebitSuccessResponse(BaseModel):
         None
     )
     debited: Debited3
-    remaining_units: Annotated[float, Field(alias="remainingUnits", examples=[99])]
+    remaining_units: Annotated[int | float, Field(alias="remainingUnits", examples=[99])]
     """
     How many metered items the remaining credit balance still covers
     """
-    units_remaining: Annotated[float, Field(alias="unitsRemaining", deprecated=True, examples=[99])]
+    units_remaining: Annotated[int | float, Field(alias="unitsRemaining", deprecated=True, examples=[99])]
     """
     Deprecated alias of remainingUnits. Prefer remainingUnits.
     """
@@ -1173,7 +1173,7 @@ class CustomerBalanceDisplayDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount_major: Annotated[float, Field(alias="amountMajor", examples=[42])]
+    amount_major: Annotated[int | float, Field(alias="amountMajor", examples=[42])]
     """
     Balance amount in the display currency major units (e.g. dollars)
     """
@@ -1181,7 +1181,7 @@ class CustomerBalanceDisplayDto(BaseModel):
     """
     ISO 4217 display currency code
     """
-    exchange_rate: Annotated[float, Field(alias="exchangeRate", examples=[1])]
+    exchange_rate: Annotated[int | float, Field(alias="exchangeRate", examples=[1])]
     """
     Exchange rate applied from USD to the display currency
     """
@@ -1203,11 +1203,11 @@ class CustomerBalanceResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    credits: Annotated[float, Field(examples=[4200])]
+    credits: Annotated[int | float, Field(examples=[4200])]
     """
     Raw credit balance in credits (100 credits = 1 minor currency unit)
     """
-    credits_per_minor_unit: Annotated[float, Field(alias="creditsPerMinorUnit", examples=[100])]
+    credits_per_minor_unit: Annotated[int | float, Field(alias="creditsPerMinorUnit", examples=[100])]
     """
     Number of credits per minor currency unit
     """
@@ -1223,7 +1223,7 @@ class CustomerBalanceResponse(BaseModel):
     """
     ISO 4217 display currency code
     """
-    display_exchange_rate: Annotated[float, Field(alias="displayExchangeRate", examples=[1])]
+    display_exchange_rate: Annotated[int | float, Field(alias="displayExchangeRate", examples=[1])]
     """
     Exchange rate from USD to the display currency
     """
@@ -1254,11 +1254,11 @@ class GrantCustomerCreditsResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    balance: float
+    balance: int | float
     """
     Customer credit balance after the grant
     """
-    credits: float
+    credits: int | float
     """
     Granted credit amount
     """
@@ -1296,24 +1296,24 @@ class LimitBalanceDto(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    credit_balance: Annotated[float, Field(alias="creditBalance")]
+    credit_balance: Annotated[int | float, Field(alias="creditBalance")]
     """
     Credit balance in credits (100 credits = 1 minor currency unit)
     """
-    credits_per_minor_unit: Annotated[float | None, Field(alias="creditsPerMinorUnit")] = None
+    credits_per_minor_unit: Annotated[int | float | None, Field(alias="creditsPerMinorUnit")] = None
     """
     Credits per minor unit of `currency` (typically 100)
     """
-    credits_per_unit: Annotated[float, Field(alias="creditsPerUnit")]
+    credits_per_unit: Annotated[int | float, Field(alias="creditsPerUnit")]
     """
     Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit)
     """
     currency: str
-    display_exchange_rate: Annotated[float | None, Field(alias="displayExchangeRate")] = None
+    display_exchange_rate: Annotated[int | float | None, Field(alias="displayExchangeRate")] = None
     """
     USD → display-currency rate used with creditsPerMinorUnit
     """
-    remaining_units: Annotated[float | None, Field(alias="remainingUnits")] = None
+    remaining_units: Annotated[int | float | None, Field(alias="remainingUnits")] = None
     """
     How many metered items the credit balance still covers (`balance / creditsPerUnit`)
     """
@@ -1332,12 +1332,12 @@ class LimitPlanItemDto(BaseModel):
     """
     Deep link that opens hosted checkout with this plan preselected. Present only when a checkout session was minted for this response.
     """
-    credits_per_unit: Annotated[float | None, Field(alias="creditsPerUnit", deprecated=True)] = None
+    credits_per_unit: Annotated[int | float | None, Field(alias="creditsPerUnit", deprecated=True)] = None
     """
     Deprecated alias of perUnitChargeMinor. Same minor-units value — not credits. Prefer perUnitChargeMinor.
     """
     currency: str
-    free_units: Annotated[float | None, Field(alias="freeUnits")] = None
+    free_units: Annotated[int | float | None, Field(alias="freeUnits")] = None
     """
     Derived included allowance for the metered meter. `0` is the unlimited sentinel (`LimitOption.cap === 0`).
     """
@@ -1346,11 +1346,11 @@ class LimitPlanItemDto(BaseModel):
     """
     Composable pricing options for this plan
     """
-    per_unit_charge_minor: Annotated[float | None, Field(alias="perUnitChargeMinor")] = None
+    per_unit_charge_minor: Annotated[int | float | None, Field(alias="perUnitChargeMinor")] = None
     """
     Per-request charge in minor currency units (usage-based plans)
     """
-    price: float
+    price: int | float
     """
     Headline price in smallest currency unit (e.g. cents)
     """
@@ -1408,11 +1408,11 @@ class LimitResponse(BaseModel):
     """
     Customer portal confirmation URL when activation is required (fallback when not starting checkout)
     """
-    credit_balance: Annotated[float | None, Field(alias="creditBalance")] = None
+    credit_balance: Annotated[int | float | None, Field(alias="creditBalance")] = None
     """
     Credit balance in credits (100 credits = 1 minor currency unit), for pre-paid usage-based plans
     """
-    credits_per_unit: Annotated[float | None, Field(alias="creditsPerUnit")] = None
+    credits_per_unit: Annotated[int | float | None, Field(alias="creditsPerUnit")] = None
     """
     Credits deducted per metered item (for prepaid usage-based plans)
     """
@@ -1420,7 +1420,7 @@ class LimitResponse(BaseModel):
     """
     ISO 4217 currency code for credit fields
     """
-    limit: float | None = None
+    limit: int | float | None = None
     """
     The effective finite cap for this meter. Present only when the backend measured a finite cap.
     """
@@ -1464,11 +1464,11 @@ class LimitResponse(BaseModel):
     """
     Active purchase reference when the customer already holds a purchase
     """
-    remaining: Annotated[float, Field(examples=[997])]
+    remaining: Annotated[int | float, Field(examples=[997])]
     """
     Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).
     """
-    used: float | None = None
+    used: int | float | None = None
     """
     Consumed usage units this period. Present only when the backend measured a finite cap.
     """
@@ -1539,7 +1539,7 @@ class Options22(BaseModel):
     kind: Literal["entitlement"]
     label: str | None = None
     scope: str | None = None
-    value: bool | float | str
+    value: bool | int | float | str
 
 
 class Options23(BaseModel):
@@ -1661,7 +1661,7 @@ class OneTimePurchaseInfo(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[9900])]
+    amount: Annotated[int | float, Field(examples=[9900])]
     """
     Amount in USD cents (normalised for aggregation)
     """
@@ -1696,7 +1696,7 @@ class Plan2(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    access_expiry_days: Annotated[float | None, Field(alias="accessExpiryDays")] = None
+    access_expiry_days: Annotated[int | float | None, Field(alias="accessExpiryDays")] = None
     """
     Access expiry in days
     """
@@ -1724,7 +1724,7 @@ class Plan2(BaseModel):
     """
     Whether the plan is active (derived from status)
     """
-    max_active_users: Annotated[float | None, Field(alias="maxActiveUsers")] = None
+    max_active_users: Annotated[int | float | None, Field(alias="maxActiveUsers")] = None
     """
     Maximum number of active users
     """
@@ -1736,7 +1736,7 @@ class Plan2(BaseModel):
     """
     Composable pricing options (money as integer minor units)
     """
-    price: Annotated[float | None, Field(examples=[2999])] = None
+    price: Annotated[int | float | None, Field(examples=[2999])] = None
     """
     Derived headline price in minor units (the base or one-time charge)
     """
@@ -1845,7 +1845,7 @@ class ProductConfigDto(BaseModel):
     """
     Fulfillment type
     """
-    validity_period: Annotated[float | None, Field(alias="validityPeriod", examples=[30])] = None
+    validity_period: Annotated[int | float | None, Field(alias="validityPeriod", examples=[30])] = None
     """
     Validity period in days
     """
@@ -1863,13 +1863,13 @@ class PutAutoRechargeSdkDto(BaseModel):
     defer_setup_intent: Annotated[bool | None, Field(alias="deferSetupIntent")] = None
     enabled: bool
     max_monthly_spend_major: Annotated[
-        float | None, Field(alias="maxMonthlySpendMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="maxMonthlySpendMajor", gt=0.0, le=10000.0)
     ] = None
     threshold_amount_major: Annotated[
-        float | None, Field(alias="thresholdAmountMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="thresholdAmountMajor", gt=0.0, le=10000.0)
     ] = None
     topup_amount_major: Annotated[
-        float | None, Field(alias="topupAmountMajor", gt=0.0, le=10000.0)
+        int | float | None, Field(alias="topupAmountMajor", gt=0.0, le=10000.0)
     ] = None
     trigger_type: Annotated[Literal["balance"], Field(alias="triggerType")]
 
@@ -1884,7 +1884,7 @@ class Event1(BaseModel):
     product_ref: Annotated[str | None, Field(alias="productRef", max_length=20)] = None
     properties: dict[str, Any] | None = None
     timestamp: str | None = None
-    value: float | None = None
+    value: int | float | None = None
 
 
 class RecordBulkMeterEventsZodDto(BaseModel):
@@ -1905,7 +1905,7 @@ class RecordMeterEventZodDto(BaseModel):
     product_ref: Annotated[str | None, Field(alias="productRef", max_length=20)] = None
     properties: dict[str, Any] | None = None
     timestamp: str | None = None
-    value: float | None = None
+    value: int | float | None = None
 
 
 class SdkMerchantResponseDto(BaseModel):
@@ -2002,7 +2002,7 @@ class SdkPaymentIntentListItem(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[4999])]
+    amount: Annotated[int | float, Field(examples=[4999])]
     """
     Amount in USD minor units (ledger/normalised); `currency` is the presentment currency
     """
@@ -2056,7 +2056,7 @@ class SdkPaymentIntentListResponse(BaseModel):
         populate_by_name=True,
     )
     payment_intents: Annotated[list[SdkPaymentIntentListItem], Field(alias="paymentIntents")]
-    total: Annotated[float, Field(examples=[1])]
+    total: Annotated[int | float, Field(examples=[1])]
     """
     Number of payment intents returned
     """
@@ -2071,7 +2071,7 @@ class SdkPaymentIntentResponse(BaseModel):
     """
     Connected Stripe account ID (only present on create)
     """
-    amount: Annotated[float, Field(examples=[4999])]
+    amount: Annotated[int | float, Field(examples=[4999])]
     """
     Amount in USD minor units (ledger/normalised). The charge-currency amount is `originalAmount` paired with `currency`.
     """
@@ -2097,7 +2097,7 @@ class SdkPaymentIntentResponse(BaseModel):
     """
     Customer reference
     """
-    exchange_rate: Annotated[float | None, Field(alias="exchangeRate", examples=[1])] = None
+    exchange_rate: Annotated[int | float | None, Field(alias="exchangeRate", examples=[1])] = None
     """
     Exchange rate applied to convert to USD
     """
@@ -2107,7 +2107,7 @@ class SdkPaymentIntentResponse(BaseModel):
     """
     Expiry timestamp of the payment intent
     """
-    original_amount: Annotated[float | None, Field(alias="originalAmount", examples=[4999])] = None
+    original_amount: Annotated[int | float | None, Field(alias="originalAmount", examples=[4999])] = None
     """
     Charge-currency amount in minor units (the currency the customer is billed in)
     """
@@ -2186,7 +2186,7 @@ class SdkPlanResponse(BaseModel):
     """
     Composable pricing options (money as integer minor units)
     """
-    price: Annotated[float | None, Field(examples=[2999])] = None
+    price: Annotated[int | float | None, Field(examples=[2999])] = None
     """
     Derived headline price in minor units (base or one-time charge)
     """
@@ -2239,7 +2239,7 @@ class SdkPlanSnapshotDto(BaseModel):
     """
     Frozen composable pricing options captured at purchase time
     """
-    price: Annotated[float, Field(examples=[2999])]
+    price: Annotated[int | float, Field(examples=[2999])]
     """
     Headline plan price in minor units (e.g. cents)
     """
@@ -2267,7 +2267,7 @@ class SdkProductResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    balance: Annotated[float, Field(examples=[0])]
+    balance: Annotated[int | float, Field(examples=[0])]
     """
     Product balance in cents
     """
@@ -2336,7 +2336,7 @@ class SdkProductResponse(BaseModel):
     """
     Product status
     """
-    total_transactions: Annotated[float, Field(alias="totalTransactions", examples=[0])]
+    total_transactions: Annotated[int | float, Field(alias="totalTransactions", examples=[0])]
     """
     Total number of transactions
     """
@@ -2382,15 +2382,15 @@ class TaxBreakdownDto(BaseModel):
     """
     True when Stripe reports taxability_reason not_collecting (no registration)
     """
-    subtotal: float
+    subtotal: int | float
     """
     Pre-tax amount in minor units
     """
-    tax_amount: Annotated[float, Field(alias="taxAmount")]
+    tax_amount: Annotated[int | float, Field(alias="taxAmount")]
     """
     Tax amount in minor units
     """
-    tax_rate: Annotated[float, Field(alias="taxRate")]
+    tax_rate: Annotated[int | float, Field(alias="taxRate")]
     """
     Tax rate as a decimal (e.g. 0.25 for 25%)
     """
@@ -2417,7 +2417,7 @@ class TaxBreakdownDto(BaseModel):
     """
     Stripe tax type (e.g. vat, sales_tax, gst)
     """
-    total: float
+    total: int | float
     """
     Total amount in minor units
     """
@@ -2500,7 +2500,7 @@ class Options31(BaseModel):
     kind: Literal["entitlement"]
     label: str | None = None
     scope: str | None = None
-    value: bool | float | str
+    value: bool | int | float | str
 
 
 class Options32(BaseModel):
@@ -2712,7 +2712,7 @@ class UserInfoPlanDto(BaseModel):
     """
     Deprecated: always null. Limit data now lives in the plan snapshot options (`kind: "limit"`).
     """
-    price: Annotated[float | None, Field(examples=[2999])] = None
+    price: Annotated[int | float | None, Field(examples=[2999])] = None
     """
     Price in minor currency units (e.g. cents)
     """
@@ -2738,13 +2738,13 @@ class UserInfoUsageDto(BaseModel):
     """
     Meter key referenced by the plan options
     """
-    percent_used: Annotated[float | None, Field(alias="percentUsed", examples=[25])] = None
-    remaining: Annotated[float, Field(examples=[750])]
-    total: Annotated[float, Field(examples=[1000])]
+    percent_used: Annotated[int | float | None, Field(alias="percentUsed", examples=[25])] = None
+    remaining: Annotated[int | float, Field(examples=[750])]
+    total: Annotated[int | float, Field(examples=[1000])]
     """
     Included allowance for the period. `0` means unlimited / no finite cap.
     """
-    used: Annotated[float, Field(examples=[250])]
+    used: Annotated[int | float, Field(examples=[250])]
 
 
 class UserInfoUserDto(BaseModel):
@@ -2929,7 +2929,7 @@ class RecordMeterEventsBulkResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    inserted: Annotated[float | None, Field(examples=[50])] = None
+    inserted: Annotated[int | float | None, Field(examples=[50])] = None
     success: Annotated[bool | None, Field(examples=[True])] = None
 
 
@@ -2965,16 +2965,16 @@ class ListProductsResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    limit: float | None = None
+    limit: int | float | None = None
     """
     Applied page size (clamped to 1-100)
     """
-    offset: float | None = None
+    offset: int | float | None = None
     """
     Applied pagination offset
     """
     products: list[SdkProductResponse] | None = None
-    total: float | None = None
+    total: int | float | None = None
     """
     Total number of products matching the filters
     """
@@ -2997,10 +2997,10 @@ class ListPlansResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    limit: float | None = None
-    offset: float | None = None
+    limit: int | float | None = None
+    offset: int | float | None = None
     plans: list[Plan2] | None = None
-    total: float | None = None
+    total: int | float | None = None
     """
     Total number of plans for the product
     """
@@ -3034,7 +3034,7 @@ class AutoRechargeConfigDto(BaseModel):
     """
     Whether auto-recharge is enabled
     """
-    failure_count: Annotated[float, Field(alias="failureCount", examples=[0])]
+    failure_count: Annotated[int | float, Field(alias="failureCount", examples=[0])]
     """
     Consecutive failure count
     """
@@ -3059,12 +3059,12 @@ class AutoRechargeConfigDto(BaseModel):
     Timestamp the processing lock was acquired
     """
     max_monthly_spend_minor: Annotated[
-        float | None, Field(alias="maxMonthlySpendMinor", examples=[10000])
+        int | float | None, Field(alias="maxMonthlySpendMinor", examples=[10000])
     ] = None
     """
     Optional monthly spend cap in topup.currency minor units
     """
-    monthly_spend_minor: Annotated[float, Field(alias="monthlySpendMinor", examples=[4500])]
+    monthly_spend_minor: Annotated[int | float, Field(alias="monthlySpendMinor", examples=[4500])]
     """
     Successful auto-recharge spend in the current UTC month
     """
@@ -3099,7 +3099,7 @@ class AutoRechargeDisplayDto(BaseModel):
     """
     Display currency code
     """
-    exchange_rate: Annotated[float, Field(alias="exchangeRate", examples=[1])]
+    exchange_rate: Annotated[int | float, Field(alias="exchangeRate", examples=[1])]
     """
     Exchange rate used for display conversion
     """
@@ -3110,11 +3110,11 @@ class AutoRechargeDisplayDto(BaseModel):
     """
     Source of the exchange rate
     """
-    threshold_amount_major: Annotated[float, Field(alias="thresholdAmountMajor", examples=[5])]
+    threshold_amount_major: Annotated[int | float, Field(alias="thresholdAmountMajor", examples=[5])]
     """
     Threshold amount in display-currency major units
     """
-    topup_amount_major: Annotated[float, Field(alias="topupAmountMajor", examples=[20])]
+    topup_amount_major: Annotated[int | float, Field(alias="topupAmountMajor", examples=[20])]
     """
     Top-up amount in display-currency major units
     """
@@ -3244,7 +3244,7 @@ class SdkPurchaseResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    amount: Annotated[float, Field(examples=[9900])]
+    amount: Annotated[int | float, Field(examples=[9900])]
     """
     Amount in USD cents (normalised for aggregation)
     """
@@ -3294,7 +3294,7 @@ class SdkPurchaseResponse(BaseModel):
     """
     End date of purchase
     """
-    exchange_rate: Annotated[float | None, Field(alias="exchangeRate", examples=[1.32])] = None
+    exchange_rate: Annotated[int | float | None, Field(alias="exchangeRate", examples=[1.32])] = None
     """
     Exchange rate from original currency to USD
     """
@@ -3318,7 +3318,7 @@ class SdkPurchaseResponse(BaseModel):
     """
     How the purchase originated
     """
-    original_amount: Annotated[float | None, Field(alias="originalAmount", examples=[7500])] = None
+    original_amount: Annotated[int | float | None, Field(alias="originalAmount", examples=[7500])] = None
     """
     Original amount in the payment currency (minor units)
     """
@@ -3434,7 +3434,7 @@ class WebhookEventDto(BaseModel):
     """
     API version that produced the event payload.
     """
-    created: Annotated[float, Field(examples=[1717000000])]
+    created: Annotated[int | float, Field(examples=[1717000000])]
     """
     Unix timestamp (seconds) when the event was created.
     """
@@ -3504,7 +3504,7 @@ class BulkUsageResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    inserted: Annotated[float, Field(examples=[2])]
+    inserted: Annotated[int | float, Field(examples=[2])]
     """
     Number of usage events inserted
     """
