@@ -10,6 +10,7 @@ Results are compared as canonical JSON text, not as Python objects: in Python
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from collections.abc import Callable
@@ -18,9 +19,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import respx
+from mcp.types import CallToolResult
 
-from solvapay import SolvaPayError
-from solvapay.mcp import narrate_activate_plan, narrated_tool_result
+from solvapay import SolvaPayError, create_solvapay
+from solvapay.mcp import create_solvapay_mcp_server, narrate_activate_plan, narrated_tool_result
 from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_paywall_gate
 from solvapay.webhooks import verify_webhook
@@ -39,7 +42,55 @@ def narrate_account(args: dict[str, Any], clock: datetime | None) -> Any:
     return {"content": dumped["content"]}
 
 
+CONFORMANCE_API = "https://api.conformance.test"
+CONFORMANCE_PUBLIC_URL = "https://mcp.conformance.test"
+
+
+def tool_outcome(result: CallToolResult) -> dict[str, Any]:
+    """The result as the cases compare it: a text block holding JSON compares parsed, as
+    ``json``, since key order is not part of what the widget reads."""
+    dumped = result.model_dump(by_alias=True, exclude_none=True, mode="json")
+    content = [
+        {"type": "text", "json": json.loads(block["text"])}
+        if block.get("type") == "text" and re.match(r"[\[{]", block.get("text", ""))
+        else block
+        for block in dumped["content"]
+    ]
+    outcome: dict[str, Any] = {"content": content}
+    if "structuredContent" in dumped:
+        outcome["structuredContent"] = dumped["structuredContent"]
+    if dumped.get("isError"):
+        outcome["isError"] = True
+    return outcome
+
+
+async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
+    customer = args.get("customerRef")
+    mcp = create_solvapay_mcp_server(
+        solvapay=create_solvapay(
+            api_key="sk_sandbox_conformance",
+            api_base_url=CONFORMANCE_API,
+            product_ref=args["productRef"],
+        ),
+        public_base_url=CONFORMANCE_PUBLIC_URL,
+        get_customer_ref=lambda _args, _context: customer,
+    )
+    # Every exchange must be used, and nothing else may be called.
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        for exchange in args.get("api", []):
+            router.route(
+                method=exchange["method"],
+                scheme="https",
+                host=CONFORMANCE_API.removeprefix("https://"),
+                path=exchange["path"],
+            ).respond(exchange.get("status", 200), json=exchange["body"])
+        result = await mcp.server.call_tool(args["tool"], args.get("arguments", {}))
+    assert isinstance(result, CallToolResult)
+    return tool_outcome(result)
+
+
 OPERATIONS: dict[str, Operation] = {
+    "callTool": lambda args, _clock: asyncio.run(_call_tool(args)),
     "verifyWebhook": lambda args, clock: verify_webhook(
         body=args["body"], signature=args["signature"], secret=args["secret"], now=clock
     ),

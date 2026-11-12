@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "attach-business-details-business-without-country",
+  "description": "A business purchase needs a country.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "paymentIntentId": "pi_1",
+        "isBusiness": true,
+        "businessName": "Acme"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Country is required"
+        }
+      ],
+      "structuredContent": {
+        "error": "Country is required",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

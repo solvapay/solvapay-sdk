@@ -97,6 +97,15 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      # The Python SDK ships two files built from TypeScript: the MCP App widget
+      # (packages/mcp-app-bundle, built just above) and the tax-ID tables
+      # (packages/core). Fail when either committed copy is stale.
+      - name: Python copies match their TypeScript sources
+        if: matrix.node == '24'
+        run: |
+          python3 python/scripts/sync_widget.py --check --no-build
+          node python/scripts/tax_ids.mjs --check
+
       - name: Run tests
         run: pnpm test
 

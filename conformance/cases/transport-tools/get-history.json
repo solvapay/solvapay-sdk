@@ -1,0 +1,129 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "get-history",
+  "description": "History is the product's purchases as charges plus the account's credit activity, as the API returns them.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "get_history",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "limit": 20
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases",
+          "body": {
+            "purchases": [
+              {
+                "reference": "pur_1",
+                "status": "active",
+                "productRef": "prd_conform1",
+                "productName": "Stock Research",
+                "planRef": "pln_pro",
+                "customerRef": "cus_conform1",
+                "amount": 2900,
+                "currency": "USD",
+                "isRecurring": true,
+                "billingCycle": "monthly",
+                "startDate": "2026-11-01T00:00:00Z",
+                "endDate": "2026-12-01T00:00:00Z",
+                "createdAt": "2026-11-01T00:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/credits/activity",
+          "body": {
+            "entries": [
+              {
+                "amount": -200,
+                "balance": 2300,
+                "timestamp": "2026-11-05T14:22:00.000Z",
+                "type": "USAGE",
+                "description": "quote"
+              }
+            ],
+            "hasMore": false
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "charges": [
+              {
+                "reference": "pur_1",
+                "status": "active",
+                "productRef": "prd_conform1",
+                "productName": "Stock Research",
+                "planRef": "pln_pro",
+                "customerRef": "cus_conform1",
+                "amount": 2900,
+                "currency": "USD",
+                "isRecurring": true,
+                "billingCycle": "monthly",
+                "startDate": "2026-11-01T00:00:00Z",
+                "endDate": "2026-12-01T00:00:00Z",
+                "createdAt": "2026-11-01T00:00:00Z"
+              }
+            ],
+            "creditActivity": {
+              "entries": [
+                {
+                  "amount": -200,
+                  "balance": 2300,
+                  "timestamp": "2026-11-05T14:22:00.000Z",
+                  "type": "USAGE",
+                  "description": "quote"
+                }
+              ],
+              "hasMore": false
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "charges": [
+          {
+            "reference": "pur_1",
+            "status": "active",
+            "productRef": "prd_conform1",
+            "productName": "Stock Research",
+            "planRef": "pln_pro",
+            "customerRef": "cus_conform1",
+            "amount": 2900,
+            "currency": "USD",
+            "isRecurring": true,
+            "billingCycle": "monthly",
+            "startDate": "2026-11-01T00:00:00Z",
+            "endDate": "2026-12-01T00:00:00Z",
+            "createdAt": "2026-11-01T00:00:00Z"
+          }
+        ],
+        "creditActivity": {
+          "entries": [
+            {
+              "amount": -200,
+              "balance": 2300,
+              "timestamp": "2026-11-05T14:22:00.000Z",
+              "type": "USAGE",
+              "description": "quote"
+            }
+          ],
+          "hasMore": false
+        }
+      }
+    }
+  }
+}

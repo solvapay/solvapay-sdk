@@ -1,0 +1,40 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-plan-with-auto-recharge",
+  "description": "autoRecharge is only accepted on a top-up.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "plan",
+        "planRef": "pln_pro",
+        "autoRecharge": {
+          "enabled": true,
+          "triggerType": "balance",
+          "currency": "USD"
+        }
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "autoRecharge is only honoured on purpose: \"topup\"."
+        }
+      ],
+      "structuredContent": {
+        "error": "create_payment_intent plan does not accept autoRecharge",
+        "status": 400,
+        "details": "autoRecharge is only honoured on purpose: \"topup\"."
+      },
+      "isError": true
+    }
+  }
+}

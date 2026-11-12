@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-hosted-session-checkout",
+  "description": "kind checkout mints a hosted checkout session for the plan and answers its id and URL only.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_hosted_session",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "kind": "checkout",
+        "planRef": "pln_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_1",
+            "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+            "expiresAt": "2026-11-13T00:00:00Z"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "sessionId": "cs_1",
+            "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1"
+          }
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "cs_1",
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1"
+      }
+    }
+  }
+}

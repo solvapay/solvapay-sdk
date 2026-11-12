@@ -1,10 +1,12 @@
 import {
+  buildSolvaPayDescriptors,
   narrateActivatePlan,
   narratedToolResult,
   parseMode,
   type BootstrapPayload,
+  type SolvaPayCallToolResult,
 } from '@solvapay/mcp-core'
-import { buildPaywallGate, verifyWebhook } from '@solvapay/server'
+import { buildPaywallGate, createSolvaPay, verifyWebhook } from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
 
@@ -50,7 +52,81 @@ function atClock<T>(clock: Date | undefined, run: () => T): T {
   }
 }
 
+/** The API the `callTool` cases run against, and the MCP server's public URL. */
+const CONFORMANCE_API = 'https://api.conformance.test'
+const CONFORMANCE_PUBLIC_URL = 'https://mcp.conformance.test'
+
+/** One API call a `callTool` case expects, and the response it gets. */
+interface ApiExchange {
+  method: string
+  path: string
+  status?: number
+  body: unknown
+}
+
+/**
+ * A tool result as the cases compare it. A text block holding JSON (what
+ * `toolResult` writes) is compared parsed, as `json`: key order is not part of
+ * what the widget reads.
+ */
+function toolOutcome(result: SolvaPayCallToolResult): Record<string, unknown> {
+  const content = result.content.map(block => {
+    const text = (block as { text?: unknown }).text
+    if (block.type === 'text' && typeof text === 'string' && /^[[{]/.test(text)) {
+      return { type: 'text', json: JSON.parse(text) as unknown }
+    }
+    return block
+  })
+  return {
+    content,
+    structuredContent: result.structuredContent,
+    isError: result.isError === true ? true : undefined,
+  }
+}
+
+/**
+ * Calls one of the server's built-in tools with `fetch` answering from
+ * `args.api`. Every exchange must be used, and nothing else may be called.
+ */
+async function callTool(args: Record<string, unknown>): Promise<unknown> {
+  const pending = [...((args.api as ApiExchange[] | undefined) ?? [])]
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
+    const at = pending.findIndex(call => call.method === method && call.path === url.pathname)
+    if (at < 0) throw new Error(`Unexpected API call: ${method} ${url.pathname}`)
+    const [call] = pending.splice(at, 1)
+    return new Response(JSON.stringify(call.body), {
+      status: call.status ?? 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+  try {
+    const customerRef = typeof args.customerRef === 'string' ? args.customerRef : null
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: createSolvaPay({ apiKey: 'sk_sandbox_conformance', apiBaseUrl: CONFORMANCE_API }),
+      productRef: str(args, 'productRef'),
+      resourceUri: 'ui://conformance/mcp-app.html',
+      readHtml: async () => '',
+      publicBaseUrl: CONFORMANCE_PUBLIC_URL,
+      getCustomerRef: () => customerRef,
+    })
+    const name = str(args, 'tool')
+    const tool = tools.find(candidate => candidate.name === name)
+    if (!tool) throw new Error(`No tool named ${name}`)
+    const result = await tool.handler((args.arguments ?? {}) as Record<string, unknown>, undefined)
+    if (pending.length > 0) {
+      throw new Error(`API calls not made: ${pending.map(c => `${c.method} ${c.path}`).join(', ')}`)
+    }
+    return toolOutcome(result)
+  } finally {
+    globalThis.fetch = realFetch
+  }
+}
+
 export const OPERATIONS: Record<string, Implementation[]> = {
+  callTool: [{ name: 'mcp-core', run: args => callTool(args) }],
   verifyWebhook: [
     {
       name: 'node',
