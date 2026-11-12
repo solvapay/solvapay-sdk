@@ -110,19 +110,76 @@ jobs:
         if: matrix.node == '24'
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
+  # The Python SDK (python/): the client generated from openapi/sdk-v1.json, the
+  # handwritten helpers, and the conformance suite, which must pass in Python
+  # exactly as it passes in TypeScript (the `test` job runs the TypeScript runner).
+  python:
+    name: Python SDK (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install
+        run: uv sync --locked --all-extras --python ${{ matrix.python }}
+
+      - name: Version matches @solvapay/server
+        if: matrix.python == '3.12'
+        run: uv run python scripts/check_version.py
+
+      # Regenerates models.py and operations.py from openapi/sdk-v1.json and
+      # fails if the committed client differs. The generator needs 3.11+.
+      - name: Generated client matches the committed spec
+        if: matrix.python == '3.12'
+        run: uv run python scripts/generate_client.py --check
+
+      - name: Lint
+        if: matrix.python == '3.12'
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Type-check
+        if: matrix.python == '3.12'
+        run: uv run mypy
+
+      - name: Unit and conformance tests
+        run: uv run pytest
+
+      - name: Stock research example
+        if: matrix.python == '3.12'
+        working-directory: examples/python-stock-research-mcp
+        run: |
+          uv sync --locked --python ${{ matrix.python }}
+          uv run pytest
+
   # Branch protection requires a check named "Lint, Build & Test". A matrix reports one
   # check per leg instead, so this job carries the required name and passes only when
-  # every leg passed (a skipped or cancelled leg fails it too).
+  # every leg passed (a skipped or cancelled leg fails it too). The Python legs count:
+  # a conformance case that fails in either SDK blocks the merge.
   lint-build-test:
     name: Lint, Build & Test
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, python]
     if: always()
     steps:
-      - name: Require every Node leg to pass
+      - name: Require every Node and Python leg to pass
         run: |
-          echo "matrix result: ${{ needs.test.result }}"
+          echo "node: ${{ needs.test.result }}, python: ${{ needs.python.result }}"
           test "${{ needs.test.result }}" = "success"
+          test "${{ needs.python.result }}" = "success"
 
   documentation:
     name: Documentation Validation
