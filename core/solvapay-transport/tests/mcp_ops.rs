@@ -81,8 +81,17 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
     assert_eq!(got["product"]["name"], "Demo");
     assert_eq!(got["plans"][0]["name"], "Pro");
     assert_eq!(got["customer"], Value::Null);
-    assert_eq!(got["checkoutUrl"], "https://checkout.example/s");
+    // A checkout session belongs to a customer record, so there is none to
+    // mint for an anonymous caller: the backend would reject the ref.
+    assert_eq!(got["checkoutUrl"], Value::Null);
     assert_eq!(got["portalUrl"], Value::Null);
+    let requests = server.received_requests().await.expect("recording on");
+    assert!(
+        requests
+            .iter()
+            .all(|r| r.url.path() != "/v1/sdk/checkout-sessions"),
+        "anonymous bootstrap must not mint a checkout session"
+    );
     assert_eq!(got["autoRechargeUrl"], Value::Null);
     assert!(got["merchant"].get("identityDisplay").is_some());
     assert!(got["taxIdFields"]["DE"]["label"].is_string());
@@ -316,4 +325,273 @@ async fn cached_verdict_does_not_cross_audiences() {
         .await
         .expect("token resolves to a verdict");
     assert_ne!(crossed["kind"], "allow", "{crossed}");
+}
+
+/// Mounts the product-side stubs every bootstrap needs.
+async fn mount_product_stubs(server: &MockServer) {
+    for (route, body) in [
+        (
+            "/v1/sdk/platform-config",
+            json!({ "stripePublishableKey": "pk_test" }),
+        ),
+        ("/v1/sdk/merchant", json!({ "displayName": "Acme" })),
+        ("/v1/sdk/products/prd_demo", json!({ "name": "Demo" })),
+        (
+            "/v1/sdk/products/prd_demo/plans",
+            json!({ "plans": [{ "reference": "pln_pro", "name": "Pro" }] }),
+        ),
+    ] {
+        Mock::given(method("GET"))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(200).set_body_json(body))
+            .mount(server)
+            .await;
+    }
+}
+
+/// Mounts the customer-side stubs for `cus_1` with the given purchases and limits.
+async fn mount_customer_stubs(server: &MockServer, customer: Value, limits: Value) {
+    for (verb, route, body) in [
+        ("GET", "/v1/sdk/customers/cus_1", customer),
+        ("GET", "/v1/sdk/payment-method", json!({ "kind": "none" })),
+        (
+            "GET",
+            "/v1/sdk/customers/cus_1/balance",
+            json!({
+                "credits": 0,
+                "customerRef": "cus_1",
+                "creditsPerMinorUnit": 100,
+                "displayCurrency": "USD",
+                "displayExchangeRate": 1
+            }),
+        ),
+        ("POST", "/v1/sdk/limits", limits),
+        (
+            "POST",
+            "/v1/sdk/checkout-sessions",
+            json!({ "checkoutUrl": "https://checkout.example/s", "sessionId": "cs_1" }),
+        ),
+        (
+            "POST",
+            "/v1/sdk/customers/customer-sessions",
+            json!({ "customerUrl": "https://portal.example/s", "sessionId": "ps_1" }),
+        ),
+    ] {
+        Mock::given(method(verb))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(200).set_body_json(body))
+            .mount(server)
+            .await;
+    }
+}
+
+fn active_purchase() -> Value {
+    json!({
+        "reference": "pur_1",
+        "status": "active",
+        "productRef": "prd_demo",
+        "planRef": "pln_pro",
+        "planSnapshot": { "reference": "pln_pro", "name": "Pro", "requiresPayment": true },
+        "usage": { "periodStart": "2026-07-01T00:00:00Z", "periodEnd": "2026-08-01T00:00:00Z" }
+    })
+}
+
+fn bootstrap_params(customer_ref: Option<&str>) -> McpBootstrapParams {
+    McpBootstrapParams {
+        view: "account".to_owned(),
+        product_ref: "prd_demo".to_owned(),
+        public_base_url: "https://app.example.com".to_owned(),
+        customer_ref: customer_ref.map(str::to_owned),
+    }
+}
+
+/// `anonymous` is the sentinel the payable adapters use when no identity was
+/// supplied. The backend has no such customer, so it must not reach any
+/// customer-scoped read or a checkout session.
+#[tokio::test]
+async fn mcp_bootstrap_treats_the_anonymous_sentinel_as_unauthenticated() {
+    for sentinel in ["anonymous", " anonymous ", "", "   "] {
+        let server = MockServer::start().await;
+        mount_product_stubs(&server).await;
+        let got = client(&server)
+            .mcp_bootstrap(bootstrap_params(Some(sentinel)))
+            .await
+            .expect("bootstrap");
+        assert_eq!(got["customer"], Value::Null, "{sentinel:?}");
+        assert_eq!(got["checkoutUrl"], Value::Null, "{sentinel:?}");
+        assert_eq!(got["portalUrl"], Value::Null, "{sentinel:?}");
+        let requests = server.received_requests().await.expect("recording on");
+        for request in &requests {
+            let route = request.url.path();
+            assert!(
+                !route.starts_with("/v1/sdk/customers")
+                    && route != "/v1/sdk/limits"
+                    && route != "/v1/sdk/checkout-sessions"
+                    && route != "/v1/sdk/payment-method",
+                "{sentinel:?} reached {route}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn mcp_bootstrap_names_the_signed_in_customer_and_carries_limits() {
+    let server = MockServer::start().await;
+    mount_product_stubs(&server).await;
+    mount_customer_stubs(
+        &server,
+        json!({
+            "customerRef": "cus_1",
+            "email": "  demo@acme.test ",
+            "name": "   ",
+            "purchases": [active_purchase()]
+        }),
+        json!({
+            "withinLimits": true,
+            "remaining": 40,
+            "limit": 100,
+            "used": 60,
+            "meterName": "requests",
+            "planRef": "pln_pro",
+            "purchaseRef": "pur_1"
+        }),
+    )
+    .await;
+
+    let got = client(&server)
+        .mcp_bootstrap(bootstrap_params(Some("  cus_1 ")))
+        .await
+        .expect("bootstrap");
+    let customer = &got["customer"];
+    assert_eq!(customer["ref"], "cus_1");
+    assert_eq!(customer["email"], "demo@acme.test");
+    assert_eq!(customer["name"], Value::Null, "a blank name is null");
+    assert_eq!(customer["limits"]["remaining"], 40);
+    assert_eq!(customer["canCall"], true);
+    assert_eq!(customer["isCreditBased"], false);
+    // Within limits: there is no next action to name.
+    assert!(customer.get("nextAction").is_none(), "{customer}");
+    // Consumption and the cap come from limits; the period from the purchase.
+    assert_eq!(customer["usage"]["used"], 60);
+    assert_eq!(customer["usage"]["total"], 100);
+    assert_eq!(customer["usage"]["purchaseRef"], "pur_1");
+    assert_eq!(customer["usage"]["periodEnd"], "2026-08-01T00:00:00Z");
+    assert_eq!(got["checkoutUrl"], "https://checkout.example/s");
+
+    // MCP has no browsable page to return to: the session carries no returnUrl.
+    let requests = server.received_requests().await.expect("recording on");
+    let checkout = requests
+        .iter()
+        .find(|r| r.url.path() == "/v1/sdk/checkout-sessions")
+        .expect("checkout session minted for a signed-in customer");
+    let body: Value = serde_json::from_slice(&checkout.body).expect("json body");
+    assert_eq!(body["customerRef"], "cus_1");
+    assert!(body.get("returnUrl").is_none_or(Value::is_null), "{body}");
+}
+
+#[tokio::test]
+async fn mcp_bootstrap_leaves_usage_unmeasured_when_limits_fail() {
+    let failing = MockServer::start().await;
+    mount_product_stubs(&failing).await;
+    for (verb, route, body) in [
+        (
+            "GET",
+            "/v1/sdk/customers/cus_1",
+            json!({ "customerRef": "cus_1", "purchases": [active_purchase()] }),
+        ),
+        ("GET", "/v1/sdk/payment-method", json!({ "kind": "none" })),
+        (
+            "GET",
+            "/v1/sdk/customers/cus_1/balance",
+            json!({ "credits": 5, "customerRef": "cus_1" }),
+        ),
+    ] {
+        Mock::given(method(verb))
+            .and(path(route))
+            .respond_with(ResponseTemplate::new(200).set_body_json(body))
+            .mount(&failing)
+            .await;
+    }
+    Mock::given(method("POST"))
+        .and(path("/v1/sdk/limits"))
+        .respond_with(ResponseTemplate::new(500).set_body_json(json!({ "message": "boom" })))
+        .mount(&failing)
+        .await;
+
+    let got = client(&failing)
+        .mcp_bootstrap(bootstrap_params(Some("cus_1")))
+        .await
+        .expect("bootstrap survives a failed limits read");
+    let customer = &got["customer"];
+    assert_eq!(customer["limits"], Value::Null);
+    assert!(customer.get("canCall").is_none(), "{customer}");
+    assert!(customer.get("nextAction").is_none(), "{customer}");
+    // Unknown, never zero: the cap and consumption were not measured.
+    assert_eq!(customer["usage"]["used"], Value::Null);
+    assert_eq!(customer["usage"]["total"], Value::Null);
+    assert_eq!(customer["usage"]["purchaseRef"], "pur_1");
+}
+
+/// The bootstrap resource carries the server's default view: the same choice
+/// the viewer tool makes when `view` is omitted.
+#[tokio::test]
+async fn mcp_bootstrap_resource_stamps_the_default_view() {
+    let read = |server: &MockServer, customer_ref: Option<&str>| {
+        let sp = client(server);
+        let customer_ref = customer_ref.map(str::to_owned);
+        async move {
+            sp.mcp_read_resource(McpReadResourceParams {
+                uri: "solvapay://bootstrap.json".to_owned(),
+                config: McpToolConfig {
+                    product_ref: "prd_demo".to_owned(),
+                    public_base_url: "https://app.example.com".to_owned(),
+                    resource_uri: None,
+                    views: None,
+                    mcp_path: None,
+                },
+                customer_ref,
+            })
+            .await
+            .expect("bootstrap resource")
+        }
+    };
+
+    // No signed-in customer, so no active plan: checkout.
+    let anonymous = MockServer::start().await;
+    mount_product_stubs(&anonymous).await;
+    assert_eq!(read(&anonymous, None).await["view"], "checkout");
+
+    // Active plan blocked on a top-up gate: topup.
+    let blocked = MockServer::start().await;
+    mount_product_stubs(&blocked).await;
+    mount_customer_stubs(
+        &blocked,
+        json!({ "customerRef": "cus_1", "purchases": [active_purchase()] }),
+        json!({
+            "withinLimits": false,
+            "remaining": 0,
+            "paywallReason": "topup_required",
+            "creditBalance": 0,
+            "creditsPerUnit": 100,
+            "planRef": "pln_pro",
+            "purchaseRef": "pur_1"
+        }),
+    )
+    .await;
+    let got = read(&blocked, Some("cus_1")).await;
+    assert_eq!(got["view"], "topup");
+    assert_eq!(got["customer"]["nextAction"], "topup");
+
+    // Active plan, zero credits, within limits: account, not topup.
+    let within = MockServer::start().await;
+    mount_product_stubs(&within).await;
+    mount_customer_stubs(
+        &within,
+        json!({ "customerRef": "cus_1", "purchases": [active_purchase()] }),
+        json!({ "withinLimits": true, "remaining": 5, "planRef": "pln_pro", "purchaseRef": "pur_1" }),
+    )
+    .await;
+    let got = read(&within, Some("cus_1")).await;
+    assert_eq!(got["view"], "account");
+    assert_eq!(got["customer"]["balance"]["credits"].as_f64(), Some(0.0));
 }
