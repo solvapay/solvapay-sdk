@@ -75,6 +75,25 @@ top-up or account link (`view`: `checkout`, `account` or `topup`), and
 `docs://solvapay/overview.md` resource come with them. Pass `views=[...]` to
 choose the views, or `views=[]` to leave `account` out.
 
+### The checkout widget
+
+On hosts that support MCP Apps (ChatGPT, Claude), `account` also opens
+SolvaPay's checkout and account widget in the chat, the same one the TypeScript
+SDK serves. It ships in this package (`solvapay/mcp/mcp-app.html`) and is
+served at `ui://<name>/mcp-app.html` (`resource_uri=` to change it). Text-only
+hosts get the same text as before; `mode: "text"` asks for text on any host.
+
+The widget pays, tops up, cancels and reactivates renewals through six tools
+only it calls: `create_payment_intent`, `process_payment`,
+`create_hosted_session`, `set_renewal`, `attach_business_details` and
+`get_history`. They are marked for the app (`_meta.ui.visibility: ["app"]`), so
+MCP Apps hosts keep them from the model. For a host that lists them anyway,
+`hide_tools_by_audience=["ui"]` leaves them out of `tools/list`; ChatGPT still
+gets them, since its widget can only call listed tools.
+
+Its Content Security Policy allows Stripe and the SolvaPay API. Add domains with
+`csp={"connectDomains": [...], "resourceDomains": [...], "frameDomains": [...]}`.
+
 ### Paid by agents
 
 `solvapay.agents.mcp.create_agent_mcp_route` serves an MCP server that SolvaPay
@@ -114,7 +133,8 @@ and the HTTP `status`; branch on those, not on the message.
 
 ## Same behaviour as the TypeScript SDK
 
-The paywall, its messages, the `account` and `activate_plan` narration and
-webhook verification are checked against the TypeScript SDK on every change by a shared conformance suite
+The paywall, its messages, the `account` and `activate_plan` narration, what
+the widget's tools answer and webhook verification are checked against the
+TypeScript SDK on every change by a shared conformance suite
 ([`conformance/`](../conformance)). The API client is generated from the same
 spec as the TypeScript types ([`openapi/`](../openapi)).

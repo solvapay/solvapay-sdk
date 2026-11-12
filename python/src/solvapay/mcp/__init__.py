@@ -1,5 +1,14 @@
 """Paid MCP tools for the official MCP Python SDK. Install with ``pip install 'solvapay[mcp]'``."""
 
+from .app import (
+    BOOTSTRAP_URI,
+    DEFAULT_CSP,
+    RESOURCE_MIME_TYPE,
+    HideToolsByAudience,
+    is_chatgpt_request,
+    merge_csp,
+    widget_html,
+)
 from .auth import SolvaPayTokenVerifier, authorization_server_metadata, oauth_bridge_routes
 from .bootstrap import (
     build_bootstrap_payload,
@@ -34,13 +43,19 @@ from .tools import (
     register_free_tool,
     register_payable_tool,
 )
+from .transport import TRANSPORT_TOOL_NAMES, register_transport_tools
 
 __all__ = [
+    "BOOTSTRAP_URI",
+    "DEFAULT_CSP",
     "NARRATORS",
     "OVERVIEW_MARKDOWN",
     "OVERVIEW_URI",
     "PAID_TOOL_HINT",
+    "RESOURCE_MIME_TYPE",
+    "TRANSPORT_TOOL_NAMES",
     "CustomerSnapshot",
+    "HideToolsByAudience",
     "NarratorOutput",
     "Nudge",
     "ResponseContext",
@@ -55,6 +70,8 @@ __all__ = [
     "derive_default_view",
     "enrich_purchase",
     "free_tool_description_suffix",
+    "is_chatgpt_request",
+    "merge_csp",
     "narrate_activate_plan",
     "narrate_auto_recharge",
     "narrate_manage_account",
@@ -65,7 +82,9 @@ __all__ = [
     "register_free_tool",
     "register_intent_tools",
     "register_payable_tool",
+    "register_transport_tools",
     "select_active_plan_purchase",
     "tool_error_result",
     "ui_placeholder",
+    "widget_html",
 ]

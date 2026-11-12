@@ -5,10 +5,10 @@
 ``create_solvapay_mcp_server`` registers all of them. ``register_intent_tools``
 adds them to any ``MCPServer``.
 
-TypeScript's eight UI transport tools and its UI resource are not ported: they
-serve the React iframe, which a Python server does not host. So the ``account``
-result carries no ``_meta.ui`` and ``mode: 'auto'`` and ``mode: 'text'`` give the
-same result.
+With ``resource_uri`` (``create_solvapay_mcp_server`` passes it), ``account`` opens
+the SolvaPay widget on MCP Apps hosts: the tool lists ``_meta.ui.resourceUri`` and
+its result carries it, except in ``mode: 'text'``. Text-only hosts read the same
+narration either way. The widget's own tools are in ``transport.py``.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from pydantic import BeforeValidator, Field
 from .._js import get
 from ..errors import SolvaPayError
 from ..solvapay import SolvaPay
+from .app import tool_ui_meta
 from .bootstrap import (
     ADVERTISED_VIEWS,
     ViewKind,
@@ -208,10 +209,14 @@ def register_intent_tools(
     public_base_url: str,
     views: Iterable[ViewKind] = ADVERTISED_VIEWS,
     get_customer_ref: GetCustomerRef | None = None,
+    resource_uri: str | None = None,
 ) -> None:
     """Registers ``account`` (unless ``views`` is empty), ``activate_plan``, the
     ``/upgrade``, ``/manage_account``, ``/topup`` and ``/activate_plan`` prompts, and the
-    ``docs://solvapay/overview.md`` resource."""
+    ``docs://solvapay/overview.md`` resource.
+
+    ``resource_uri`` is the widget's ``ui://`` resource, which the caller registers
+    (``create_solvapay_mcp_server`` does). Without it ``account`` is text only."""
     if not public_base_url.startswith(("https://", "http://")):
         raise SolvaPayError("public_base_url must be an http(s) URL", code="invalid_argument")
     enabled = set(views)
@@ -256,9 +261,10 @@ def register_intent_tools(
                     data = await payload(requested, customer_ref)
             except SolvaPayError as error:
                 return _error_from(error)
-            return narrated_tool_result(
-                data["view"], data, mode, {"openai/widgetSessionId": str(uuid.uuid4())}
-            )
+            result_meta: Json = {"openai/widgetSessionId": str(uuid.uuid4())}
+            if resource_uri is not None:
+                result_meta = {"ui": {"resourceUri": resource_uri}, **result_meta}
+            return narrated_tool_result(data["view"], data, mode, result_meta)
 
         view_type: Any = Literal[tuple(advertised)]
         _annotate(
@@ -291,6 +297,7 @@ def register_intent_tools(
             annotations=ToolAnnotations(
                 read_only_hint=True, idempotent_hint=True, open_world_hint=True
             ),
+            meta=tool_ui_meta(resource_uri) if resource_uri is not None else None,
             structured_output=False,
         )
 

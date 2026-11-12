@@ -27,6 +27,8 @@ Every call bills one unit, whatever its upstream fan-out.
 to call: `account` (the customer's plan, balance and checkout or top-up link)
 and `activate_plan`, plus the `/upgrade`, `/manage_account`, `/topup` and
 `/activate_plan` prompts. A paywall message names `account` as the way to pay.
+In ChatGPT and Claude, `account` opens SolvaPay's checkout and account widget
+in the chat; other hosts get the text with links.
 
 ## Run it
 

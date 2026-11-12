@@ -157,7 +157,18 @@ async def test_tools_list_has_the_builtin_tools_next_to_paid_ones() -> None:
 
     mcp.register_payable("quote", handler=quote)
     tools = {tool.name: tool for tool in await mcp.server.list_tools()}
-    assert set(tools) == {"account", "activate_plan", "quote"}
+    assert set(tools) == {
+        "account",
+        "activate_plan",
+        "quote",
+        # The widget's transport tools (tests/test_mcp_app.py).
+        "create_hosted_session",
+        "create_payment_intent",
+        "process_payment",
+        "attach_business_details",
+        "set_renewal",
+        "get_history",
+    }
     assert tools["account"].annotations.read_only_hint is True
     assert tools["account"].input_schema["properties"]["view"]["anyOf"][0]["enum"] == [
         "checkout",
@@ -168,7 +179,11 @@ async def test_tools_list_has_the_builtin_tools_next_to_paid_ones() -> None:
     prompts = [prompt.name for prompt in await mcp.server.list_prompts()]
     assert prompts == ["upgrade", "manage_account", "topup", "activate_plan"]
     resources = [str(resource.uri) for resource in await mcp.server.list_resources()]
-    assert resources == ["docs://solvapay/overview.md"]
+    assert resources == [
+        "docs://solvapay/overview.md",
+        "ui://solvapay-mcp/mcp-app.html",
+        "solvapay://bootstrap.json",
+    ]
 
 
 async def test_views_limit_the_account_tool_and_its_prompts() -> None:

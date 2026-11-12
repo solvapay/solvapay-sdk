@@ -7,7 +7,7 @@ import pytest
 import respx
 from mcp.types import CallToolResult
 from solvapay import create_solvapay
-from solvapay.mcp import create_solvapay_mcp_server
+from solvapay.mcp import TRANSPORT_TOOL_NAMES, create_solvapay_mcp_server
 
 from market_data import StubMarketData
 from tools import register_tools
@@ -44,8 +44,9 @@ async def call(mcp: Any, name: str, args: dict[str, Any]) -> dict[str, Any]:
 
 async def test_every_tool_is_paid_and_has_its_schema(mcp: Any) -> None:
     tools = {t.name: t for t in await mcp.server.list_tools()}
-    # SolvaPay's built-in tools sit next to the research tools.
-    assert set(tools) == {*TOOLS, "account", "activate_plan"}
+    # SolvaPay's built-in tools sit next to the research tools: the two the model
+    # calls, and the six the checkout widget calls.
+    assert set(tools) == {*TOOLS, "account", "activate_plan", *TRANSPORT_TOOL_NAMES}
     for name, required in TOOLS.items():
         assert tools[name].input_schema.get("required", []) == required
         assert "Paid tool" in (tools[name].description or "")
