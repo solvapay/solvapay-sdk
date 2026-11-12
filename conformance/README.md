@@ -44,7 +44,8 @@ it has not mapped is a failure.
 - `fn` is a language-neutral name. `args` is one JSON object with camelCase
   keys; a runner converts them (Python: `verify_webhook(body=…, …)`).
 - `clock` is the time the operation runs at. Anything that reads the clock reads
-  this instead, so a case gives the same outcome every day.
+  this instead, so a case gives the same outcome every day. (The TypeScript
+  runner fixes `new Date()` for operations that take no clock argument.)
 - `expect.result` is compared as JSON: a key that is missing and a key whose
   value is undefined are the same, `null` is not.
 - `expect.error.code` is the error's stable code. Messages are for people and
@@ -52,10 +53,11 @@ it has not mapped is a failure.
 
 ## Suites
 
-| Suite                  | Operation          | What it pins down                                                         |
-| ---------------------- | ------------------ | ------------------------------------------------------------------------- |
-| `webhook-verification` | `verifyWebhook`    | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes |
-| `paywall-gate`         | `buildPaywallGate` | Gate kind, recovery fields, links and the exact message a customer sees   |
+| Suite                  | Operation                               | What it pins down                                                                                                                    |
+| ---------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `webhook-verification` | `verifyWebhook`                         | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                            |
+| `paywall-gate`         | `buildPaywallGate`                      | Gate kind, recovery fields, links and the exact message a customer sees                                                              |
+| `narration`            | `narrateAccount`, `narrateActivatePlan` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status |
 
 ## Running
 
@@ -82,7 +84,8 @@ change shows in review.
 
 A deliberate difference between SDKs is listed here with its reason, never left
 as a failing or skipped case. None of these changes a conformance case's
-outcome; they are in code the cases do not reach (customer resolution, errors).
+outcome; they are in code the cases do not reach (customer resolution, errors,
+API reads).
 
 | Python does                                                                                               | TypeScript does                                                                      | Why                                                                                                                                                                                                              |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,3 +94,6 @@ outcome; they are in code the cases do not reach (customer resolution, errors).
 | Resolves a 409 on customer creation with one lookup by `externalRef`, else fails with `customer_conflict` | Also looks up by email, backfills `externalRef`, then retries with a generated email | The platform now links an email-matched customer itself when `externalRef` is sent, so a 409 means the email belongs to another account. A retry with a new email creates a second customer for the same person. |
 | Keeps the customer cache on the client instance                                                           | Shares one process-wide cache keyed by `externalRef` alone                           | Two clients with different keys in one process must never share a customer.                                                                                                                                      |
 | Retries a usage event only on 404                                                                         | Retries only when the message says "Customer not found"                              | Same intent, read from the status.                                                                                                                                                                               |
+| `account`: a failed customer read leaves `customer.purchase` null, and is logged                          | `checkPurchaseCore` swallows the error and reports `{ customerRef, purchases: [] }`  | An outage must not read as "this customer has no plan". The narration is the same either way: no active purchase.                                                                                                |
+| `account`: reads the customer by the signed-in `customer_ref` directly                                    | Calls `ensureCustomer` first, which returns a `cus_` ref unchanged                   | The MCP customer always comes from the verified token as a `cus_` ref, so the lookup step never runs.                                                                                                            |
+| Agent MCP route: keeps waiting for the owner's approval after the MCP client disconnects                  | Stops waiting when the request's `AbortSignal` fires                                 | A Starlette request has no synchronous disconnect signal; the wait still ends at `max_wait_seconds`.                                                                                                             |

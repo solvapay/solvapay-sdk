@@ -33,6 +33,8 @@ from ..errors import SolvaPayError
 from ..paywall.decide import FreeLimit
 from ..solvapay import SolvaPay
 from .auth import SolvaPayTokenVerifier, oauth_bridge_routes
+from .bootstrap import ADVERTISED_VIEWS, ViewKind
+from .intent import register_intent_tools
 from .tools import GetCustomerRef, Handler, register_free_tool, register_payable_tool
 
 Json = dict[str, Any]
@@ -138,11 +140,20 @@ def create_solvapay_mcp_server(
     mcp_path: str = "/mcp",
     oauth_paths: dict[str, str] | None = None,
     http_client: httpx.AsyncClient | None = None,
+    views: list[ViewKind] | None = None,
+    get_customer_ref: GetCustomerRef | None = None,
 ) -> SolvaPayMcpServer:
     """An MCP server whose customers sign in with SolvaPay.
 
     ``public_base_url`` is where clients reach this server (an ngrok URL in
     development). It is the OAuth issuer clients see.
+
+    The server comes with SolvaPay's built-in tools, as the TypeScript server does:
+    ``account`` (checkout, account and top-up views; ``views`` picks which, and an
+    empty list leaves the tool out) and ``activate_plan``, the ``/upgrade``,
+    ``/manage_account``, ``/topup`` and ``/activate_plan`` prompts, and the
+    ``docs://solvapay/overview.md`` resource. ``get_customer_ref`` overrides who the
+    customer is for them; by default it is the verified access token's.
     """
     if not public_base_url.startswith(("https://", "http://")):
         raise SolvaPayError("public_base_url must be an http(s) URL", code="invalid_argument")
@@ -171,6 +182,14 @@ def create_solvapay_mcp_server(
         http_client=http_client,
     ):
         server.custom_route(route.path, methods=sorted(route.methods or []))(route.endpoint)
+    register_intent_tools(
+        server,
+        solvapay=solvapay,
+        product_ref=product,
+        public_base_url=public_base_url,
+        views=ADVERTISED_VIEWS if views is None else views,
+        get_customer_ref=get_customer_ref,
+    )
     return SolvaPayMcpServer(
         server=server, solvapay=solvapay, product_ref=product, mcp_path=mcp_path
     )

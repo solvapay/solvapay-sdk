@@ -1,0 +1,17 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-activated-unnamed",
+  "description": "Without a plan name the activation is generic.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "activated"
+      }
+    }
+  },
+  "expect": {
+    "result": "Plan activated. Paid tools are available now."
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-recurring-unlimited",
+  "description": "A recurring plan whose cap is 0 (unlimited, state C): Unlimited calls with the renewal date from the purchase end date.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "auto",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_free",
+            "name": "Free",
+            "type": "recurring",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_unlimited",
+            "name": "Unlimited",
+            "type": "recurring",
+            "price": 9900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 9900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 0,
+                "onExceed": "block"
+              }
+            ]
+          }
+        ],
+        "customer": {
+          "ref": "cus_42",
+          "email": "ada@example.com",
+          "name": "Ada",
+          "purchase": {
+            "customerRef": "cus_42",
+            "purchases": [
+              {
+                "reference": "pur_unlimited",
+                "status": "active",
+                "productRef": "prd_research",
+                "planRef": "pln_unlimited",
+                "planSnapshot": {
+                  "reference": "pln_unlimited",
+                  "name": "Unlimited",
+                  "price": 9900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 9900,
+                      "currency": "USD"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 0,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 9900,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": true,
+                "endDate": "2026-12-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": {
+            "meterRef": "requests",
+            "total": null,
+            "used": null,
+            "remaining": null,
+            "percentUsed": null
+          },
+          "limits": {
+            "withinLimits": true,
+            "remaining": -1,
+            "planRef": "pln_unlimited",
+            "meterName": "requests"
+          }
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+        "portalUrl": "https://solvapay.com/customer/manage?session=sess_1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge"
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Unlimited, $99 a month. Unlimited calls, renewing Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/manage?session=sess_1",
+          "name": "Manage account"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_1",
+          "name": "Open checkout"
+        }
+      ]
+    }
+  }
+}

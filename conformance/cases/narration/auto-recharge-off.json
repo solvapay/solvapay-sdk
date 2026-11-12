@@ -1,0 +1,176 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "auto-recharge-off",
+  "description": "The auto-recharge view with it off: the balance, how to turn it on, and the portal deep link labelled Turn on auto-recharge.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "auto-recharge",
+      "mode": "text",
+      "payload": {
+        "view": "auto-recharge",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_free",
+            "name": "Free",
+            "type": "recurring",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 2,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ]
+          },
+          {
+            "reference": "pln_lifetime",
+            "name": "Lifetime",
+            "type": "one-time",
+            "price": 19900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 19900,
+                "currency": "USD"
+              }
+            ]
+          }
+        ],
+        "customer": {
+          "ref": "cus_42",
+          "email": "ada@example.com",
+          "name": "Ada",
+          "purchase": {
+            "customerRef": "cus_42",
+            "purchases": [
+              {
+                "reference": "pur_payg",
+                "status": "active",
+                "productRef": "prd_research",
+                "planRef": "pln_payg",
+                "planSnapshot": {
+                  "reference": "pln_payg",
+                  "name": "Pay as you go",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "unit",
+                      "amountMinor": 2,
+                      "currency": "USD",
+                      "meter": "requests"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": false
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": {
+            "credits": 900,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null,
+          "limits": null,
+          "autoRecharge": {
+            "enabled": false
+          }
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+        "portalUrl": "https://solvapay.com/customer/manage?session=sess_1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge"
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Auto-recharge — Stock Research**\n\nBalance: 900 credits (~$0.09)\nAuto-recharge is off. Turn it on from the link below — it stores a card and tops your balance up automatically so calls do not fail.\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"account\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge",
+          "name": "Turn on auto-recharge"
+        }
+      ]
+    }
+  }
+}

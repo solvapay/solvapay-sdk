@@ -20,6 +20,8 @@ from typing import Any
 import pytest
 
 from solvapay import SolvaPayError
+from solvapay.mcp import narrate_activate_plan, narrated_tool_result
+from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_paywall_gate
 from solvapay.webhooks import verify_webhook
 
@@ -28,11 +30,22 @@ NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 Operation = Callable[[dict[str, Any], "datetime | None"], Any]
 
+
+def narrate_account(args: dict[str, Any], clock: datetime | None) -> Any:
+    result = narrated_tool_result(
+        args["view"], args["payload"], parse_mode(args.get("mode")), now=clock
+    )
+    dumped = result.model_dump(by_alias=True, exclude_none=True, mode="json")
+    return {"content": dumped["content"]}
+
+
 OPERATIONS: dict[str, Operation] = {
     "verifyWebhook": lambda args, clock: verify_webhook(
         body=args["body"], signature=args["signature"], secret=args["secret"], now=clock
     ),
     "buildPaywallGate": lambda args, _clock: build_paywall_gate(args["productRef"], args["limits"]),
+    "narrateAccount": narrate_account,
+    "narrateActivatePlan": lambda args, _clock: narrate_activate_plan(args["result"]),
 }
 
 

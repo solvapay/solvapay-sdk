@@ -1,3 +1,9 @@
+import {
+  narrateActivatePlan,
+  narratedToolResult,
+  parseMode,
+  type BootstrapPayload,
+} from '@solvapay/mcp-core'
 import { buildPaywallGate, verifyWebhook } from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
@@ -16,6 +22,32 @@ const str = (args: Record<string, unknown>, key: string): string => {
   const value = args[key]
   if (typeof value !== 'string') throw new Error(`args.${key} must be a string`)
   return value
+}
+
+/**
+ * Runs `run` with `new Date()` and `Date.now()` reading `clock`, for code that
+ * takes no clock argument (the account narrator reads the current time to say
+ * how many days a cancelled plan has left). Synchronous only.
+ */
+function atClock<T>(clock: Date | undefined, run: () => T): T {
+  if (clock === undefined) return run()
+  const RealDate = Date
+  const fixed = clock.getTime()
+  class FixedDate extends RealDate {
+    constructor(...args: unknown[]) {
+      if (args.length === 0) super(fixed)
+      else super(...(args as [string]))
+    }
+    static now(): number {
+      return fixed
+    }
+  }
+  globalThis.Date = FixedDate as DateConstructor
+  try {
+    return run()
+  } finally {
+    globalThis.Date = RealDate
+  }
 }
 
 export const OPERATIONS: Record<string, Implementation[]> = {
@@ -49,6 +81,27 @@ export const OPERATIONS: Record<string, Implementation[]> = {
           str(args, 'productRef'),
           args.limits as Parameters<typeof buildPaywallGate>[1],
         ),
+    },
+  ],
+  narrateAccount: [
+    {
+      name: 'mcp-core',
+      run: (args, clock) => {
+        const result = atClock(clock, () =>
+          narratedToolResult(
+            str(args, 'view'),
+            args.payload as BootstrapPayload,
+            parseMode(args.mode),
+          ),
+        )
+        return { content: result.content }
+      },
+    },
+  ],
+  narrateActivatePlan: [
+    {
+      name: 'mcp-core',
+      run: args => narrateActivatePlan(args.result as Parameters<typeof narrateActivatePlan>[0]),
     },
   ],
 }

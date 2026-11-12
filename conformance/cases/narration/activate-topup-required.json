@@ -1,0 +1,19 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-topup-required",
+  "description": "A usage plan without credits links the top-up checkout as Add credits and points at the topup view.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "topup_required",
+        "planName": "Pay as you go",
+        "checkoutUrl": "https://solvapay.com/customer/checkout/topup?id=cs_2"
+      }
+    }
+  },
+  "expect": {
+    "result": "Pay as you go needs credits before it can activate. [Add credits](https://solvapay.com/customer/checkout/topup?id=cs_2) (expires in 15 minutes), or Call `account` with view: 'topup' to add credits."
+  }
+}
