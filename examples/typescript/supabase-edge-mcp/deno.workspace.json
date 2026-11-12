@@ -10,11 +10,11 @@
     "@solvapay/mcp-core": "npm:@solvapay/mcp-core",
     "@solvapay/server": "npm:@solvapay/server",
     "@solvapay/core": "npm:@solvapay/core",
-    "@modelcontextprotocol/core": "npm:@modelcontextprotocol/core@2.0.0",
-    "@modelcontextprotocol/core/": "npm:/@modelcontextprotocol/core@2.0.0/",
-    "@modelcontextprotocol/server": "npm:@modelcontextprotocol/server@2.0.0",
-    "@modelcontextprotocol/server/": "npm:/@modelcontextprotocol/server@2.0.0/",
-    "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@2.0.0/",
+    "@modelcontextprotocol/core": "npm:@modelcontextprotocol/core@2.4.0",
+    "@modelcontextprotocol/core/": "npm:/@modelcontextprotocol/core@2.4.0/",
+    "@modelcontextprotocol/server": "npm:@modelcontextprotocol/server@2.4.0",
+    "@modelcontextprotocol/server/": "npm:/@modelcontextprotocol/server@2.4.0/",
+    "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@2.0.4/",
     "zod": "npm:zod@4.3.6"
   }
 }

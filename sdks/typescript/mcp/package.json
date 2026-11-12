@@ -113,8 +113,8 @@
     }
   },
   "devDependencies": {
-    "@modelcontextprotocol/core": "2.0.0",
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/core": "^2.4.0",
+    "@modelcontextprotocol/server": "^2.4.0",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
