@@ -1,0 +1,11 @@
+{
+  "workerName": "petstore-v2-forms",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": { "kind": "none" },
+  "mode": "one-to-one",
+  "operations": [
+    { "operationId": "updatePetWithForm", "tier": "paid" },
+    { "operationId": "uploadFile", "tier": "paid" },
+    { "operationId": "createUsersWithArrayInput", "tier": "paid" }
+  ]
+}

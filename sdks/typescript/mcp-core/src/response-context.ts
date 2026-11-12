@@ -94,7 +94,6 @@ function snapshotFromLimits(params: {
     balance: snapshot.balance,
     remaining: snapshot.remaining,
     withinLimits: snapshot.withinLimits,
-    throttled: snapshot.throttled,
     overage: snapshot.overage,
     isCreditBased: snapshot.isCreditBased,
     plan,

@@ -110,7 +110,7 @@ describe('useLimits', () => {
       expect(getLimits).toHaveBeenCalledWith({ productRef: 'prd_api', meterName: 'requests' })
     })
 
-    it.each(['throttled', 'overage', 'needsTopUp', 'needsUpgrade', 'upgraded'] as const)(
+    it.each(['overage', 'needsTopUp'] as const)(
       'surfaces %s from the transport result',
       async flag => {
         const getLimits = vi.fn().mockResolvedValue(limitsResult({ [flag]: true }))

@@ -1,8 +1,8 @@
 /**
  * Host-blend contract for the MCP widget stylesheet.
  *
- * The iframe must sit on the host canvas: transparent chrome, a hairline
- * frame (no fill, no shadow), tokens from the MCP Apps spec. Fallbacks
+ * The iframe must sit on the host canvas: transparent chrome, no outer
+ * frame (the host owns it), tokens from the MCP Apps spec. Fallbacks
  * live in one `:root` `light-dark()` block — never as inline
  * `var(--x, #hex)` pairs. File-level assertions — jsdom does not apply
  * this stylesheet.
@@ -82,12 +82,24 @@ describe('MCP widget host blend', () => {
     expect(body).not.toMatch(/--color-background-primary/)
   })
 
-  it('frames .solvapay-mcp-card with a spec hairline and no fill or shadow', () => {
+  it('leaves the outer frame to the host: no border, radius, fill, or shadow on the card', () => {
     const card = firstRule(STYLES, /\.solvapay-mcp-card\s*\{([^}]+)\}/)
-    expect(card).toMatch(/border-radius:\s*var\(--border-radius-xl\)/)
-    expect(card).toMatch(/border:\s*1px solid var\(--color-border-primary\)/)
+    expect(card).not.toMatch(/border(?:-radius)?:/)
     expect(card).not.toMatch(/background:/)
     expect(card).not.toMatch(/box-shadow:/)
+  })
+
+  it('adds no gutter on #root — padding comes only from host safe-area insets', () => {
+    const root = firstRule(STYLES, /(?:^|\n)#root\s*\{([^}]+)\}/)
+    expect(root).not.toMatch(/padding/)
+    expect(root).not.toMatch(/border|background/)
+  })
+
+  it('never shows a root scrollbar — the host sizes the frame, a retained bar steals width', () => {
+    const html = firstRule(STYLES, /(?:^|\n)html\s*\{([^}]+)\}/)
+    expect(html).toMatch(/scrollbar-width:\s*none/)
+    // Scrolling itself stays available for hosts that cap the frame height.
+    expect(html).not.toMatch(/overflow/)
   })
 
   it('does not invent --color-* names the MCP Apps spec does not define', () => {

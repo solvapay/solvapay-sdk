@@ -28,11 +28,8 @@ export function toTransportLimits(limits: LimitResponseWithPlan): TransportLimit
     remaining: limits.remaining,
     meterName: limits.meterName ?? null,
     activationRequired: limits.activationRequired === true,
-    ...(limits.throttled !== undefined ? { throttled: limits.throttled } : {}),
     ...(limits.overage !== undefined ? { overage: limits.overage } : {}),
     ...(limits.needsTopUp !== undefined ? { needsTopUp: limits.needsTopUp } : {}),
-    ...(limits.needsUpgrade !== undefined ? { needsUpgrade: limits.needsUpgrade } : {}),
-    ...(limits.upgraded !== undefined ? { upgraded: limits.upgraded } : {}),
     ...(limits.used !== undefined ? { used: limits.used } : {}),
     ...(limits.limit !== undefined ? { limit: limits.limit } : {}),
   }

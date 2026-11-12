@@ -3,7 +3,7 @@ import { RELEASE_TRAIN_VERSION } from './release-train-version.generated'
 import { LANGUAGE_RUNTIME_DEPS, resolveLatestVersions } from './versions'
 
 describe('LANGUAGE_RUNTIME_DEPS', () => {
-  it('pins offline fallbacks to the stamped release-train version', () => {
+  it('pins --offline versions to the stamped release-train version', () => {
     expect(RELEASE_TRAIN_VERSION.length).toBeGreaterThan(0)
     for (const language of ['ts', 'python', 'ruby', 'rust'] as const) {
       for (const dep of LANGUAGE_RUNTIME_DEPS[language]) {
@@ -64,44 +64,62 @@ describe('resolveLatestVersions', () => {
     expect(map.get('solvapay')).toBe('0.2.1')
   })
 
-  it('falls back when fetch throws', async () => {
+  it('throws, naming the package and the cause, when fetch fails', async () => {
     globalThis.fetch = vi.fn(async () => {
       throw new Error('ENETUNREACH')
     }) as typeof fetch
 
-    const map = await resolveLatestVersions('ruby', LANGUAGE_RUNTIME_DEPS.ruby, {
-      onResolve: () => {},
-    })
-    expect(map.get('solvapay')).toBe(RELEASE_TRAIN_VERSION)
-    expect(map.get('solvapay-mcp')).toBe(RELEASE_TRAIN_VERSION)
+    await expect(
+      resolveLatestVersions('ruby', LANGUAGE_RUNTIME_DEPS.ruby, { onResolve: () => {} }),
+    ).rejects.toThrow(/solvapay: .*ENETUNREACH[\s\S]*--offline/)
   })
 
-  it('falls back on non-2xx', async () => {
-    globalThis.fetch = vi.fn(async () => new Response('gone', { status: 404 })) as typeof fetch
-    const map = await resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} })
-    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe(`v${RELEASE_TRAIN_VERSION}`)
-  })
-
-  it('throws on a 404 when failOnNotPublished is set, naming the package', async () => {
+  it('throws on a 404, naming the package as not published', async () => {
     globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
     await expect(
       resolveLatestVersions('ts', [{ name: '@solvapay/server-wasm', fallback: '0.2.0' }], {
         onResolve: () => {},
-        failOnNotPublished: true,
       }),
-    ).rejects.toThrow('@solvapay/server-wasm')
+    ).rejects.toThrow(/@solvapay\/server-wasm: .*answered 404 \(not published\)/)
   })
 
-  it('still falls back on a network error when failOnNotPublished is set', async () => {
-    // A network error is "can't reach the registry", not "not published" —
-    // it must not abort the published lane.
-    globalThis.fetch = vi.fn(async () => {
-      throw new Error('ENETUNREACH')
-    }) as typeof fetch
-    const map = await resolveLatestVersions('ruby', [{ name: 'solvapay', fallback: '0.1.0' }], {
-      onResolve: () => {},
-      failOnNotPublished: true,
+  it('throws on any other non-2xx response', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('down', { status: 503 })) as typeof fetch
+    await expect(
+      resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} }),
+    ).rejects.toThrow(/answered 503/)
+  })
+
+  it('throws when the registry returns no version', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ notVersion: 'oops' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    ) as typeof fetch
+    await expect(
+      resolveLatestVersions('python', [{ name: 'solvapay', fallback: '0.1.0' }], {
+        onResolve: () => {},
+      }),
+    ).rejects.toThrow(/returned no version/)
+  })
+
+  it('uses the release-train pins with offline, without touching the network', async () => {
+    const fetchSpy = vi.fn()
+    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    const onResolve = vi.fn()
+
+    const map = await resolveLatestVersions('ruby', LANGUAGE_RUNTIME_DEPS.ruby, {
+      offline: true,
+      onResolve,
     })
-    expect(map.get('solvapay')).toBe('0.1.0')
+
+    expect(map.get('solvapay')).toBe(RELEASE_TRAIN_VERSION)
+    expect(map.get('solvapay-mcp')).toBe(RELEASE_TRAIN_VERSION)
+    expect(fetchSpy).not.toHaveBeenCalled()
+    for (const call of onResolve.mock.calls) {
+      expect(call[0].source).toBe('pinned')
+    }
   })
 })

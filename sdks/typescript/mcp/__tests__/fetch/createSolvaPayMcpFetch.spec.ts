@@ -385,7 +385,7 @@ describe('createSolvaPayMcpFetch', () => {
     }
   })
 
-  it('resources/read returns the registered UI HTML with prefersBorder: false', async () => {
+  it('resources/read returns the registered UI HTML with prefersBorder: true', async () => {
     const handler = buildHandler()
     await initialize(handler)
 
@@ -399,7 +399,7 @@ describe('createSolvaPayMcpFetch', () => {
     const entry = read.json.result?.contents?.[0]
     expect(entry?.uri).toBe(resourceUri)
     expect(entry?.text).toContain('<html><body>test</body></html>')
-    expect(entry?._meta?.ui?.prefersBorder).toBe(false)
+    expect(entry?._meta?.ui?.prefersBorder).toBe(true)
   })
 
   it('resources/read returns bootstrap JSON at solvapay://bootstrap.json', async () => {
@@ -416,9 +416,14 @@ describe('createSolvaPayMcpFetch', () => {
     const entry = read.json.result?.contents?.[0]
     expect(entry?.uri).toBe(SOLVAPAY_BOOTSTRAP_URI)
     expect(entry?.mimeType).toBe('application/json')
-    const payload = JSON.parse(entry?.text ?? '{}') as { productRef?: string; returnUrl?: string }
+    const payload = JSON.parse(entry?.text ?? '{}') as {
+      productRef?: string
+      returnUrl?: string
+      view?: string
+    }
     expect(payload.productRef).toBe(productRef)
     expect(payload.returnUrl).toBe(publicBaseUrl)
+    expect(payload.view).toBe('checkout')
   })
 
   it('tools/call reaches the upgrade intent handler with default mode', async () => {

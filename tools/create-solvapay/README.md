@@ -75,6 +75,7 @@ npm run deploy       # Cloudflare Workers deploy
 | `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input                  |
 | `--skip-install`    | Skip post-scaffold `npm install`                                      |
 | `--skip-init`       | Skip post-scaffold `solvapay init` (no browser OAuth)                 |
+| `--offline`         | Pin `@solvapay/*` to the versions this release ships with, not npm's latest. Without it, a failed registry lookup stops the scaffold. |
 | `--dev`             | Target api-dev.solvapay.com (internal testing only)                   |
 | `--list-types`      | List available project types and exit                                 |
 

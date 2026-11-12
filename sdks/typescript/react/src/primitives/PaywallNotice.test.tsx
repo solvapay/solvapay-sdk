@@ -7,7 +7,7 @@
  *    `payment_required` content carries structured balance data; falls
  *    back to `content.message` otherwise.
  * 2. `EmbeddedCheckout` branches on the selected plan's type — PAYG
- *    (`usage-based` / `hybrid`) mounts `<AmountPicker>` → `<TopupForm>`
+ *    (`usage-based`) mounts `<AmountPicker>` → `<TopupForm>`
  *    rather than the recurring `<PaymentForm>`. The previous
  *    implementation always mounted `PaymentForm` and blew up with
  *    Stripe's minimum-charge error on PAYG plans.

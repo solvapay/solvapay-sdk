@@ -213,6 +213,15 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     // dev.mjs should have copied into scripts/.
     const dev = await readFile(path.join(target, 'scripts', 'dev.mjs'), 'utf8')
     expect(dev).toContain('wrangler')
+
+    // The project keeps its SDK current: Dependabot groups @solvapay/*, and deploy checks versions.
+    const dependabot = await readFile(path.join(target, '.github', 'dependabot.yml'), 'utf8')
+    expect(dependabot).toContain("'@solvapay/*'")
+    const deploy = await readFile(path.join(target, 'scripts', 'deploy.mjs'), 'utf8')
+    expect(deploy).toContain('outdatedSolvapayMessage(projectRoot')
+    expect(await readFile(path.join(target, 'scripts', 'lib', 'sdk-versions.mjs'), 'utf8')).toContain(
+      'findOutdatedSolvapayPackages',
+    )
   })
 
   it('appends overlay payloads onto matching base files', async () => {
@@ -281,7 +290,7 @@ describe('mcp-app.html color-scheme meta', () => {
 })
 
 describe('SOLVAPAY_RUNTIME_DEPS', () => {
-  it('covers the five @solvapay/* runtime packages with non-empty fallbacks', () => {
+  it('covers the five @solvapay/* runtime packages with non-empty release pins', () => {
     const names = SOLVAPAY_RUNTIME_DEPS.map(d => d.name).sort()
     expect(names).toEqual([
       '@solvapay/core',
@@ -295,7 +304,7 @@ describe('SOLVAPAY_RUNTIME_DEPS', () => {
     }
   })
 
-  it('fallbacks match the caret pins in templates/mcp/ts/_base/package.json', async () => {
+  it('release pins match the caret pins in templates/mcp/ts/_base/package.json', async () => {
     const raw = await readFile(path.join(BASE_TEMPLATE_DIR, 'package.json'), 'utf8')
     const pkg = JSON.parse(raw) as { dependencies: Record<string, string> }
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {
@@ -348,32 +357,25 @@ describe('resolveLatestSolvapayVersions', () => {
     }
   })
 
-  it('falls back to hardcoded versions when fetch throws (offline)', async () => {
+  it('throws, naming the package and the cause, when fetch fails', async () => {
     globalThis.fetch = vi.fn(async () => {
       throw new Error('ENETUNREACH')
     }) as typeof fetch
 
-    const onResolve = vi.fn()
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
-
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(map.get(dep.name)).toBe(dep.fallback)
-    }
-    for (const call of onResolve.mock.calls) {
-      expect(call[0].source).toBe('fallback')
-    }
+    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /@solvapay\/mcp: .*ENETUNREACH[\s\S]*--offline/,
+    )
   })
 
-  it('falls back when the registry returns a non-2xx response', async () => {
+  it('throws when the registry returns a non-2xx response', async () => {
     globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
 
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(map.get(dep.name)).toBe(dep.fallback)
-    }
+    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /answered 404/,
+    )
   })
 
-  it('falls back when the registry returns malformed JSON', async () => {
+  it('throws when the registry returns malformed JSON', async () => {
     globalThis.fetch = vi.fn(
       async () =>
         new Response(JSON.stringify({ notVersion: 'oops' }), {
@@ -382,9 +384,28 @@ describe('resolveLatestSolvapayVersions', () => {
         }),
     ) as typeof fetch
 
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
+    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /returned no version/,
+    )
+  })
+
+  it('uses the release pins with offline, without touching the network', async () => {
+    const fetchSpy = vi.fn()
+    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    const onResolve = vi.fn()
+
+    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, {
+      offline: true,
+      onResolve,
+    })
+
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {
       expect(map.get(dep.name)).toBe(dep.fallback)
+    }
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(onResolve).toHaveBeenCalledTimes(SOLVAPAY_RUNTIME_DEPS.length)
+    for (const call of onResolve.mock.calls) {
+      expect(call[0].source).toBe('pinned')
     }
   })
 })

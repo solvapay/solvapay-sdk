@@ -7,7 +7,7 @@ export type LanguageDep = {
 }
 
 /**
- * Release-train pin for offline scaffold fallbacks.
+ * Release-train pin used by `--offline` scaffolds.
  *
  * The literal lives in `release-train-version.generated.ts`, stamped by
  * `readReleaseTrainVersion` via `tools/repo/sync-release-train.ts`. The
@@ -46,29 +46,24 @@ export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDe
 }
 
 export type ResolveLatestVersionsOptions = {
-  timeoutMs?: number
-  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
   /**
-   * When true, a definitive "not published" registry response (HTTP 404)
-   * throws instead of silently substituting the release-train pin. Only the
-   * published (non-`--dev`) scaffold lane sets this: pinning a fallback for a
-   * package that exists nowhere produces a manifest that can't install, logged
-   * as `(offline fallback)`. A network error or timeout is still treated as
-   * offline and falls back — this distinguishes "not published" from "can't
-   * reach the registry". The `--dev` lane never calls this (it resolves from
-   * the checkout), so leaving the default `false` keeps existing behavior.
+   * Pin every package to the version this release ships with (the
+   * release-train pin) instead of asking the registry. Set by `--offline`.
    */
-  failOnNotPublished?: boolean
+  offline?: boolean
+  /** Per-package timeout in milliseconds. Defaults to 10000ms. */
+  timeoutMs?: number
+  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'pinned' }) => void
 }
 
-const DEFAULT_TIMEOUT_MS = 3000
+const DEFAULT_TIMEOUT_MS = 10_000
 
 const defaultOnResolve = (entry: {
   name: string
   version: string
-  source: 'registry' | 'fallback'
+  source: 'registry' | 'pinned'
 }): void => {
-  const suffix = entry.source === 'fallback' ? ' (offline fallback)' : ''
+  const suffix = entry.source === 'pinned' ? ' (--offline: release pin)' : ''
   process.stdout.write(`   ${entry.name}@${entry.version}${suffix}\n`)
 }
 
@@ -118,66 +113,76 @@ const parseVersion = (language: ScaffoldLanguage, body: unknown): string | undef
 }
 
 /**
- * Resolve current published versions for the language's SolvaPay packages.
- * Registry failures fall back to the release-train pin so offline scaffolds
- * still produce an installable manifest. The pin is stamped from
- * `@solvapay/release-train`; a missing stamp throws at import.
+ * The version each SolvaPay package should be pinned to: the registry's
+ * latest, or with `offline` the release-train pin stamped from
+ * `@solvapay/release-train` (a missing stamp throws at import).
+ *
+ * A registry lookup that fails (network error, timeout, non-2xx response,
+ * malformed payload) stops the scaffold with an error naming each package
+ * and why. It never falls back quietly: a quiet fallback is how scaffolds
+ * ended up weeks behind the SDK, or pinned to a version that installs nowhere.
  */
 export async function resolveLatestVersions(
   language: ScaffoldLanguage,
   deps: ReadonlyArray<LanguageDep> = LANGUAGE_RUNTIME_DEPS[language],
   options: ResolveLatestVersionsOptions = {},
 ): Promise<Map<string, string>> {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const onResolve = options.onResolve ?? defaultOnResolve
 
+  if (options.offline) {
+    const pins = new Map<string, string>()
+    for (const dep of deps) {
+      pins.set(dep.name, dep.fallback)
+      onResolve({ name: dep.name, version: dep.fallback, source: 'pinned' })
+    }
+    return pins
+  }
+
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const settled = await Promise.all(
     deps.map(async dep => {
+      const url = registryUrl(language, dep.name)
       try {
-        const response = await fetch(registryUrl(language, dep.name), {
+        const response = await fetch(url, {
           headers: {
             accept: 'application/json',
             'user-agent': 'solvapay-init (https://github.com/solvapay/solvapay-sdk)',
           },
           signal: AbortSignal.timeout(timeoutMs),
         })
-        // A 404 is definitive: the package is not published. Keep it distinct
-        // from other non-ok statuses and from network errors, which are
-        // "can't reach the registry" and stay as offline fallbacks.
         if (response.status === 404) {
-          return { dep, version: dep.fallback, source: 'not-published' as const }
+          return { name: dep.name, error: `${url} answered 404 (not published)` }
         }
-        if (!response.ok) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
-        }
+        if (!response.ok) return { name: dep.name, error: `${url} answered ${response.status}` }
         const body: unknown = await response.json()
         const version = parseVersion(language, body)
-        if (!version) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
+        if (!version) return { name: dep.name, error: `${url} returned no version` }
+        return { name: dep.name, version }
+      } catch (error) {
+        return {
+          name: dep.name,
+          error: `${url} failed: ${error instanceof Error ? error.message : String(error)}`,
         }
-        return { dep, version, source: 'registry' as const }
-      } catch {
-        return { dep, version: dep.fallback, source: 'fallback' as const }
       }
     }),
   )
 
-  const notPublished = settled.filter(entry => entry.source === 'not-published')
-  if (options.failOnNotPublished && notPublished.length > 0) {
-    const names = notPublished.map(entry => entry.dep.name).join(', ')
+  const failed = settled.filter(
+    (entry): entry is { name: string; error: string } => 'error' in entry,
+  )
+  if (failed.length > 0) {
     throw new Error(
-      `SolvaPay ${notPublished.length > 1 ? 'packages are' : 'package is'} not published to the registry: ${names}. ` +
-        'Scaffold with --dev to resolve SolvaPay dependencies from a local solvapay-sdk checkout.',
+      `Could not resolve the latest SolvaPay versions from the ${language} registry:\n` +
+        failed.map(entry => `  - ${entry.name}: ${entry.error}`).join('\n') +
+        `\nCheck your network or registry access, pass --offline to use the versions this release ships with, or scaffold with --dev to resolve SolvaPay dependencies from a local solvapay-sdk checkout.`,
     )
   }
 
   const result = new Map<string, string>()
   for (const entry of settled) {
-    result.set(entry.dep.name, entry.version)
-    // `not-published` folds into `fallback` for reporting when the caller did
-    // not opt into failing — preserving the pre-existing offline behavior.
-    const source = entry.source === 'not-published' ? 'fallback' : entry.source
-    onResolve({ name: entry.dep.name, version: entry.version, source })
+    if ('error' in entry) continue
+    result.set(entry.name, entry.version)
+    onResolve({ name: entry.name, version: entry.version, source: 'registry' })
   }
   return result
 }

@@ -857,7 +857,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
       product: productRef,
       checkoutUrl: '',
       plans: [
-        // PAYG-only — every plan has a usage-based / hybrid type.
+        // PAYG-only — every plan has a usage-based type.
         {
           reference: 'pln_payg',
           type: 'usage-based',

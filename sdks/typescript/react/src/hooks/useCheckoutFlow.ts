@@ -41,13 +41,14 @@ import { useBalance } from './useBalance'
 import { useMerchant } from './useMerchant'
 import { useSolvaPay } from './useSolvaPay'
 import { useTransport } from './useTransport'
-import { useLocale } from './useCopy'
+import { useCopy, useLocale } from './useCopy'
 import type { Plan } from '../types'
 import {
   formatPaygRate,
   inferIncludedUnits,
   isPayg,
   planMeterName,
+  recurringCreditNote,
   toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
@@ -184,6 +185,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const planCtx = usePlanSelector()
   const planSelection = usePlanSelection()
   const transport = useTransport()
+  const copy = useCopy()
   const locale = useLocale()
   const balance = useBalance()
   const { creditsPerMinorUnit, displayExchangeRate, adjustBalance } = balance
@@ -295,7 +297,25 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       // Activate-then-top-up: PAYG activates immediately even at a zero
       // balance. The wallet after activate decides the next step — empty
       // goes to the amount picker (`credit_topup`); funded skips payment.
-      await transport.activatePlan({ productRef, planRef: selectedPlanRef })
+      // The backend status is authoritative. A paid recurring or hybrid
+      // plan returns `payment_required` and must not render as activated.
+      const result = await transport.activatePlan({ productRef, planRef: selectedPlanRef })
+      switch (result.status) {
+        case 'activated':
+        case 'already_active':
+        case 'already_purchased':
+          break
+        case 'topup_required':
+          setStatus('idle')
+          setStep('amount')
+          return true
+        case 'payment_required':
+          throw new Error(copy.activation.paymentRequired)
+        case 'invalid':
+          throw new Error(result.message ?? copy.activation.invalidConfiguration)
+        default:
+          throw new Error(copy.activation.unexpectedResponse)
+      }
       const credits = (await balance.refetch()) ?? balance.credits
       if (credits == null) {
         throw new Error('Credit balance is unavailable')
@@ -321,7 +341,17 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       onErrorRef.current?.(wrapped, 'activate')
       return false
     }
-  }, [balance, locale, productRef, selectedPlanRef, selectedPlanShape, transport])
+  }, [
+    balance,
+    copy.activation.invalidConfiguration,
+    copy.activation.paymentRequired,
+    copy.activation.unexpectedResponse,
+    locale,
+    productRef,
+    selectedPlanRef,
+    selectedPlanShape,
+    transport,
+  ])
 
   const advanceFromPlan = useCallback(async () => {
     if (!selectedPlanShape || !selectedPlanRef) return
@@ -469,11 +499,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,
+      creditNote: balance.credits === 0 ? recurringCreditNote(selectedPlanShape) : null,
     }
     setSuccessMeta(meta)
     setStep('success')
     onPurchaseSuccessRef.current?.(meta)
-  }, [selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
+  }, [balance.credits, selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
 
   const advance = useCallback(async () => {
     if (step === 'plan') {

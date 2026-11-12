@@ -22,7 +22,13 @@ import { checkPurchaseCore } from './purchase'
 export interface GetUsageResult {
   meterRef: string | null
   total: number | null
-  used: number
+  /**
+   * Consumed units this period. `limits.used` when the backend measured a
+   * finite cap, otherwise `total - remaining` when both are finite.
+   * `null` means this response did not measure consumption (`limits` null,
+   * unlimited, or credit-based).
+   */
+  used: number | null
   remaining: number | null
   /** 0–100, rounded to 2dp. `null` when `total` is unknown. */
   percentUsed: number | null
