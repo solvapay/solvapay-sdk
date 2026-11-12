@@ -22,10 +22,12 @@ app = mcp.http_app()   # serve with uvicorn: the MCP endpoint is /mcp
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from starlette.applications import Starlette
 
@@ -50,11 +52,13 @@ class SolvaPayMcpServer:
         solvapay: SolvaPay,
         product_ref: str,
         mcp_path: str,
+        public_base_url: str,
     ) -> None:
         self.server = server
         self.solvapay = solvapay
         self.product_ref = product_ref
         self.mcp_path = mcp_path
+        self.public_base_url = public_base_url
         self._free_meters: dict[str, tuple[FreeLimit, list[str]]] = {}
 
     def register_payable(
@@ -125,8 +129,25 @@ class SolvaPayMcpServer:
         )
 
     def http_app(self, **options: Any) -> Starlette:
-        """The ASGI app: the MCP endpoint at ``mcp_path`` plus the sign-in routes."""
+        """The ASGI app: the MCP endpoint at ``mcp_path`` plus the sign-in routes.
+
+        DNS-rebinding protection stays on, allowing this server's public host
+        (from ``public_base_url``) and localhost. Without the public host, the
+        MCP SDK answers every request through the public URL (a tunnel, a
+        load balancer) with 421. Pass ``transport_security`` to set your own.
+        """
+        options.setdefault("transport_security", self.transport_security())
         return self.server.streamable_http_app(streamable_http_path=self.mcp_path, **options)
+
+    def transport_security(self) -> TransportSecuritySettings:
+        public = urlsplit(self.public_base_url)
+        host = public.netloc
+        origin = f"{public.scheme}://{host}"
+        return TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=[host, "127.0.0.1:*", "localhost:*", "[::1]:*"],
+            allowed_origins=[origin, "http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+        )
 
 
 def create_solvapay_mcp_server(
@@ -191,5 +212,9 @@ def create_solvapay_mcp_server(
         get_customer_ref=get_customer_ref,
     )
     return SolvaPayMcpServer(
-        server=server, solvapay=solvapay, product_ref=product, mcp_path=mcp_path
+        server=server,
+        solvapay=solvapay,
+        product_ref=product,
+        mcp_path=mcp_path,
+        public_base_url=base,
     )

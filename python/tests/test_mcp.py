@@ -263,3 +263,40 @@ async def test_token_errors_are_oauth_shaped_and_bodies_pass_verbatim() -> None:
     assert response.json() == {"error": "invalid_request", "error_description": "code expired"}
     assert response.headers["access-control-allow-origin"] == "https://x"
     assert upstream.calls.last.request.content.decode() == raw
+
+
+INITIALIZE = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "test", "version": "1"},
+    },
+}
+
+
+@respx.mock
+async def test_a_signed_in_request_through_the_public_host_is_served() -> None:
+    # Requests arrive through the public URL (a tunnel, a load balancer). The MCP
+    # SDK's DNS-rebinding check must allow that host, or every call is a 421.
+    respx.get(f"{API}/v1/customer/auth/userinfo").respond(200, json={"sub": "cus_1"})
+    respx.route(host="mcp.test").pass_through()
+    respx.route(host="evil.test").pass_through()
+    app = server().http_app()
+    headers = {
+        "authorization": "Bearer good",
+        "accept": "application/json, text/event-stream",
+    }
+    async with app.router.lifespan_context(app):
+        async with client_for(app, "https://mcp.test") as http:
+            ok = await http.post("/mcp", json=INITIALIZE, headers=headers)
+        async with client_for(app, "https://evil.test") as http:
+            foreign = await http.post("/mcp", json=INITIALIZE, headers=headers)
+    assert ok.status_code == 200
+    assert foreign.status_code == 421
+
+
+def client_for(app: Any, base_url: str) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=base_url)
