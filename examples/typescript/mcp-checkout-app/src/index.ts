@@ -45,7 +45,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function assertTransportToolsListed(): Promise<void> {
-  const response = await mcpHandler.fetch(
+  // The engine refuses `tools/list` without a bearer in the default auth
+  // mode, and no caller has signed in at boot. The catalog does not depend
+  // on who asks, so the check lists through a handler that leaves listing open.
+  const bootHandler = createMcpHandler(
+    () => createServer(cachedBranding, { authMode: 'tools-call' }),
+    {
+      onerror: error => {
+        console.error('[mcp-checkout-app] MCP boot check error', error)
+      },
+    },
+  )
+  const response = await bootHandler.fetch(
     new Request('http://127.0.0.1/mcp', {
       method: 'POST',
       headers: {

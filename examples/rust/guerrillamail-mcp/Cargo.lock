@@ -1331,18 +1331,20 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.3.0"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88db56b8ae316560e9e868b6b978ea940f27cb883323fc90e07435e44158f5c"
+checksum = "b5949e504d5ab9944a168259afc0c39ac0230627b6ec5367ace194c59bcbe163"
 dependencies = [
  "chrono",
  "futures",
  "indexmap",
+ "libc",
  "pastey",
  "pin-project-lite",
  "schemars",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -1602,7 +1604,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "js-sys",
  "serde_json",
@@ -1616,7 +1618,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-core"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "hmac 0.13.0",
  "serde",
@@ -1629,7 +1631,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-dto"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1652,13 +1654,14 @@ dependencies = [
 
 [[package]]
 name = "solvapay-export"
-version = "3.0.0"
+version = "2.6.0"
 
 [[package]]
 name = "solvapay-mcp"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "http",
  "js-sys",
  "rmcp",
  "serde_json",
@@ -1674,7 +1677,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-mcp-core"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac 0.13.0",
@@ -1691,7 +1694,7 @@ dependencies = [
 
 [[package]]
 name = "solvapay-transport"
-version = "3.0.0"
+version = "2.6.0"
 dependencies = [
  "js-sys",
  "reqwest",
@@ -1700,6 +1703,7 @@ dependencies = [
  "solvapay-core",
  "solvapay-dto",
  "solvapay-mcp-core",
+ "tokio",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

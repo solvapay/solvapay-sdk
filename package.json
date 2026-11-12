@@ -70,6 +70,7 @@
     "build:all": "tsx tools/repo/build-all.ts",
     "build:native": "tsx tools/repo/build-all.ts --native-only",
     "test:all": "tsx tools/repo/test-all.ts",
+    "test:examples:mcp": "tsx tools/repo/examples-mcp-smoke.ts",
     "test:native": "tsx tools/repo/test-all.ts --native-only",
     "test:live": "tsx tools/conformance/live-all.ts",
     "test:fixtures": "cargo run -q -p fixture-runner -- contract/fixtures",

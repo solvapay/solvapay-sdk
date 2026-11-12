@@ -158,6 +158,8 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
     >
     const handler = handlers.get('tools/call')
     if (!handler) throw new Error('tools/call handler not registered')
+    // No bearer is presented, so the engine refuses the call. What matters is
+    // that it is refused as unauthorized, not as an unknown (hidden) tool.
     const result = await handler(
       {
         method: 'tools/call',
@@ -169,12 +171,12 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
         sendRequest: vi.fn(),
         mcpReq: { requestState: () => undefined },
       },
-    )
-    const error =
-      result !== null && typeof result === 'object' && 'error' in result
-        ? (result as { error?: { code?: unknown } }).error
+    ).catch((error: unknown) => error)
+    const code =
+      result !== null && typeof result === 'object' && 'code' in result
+        ? (result as { code?: unknown }).code
         : undefined
-    expect(error?.code).not.toBe(-32601)
+    expect(code).toBe(-32001)
   })
 
   it('does not leak audience filter into a second server instance', async () => {

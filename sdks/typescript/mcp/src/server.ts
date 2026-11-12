@@ -104,6 +104,13 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    * Use `tools-call` when listing/handshake should stay open.
    */
   authMode?: 'tools-call' | 'all'
+  /**
+   * Path the MCP endpoint is mounted at. Defaults to `/mcp`, as the Express
+   * and fetch OAuth bridges do. The server checks a bearer's audience against
+   * the public origin plus this path, so it must match the bridge in front of
+   * it: a token the bridge accepted is otherwise refused inside the server.
+   */
+  mcpPath?: string
 }
 
 /**
@@ -118,6 +125,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     serverVersion = '1.0.0',
     hideToolsByAudience,
     authMode,
+    mcpPath = '/mcp',
     ...descriptorOptions
   } = options
 
@@ -149,6 +157,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
       ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
       ...(hideAudiences !== undefined ? { hideAudiences } : {}),
       ...(authMode !== undefined ? { authMode } : {}),
+      mcpPath,
     },
     payables,
     readHtml: descriptors.resource.readHtml,

@@ -120,7 +120,10 @@ export async function fetchBranding(): Promise<SolvaPayMerchantBranding | undefi
  * the paywall flow can be exercised from `basic-host` without hand-rolling
  * a gated tool. See `examples/typescript/mcp-checkout-app/src/demo-tools.ts`.
  */
-export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
+export function createServer(
+  branding?: SolvaPayMerchantBranding,
+  options: { authMode?: 'tools-call' | 'all' } = {},
+): McpServer {
   // Allow the merchant logo + other provider-served assets to load from
   // the SolvaPay API origin + any extra origins declared via
   // `MCP_ASSET_ORIGINS` (typically `http://localhost:<port>` in dev).
@@ -141,6 +144,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
     },
     branding,
     hideToolsByAudience: process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
+    ...(options.authMode !== undefined ? { authMode: options.authMode } : {}),
     additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
     onToolCall: (name, args) => {
       if (process.env.SOLVAPAY_DEBUG === 'true') {

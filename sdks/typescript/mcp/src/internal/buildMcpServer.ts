@@ -3,7 +3,7 @@
  * official SDK; JSON-RPC routing goes through `mcpDispatch`.
  */
 
-import { McpServer } from '@modelcontextprotocol/server'
+import { McpServer, ProtocolError } from '@modelcontextprotocol/server'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/server'
 import {
   buildSolvaPayDescriptors,
@@ -54,6 +54,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function jsonRpcResult(body: unknown): unknown {
   if (isRecord(body) && 'result' in body) return body.result
+  // An engine error is a JSON-RPC error, not a result: raise it so the SDK
+  // answers with `error` instead of a result object that carries one.
+  if (isRecord(body) && isRecord(body.error) && typeof body.error.code === 'number') {
+    throw new ProtocolError(
+      body.error.code,
+      typeof body.error.message === 'string' ? body.error.message : 'Request failed',
+      body.error.data,
+    )
+  }
   return body
 }
 
