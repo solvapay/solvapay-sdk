@@ -7,7 +7,7 @@
 #include "contract/harness.h"
 
 int main(void) {
-  const size_t want_parsed = 795;
-  const size_t want_replayed = 790;
+  const size_t want_parsed = 950;
+  const size_t want_replayed = 945;
   return contract_run_census(want_parsed, want_replayed);
 }
