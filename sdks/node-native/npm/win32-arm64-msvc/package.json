@@ -11,7 +11,7 @@
   "description": "SolvaPay napi-rs Node binding (step 36 scaffold)",
   "license": "MIT",
   "engines": {
-    "node": ">= 18"
+    "node": ">=22"
   },
   "os": [
     "win32"
