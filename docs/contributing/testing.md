@@ -61,10 +61,16 @@ Rust/Go generated parity tests). Offline drift is caught by `pnpm parity:check`.
 Run from the repo root:
 
 ```bash
-cargo test --workspace          # core, transport, dto-gen, bindings
-cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --exclude solvapay-wasm          # core, transport, dto-gen, bindings
+cargo clippy --workspace --exclude solvapay-wasm --all-targets -- -D warnings
+cargo test -p solvapay-wasm --no-default-features --features edge --lib
 ./tools/repo/check-no-unwrap.sh # bans .unwrap()/.expect()/panic outside #[cfg(test)]
 ```
+
+`solvapay-wasm` needs exactly one of its `edge` and `browser` features, so it
+is excluded from the workspace run and tested on its own. `solvapay-ruby`
+links against Ruby 3.3 or newer: add `--exclude solvapay-ruby` when the Ruby
+on your PATH is older.
 
 CI also builds/tests the wasm32 target, each language binding
 (`cargo test -p solvapay-{python,ruby,c}`, the Go/wazero suite), and the
@@ -230,7 +236,8 @@ Before opening a PR, make sure:
   inputs, fixtures, or dto-gen
 - fixtures pass on both sides (`pnpm test:contract` + the `fixture-runner`) when
   you change behavior
-- Rust gates pass (`cargo test --workspace`, `cargo clippy`, `check-no-unwrap.sh`)
+- Rust gates pass (`cargo test --workspace --exclude solvapay-wasm`, `cargo clippy`,
+  `check-no-unwrap.sh`)
   when you touch `core/` or `sdks/`
 - new behavior has coverage in unit, integration, or fixture tests
 - docs links are valid (`pnpm docs:validate-links`)
