@@ -60,7 +60,7 @@
     "directory": "sdks/typescript/server"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22"
   },
   "sideEffects": false,
   "scripts": {

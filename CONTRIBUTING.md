@@ -8,9 +8,8 @@ Please also review our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributi
 
 ### Prerequisites
 
-- **Node.js** >= 20 — `@solvapay/mcp` and `@solvapay/mcp-core` set `engines.node: >=20`,
-  so a full `pnpm install` / `pnpm build` needs it. The published floor for the rest of
-  the packages is 18.17.
+- **Node.js** >= 22 — every published package sets `engines.node: >=22`. Node 18 and 20
+  are end-of-life.
 - **pnpm** (package manager)
 - **TypeScript** >= 5.0
 

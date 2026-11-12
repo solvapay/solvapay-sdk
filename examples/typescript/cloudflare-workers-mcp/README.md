@@ -17,7 +17,7 @@ Ships with a toy paywalled demo toolbox (`predict_price_chart`, `predict_directi
 
 ## Prerequisites
 
-- Node.js 20+ and pnpm 9.6+ (workspace-managed)
+- Node.js 22+ and pnpm 9.6+ (workspace-managed)
 - A SolvaPay account with:
   - A secret key (`sk_…`)
   - A product ref (`prd_…`) — create one in the dashboard under **Products**

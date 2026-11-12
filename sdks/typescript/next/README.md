@@ -111,7 +111,7 @@ In this monorepo the examples share that setup via
 ## Requirements
 
 - Next.js >= 13.0.0
-- Node.js >= 18.17
+- Node.js >= 22
 
 ## See also
 
