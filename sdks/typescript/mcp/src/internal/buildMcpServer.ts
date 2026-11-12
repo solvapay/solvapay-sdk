@@ -8,6 +8,7 @@ import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/s
 import {
   buildSolvaPayDescriptors,
   callMcpSyncOp,
+  deriveDefaultView,
   deriveIcons,
   mcpDescriptors,
   hideToolsByAudience,
@@ -175,11 +176,20 @@ function resolveMcpDispatch(
     }
     if (handled.kind === 'readResource') {
       const uri = typeof handled.uri === 'string' ? handled.uri : ''
+      const config = isRecord(params.config) ? params.config : {}
+      // No client call is possible here, so no customer is known: `view` is the
+      // core's default for a caller with no active plan.
+      const view = deriveDefaultView({
+        hasActivePlan: false,
+        productRef: config.productRef ?? null,
+        ...(Array.isArray(config.views) ? { enabledViews: config.views } : {}),
+      })
       const bootstrap =
         uri === 'solvapay://bootstrap.json'
           ? JSON.stringify({
-              productRef: isRecord(params.config) ? params.config.productRef : undefined,
-              returnUrl: isRecord(params.config) ? params.config.publicBaseUrl : undefined,
+              productRef: config.productRef,
+              returnUrl: config.publicBaseUrl,
+              ...(typeof view === 'string' ? { view } : {}),
             })
           : '{}'
       return {

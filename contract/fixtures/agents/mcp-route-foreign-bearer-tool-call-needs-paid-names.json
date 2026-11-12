@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-foreign-bearer-tool-call-needs-paid-names",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp"
+        },
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "tools/call",
+          "params": {
+            "name": "paid"
+          }
+        },
+        "authorization": "Bearer merchant-own-token"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "paid_tools"
+    }
+  }
+}

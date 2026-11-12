@@ -24,7 +24,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import * as scaffolderOpenapi from '../../../scripts/mcp/lib/openapi.mjs'
 // The project's `test.mjs` ships its own copy of the parser; both must agree.
 // @ts-expect-error — same plain ESM module, no .d.ts.
-import * as projectOpenapi from '../../../templates/mcp/_base/scripts/lib/openapi.mjs'
+import * as projectOpenapi from '../../../templates/mcp/ts/_base/scripts/lib/openapi.mjs'
 
 const { listOperations } = scaffolderOpenapi
 

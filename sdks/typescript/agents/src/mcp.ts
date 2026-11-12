@@ -108,6 +108,7 @@ const UNREACHABLE = 'The service behind this tool could not be reached. Nothing 
 type Route =
   | { kind: 'pass' }
   | { kind: 'anonymous' }
+  | { kind: 'paid_tools' }
   | { kind: 'identify'; token: string }
   | { kind: 'agent'; agentToken: string }
   | { kind: 'error'; message: string }
@@ -158,7 +159,7 @@ export function createAgentMcpRoute(
     if (route.kind === 'identify') {
       identity = await options.agentLayer.identify(route.token)
       route = agentMcpRouteStep({ ...input, identity }) as Route
-    } else if (route.kind === 'anonymous') {
+    } else if (route.kind === 'anonymous' || route.kind === 'paid_tools') {
       // A host that has not signed in: a call to a paid tool is what sends it to sign in.
       anonymous = listing()
       route = agentMcpRouteStep({ ...input, paidTools: anonymous.paidTools }) as Route
@@ -186,7 +187,7 @@ export function createAgentMcpRoute(
         return handler.fetch(request)
       }
       default:
-        throw new Error('The route asked to identify a token twice')
+        throw new Error(`The route did not settle (${route.kind})`)
     }
   }
 }

@@ -183,13 +183,21 @@ fn anonymous(input: &Value, resource: &Value, method: &str, authorization: &str)
         .get("lazyAuth")
         .and_then(Value::as_bool)
         .unwrap_or(true);
-    let is_paid = |name: &str| {
-        input
-            .get("paidTools")
-            .and_then(Value::as_array)
-            .is_some_and(|names| names.iter().any(|paid| paid.as_str() == Some(name)))
+    let paid_tools = input.get("paidTools").and_then(Value::as_array);
+    let needs_agent = if !lazy {
+        !calls.is_empty()
+    } else if calls.is_empty() {
+        false
+    } else {
+        // Which call is paid decides the answer, so the names must be known first.
+        let Some(paid_tools) = paid_tools else {
+            return json!({ "kind": "paid_tools" });
+        };
+        calls
+            .iter()
+            .any(|(_, name)| paid_tools.iter().any(|paid| paid.as_str() == Some(name)))
     };
-    if calls.iter().any(|(_, name)| !lazy || is_paid(name)) {
+    if needs_agent {
         let id = calls.first().map_or(Value::Null, |(id, _)| id.clone());
         return auth_challenge(resource, "Sign in to pay for this tool", id);
     }
@@ -211,6 +219,7 @@ fn anonymous(input: &Value, resource: &Value, method: &str, authorization: &str)
 /// - `{ kind: "pass" }`: the merchant's own handler answers.
 /// - `{ kind: "response", status, headers, body }`: answer with this JSON.
 /// - `{ kind: "anonymous" }`: serve the listing server, where only free tools run.
+/// - `{ kind: "paid_tools" }`: a tool is called with no agent token; step again with `paidTools`.
 /// - `{ kind: "identify", token }`: verify the token, then step again with `identity`.
 /// - `{ kind: "agent", agent, agentToken }`: serve the agent.
 /// - `{ kind: "error", message }`: a misconfiguration to raise.
@@ -526,6 +535,31 @@ mod tests {
             paid["body"]["error"]["message"],
             "Sign in to pay for this tool"
         );
+    }
+
+    #[test]
+    fn a_tool_call_without_the_paid_names_asks_for_them() {
+        let asked = agent_mcp_route_step(&base(json!({
+            "protectedResource": oauth(),
+            "authorization": "Bearer merchant-own-token",
+            "body": tool_call("paid"),
+        })));
+        assert_eq!(asked, json!({ "kind": "paid_tools" }));
+        // With the names, the merchant's own bearer still cannot run a paid tool.
+        let paid = agent_mcp_route_step(&base(json!({
+            "protectedResource": oauth(),
+            "authorization": "Bearer merchant-own-token",
+            "paidTools": ["paid"],
+            "body": tool_call("paid"),
+        })));
+        assert_eq!(paid["status"], 401);
+        let free = agent_mcp_route_step(&base(json!({
+            "protectedResource": oauth(),
+            "authorization": "Bearer merchant-own-token",
+            "paidTools": ["paid"],
+            "body": tool_call("free"),
+        })));
+        assert_eq!(free, json!({ "kind": "pass" }));
     }
 
     #[test]

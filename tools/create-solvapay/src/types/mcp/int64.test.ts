@@ -19,11 +19,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { int64 } from '../../../templates/mcp/_base/src/lib/int64'
+import { int64 } from '../../../templates/mcp/ts/_base/src/lib/int64'
 import {
   stringifyLossless,
   upstreamFetchJson,
-} from '../../../templates/mcp/_base/src/lib/upstreamFetch'
+} from '../../../templates/mcp/ts/_base/src/lib/upstreamFetch'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURES_DIR = path.join(HERE, '__fixtures__')

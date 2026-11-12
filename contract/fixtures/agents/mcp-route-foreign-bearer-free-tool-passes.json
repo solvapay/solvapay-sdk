@@ -1,0 +1,34 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-foreign-bearer-free-tool-passes",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp"
+        },
+        "paidTools": ["paid"],
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "tools/call",
+          "params": {
+            "name": "free"
+          }
+        },
+        "authorization": "Bearer merchant-own-token"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "pass"
+    }
+  }
+}
