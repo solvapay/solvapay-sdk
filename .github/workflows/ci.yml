@@ -85,6 +85,15 @@ jobs:
         if: matrix.node == '24'
         run: pnpm lint
 
+      # The TypeScript types are generated from the committed spec
+      # (openapi/sdk-v1.json, copied from solvapay/platform by `pnpm spec:sync`).
+      # Fail when someone changed one without regenerating the other.
+      - name: Generated types match the committed spec
+        if: matrix.node == '24'
+        run: |
+          pnpm --filter @solvapay/server generate:types
+          git diff --exit-code -- packages/server/src/types/generated.ts
+
       - name: Build packages
         run: pnpm build:packages
 

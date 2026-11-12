@@ -58,6 +58,7 @@
     "docs:validate-links": "tsx scripts/validate-doc-links.ts",
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx scripts/check-dependency-health.ts",
+    "spec:sync": "tsx scripts/sync-spec.ts",
     "loc": "tsx scripts/count-loc.ts",
     "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",
     "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel"

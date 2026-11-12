@@ -39,3 +39,12 @@ research-tmp/
 
 # Scratch design explorations — internal, not for the public repo
 tmp-designs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+python/dist/
