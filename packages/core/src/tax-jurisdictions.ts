@@ -458,7 +458,7 @@ export const TAX_ID_FORMAT_BY_TYPE: Record<TaxIdType, RegExp> = {
 }
 
 /** Per-country EU VAT formats (stricter than the combined eu_vat regex). */
-const EU_VAT_FORMAT_BY_COUNTRY: Record<EuMemberCountry, RegExp> = {
+export const EU_VAT_FORMAT_BY_COUNTRY: Record<EuMemberCountry, RegExp> = {
   AT: /^ATU\d{8}$/,
   BE: /^BE[01]\d{9}$/,
   BG: /^BG\d{9,10}$/,

@@ -60,7 +60,7 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.ruff]
 target-version = "py310"
 line-length = 100
-extend-exclude = ["src/solvapay/_generated", "src/solvapay/_currencies.py"]
+extend-exclude = ["src/solvapay/_generated", "src/solvapay/_currencies.py", "src/solvapay/_tax_ids.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
