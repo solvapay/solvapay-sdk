@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-approval-expired",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "approval_expired"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

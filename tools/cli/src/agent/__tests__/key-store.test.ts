@@ -54,11 +54,35 @@ describe('key store', () => {
       url.endsWith('/claims')
         ? Response.json({ status: 'approved', ...answer('agk_SECRET') })
         : url.endsWith('/agent/connect-requests')
-          ? Response.json({ userCode: 'KQ7M-RX4D', verificationUrl: 'https://x.test/c/KQ7M-RX4D', pollSecret: 'poll-secret-0123456789', expiresAt: 'soon' }, { status: 201 })
+          ? Response.json(
+              {
+                userCode: 'KQ7M-RX4D',
+                verificationUrl: 'https://x.test/c/KQ7M-RX4D',
+                pollSecret: 'poll-secret-0123456789',
+                expiresAt: 'soon',
+              },
+              { status: 201 },
+            )
           : new Response('not found', { status: 404 }),
     )
-    const deps = { env: { ...env, HERMES_HOME: env.SOLVAPAY_HOME }, out: (t: string) => printed.push(t), sleep: async () => undefined }
-    await main(['connect', PROV, '--client', 'hermes', '--api', 'https://api.example.test/v1', '--mcp-url', 'https://m.test/mcp'], deps)
+    const deps = {
+      env: { ...env, HERMES_HOME: env.SOLVAPAY_HOME },
+      out: (t: string) => printed.push(t),
+      sleep: async () => undefined,
+    }
+    await main(
+      [
+        'connect',
+        PROV,
+        '--client',
+        'hermes',
+        '--api',
+        'https://api.example.test/v1',
+        '--mcp-url',
+        'https://m.test/mcp',
+      ],
+      deps,
+    )
     expect(await main(['connect', PROV], deps)).toBe(0)
     expect(printed.join('\n')).not.toContain('agk_SECRET')
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')

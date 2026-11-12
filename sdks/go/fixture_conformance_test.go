@@ -33,7 +33,7 @@ type expectError struct {
 }
 
 func isRoutedClientOp(fn string) bool {
-	return !strings.HasPrefix(fn, "mcp") && fn != "fetchJwks"
+	return !strings.HasPrefix(fn, "mcp") && !strings.HasPrefix(fn, "agent") && fn != "fetchJwks"
 }
 
 func TestFacadeInventoryHasSuccessAndErrorPerOperation(t *testing.T) {

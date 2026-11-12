@@ -108,6 +108,132 @@ expectTypeOf<AssertArity>().toEqualTypeOf<true>()
       type R = ReturnType<NonNullable<SolvaPayClient['activatePlan']>>
 expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
 })
+    it('agentAuthorize presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentAuthorize']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentAuthorize']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentAuthorize']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentAuthorize']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentBeginCall presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentBeginCall']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentBeginCall']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentBeginCall']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentBeginCall']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentComplete presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentComplete']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentComplete']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentComplete']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentComplete']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentFinishCall presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentFinishCall']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentFinishCall']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentFinishCall']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentFinishCall']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentGate presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentGate']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentGate']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentGate']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentGate']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentIdentify presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentIdentify']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentIdentify']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentIdentify']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentIdentify']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentMcpRoute presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentMcpRoute']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentMcpRoute']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentMcpRoute']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentMcpRoute']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentReportUsage presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentReportUsage']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentReportUsage']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentReportUsage']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentReportUsage']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('agentVerifyKey presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['agentVerifyKey']>().toEqualTypeOf<
+SolvaPayClientGenerated['agentVerifyKey']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['agentVerifyKey']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['agentVerifyKey']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
     it('assignCredits presence / arity / sync', () => {
 expectTypeOf<SolvaPayClient['assignCredits']>().toEqualTypeOf<
 SolvaPayClientGenerated['assignCredits']

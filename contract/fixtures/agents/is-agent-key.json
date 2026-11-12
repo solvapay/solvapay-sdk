@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "is-agent-key",
+  "input": {
+    "fn": "isAgentKey",
+    "args": {
+      "value": "agk_sandbox_X"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

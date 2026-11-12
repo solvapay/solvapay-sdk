@@ -1,0 +1,35 @@
+{
+  "suite": "agents",
+  "case": "parse-complete",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "complete",
+      "value": {
+        "callRef": "call_TEST0001",
+        "settled": true,
+        "source": "reported",
+        "amount": {
+          "amount": "0.1",
+          "currency": "USD"
+        },
+        "duplicate": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "callRef": "call_TEST0001",
+        "settled": true,
+        "source": "reported",
+        "amount": {
+          "amount": "0.1",
+          "currency": "USD"
+        },
+        "duplicate": false
+      }
+    }
+  }
+}

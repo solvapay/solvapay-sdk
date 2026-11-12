@@ -55,6 +55,15 @@ const ALL_METHODS: NativeClientMethod[] = [
   'mcpDispatch',
   'mcpResolveAuth',
   'fetchJwks',
+  'agentVerifyKey',
+  'agentAuthorize',
+  'agentComplete',
+  'agentReportUsage',
+  'agentIdentify',
+  'agentBeginCall',
+  'agentFinishCall',
+  'agentGate',
+  'agentMcpRoute',
 ]
 
 function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike {

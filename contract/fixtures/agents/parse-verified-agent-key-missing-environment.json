@@ -1,0 +1,21 @@
+{
+  "suite": "agents",
+  "case": "parse-verified-agent-key-missing-environment",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "verifiedAgentKey",
+      "value": {
+        "agentRef": "agt_1",
+        "principalRef": "ppl_1",
+        "promptExcerpt": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "environment must be one of sandbox, live, got undefined"
+    }
+  }
+}

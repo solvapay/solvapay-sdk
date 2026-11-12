@@ -8,6 +8,7 @@
 //! `browser` = `client-public` only (no webhook / no JWT HMAC).
 
 pub mod activation;
+pub mod agents;
 #[cfg(feature = "client-full")]
 pub mod auth_resolution;
 pub mod balance_poll;
@@ -63,6 +64,13 @@ pub mod webhook;
 pub use solvapay_export::solvapay_export;
 
 pub use activation::validate_activate_plan_params;
+pub use agents::{
+    agent_amount_string, agent_call_step, agent_canonical_resource, agent_challenge_headers,
+    agent_complete_body, agent_constants, agent_credential_kind, agent_from_claims,
+    agent_gate_result, agent_key_result, agent_mcp_route_step, agent_prompt_facts,
+    agent_protected_resource, agent_refusal_status, agent_refusal_tool_result,
+    agent_secret_key_environment, is_agent_key, looks_like_jwt, parse_agent_response,
+};
 #[cfg(feature = "client-full")]
 pub use auth_resolution::{resolve_authenticated_user, AuthResolutionInput, AuthenticatedUser};
 pub use balance_poll::{

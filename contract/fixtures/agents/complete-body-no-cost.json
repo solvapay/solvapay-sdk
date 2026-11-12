@@ -1,0 +1,19 @@
+{
+  "suite": "agents",
+  "case": "complete-body-no-cost",
+  "input": {
+    "fn": "agentCompleteBody",
+    "args": {
+      "result": {
+        "status": 200,
+        "cost": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "cost": null
+    }
+  }
+}

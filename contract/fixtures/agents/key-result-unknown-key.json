@@ -1,0 +1,20 @@
+{
+  "suite": "agents",
+  "case": "key-result-unknown-key",
+  "input": {
+    "fn": "agentKeyResult",
+    "args": {
+      "input": {
+        "errorStatus": 401,
+        "errorMessage": "POST /v1/sdk/agent/keys/verifications failed (401): unknown"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "invalid",
+      "detail": "POST /v1/sdk/agent/keys/verifications failed (401): unknown"
+    }
+  }
+}

@@ -24,6 +24,139 @@ def state_required_countries() -> Any:
     payload: dict[str, Any] = {}
     return call_native_sync("STATE_REQUIRED_COUNTRIES", json.dumps(payload))
 
+def agent_amount_string(amount: float) -> Any:
+    """Format an amount as a decimal string with up to 8 places.
+    @returns Decimal string with trailing zeros trimmed.
+    """
+    payload: dict[str, Any] = {}
+    payload["amount"] = amount
+    return call_native_sync("agent_amount_string", json.dumps(payload))
+
+def agent_call_step(input: Any) -> Any:
+    """Decide the next move of a paid agent call.
+    @returns Step with kind authorize, sleep, allow or refused.
+    """
+    payload: dict[str, Any] = {}
+    payload["input"] = input
+    return call_native_sync("agent_call_step", json.dumps(payload))
+
+def agent_canonical_resource(resource: str) -> Any:
+    """Return the canonical form SolvaPay compares OAuth resources in.
+    @returns ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+    """
+    payload: dict[str, Any] = {}
+    payload["resource"] = resource
+    return call_native_sync("agent_canonical_resource", json.dumps(payload))
+
+def agent_challenge_headers(resource: Any, description: str) -> Any:
+    """Build the WWW-Authenticate challenge that sends a host to sign in.
+    @returns ok with the header map, or ok false when the resource is not usable.
+    """
+    payload: dict[str, Any] = {}
+    payload["resource"] = resource
+    payload["description"] = description
+    return call_native_sync("agent_challenge_headers", json.dumps(payload))
+
+def agent_complete_body(result: Any) -> Any:
+    """Build the complete request body for how a call ended.
+    @returns status, cost with a string amount or null, and interrupted when set.
+    """
+    payload: dict[str, Any] = {}
+    payload["result"] = result
+    return call_native_sync("agent_complete_body", json.dumps(payload))
+
+def agent_constants() -> Any:
+    """Return the frozen agent payment constants.
+    @returns Refusal reasons, reconciliation results and reasons, environments, key prefix, wait
+    and cache limits, claim names.
+    """
+    payload: dict[str, Any] = {}
+    return call_native_sync("agent_constants", json.dumps(payload))
+
+def agent_credential_kind(presented_key: str, accept_agent_keys: bool) -> Any:
+    """Classify how a presented key is checked.
+    @returns agent_key, agent_token or not_agent.
+    """
+    payload: dict[str, Any] = {}
+    payload["presentedKey"] = presented_key
+    payload["acceptAgentKeys"] = accept_agent_keys
+    return call_native_sync("agent_credential_kind", json.dumps(payload))
+
+def agent_from_claims(claims: Any, merchant_environment: str | None = None) -> Any:
+    """Read the agent a verified token payload names.
+    @returns ok with the agent, or ok false with reason invalid or environment_mismatch.
+    """
+    payload: dict[str, Any] = {}
+    payload["claims"] = claims
+    if merchant_environment is not None:
+        payload["merchantEnvironment"] = merchant_environment
+    return call_native_sync("agent_from_claims", json.dumps(payload))
+
+def agent_gate_result(input: Any) -> Any:
+    """Turn an identification and a call outcome into an HTTP gate result.
+    @returns Gate result with kind not_agent, rejected, begin, refused or allowed.
+    """
+    payload: dict[str, Any] = {}
+    payload["input"] = input
+    return call_native_sync("agent_gate_result", json.dumps(payload))
+
+def agent_key_result(input: Any) -> Any:
+    """Decide what an agent key verification answer means.
+    @returns ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+    """
+    payload: dict[str, Any] = {}
+    payload["input"] = input
+    return call_native_sync("agent_key_result", json.dumps(payload))
+
+def agent_mcp_route_step(input: Any) -> Any:
+    """Decide where one request to an agent-paid MCP server goes.
+    @returns Route with kind pass, response, anonymous, identify, agent or error.
+    """
+    payload: dict[str, Any] = {}
+    payload["input"] = input
+    return call_native_sync("agent_mcp_route_step", json.dumps(payload))
+
+def agent_prompt_facts(text: str, tool_error: bool) -> Any:
+    """Compute the prompt facts sent with an authorize.
+    @returns promptHash, toolError and the last 1,500 characters as excerpt.
+    """
+    payload: dict[str, Any] = {}
+    payload["text"] = text
+    payload["toolError"] = tool_error
+    return call_native_sync("agent_prompt_facts", json.dumps(payload))
+
+def agent_protected_resource(resource: Any) -> Any:
+    """Build the RFC 9728 view of a protected resource.
+    @returns Canonical resource, metadata path, metadata URL and the metadata document.
+    """
+    payload: dict[str, Any] = {}
+    payload["resource"] = resource
+    return call_native_sync("agent_protected_resource", json.dumps(payload))
+
+def agent_refusal_status(reason: str) -> Any:
+    """Map a refusal reason to its HTTP status.
+    @returns 401, 402, 422 or 502, or null for an unknown reason.
+    """
+    payload: dict[str, Any] = {}
+    payload["reason"] = reason
+    return call_native_sync("agent_refusal_status", json.dumps(payload))
+
+def agent_refusal_tool_result(refused: Any) -> Any:
+    """Shape a refusal as an MCP tool error.
+    @returns Tool result with isError, the sentence as text and structuredContent.refusal.
+    """
+    payload: dict[str, Any] = {}
+    payload["refused"] = refused
+    return call_native_sync("agent_refusal_tool_result", json.dumps(payload))
+
+def agent_secret_key_environment(secret_key: str) -> Any:
+    """Read the environment a merchant secret key is for.
+    @returns sandbox or live, or null when the prefix does not say.
+    """
+    payload: dict[str, Any] = {}
+    payload["secretKey"] = secret_key
+    return call_native_sync("agent_secret_key_environment", json.dumps(payload))
+
 def append_paid_tool_description(description: str | None = None) -> Any:
     """Append the paid-tool account hint to a merchant tool description.
     @param description Optional merchant-authored description; trailing whitespace is stripped.
@@ -333,6 +466,14 @@ def included_units(priced: Any | None = None, meter: str | None = None) -> Any:
         payload["meter"] = meter
     return call_native_sync("included_units", json.dumps(payload))
 
+def is_agent_key(value: str) -> Any:
+    """Tell whether a presented key is an agent key.
+    @returns True for the agk_ prefix with something after it.
+    """
+    payload: dict[str, Any] = {}
+    payload["value"] = value
+    return call_native_sync("is_agent_key", json.dumps(payload))
+
 def is_postal_code_required(country: str) -> Any:
     """Whether Stripe Tax requires a postal or ZIP code for a country.
     @returns True when a postal or ZIP code is required.
@@ -383,6 +524,14 @@ def link_label(name: str) -> Any:
     payload["name"] = name
     return call_native_sync("link_label", json.dumps(payload))
 
+def looks_like_jwt(value: str) -> Any:
+    """Tell whether a presented key is a JWS compact token.
+    @returns True for three base64url parts.
+    """
+    payload: dict[str, Any] = {}
+    payload["value"] = value
+    return call_native_sync("looks_like_jwt", json.dumps(payload))
+
 def meter_name(priced: Any | None = None) -> Any:
     """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
     @returns Meter name, or null when no charge, tier, or limit names one.
@@ -416,6 +565,15 @@ def normalize_free_limit(limit: Any) -> Any:
     payload: dict[str, Any] = {}
     payload["limit"] = limit
     return call_native_sync("normalize_free_limit", json.dumps(payload))
+
+def parse_agent_response(kind: str, value: Any) -> Any:
+    """Read one agent API answer strictly, field by field.
+    @returns ok with the checked value, or ok false with the first field that did not read.
+    """
+    payload: dict[str, Any] = {}
+    payload["kind"] = kind
+    payload["value"] = value
+    return call_native_sync("parse_agent_response", json.dumps(payload))
 
 def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
     """Project a PaywallError into the client-facing payload shape.

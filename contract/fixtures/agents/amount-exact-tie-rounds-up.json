@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "amount-exact-tie-rounds-up",
+  "input": {
+    "fn": "agentAmountString",
+    "args": {
+      "amount": 0.001953125
+    }
+  },
+  "expect": {
+    "result": "0.00195313"
+  }
+}

@@ -10,6 +10,7 @@
 )]
 #![allow(clippy::result_large_err, clippy::missing_docs_in_private_items)]
 
+mod agent_token;
 mod auth_gate;
 mod bearer_verify;
 mod config_log;
@@ -30,6 +31,7 @@ mod engine;
 #[cfg(feature = "engine")]
 mod widget_resource;
 
+pub use agent_token::{verify_agent_token, AgentTokenInput};
 pub use auth_gate::{
     is_free_mcp_method, mcp_auth_challenge, mcp_auth_gate, requires_bearer_auth, AuthGateInput,
     AuthGateResult, McpAuthMode,

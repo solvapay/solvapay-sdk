@@ -5,7 +5,11 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, assert_valid_product_ref,
+    agent_amount_string, agent_call_step, agent_canonical_resource, agent_challenge_headers,
+    agent_complete_body, agent_constants, agent_credential_kind, agent_from_claims,
+    agent_gate_result, agent_key_result, agent_mcp_route_step, agent_prompt_facts,
+    agent_protected_resource, agent_refusal_status, agent_refusal_tool_result,
+    agent_secret_key_environment, append_paid_tool_description, assert_valid_product_ref,
     attach_business_details_validation_error, balance_reconcile_delays_ms, billing_cycle,
     build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
     build_payable_tool_result, build_paywall_gate, business_country_display_names,
@@ -23,14 +27,14 @@ use solvapay_core::{
     free_tool_description_suffix, gate_next, get_business_country_options,
     get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
     get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
-    headline_charges, history_rows, included_units, invoke_payable_next,
+    headline_charges, history_rows, included_units, invoke_payable_next, is_agent_key,
     is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
     is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
-    is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, minor_units_per_major,
-    next_action_for, normalize_cancel_response, normalize_free_limit,
-    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
-    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
-    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    is_zero_decimal_currency, link_label, looks_like_jwt, mcp_view_maps, meter_name,
+    minor_units_per_major, next_action_for, normalize_cancel_response, normalize_free_limit,
+    normalize_reactivate_response, overlay_claimed_limits, parse_agent_response,
+    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
     postal_code_required_countries, project_topup_process_outcome, purchase_usage_is_metered,
     require_product_ref, resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
     resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
@@ -144,6 +148,121 @@ fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingE
 fn invoke_topup_balance_poll_delays_ms(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&topup_balance_poll_delays_ms())
+}
+
+fn invoke_agent_amount_string(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let amount = require_f64(&args, "amount")?;
+    Ok(Value::String(agent_amount_string(amount).to_owned()))
+}
+
+fn invoke_agent_call_step(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    to_value(&agent_call_step(input.as_ref().unwrap_or(&Value::Null)))
+}
+
+fn invoke_agent_canonical_resource(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let resource = require_string(&args, "resource")?;
+    to_value(&agent_canonical_resource(&resource))
+}
+
+fn invoke_agent_challenge_headers(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let resource = optional_value(&args, "resource");
+    let description = require_string(&args, "description")?;
+    to_value(&agent_challenge_headers(
+        resource.as_ref().unwrap_or(&Value::Null),
+        &description,
+    ))
+}
+
+fn invoke_agent_complete_body(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let result = optional_value(&args, "result");
+    to_value(&agent_complete_body(
+        result.as_ref().unwrap_or(&Value::Null),
+    ))
+}
+
+fn invoke_agent_constants(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    to_value(&agent_constants())
+}
+
+fn invoke_agent_credential_kind(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let presented_key = require_string(&args, "presentedKey")?;
+    let accept_agent_keys = require_bool(&args, "acceptAgentKeys")?;
+    Ok(Value::String(
+        agent_credential_kind(&presented_key, accept_agent_keys).to_owned(),
+    ))
+}
+
+fn invoke_agent_from_claims(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let claims = optional_value(&args, "claims");
+    let merchant_environment = optional_string(&args, "merchantEnvironment")?;
+    to_value(&agent_from_claims(
+        claims.as_ref().unwrap_or(&Value::Null),
+        merchant_environment.as_deref(),
+    ))
+}
+
+fn invoke_agent_gate_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    to_value(&agent_gate_result(input.as_ref().unwrap_or(&Value::Null)))
+}
+
+fn invoke_agent_key_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    to_value(&agent_key_result(input.as_ref().unwrap_or(&Value::Null)))
+}
+
+fn invoke_agent_mcp_route_step(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    to_value(&agent_mcp_route_step(
+        input.as_ref().unwrap_or(&Value::Null),
+    ))
+}
+
+fn invoke_agent_prompt_facts(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let text = require_string(&args, "text")?;
+    let tool_error = require_bool(&args, "toolError")?;
+    to_value(&agent_prompt_facts(&text, tool_error))
+}
+
+fn invoke_agent_protected_resource(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let resource = optional_value(&args, "resource");
+    to_value(&agent_protected_resource(
+        resource.as_ref().unwrap_or(&Value::Null),
+    ))
+}
+
+fn invoke_agent_refusal_status(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let reason = require_string(&args, "reason")?;
+    to_value(&agent_refusal_status(&reason))
+}
+
+fn invoke_agent_refusal_tool_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let refused = optional_value(&args, "refused");
+    to_value(&agent_refusal_tool_result(
+        refused.as_ref().unwrap_or(&Value::Null),
+    ))
+}
+
+fn invoke_agent_secret_key_environment(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let secret_key = require_string(&args, "secretKey")?;
+    to_value(&agent_secret_key_environment(&secret_key))
 }
 
 fn invoke_append_paid_tool_description(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -711,6 +830,12 @@ fn invoke_invoke_payable_next(input: &FixtureInput) -> Result<Value, BindingErro
     result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
 }
 
+fn invoke_is_agent_key(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let value = require_string(&args, "value")?;
+    Ok(Value::Bool(is_agent_key(&value)))
+}
+
 fn invoke_is_cached_customer_ref_valid(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let external_ref = optional_string(&args, "externalRef")?;
@@ -775,6 +900,12 @@ fn invoke_link_label(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let name = require_string(&args, "name")?;
     Ok(Value::String(link_label(&name).to_owned()))
+}
+
+fn invoke_looks_like_jwt(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let value = require_string(&args, "value")?;
+    Ok(Value::Bool(looks_like_jwt(&value)))
 }
 
 fn invoke_make_response_result(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -896,6 +1027,16 @@ fn invoke_overlay_claimed_limits(input: &FixtureInput) -> Result<Value, BindingE
     to_value(&overlay_claimed_limits(
         limits.as_ref().unwrap_or(&Value::Null),
         claimed,
+    ))
+}
+
+fn invoke_parse_agent_response(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let kind = require_string(&args, "kind")?;
+    let value = optional_value(&args, "value");
+    to_value(&parse_agent_response(
+        &kind,
+        value.as_ref().unwrap_or(&Value::Null),
     ))
 }
 
@@ -2450,6 +2591,139 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "agentConstants",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_constants(&fixture.input)),
+        },
+    );
+    registry.register(
+        "parseAgentResponse",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_parse_agent_response(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentSecretKeyEnvironment",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_secret_key_environment(&fixture.input)),
+        },
+    );
+    registry.register(
+        "isAgentKey",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_is_agent_key(&fixture.input)),
+        },
+    );
+    registry.register(
+        "looksLikeJwt",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_looks_like_jwt(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCredentialKind",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_credential_kind(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentFromClaims",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_from_claims(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentKeyResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_key_result(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCanonicalResource",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_canonical_resource(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentProtectedResource",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_protected_resource(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentChallengeHeaders",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_challenge_headers(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentPromptFacts",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_prompt_facts(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentAmountString",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_amount_string(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCallStep",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_call_step(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCompleteBody",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_complete_body(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentRefusalStatus",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_refusal_status(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentGateResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_gate_result(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentRefusalToolResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_refusal_tool_result(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentMcpRouteStep",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_mcp_route_step(&fixture.input)),
+        },
+    );
+    registry.register(
         "assertResponseResult",
         Binding {
             id: "core",
@@ -2512,6 +2786,69 @@ pub fn create_default_registry() -> BindingRegistry {
     );
     registry.register(
         "activatePlan",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentAuthorize",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentBeginCall",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentComplete",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentFinishCall",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentGate",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentIdentify",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentMcpRoute",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentReportUsage",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "agentVerifyKey",
         Binding {
             id: "client",
             invoke: Box::new(crate::client_replay::invoke),

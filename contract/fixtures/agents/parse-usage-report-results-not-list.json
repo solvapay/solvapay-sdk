@@ -1,0 +1,27 @@
+{
+  "suite": "agents",
+  "case": "parse-usage-report-results-not-list",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "usageReport",
+      "value": {
+        "reference": "urp_TEST0001",
+        "currency": "USD",
+        "duplicate": false,
+        "results": {},
+        "untagged": {
+          "total": "0.5",
+          "beforePolicy": "0.1",
+          "flagged": true
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Usage report results must be a list"
+    }
+  }
+}

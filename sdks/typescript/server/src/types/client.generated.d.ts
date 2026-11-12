@@ -45,6 +45,60 @@ export interface SolvaPayClientGenerated {
  */
   activatePlan?(params: components['schemas']['ActivatePlanDto']): Promise<ActivatePlanResult>
 /**
+ * Ask SolvaPay to authorize one paid agent call.
+ * @param params agentToken, requestId, estimate, wait and optional item and prompt facts.
+ * @returns Authorize answer with status allowed, refused or waiting.
+ */
+  agentAuthorize?(params: unknown): Promise<unknown>
+/**
+ * Authorize one paid call, waiting for the owner when they must approve.
+ * @param params requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+ * @returns Outcome with kind allow or refused; a refusal carries the sentence for the human.
+ */
+  agentBeginCall?(params: unknown): Promise<unknown>
+/**
+ * Complete an agent call at how the upstream answered.
+ * @param params callRef, upstream status, reported cost or null, optional interrupted reason.
+ * @returns Settlement: callRef, settled, source, amount, duplicate.
+ */
+  agentComplete?(params: unknown): Promise<unknown>
+/**
+ * Complete an allowed call, or release one that never reached the upstream.
+ * @param params callRef with status, cost and interrupted, or release with the reason.
+ * @returns completed settlement, or null with failure when SolvaPay could not be told.
+ */
+  agentFinishCall?(params: unknown): Promise<unknown>
+/**
+ * Gate one HTTP call: verify the caller, then authorize the paid call.
+ * @param params presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer, providerRef and optional protectedResource.
+ * @returns Gate result with kind not_agent, rejected, refused or allowed.
+ */
+  agentGate?(params: unknown): Promise<unknown>
+/**
+ * Say whether a presented key is a verified SolvaPay agent.
+ * @param params presentedKey, issuer, providerRef and optional resource, jwksJson, acceptAgentKeys, environment.
+ * @returns Identification with kind agent, rejected or not_agent.
+ */
+  agentIdentify?(params: unknown): Promise<unknown>
+/**
+ * Route one request to an MCP server paid by SolvaPay agents.
+ * @param params method, path, authorization, body, issuer, providerRef, mcpPath, serverName and optional OAuth settings.
+ * @returns Route with kind pass, response, anonymous, agent or error.
+ */
+  agentMcpRoute?(params: unknown): Promise<unknown>
+/**
+ * Report a window of usage for reconciliation.
+ * @param params reportId, customerRef, source, window, currency, calls and untagged usage.
+ * @returns Report reference with each call as SolvaPay reconciled it.
+ */
+  agentReportUsage?(params: unknown): Promise<unknown>
+/**
+ * Ask SolvaPay whose an agent key is.
+ * @param params agentKey as presented.
+ * @returns Verified agent: agentRef, principalRef, promptExcerpt, environment.
+ */
+  agentVerifyKey?(params: unknown): Promise<unknown>
+/**
  * Grant credits to a customer balance.
  * @param params Credit grant request (customer, amount, and reason).
  * @returns Credit assignment response.

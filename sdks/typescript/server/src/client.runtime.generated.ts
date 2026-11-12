@@ -7,6 +7,15 @@ import type { SolvaPayClient } from './types'
 /** Catalogued client methods dispatched through Node native or WASM. */
 export type NativeClientMethod =
   | 'activatePlan'
+  | 'agentAuthorize'
+  | 'agentBeginCall'
+  | 'agentComplete'
+  | 'agentFinishCall'
+  | 'agentGate'
+  | 'agentIdentify'
+  | 'agentMcpRoute'
+  | 'agentReportUsage'
+  | 'agentVerifyKey'
   | 'assignCredits'
   | 'attachBusinessDetails'
   | 'bootstrapMcpProduct'
@@ -60,6 +69,33 @@ export function createGeneratedClientOperations(
   return {
     async activatePlan(params) {
       return dispatchClient('activatePlan', params)
+    },
+    async agentAuthorize(params) {
+      return dispatchClient('agentAuthorize', params)
+    },
+    async agentBeginCall(params) {
+      return dispatchClient('agentBeginCall', params)
+    },
+    async agentComplete(params) {
+      return dispatchClient('agentComplete', params)
+    },
+    async agentFinishCall(params) {
+      return dispatchClient('agentFinishCall', params)
+    },
+    async agentGate(params) {
+      return dispatchClient('agentGate', params)
+    },
+    async agentIdentify(params) {
+      return dispatchClient('agentIdentify', params)
+    },
+    async agentMcpRoute(params) {
+      return dispatchClient('agentMcpRoute', params)
+    },
+    async agentReportUsage(params) {
+      return dispatchClient('agentReportUsage', params)
+    },
+    async agentVerifyKey(params) {
+      return dispatchClient('agentVerifyKey', params)
     },
     async assignCredits(params) {
       return dispatchClient('assignCredits', params)

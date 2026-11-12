@@ -488,6 +488,160 @@ export function creditDrawnMeters(priced: PricedLike | null | undefined): string
 }
 
 /**
+ * Return the frozen agent payment constants.
+ * @returns Refusal reasons, reconciliation results and reasons, environments, key prefix, wait and cache limits, claim names.
+ */
+export function agentConstants(): unknown { return dispatchSync('agentConstants', {}) }
+
+/**
+ * Read one agent API answer strictly, field by field.
+ * @returns ok with the checked value, or ok false with the first field that did not read.
+ */
+export function parseAgentResponse(kind: string, value: unknown): unknown {
+  return dispatchSync('parseAgentResponse', { kind, value })
+}
+
+/**
+ * Read the environment a merchant secret key is for.
+ * @returns sandbox or live, or null when the prefix does not say.
+ */
+export function agentSecretKeyEnvironment(secretKey: string): string | null {
+  return dispatchSync('agentSecretKeyEnvironment', { secretKey })
+}
+
+/**
+ * Tell whether a presented key is an agent key.
+ * @returns True for the agk_ prefix with something after it.
+ */
+export function isAgentKey(value: string): boolean { return dispatchSync('isAgentKey', { value }) }
+
+/**
+ * Tell whether a presented key is a JWS compact token.
+ * @returns True for three base64url parts.
+ */
+export function looksLikeJwt(value: string): boolean {
+  return dispatchSync('looksLikeJwt', { value })
+}
+
+/**
+ * Classify how a presented key is checked.
+ * @returns agent_key, agent_token or not_agent.
+ */
+export function agentCredentialKind(presentedKey: string, acceptAgentKeys: boolean): string {
+  return dispatchSync('agentCredentialKind', { presentedKey, acceptAgentKeys })
+}
+
+/**
+ * Read the agent a verified token payload names.
+ * @returns ok with the agent, or ok false with reason invalid or environment_mismatch.
+ */
+export function agentFromClaims(
+  claims: unknown,
+  merchantEnvironment: string | null | undefined,
+): unknown {
+  return dispatchSync('agentFromClaims', {
+    claims,
+    merchantEnvironment: merchantEnvironment ?? null,
+  })
+}
+
+/**
+ * Decide what an agent key verification answer means.
+ * @returns ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+ */
+export function agentKeyResult(input: unknown): unknown {
+  return dispatchSync('agentKeyResult', { input })
+}
+
+/**
+ * Return the canonical form SolvaPay compares OAuth resources in.
+ * @returns ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+ */
+export function agentCanonicalResource(resource: string): unknown {
+  return dispatchSync('agentCanonicalResource', { resource })
+}
+
+/**
+ * Build the RFC 9728 view of a protected resource.
+ * @returns Canonical resource, metadata path, metadata URL and the metadata document.
+ */
+export function agentProtectedResource(resource: unknown): unknown {
+  return dispatchSync('agentProtectedResource', { resource })
+}
+
+/**
+ * Build the WWW-Authenticate challenge that sends a host to sign in.
+ * @returns ok with the header map, or ok false when the resource is not usable.
+ */
+export function agentChallengeHeaders(resource: unknown, description: string): unknown {
+  return dispatchSync('agentChallengeHeaders', { resource, description })
+}
+
+/**
+ * Compute the prompt facts sent with an authorize.
+ * @returns promptHash, toolError and the last 1,500 characters as excerpt.
+ */
+export function agentPromptFacts(text: string, toolError: boolean): unknown {
+  return dispatchSync('agentPromptFacts', { text, toolError })
+}
+
+/**
+ * Format an amount as a decimal string with up to 8 places.
+ * @returns Decimal string with trailing zeros trimmed.
+ */
+export function agentAmountString(amount: number): string {
+  return dispatchSync('agentAmountString', { amount })
+}
+
+/**
+ * Decide the next move of a paid agent call.
+ * @returns Step with kind authorize, sleep, allow or refused.
+ */
+export function agentCallStep(input: unknown): unknown {
+  return dispatchSync('agentCallStep', { input })
+}
+
+/**
+ * Build the complete request body for how a call ended.
+ * @returns status, cost with a string amount or null, and interrupted when set.
+ */
+export function agentCompleteBody(result: unknown): unknown {
+  return dispatchSync('agentCompleteBody', { result })
+}
+
+/**
+ * Map a refusal reason to its HTTP status.
+ * @returns 401, 402, 422 or 502, or null for an unknown reason.
+ */
+export function agentRefusalStatus(reason: string): number | null {
+  return dispatchSync('agentRefusalStatus', { reason })
+}
+
+/**
+ * Turn an identification and a call outcome into an HTTP gate result.
+ * @returns Gate result with kind not_agent, rejected, begin, refused or allowed.
+ */
+export function agentGateResult(input: unknown): unknown {
+  return dispatchSync('agentGateResult', { input })
+}
+
+/**
+ * Shape a refusal as an MCP tool error.
+ * @returns Tool result with isError, the sentence as text and structuredContent.refusal.
+ */
+export function agentRefusalToolResult(refused: unknown): unknown {
+  return dispatchSync('agentRefusalToolResult', { refused })
+}
+
+/**
+ * Decide where one request to an agent-paid MCP server goes.
+ * @returns Route with kind pass, response, anonymous, identify, agent or error.
+ */
+export function agentMcpRouteStep(input: unknown): unknown {
+  return dispatchSync('agentMcpRouteStep', { input })
+}
+
+/**
  * Return what one metered unit costs, from a per-unit charge or the first priced band.
  * @returns The entry rate, with tiered true when that rate is the floor of a stack.
  */

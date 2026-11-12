@@ -27,6 +27,177 @@ func (c *Client) ActivatePlan(ctx context.Context, params map[string]any) (any, 
 	return out, nil
 }
 
+// AgentAuthorize ask SolvaPay to authorize one paid agent call.
+// The params parameter is agentToken, requestId, estimate, wait and optional item and prompt facts.
+// Returns Authorize answer with status allowed, refused or waiting.
+func (c *Client) AgentAuthorize(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_authorize", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentBeginCall authorize one paid call, waiting for the owner when they must approve.
+// The params parameter is requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+// Returns Outcome with kind allow or refused; a refusal carries the sentence for the human.
+func (c *Client) AgentBeginCall(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_begin_call", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentComplete complete an agent call at how the upstream answered.
+// The params parameter is callRef, upstream status, reported cost or null, optional interrupted reason.
+// Returns Settlement: callRef, settled, source, amount, duplicate.
+func (c *Client) AgentComplete(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_complete", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentFinishCall complete an allowed call, or release one that never reached the upstream.
+// The params parameter is callRef with status, cost and interrupted, or release with the reason.
+// Returns completed settlement, or null with failure when SolvaPay could not be told.
+func (c *Client) AgentFinishCall(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_finish_call", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentGate gate one HTTP call: verify the caller, then authorize the paid call.
+// The params parameter is presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer, providerRef and optional protectedResource.
+// Returns Gate result with kind not_agent, rejected, refused or allowed.
+func (c *Client) AgentGate(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_gate", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentIdentify say whether a presented key is a verified SolvaPay agent.
+// The params parameter is presentedKey, issuer, providerRef and optional resource, jwksJson, acceptAgentKeys, environment.
+// Returns Identification with kind agent, rejected or not_agent.
+func (c *Client) AgentIdentify(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_identify", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentMcpRoute route one request to an MCP server paid by SolvaPay agents.
+// The params parameter is method, path, authorization, body, issuer, providerRef, mcpPath, serverName and optional OAuth settings.
+// Returns Route with kind pass, response, anonymous, agent or error.
+func (c *Client) AgentMcpRoute(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_mcp_route", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentReportUsage report a window of usage for reconciliation.
+// The params parameter is reportId, customerRef, source, window, currency, calls and untagged usage.
+// Returns Report reference with each call as SolvaPay reconciled it.
+func (c *Client) AgentReportUsage(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_report_usage", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AgentVerifyKey ask SolvaPay whose an agent key is.
+// The params parameter is agentKey as presented.
+// Returns Verified agent: agentRef, principalRef, promptExcerpt, environment.
+func (c *Client) AgentVerifyKey(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_agent_verify_key", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AssignCredits grant credits to a customer balance.
 // The params parameter is Credit grant request (customer, amount, and reason).
 // Returns Credit assignment response.

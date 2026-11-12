@@ -1,0 +1,36 @@
+{
+  "suite": "agents",
+  "case": "gate-rejected-with-challenge",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "rejected",
+          "reason": "expired",
+          "detail": "exp"
+        },
+        "protectedResource": {
+          "resource": "https://api.example.com/v1",
+          "authorizationServer": "https://api.solvapay.test/v1/agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rejected",
+      "status": 401,
+      "reason": "expired",
+      "detail": "exp",
+      "challenge": {
+        "WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted: sign in again\", resource_metadata=\"https://api.example.com/.well-known/oauth-protected-resource/v1\", scope=\"usage\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate"
+      },
+      "log": {
+        "reason": "agent_token_expired",
+        "detail": "exp"
+      }
+    }
+  }
+}

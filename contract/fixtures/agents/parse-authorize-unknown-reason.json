@@ -1,0 +1,22 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-unknown-reason",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "refused",
+        "callRef": "call_TEST0001",
+        "reason": "nope",
+        "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "reason must be one of customer_not_linked, ask, deny, topup_required, approval_declined, approval_expired, got \"nope\""
+    }
+  }
+}

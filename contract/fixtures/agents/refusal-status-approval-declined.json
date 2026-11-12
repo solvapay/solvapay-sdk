@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-approval-declined",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "approval_declined"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

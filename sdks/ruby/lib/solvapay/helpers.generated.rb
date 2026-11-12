@@ -47,6 +47,137 @@ module SolvaPay
   # Top-up payment-intent balance poll backoff, in milliseconds.
   # @return Frozen delay table.
   TOPUP_BALANCE_POLL_DELAYS_MS = NativeDispatch.call_sync("TOPUP_BALANCE_POLL_DELAYS_MS", {}).freeze
+  # Format an amount as a decimal string with up to 8 places.
+  # @return Decimal string with trailing zeros trimmed.
+  def self.agent_amount_string(amount:)
+    args = {} #: Hash[String, untyped]
+    args["amount"] = amount
+    NativeDispatch.call_sync("agent_amount_string", args)
+  end
+
+  # Decide the next move of a paid agent call.
+  # @return Step with kind authorize, sleep, allow or refused.
+  def self.agent_call_step(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("agent_call_step", args)
+  end
+
+  # Return the canonical form SolvaPay compares OAuth resources in.
+  # @return ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+  def self.agent_canonical_resource(resource:)
+    args = {} #: Hash[String, untyped]
+    args["resource"] = resource
+    NativeDispatch.call_sync("agent_canonical_resource", args)
+  end
+
+  # Build the WWW-Authenticate challenge that sends a host to sign in.
+  # @return ok with the header map, or ok false when the resource is not usable.
+  def self.agent_challenge_headers(resource:, description:)
+    args = {} #: Hash[String, untyped]
+    args["resource"] = resource
+    args["description"] = description
+    NativeDispatch.call_sync("agent_challenge_headers", args)
+  end
+
+  # Build the complete request body for how a call ended.
+  # @return status, cost with a string amount or null, and interrupted when set.
+  def self.agent_complete_body(result:)
+    args = {} #: Hash[String, untyped]
+    args["result"] = result
+    NativeDispatch.call_sync("agent_complete_body", args)
+  end
+
+  # Return the frozen agent payment constants.
+  # @return Refusal reasons, reconciliation results and reasons, environments, key prefix, wait and cache limits, claim names.
+  def self.agent_constants
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("agent_constants", args)
+  end
+
+  # Classify how a presented key is checked.
+  # @return agent_key, agent_token or not_agent.
+  def self.agent_credential_kind(presented_key:, accept_agent_keys:)
+    args = {} #: Hash[String, untyped]
+    args["presentedKey"] = presented_key
+    args["acceptAgentKeys"] = accept_agent_keys
+    NativeDispatch.call_sync("agent_credential_kind", args)
+  end
+
+  # Read the agent a verified token payload names.
+  # @return ok with the agent, or ok false with reason invalid or environment_mismatch.
+  def self.agent_from_claims(claims:, merchant_environment: nil)
+    args = {} #: Hash[String, untyped]
+    args["claims"] = claims
+    args["merchantEnvironment"] = merchant_environment unless merchant_environment.nil?
+    NativeDispatch.call_sync("agent_from_claims", args)
+  end
+
+  # Turn an identification and a call outcome into an HTTP gate result.
+  # @return Gate result with kind not_agent, rejected, begin, refused or allowed.
+  def self.agent_gate_result(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("agent_gate_result", args)
+  end
+
+  # Decide what an agent key verification answer means.
+  # @return ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+  def self.agent_key_result(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("agent_key_result", args)
+  end
+
+  # Decide where one request to an agent-paid MCP server goes.
+  # @return Route with kind pass, response, anonymous, identify, agent or error.
+  def self.agent_mcp_route_step(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("agent_mcp_route_step", args)
+  end
+
+  # Compute the prompt facts sent with an authorize.
+  # @return promptHash, toolError and the last 1,500 characters as excerpt.
+  def self.agent_prompt_facts(text:, tool_error:)
+    args = {} #: Hash[String, untyped]
+    args["text"] = text
+    args["toolError"] = tool_error
+    NativeDispatch.call_sync("agent_prompt_facts", args)
+  end
+
+  # Build the RFC 9728 view of a protected resource.
+  # @return Canonical resource, metadata path, metadata URL and the metadata document.
+  def self.agent_protected_resource(resource:)
+    args = {} #: Hash[String, untyped]
+    args["resource"] = resource
+    NativeDispatch.call_sync("agent_protected_resource", args)
+  end
+
+  # Map a refusal reason to its HTTP status.
+  # @return 401, 402, 422 or 502, or null for an unknown reason.
+  def self.agent_refusal_status(reason:)
+    args = {} #: Hash[String, untyped]
+    args["reason"] = reason
+    NativeDispatch.call_sync("agent_refusal_status", args)
+  end
+
+  # Shape a refusal as an MCP tool error.
+  # @return Tool result with isError, the sentence as text and structuredContent.refusal.
+  def self.agent_refusal_tool_result(refused:)
+    args = {} #: Hash[String, untyped]
+    args["refused"] = refused
+    NativeDispatch.call_sync("agent_refusal_tool_result", args)
+  end
+
+  # Read the environment a merchant secret key is for.
+  # @return sandbox or live, or null when the prefix does not say.
+  def self.agent_secret_key_environment(secret_key:)
+    args = {} #: Hash[String, untyped]
+    args["secretKey"] = secret_key
+    NativeDispatch.call_sync("agent_secret_key_environment", args)
+  end
+
   # Append the paid-tool account hint to a merchant tool description.
   # @param description Optional merchant-authored description; trailing whitespace is stripped.
   # @return Description plus hint, or the hint alone when no description is present.
@@ -312,6 +443,14 @@ module SolvaPay
     NativeDispatch.call_sync("included_units", args)
   end
 
+  # Tell whether a presented key is an agent key.
+  # @return True for the agk_ prefix with something after it.
+  def self.is_agent_key(value:)
+    args = {} #: Hash[String, untyped]
+    args["value"] = value
+    NativeDispatch.call_sync("is_agent_key", args)
+  end
+
   # Whether Stripe Tax requires a postal or ZIP code for a country.
   # @return True when a postal or ZIP code is required.
   def self.is_postal_code_required(country:)
@@ -362,6 +501,14 @@ module SolvaPay
     NativeDispatch.call_sync("link_label", args)
   end
 
+  # Tell whether a presented key is a JWS compact token.
+  # @return True for three base64url parts.
+  def self.looks_like_jwt(value:)
+    args = {} #: Hash[String, untyped]
+    args["value"] = value
+    NativeDispatch.call_sync("looks_like_jwt", args)
+  end
+
   # Read the meter a plan counts against from a per-unit charge, tier, or limit option.
   # @return Meter name, or null when no charge, tier, or limit names one.
   def self.meter_name(priced: nil)
@@ -393,6 +540,15 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["limit"] = limit
     NativeDispatch.call_sync("normalize_free_limit", args)
+  end
+
+  # Read one agent API answer strictly, field by field.
+  # @return ok with the checked value, or ok false with the first field that did not read.
+  def self.parse_agent_response(kind:, value:)
+    args = {} #: Hash[String, untyped]
+    args["kind"] = kind
+    args["value"] = value
+    NativeDispatch.call_sync("parse_agent_response", args)
   end
 
   # Project a PaywallError into the client-facing payload shape.

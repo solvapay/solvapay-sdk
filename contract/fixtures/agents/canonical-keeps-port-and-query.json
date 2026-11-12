@@ -1,0 +1,16 @@
+{
+  "suite": "agents",
+  "case": "canonical-keeps-port-and-query",
+  "input": {
+    "fn": "agentCanonicalResource",
+    "args": {
+      "resource": "http://localhost:3000/mcp?x=1"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": "http://localhost:3000/mcp?x=1"
+    }
+  }
+}

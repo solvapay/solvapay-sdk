@@ -1,0 +1,25 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-invalid-resource-is-error",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "nope"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "error",
+      "message": "Invalid URL"
+    }
+  }
+}

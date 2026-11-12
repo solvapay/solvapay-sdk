@@ -1,0 +1,16 @@
+{
+  "suite": "agents",
+  "case": "canonical-relative-refused",
+  "input": {
+    "fn": "agentCanonicalResource",
+    "args": {
+      "resource": "/mcp"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Invalid URL"
+    }
+  }
+}

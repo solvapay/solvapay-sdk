@@ -23,13 +23,13 @@ browser = ["client-public"]
 client-full = ["hmac-crypto"]
 client-public = []
 webhook-verify = ["hmac-crypto"]
-hmac-crypto = ["dep:hmac", "dep:sha2", "dep:subtle"]
+hmac-crypto = ["dep:hmac", "dep:subtle"]
 
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 hmac = { workspace = true, optional = true }
-sha2 = { workspace = true, optional = true }
+sha2 = { workspace = true }
 subtle = { workspace = true, optional = true }
 solvapay-dto = { path = "../solvapay-dto", version = "2.6.0" }
 solvapay-export = { path = "../solvapay-export", version = "2.6.0" }

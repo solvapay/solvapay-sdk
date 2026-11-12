@@ -186,10 +186,13 @@ fn push_binding_doc(out: &mut String, binding: &IrBindingSymbol) {
 }
 
 fn collect_named_types(ir: &Ir, core_path: &str, out: &mut BTreeSet<String>) -> GenResult<()> {
-    let func = ir
-        .core_fns
-        .get(core_path)
-        .or_else(|| ir.core_fns.values().find(|f| f.core_path() == core_path));
+    let func = ir.core_fns.get(core_path).or_else(|| {
+        // A helper in a nested module is re-exported from its top-level
+        // module, which is the path the binding snapshot records.
+        ir.core_fns
+            .values()
+            .find(|f| f.core_path() == core_path || f.binding_core() == core_path)
+    });
     let Some(func) = func else {
         return Err(GenError::Parse(format!(
             "no scanned core fn for helper path {core_path}"

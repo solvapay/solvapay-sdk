@@ -1,0 +1,26 @@
+{
+  "suite": "agents",
+  "case": "parse-complete-unknown-source",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "complete",
+      "value": {
+        "callRef": "call_TEST0001",
+        "settled": true,
+        "source": "guess",
+        "amount": {
+          "amount": "0.1",
+          "currency": "USD"
+        },
+        "duplicate": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "source must be one of reported, provisional, none, got \"guess\""
+    }
+  }
+}

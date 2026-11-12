@@ -20,6 +20,7 @@
 // returns it by value rather than `Box<SdkError>`.
 #![allow(clippy::result_large_err)]
 
+pub mod agents;
 pub(crate) mod auth_cache;
 pub mod client;
 #[allow(dead_code)]
@@ -40,6 +41,11 @@ pub mod reqwest_transport;
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 pub mod fetch_transport;
 
+pub use agents::{
+    AgentAuthorizeParams, AgentBeginCallParams, AgentCompleteParams, AgentFinishCallParams,
+    AgentGateParams, AgentIdentifyParams, AgentMcpRouteParams, AgentReportUsageParams,
+    AgentVerifyKeyParams,
+};
 pub use client::{encode_path_segment, SolvaPayClient};
 pub use http::{HeaderName, HttpRequest, HttpResponse, Method};
 pub use mcp::{

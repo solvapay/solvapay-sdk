@@ -29,6 +29,7 @@ sdks:
   rustMcp: sdks/rust-mcp
 
 tsPackages:
+  agents: sdks/typescript/agents
   auth: sdks/typescript/auth
   core: sdks/typescript/core
   mcp: sdks/typescript/mcp

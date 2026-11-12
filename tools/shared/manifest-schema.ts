@@ -9,9 +9,9 @@ import { z } from 'zod'
 export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust', 'c'] as const
 export type Language = (typeof LANGUAGES)[number]
 
-/** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
+/** Wire (OpenAPI-backed) client operations. Routeless composites (MCP and agent) are extra. */
 export const EXPECTED_ROUTED_OPERATION_COUNT = 38
-export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 7
+export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 16
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
@@ -415,7 +415,7 @@ export type BindingResidue = z.infer<typeof BindingResidueSchema>
  * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
  */
 export const SHIM_JS_NAMES = [
-  // Client dispatch (38 routed + 6 MCP composite)
+  // Client dispatch (38 routed + 16 routeless composite: 7 MCP, 9 agent)
   'activatePlan',
   'assignCredits',
   'attachBusinessDetails',
@@ -435,6 +435,15 @@ export const SHIM_JS_NAMES = [
   'deleteProduct',
   'disableAutoRecharge',
   'fetchJwks',
+  'agentVerifyKey',
+  'agentAuthorize',
+  'agentComplete',
+  'agentReportUsage',
+  'agentIdentify',
+  'agentBeginCall',
+  'agentFinishCall',
+  'agentGate',
+  'agentMcpRoute',
   'getAutoRecharge',
   'getCreditActivity',
   'getCustomer',
@@ -531,6 +540,25 @@ export const SHIM_JS_NAMES = [
   'tierBands',
   'tierMeters',
   'creditDrawnMeters',
+  'agentConstants',
+  'parseAgentResponse',
+  'agentSecretKeyEnvironment',
+  'isAgentKey',
+  'looksLikeJwt',
+  'agentCredentialKind',
+  'agentFromClaims',
+  'agentKeyResult',
+  'agentCanonicalResource',
+  'agentProtectedResource',
+  'agentChallengeHeaders',
+  'agentPromptFacts',
+  'agentAmountString',
+  'agentCallStep',
+  'agentCompleteBody',
+  'agentRefusalStatus',
+  'agentGateResult',
+  'agentRefusalToolResult',
+  'agentMcpRouteStep',
   'usageRate',
   'billingCycle',
   'trialDays',

@@ -39,6 +39,15 @@ pub mod transport {
 /// All manifest client operation ids (camelCase, sorted).
 pub const OPERATION_NAMES: &[&str] = &[
     "activatePlan",
+    "agentAuthorize",
+    "agentBeginCall",
+    "agentComplete",
+    "agentFinishCall",
+    "agentGate",
+    "agentIdentify",
+    "agentMcpRoute",
+    "agentReportUsage",
+    "agentVerifyKey",
     "assignCredits",
     "attachBusinessDetails",
     "bootstrapMcpProduct",
@@ -91,6 +100,51 @@ pub mod operations {
     pub mod activate_plan {
         /// Default failure template.
         pub const DEFAULT: &str = "Activate plan failed ({status}): {body}";
+    }
+    /// Templates for `agentAuthorize`.
+    pub mod agent_authorize {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent authorize failed ({status}): {body}";
+    }
+    /// Templates for `agentBeginCall`.
+    pub mod agent_begin_call {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent begin call failed ({status}): {body}";
+    }
+    /// Templates for `agentComplete`.
+    pub mod agent_complete {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent complete failed ({status}): {body}";
+    }
+    /// Templates for `agentFinishCall`.
+    pub mod agent_finish_call {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent finish call failed ({status}): {body}";
+    }
+    /// Templates for `agentGate`.
+    pub mod agent_gate {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent gate failed ({status}): {body}";
+    }
+    /// Templates for `agentIdentify`.
+    pub mod agent_identify {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent identify failed ({status}): {body}";
+    }
+    /// Templates for `agentMcpRoute`.
+    pub mod agent_mcp_route {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent MCP route failed ({status}): {body}";
+    }
+    /// Templates for `agentReportUsage`.
+    pub mod agent_report_usage {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent usage report failed ({status}): {body}";
+    }
+    /// Templates for `agentVerifyKey`.
+    pub mod agent_verify_key {
+        /// Default failure template.
+        pub const DEFAULT: &str = "Agent key verification failed ({status}): {body}";
     }
     /// Templates for `assignCredits`.
     pub mod assign_credits {

@@ -50,7 +50,9 @@ describe('listOperations — Swagger 2.0', () => {
       '/pet/{petId}': {
         get: {
           operationId: 'getPetById',
-          parameters: [{ name: 'petId', in: 'path', required: true, type: 'integer', format: 'int64' }],
+          parameters: [
+            { name: 'petId', in: 'path', required: true, type: 'integer', format: 'int64' },
+          ],
         },
         post: {
           operationId: 'updatePetWithForm',
@@ -192,7 +194,10 @@ describe('scaffold.mjs — end-to-end Swagger 2.0 Petstore', () => {
     const getPet = await readFile(path.join(target, 'src', 'tools', 'getPetById.ts'), 'utf8')
     expect(getPet).toContain('petId: int64.describe("ID of pet to return"),')
 
-    const findByStatus = await readFile(path.join(target, 'src', 'tools', 'findPetsByStatus.ts'), 'utf8')
+    const findByStatus = await readFile(
+      path.join(target, 'src', 'tools', 'findPetsByStatus.ts'),
+      'utf8',
+    )
     expect(findByStatus).toContain('status: z.array(z.unknown())')
 
     const addPet = await readFile(path.join(target, 'src', 'tools', 'addPet.ts'), 'utf8')
@@ -208,10 +213,18 @@ describe('scaffold.mjs — end-to-end Swagger 2.0 Petstore', () => {
     cleanup.push(parent)
     const target = path.join(parent, 'petstore-v2-forms')
 
-    const result = await spawnScript('scaffold.mjs', [SPEC, target, '--selections', FORMS_SELECTIONS])
+    const result = await spawnScript('scaffold.mjs', [
+      SPEC,
+      target,
+      '--selections',
+      FORMS_SELECTIONS,
+    ])
     expect(result.exitCode, `scaffold.mjs failed:\n--stderr--\n${result.stderr}`).toBe(0)
 
-    const withForm = await readFile(path.join(target, 'src', 'tools', 'updatePetWithForm.ts'), 'utf8')
+    const withForm = await readFile(
+      path.join(target, 'src', 'tools', 'updatePetWithForm.ts'),
+      'utf8',
+    )
     expect(withForm).toContain('const form = new URLSearchParams()')
     expect(withForm).toContain("if (input.name !== undefined) form.set('name', String(input.name))")
     expect(withForm).toContain('        body: form,')
@@ -222,7 +235,10 @@ describe('scaffold.mjs — end-to-end Swagger 2.0 Petstore', () => {
     expect(upload).toContain("form.set('additionalMetadata'")
     expect(upload).not.toMatch(/\bfile:/)
 
-    const arrayBody = await readFile(path.join(target, 'src', 'tools', 'createUsersWithArrayInput.ts'), 'utf8')
+    const arrayBody = await readFile(
+      path.join(target, 'src', 'tools', 'createUsersWithArrayInput.ts'),
+      'utf8',
+    )
     expect(arrayBody).toContain('body: z.array(z.unknown()).optional(),')
     expect(arrayBody).toContain('stringifyLossless(input.body ?? [], new Set(["id","userStatus"]))')
   })

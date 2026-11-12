@@ -1,0 +1,27 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-refused",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "refused",
+        "callRef": "call_TEST0001",
+        "reason": "deny",
+        "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "status": "refused",
+        "callRef": "call_TEST0001",
+        "reason": "deny",
+        "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+      }
+    }
+  }
+}

@@ -22,6 +22,78 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "activate_plan", args)
     end
 
+    # Ask SolvaPay to authorize one paid agent call.
+    # @param params agentToken, requestId, estimate, wait and optional item and prompt facts.
+    # @return Authorize answer with status allowed, refused or waiting.
+    def agent_authorize(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_authorize", args)
+    end
+
+    # Authorize one paid call, waiting for the owner when they must approve.
+    # @param params requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+    # @return Outcome with kind allow or refused; a refusal carries the sentence for the human.
+    def agent_begin_call(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_begin_call", args)
+    end
+
+    # Complete an agent call at how the upstream answered.
+    # @param params callRef, upstream status, reported cost or null, optional interrupted reason.
+    # @return Settlement: callRef, settled, source, amount, duplicate.
+    def agent_complete(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_complete", args)
+    end
+
+    # Complete an allowed call, or release one that never reached the upstream.
+    # @param params callRef with status, cost and interrupted, or release with the reason.
+    # @return completed settlement, or null with failure when SolvaPay could not be told.
+    def agent_finish_call(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_finish_call", args)
+    end
+
+    # Gate one HTTP call: verify the caller, then authorize the paid call.
+    # @param params presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer, providerRef and optional protectedResource.
+    # @return Gate result with kind not_agent, rejected, refused or allowed.
+    def agent_gate(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_gate", args)
+    end
+
+    # Say whether a presented key is a verified SolvaPay agent.
+    # @param params presentedKey, issuer, providerRef and optional resource, jwksJson, acceptAgentKeys, environment.
+    # @return Identification with kind agent, rejected or not_agent.
+    def agent_identify(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_identify", args)
+    end
+
+    # Route one request to an MCP server paid by SolvaPay agents.
+    # @param params method, path, authorization, body, issuer, providerRef, mcpPath, serverName and optional OAuth settings.
+    # @return Route with kind pass, response, anonymous, agent or error.
+    def agent_mcp_route(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_mcp_route", args)
+    end
+
+    # Report a window of usage for reconciliation.
+    # @param params reportId, customerRef, source, window, currency, calls and untagged usage.
+    # @return Report reference with each call as SolvaPay reconciled it.
+    def agent_report_usage(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_report_usage", args)
+    end
+
+    # Ask SolvaPay whose an agent key is.
+    # @param params agentKey as presented.
+    # @return Verified agent: agentRef, principalRef, promptExcerpt, environment.
+    def agent_verify_key(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "agent_verify_key", args)
+    end
+
     # Grant credits to a customer balance.
     # @param params Credit grant request (customer, amount, and reason).
     # @return Credit assignment response.

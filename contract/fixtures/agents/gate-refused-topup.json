@@ -1,0 +1,52 @@
+{
+  "suite": "agents",
+  "case": "gate-refused-topup",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "agent",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false,
+            "environment": "sandbox"
+          }
+        },
+        "begun": {
+          "kind": "refused",
+          "reason": "topup_required",
+          "message": "Top up to continue."
+        },
+        "protectedResource": {
+          "resource": "https://api.example.com/v1",
+          "authorizationServer": "https://api.solvapay.test/v1/agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refused",
+      "status": 402,
+      "refused": {
+        "kind": "refused",
+        "reason": "topup_required",
+        "message": "Top up to continue."
+      },
+      "agent": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      },
+      "body": {
+        "error": {
+          "type": "topup_required",
+          "message": "Top up to continue."
+        }
+      }
+    }
+  }
+}

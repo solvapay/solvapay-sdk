@@ -20,7 +20,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { int64 } from '../../../templates/mcp/_base/src/lib/int64'
-import { stringifyLossless, upstreamFetchJson } from '../../../templates/mcp/_base/src/lib/upstreamFetch'
+import {
+  stringifyLossless,
+  upstreamFetchJson,
+} from '../../../templates/mcp/_base/src/lib/upstreamFetch'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURES_DIR = path.join(HERE, '__fixtures__')
@@ -40,10 +43,15 @@ describe('template upstreamFetchJson — lossless integers', () => {
       '"count":42,"price":1.5,"big":1e20,"phone":"0701234567","parts":[{"partId":9007199254740993}]}'
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })),
+      vi.fn(
+        async () =>
+          new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }),
+      ),
     )
 
-    const data = await upstreamFetchJson<Record<string, unknown>>('https://api.example.com/v1/widgets/1')
+    const data = await upstreamFetchJson<Record<string, unknown>>(
+      'https://api.example.com/v1/widgets/1',
+    )
 
     expect(data).toEqual({
       id: '9223372036854775271',
@@ -63,13 +71,20 @@ describe('template stringifyLossless', () => {
       { id: '9223372036854775271', owner: { accountId: '-42' }, phone: '0701234567', count: 3 },
       new Set(['id', 'accountId']),
     )
-    expect(out).toBe('{"id":9223372036854775271,"owner":{"accountId":-42},"phone":"0701234567","count":3}')
+    expect(out).toBe(
+      '{"id":9223372036854775271,"owner":{"accountId":-42},"phone":"0701234567","count":3}',
+    )
   })
 
   it('round-trips an upstream int64 exactly', async () => {
     const source = '{"id":9223372036854775271,"name":"rex"}'
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(source, { status: 200 })))
-    const parsed = await upstreamFetchJson<Record<string, unknown>>('https://api.example.com/v1/widgets/1')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(source, { status: 200 })),
+    )
+    const parsed = await upstreamFetchJson<Record<string, unknown>>(
+      'https://api.example.com/v1/widgets/1',
+    )
     vi.unstubAllGlobals()
     expect(stringifyLossless(parsed, new Set(['id']))).toBe(source)
   })
@@ -113,8 +128,13 @@ describe('scaffold.mjs — end-to-end int64', () => {
     expect(getWidget).toContain('revision: z.number().int().optional(),')
     expect(getWidget).toContain("import { upstreamFetchJson } from '../lib/upstreamFetch'")
 
-    const createWidget = await readFile(path.join(target, 'src', 'tools', 'createWidget.ts'), 'utf8')
-    expect(createWidget).toContain("import { upstreamFetchJson, stringifyLossless } from '../lib/upstreamFetch'")
+    const createWidget = await readFile(
+      path.join(target, 'src', 'tools', 'createWidget.ts'),
+      'utf8',
+    )
+    expect(createWidget).toContain(
+      "import { upstreamFetchJson, stringifyLossless } from '../lib/upstreamFetch'",
+    )
     expect(createWidget).toContain(
       'body: stringifyLossless(input.body ?? {}, new Set(["accountId","id","partId"])),',
     )

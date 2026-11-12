@@ -23,6 +23,31 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `TAX_NOT_COLLECTED_NOTE`
 - added symbol `TOPUP_BALANCE_POLL_DELAYS_MS`
 - added symbol `activatePlan`
+- added symbol `agentAmountString`
+- added symbol `agentAuthorize`
+- added symbol `agentBeginCall`
+- added symbol `agentCallStep`
+- added symbol `agentCanonicalResource`
+- added symbol `agentChallengeHeaders`
+- added symbol `agentComplete`
+- added symbol `agentCompleteBody`
+- added symbol `agentConstants`
+- added symbol `agentCredentialKind`
+- added symbol `agentFinishCall`
+- added symbol `agentFromClaims`
+- added symbol `agentGate`
+- added symbol `agentGateResult`
+- added symbol `agentIdentify`
+- added symbol `agentKeyResult`
+- added symbol `agentMcpRoute`
+- added symbol `agentMcpRouteStep`
+- added symbol `agentPromptFacts`
+- added symbol `agentProtectedResource`
+- added symbol `agentRefusalStatus`
+- added symbol `agentRefusalToolResult`
+- added symbol `agentReportUsage`
+- added symbol `agentSecretKeyEnvironment`
+- added symbol `agentVerifyKey`
 - added symbol `appendPaidToolDescription`
 - added symbol `assertResponseResult`
 - added symbol `assertValidProductRef`
@@ -117,6 +142,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `historyRows`
 - added symbol `includedUnits`
 - added symbol `invokePayableNext`
+- added symbol `isAgentKey`
 - added symbol `isCachedCustomerRefValid`
 - added symbol `isCustomerAddressComplete`
 - added symbol `isEmailConflict`
@@ -130,6 +156,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `listPlans`
 - added symbol `listProducts`
 - added symbol `listPurchases`
+- added symbol `looksLikeJwt`
 - added symbol `makeResponseResult`
 - added symbol `mapRouteError`
 - added symbol `mcpBootstrap`
@@ -146,6 +173,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `normalizeFreeLimit`
 - added symbol `normalizeReactivateResponse`
 - added symbol `overlayClaimedLimits`
+- added symbol `parseAgentResponse`
 - added symbol `paywallErrorToClientPayload`
 - added symbol `paywallStructuredContentSchema`
 - added symbol `paywallToolResult`
@@ -325,6 +353,15 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added boundary type `WebhookError`
 - added boundary type `WebhookErrorCode`
 - added `activatePlan` (POST /v1/sdk/activate)
+- added `agentAuthorize`
+- added `agentBeginCall`
+- added `agentComplete`
+- added `agentFinishCall`
+- added `agentGate`
+- added `agentIdentify`
+- added `agentMcpRoute`
+- added `agentReportUsage`
+- added `agentVerifyKey`
 - added `assignCredits` (POST /v1/sdk/customers/{reference}/credits)
 - added `attachBusinessDetails` (POST /v1/sdk/payment-intents/{processorPaymentId}/business-details)
 - added `bootstrapMcpProduct` (POST /v1/sdk/products/mcp/bootstrap)
@@ -531,6 +568,206 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `activatePlan` on facade `rust`
 - exposed `activatePlan` on facade `typescript`
 - exposed `activatePlan` on facade `wasm-edge`
+- exposed `agentAmountString` on facade `capi`
+- exposed `agentAmountString` on facade `go`
+- exposed `agentAmountString` on facade `node-native`
+- exposed `agentAmountString` on facade `python`
+- exposed `agentAmountString` on facade `ruby`
+- exposed `agentAmountString` on facade `rust`
+- exposed `agentAmountString` on facade `typescript`
+- exposed `agentAmountString` on facade `wasm-edge`
+- exposed `agentAuthorize` on facade `capi`
+- exposed `agentAuthorize` on facade `go`
+- exposed `agentAuthorize` on facade `node-native`
+- exposed `agentAuthorize` on facade `python`
+- exposed `agentAuthorize` on facade `ruby`
+- exposed `agentAuthorize` on facade `rust`
+- exposed `agentAuthorize` on facade `typescript`
+- exposed `agentAuthorize` on facade `wasm-edge`
+- exposed `agentBeginCall` on facade `capi`
+- exposed `agentBeginCall` on facade `go`
+- exposed `agentBeginCall` on facade `node-native`
+- exposed `agentBeginCall` on facade `python`
+- exposed `agentBeginCall` on facade `ruby`
+- exposed `agentBeginCall` on facade `rust`
+- exposed `agentBeginCall` on facade `typescript`
+- exposed `agentBeginCall` on facade `wasm-edge`
+- exposed `agentCallStep` on facade `capi`
+- exposed `agentCallStep` on facade `go`
+- exposed `agentCallStep` on facade `node-native`
+- exposed `agentCallStep` on facade `python`
+- exposed `agentCallStep` on facade `ruby`
+- exposed `agentCallStep` on facade `rust`
+- exposed `agentCallStep` on facade `typescript`
+- exposed `agentCallStep` on facade `wasm-edge`
+- exposed `agentCanonicalResource` on facade `capi`
+- exposed `agentCanonicalResource` on facade `go`
+- exposed `agentCanonicalResource` on facade `node-native`
+- exposed `agentCanonicalResource` on facade `python`
+- exposed `agentCanonicalResource` on facade `ruby`
+- exposed `agentCanonicalResource` on facade `rust`
+- exposed `agentCanonicalResource` on facade `typescript`
+- exposed `agentCanonicalResource` on facade `wasm-edge`
+- exposed `agentChallengeHeaders` on facade `capi`
+- exposed `agentChallengeHeaders` on facade `go`
+- exposed `agentChallengeHeaders` on facade `node-native`
+- exposed `agentChallengeHeaders` on facade `python`
+- exposed `agentChallengeHeaders` on facade `ruby`
+- exposed `agentChallengeHeaders` on facade `rust`
+- exposed `agentChallengeHeaders` on facade `typescript`
+- exposed `agentChallengeHeaders` on facade `wasm-edge`
+- exposed `agentComplete` on facade `capi`
+- exposed `agentComplete` on facade `go`
+- exposed `agentComplete` on facade `node-native`
+- exposed `agentComplete` on facade `python`
+- exposed `agentComplete` on facade `ruby`
+- exposed `agentComplete` on facade `rust`
+- exposed `agentComplete` on facade `typescript`
+- exposed `agentComplete` on facade `wasm-edge`
+- exposed `agentCompleteBody` on facade `capi`
+- exposed `agentCompleteBody` on facade `go`
+- exposed `agentCompleteBody` on facade `node-native`
+- exposed `agentCompleteBody` on facade `python`
+- exposed `agentCompleteBody` on facade `ruby`
+- exposed `agentCompleteBody` on facade `rust`
+- exposed `agentCompleteBody` on facade `typescript`
+- exposed `agentCompleteBody` on facade `wasm-edge`
+- exposed `agentConstants` on facade `capi`
+- exposed `agentConstants` on facade `go`
+- exposed `agentConstants` on facade `node-native`
+- exposed `agentConstants` on facade `python`
+- exposed `agentConstants` on facade `ruby`
+- exposed `agentConstants` on facade `rust`
+- exposed `agentConstants` on facade `typescript`
+- exposed `agentConstants` on facade `wasm-edge`
+- exposed `agentCredentialKind` on facade `capi`
+- exposed `agentCredentialKind` on facade `go`
+- exposed `agentCredentialKind` on facade `node-native`
+- exposed `agentCredentialKind` on facade `python`
+- exposed `agentCredentialKind` on facade `ruby`
+- exposed `agentCredentialKind` on facade `rust`
+- exposed `agentCredentialKind` on facade `typescript`
+- exposed `agentCredentialKind` on facade `wasm-edge`
+- exposed `agentFinishCall` on facade `capi`
+- exposed `agentFinishCall` on facade `go`
+- exposed `agentFinishCall` on facade `node-native`
+- exposed `agentFinishCall` on facade `python`
+- exposed `agentFinishCall` on facade `ruby`
+- exposed `agentFinishCall` on facade `rust`
+- exposed `agentFinishCall` on facade `typescript`
+- exposed `agentFinishCall` on facade `wasm-edge`
+- exposed `agentFromClaims` on facade `capi`
+- exposed `agentFromClaims` on facade `go`
+- exposed `agentFromClaims` on facade `node-native`
+- exposed `agentFromClaims` on facade `python`
+- exposed `agentFromClaims` on facade `ruby`
+- exposed `agentFromClaims` on facade `rust`
+- exposed `agentFromClaims` on facade `typescript`
+- exposed `agentFromClaims` on facade `wasm-edge`
+- exposed `agentGate` on facade `capi`
+- exposed `agentGate` on facade `go`
+- exposed `agentGate` on facade `node-native`
+- exposed `agentGate` on facade `python`
+- exposed `agentGate` on facade `ruby`
+- exposed `agentGate` on facade `rust`
+- exposed `agentGate` on facade `typescript`
+- exposed `agentGate` on facade `wasm-edge`
+- exposed `agentGateResult` on facade `capi`
+- exposed `agentGateResult` on facade `go`
+- exposed `agentGateResult` on facade `node-native`
+- exposed `agentGateResult` on facade `python`
+- exposed `agentGateResult` on facade `ruby`
+- exposed `agentGateResult` on facade `rust`
+- exposed `agentGateResult` on facade `typescript`
+- exposed `agentGateResult` on facade `wasm-edge`
+- exposed `agentIdentify` on facade `capi`
+- exposed `agentIdentify` on facade `go`
+- exposed `agentIdentify` on facade `node-native`
+- exposed `agentIdentify` on facade `python`
+- exposed `agentIdentify` on facade `ruby`
+- exposed `agentIdentify` on facade `rust`
+- exposed `agentIdentify` on facade `typescript`
+- exposed `agentIdentify` on facade `wasm-edge`
+- exposed `agentKeyResult` on facade `capi`
+- exposed `agentKeyResult` on facade `go`
+- exposed `agentKeyResult` on facade `node-native`
+- exposed `agentKeyResult` on facade `python`
+- exposed `agentKeyResult` on facade `ruby`
+- exposed `agentKeyResult` on facade `rust`
+- exposed `agentKeyResult` on facade `typescript`
+- exposed `agentKeyResult` on facade `wasm-edge`
+- exposed `agentMcpRoute` on facade `capi`
+- exposed `agentMcpRoute` on facade `go`
+- exposed `agentMcpRoute` on facade `node-native`
+- exposed `agentMcpRoute` on facade `python`
+- exposed `agentMcpRoute` on facade `ruby`
+- exposed `agentMcpRoute` on facade `rust`
+- exposed `agentMcpRoute` on facade `typescript`
+- exposed `agentMcpRoute` on facade `wasm-edge`
+- exposed `agentMcpRouteStep` on facade `capi`
+- exposed `agentMcpRouteStep` on facade `go`
+- exposed `agentMcpRouteStep` on facade `node-native`
+- exposed `agentMcpRouteStep` on facade `python`
+- exposed `agentMcpRouteStep` on facade `ruby`
+- exposed `agentMcpRouteStep` on facade `rust`
+- exposed `agentMcpRouteStep` on facade `typescript`
+- exposed `agentMcpRouteStep` on facade `wasm-edge`
+- exposed `agentPromptFacts` on facade `capi`
+- exposed `agentPromptFacts` on facade `go`
+- exposed `agentPromptFacts` on facade `node-native`
+- exposed `agentPromptFacts` on facade `python`
+- exposed `agentPromptFacts` on facade `ruby`
+- exposed `agentPromptFacts` on facade `rust`
+- exposed `agentPromptFacts` on facade `typescript`
+- exposed `agentPromptFacts` on facade `wasm-edge`
+- exposed `agentProtectedResource` on facade `capi`
+- exposed `agentProtectedResource` on facade `go`
+- exposed `agentProtectedResource` on facade `node-native`
+- exposed `agentProtectedResource` on facade `python`
+- exposed `agentProtectedResource` on facade `ruby`
+- exposed `agentProtectedResource` on facade `rust`
+- exposed `agentProtectedResource` on facade `typescript`
+- exposed `agentProtectedResource` on facade `wasm-edge`
+- exposed `agentRefusalStatus` on facade `capi`
+- exposed `agentRefusalStatus` on facade `go`
+- exposed `agentRefusalStatus` on facade `node-native`
+- exposed `agentRefusalStatus` on facade `python`
+- exposed `agentRefusalStatus` on facade `ruby`
+- exposed `agentRefusalStatus` on facade `rust`
+- exposed `agentRefusalStatus` on facade `typescript`
+- exposed `agentRefusalStatus` on facade `wasm-edge`
+- exposed `agentRefusalToolResult` on facade `capi`
+- exposed `agentRefusalToolResult` on facade `go`
+- exposed `agentRefusalToolResult` on facade `node-native`
+- exposed `agentRefusalToolResult` on facade `python`
+- exposed `agentRefusalToolResult` on facade `ruby`
+- exposed `agentRefusalToolResult` on facade `rust`
+- exposed `agentRefusalToolResult` on facade `typescript`
+- exposed `agentRefusalToolResult` on facade `wasm-edge`
+- exposed `agentReportUsage` on facade `capi`
+- exposed `agentReportUsage` on facade `go`
+- exposed `agentReportUsage` on facade `node-native`
+- exposed `agentReportUsage` on facade `python`
+- exposed `agentReportUsage` on facade `ruby`
+- exposed `agentReportUsage` on facade `rust`
+- exposed `agentReportUsage` on facade `typescript`
+- exposed `agentReportUsage` on facade `wasm-edge`
+- exposed `agentSecretKeyEnvironment` on facade `capi`
+- exposed `agentSecretKeyEnvironment` on facade `go`
+- exposed `agentSecretKeyEnvironment` on facade `node-native`
+- exposed `agentSecretKeyEnvironment` on facade `python`
+- exposed `agentSecretKeyEnvironment` on facade `ruby`
+- exposed `agentSecretKeyEnvironment` on facade `rust`
+- exposed `agentSecretKeyEnvironment` on facade `typescript`
+- exposed `agentSecretKeyEnvironment` on facade `wasm-edge`
+- exposed `agentVerifyKey` on facade `capi`
+- exposed `agentVerifyKey` on facade `go`
+- exposed `agentVerifyKey` on facade `node-native`
+- exposed `agentVerifyKey` on facade `python`
+- exposed `agentVerifyKey` on facade `ruby`
+- exposed `agentVerifyKey` on facade `rust`
+- exposed `agentVerifyKey` on facade `typescript`
+- exposed `agentVerifyKey` on facade `wasm-edge`
 - exposed `appendPaidToolDescription` on facade `capi`
 - exposed `appendPaidToolDescription` on facade `go`
 - exposed `appendPaidToolDescription` on facade `node-native`
@@ -1235,6 +1472,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `invokePayableNext` on facade `rust-mcp`
 - exposed `invokePayableNext` on facade `typescript-mcp`
 - exposed `invokePayableNext` on facade `wasm-edge`
+- exposed `isAgentKey` on facade `capi`
+- exposed `isAgentKey` on facade `go`
+- exposed `isAgentKey` on facade `node-native`
+- exposed `isAgentKey` on facade `python`
+- exposed `isAgentKey` on facade `ruby`
+- exposed `isAgentKey` on facade `rust`
+- exposed `isAgentKey` on facade `typescript`
+- exposed `isAgentKey` on facade `wasm-edge`
 - exposed `isCachedCustomerRefValid` on facade `capi`
 - exposed `isCachedCustomerRefValid` on facade `node-native`
 - exposed `isCachedCustomerRefValid` on facade `rust`
@@ -1335,6 +1580,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `listPurchases` on facade `rust`
 - exposed `listPurchases` on facade `typescript`
 - exposed `listPurchases` on facade `wasm-edge`
+- exposed `looksLikeJwt` on facade `capi`
+- exposed `looksLikeJwt` on facade `go`
+- exposed `looksLikeJwt` on facade `node-native`
+- exposed `looksLikeJwt` on facade `python`
+- exposed `looksLikeJwt` on facade `ruby`
+- exposed `looksLikeJwt` on facade `rust`
+- exposed `looksLikeJwt` on facade `typescript`
+- exposed `looksLikeJwt` on facade `wasm-edge`
 - exposed `makeResponseResult` on facade `capi`
 - exposed `makeResponseResult` on facade `go-mcp`
 - exposed `makeResponseResult` on facade `node-native`
@@ -1461,6 +1714,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `overlayClaimedLimits` on facade `rust`
 - exposed `overlayClaimedLimits` on facade `typescript`
 - exposed `overlayClaimedLimits` on facade `wasm-edge`
+- exposed `parseAgentResponse` on facade `capi`
+- exposed `parseAgentResponse` on facade `go`
+- exposed `parseAgentResponse` on facade `node-native`
+- exposed `parseAgentResponse` on facade `python`
+- exposed `parseAgentResponse` on facade `ruby`
+- exposed `parseAgentResponse` on facade `rust`
+- exposed `parseAgentResponse` on facade `typescript`
+- exposed `parseAgentResponse` on facade `wasm-edge`
 - exposed `paywallErrorToClientPayload` on facade `capi`
 - exposed `paywallErrorToClientPayload` on facade `go`
 - exposed `paywallErrorToClientPayload` on facade `node-native`

@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-unavailable",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "unavailable"
+    }
+  },
+  "expect": {
+    "result": 502
+  }
+}

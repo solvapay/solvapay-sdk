@@ -23,6 +23,15 @@ type Signature struct {
 // generated operationSignatures table in signature_parity_generated_test.go).
 var Signatures = []Signature{
 	{"ActivatePlan", []string{"params"}},
+	{"AgentAuthorize", []string{"params"}},
+	{"AgentBeginCall", []string{"params"}},
+	{"AgentComplete", []string{"params"}},
+	{"AgentFinishCall", []string{"params"}},
+	{"AgentGate", []string{"params"}},
+	{"AgentIdentify", []string{"params"}},
+	{"AgentMcpRoute", []string{"params"}},
+	{"AgentReportUsage", []string{"params"}},
+	{"AgentVerifyKey", []string{"params"}},
 	{"AssignCredits", []string{"params"}},
 	{"AttachBusinessDetails", []string{"params"}},
 	{"BootstrapMcpProduct", []string{"params"}},

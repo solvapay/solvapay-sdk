@@ -1,0 +1,17 @@
+{
+  "suite": "agents",
+  "case": "parse-unknown-kind",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "other",
+      "value": {}
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Unknown agent response kind \"other\""
+    }
+  }
+}

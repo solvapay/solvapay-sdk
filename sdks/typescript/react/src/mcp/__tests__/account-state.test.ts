@@ -141,7 +141,6 @@ describe('resolveAccountState precedence', () => {
       }),
     ).toBe('D')
   })
-
 })
 
 describe('resolveAccountState plan-shape states', () => {

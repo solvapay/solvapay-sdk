@@ -1,0 +1,18 @@
+{
+  "suite": "agents",
+  "case": "protected-resource-invalid",
+  "input": {
+    "fn": "agentProtectedResource",
+    "args": {
+      "resource": {
+        "resource": "nope"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Invalid URL"
+    }
+  }
+}

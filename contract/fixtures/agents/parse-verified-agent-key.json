@@ -1,0 +1,28 @@
+{
+  "suite": "agents",
+  "case": "parse-verified-agent-key",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "verifiedAgentKey",
+      "value": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "promptExcerpt": false,
+        "environment": "sandbox",
+        "extra": 1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      }
+    }
+  }
+}

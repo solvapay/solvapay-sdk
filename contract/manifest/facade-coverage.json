@@ -67,6 +67,1256 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "agentAmountString": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentAuthorize": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentBeginCall": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCallStep": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCanonicalResource": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentChallengeHeaders": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentComplete": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCompleteBody": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentConstants": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCredentialKind": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentFinishCall": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentFromClaims": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentGate": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentGateResult": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentIdentify": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentKeyResult": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentMcpRoute": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentMcpRouteStep": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentPromptFacts": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentProtectedResource": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentRefusalStatus": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentRefusalToolResult": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentReportUsage": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentSecretKeyEnvironment": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentVerifyKey": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "reason": "Agent payment client operation; it is on the language SDK client, with no named declaration on the MCP package"
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
     "appendPaidToolDescription": {
       "capi": {
         "exposed": true
@@ -5011,6 +6261,56 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "isAgentKey": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
     "isCachedCustomerRefValid": {
       "capi": {
         "exposed": true
@@ -5616,6 +6916,56 @@
       }
     },
     "listPurchases": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "looksLikeJwt": {
       "capi": {
         "exposed": true
       },
@@ -6488,6 +7838,56 @@
       "ruby": {
         "exposed": false,
         "reason": "no public Ruby declaration; only a native dispatch name mentions it"
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "parseAgentResponse": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
       },
       "ruby-mcp": {
         "exposed": false,

@@ -1,0 +1,25 @@
+{
+  "suite": "agents",
+  "case": "parse-complete-money-without-currency",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "complete",
+      "value": {
+        "callRef": "call_TEST0001",
+        "settled": true,
+        "source": "reported",
+        "amount": {
+          "amount": "0.1"
+        },
+        "duplicate": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "amount.currency must be a non-empty string"
+    }
+  }
+}

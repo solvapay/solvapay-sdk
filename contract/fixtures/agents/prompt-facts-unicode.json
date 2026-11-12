@@ -1,0 +1,18 @@
+{
+  "suite": "agents",
+  "case": "prompt-facts-unicode",
+  "input": {
+    "fn": "agentPromptFacts",
+    "args": {
+      "text": "Grüße, 世界 😀",
+      "toolError": false
+    }
+  },
+  "expect": {
+    "result": {
+      "promptHash": "sha256:921467e899170b841a63bd6514aeed31eb6339fe50c43e03bff5c9520f0790b1",
+      "toolError": false,
+      "excerpt": "Grüße, 世界 😀"
+    }
+  }
+}

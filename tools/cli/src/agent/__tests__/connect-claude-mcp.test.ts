@@ -33,7 +33,13 @@ function run(argv: string[], npx?: string) {
   }) as Promise<number>
 }
 
-const approved = { status: 'approved', agentKey: 'agk_SECRET', agentRef: 'agt_CLAUDE01', providerRef: PROV, merchantName: 'Opper' }
+const approved = {
+  status: 'approved',
+  agentKey: 'agk_SECRET',
+  agentRef: 'agt_CLAUDE01',
+  providerRef: PROV,
+  merchantName: 'Opper',
+}
 
 beforeEach(async () => {
   home = await mkdtemp(join(tmpdir(), 'claude-mcp-'))
@@ -46,9 +52,18 @@ beforeEach(async () => {
   answers = []
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const path = url.slice(API.length)
-    if (path === `/catalog/listings/${PROV}`) return Response.json({ providerRef: PROV, mcpUrl: MCP, ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}) })
+    if (path === `/catalog/listings/${PROV}`)
+      return Response.json({
+        providerRef: PROV,
+        mcpUrl: MCP,
+        ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}),
+      })
     if (path === '/agent/connect-requests' && init?.method === 'POST') {
-      expect(JSON.parse(String(init.body))).toEqual({ providerRef: PROV, name: 'Claude Code', client: 'claude' })
+      expect(JSON.parse(String(init.body))).toEqual({
+        providerRef: PROV,
+        name: 'Claude Code',
+        client: 'claude',
+      })
       opens++
       return Response.json(
         {
@@ -62,7 +77,8 @@ beforeEach(async () => {
         { status: 201 },
       )
     }
-    if (path === '/agent/connect-requests/claims') return Response.json(claims.shift() ?? { status: 'claimed' })
+    if (path === '/agent/connect-requests/claims')
+      return Response.json(claims.shift() ?? { status: 'claimed' })
     return new Response('not found', { status: 404 })
   })
 })
@@ -75,7 +91,9 @@ describe('connect --add-mcp', () => {
   it("adds the merchant's MCP server to Claude Code at user scope once approved, with the key read by a helper", async () => {
     claims.push(approved)
     expect(await run(connect)).toBe(0)
-    expect(lines.join('\n')).toContain(`run the same command again:\n  npx solvapay connect ${PROV} --client claude --api ${API} --add-mcp`)
+    expect(lines.join('\n')).toContain(
+      `run the same command again:\n  npx solvapay connect ${PROV} --client claude --api ${API} --add-mcp`,
+    )
     expect(calls).toEqual([])
 
     expect(await run(connect)).toBe(0)
@@ -89,8 +107,12 @@ describe('connect --add-mcp', () => {
     expect(config).toEqual({ type: 'http', url: MCP, headersHelper: headersHelper(env, PROV) })
     expect(json).not.toContain('agk_SECRET')
     expect(lines.join('\n')).not.toContain('agk_SECRET')
-    expect(lines.at(-1)).toContain(`Claude Code has a new MCP server "opper" at ${MCP} (user scope)`)
-    expect(lines.at(-1)).toContain('Start a new Claude Code session to use it; one already open will not see it.')
+    expect(lines.at(-1)).toContain(
+      `Claude Code has a new MCP server "opper" at ${MCP} (user scope)`,
+    )
+    expect(lines.at(-1)).toContain(
+      'Start a new Claude Code session to use it; one already open will not see it.',
+    )
     expect(lines.at(-1)).not.toContain('Run /mcp')
   })
 
@@ -99,7 +121,9 @@ describe('connect --add-mcp', () => {
     await run(connect)
     await run(connect)
     const helper = headersHelper(env, PROV)
-    expect(JSON.parse(execSync(helper, { encoding: 'utf8' }))).toEqual({ Authorization: 'Bearer agk_SECRET' })
+    expect(JSON.parse(execSync(helper, { encoding: 'utf8' }))).toEqual({
+      Authorization: 'Bearer agk_SECRET',
+    })
 
     const other = { ...env, SOLVAPAY_HOME: join(home, 'empty') }
     expect(() => execSync(headersHelper(other, PROV), { stdio: 'pipe' })).toThrow()
@@ -110,7 +134,10 @@ describe('connect --add-mcp', () => {
     await run(connect)
     const exists = { code: 1, output: 'MCP server opper already exists in user config' }
     const claudeJson = (server: object) =>
-      writeFile(join(home, 'claude', '.claude.json'), JSON.stringify({ mcpServers: { opper: server } }))
+      writeFile(
+        join(home, 'claude', '.claude.json'),
+        JSON.stringify({ mcpServers: { opper: server } }),
+      )
     await mkdir(join(home, 'claude'), { recursive: true })
 
     await claudeJson({ type: 'http', url: MCP, headersHelper: headersHelper(env, PROV) })
@@ -120,7 +147,11 @@ describe('connect --add-mcp', () => {
     expect(calls.map(c => c.args[1])).toEqual(['add-json'])
 
     calls = []
-    await claudeJson({ type: 'http', url: MCP, headersHelper: `'/old/node' -e 'read ${join(env.SOLVAPAY_HOME, 'agents', `${PROV}.json`)}'` })
+    await claudeJson({
+      type: 'http',
+      url: MCP,
+      headersHelper: `'/old/node' -e 'read ${join(env.SOLVAPAY_HOME, 'agents', `${PROV}.json`)}'`,
+    })
     answers.push(exists)
     expect(await run(connect)).toBe(0)
     expect(lines.at(-1)).toContain(`"opper" is updated: it is at ${MCP}`)
@@ -128,7 +159,11 @@ describe('connect --add-mcp', () => {
 
     // Its own server at another URL, e.g. --mcp-url on a merchant connected before: moved, not refused.
     calls = []
-    await claudeJson({ type: 'http', url: 'https://old.opper.test/mcp', headersHelper: headersHelper(env, PROV) })
+    await claudeJson({
+      type: 'http',
+      url: 'https://old.opper.test/mcp',
+      headersHelper: headersHelper(env, PROV),
+    })
     answers.push(exists)
     expect(await run(connect)).toBe(0)
     expect(calls.map(c => c.args[1])).toEqual(['add-json', 'remove', 'add-json'])
@@ -146,7 +181,9 @@ describe('connect --add-mcp', () => {
     claims.push(approved)
     await run(connect)
     answers.push({ code: 1, output: 'Invalid configuration\n' })
-    await expect(run(connect)).rejects.toThrow('claude mcp add-json opper failed (exit 1): Invalid configuration')
+    await expect(run(connect)).rejects.toThrow(
+      'claude mcp add-json opper failed (exit 1): Invalid configuration',
+    )
   })
 
   it('offers launch, as the preview CLI, when the merchant has a model API', async () => {
@@ -155,7 +192,9 @@ describe('connect --add-mcp', () => {
     const plain = ['connect', PROV, '--client', 'claude', '--api', API]
     await run(plain, 'npx solvapay@preview')
     expect(await run(plain, 'npx solvapay@preview')).toBe(0)
-    expect(lines.at(-1)).toContain(`Start Claude Code paying with it:\n  npx solvapay@preview launch claude ${PROV}`)
+    expect(lines.at(-1)).toContain(
+      `Start Claude Code paying with it:\n  npx solvapay@preview launch claude ${PROV}`,
+    )
     expect(lines.at(-1)).toContain('Or add its MCP server to Claude Code')
   })
 
@@ -166,7 +205,9 @@ describe('connect --add-mcp', () => {
     expect(await run(plain)).toBe(0)
     // Opper's listing here has no model API, so there is nothing to launch on.
     expect(lines.at(-1)).not.toContain('launch')
-    expect(lines.at(-1)).toContain('To use it, add its MCP server to Claude Code, paying with the same key: run the same command with --add-mcp.')
+    expect(lines.at(-1)).toContain(
+      'To use it, add its MCP server to Claude Code, paying with the same key: run the same command with --add-mcp.',
+    )
     expect(calls).toEqual([])
 
     expect(await run(connect)).toBe(0)
@@ -177,12 +218,22 @@ describe('connect --add-mcp', () => {
   })
 
   it('refuses --add-mcp for another host, with a model API, or changed on a waiting request', async () => {
-    await expect(run(['connect', PROV, '--client', 'hermes', '--api', API, '--add-mcp'])).rejects.toThrow(
-      '--add-mcp adds the merchant\'s MCP server to Claude Code, so it goes with --client claude (got --client hermes)',
+    await expect(
+      run(['connect', PROV, '--client', 'hermes', '--api', API, '--add-mcp']),
+    ).rejects.toThrow(
+      "--add-mcp adds the merchant's MCP server to Claude Code, so it goes with --client claude (got --client hermes)",
     )
     await expect(
-      run([...connect, '--model-url', 'https://opper.test/v3/compat', '--model', 'aws/claude-sonnet-4-6-eu']),
-    ).rejects.toThrow('--add-mcp adds the merchant\'s MCP server, and --model-url connects its model API')
+      run([
+        ...connect,
+        '--model-url',
+        'https://opper.test/v3/compat',
+        '--model',
+        'aws/claude-sonnet-4-6-eu',
+      ]),
+    ).rejects.toThrow(
+      "--add-mcp adds the merchant's MCP server, and --model-url connects its model API",
+    )
     expect(opens).toBe(0)
 
     await run(['connect', PROV, '--client', 'claude', '--api', API])

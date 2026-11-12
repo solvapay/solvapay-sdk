@@ -1,0 +1,31 @@
+{
+  "suite": "agents",
+  "case": "parse-usage-report-unknown-result",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "usageReport",
+      "value": {
+        "reference": "urp_TEST0001",
+        "currency": "USD",
+        "duplicate": false,
+        "results": [
+          {
+            "result": "lost"
+          }
+        ],
+        "untagged": {
+          "total": "0.5",
+          "beforePolicy": "0.1",
+          "flagged": true
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "result must be one of matched, adjusted, pending, already_reconciled, ignored, got \"lost\""
+    }
+  }
+}

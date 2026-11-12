@@ -1,0 +1,25 @@
+{
+  "suite": "agents",
+  "case": "from-claims-principal-missing",
+  "input": {
+    "fn": "agentFromClaims",
+    "args": {
+      "claims": {
+        "sub": "agt_TESTAGNT",
+        "scope": "usage",
+        "env": "sandbox",
+        "jti": "tok_1",
+        "iat": 1767224700,
+        "exp": 1767225600
+      },
+      "merchantEnvironment": null
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "invalid",
+      "detail": "principal is missing"
+    }
+  }
+}

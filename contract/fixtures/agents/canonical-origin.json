@@ -1,0 +1,16 @@
+{
+  "suite": "agents",
+  "case": "canonical-origin",
+  "input": {
+    "fn": "agentCanonicalResource",
+    "args": {
+      "resource": "https://example.com/"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": "https://example.com"
+    }
+  }
+}

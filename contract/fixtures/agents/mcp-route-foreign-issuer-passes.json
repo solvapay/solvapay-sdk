@@ -1,0 +1,22 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-foreign-issuer-passes",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2Vsc2V3aGVyZSJ9.c2ln"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "pass"
+    }
+  }
+}

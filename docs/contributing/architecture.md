@@ -180,11 +180,12 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 headers, idempotency, and retry. Three op surfaces live in the manifest
 (`contract/manifest/sdk-contract.yaml`); do not add a fourth hand table:
 
-| Surface                         | Count | Source of truth                                                                                                          | Dispatch                                                  |
-| ------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| Routed `SolvaPayClient` methods | 38    | `operations:` catalog                                                                                                    | `solvapay-transport` client                               |
-| MCP composites                  | 7     | `mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`, `mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks` | transport client (async)                                  |
-| MCP `syncOp`                    | ~20   | `mcp:` entries with `surface: syncOp`                                                                                    | `solvapay-mcp` `dispatch_sync` / generated `MCP_SYNC_OPS` |
+| Surface                         | Count | Source of truth                                                                                                                                             | Dispatch                                                  |
+| ------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Routed `SolvaPayClient` methods | 38    | `operations:` catalog                                                                                                                                       | `solvapay-transport` client                               |
+| MCP composites                  | 7     | `mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`, `mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks`                                    | transport client (async)                                  |
+| Agent composites                | 9     | `agentVerifyKey`, `agentAuthorize`, `agentComplete`, `agentReportUsage`, `agentIdentify`, `agentBeginCall`, `agentFinishCall`, `agentGate`, `agentMcpRoute` | transport client (async)                                  |
+| MCP `syncOp`                    | ~20   | `mcp:` entries with `surface: syncOp`                                                                                                                       | `solvapay-mcp` `dispatch_sync` / generated `MCP_SYNC_OPS` |
 
 `core/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.
 

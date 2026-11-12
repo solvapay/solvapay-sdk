@@ -1,0 +1,32 @@
+{
+  "suite": "agents",
+  "case": "gate-rejected-other-environment",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "rejected",
+          "reason": "environment_mismatch",
+          "detail": "This agent spends in sandbox, and this secret key is for live"
+        },
+        "protectedResource": {
+          "resource": "https://api.example.com/v1",
+          "authorizationServer": "https://api.solvapay.test/v1/agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rejected",
+      "status": 403,
+      "reason": "environment_mismatch",
+      "detail": "This agent spends in sandbox, and this secret key is for live",
+      "log": {
+        "reason": "agent_token_environment_mismatch",
+        "detail": "This agent spends in sandbox, and this secret key is for live"
+      }
+    }
+  }
+}

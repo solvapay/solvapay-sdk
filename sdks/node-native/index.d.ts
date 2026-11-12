@@ -110,7 +110,73 @@ export declare class NativeClient {
   mcpDispatch(argsJson: string): Promise<string>
   /** `fetchJwks` */
   fetchJwks(argsJson: string): Promise<string>
+  /** `agentVerifyKey` */
+  agentVerifyKey(argsJson: string): Promise<string>
+  /** `agentAuthorize` */
+  agentAuthorize(argsJson: string): Promise<string>
+  /** `agentComplete` */
+  agentComplete(argsJson: string): Promise<string>
+  /** `agentReportUsage` */
+  agentReportUsage(argsJson: string): Promise<string>
+  /** `agentIdentify` */
+  agentIdentify(argsJson: string): Promise<string>
+  /** `agentBeginCall` */
+  agentBeginCall(argsJson: string): Promise<string>
+  /** `agentFinishCall` */
+  agentFinishCall(argsJson: string): Promise<string>
+  /** `agentGate` */
+  agentGate(argsJson: string): Promise<string>
+  /** `agentMcpRoute` */
+  agentMcpRoute(argsJson: string): Promise<string>
 }
+
+/** Binding for `agentAmountString`. */
+export declare function agentAmountString(argsJson: string): string
+
+/** Binding for `agentCallStep`. */
+export declare function agentCallStep(argsJson: string): string
+
+/** Binding for `agentCanonicalResource`. */
+export declare function agentCanonicalResource(argsJson: string): string
+
+/** Binding for `agentChallengeHeaders`. */
+export declare function agentChallengeHeaders(argsJson: string): string
+
+/** Binding for `agentCompleteBody`. */
+export declare function agentCompleteBody(argsJson: string): string
+
+/** Binding for `agentConstants`. */
+export declare function agentConstants(argsJson: string): string
+
+/** Binding for `agentCredentialKind`. */
+export declare function agentCredentialKind(argsJson: string): string
+
+/** Binding for `agentFromClaims`. */
+export declare function agentFromClaims(argsJson: string): string
+
+/** Binding for `agentGateResult`. */
+export declare function agentGateResult(argsJson: string): string
+
+/** Binding for `agentKeyResult`. */
+export declare function agentKeyResult(argsJson: string): string
+
+/** Binding for `agentMcpRouteStep`. */
+export declare function agentMcpRouteStep(argsJson: string): string
+
+/** Binding for `agentPromptFacts`. */
+export declare function agentPromptFacts(argsJson: string): string
+
+/** Binding for `agentProtectedResource`. */
+export declare function agentProtectedResource(argsJson: string): string
+
+/** Binding for `agentRefusalStatus`. */
+export declare function agentRefusalStatus(argsJson: string): string
+
+/** Binding for `agentRefusalToolResult`. */
+export declare function agentRefusalToolResult(argsJson: string): string
+
+/** Binding for `agentSecretKeyEnvironment`. */
+export declare function agentSecretKeyEnvironment(argsJson: string): string
 
 /** Binding for `appendPaidToolDescription`. */
 export declare function appendPaidToolDescription(argsJson: string): string
@@ -328,6 +394,9 @@ export declare function includedUnits(argsJson: string): string
 /** Binding for `invokePayableNext`. */
 export declare function invokePayableNext(argsJson: string): string
 
+/** Binding for `isAgentKey`. */
+export declare function isAgentKey(argsJson: string): string
+
 /** Binding for `isCachedCustomerRefValid`. */
 export declare function isCachedCustomerRefValid(argsJson: string): string
 
@@ -357,6 +426,9 @@ export declare function isZeroDecimalCurrency(argsJson: string): string
 
 /** Binding for `linkLabel`. */
 export declare function linkLabel(argsJson: string): string
+
+/** Binding for `looksLikeJwt`. */
+export declare function looksLikeJwt(argsJson: string): string
 
 /** Binding for `makeResponseResult`. */
 export declare function makeResponseResult(argsJson: string): string
@@ -400,6 +472,9 @@ export declare function normalizeReactivateResponse(argsJson: string): string
 
 /** Binding for `overlayClaimedLimits`. */
 export declare function overlayClaimedLimits(argsJson: string): string
+
+/** Binding for `parseAgentResponse`. */
+export declare function parseAgentResponse(argsJson: string): string
 
 /**
  * Binding for `paywallErrorToClientPayload`.

@@ -1601,6 +1601,315 @@ impl SolvaPayClient {
             })
         })
     }
+
+    /// `agentVerifyKey`
+    fn agent_verify_key<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentVerifyKeyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_verify_key(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_verify_key`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_verify_key_blocking")]
+    fn agent_verify_key_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentVerifyKeyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_verify_key(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentAuthorize`
+    fn agent_authorize<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentAuthorizeParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_authorize(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_authorize`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_authorize_blocking")]
+    fn agent_authorize_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentAuthorizeParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_authorize(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentComplete`
+    fn agent_complete<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentCompleteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_complete(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_complete`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_complete_blocking")]
+    fn agent_complete_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentCompleteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_complete(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentReportUsage`
+    fn agent_report_usage<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentReportUsageParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_report_usage(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_report_usage`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_report_usage_blocking")]
+    fn agent_report_usage_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentReportUsageParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_report_usage(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentIdentify`
+    fn agent_identify<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentIdentifyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_identify(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_identify`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_identify_blocking")]
+    fn agent_identify_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentIdentifyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_identify(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentBeginCall`
+    fn agent_begin_call<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentBeginCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_begin_call(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_begin_call`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_begin_call_blocking")]
+    fn agent_begin_call_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentBeginCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_begin_call(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentFinishCall`
+    fn agent_finish_call<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentFinishCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_finish_call(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_finish_call`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_finish_call_blocking")]
+    fn agent_finish_call_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentFinishCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_finish_call(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentGate`
+    fn agent_gate<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+                    client.agent_gate(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_gate`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_gate_blocking")]
+    fn agent_gate_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+                    client.agent_gate(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentMcpRoute`
+    fn agent_mcp_route<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentMcpRouteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_mcp_route(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::agent_mcp_route`] (interpreter detached while awaiting).
+    #[pyo3(name = "agent_mcp_route_blocking")]
+    fn agent_mcp_route_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentMcpRouteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_mcp_route(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 /// Extracts path refs from a combined args object, leaving the remaining body.

@@ -65,6 +65,15 @@ const PURE_SYNC = {
 const FIXTURE_OPERATION_IDS = SHIM_JS_NAMES.filter(id =>
   [
     'activatePlan',
+    'agentAuthorize',
+    'agentBeginCall',
+    'agentComplete',
+    'agentFinishCall',
+    'agentGate',
+    'agentIdentify',
+    'agentMcpRoute',
+    'agentReportUsage',
+    'agentVerifyKey',
     'assignCredits',
     'attachBusinessDetails',
     'bootstrapMcpProduct',
@@ -116,7 +125,7 @@ function buildFixtureManifest(): SdkContractManifest {
   const operations: SdkContractManifest['operations'] = {}
   for (const id of FIXTURE_OPERATION_IDS) {
     const isCheckLimits = id === 'checkLimits'
-    const isMcpComposite = id.startsWith('mcp') || id === 'fetchJwks'
+    const isMcpComposite = id.startsWith('mcp') || id.startsWith('agent') || id === 'fetchJwks'
     operations[id] = {
       ...(isMcpComposite
         ? {}

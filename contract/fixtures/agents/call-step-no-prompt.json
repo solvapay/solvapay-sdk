@@ -1,0 +1,45 @@
+{
+  "suite": "agents",
+  "case": "call-step-no-prompt",
+  "input": {
+    "fn": "agentCallStep",
+    "args": {
+      "input": {
+        "call": {
+          "requestId": "req_1",
+          "agentToken": "tok",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false
+          },
+          "item": "model-x",
+          "estimate": {
+            "amount": "0.25",
+            "currency": "USD"
+          },
+          "prompt": null
+        },
+        "maxWaitSeconds": 0,
+        "nowMs": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "authorize",
+      "body": {
+        "agentToken": "tok",
+        "requestId": "req_1",
+        "item": "model-x",
+        "estimate": {
+          "amount": "0.25",
+          "currency": "USD"
+        },
+        "wait": 0
+      },
+      "timeoutMs": 10000,
+      "deadlineMs": 0
+    }
+  }
+}

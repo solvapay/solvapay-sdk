@@ -1,0 +1,17 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-not-object",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": []
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Authorize response was not an object"
+    }
+  }
+}

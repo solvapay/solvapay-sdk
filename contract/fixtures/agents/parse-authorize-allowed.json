@@ -1,0 +1,38 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-allowed",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "allowed",
+        "callRef": "call_TEST0001",
+        "reservation": {
+          "held": {
+            "amount": "0.25",
+            "currency": "USD"
+          },
+          "expiresAt": "2026-01-01T00:30:00.000Z"
+        },
+        "extra": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "status": "allowed",
+        "callRef": "call_TEST0001",
+        "reservation": {
+          "held": {
+            "amount": "0.25",
+            "currency": "USD"
+          },
+          "expiresAt": "2026-01-01T00:30:00.000Z"
+        }
+      }
+    }
+  }
+}

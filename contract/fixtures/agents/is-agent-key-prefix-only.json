@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "is-agent-key-prefix-only",
+  "input": {
+    "fn": "isAgentKey",
+    "args": {
+      "value": "agk_"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

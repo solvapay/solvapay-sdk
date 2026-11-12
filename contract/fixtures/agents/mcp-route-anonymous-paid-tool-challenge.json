@@ -1,0 +1,47 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-anonymous-paid-tool-challenge",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp"
+        },
+        "paidTools": ["paid"],
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "tools/call",
+          "params": {
+            "name": "paid"
+          }
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "response",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32001,
+          "message": "Sign in to pay for this tool"
+        }
+      }
+    }
+  }
+}

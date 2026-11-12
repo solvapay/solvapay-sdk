@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-approval-client-closed",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "approval_client_closed"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

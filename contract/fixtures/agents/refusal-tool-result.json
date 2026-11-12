@@ -1,0 +1,31 @@
+{
+  "suite": "agents",
+  "case": "refusal-tool-result",
+  "input": {
+    "fn": "agentRefusalToolResult",
+    "args": {
+      "refused": {
+        "kind": "refused",
+        "reason": "deny",
+        "message": "Over the cap."
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "Over the cap."
+        }
+      ],
+      "structuredContent": {
+        "refusal": {
+          "reason": "deny",
+          "message": "Over the cap."
+        }
+      }
+    }
+  }
+}

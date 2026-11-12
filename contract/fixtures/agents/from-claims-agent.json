@@ -1,0 +1,35 @@
+{
+  "suite": "agents",
+  "case": "from-claims-agent",
+  "input": {
+    "fn": "agentFromClaims",
+    "args": {
+      "claims": {
+        "sub": "agt_TESTAGNT",
+        "principal": "ppl_ABCDEFGHIJKLMNOP",
+        "scope": "usage",
+        "env": "sandbox",
+        "jti": "tok_1",
+        "iat": 1767224700,
+        "exp": 1767225600,
+        "px": true,
+        "cid": "oac_1"
+      },
+      "merchantEnvironment": "sandbox"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "agent": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "tokenId": "tok_1",
+        "expiresAt": "2026-01-01T00:00:00.000Z",
+        "promptExcerpt": true,
+        "environment": "sandbox",
+        "clientId": "oac_1"
+      }
+    }
+  }
+}

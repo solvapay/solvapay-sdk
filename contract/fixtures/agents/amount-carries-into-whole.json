@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "amount-carries-into-whole",
+  "input": {
+    "fn": "agentAmountString",
+    "args": {
+      "amount": 0.999999999
+    }
+  },
+  "expect": {
+    "result": "1"
+  }
+}

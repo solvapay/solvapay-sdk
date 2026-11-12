@@ -98,6 +98,200 @@ func TOPUP_BALANCE_POLL_DELAYS_MS(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_topup_balance_poll_delays_ms_binding", "{}")
 }
 
+// AgentAmountString format an amount as a decimal string with up to 8 places.
+// Returns Decimal string with trailing zeros trimmed.
+func AgentAmountString(ctx context.Context, amount any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"amount": amount,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_amount_string_binding", string(payload))
+}
+
+// AgentCallStep decide the next move of a paid agent call.
+// Returns Step with kind authorize, sleep, allow or refused.
+func AgentCallStep(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_call_step_binding", string(payload))
+}
+
+// AgentCanonicalResource return the canonical form SolvaPay compares OAuth resources in.
+// Returns ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+func AgentCanonicalResource(ctx context.Context, resource any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"resource": resource,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_canonical_resource_binding", string(payload))
+}
+
+// AgentChallengeHeaders build the WWW-Authenticate challenge that sends a host to sign in.
+// Returns ok with the header map, or ok false when the resource is not usable.
+func AgentChallengeHeaders(ctx context.Context, resource any, description any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"resource":    resource,
+		"description": description,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_challenge_headers_binding", string(payload))
+}
+
+// AgentCompleteBody build the complete request body for how a call ended.
+// Returns status, cost with a string amount or null, and interrupted when set.
+func AgentCompleteBody(ctx context.Context, result any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"result": result,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_complete_body_binding", string(payload))
+}
+
+// AgentConstants return the frozen agent payment constants.
+// Returns Refusal reasons, reconciliation results and reasons, environments, key prefix, wait and cache limits, claim names.
+func AgentConstants(ctx context.Context) (any, error) {
+	payload, err := json.Marshal(map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_constants_binding", string(payload))
+}
+
+// AgentCredentialKind classify how a presented key is checked.
+// Returns agent_key, agent_token or not_agent.
+func AgentCredentialKind(ctx context.Context, presentedKey any, acceptAgentKeys any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"presentedKey":    presentedKey,
+		"acceptAgentKeys": acceptAgentKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_credential_kind_binding", string(payload))
+}
+
+// AgentFromClaims read the agent a verified token payload names.
+// Returns ok with the agent, or ok false with reason invalid or environment_mismatch.
+func AgentFromClaims(ctx context.Context, claims any, merchantEnvironment any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"claims":              claims,
+		"merchantEnvironment": merchantEnvironment,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_from_claims_binding", string(payload))
+}
+
+// AgentGateResult turn an identification and a call outcome into an HTTP gate result.
+// Returns Gate result with kind not_agent, rejected, begin, refused or allowed.
+func AgentGateResult(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_gate_result_binding", string(payload))
+}
+
+// AgentKeyResult decide what an agent key verification answer means.
+// Returns ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+func AgentKeyResult(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_key_result_binding", string(payload))
+}
+
+// AgentMcpRouteStep decide where one request to an agent-paid MCP server goes.
+// Returns Route with kind pass, response, anonymous, identify, agent or error.
+func AgentMcpRouteStep(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_mcp_route_step_binding", string(payload))
+}
+
+// AgentPromptFacts compute the prompt facts sent with an authorize.
+// Returns promptHash, toolError and the last 1,500 characters as excerpt.
+func AgentPromptFacts(ctx context.Context, text any, toolError any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"text":      text,
+		"toolError": toolError,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_prompt_facts_binding", string(payload))
+}
+
+// AgentProtectedResource build the RFC 9728 view of a protected resource.
+// Returns Canonical resource, metadata path, metadata URL and the metadata document.
+func AgentProtectedResource(ctx context.Context, resource any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"resource": resource,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_protected_resource_binding", string(payload))
+}
+
+// AgentRefusalStatus map a refusal reason to its HTTP status.
+// Returns 401, 402, 422 or 502, or null for an unknown reason.
+func AgentRefusalStatus(ctx context.Context, reason any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"reason": reason,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_refusal_status_binding", string(payload))
+}
+
+// AgentRefusalToolResult shape a refusal as an MCP tool error.
+// Returns Tool result with isError, the sentence as text and structuredContent.refusal.
+func AgentRefusalToolResult(ctx context.Context, refused any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"refused": refused,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_refusal_tool_result_binding", string(payload))
+}
+
+// AgentSecretKeyEnvironment read the environment a merchant secret key is for.
+// Returns sandbox or live, or null when the prefix does not say.
+func AgentSecretKeyEnvironment(ctx context.Context, secretKey any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"secretKey": secretKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_secret_key_environment_binding", string(payload))
+}
+
 // AppendPaidToolDescription append the paid-tool account hint to a merchant tool description.
 // The description parameter is Optional merchant-authored description; trailing whitespace is stripped.
 // Returns Description plus hint, or the hint alone when no description is present.
@@ -489,6 +683,18 @@ func IncludedUnits(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_included_units_binding", string(payload))
 }
 
+// IsAgentKey tell whether a presented key is an agent key.
+// Returns True for the agk_ prefix with something after it.
+func IsAgentKey(ctx context.Context, value any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"value": value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_is_agent_key_binding", string(payload))
+}
+
 // IsPostalCodeRequired whether Stripe Tax requires a postal or ZIP code for a country.
 // Returns True when a postal or ZIP code is required.
 func IsPostalCodeRequired(ctx context.Context, country any) (any, error) {
@@ -563,6 +769,18 @@ func LinkLabel(ctx context.Context, name any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_link_label_binding", string(payload))
 }
 
+// LooksLikeJwt tell whether a presented key is a JWS compact token.
+// Returns True for three base64url parts.
+func LooksLikeJwt(ctx context.Context, value any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"value": value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_looks_like_jwt_binding", string(payload))
+}
+
 // MeterName read the meter a plan counts against from a per-unit charge, tier, or limit option.
 // Returns Meter name, or null when no charge, tier, or limit names one.
 func MeterName(ctx context.Context, priced any) (any, error) {
@@ -610,6 +828,19 @@ func NormalizeFreeLimit(ctx context.Context, limit any) (any, error) {
 		return nil, err
 	}
 	return nativecall.CallSync(ctx, "sv_normalize_free_limit_binding", string(payload))
+}
+
+// ParseAgentResponse read one agent API answer strictly, field by field.
+// Returns ok with the checked value, or ok false with the first field that did not read.
+func ParseAgentResponse(ctx context.Context, kind any, value any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"kind":  kind,
+		"value": value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_parse_agent_response_binding", string(payload))
 }
 
 // PaywallErrorToClientPayload project a PaywallError into the client-facing payload shape.

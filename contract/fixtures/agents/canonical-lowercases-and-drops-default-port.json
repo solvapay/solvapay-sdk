@@ -1,0 +1,16 @@
+{
+  "suite": "agents",
+  "case": "canonical-lowercases-and-drops-default-port",
+  "input": {
+    "fn": "agentCanonicalResource",
+    "args": {
+      "resource": "HTTPS://MCP.Example.COM:443/mcp/"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": "https://mcp.example.com/mcp"
+    }
+  }
+}

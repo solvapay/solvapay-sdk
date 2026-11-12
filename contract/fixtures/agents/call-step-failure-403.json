@@ -1,0 +1,47 @@
+{
+  "suite": "agents",
+  "case": "call-step-failure-403",
+  "input": {
+    "fn": "agentCallStep",
+    "args": {
+      "input": {
+        "call": {
+          "requestId": "req_1",
+          "agentToken": "tok",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false
+          },
+          "item": "model-x",
+          "estimate": {
+            "amount": "0.25",
+            "currency": "USD"
+          },
+          "prompt": {
+            "promptHash": "sha256:abc",
+            "toolError": false,
+            "excerpt": "the end"
+          }
+        },
+        "maxWaitSeconds": 0,
+        "nowMs": 0,
+        "failure": {
+          "status": 403,
+          "error": "POST /v1/sdk/agent/calls failed (403): other merchant"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refused",
+      "reason": "agent_not_accepted",
+      "message": "SolvaPay did not accept this agent (revoked or not for this merchant).",
+      "log": {
+        "status": 403,
+        "error": "POST /v1/sdk/agent/calls failed (403): other merchant"
+      }
+    }
+  }
+}

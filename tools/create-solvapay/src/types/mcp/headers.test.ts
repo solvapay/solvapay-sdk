@@ -48,13 +48,13 @@ describe('scaffold.mjs — header parameters', () => {
 
     // Non-identifier names use bracket access (was `input.["page-size"]`, a syntax error).
     expect(tool).toContain(
-      "if (input[\"page-size\"] !== undefined) url.searchParams.set('page-size', String(input[\"page-size\"]))",
+      'if (input["page-size"] !== undefined) url.searchParams.set(\'page-size\', String(input["page-size"]))',
     )
 
     // Headers: params first, then the credential, so the secret always wins.
     expect(tool).toContain(
-      "headers: { ...(input[\"X-Request-Id\"] !== undefined ? { \"x-request-id\": String(input[\"X-Request-Id\"]) } : {}), " +
-        "...(input[\"If-Match\"] !== undefined ? { \"if-match\": String(input[\"If-Match\"]) } : {}), " +
+      'headers: { ...(input["X-Request-Id"] !== undefined ? { "x-request-id": String(input["X-Request-Id"]) } : {}), ' +
+        '...(input["If-Match"] !== undefined ? { "if-match": String(input["If-Match"]) } : {}), ' +
         "'x-api-key': `${env.UPSTREAM_API_KEY}` },",
     )
   })

@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "amount-below-half-rounds-down",
+  "input": {
+    "fn": "agentAmountString",
+    "args": {
+      "amount": 4e-9
+    }
+  },
+  "expect": {
+    "result": "0"
+  }
+}

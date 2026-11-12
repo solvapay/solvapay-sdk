@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-approval-timed-out",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "approval_timed_out"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

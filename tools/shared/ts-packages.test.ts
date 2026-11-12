@@ -12,6 +12,7 @@ import {
 describe('TypeScript package accessors', () => {
   it('enumerates published SDK package ids', () => {
     expect([...TS_PACKAGE_IDS]).toEqual([
+      'agents',
       'auth',
       'core',
       'mcp',

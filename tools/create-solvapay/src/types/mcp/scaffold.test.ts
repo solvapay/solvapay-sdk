@@ -219,9 +219,9 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     expect(dependabot).toContain("'@solvapay/*'")
     const deploy = await readFile(path.join(target, 'scripts', 'deploy.mjs'), 'utf8')
     expect(deploy).toContain('outdatedSolvapayMessage(projectRoot')
-    expect(await readFile(path.join(target, 'scripts', 'lib', 'sdk-versions.mjs'), 'utf8')).toContain(
-      'findOutdatedSolvapayPackages',
-    )
+    expect(
+      await readFile(path.join(target, 'scripts', 'lib', 'sdk-versions.mjs'), 'utf8'),
+    ).toContain('findOutdatedSolvapayPackages')
   })
 
   it('appends overlay payloads onto matching base files', async () => {
@@ -362,17 +362,17 @@ describe('resolveLatestSolvapayVersions', () => {
       throw new Error('ENETUNREACH')
     }) as typeof fetch
 
-    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
-      /@solvapay\/mcp: .*ENETUNREACH[\s\S]*--offline/,
-    )
+    await expect(
+      resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} }),
+    ).rejects.toThrow(/@solvapay\/mcp: .*ENETUNREACH[\s\S]*--offline/)
   })
 
   it('throws when the registry returns a non-2xx response', async () => {
     globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
 
-    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
-      /answered 404/,
-    )
+    await expect(
+      resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} }),
+    ).rejects.toThrow(/answered 404/)
   })
 
   it('throws when the registry returns malformed JSON', async () => {
@@ -384,9 +384,9 @@ describe('resolveLatestSolvapayVersions', () => {
         }),
     ) as typeof fetch
 
-    await expect(resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
-      /returned no version/,
-    )
+    await expect(
+      resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} }),
+    ).rejects.toThrow(/returned no version/)
   })
 
   it('uses the release pins with offline, without touching the network', async () => {

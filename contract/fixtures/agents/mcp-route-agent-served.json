@@ -1,0 +1,38 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-agent-served",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FwaS5zb2x2YXBheS50ZXN0L3YxL2FnZW50In0.c2ln",
+        "identity": {
+          "kind": "agent",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false,
+            "environment": "sandbox"
+          }
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "agent",
+      "agent": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      },
+      "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FwaS5zb2x2YXBheS50ZXN0L3YxL2FnZW50In0.c2ln"
+    }
+  }
+}

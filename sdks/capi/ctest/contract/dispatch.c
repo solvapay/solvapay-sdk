@@ -55,6 +55,15 @@ static const char *kClientOps[] = {
   "mcpOauthRequest",
   "mcpDispatch",
   "fetchJwks",
+  "agentVerifyKey",
+  "agentAuthorize",
+  "agentComplete",
+  "agentReportUsage",
+  "agentIdentify",
+  "agentBeginCall",
+  "agentFinishCall",
+  "agentGate",
+  "agentMcpRoute",
 };
 
 static const size_t kClientOpCount = sizeof(kClientOps) / sizeof(kClientOps[0]);

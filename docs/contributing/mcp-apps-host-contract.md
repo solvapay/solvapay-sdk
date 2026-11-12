@@ -182,12 +182,12 @@ Relevant to §3a: Claude Code triggers MCP Tool Search once a server's tool desc
 
 `/favicon.ico` and `/favicon.svg` on the MCP origin are not part of that path. No host below requests them.
 
-| Host | Observed | Date |
-| --- | --- | --- |
+| Host          | Observed                                                                                                                                                                                                                                                                                                                                                                             | Date    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
 | **claude.ai** | Requests `google.com/s2/favicons?domain=<last two labels of the host>` and ignores `serverInfo.icons`, origin favicons, and `logo_uri` ([claude-ai-mcp#152](https://github.com/anthropics/claude-ai-mcp/issues/152), [#838](https://github.com/anthropics/claude-ai-mcp/issues/838)). An ngrok capture of `server/discover` carried our icon; Claude never requested `/favicon.ico`. | 2026-09 |
-| **ChatGPT** | Uses the 128×128 icon uploaded in the developer-mode app dialog. Documents no server-side source. | 2026-09 |
-| **VS Code** | Reads `serverInfo.icons` and `Tool.icons`, limited to PNG, JPEG, WebP, or GIF. An HTTP icon must have exactly the same authority as the MCP URL, or be a `data:` URI ([mcpIcons.ts](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/mcp/common/mcpIcons.ts)). An SVG served from `api.solvapay.com` is dropped. | 2026-09 |
-| **MCPJam** | Reads `serverInfo.icons[0].src` from any origin. | 2026-09 |
+| **ChatGPT**   | Uses the 128×128 icon uploaded in the developer-mode app dialog. Documents no server-side source.                                                                                                                                                                                                                                                                                    | 2026-09 |
+| **VS Code**   | Reads `serverInfo.icons` and `Tool.icons`, limited to PNG, JPEG, WebP, or GIF. An HTTP icon must have exactly the same authority as the MCP URL, or be a `data:` URI ([mcpIcons.ts](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/mcp/common/mcpIcons.ts)). An SVG served from `api.solvapay.com` is dropped.                                               | 2026-09 |
+| **MCPJam**    | Reads `serverInfo.icons[0].src` from any origin.                                                                                                                                                                                                                                                                                                                                     | 2026-09 |
 
 Claude's lookup is the last two labels of the host:
 
@@ -201,12 +201,12 @@ Claude's lookup is the last two labels of the host:
 
 The MCP Apps spec defines `_meta.ui.prefersBorder` as whether a visible border and background is provided by the **host**. Servers should set it explicitly, and hosts read it from `resources/list` and the `resources/read` content item. Anthropic and OpenAI agree on the outcome: one frame, owned by the host, with a transparent widget root and no side margins.
 
-| Host | Observed | Date |
-| --- | --- | --- |
+| Host               | Observed                                                                                                                                                                              | Date       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | **Claude Desktop** | Paints a bordered card around the iframe even with `prefersBorder: false`. First-hand: with our own `.solvapay-mcp-card` hairline and 16px root gutter, this rendered a double frame. | 2026-10-01 |
-| **Claude (docs)** | Default is borderless on web, bordered on mobile. Anthropic's `build-mcp-app` skill notes that `prefersBorder: false` affects mobile only. | 2026-10 |
-| **ChatGPT** | Always wraps the inline widget in its own container and app label. Widgets must not duplicate host chrome and should respect host corner radii. | 2026-10 |
-| **Goose** | Honours the flag (default `true`). | 2026-10 |
+| **Claude (docs)**  | Default is borderless on web, bordered on mobile. Anthropic's `build-mcp-app` skill notes that `prefersBorder: false` affects mobile only.                                            | 2026-10    |
+| **ChatGPT**        | Always wraps the inline widget in its own container and app label. Widgets must not duplicate host chrome and should respect host corner radii.                                       | 2026-10    |
+| **Goose**          | Honours the flag (default `true`).                                                                                                                                                    | 2026-10    |
 
 So we advertise `prefersBorder: true` and paint no outer frame. Hosts that frame anyway draw the one frame. Hosts that honour the flag draw it on request. A host that ignores the flag and defaults to borderless renders us blended into the canvas, which is what Anthropic recommends.
 

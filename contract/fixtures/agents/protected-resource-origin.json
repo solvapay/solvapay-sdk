@@ -1,0 +1,27 @@
+{
+  "suite": "agents",
+  "case": "protected-resource-origin",
+  "input": {
+    "fn": "agentProtectedResource",
+    "args": {
+      "resource": {
+        "resource": "https://api.example.com",
+        "authorizationServer": "https://api.solvapay.test/v1/agent"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "resource": "https://api.example.com",
+      "path": "/.well-known/oauth-protected-resource/",
+      "url": "https://api.example.com/.well-known/oauth-protected-resource/",
+      "metadata": {
+        "resource": "https://api.example.com",
+        "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+        "scopes_supported": ["usage"],
+        "bearer_methods_supported": ["header"]
+      }
+    }
+  }
+}

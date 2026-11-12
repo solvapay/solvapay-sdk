@@ -1,0 +1,30 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-anonymous-list",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp"
+        },
+        "paidTools": ["paid"],
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "anonymous"
+    }
+  }
+}

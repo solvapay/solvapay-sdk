@@ -63,6 +63,15 @@ static const char *kOps[] = {
   "mcpOauthRequest",
   "mcpDispatch",
   "fetchJwks",
+  "agentVerifyKey",
+  "agentAuthorize",
+  "agentComplete",
+  "agentReportUsage",
+  "agentIdentify",
+  "agentBeginCall",
+  "agentFinishCall",
+  "agentGate",
+  "agentMcpRoute",
 };
 
 /* Required split-path args per op. The C envelope names the first missing key only,
@@ -115,6 +124,15 @@ static const char *kRequiredArgs[][kMaxRequired] = {
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
 };
 
 static int json_with_filled(char *buf, size_t bufsz, const char *const *args, size_t filled) {
@@ -147,8 +165,8 @@ int main(void) {
 		return 1;
 	}
 	size_t nops = sizeof(kOps) / sizeof(kOps[0]);
-	if (nops != 45) {
-		fprintf(stderr, "FAIL: kOps len = %zu, want 45\n", nops);
+	if (nops != 54) {
+		fprintf(stderr, "FAIL: kOps len = %zu, want 54\n", nops);
 		return 1;
 	}
 
@@ -198,6 +216,6 @@ int main(void) {
 		}
 	}
 	solvapay_client_free(client);
-	printf("OK: C signature parity (45 ops)\n");
+	printf("OK: C signature parity (54 ops)\n");
 	return 0;
 }

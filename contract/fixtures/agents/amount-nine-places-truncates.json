@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "amount-nine-places-truncates",
+  "input": {
+    "fn": "agentAmountString",
+    "args": {
+      "amount": 1.234567891
+    }
+  },
+  "expect": {
+    "result": "1.23456789"
+  }
+}

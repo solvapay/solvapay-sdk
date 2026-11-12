@@ -41,7 +41,11 @@ beforeEach(async () => {
       return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
     }
     if (path === '/agent/connect-requests' && init?.method === 'POST') {
-      expect(JSON.parse(String(init.body))).toEqual({ providerRef: PROV, name: requestedName, client: 'hermes' })
+      expect(JSON.parse(String(init.body))).toEqual({
+        providerRef: PROV,
+        name: requestedName,
+        client: 'hermes',
+      })
       opens++
       return Response.json(
         {
@@ -68,7 +72,10 @@ afterEach(() => vi.unstubAllGlobals())
 describe('connect', () => {
   it('prints the command to run again as one the shell reads back: the preview CLI, a quoted name', async () => {
     requestedName = "Erik's agent"
-    await run(['connect', 'opper', '--client', 'hermes', '--name', "Erik's agent", '--api', API], 'npx solvapay@preview')
+    await run(
+      ['connect', 'opper', '--client', 'hermes', '--name', "Erik's agent", '--api', API],
+      'npx solvapay@preview',
+    )
     expect(lines.join('\n')).toContain(
       `run the same command again:\n  npx solvapay@preview connect opper --client hermes --name 'Erik'\\''s agent' --api ${API}`,
     )
@@ -77,18 +84,24 @@ describe('connect', () => {
   it('asks the owner and tells the agent to run the same command again', async () => {
     expect(await run(['connect', PROV, '--client', 'hermes', '--api', API])).toBe(0)
     expect(lines.join('\n')).toContain('https://account.example.test/c/KQ7M-RX4D')
-    expect(lines.join('\n')).toContain(`run the same command again:\n  npx solvapay connect ${PROV} --client hermes --api ${API}`)
+    expect(lines.join('\n')).toContain(
+      `run the same command again:\n  npx solvapay connect ${PROV} --client hermes --api ${API}`,
+    )
     expect(lines.join('\n')).not.toContain('poll-secret')
   })
 
   it("takes the merchant's launch name, and keeps it in the command to run again", async () => {
     expect(await run(['connect', 'opper', '--client', 'hermes', '--api', API])).toBe(0)
-    expect(lines.join('\n')).toContain(`run the same command again:\n  npx solvapay connect opper --client hermes --api ${API}`)
+    expect(lines.join('\n')).toContain(
+      `run the same command again:\n  npx solvapay connect opper --client hermes --api ${API}`,
+    )
     expect(opens).toBe(1)
 
     // The re-run finds the waiting request under the merchant the name resolved to.
     claims.splice(0, claims.length, { status: 'pending', retryAfterSeconds: 3 })
-    expect(await run(['connect', 'opper', '--client', 'hermes', '--api', API, '--timeout', '0'])).toBe(2)
+    expect(
+      await run(['connect', 'opper', '--client', 'hermes', '--api', API, '--timeout', '0']),
+    ).toBe(2)
     expect(lines.at(-1)).toContain('has not approved yet')
     expect(opens).toBe(1)
   })
@@ -126,17 +139,48 @@ describe('connect', () => {
   })
 
   it('uses the MCP URL a site gives instead of the catalog listing', async () => {
-    claims.push({ status: 'approved', agentKey: 'agk_X', agentRef: 'agt_A', providerRef: PROV, merchantName: 'Opper' })
-    await run(['connect', PROV, '--client', 'hermes', '--api', API, '--mcp-url', 'https://site.test/mcp'])
+    claims.push({
+      status: 'approved',
+      agentKey: 'agk_X',
+      agentRef: 'agt_A',
+      providerRef: PROV,
+      merchantName: 'Opper',
+    })
+    await run([
+      'connect',
+      PROV,
+      '--client',
+      'hermes',
+      '--api',
+      API,
+      '--mcp-url',
+      'https://site.test/mcp',
+    ])
     await run(['connect', PROV])
-    expect(await readFile(join(home, 'config.yaml'), 'utf8')).toContain('url: https://site.test/mcp')
+    expect(await readFile(join(home, 'config.yaml'), 'utf8')).toContain(
+      'url: https://site.test/mcp',
+    )
   })
 
   it('adds the merchant as a model provider paid with the key, without its MCP server', async () => {
-    claims.push({ status: 'approved', agentKey: 'agk_X', agentRef: 'agt_A', providerRef: PROV, merchantName: 'Opper' })
+    claims.push({
+      status: 'approved',
+      agentKey: 'agk_X',
+      agentRef: 'agt_A',
+      providerRef: PROV,
+      merchantName: 'Opper',
+    })
     await run([
-      'connect', PROV, '--client', 'hermes', '--api', API,
-      '--model-url', 'https://opper.test/v3/compat', '--model', 'aws/claude-sonnet-4-6-eu',
+      'connect',
+      PROV,
+      '--client',
+      'hermes',
+      '--api',
+      API,
+      '--model-url',
+      'https://opper.test/v3/compat',
+      '--model',
+      'aws/claude-sonnet-4-6-eu',
     ])
     expect(await run(['connect', PROV, '--client', 'hermes', '--api', API])).toBe(0)
 
@@ -152,7 +196,16 @@ describe('connect', () => {
 
   it('needs the model with the model URL', async () => {
     await expect(
-      run(['connect', PROV, '--client', 'hermes', '--api', API, '--model-url', 'https://opper.test/v3/compat']),
+      run([
+        'connect',
+        PROV,
+        '--client',
+        'hermes',
+        '--api',
+        API,
+        '--model-url',
+        'https://opper.test/v3/compat',
+      ]),
     ).rejects.toThrow('--model-url and --model go together')
   })
 
@@ -185,7 +238,13 @@ describe('connect', () => {
   })
 
   it('says it is already connected instead of asking again, unless --new', async () => {
-    claims.push({ status: 'approved', agentKey: 'agk_X', agentRef: 'agt_A', providerRef: PROV, merchantName: 'Opper' })
+    claims.push({
+      status: 'approved',
+      agentKey: 'agk_X',
+      agentRef: 'agt_A',
+      providerRef: PROV,
+      merchantName: 'Opper',
+    })
     const connect = ['connect', PROV, '--client', 'hermes', '--api', API]
     await run(connect)
     expect(await run(connect)).toBe(0)

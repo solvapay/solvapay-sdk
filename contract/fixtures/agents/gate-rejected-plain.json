@@ -1,0 +1,28 @@
+{
+  "suite": "agents",
+  "case": "gate-rejected-plain",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "rejected",
+          "reason": "invalid",
+          "detail": "signature verification failed"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rejected",
+      "status": 401,
+      "reason": "invalid",
+      "detail": "signature verification failed",
+      "log": {
+        "reason": "agent_token_invalid",
+        "detail": "signature verification failed"
+      }
+    }
+  }
+}

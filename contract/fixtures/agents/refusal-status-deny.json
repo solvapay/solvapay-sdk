@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-deny",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "deny"
+    }
+  },
+  "expect": {
+    "result": 422
+  }
+}

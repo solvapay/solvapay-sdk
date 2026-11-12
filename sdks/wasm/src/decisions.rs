@@ -27,21 +27,26 @@ use solvapay_core::{
 
 #[cfg(feature = "edge")]
 use solvapay_core::{
-    append_paid_tool_description, build_create_customer_params, build_customer_snapshot,
-    build_gate_message, build_nudge_message, build_paywall_gate, classify_customer_ref,
-    classify_paywall_state, coerce_customer_options, compile_string_field_input_schema_json,
-    credit_signals, customer_ref_from_claims, decide_paywall_outcome,
-    decode_jwt_payload_unverified, default_mcp_bearer_expectations, ensure_customer_next,
-    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
-    extract_backend_customer_ref, extract_bearer_token, free_limits_agree,
-    free_tool_description_suffix, gate_next, get_history_next, is_error_result, link_label,
-    map_route_error, next_action_for, normalize_free_limit, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, plan_ladder,
-    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
-    purchase_usage_is_metered, resolve_authenticated_user, resolve_check_limits_params,
-    resolve_customer_ref, resolve_fallback_gate_limits, resolve_purchase_customer_ref,
-    resolve_return_url, resolve_usage_extra, select_active_plan_purchase, select_active_purchases,
+    agent_amount_string, agent_call_step, agent_canonical_resource, agent_challenge_headers,
+    agent_complete_body, agent_constants, agent_credential_kind, agent_from_claims,
+    agent_gate_result, agent_key_result, agent_mcp_route_step, agent_prompt_facts,
+    agent_protected_resource, agent_refusal_status, agent_refusal_tool_result,
+    agent_secret_key_environment, append_paid_tool_description, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate,
+    classify_customer_ref, classify_paywall_state, coerce_customer_options,
+    compile_string_field_input_schema_json, credit_signals, customer_ref_from_claims,
+    decide_paywall_outcome, decode_jwt_payload_unverified, default_mcp_bearer_expectations,
+    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
+    free_limits_agree, free_tool_description_suffix, gate_next, get_history_next, is_agent_key,
+    is_error_result, link_label, looks_like_jwt, map_route_error, next_action_for,
+    normalize_free_limit, overlay_claimed_limits, parse_agent_response, paywall_client_payload,
+    paywall_structured_content_schema, plan_ladder, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, purchase_usage_is_metered,
+    resolve_authenticated_user, resolve_check_limits_params, resolve_customer_ref,
+    resolve_fallback_gate_limits, resolve_purchase_customer_ref, resolve_return_url,
+    resolve_usage_extra, select_active_plan_purchase, select_active_purchases,
     should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
     validate_activate_plan_params, validate_topup_payment_intent_params, AuthResolutionInput,
     Backoff, FreeLimit, FreeLimitInput, GateContent, PaymentIntentSource, PaywallGate,
@@ -1465,6 +1470,240 @@ pub fn ensure_output_schema_object_type_binding(args_json: String) -> String {
         let schema = optional_value(&args, "schema");
         to_value(&ensure_output_schema_object_type(
             schema.as_ref().unwrap_or(&Value::Null),
+        ))
+    })
+}
+
+// --- agents ---
+
+#[cfg(feature = "edge")]
+/// Binding for `agentConstants`.
+#[wasm_bindgen(js_name = "agentConstants")]
+pub fn agent_constants_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&agent_constants())
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `parseAgentResponse`.
+#[wasm_bindgen(js_name = "parseAgentResponse")]
+pub fn parse_agent_response_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let kind = require_string(&args, "kind")?;
+        let value = optional_value(&args, "value");
+        to_value(&parse_agent_response(
+            &kind,
+            value.as_ref().unwrap_or(&Value::Null),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentSecretKeyEnvironment`.
+#[wasm_bindgen(js_name = "agentSecretKeyEnvironment")]
+pub fn agent_secret_key_environment_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let secret_key = require_string(&args, "secretKey")?;
+        to_value(&agent_secret_key_environment(&secret_key))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `isAgentKey`.
+#[wasm_bindgen(js_name = "isAgentKey")]
+pub fn is_agent_key_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(is_agent_key(&value)))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `looksLikeJwt`.
+#[wasm_bindgen(js_name = "looksLikeJwt")]
+pub fn looks_like_jwt_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(looks_like_jwt(&value)))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCredentialKind`.
+#[wasm_bindgen(js_name = "agentCredentialKind")]
+pub fn agent_credential_kind_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let presented_key = require_string(&args, "presentedKey")?;
+        let accept_agent_keys = require_bool(&args, "acceptAgentKeys")?;
+        Ok(Value::String(
+            agent_credential_kind(&presented_key, accept_agent_keys).to_owned(),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentFromClaims`.
+#[wasm_bindgen(js_name = "agentFromClaims")]
+pub fn agent_from_claims_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let claims = optional_value(&args, "claims");
+        let merchant_environment = optional_string(&args, "merchantEnvironment")?;
+        to_value(&agent_from_claims(
+            claims.as_ref().unwrap_or(&Value::Null),
+            merchant_environment.as_deref(),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentKeyResult`.
+#[wasm_bindgen(js_name = "agentKeyResult")]
+pub fn agent_key_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_key_result(input.as_ref().unwrap_or(&Value::Null)))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCanonicalResource`.
+#[wasm_bindgen(js_name = "agentCanonicalResource")]
+pub fn agent_canonical_resource_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = require_string(&args, "resource")?;
+        to_value(&agent_canonical_resource(&resource))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentProtectedResource`.
+#[wasm_bindgen(js_name = "agentProtectedResource")]
+pub fn agent_protected_resource_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = optional_value(&args, "resource");
+        to_value(&agent_protected_resource(
+            resource.as_ref().unwrap_or(&Value::Null),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentChallengeHeaders`.
+#[wasm_bindgen(js_name = "agentChallengeHeaders")]
+pub fn agent_challenge_headers_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = optional_value(&args, "resource");
+        let description = require_string(&args, "description")?;
+        to_value(&agent_challenge_headers(
+            resource.as_ref().unwrap_or(&Value::Null),
+            &description,
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentPromptFacts`.
+#[wasm_bindgen(js_name = "agentPromptFacts")]
+pub fn agent_prompt_facts_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let text = require_string(&args, "text")?;
+        let tool_error = require_bool(&args, "toolError")?;
+        to_value(&agent_prompt_facts(&text, tool_error))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentAmountString`.
+#[wasm_bindgen(js_name = "agentAmountString")]
+pub fn agent_amount_string_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let amount = require_f64(&args, "amount")?;
+        Ok(Value::String(agent_amount_string(amount).to_owned()))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCallStep`.
+#[wasm_bindgen(js_name = "agentCallStep")]
+pub fn agent_call_step_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_call_step(input.as_ref().unwrap_or(&Value::Null)))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentCompleteBody`.
+#[wasm_bindgen(js_name = "agentCompleteBody")]
+pub fn agent_complete_body_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let result = optional_value(&args, "result");
+        to_value(&agent_complete_body(
+            result.as_ref().unwrap_or(&Value::Null),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentRefusalStatus`.
+#[wasm_bindgen(js_name = "agentRefusalStatus")]
+pub fn agent_refusal_status_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let reason = require_string(&args, "reason")?;
+        to_value(&agent_refusal_status(&reason))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentGateResult`.
+#[wasm_bindgen(js_name = "agentGateResult")]
+pub fn agent_gate_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_gate_result(input.as_ref().unwrap_or(&Value::Null)))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentRefusalToolResult`.
+#[wasm_bindgen(js_name = "agentRefusalToolResult")]
+pub fn agent_refusal_tool_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let refused = optional_value(&args, "refused");
+        to_value(&agent_refusal_tool_result(
+            refused.as_ref().unwrap_or(&Value::Null),
+        ))
+    })
+}
+
+#[cfg(feature = "edge")]
+/// Binding for `agentMcpRouteStep`.
+#[wasm_bindgen(js_name = "agentMcpRouteStep")]
+pub fn agent_mcp_route_step_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_mcp_route_step(
+            input.as_ref().unwrap_or(&Value::Null),
         ))
     })
 }

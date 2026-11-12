@@ -1,0 +1,23 @@
+{
+  "suite": "agents",
+  "case": "challenge-headers-quotes-description",
+  "input": {
+    "fn": "agentChallengeHeaders",
+    "args": {
+      "resource": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorizationServer": "https://api.solvapay.test/v1/agent"
+      },
+      "description": "Sign in to \"pay\" \\ now"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "headers": {
+        "WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to \\\"pay\\\" \\\\ now\", resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate"
+      }
+    }
+  }
+}

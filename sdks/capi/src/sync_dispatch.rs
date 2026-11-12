@@ -12,43 +12,47 @@
 
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, assert_response_result, assert_valid_product_ref,
-    attach_business_details_validation_error, balance_reconcile_delays_ms, billing_cycle,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_payable_tool_result, build_paywall_gate, build_prompt_descriptor_metadata,
-    build_prompt_user_message, build_tool_descriptor_metadata, business_country_display_names,
-    business_country_options_table, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_drawn_meters, credit_signals,
-    credits_per_unit_from_balance, credits_to_display_minor_units, customer_ref_from_claims,
-    decide_paywall_outcome, decode_jwt_payload_unverified, default_mcp_bearer_expectations,
-    derive_active_products, derive_default_view, derive_icons, derive_tax_id_type,
-    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
-    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
-    format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
-    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, gate_next,
-    get_business_country_options, get_customer_address_field_errors, get_history_next,
-    get_postal_code_field_label, get_postal_code_placeholder,
-    get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
-    get_tax_id_field_label, get_tax_id_helper_text, headline_charges, history_rows, included_units,
-    invoke_payable_next, is_cached_customer_ref_valid, is_customer_address_complete,
-    is_email_conflict, is_error_result, is_postal_code_required, is_state_required, is_tax_id_type,
-    is_unlimited_remaining, is_zero_decimal_currency, link_label, make_response_result,
-    map_route_error, mcp_tool_names_json, mcp_view_maps, meter_name, minor_units_per_major,
-    next_action_for, normalize_cancel_response, normalize_free_limit,
-    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
-    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
-    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
-    postal_code_required_countries, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
-    resolve_authenticated_user, resolve_buyer_country, resolve_check_limits_params,
-    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
-    resolve_mandate_legal_docs, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, resolve_seller_identity_display,
-    resolve_tax_behavior, resolve_tax_treatment_note, resolve_usage_extra, reverse_charge_note,
-    select_active_plan_purchase, select_active_purchases,
+    agent_amount_string, agent_call_step, agent_canonical_resource, agent_challenge_headers,
+    agent_complete_body, agent_constants, agent_credential_kind, agent_from_claims,
+    agent_gate_result, agent_key_result, agent_mcp_route_step, agent_prompt_facts,
+    agent_protected_resource, agent_refusal_status, agent_refusal_tool_result,
+    agent_secret_key_environment, append_paid_tool_description, assert_response_result,
+    assert_valid_product_ref, attach_business_details_validation_error,
+    balance_reconcile_delays_ms, billing_cycle, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
+    build_paywall_gate, build_prompt_descriptor_metadata, build_prompt_user_message,
+    build_tool_descriptor_metadata, business_country_display_names, business_country_options_table,
+    charges, classify_cancel_error, classify_create_error, classify_customer_ref,
+    classify_lookup_error, classify_paywall_state, classify_reactivate_error,
+    coerce_customer_options, compile_string_field_input_schema_json, country_to_tax_id_type,
+    counts_usage, credit_drawn_meters, credit_signals, credits_per_unit_from_balance,
+    credits_to_display_minor_units, customer_ref_from_claims, decide_paywall_outcome,
+    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
+    derive_default_view, derive_icons, derive_tax_id_type, ensure_customer_next,
+    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
+    extract_backend_customer_ref, extract_bearer_token, format_compact_credits, format_price,
+    format_subtotal_label, format_vat_summary_label, free_limits_agree, free_meter_name_pattern,
+    free_tool_description_suffix, gate_next, get_business_country_options,
+    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
+    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
+    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, headline_charges,
+    history_rows, included_units, invoke_payable_next, is_agent_key, is_cached_customer_ref_valid,
+    is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
+    is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
+    link_label, looks_like_jwt, make_response_result, map_route_error, mcp_tool_names_json,
+    mcp_view_maps, meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
+    normalize_free_limit, normalize_reactivate_response, overlay_claimed_limits,
+    parse_agent_response, paywall_client_payload, paywall_structured_content_schema,
+    paywall_tool_result, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder,
+    plan_pricing_shape, postal_code_required_countries, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, purchase_usage_is_metered,
+    require_product_ref, resolve_account_state, resolve_authenticated_user, resolve_buyer_country,
+    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
+    resolve_fallback_gate_limits, resolve_mandate_legal_docs, resolve_narrator_plan_shape,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_return_url,
+    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
+    resolve_usage_extra, reverse_charge_note, select_active_plan_purchase, select_active_purchases,
     seller_tax_identifier_display_label_by_type, should_retry_usage_error, should_show_tax_row,
     solvapay_privacy_url, solvapay_terms_url, solvapay_website_url, state_required_countries,
     supported_business_countries, tax_behaviors, tax_exclusive_currencies,
@@ -137,6 +141,22 @@ const HELPER_OPS: &[&str] = &[
     "TAX_ID_TYPES",
     "TAX_NOT_COLLECTED_NOTE",
     "TOPUP_BALANCE_POLL_DELAYS_MS",
+    "agentAmountString",
+    "agentCallStep",
+    "agentCanonicalResource",
+    "agentChallengeHeaders",
+    "agentCompleteBody",
+    "agentConstants",
+    "agentCredentialKind",
+    "agentFromClaims",
+    "agentGateResult",
+    "agentKeyResult",
+    "agentMcpRouteStep",
+    "agentPromptFacts",
+    "agentProtectedResource",
+    "agentRefusalStatus",
+    "agentRefusalToolResult",
+    "agentSecretKeyEnvironment",
     "appendPaidToolDescription",
     "assertResponseResult",
     "assertValidProductRef",
@@ -204,6 +224,7 @@ const HELPER_OPS: &[&str] = &[
     "historyRows",
     "includedUnits",
     "invokePayableNext",
+    "isAgentKey",
     "isCachedCustomerRefValid",
     "isCustomerAddressComplete",
     "isEmailConflict",
@@ -214,6 +235,7 @@ const HELPER_OPS: &[&str] = &[
     "isUnlimitedRemaining",
     "isZeroDecimalCurrency",
     "linkLabel",
+    "looksLikeJwt",
     "makeResponseResult",
     "mapRouteError",
     "mcpViewMaps",
@@ -224,6 +246,7 @@ const HELPER_OPS: &[&str] = &[
     "normalizeFreeLimit",
     "normalizeReactivateResponse",
     "overlayClaimedLimits",
+    "parseAgentResponse",
     "paywallErrorToClientPayload",
     "paywallStructuredContentSchema",
     "paywallToolResult",
@@ -356,6 +379,105 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
         "TOPUP_BALANCE_POLL_DELAYS_MS" => {
             let _args = args_map(args_json)?;
             to_value(&topup_balance_poll_delays_ms())
+        }
+        "agentAmountString" => {
+            let args = args_map(args_json)?;
+            let amount = require_f64(&args, "amount")?;
+            Ok(Value::String(agent_amount_string(amount).to_owned()))
+        }
+        "agentCallStep" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            to_value(&agent_call_step(input.as_ref().unwrap_or(&Value::Null)))
+        }
+        "agentCanonicalResource" => {
+            let args = args_map(args_json)?;
+            let resource = require_string(&args, "resource")?;
+            to_value(&agent_canonical_resource(&resource))
+        }
+        "agentChallengeHeaders" => {
+            let args = args_map(args_json)?;
+            let resource = optional_value(&args, "resource");
+            let description = require_string(&args, "description")?;
+            to_value(&agent_challenge_headers(
+                resource.as_ref().unwrap_or(&Value::Null),
+                &description,
+            ))
+        }
+        "agentCompleteBody" => {
+            let args = args_map(args_json)?;
+            let result = optional_value(&args, "result");
+            to_value(&agent_complete_body(
+                result.as_ref().unwrap_or(&Value::Null),
+            ))
+        }
+        "agentConstants" => {
+            let _args = args_map(args_json)?;
+            to_value(&agent_constants())
+        }
+        "agentCredentialKind" => {
+            let args = args_map(args_json)?;
+            let presented_key = require_string(&args, "presentedKey")?;
+            let accept_agent_keys = require_bool(&args, "acceptAgentKeys")?;
+            Ok(Value::String(
+                agent_credential_kind(&presented_key, accept_agent_keys).to_owned(),
+            ))
+        }
+        "agentFromClaims" => {
+            let args = args_map(args_json)?;
+            let claims = optional_value(&args, "claims");
+            let merchant_environment = optional_string(&args, "merchantEnvironment")?;
+            to_value(&agent_from_claims(
+                claims.as_ref().unwrap_or(&Value::Null),
+                merchant_environment.as_deref(),
+            ))
+        }
+        "agentGateResult" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            to_value(&agent_gate_result(input.as_ref().unwrap_or(&Value::Null)))
+        }
+        "agentKeyResult" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            to_value(&agent_key_result(input.as_ref().unwrap_or(&Value::Null)))
+        }
+        "agentMcpRouteStep" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            to_value(&agent_mcp_route_step(
+                input.as_ref().unwrap_or(&Value::Null),
+            ))
+        }
+        "agentPromptFacts" => {
+            let args = args_map(args_json)?;
+            let text = require_string(&args, "text")?;
+            let tool_error = require_bool(&args, "toolError")?;
+            to_value(&agent_prompt_facts(&text, tool_error))
+        }
+        "agentProtectedResource" => {
+            let args = args_map(args_json)?;
+            let resource = optional_value(&args, "resource");
+            to_value(&agent_protected_resource(
+                resource.as_ref().unwrap_or(&Value::Null),
+            ))
+        }
+        "agentRefusalStatus" => {
+            let args = args_map(args_json)?;
+            let reason = require_string(&args, "reason")?;
+            to_value(&agent_refusal_status(&reason))
+        }
+        "agentRefusalToolResult" => {
+            let args = args_map(args_json)?;
+            let refused = optional_value(&args, "refused");
+            to_value(&agent_refusal_tool_result(
+                refused.as_ref().unwrap_or(&Value::Null),
+            ))
+        }
+        "agentSecretKeyEnvironment" => {
+            let args = args_map(args_json)?;
+            let secret_key = require_string(&args, "secretKey")?;
+            to_value(&agent_secret_key_environment(&secret_key))
         }
         "appendPaidToolDescription" => {
             let args = args_map(args_json)?;
@@ -850,6 +972,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let event = optional_value(&args, "event");
             result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
         }
+        "isAgentKey" => {
+            let args = args_map(args_json)?;
+            let value = require_string(&args, "value")?;
+            Ok(Value::Bool(is_agent_key(&value)))
+        }
         "isCachedCustomerRefValid" => {
             let args = args_map(args_json)?;
             let external_ref = optional_string(&args, "externalRef")?;
@@ -905,6 +1032,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let args = args_map(args_json)?;
             let name = require_string(&args, "name")?;
             Ok(Value::String(link_label(&name).to_owned()))
+        }
+        "looksLikeJwt" => {
+            let args = args_map(args_json)?;
+            let value = require_string(&args, "value")?;
+            Ok(Value::Bool(looks_like_jwt(&value)))
         }
         "makeResponseResult" => {
             let args = args_map(args_json)?;
@@ -1012,6 +1144,15 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             to_value(&overlay_claimed_limits(
                 limits.as_ref().unwrap_or(&Value::Null),
                 claimed,
+            ))
+        }
+        "parseAgentResponse" => {
+            let args = args_map(args_json)?;
+            let kind = require_string(&args, "kind")?;
+            let value = optional_value(&args, "value");
+            to_value(&parse_agent_response(
+                &kind,
+                value.as_ref().unwrap_or(&Value::Null),
             ))
         }
         "paywallErrorToClientPayload" => {

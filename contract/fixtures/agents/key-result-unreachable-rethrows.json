@@ -1,0 +1,18 @@
+{
+  "suite": "agents",
+  "case": "key-result-unreachable-rethrows",
+  "input": {
+    "fn": "agentKeyResult",
+    "args": {
+      "input": {
+        "errorStatus": 503,
+        "errorMessage": "down"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "rethrow": true
+    }
+  }
+}

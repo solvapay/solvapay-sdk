@@ -51,6 +51,15 @@ module SolvaPay
       mcp_oauth_request
       mcp_dispatch
       fetch_jwks
+      agent_verify_key
+      agent_authorize
+      agent_complete
+      agent_report_usage
+      agent_identify
+      agent_begin_call
+      agent_finish_call
+      agent_gate
+      agent_mcp_route
     ].freeze
 
     SYNC_METHODS = %w[
@@ -211,6 +220,25 @@ module SolvaPay
       ensure_output_schema_object_type
       TOPUP_BALANCE_POLL_DELAYS_MS
       BALANCE_RECONCILE_DELAYS_MS
+      agent_constants
+      parse_agent_response
+      agent_secret_key_environment
+      is_agent_key
+      looks_like_jwt
+      agent_credential_kind
+      agent_from_claims
+      agent_key_result
+      agent_canonical_resource
+      agent_protected_resource
+      agent_challenge_headers
+      agent_prompt_facts
+      agent_amount_string
+      agent_call_step
+      agent_complete_body
+      agent_refusal_status
+      agent_gate_result
+      agent_refusal_tool_result
+      agent_mcp_route_step
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

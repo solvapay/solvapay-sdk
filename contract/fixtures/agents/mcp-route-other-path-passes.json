@@ -1,0 +1,21 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-other-path-passes",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/other",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "pass"
+    }
+  }
+}

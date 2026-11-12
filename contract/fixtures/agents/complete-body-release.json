@@ -1,0 +1,19 @@
+{
+  "suite": "agents",
+  "case": "complete-body-release",
+  "input": {
+    "fn": "agentCompleteBody",
+    "args": {
+      "result": {
+        "release": "upstream_unreachable"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 502,
+      "cost": null,
+      "interrupted": "upstream_unreachable"
+    }
+  }
+}

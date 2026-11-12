@@ -788,3 +788,147 @@ pub unsafe extern "C" fn sv_fetch_jwks(args_ptr: *mut u8, args_len: usize) -> u6
         }))
     }))
 }
+
+/// `agentVerifyKey`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_verify_key(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentVerifyKeyParams = parse_args_json(&args_json)?;
+            client.agent_verify_key(params).await
+        }))
+    }))
+}
+
+/// `agentAuthorize`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_authorize(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentAuthorizeParams = parse_args_json(&args_json)?;
+            client.agent_authorize(params).await
+        }))
+    }))
+}
+
+/// `agentComplete`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_complete(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentCompleteParams = parse_args_json(&args_json)?;
+            client.agent_complete(params).await
+        }))
+    }))
+}
+
+/// `agentReportUsage`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_report_usage(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentReportUsageParams = parse_args_json(&args_json)?;
+            client.agent_report_usage(params).await
+        }))
+    }))
+}
+
+/// `agentIdentify`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_identify(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentIdentifyParams = parse_args_json(&args_json)?;
+            client.agent_identify(params).await
+        }))
+    }))
+}
+
+/// `agentBeginCall`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_begin_call(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentBeginCallParams = parse_args_json(&args_json)?;
+            client.agent_begin_call(params).await
+        }))
+    }))
+}
+
+/// `agentFinishCall`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_finish_call(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentFinishCallParams = parse_args_json(&args_json)?;
+            client.agent_finish_call(params).await
+        }))
+    }))
+}
+
+/// `agentGate`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_gate(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+            client.agent_gate(params).await
+        }))
+    }))
+}
+
+/// `agentMcpRoute`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_mcp_route(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentMcpRouteParams = parse_args_json(&args_json)?;
+            client.agent_mcp_route(params).await
+        }))
+    }))
+}

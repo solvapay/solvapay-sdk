@@ -1,0 +1,28 @@
+{
+  "suite": "agents",
+  "case": "protected-resource-metadata-path-override",
+  "input": {
+    "fn": "agentProtectedResource",
+    "args": {
+      "resource": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorizationServer": "https://api.solvapay.test/v1/agent",
+        "metadataPath": "/meta"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "resource": "https://mcp.example.com/mcp",
+      "path": "/meta",
+      "url": "https://mcp.example.com/meta",
+      "metadata": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+        "scopes_supported": ["usage"],
+        "bearer_methods_supported": ["header"]
+      }
+    }
+  }
+}

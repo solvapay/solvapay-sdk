@@ -8484,6 +8484,491 @@
         }
       }
     },
+    "solvapay_core::agents::agent_constants": {
+      "name": "agent_constants",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "The frozen agent constants, for surfaces that cannot import Rust consts.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::calls::agent_amount_string": {
+      "name": "agent_amount_string",
+      "module": "agents::calls",
+      "implTy": null,
+      "rustdoc": "An amount as a decimal string with up to 8 places, trailing zeros trimmed.\n\nRounds half away from zero at the eighth place, as the TypeScript SDK does.",
+      "params": [
+        {
+          "rustName": "amount",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::agents::calls::agent_call_step": {
+      "name": "agent_call_step",
+      "module": "agents::calls",
+      "implTy": null,
+      "rustdoc": "The next move of a paid call.\n\n`input` carries `call` (`requestId`, `agentToken`, `agent`, `item`,\n`estimate`, `prompt`), `maxWaitSeconds` and `nowMs`. Echo `deadlineMs` from\nthe previous step. After an authorize, add its raw `answer`, or `failure`\n(`status`, `error`) when it could not be made; add `aborted: true` once the\ncaller has gone away.\n\nReturns one of:\n- `{ kind: \"authorize\", body, timeoutMs, deadlineMs }`: send the request.\n- `{ kind: \"sleep\", ms, deadlineMs, log }`: the owner is deciding; wait, then step again with no answer.\n- `{ kind: \"allow\", callRef, item, estimate, reservation }`: run the call.\n- `{ kind: \"refused\", reason, message, log }`: `message` is the sentence for the human.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::calls::agent_complete_body": {
+      "name": "agent_complete_body",
+      "module": "agents::calls",
+      "implTy": null,
+      "rustdoc": "The complete request body for how a call ended.\n\n`result` is `{ status, cost, interrupted? }` with `cost` as\n`{ amount, currency }` (a number amount) or null when none arrived. Pass\n`{ release: reason }` for a call that never reached the upstream: it is\ncompleted as an upstream failure, so nothing is charged.",
+      "params": [
+        {
+          "rustName": "result",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::http::agent_gate_result": {
+      "name": "agent_gate_result",
+      "module": "agents::http",
+      "implTy": null,
+      "rustdoc": "What an HTTP gate answers for an identification and, once begun, a call.\n\n`input` carries `identity` (`{ kind: \"not_agent\" | \"rejected\" | \"agent\", … }`),\nthen `begun` (the call's `allow` or `refused` outcome) once the call was\nstarted, and an optional `protectedResource` that turns the OAuth challenge on.\n\nReturns one of:\n- `{ kind: \"not_agent\" }`: the merchant's own auth decides.\n- `{ kind: \"rejected\", status, reason, detail, challenge?, log }`: 401, or 403 for the other environment.\n- `{ kind: \"begin\", agent }`: verified; start the call.\n- `{ kind: \"refused\", status, refused, agent, challenge?, body }`: `body` is a plain JSON refusal.\n- `{ kind: \"allowed\", allowed, agent }`.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::http::agent_refusal_status": {
+      "name": "agent_refusal_status",
+      "module": "agents::http",
+      "implTy": null,
+      "rustdoc": "The HTTP status for a refusal.\n\n402 for anything money or the owner can settle (link the account, top up,\napprove), so a client shows the reason instead of retrying. 422 for a\npolicy deny, 401 for an agent SolvaPay did not accept, 502 when SolvaPay\ncould not be reached. `None` for a reason that is not a refusal reason.",
+      "params": [
+        {
+          "rustName": "reason",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "i64"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::agent_credential_kind": {
+      "name": "agent_credential_kind",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "How a presented key is checked: `agent_key`, `agent_token` or `not_agent`.\n\nWithout `accept_agent_keys` an agent key is the merchant's own auth's to answer.",
+      "params": [
+        {
+          "rustName": "presented_key",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "accept_agent_keys",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "bool"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::agent_from_claims": {
+      "name": "agent_from_claims",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "The agent a verified token payload names, or why it is not one.\n\n`claims` must come from a token whose signature, issuer, audience and time\nclaims already passed. Returns `{ ok: true, agent }` or\n`{ ok: false, reason, detail }` with `reason` `invalid` or\n`environment_mismatch`.",
+      "params": [
+        {
+          "rustName": "claims",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "merchant_environment",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::agent_key_result": {
+      "name": "agent_key_result",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "What SolvaPay's answer about an agent key means.\n\n`input` carries `verified` (the parsed key verification) or the failure as\n`errorStatus` and `errorMessage`, plus an optional `merchantEnvironment`.\nReturns `{ ok: true, agent }`, `{ ok: false, reason, detail }`, or\n`{ rethrow: true }` when SolvaPay was out of reach: every paid call would\nfail the same way, so that failure is not an answer about the key.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::agent_secret_key_environment": {
+      "name": "agent_secret_key_environment",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "The environment a merchant secret key is for, when its prefix says.",
+      "params": [
+        {
+          "rustName": "secret_key",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::is_agent_key": {
+      "name": "is_agent_key",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "Whether `value` is an agent key: the prefix and something after it.",
+      "params": [
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::agents::identity::looks_like_jwt": {
+      "name": "looks_like_jwt",
+      "module": "agents::identity",
+      "implTy": null,
+      "rustdoc": "Whether `value` is a JWS compact token, as opposed to a merchant API key.",
+      "params": [
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::agents::mcp::agent_mcp_route_step": {
+      "name": "agent_mcp_route_step",
+      "module": "agents::mcp",
+      "implTy": null,
+      "rustdoc": "Where one request to a merchant's MCP server goes.\n\n`input` carries `method`, `path`, `authorization`, the parsed JSON-RPC\n`body`, `issuer`, `mcpPath`, `serverName`, and with OAuth on\n`protectedResource`, `lazyAuth` and `paidTools` (the paid tool names). Once\na token was identified, add `identity` and step again.\n\nReturns one of:\n- `{ kind: \"pass\" }`: the merchant's own handler answers.\n- `{ kind: \"response\", status, headers, body }`: answer with this JSON.\n- `{ kind: \"anonymous\" }`: serve the listing server, where only free tools run.\n- `{ kind: \"identify\", token }`: verify the token, then step again with `identity`.\n- `{ kind: \"agent\", agent, agentToken }`: serve the agent.\n- `{ kind: \"error\", message }`: a misconfiguration to raise.\n\nA `rejected` identity also carries `log` for the merchant's own logging.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::mcp::agent_refusal_tool_result": {
+      "name": "agent_refusal_tool_result",
+      "module": "agents::mcp",
+      "implTy": null,
+      "rustdoc": "A refusal as an MCP tool error.\n\nThe text is the sentence for the agent's human, and\n`structuredContent.refusal.reason` says which refusal it was, so an agent\ncan act on it without parsing the text.",
+      "params": [
+        {
+          "rustName": "refused",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::oauth::agent_canonical_resource": {
+      "name": "agent_canonical_resource",
+      "module": "agents::oauth",
+      "implTy": null,
+      "rustdoc": "The canonical form SolvaPay compares resources in.\n\nScheme and host lowercased, default port dropped, no trailing slash.\nReturns `{ ok: true, value }`, or `{ ok: false, error }` when the URL is\nnot absolute `http(s)` or carries a fragment or credentials.",
+      "params": [
+        {
+          "rustName": "resource",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::oauth::agent_challenge_headers": {
+      "name": "agent_challenge_headers",
+      "module": "agents::oauth",
+      "implTy": null,
+      "rustdoc": "The `WWW-Authenticate` challenge hosts look for.\n\n`error` and `error_description` are both present and the one scope is\nnamed, so hosts ask for nothing broader. Returns `{ ok: true, headers }`\nor `{ ok: false, error }`.",
+      "params": [
+        {
+          "rustName": "resource",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "description",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::oauth::agent_protected_resource": {
+      "name": "agent_protected_resource",
+      "module": "agents::oauth",
+      "implTy": null,
+      "rustdoc": "The RFC 9728 view of a protected resource.\n\n`resource` carries `resource`, `authorizationServer`, and optional\n`documentation`, `metadataPath` and `serverName`. Returns\n`{ ok: true, resource, path, url, metadata }`: the canonical resource, the\npath-suffixed metadata path hosts try first, its absolute URL, and the\ndocument. `{ ok: false, error }` when the resource is not usable.",
+      "params": [
+        {
+          "rustName": "resource",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::parse::parse_agent_response": {
+      "name": "parse_agent_response",
+      "module": "agents::parse",
+      "implTy": null,
+      "rustdoc": "Read one agent API answer strictly.\n\nReturns `{ ok: true, value }` with unknown fields dropped, or\n`{ ok: false, error }` naming the first field that did not read.",
+      "params": [
+        {
+          "rustName": "kind",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::parse::parse_agent_response_typed": {
+      "name": "parse_agent_response_typed",
+      "module": "agents::parse",
+      "implTy": null,
+      "rustdoc": "Read one agent API answer, typed for Rust callers.\n\n`kind` is `verifiedAgentKey`, `authorize`, `complete` or `usageReport`.\n\n# Errors\n\nThe sentence naming the first field that did not read.",
+      "params": [
+        {
+          "rustName": "kind",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "string"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::prompt::agent_prompt_facts": {
+      "name": "agent_prompt_facts",
+      "module": "agents::prompt",
+      "implTy": null,
+      "rustdoc": "The facts about a prompt that go to SolvaPay with an authorize.\n\nReturns `{ promptHash, toolError, excerpt }`: `sha256:` over the text, the\ntool-error flag as given, and the text's last 1,500 characters.",
+      "params": [
+        {
+          "rustName": "text",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "tool_error",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "bool"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
     "solvapay_core::auth_resolution::resolve_authenticated_user": {
       "name": "resolve_authenticated_user",
       "module": "auth_resolution",

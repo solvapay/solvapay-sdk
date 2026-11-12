@@ -5,7 +5,7 @@
 | Surface | Count | Source |
 | --- | ---: | --- |
 | Routed `SolvaPayClient` methods | 38 | `operations:` |
-| MCP composites | 7 | routeless `operations:` |
+| MCP composites | 16 | routeless `operations:` |
 | MCP `syncOp` | 20 | `mcp:` `surface: syncOp` |
 
 
@@ -52,6 +52,15 @@
 
 ## Composites
 
+- `agentAuthorize`
+- `agentBeginCall`
+- `agentComplete`
+- `agentFinishCall`
+- `agentGate`
+- `agentIdentify`
+- `agentMcpRoute`
+- `agentReportUsage`
+- `agentVerifyKey`
 - `fetchJwks`
 - `mcpBootstrap`
 - `mcpCallBuiltinTool`

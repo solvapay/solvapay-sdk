@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-ask",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "ask"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

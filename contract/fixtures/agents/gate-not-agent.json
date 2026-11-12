@@ -1,0 +1,19 @@
+{
+  "suite": "agents",
+  "case": "gate-not-agent",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "not_agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "not_agent"
+    }
+  }
+}

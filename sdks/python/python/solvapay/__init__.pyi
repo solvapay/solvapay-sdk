@@ -41,6 +41,120 @@ class SolvaPayClient:
         @returns Activation result projection.
         """
         ...
+    async def agent_authorize(self, args_json: str) -> str:
+        """Ask SolvaPay to authorize one paid agent call.
+        @param params agentToken, requestId, estimate, wait and optional item and prompt facts.
+        @returns Authorize answer with status allowed, refused or waiting.
+        """
+        ...
+    def agent_authorize_blocking(self, args_json: str) -> str:
+        """Ask SolvaPay to authorize one paid agent call.
+        @param params agentToken, requestId, estimate, wait and optional item and prompt facts.
+        @returns Authorize answer with status allowed, refused or waiting.
+        """
+        ...
+    async def agent_begin_call(self, args_json: str) -> str:
+        """Authorize one paid call, waiting for the owner when they must approve.
+        @param params requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+        @returns Outcome with kind allow or refused; a refusal carries the sentence for the human.
+        """
+        ...
+    def agent_begin_call_blocking(self, args_json: str) -> str:
+        """Authorize one paid call, waiting for the owner when they must approve.
+        @param params requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+        @returns Outcome with kind allow or refused; a refusal carries the sentence for the human.
+        """
+        ...
+    async def agent_complete(self, args_json: str) -> str:
+        """Complete an agent call at how the upstream answered.
+        @param params callRef, upstream status, reported cost or null, optional interrupted reason.
+        @returns Settlement: callRef, settled, source, amount, duplicate.
+        """
+        ...
+    def agent_complete_blocking(self, args_json: str) -> str:
+        """Complete an agent call at how the upstream answered.
+        @param params callRef, upstream status, reported cost or null, optional interrupted reason.
+        @returns Settlement: callRef, settled, source, amount, duplicate.
+        """
+        ...
+    async def agent_finish_call(self, args_json: str) -> str:
+        """Complete an allowed call, or release one that never reached the upstream.
+        @param params callRef with status, cost and interrupted, or release with the reason.
+        @returns completed settlement, or null with failure when SolvaPay could not be told.
+        """
+        ...
+    def agent_finish_call_blocking(self, args_json: str) -> str:
+        """Complete an allowed call, or release one that never reached the upstream.
+        @param params callRef with status, cost and interrupted, or release with the reason.
+        @returns completed settlement, or null with failure when SolvaPay could not be told.
+        """
+        ...
+    async def agent_gate(self, args_json: str) -> str:
+        """Gate one HTTP call: verify the caller, then authorize the paid call.
+        @param params presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer,
+        providerRef and optional protectedResource.
+        @returns Gate result with kind not_agent, rejected, refused or allowed.
+        """
+        ...
+    def agent_gate_blocking(self, args_json: str) -> str:
+        """Gate one HTTP call: verify the caller, then authorize the paid call.
+        @param params presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer,
+        providerRef and optional protectedResource.
+        @returns Gate result with kind not_agent, rejected, refused or allowed.
+        """
+        ...
+    async def agent_identify(self, args_json: str) -> str:
+        """Say whether a presented key is a verified SolvaPay agent.
+        @param params presentedKey, issuer, providerRef and optional resource, jwksJson,
+        acceptAgentKeys, environment.
+        @returns Identification with kind agent, rejected or not_agent.
+        """
+        ...
+    def agent_identify_blocking(self, args_json: str) -> str:
+        """Say whether a presented key is a verified SolvaPay agent.
+        @param params presentedKey, issuer, providerRef and optional resource, jwksJson,
+        acceptAgentKeys, environment.
+        @returns Identification with kind agent, rejected or not_agent.
+        """
+        ...
+    async def agent_mcp_route(self, args_json: str) -> str:
+        """Route one request to an MCP server paid by SolvaPay agents.
+        @param params method, path, authorization, body, issuer, providerRef, mcpPath, serverName
+        and optional OAuth settings.
+        @returns Route with kind pass, response, anonymous, agent or error.
+        """
+        ...
+    def agent_mcp_route_blocking(self, args_json: str) -> str:
+        """Route one request to an MCP server paid by SolvaPay agents.
+        @param params method, path, authorization, body, issuer, providerRef, mcpPath, serverName
+        and optional OAuth settings.
+        @returns Route with kind pass, response, anonymous, agent or error.
+        """
+        ...
+    async def agent_report_usage(self, args_json: str) -> str:
+        """Report a window of usage for reconciliation.
+        @param params reportId, customerRef, source, window, currency, calls and untagged usage.
+        @returns Report reference with each call as SolvaPay reconciled it.
+        """
+        ...
+    def agent_report_usage_blocking(self, args_json: str) -> str:
+        """Report a window of usage for reconciliation.
+        @param params reportId, customerRef, source, window, currency, calls and untagged usage.
+        @returns Report reference with each call as SolvaPay reconciled it.
+        """
+        ...
+    async def agent_verify_key(self, args_json: str) -> str:
+        """Ask SolvaPay whose an agent key is.
+        @param params agentKey as presented.
+        @returns Verified agent: agentRef, principalRef, promptExcerpt, environment.
+        """
+        ...
+    def agent_verify_key_blocking(self, args_json: str) -> str:
+        """Ask SolvaPay whose an agent key is.
+        @param params agentKey as presented.
+        @returns Verified agent: agentRef, principalRef, promptExcerpt, environment.
+        """
+        ...
     async def assign_credits(self, args_json: str) -> str:
         """Grant credits to a customer balance.
         @param params Credit grant request (customer, amount, and reason).
@@ -610,6 +724,87 @@ TOPUP_BALANCE_POLL_DELAYS_MS: list[int]
 """Top-up payment-intent balance poll backoff, in milliseconds.
 @returns Frozen delay table.
 """
+def agent_amount_string(amount: float) -> str:
+    """Format an amount as a decimal string with up to 8 places.
+    @returns Decimal string with trailing zeros trimmed.
+    """
+    ...
+def agent_call_step(input: object) -> object:
+    """Decide the next move of a paid agent call.
+    @returns Step with kind authorize, sleep, allow or refused.
+    """
+    ...
+def agent_canonical_resource(resource: str) -> object:
+    """Return the canonical form SolvaPay compares OAuth resources in.
+    @returns ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+    """
+    ...
+def agent_challenge_headers(resource: object, description: str) -> object:
+    """Build the WWW-Authenticate challenge that sends a host to sign in.
+    @returns ok with the header map, or ok false when the resource is not usable.
+    """
+    ...
+def agent_complete_body(result: object) -> object:
+    """Build the complete request body for how a call ended.
+    @returns status, cost with a string amount or null, and interrupted when set.
+    """
+    ...
+def agent_constants() -> object:
+    """Return the frozen agent payment constants.
+    @returns Refusal reasons, reconciliation results and reasons, environments, key prefix, wait
+    and cache limits, claim names.
+    """
+    ...
+def agent_credential_kind(presented_key: str, accept_agent_keys: bool) -> str:
+    """Classify how a presented key is checked.
+    @returns agent_key, agent_token or not_agent.
+    """
+    ...
+def agent_from_claims(claims: object, merchant_environment: str | None = None) -> object:
+    """Read the agent a verified token payload names.
+    @returns ok with the agent, or ok false with reason invalid or environment_mismatch.
+    """
+    ...
+def agent_gate_result(input: object) -> object:
+    """Turn an identification and a call outcome into an HTTP gate result.
+    @returns Gate result with kind not_agent, rejected, begin, refused or allowed.
+    """
+    ...
+def agent_key_result(input: object) -> object:
+    """Decide what an agent key verification answer means.
+    @returns ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+    """
+    ...
+def agent_mcp_route_step(input: object) -> object:
+    """Decide where one request to an agent-paid MCP server goes.
+    @returns Route with kind pass, response, anonymous, identify, agent or error.
+    """
+    ...
+def agent_prompt_facts(text: str, tool_error: bool) -> object:
+    """Compute the prompt facts sent with an authorize.
+    @returns promptHash, toolError and the last 1,500 characters as excerpt.
+    """
+    ...
+def agent_protected_resource(resource: object) -> object:
+    """Build the RFC 9728 view of a protected resource.
+    @returns Canonical resource, metadata path, metadata URL and the metadata document.
+    """
+    ...
+def agent_refusal_status(reason: str) -> int | None:
+    """Map a refusal reason to its HTTP status.
+    @returns 401, 402, 422 or 502, or null for an unknown reason.
+    """
+    ...
+def agent_refusal_tool_result(refused: object) -> object:
+    """Shape a refusal as an MCP tool error.
+    @returns Tool result with isError, the sentence as text and structuredContent.refusal.
+    """
+    ...
+def agent_secret_key_environment(secret_key: str) -> str | None:
+    """Read the environment a merchant secret key is for.
+    @returns sandbox or live, or null when the prefix does not say.
+    """
+    ...
 def append_paid_tool_description(description: str | None = None) -> str:
     """Append the paid-tool account hint to a merchant tool description.
     @param description Optional merchant-authored description; trailing whitespace is stripped.
@@ -786,6 +981,11 @@ def included_units(priced: object | None = None, meter: str | None = None) -> in
     @returns Cap (0 means unlimited), or null when no limit is configured.
     """
     ...
+def is_agent_key(value: str) -> bool:
+    """Tell whether a presented key is an agent key.
+    @returns True for the agk_ prefix with something after it.
+    """
+    ...
 def is_postal_code_required(country: str) -> bool:
     """Whether Stripe Tax requires a postal or ZIP code for a country.
     @returns True when a postal or ZIP code is required.
@@ -818,6 +1018,11 @@ def link_label(name: str) -> str:
     @returns Label safe to embed in a markdown link.
     """
     ...
+def looks_like_jwt(value: str) -> bool:
+    """Tell whether a presented key is a JWS compact token.
+    @returns True for three base64url parts.
+    """
+    ...
 def meter_name(priced: object | None = None) -> str | None:
     """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
     @returns Meter name, or null when no charge, tier, or limit names one.
@@ -837,6 +1042,11 @@ def next_action_for(state: object) -> object:
 def normalize_free_limit(limit: object) -> object:
     """Normalize a free-tool allowance, defaulting and validating the meter.
     @returns Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
+    """
+    ...
+def parse_agent_response(kind: str, value: object) -> object:
+    """Read one agent API answer strictly, field by field.
+    @returns ok with the checked value, or ok false with the first field that did not read.
     """
     ...
 def paywall_error_to_client_payload(message: str, structured_content: object) -> object:

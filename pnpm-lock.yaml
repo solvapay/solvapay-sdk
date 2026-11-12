@@ -241,7 +241,7 @@ importers:
         version: link:../../../sdks/typescript/react-supabase
       '@solvapay/server':
         specifier: ^2.6.0
-        version: link:../../../sdks/typescript/server
+        version: 2.11.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
         version: 6.1.0(@stripe/stripe-js@9.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -965,7 +965,7 @@ importers:
         version: link:../../../sdks/typescript/core
       '@solvapay/server':
         specifier: ^2.0.0
-        version: link:../../../sdks/typescript/server
+        version: 2.11.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
 
   examples/typescript/supabase-edge-mcp:
     devDependencies:
@@ -1165,6 +1165,49 @@ importers:
       '@solvapay/server-native-win32-x64-msvc':
         specifier: file:npm/win32-x64-msvc
         version: file:sdks/node-native/npm/win32-x64-msvc
+
+  sdks/typescript/agents:
+    dependencies:
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../core
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../server
+      jose:
+        specifier: ^6.2.2
+        version: 6.2.10
+      solvapay:
+        specifier: workspace:*
+        version: link:../../../tools/cli
+    devDependencies:
+      '@modelcontextprotocol/core':
+        specifier: 2.0.0
+        version: 2.0.0
+      '@modelcontextprotocol/sdk':
+        specifier: 1.29.0
+        version: 1.29.0(supports-color@10.2.2)(zod@4.3.6)
+      '@modelcontextprotocol/server':
+        specifier: 2.0.0
+        version: 2.0.0
+      '@solvapay/tsconfig':
+        specifier: workspace:*
+        version: link:../../../internal/tsconfig
+      '@types/node':
+        specifier: ^25.5.2
+        version: 25.5.2
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.3
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   sdks/typescript/auth:
     dependencies:
@@ -4465,6 +4508,9 @@ packages:
     resolution: {integrity: sha512-oTt3OP9NcJkrySCSCCdSbP6XLSMNgOmt/ulaiYtb0Ng6tfEWtXQ1mwfyqmLd+GapmDUjbU2mgkf7QIq9H4ij/g==}
     engines: {node: '>=18.0.0'}
 
+  '@solvapay/core@1.8.0':
+    resolution: {integrity: sha512-1oBO42oYdJMC+bNMAYAv9JgFOL88PkCYIrtr+1A1XnEMNqdtcQdDykvywfeY+aQSrYLQX0+uhllfb0aogxarnw==}
+
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     resolution: {directory: sdks/node-native/npm/darwin-arm64, type: directory}
     engines: {node: '>=22'}
@@ -4516,6 +4562,16 @@ packages:
     engines: {node: '>=22'}
     cpu: [x64]
     os: [win32]
+
+  '@solvapay/server@2.11.0':
+    resolution: {integrity: sha512-dKOLRFoYEmbwGFKYmtmvf3jAV94VQJ7DxoxLMcOuvysDf390xiSBOQror0wX4UQDrwbcU7nkWUhBb8PTSh2EoQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@solvapay/auth': ^1.2.0
+      zod: ^4.2.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
@@ -5006,9 +5062,6 @@ packages:
 
   ajv@6.14.0:
     resolution: {integrity: sha512-IWrosm/yrn43eiKqkfkHis7QioDleaXQHdDVPKg0FSwwd/DuvyX79TZnFOnYpB7dcsFAMmtFztZuXPDvSePkFw==}
-
-  ajv@8.18.0:
-    resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -9332,7 +9385,7 @@ snapshots:
   '@commitlint/config-validator@21.2.0':
     dependencies:
       '@commitlint/types': 21.2.0
-      ajv: 8.18.0
+      ajv: 8.20.0
 
   '@commitlint/ensure@21.2.0':
     dependencies:
@@ -9870,8 +9923,8 @@ snapshots:
 
   '@fastify/ajv-compiler@4.0.5':
     dependencies:
-      ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 3.1.0
 
   '@fastify/error@4.2.0': {}
@@ -9954,7 +10007,6 @@ snapshots:
   '@hono/node-server@1.19.17(hono@4.13.4)':
     dependencies:
       hono: 4.13.4
-    optional: true
 
   '@humanfs/core@0.19.1': {}
 
@@ -10291,7 +10343,6 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   '@modelcontextprotocol/server@2.0.0':
     dependencies:
@@ -11269,6 +11320,10 @@ snapshots:
       '@smithy/core': 3.24.6
       tslib: 2.8.1
 
+  '@solvapay/core@1.8.0':
+    dependencies:
+      zod: 4.3.6
+
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     optional: true
 
@@ -11292,6 +11347,13 @@ snapshots:
 
   '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     optional: true
+
+  '@solvapay/server@2.11.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)':
+    dependencies:
+      '@solvapay/auth': link:sdks/typescript/auth
+      '@solvapay/core': 1.8.0
+    optionalDependencies:
+      zod: 4.3.6
 
   '@speed-highlight/core@1.2.15': {}
 
@@ -11819,14 +11881,9 @@ snapshots:
     dependencies:
       humanize-ms: 1.2.1
 
-  ajv-formats@3.0.1(ajv@8.18.0):
-    optionalDependencies:
-      ajv: 8.18.0
-
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
-    optional: true
 
   ajv@6.14.0:
     dependencies:
@@ -11835,20 +11892,12 @@ snapshots:
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
 
-  ajv@8.18.0:
-    dependencies:
-      fast-deep-equal: 3.1.3
-      fast-uri: 3.1.0
-      json-schema-traverse: 1.0.0
-      require-from-string: 2.0.2
-
   ajv@8.20.0:
     dependencies:
       fast-deep-equal: 3.1.3
       fast-uri: 3.1.6
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
-    optional: true
 
   ansi-colors@4.1.3: {}
 
@@ -12245,7 +12294,6 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
-    optional: true
 
   cosmiconfig-typescript-loader@6.2.0(@types/node@25.5.2)(cosmiconfig@9.0.1(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
@@ -12823,7 +12871,6 @@ snapshots:
       ip-address: 10.5.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   express@5.2.1(supports-color@10.2.2):
     dependencies:
@@ -12879,8 +12926,8 @@ snapshots:
   fast-json-stringify@6.3.0:
     dependencies:
       '@fastify/merge-json-schemas': 0.2.1
-      ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 3.1.0
       json-schema-ref-resolver: 3.0.0
       rfdc: 1.4.1
@@ -12901,8 +12948,7 @@ snapshots:
 
   fast-uri@3.1.0: {}
 
-  fast-uri@3.1.6:
-    optional: true
+  fast-uri@3.1.6: {}
 
   fast-wrap-ansi@0.2.2:
     dependencies:
@@ -13321,8 +13367,7 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
-  ip-address@10.5.0:
-    optional: true
+  ip-address@10.5.0: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -13594,8 +13639,7 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  json-schema-typed@8.0.2:
-    optional: true
+  json-schema-typed@8.0.2: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -14381,7 +14425,7 @@ snapshots:
 
   openid-client@6.8.4:
     dependencies:
-      jose: 6.2.2
+      jose: 6.2.10
       oauth4webapi: 3.8.6
 
   optionator@0.9.4:
@@ -15896,7 +15940,6 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.3.6):
     dependencies:
       zod: 4.3.6
-    optional: true
 
   zod-validation-error@4.0.2(zod@4.3.6):
     dependencies:

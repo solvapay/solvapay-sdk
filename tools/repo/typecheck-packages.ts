@@ -30,6 +30,7 @@ const PACKAGES: PackageTypecheck[] = [
   { dir: tsPackageRel('mcp-core'), projects: ['tsconfig.build.json'] },
   { dir: tsPackageRel('server'), projects: ['tsconfig.build.json'] },
   { dir: tsPackageRel('mcp'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('agents'), projects: ['tsconfig.build.json'] },
   { dir: tsPackageRel('next'), projects: ['tsconfig.build.json'] },
   {
     dir: tsPackageRel('react'),

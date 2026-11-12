@@ -768,6 +768,140 @@ impl SolvaPayClient {
             })
         })
     }
+
+    /// `agentVerifyKey`
+    pub(crate) fn agent_verify_key(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentVerifyKeyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_verify_key(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentAuthorize`
+    pub(crate) fn agent_authorize(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentAuthorizeParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_authorize(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentComplete`
+    pub(crate) fn agent_complete(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentCompleteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_complete(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentReportUsage`
+    pub(crate) fn agent_report_usage(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentReportUsageParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_report_usage(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentIdentify`
+    pub(crate) fn agent_identify(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentIdentifyParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_identify(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentBeginCall`
+    pub(crate) fn agent_begin_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentBeginCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_begin_call(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentFinishCall`
+    pub(crate) fn agent_finish_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentFinishCallParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_finish_call(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentGate`
+    pub(crate) fn agent_gate(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+                    client.agent_gate(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `agentMcpRoute`
+    pub(crate) fn agent_mcp_route(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl_envelope(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::AgentMcpRouteParams =
+                        parse_args_json(&args_json)?;
+                    client.agent_mcp_route(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 #[allow(dead_code)] // retained for Step 44 clientSplit methods

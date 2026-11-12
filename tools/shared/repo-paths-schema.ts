@@ -70,6 +70,7 @@ export const SDK_SURFACE_IDS = [
 ] as const
 
 export const TS_PACKAGE_IDS = [
+  'agents',
   'auth',
   'core',
   'mcp',
@@ -121,6 +122,7 @@ export const RepoPathsManifestSchema = z
       rustMcp: RelPath,
     }),
     tsPackages: z.object({
+      agents: RelPath,
       auth: RelPath,
       core: RelPath,
       mcp: RelPath,

@@ -1864,6 +1864,321 @@ operations:
       go: blocking
       rust: [async, blocking]
       c: blocking
+  agentVerifyKey:
+    names:
+      ts: agentVerifyKey
+      py: agent_verify_key
+      rb: agent_verify_key
+      go: AgentVerifyKey
+      rust: agent_verify_key
+      c: agentVerifyKey
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent key verification failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Ask SolvaPay whose an agent key is.'
+      params:
+        params: 'agentKey as presented.'
+      returns: 'Verified agent: agentRef, principalRef, promptExcerpt, environment.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentAuthorize:
+    names:
+      ts: agentAuthorize
+      py: agent_authorize
+      rb: agent_authorize
+      go: AgentAuthorize
+      rust: agent_authorize
+      c: agentAuthorize
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent authorize failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Ask SolvaPay to authorize one paid agent call.'
+      params:
+        params: 'agentToken, requestId, estimate, wait and optional item and prompt facts.'
+      returns: 'Authorize answer with status allowed, refused or waiting.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentComplete:
+    names:
+      ts: agentComplete
+      py: agent_complete
+      rb: agent_complete
+      go: AgentComplete
+      rust: agent_complete
+      c: agentComplete
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent complete failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Complete an agent call at how the upstream answered.'
+      params:
+        params: 'callRef, upstream status, reported cost or null, optional interrupted reason.'
+      returns: 'Settlement: callRef, settled, source, amount, duplicate.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentReportUsage:
+    names:
+      ts: agentReportUsage
+      py: agent_report_usage
+      rb: agent_report_usage
+      go: AgentReportUsage
+      rust: agent_report_usage
+      c: agentReportUsage
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent usage report failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Report a window of usage for reconciliation.'
+      params:
+        params: 'reportId, customerRef, source, window, currency, calls and untagged usage.'
+      returns: 'Report reference with each call as SolvaPay reconciled it.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentIdentify:
+    names:
+      ts: agentIdentify
+      py: agent_identify
+      rb: agent_identify
+      go: AgentIdentify
+      rust: agent_identify
+      c: agentIdentify
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent identify failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Say whether a presented key is a verified SolvaPay agent.'
+      params:
+        params: 'presentedKey, issuer, providerRef and optional resource, jwksJson, acceptAgentKeys, environment.'
+      returns: 'Identification with kind agent, rejected or not_agent.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentBeginCall:
+    names:
+      ts: agentBeginCall
+      py: agent_begin_call
+      rb: agent_begin_call
+      go: AgentBeginCall
+      rust: agent_begin_call
+      c: agentBeginCall
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent begin call failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Authorize one paid call, waiting for the owner when they must approve.'
+      params:
+        params: 'requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.'
+      returns: 'Outcome with kind allow or refused; a refusal carries the sentence for the human.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentFinishCall:
+    names:
+      ts: agentFinishCall
+      py: agent_finish_call
+      rb: agent_finish_call
+      go: AgentFinishCall
+      rust: agent_finish_call
+      c: agentFinishCall
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent finish call failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Complete an allowed call, or release one that never reached the upstream.'
+      params:
+        params: 'callRef with status, cost and interrupted, or release with the reason.'
+      returns: 'completed settlement, or null with failure when SolvaPay could not be told.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentGate:
+    names:
+      ts: agentGate
+      py: agent_gate
+      rb: agent_gate
+      go: AgentGate
+      rust: agent_gate
+      c: agentGate
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent gate failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Gate one HTTP call: verify the caller, then authorize the paid call.'
+      params:
+        params: 'presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer, providerRef and optional protectedResource.'
+      returns: 'Gate result with kind not_agent, rejected, refused or allowed.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  agentMcpRoute:
+    names:
+      ts: agentMcpRoute
+      py: agent_mcp_route
+      rb: agent_mcp_route
+      go: AgentMcpRoute
+      rust: agent_mcp_route
+      c: agentMcpRoute
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Agent MCP route failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Route one request to an MCP server paid by SolvaPay agents.'
+      params:
+        params: 'method, path, authorization, body, issuer, providerRef, mcpPath, serverName and optional OAuth settings.'
+      returns: 'Route with kind pass, response, anonymous, agent or error.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
   disableAutoRecharge:
     route:
       method: DELETE
@@ -4535,6 +4850,408 @@ coreHelpers:
     docs:
       summary: 'Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.'
       returns: 'Frozen delay table.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentConstants:
+    names:
+      ts: agentConstants
+      py: agent_constants
+      rb: agent_constants
+      go: AgentConstants
+      rust: agent_constants
+      c: agentConstants
+    params: []
+    docs:
+      summary: 'Return the frozen agent payment constants.'
+      returns: 'Refusal reasons, reconciliation results and reasons, environments, key prefix, wait and cache limits, claim names.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  parseAgentResponse:
+    names:
+      ts: parseAgentResponse
+      py: parse_agent_response
+      rb: parse_agent_response
+      go: ParseAgentResponse
+      rust: parse_agent_response
+      c: parseAgentResponse
+    params: []
+    docs:
+      summary: 'Read one agent API answer strictly, field by field.'
+      params:
+        kind: 'verifiedAgentKey, authorize, complete or usageReport.'
+        value: 'The raw JSON SolvaPay answered.'
+      returns: 'ok with the checked value, or ok false with the first field that did not read.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentSecretKeyEnvironment:
+    names:
+      ts: agentSecretKeyEnvironment
+      py: agent_secret_key_environment
+      rb: agent_secret_key_environment
+      go: AgentSecretKeyEnvironment
+      rust: agent_secret_key_environment
+      c: agentSecretKeyEnvironment
+    params: []
+    docs:
+      summary: 'Read the environment a merchant secret key is for.'
+      params:
+        secretKey: 'Merchant secret key.'
+      returns: 'sandbox or live, or null when the prefix does not say.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isAgentKey:
+    names:
+      ts: isAgentKey
+      py: is_agent_key
+      rb: is_agent_key
+      go: IsAgentKey
+      rust: is_agent_key
+      c: isAgentKey
+    params: []
+    docs:
+      summary: 'Tell whether a presented key is an agent key.'
+      params:
+        value: 'Presented key.'
+      returns: 'True for the agk_ prefix with something after it.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  looksLikeJwt:
+    names:
+      ts: looksLikeJwt
+      py: looks_like_jwt
+      rb: looks_like_jwt
+      go: LooksLikeJwt
+      rust: looks_like_jwt
+      c: looksLikeJwt
+    params: []
+    docs:
+      summary: 'Tell whether a presented key is a JWS compact token.'
+      params:
+        value: 'Presented key.'
+      returns: 'True for three base64url parts.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCredentialKind:
+    names:
+      ts: agentCredentialKind
+      py: agent_credential_kind
+      rb: agent_credential_kind
+      go: AgentCredentialKind
+      rust: agent_credential_kind
+      c: agentCredentialKind
+    params: []
+    docs:
+      summary: 'Classify how a presented key is checked.'
+      params:
+        presentedKey: 'Presented key.'
+        acceptAgentKeys: 'Whether agent keys are accepted.'
+      returns: 'agent_key, agent_token or not_agent.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentFromClaims:
+    names:
+      ts: agentFromClaims
+      py: agent_from_claims
+      rb: agent_from_claims
+      go: AgentFromClaims
+      rust: agent_from_claims
+      c: agentFromClaims
+    params: []
+    docs:
+      summary: 'Read the agent a verified token payload names.'
+      params:
+        claims: 'Payload of a token whose signature, issuer, audience and times passed.'
+        merchantEnvironment: 'Environment of the merchant secret key, when known.'
+      returns: 'ok with the agent, or ok false with reason invalid or environment_mismatch.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentKeyResult:
+    names:
+      ts: agentKeyResult
+      py: agent_key_result
+      rb: agent_key_result
+      go: AgentKeyResult
+      rust: agent_key_result
+      c: agentKeyResult
+    params: []
+    docs:
+      summary: 'Decide what an agent key verification answer means.'
+      params:
+        input: 'verified answer or errorStatus and errorMessage, plus merchantEnvironment.'
+      returns: 'ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCanonicalResource:
+    names:
+      ts: agentCanonicalResource
+      py: agent_canonical_resource
+      rb: agent_canonical_resource
+      go: AgentCanonicalResource
+      rust: agent_canonical_resource
+      c: agentCanonicalResource
+    params: []
+    docs:
+      summary: 'Return the canonical form SolvaPay compares OAuth resources in.'
+      params:
+        resource: 'Absolute http or https URL.'
+      returns: 'ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentProtectedResource:
+    names:
+      ts: agentProtectedResource
+      py: agent_protected_resource
+      rb: agent_protected_resource
+      go: AgentProtectedResource
+      rust: agent_protected_resource
+      c: agentProtectedResource
+    params: []
+    docs:
+      summary: 'Build the RFC 9728 view of a protected resource.'
+      params:
+        resource: 'resource, authorizationServer and optional documentation, metadataPath, serverName.'
+      returns: 'Canonical resource, metadata path, metadata URL and the metadata document.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentChallengeHeaders:
+    names:
+      ts: agentChallengeHeaders
+      py: agent_challenge_headers
+      rb: agent_challenge_headers
+      go: AgentChallengeHeaders
+      rust: agent_challenge_headers
+      c: agentChallengeHeaders
+    params: []
+    docs:
+      summary: 'Build the WWW-Authenticate challenge that sends a host to sign in.'
+      params:
+        resource: 'Protected resource description.'
+        description: 'Sentence for error_description.'
+      returns: 'ok with the header map, or ok false when the resource is not usable.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentPromptFacts:
+    names:
+      ts: agentPromptFacts
+      py: agent_prompt_facts
+      rb: agent_prompt_facts
+      go: AgentPromptFacts
+      rust: agent_prompt_facts
+      c: agentPromptFacts
+    params: []
+    docs:
+      summary: 'Compute the prompt facts sent with an authorize.'
+      params:
+        text: 'The prompt text the merchant picked.'
+        toolError: 'Whether the prompt carries a failed tool result.'
+      returns: 'promptHash, toolError and the last 1,500 characters as excerpt.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentAmountString:
+    names:
+      ts: agentAmountString
+      py: agent_amount_string
+      rb: agent_amount_string
+      go: AgentAmountString
+      rust: agent_amount_string
+      c: agentAmountString
+    params: []
+    docs:
+      summary: 'Format an amount as a decimal string with up to 8 places.'
+      params:
+        amount: 'Amount as a number.'
+      returns: 'Decimal string with trailing zeros trimmed.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCallStep:
+    names:
+      ts: agentCallStep
+      py: agent_call_step
+      rb: agent_call_step
+      go: AgentCallStep
+      rust: agent_call_step
+      c: agentCallStep
+    params: []
+    docs:
+      summary: 'Decide the next move of a paid agent call.'
+      params:
+        input: 'call, maxWaitSeconds, nowMs, and after an authorize its answer or failure.'
+      returns: 'Step with kind authorize, sleep, allow or refused.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCompleteBody:
+    names:
+      ts: agentCompleteBody
+      py: agent_complete_body
+      rb: agent_complete_body
+      go: AgentCompleteBody
+      rust: agent_complete_body
+      c: agentCompleteBody
+    params: []
+    docs:
+      summary: 'Build the complete request body for how a call ended.'
+      params:
+        result: 'status, cost and interrupted, or release with the reason.'
+      returns: 'status, cost with a string amount or null, and interrupted when set.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentRefusalStatus:
+    names:
+      ts: agentRefusalStatus
+      py: agent_refusal_status
+      rb: agent_refusal_status
+      go: AgentRefusalStatus
+      rust: agent_refusal_status
+      c: agentRefusalStatus
+    params: []
+    docs:
+      summary: 'Map a refusal reason to its HTTP status.'
+      params:
+        reason: 'Refusal reason.'
+      returns: '401, 402, 422 or 502, or null for an unknown reason.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentGateResult:
+    names:
+      ts: agentGateResult
+      py: agent_gate_result
+      rb: agent_gate_result
+      go: AgentGateResult
+      rust: agent_gate_result
+      c: agentGateResult
+    params: []
+    docs:
+      summary: 'Turn an identification and a call outcome into an HTTP gate result.'
+      params:
+        input: 'identity, then begun once the call started, and optional protectedResource.'
+      returns: 'Gate result with kind not_agent, rejected, begin, refused or allowed.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentRefusalToolResult:
+    names:
+      ts: agentRefusalToolResult
+      py: agent_refusal_tool_result
+      rb: agent_refusal_tool_result
+      go: AgentRefusalToolResult
+      rust: agent_refusal_tool_result
+      c: agentRefusalToolResult
+    params: []
+    docs:
+      summary: 'Shape a refusal as an MCP tool error.'
+      params:
+        refused: 'Refusal with reason and message.'
+      returns: 'Tool result with isError, the sentence as text and structuredContent.refusal.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentMcpRouteStep:
+    names:
+      ts: agentMcpRouteStep
+      py: agent_mcp_route_step
+      rb: agent_mcp_route_step
+      go: AgentMcpRouteStep
+      rust: agent_mcp_route_step
+      c: agentMcpRouteStep
+    params: []
+    docs:
+      summary: 'Decide where one request to an agent-paid MCP server goes.'
+      params:
+        input: 'method, path, authorization, body, issuer, mcpPath, serverName, OAuth settings and identity once known.'
+      returns: 'Route with kind pass, response, anonymous, identify, agent or error.'
     sync:
       ts: sync
       py: sync

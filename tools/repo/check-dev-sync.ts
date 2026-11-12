@@ -33,6 +33,7 @@ import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from '..
 export const DEV_SYNC_SINCE = 'ee190801'
 
 const TS_PACKAGES = new Set([
+  'agents',
   'auth',
   'core',
   'mcp',

@@ -1,0 +1,20 @@
+{
+  "suite": "agents",
+  "case": "key-result-403-other-merchant",
+  "input": {
+    "fn": "agentKeyResult",
+    "args": {
+      "input": {
+        "errorStatus": 403,
+        "errorMessage": "POST /v1/sdk/agent/keys/verifications failed (403): forbidden"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "invalid",
+      "detail": "POST /v1/sdk/agent/keys/verifications failed (403): forbidden"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-metadata-without-oauth-passes",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "GET",
+        "path": "/.well-known/oauth-protected-resource/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "pass"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "suite": "agents",
+  "case": "complete-body-interrupted",
+  "input": {
+    "fn": "agentCompleteBody",
+    "args": {
+      "result": {
+        "status": 200,
+        "cost": {
+          "amount": 0.004,
+          "currency": "EUR"
+        },
+        "interrupted": "client closed"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "cost": {
+        "amount": "0.004",
+        "currency": "EUR"
+      },
+      "interrupted": "client closed"
+    }
+  }
+}

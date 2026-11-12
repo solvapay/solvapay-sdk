@@ -34,9 +34,6 @@
     }
   },
   "expect": {
-    "result": [
-      "tokens",
-      "requests"
-    ]
+    "result": ["tokens", "requests"]
   }
 }

@@ -95,6 +95,42 @@ export class WasmClient {
      */
     activatePlan(args_json: string): Promise<string>;
     /**
+     * `agentAuthorize`
+     */
+    agentAuthorize(args_json: string): Promise<string>;
+    /**
+     * `agentBeginCall`
+     */
+    agentBeginCall(args_json: string): Promise<string>;
+    /**
+     * `agentComplete`
+     */
+    agentComplete(args_json: string): Promise<string>;
+    /**
+     * `agentFinishCall`
+     */
+    agentFinishCall(args_json: string): Promise<string>;
+    /**
+     * `agentGate`
+     */
+    agentGate(args_json: string): Promise<string>;
+    /**
+     * `agentIdentify`
+     */
+    agentIdentify(args_json: string): Promise<string>;
+    /**
+     * `agentMcpRoute`
+     */
+    agentMcpRoute(args_json: string): Promise<string>;
+    /**
+     * `agentReportUsage`
+     */
+    agentReportUsage(args_json: string): Promise<string>;
+    /**
+     * `agentVerifyKey`
+     */
+    agentVerifyKey(args_json: string): Promise<string>;
+    /**
      * `POST /v1/sdk/customers/{customerRef}/credits`
      */
     assignCredits(args_json: string): Promise<string>;
@@ -280,6 +316,86 @@ export class WasmClient {
      */
     updateProduct(args_json: string): Promise<string>;
 }
+
+/**
+ * Binding for `agentAmountString`.
+ */
+export function agentAmountString(args_json: string): string;
+
+/**
+ * Binding for `agentCallStep`.
+ */
+export function agentCallStep(args_json: string): string;
+
+/**
+ * Binding for `agentCanonicalResource`.
+ */
+export function agentCanonicalResource(args_json: string): string;
+
+/**
+ * Binding for `agentChallengeHeaders`.
+ */
+export function agentChallengeHeaders(args_json: string): string;
+
+/**
+ * Binding for `agentCompleteBody`.
+ */
+export function agentCompleteBody(args_json: string): string;
+
+/**
+ * Binding for `agentConstants`.
+ */
+export function agentConstants(args_json: string): string;
+
+/**
+ * Binding for `agentCredentialKind`.
+ */
+export function agentCredentialKind(args_json: string): string;
+
+/**
+ * Binding for `agentFromClaims`.
+ */
+export function agentFromClaims(args_json: string): string;
+
+/**
+ * Binding for `agentGateResult`.
+ */
+export function agentGateResult(args_json: string): string;
+
+/**
+ * Binding for `agentKeyResult`.
+ */
+export function agentKeyResult(args_json: string): string;
+
+/**
+ * Binding for `agentMcpRouteStep`.
+ */
+export function agentMcpRouteStep(args_json: string): string;
+
+/**
+ * Binding for `agentPromptFacts`.
+ */
+export function agentPromptFacts(args_json: string): string;
+
+/**
+ * Binding for `agentProtectedResource`.
+ */
+export function agentProtectedResource(args_json: string): string;
+
+/**
+ * Binding for `agentRefusalStatus`.
+ */
+export function agentRefusalStatus(args_json: string): string;
+
+/**
+ * Binding for `agentRefusalToolResult`.
+ */
+export function agentRefusalToolResult(args_json: string): string;
+
+/**
+ * Binding for `agentSecretKeyEnvironment`.
+ */
+export function agentSecretKeyEnvironment(args_json: string): string;
 
 /**
  * Binding for `appendPaidToolDescription`.
@@ -618,6 +734,11 @@ export function includedUnits(args_json: string): string;
 export function invokePayableNext(args_json: string): string;
 
 /**
+ * Binding for `isAgentKey`.
+ */
+export function isAgentKey(args_json: string): string;
+
+/**
  * Binding for `isCachedCustomerRefValid`.
  */
 export function isCachedCustomerRefValid(args_json: string): string;
@@ -668,6 +789,11 @@ export function isZeroDecimalCurrency(args_json: string): string;
 export function linkLabel(args_json: string): string;
 
 /**
+ * Binding for `looksLikeJwt`.
+ */
+export function looksLikeJwt(args_json: string): string;
+
+/**
  * Binding for `makeResponseResult`.
  */
 export function makeResponseResult(args_json: string): string;
@@ -716,6 +842,11 @@ export function normalizeReactivateResponse(args_json: string): string;
  * Binding for `overlayClaimedLimits`.
  */
 export function overlayClaimedLimits(args_json: string): string;
+
+/**
+ * Binding for `parseAgentResponse`.
+ */
+export function parseAgentResponse(args_json: string): string;
 
 /**
  * Binding for `paywallErrorToClientPayload`.
@@ -1047,6 +1178,22 @@ export interface InitOutput {
     readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly TOPUP_BALANCE_POLL_DELAYS_MS: (a: number, b: number) => [number, number];
     readonly __wbg_wasmclient_free: (a: number, b: number) => void;
+    readonly agentAmountString: (a: number, b: number) => [number, number];
+    readonly agentCallStep: (a: number, b: number) => [number, number];
+    readonly agentCanonicalResource: (a: number, b: number) => [number, number];
+    readonly agentChallengeHeaders: (a: number, b: number) => [number, number];
+    readonly agentCompleteBody: (a: number, b: number) => [number, number];
+    readonly agentConstants: (a: number, b: number) => [number, number];
+    readonly agentCredentialKind: (a: number, b: number) => [number, number];
+    readonly agentFromClaims: (a: number, b: number) => [number, number];
+    readonly agentGateResult: (a: number, b: number) => [number, number];
+    readonly agentKeyResult: (a: number, b: number) => [number, number];
+    readonly agentMcpRouteStep: (a: number, b: number) => [number, number];
+    readonly agentPromptFacts: (a: number, b: number) => [number, number];
+    readonly agentProtectedResource: (a: number, b: number) => [number, number];
+    readonly agentRefusalStatus: (a: number, b: number) => [number, number];
+    readonly agentRefusalToolResult: (a: number, b: number) => [number, number];
+    readonly agentSecretKeyEnvironment: (a: number, b: number) => [number, number];
     readonly appendPaidToolDescription: (a: number, b: number) => [number, number];
     readonly assertResponseResult: (a: number, b: number) => [number, number];
     readonly assertValidProductRef: (a: number, b: number) => [number, number];
@@ -1114,6 +1261,7 @@ export interface InitOutput {
     readonly historyRows: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
     readonly invokePayableNext: (a: number, b: number) => [number, number];
+    readonly isAgentKey: (a: number, b: number) => [number, number];
     readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
     readonly isCustomerAddressComplete: (a: number, b: number) => [number, number];
     readonly isEmailConflict: (a: number, b: number) => [number, number];
@@ -1124,6 +1272,7 @@ export interface InitOutput {
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly linkLabel: (a: number, b: number) => [number, number];
+    readonly looksLikeJwt: (a: number, b: number) => [number, number];
     readonly makeResponseResult: (a: number, b: number) => [number, number];
     readonly mapRouteError: (a: number, b: number) => [number, number];
     readonly mcpViewMaps: (a: number, b: number) => [number, number];
@@ -1134,6 +1283,7 @@ export interface InitOutput {
     readonly normalizeFreeLimit: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly overlayClaimedLimits: (a: number, b: number) => [number, number];
+    readonly parseAgentResponse: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
     readonly paywallStructuredContentSchema: (a: number, b: number) => [number, number];
     readonly paywallToolResult: (a: number, b: number) => [number, number];
@@ -1193,6 +1343,15 @@ export interface InitOutput {
     readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly wasmclient_activatePlan: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentAuthorize: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentBeginCall: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentComplete: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentFinishCall: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentGate: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentIdentify: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentMcpRoute: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentReportUsage: (a: number, b: number, c: number) => any;
+    readonly wasmclient_agentVerifyKey: (a: number, b: number, c: number) => any;
     readonly wasmclient_assignCredits: (a: number, b: number, c: number) => any;
     readonly wasmclient_attachBusinessDetails: (a: number, b: number, c: number) => any;
     readonly wasmclient_bootstrapMcpProduct: (a: number, b: number, c: number) => any;

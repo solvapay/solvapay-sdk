@@ -9,6 +9,15 @@ require "solvapay"
 class SignatureParityGeneratedTest < Minitest::Test
   OPERATION_SIGNATURES = {
     "activate_plan" => [[:keyreq, :params]],
+    "agent_authorize" => [[:keyreq, :params]],
+    "agent_begin_call" => [[:keyreq, :params]],
+    "agent_complete" => [[:keyreq, :params]],
+    "agent_finish_call" => [[:keyreq, :params]],
+    "agent_gate" => [[:keyreq, :params]],
+    "agent_identify" => [[:keyreq, :params]],
+    "agent_mcp_route" => [[:keyreq, :params]],
+    "agent_report_usage" => [[:keyreq, :params]],
+    "agent_verify_key" => [[:keyreq, :params]],
     "assign_credits" => [[:keyreq, :params]],
     "attach_business_details" => [[:keyreq, :params]],
     "bootstrap_mcp_product" => [[:keyreq, :params]],
@@ -56,6 +65,22 @@ class SignatureParityGeneratedTest < Minitest::Test
   }.freeze
 
   GENERATED_HELPERS = %w[
+    agent_amount_string
+    agent_call_step
+    agent_canonical_resource
+    agent_challenge_headers
+    agent_complete_body
+    agent_constants
+    agent_credential_kind
+    agent_from_claims
+    agent_gate_result
+    agent_key_result
+    agent_mcp_route_step
+    agent_prompt_facts
+    agent_protected_resource
+    agent_refusal_status
+    agent_refusal_tool_result
+    agent_secret_key_environment
     append_paid_tool_description
     assert_valid_product_ref
     billing_cycle
@@ -87,16 +112,19 @@ class SignatureParityGeneratedTest < Minitest::Test
     get_tax_id_helper_text
     headline_charges
     included_units
+    is_agent_key
     is_postal_code_required
     is_state_required
     is_tax_id_type
     is_unlimited_remaining
     is_zero_decimal_currency
     link_label
+    looks_like_jwt
     meter_name
     minor_units_per_major
     next_action_for
     normalize_free_limit
+    parse_agent_response
     paywall_error_to_client_payload
     paywall_structured_content_schema
     pegged_credits_per_unit
@@ -131,8 +159,8 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_REQUEST_ID_FORMAT = "solvapay_{epochMs}_{random9}"
   EXPECTED_USAGE_ACTION_TYPE = "api_call"
 
-  def test_all_45_client_operations_have_exact_keyword_signatures
-    assert_equal 45, OPERATION_SIGNATURES.length
+  def test_all_54_client_operations_have_exact_keyword_signatures
+    assert_equal 54, OPERATION_SIGNATURES.length
     OPERATION_SIGNATURES.each do |name, expected|
       method = SolvaPay::Client.instance_method(name)
       assert_equal expected, method.parameters, name

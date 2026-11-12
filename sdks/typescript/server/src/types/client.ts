@@ -469,4 +469,31 @@ export interface SolvaPayClient {
 
   /** Fetch an authorization-server JWKS document without merchant credentials. */
   fetchJwks?(params: unknown): Promise<unknown>
+
+  /** Ask SolvaPay whose an agent key is. */
+  agentVerifyKey?(params: unknown): Promise<unknown>
+
+  /** Ask SolvaPay to authorize one paid agent call. */
+  agentAuthorize?(params: unknown): Promise<unknown>
+
+  /** Complete an agent call at how the upstream answered. */
+  agentComplete?(params: unknown): Promise<unknown>
+
+  /** Report a window of usage for reconciliation. */
+  agentReportUsage?(params: unknown): Promise<unknown>
+
+  /** Say whether a presented key is a verified SolvaPay agent. */
+  agentIdentify?(params: unknown): Promise<unknown>
+
+  /** Authorize one paid call, waiting for the owner when they must approve. */
+  agentBeginCall?(params: unknown): Promise<unknown>
+
+  /** Complete an allowed call, or release one that never reached the upstream. */
+  agentFinishCall?(params: unknown): Promise<unknown>
+
+  /** Gate one HTTP call: verify the caller, then authorize the paid call. */
+  agentGate?(params: unknown): Promise<unknown>
+
+  /** Route one request to an MCP server paid by SolvaPay agents. */
+  agentMcpRoute?(params: unknown): Promise<unknown>
 }

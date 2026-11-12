@@ -38,6 +38,150 @@ impl Client {
         self.inner.api.activate_plan(params).await
     }
 
+    /// Ask SolvaPay to authorize one paid agent call.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — agentToken, requestId, estimate, wait and optional item and prompt facts.
+    ///
+    /// # Returns
+    ///
+    /// Authorize answer with status allowed, refused or waiting.
+    pub async fn agent_authorize(
+        &self,
+        params: solvapay_transport::AgentAuthorizeParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_authorize(params).await
+    }
+
+    /// Authorize one paid call, waiting for the owner when they must approve.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — requestId, agentToken, agent, item, estimate, prompt and maxWaitSeconds.
+    ///
+    /// # Returns
+    ///
+    /// Outcome with kind allow or refused; a refusal carries the sentence for the human.
+    pub async fn agent_begin_call(
+        &self,
+        params: solvapay_transport::AgentBeginCallParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_begin_call(params).await
+    }
+
+    /// Complete an agent call at how the upstream answered.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — callRef, upstream status, reported cost or null, optional interrupted reason.
+    ///
+    /// # Returns
+    ///
+    /// Settlement: callRef, settled, source, amount, duplicate.
+    pub async fn agent_complete(
+        &self,
+        params: solvapay_transport::AgentCompleteParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_complete(params).await
+    }
+
+    /// Complete an allowed call, or release one that never reached the upstream.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — callRef with status, cost and interrupted, or release with the reason.
+    ///
+    /// # Returns
+    ///
+    /// completed settlement, or null with failure when SolvaPay could not be told.
+    pub async fn agent_finish_call(
+        &self,
+        params: solvapay_transport::AgentFinishCallParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_finish_call(params).await
+    }
+
+    /// Gate one HTTP call: verify the caller, then authorize the paid call.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — presentedKey, requestId, item, estimate, prompt, maxWaitSeconds, issuer, providerRef and optional protectedResource.
+    ///
+    /// # Returns
+    ///
+    /// Gate result with kind not_agent, rejected, refused or allowed.
+    pub async fn agent_gate(
+        &self,
+        params: solvapay_transport::AgentGateParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_gate(params).await
+    }
+
+    /// Say whether a presented key is a verified SolvaPay agent.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — presentedKey, issuer, providerRef and optional resource, jwksJson, acceptAgentKeys, environment.
+    ///
+    /// # Returns
+    ///
+    /// Identification with kind agent, rejected or not_agent.
+    pub async fn agent_identify(
+        &self,
+        params: solvapay_transport::AgentIdentifyParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_identify(params).await
+    }
+
+    /// Route one request to an MCP server paid by SolvaPay agents.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — method, path, authorization, body, issuer, providerRef, mcpPath, serverName and optional OAuth settings.
+    ///
+    /// # Returns
+    ///
+    /// Route with kind pass, response, anonymous, agent or error.
+    pub async fn agent_mcp_route(
+        &self,
+        params: solvapay_transport::AgentMcpRouteParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_mcp_route(params).await
+    }
+
+    /// Report a window of usage for reconciliation.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — reportId, customerRef, source, window, currency, calls and untagged usage.
+    ///
+    /// # Returns
+    ///
+    /// Report reference with each call as SolvaPay reconciled it.
+    pub async fn agent_report_usage(
+        &self,
+        params: solvapay_transport::AgentReportUsageParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_report_usage(params).await
+    }
+
+    /// Ask SolvaPay whose an agent key is.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — agentKey as presented.
+    ///
+    /// # Returns
+    ///
+    /// Verified agent: agentRef, principalRef, promptExcerpt, environment.
+    pub async fn agent_verify_key(
+        &self,
+        params: solvapay_transport::AgentVerifyKeyParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.agent_verify_key(params).await
+    }
+
     /// Grant credits to a customer balance.
     ///
     /// # Arguments

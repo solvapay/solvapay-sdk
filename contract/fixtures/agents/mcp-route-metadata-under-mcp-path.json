@@ -1,0 +1,39 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-metadata-under-mcp-path",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "GET",
+        "path": "/mcp/.well-known/oauth-protected-resource",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp",
+          "documentation": "https://example.com/docs"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "response",
+      "status": 200,
+      "headers": {
+        "Cache-Control": "public, max-age=300",
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+        "scopes_supported": ["usage"],
+        "bearer_methods_supported": ["header"],
+        "resource_name": "Example",
+        "resource_documentation": "https://example.com/docs"
+      }
+    }
+  }
+}

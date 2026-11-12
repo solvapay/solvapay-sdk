@@ -608,6 +608,1145 @@
       "coreCall": "activate_plan",
       "clientCallArgs": []
     },
+    "agentAmountString": {
+      "core": "solvapay_core::agents::agent_amount_string",
+      "names": {
+        "ts": "agentAmountString",
+        "py": "agent_amount_string",
+        "rb": "agent_amount_string",
+        "go": "AgentAmountString",
+        "rust": "agent_amount_string",
+        "c": "agentAmountString"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentAmountString"
+      },
+      "args": [
+        {
+          "name": "amount",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 162,
+      "section": "agents",
+      "doc": "Binding for `agentAmountString`.",
+      "docWasm": null,
+      "rustFnName": "agent_amount_string_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "amount"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_amount_string",
+      "clientCallArgs": []
+    },
+    "agentAuthorize": {
+      "core": "solvapay_transport::SolvaPayClient::agent_authorize",
+      "names": {
+        "ts": "agentAuthorize",
+        "py": "agent_authorize",
+        "rb": "agent_authorize",
+        "go": "AgentAuthorize",
+        "rust": "agent_authorize",
+        "c": "agentAuthorize"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentAuthorize"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 51,
+      "section": "MCP composite",
+      "doc": "`agentAuthorize`",
+      "docWasm": null,
+      "rustFnName": "agent_authorize",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentAuthorizeParams",
+      "coreCall": "agent_authorize",
+      "clientCallArgs": []
+    },
+    "agentBeginCall": {
+      "core": "solvapay_transport::SolvaPayClient::agent_begin_call",
+      "names": {
+        "ts": "agentBeginCall",
+        "py": "agent_begin_call",
+        "rb": "agent_begin_call",
+        "go": "AgentBeginCall",
+        "rust": "agent_begin_call",
+        "c": "agentBeginCall"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentBeginCall"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 55,
+      "section": "MCP composite",
+      "doc": "`agentBeginCall`",
+      "docWasm": null,
+      "rustFnName": "agent_begin_call",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentBeginCallParams",
+      "coreCall": "agent_begin_call",
+      "clientCallArgs": []
+    },
+    "agentCallStep": {
+      "core": "solvapay_core::agents::agent_call_step",
+      "names": {
+        "ts": "agentCallStep",
+        "py": "agent_call_step",
+        "rb": "agent_call_step",
+        "go": "AgentCallStep",
+        "rust": "agent_call_step",
+        "c": "agentCallStep"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentCallStep"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 163,
+      "section": "agents",
+      "doc": "Binding for `agentCallStep`.",
+      "docWasm": null,
+      "rustFnName": "agent_call_step_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "input.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_call_step",
+      "clientCallArgs": []
+    },
+    "agentCanonicalResource": {
+      "core": "solvapay_core::agents::agent_canonical_resource",
+      "names": {
+        "ts": "agentCanonicalResource",
+        "py": "agent_canonical_resource",
+        "rb": "agent_canonical_resource",
+        "go": "AgentCanonicalResource",
+        "rust": "agent_canonical_resource",
+        "c": "agentCanonicalResource"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentCanonicalResource"
+      },
+      "args": [
+        {
+          "name": "resource",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 158,
+      "section": "agents",
+      "doc": "Binding for `agentCanonicalResource`.",
+      "docWasm": null,
+      "rustFnName": "agent_canonical_resource_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&resource"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_canonical_resource",
+      "clientCallArgs": []
+    },
+    "agentChallengeHeaders": {
+      "core": "solvapay_core::agents::agent_challenge_headers",
+      "names": {
+        "ts": "agentChallengeHeaders",
+        "py": "agent_challenge_headers",
+        "rb": "agent_challenge_headers",
+        "go": "AgentChallengeHeaders",
+        "rust": "agent_challenge_headers",
+        "c": "agentChallengeHeaders"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentChallengeHeaders"
+      },
+      "args": [
+        {
+          "name": "resource",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 160,
+      "section": "agents",
+      "doc": "Binding for `agentChallengeHeaders`.",
+      "docWasm": null,
+      "rustFnName": "agent_challenge_headers_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "resource.as_ref().unwrap_or(&Value::Null)",
+          "&description"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_challenge_headers",
+      "clientCallArgs": []
+    },
+    "agentComplete": {
+      "core": "solvapay_transport::SolvaPayClient::agent_complete",
+      "names": {
+        "ts": "agentComplete",
+        "py": "agent_complete",
+        "rb": "agent_complete",
+        "go": "AgentComplete",
+        "rust": "agent_complete",
+        "c": "agentComplete"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentComplete"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 52,
+      "section": "MCP composite",
+      "doc": "`agentComplete`",
+      "docWasm": null,
+      "rustFnName": "agent_complete",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentCompleteParams",
+      "coreCall": "agent_complete",
+      "clientCallArgs": []
+    },
+    "agentCompleteBody": {
+      "core": "solvapay_core::agents::agent_complete_body",
+      "names": {
+        "ts": "agentCompleteBody",
+        "py": "agent_complete_body",
+        "rb": "agent_complete_body",
+        "go": "AgentCompleteBody",
+        "rust": "agent_complete_body",
+        "c": "agentCompleteBody"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentCompleteBody"
+      },
+      "args": [
+        {
+          "name": "result",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 164,
+      "section": "agents",
+      "doc": "Binding for `agentCompleteBody`.",
+      "docWasm": null,
+      "rustFnName": "agent_complete_body_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "result.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_complete_body",
+      "clientCallArgs": []
+    },
+    "agentConstants": {
+      "core": "solvapay_core::agents::agent_constants",
+      "names": {
+        "ts": "agentConstants",
+        "py": "agent_constants",
+        "rb": "agent_constants",
+        "go": "AgentConstants",
+        "rust": "agent_constants",
+        "c": "agentConstants"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentConstants"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 150,
+      "section": "agents",
+      "doc": "Binding for `agentConstants`.",
+      "docWasm": null,
+      "rustFnName": "agent_constants_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_constants",
+      "clientCallArgs": []
+    },
+    "agentCredentialKind": {
+      "core": "solvapay_core::agents::agent_credential_kind",
+      "names": {
+        "ts": "agentCredentialKind",
+        "py": "agent_credential_kind",
+        "rb": "agent_credential_kind",
+        "go": "AgentCredentialKind",
+        "rust": "agent_credential_kind",
+        "c": "agentCredentialKind"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentCredentialKind"
+      },
+      "args": [
+        {
+          "name": "presentedKey",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "presented_key"
+        },
+        {
+          "name": "acceptAgentKeys",
+          "type": "bool",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireBool",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "accept_agent_keys"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 155,
+      "section": "agents",
+      "doc": "Binding for `agentCredentialKind`.",
+      "docWasm": null,
+      "rustFnName": "agent_credential_kind_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "&presented_key",
+          "accept_agent_keys"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_credential_kind",
+      "clientCallArgs": []
+    },
+    "agentFinishCall": {
+      "core": "solvapay_transport::SolvaPayClient::agent_finish_call",
+      "names": {
+        "ts": "agentFinishCall",
+        "py": "agent_finish_call",
+        "rb": "agent_finish_call",
+        "go": "AgentFinishCall",
+        "rust": "agent_finish_call",
+        "c": "agentFinishCall"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentFinishCall"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 56,
+      "section": "MCP composite",
+      "doc": "`agentFinishCall`",
+      "docWasm": null,
+      "rustFnName": "agent_finish_call",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentFinishCallParams",
+      "coreCall": "agent_finish_call",
+      "clientCallArgs": []
+    },
+    "agentFromClaims": {
+      "core": "solvapay_core::agents::agent_from_claims",
+      "names": {
+        "ts": "agentFromClaims",
+        "py": "agent_from_claims",
+        "rb": "agent_from_claims",
+        "go": "AgentFromClaims",
+        "rust": "agent_from_claims",
+        "c": "agentFromClaims"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentFromClaims"
+      },
+      "args": [
+        {
+          "name": "claims",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "merchantEnvironment",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "merchant_environment"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 156,
+      "section": "agents",
+      "doc": "Binding for `agentFromClaims`.",
+      "docWasm": null,
+      "rustFnName": "agent_from_claims_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "claims.as_ref().unwrap_or(&Value::Null)",
+          "merchant_environment.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_from_claims",
+      "clientCallArgs": []
+    },
+    "agentGate": {
+      "core": "solvapay_transport::SolvaPayClient::agent_gate",
+      "names": {
+        "ts": "agentGate",
+        "py": "agent_gate",
+        "rb": "agent_gate",
+        "go": "AgentGate",
+        "rust": "agent_gate",
+        "c": "agentGate"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentGate"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 57,
+      "section": "MCP composite",
+      "doc": "`agentGate`",
+      "docWasm": null,
+      "rustFnName": "agent_gate",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentGateParams",
+      "coreCall": "agent_gate",
+      "clientCallArgs": []
+    },
+    "agentGateResult": {
+      "core": "solvapay_core::agents::agent_gate_result",
+      "names": {
+        "ts": "agentGateResult",
+        "py": "agent_gate_result",
+        "rb": "agent_gate_result",
+        "go": "AgentGateResult",
+        "rust": "agent_gate_result",
+        "c": "agentGateResult"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentGateResult"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 166,
+      "section": "agents",
+      "doc": "Binding for `agentGateResult`.",
+      "docWasm": null,
+      "rustFnName": "agent_gate_result_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "input.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_gate_result",
+      "clientCallArgs": []
+    },
+    "agentIdentify": {
+      "core": "solvapay_transport::SolvaPayClient::agent_identify",
+      "names": {
+        "ts": "agentIdentify",
+        "py": "agent_identify",
+        "rb": "agent_identify",
+        "go": "AgentIdentify",
+        "rust": "agent_identify",
+        "c": "agentIdentify"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentIdentify"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 54,
+      "section": "MCP composite",
+      "doc": "`agentIdentify`",
+      "docWasm": null,
+      "rustFnName": "agent_identify",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentIdentifyParams",
+      "coreCall": "agent_identify",
+      "clientCallArgs": []
+    },
+    "agentKeyResult": {
+      "core": "solvapay_core::agents::agent_key_result",
+      "names": {
+        "ts": "agentKeyResult",
+        "py": "agent_key_result",
+        "rb": "agent_key_result",
+        "go": "AgentKeyResult",
+        "rust": "agent_key_result",
+        "c": "agentKeyResult"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentKeyResult"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 157,
+      "section": "agents",
+      "doc": "Binding for `agentKeyResult`.",
+      "docWasm": null,
+      "rustFnName": "agent_key_result_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "input.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_key_result",
+      "clientCallArgs": []
+    },
+    "agentMcpRoute": {
+      "core": "solvapay_transport::SolvaPayClient::agent_mcp_route",
+      "names": {
+        "ts": "agentMcpRoute",
+        "py": "agent_mcp_route",
+        "rb": "agent_mcp_route",
+        "go": "AgentMcpRoute",
+        "rust": "agent_mcp_route",
+        "c": "agentMcpRoute"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentMcpRoute"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 58,
+      "section": "MCP composite",
+      "doc": "`agentMcpRoute`",
+      "docWasm": null,
+      "rustFnName": "agent_mcp_route",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentMcpRouteParams",
+      "coreCall": "agent_mcp_route",
+      "clientCallArgs": []
+    },
+    "agentMcpRouteStep": {
+      "core": "solvapay_core::agents::agent_mcp_route_step",
+      "names": {
+        "ts": "agentMcpRouteStep",
+        "py": "agent_mcp_route_step",
+        "rb": "agent_mcp_route_step",
+        "go": "AgentMcpRouteStep",
+        "rust": "agent_mcp_route_step",
+        "c": "agentMcpRouteStep"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentMcpRouteStep"
+      },
+      "args": [
+        {
+          "name": "input",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 168,
+      "section": "agents",
+      "doc": "Binding for `agentMcpRouteStep`.",
+      "docWasm": null,
+      "rustFnName": "agent_mcp_route_step_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "input.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_mcp_route_step",
+      "clientCallArgs": []
+    },
+    "agentPromptFacts": {
+      "core": "solvapay_core::agents::agent_prompt_facts",
+      "names": {
+        "ts": "agentPromptFacts",
+        "py": "agent_prompt_facts",
+        "rb": "agent_prompt_facts",
+        "go": "AgentPromptFacts",
+        "rust": "agent_prompt_facts",
+        "c": "agentPromptFacts"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentPromptFacts"
+      },
+      "args": [
+        {
+          "name": "text",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "toolError",
+          "type": "bool",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireBool",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "tool_error"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 161,
+      "section": "agents",
+      "doc": "Binding for `agentPromptFacts`.",
+      "docWasm": null,
+      "rustFnName": "agent_prompt_facts_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&text",
+          "tool_error"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_prompt_facts",
+      "clientCallArgs": []
+    },
+    "agentProtectedResource": {
+      "core": "solvapay_core::agents::agent_protected_resource",
+      "names": {
+        "ts": "agentProtectedResource",
+        "py": "agent_protected_resource",
+        "rb": "agent_protected_resource",
+        "go": "AgentProtectedResource",
+        "rust": "agent_protected_resource",
+        "c": "agentProtectedResource"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentProtectedResource"
+      },
+      "args": [
+        {
+          "name": "resource",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 159,
+      "section": "agents",
+      "doc": "Binding for `agentProtectedResource`.",
+      "docWasm": null,
+      "rustFnName": "agent_protected_resource_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "resource.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_protected_resource",
+      "clientCallArgs": []
+    },
+    "agentRefusalStatus": {
+      "core": "solvapay_core::agents::agent_refusal_status",
+      "names": {
+        "ts": "agentRefusalStatus",
+        "py": "agent_refusal_status",
+        "rb": "agent_refusal_status",
+        "go": "AgentRefusalStatus",
+        "rust": "agent_refusal_status",
+        "c": "agentRefusalStatus"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentRefusalStatus"
+      },
+      "args": [
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 165,
+      "section": "agents",
+      "doc": "Binding for `agentRefusalStatus`.",
+      "docWasm": null,
+      "rustFnName": "agent_refusal_status_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&reason"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_refusal_status",
+      "clientCallArgs": []
+    },
+    "agentRefusalToolResult": {
+      "core": "solvapay_core::agents::agent_refusal_tool_result",
+      "names": {
+        "ts": "agentRefusalToolResult",
+        "py": "agent_refusal_tool_result",
+        "rb": "agent_refusal_tool_result",
+        "go": "AgentRefusalToolResult",
+        "rust": "agent_refusal_tool_result",
+        "c": "agentRefusalToolResult"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentRefusalToolResult"
+      },
+      "args": [
+        {
+          "name": "refused",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 167,
+      "section": "agents",
+      "doc": "Binding for `agentRefusalToolResult`.",
+      "docWasm": null,
+      "rustFnName": "agent_refusal_tool_result_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "refused.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_refusal_tool_result",
+      "clientCallArgs": []
+    },
+    "agentReportUsage": {
+      "core": "solvapay_transport::SolvaPayClient::agent_report_usage",
+      "names": {
+        "ts": "agentReportUsage",
+        "py": "agent_report_usage",
+        "rb": "agent_report_usage",
+        "go": "AgentReportUsage",
+        "rust": "agent_report_usage",
+        "c": "agentReportUsage"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentReportUsage"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 53,
+      "section": "MCP composite",
+      "doc": "`agentReportUsage`",
+      "docWasm": null,
+      "rustFnName": "agent_report_usage",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentReportUsageParams",
+      "coreCall": "agent_report_usage",
+      "clientCallArgs": []
+    },
+    "agentSecretKeyEnvironment": {
+      "core": "solvapay_core::agents::agent_secret_key_environment",
+      "names": {
+        "ts": "agentSecretKeyEnvironment",
+        "py": "agent_secret_key_environment",
+        "rb": "agent_secret_key_environment",
+        "go": "AgentSecretKeyEnvironment",
+        "rust": "agent_secret_key_environment",
+        "c": "agentSecretKeyEnvironment"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "agentSecretKeyEnvironment"
+      },
+      "args": [
+        {
+          "name": "secretKey",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "secret_key"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 152,
+      "section": "agents",
+      "doc": "Binding for `agentSecretKeyEnvironment`.",
+      "docWasm": null,
+      "rustFnName": "agent_secret_key_environment_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&secret_key"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "agent_secret_key_environment",
+      "clientCallArgs": []
+    },
+    "agentVerifyKey": {
+      "core": "solvapay_transport::SolvaPayClient::agent_verify_key",
+      "names": {
+        "ts": "agentVerifyKey",
+        "py": "agent_verify_key",
+        "rb": "agent_verify_key",
+        "go": "AgentVerifyKey",
+        "rust": "agent_verify_key",
+        "c": "agentVerifyKey"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "agentVerifyKey"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 50,
+      "section": "MCP composite",
+      "doc": "`agentVerifyKey`",
+      "docWasm": null,
+      "rustFnName": "agent_verify_key",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::AgentVerifyKeyParams",
+      "coreCall": "agent_verify_key",
+      "clientCallArgs": []
+    },
     "appendPaidToolDescription": {
       "core": "solvapay_core::mcp::append_paid_tool_description",
       "names": {
@@ -5232,6 +6371,55 @@
       "coreCall": "invoke_payable_next",
       "clientCallArgs": []
     },
+    "isAgentKey": {
+      "core": "solvapay_core::agents::is_agent_key",
+      "names": {
+        "ts": "isAgentKey",
+        "py": "is_agent_key",
+        "rb": "is_agent_key",
+        "go": "IsAgentKey",
+        "rust": "is_agent_key",
+        "c": "isAgentKey"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "isAgentKey"
+      },
+      "args": [
+        {
+          "name": "value",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 153,
+      "section": "agents",
+      "doc": "Binding for `isAgentKey`.",
+      "docWasm": null,
+      "rustFnName": "is_agent_key_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&value"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_agent_key",
+      "clientCallArgs": []
+    },
     "isCachedCustomerRefValid": {
       "core": "solvapay_core::purchase::is_cached_customer_ref_valid",
       "names": {
@@ -5850,6 +7038,55 @@
       "verbatimBodyWasm": null,
       "dtoType": "ListPurchasesParams",
       "coreCall": "list_purchases",
+      "clientCallArgs": []
+    },
+    "looksLikeJwt": {
+      "core": "solvapay_core::agents::looks_like_jwt",
+      "names": {
+        "ts": "looksLikeJwt",
+        "py": "looks_like_jwt",
+        "rb": "looks_like_jwt",
+        "go": "LooksLikeJwt",
+        "rust": "looks_like_jwt",
+        "c": "looksLikeJwt"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "looksLikeJwt"
+      },
+      "args": [
+        {
+          "name": "value",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 154,
+      "section": "agents",
+      "doc": "Binding for `looksLikeJwt`.",
+      "docWasm": null,
+      "rustFnName": "looks_like_jwt_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&value"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "looks_like_jwt",
       "clientCallArgs": []
     },
     "makeResponseResult": {
@@ -6610,6 +7847,66 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "overlay_claimed_limits",
+      "clientCallArgs": []
+    },
+    "parseAgentResponse": {
+      "core": "solvapay_core::agents::parse_agent_response",
+      "names": {
+        "ts": "parseAgentResponse",
+        "py": "parse_agent_response",
+        "rb": "parse_agent_response",
+        "go": "ParseAgentResponse",
+        "rust": "parse_agent_response",
+        "c": "parseAgentResponse"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "parseAgentResponse"
+      },
+      "args": [
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "value",
+          "type": "value",
+          "required": true,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 151,
+      "section": "agents",
+      "doc": "Binding for `parseAgentResponse`.",
+      "docWasm": null,
+      "rustFnName": "parse_agent_response_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&kind",
+          "value.as_ref().unwrap_or(&Value::Null)"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "parse_agent_response",
       "clientCallArgs": []
     },
     "paywallErrorToClientPayload": {

@@ -1,0 +1,66 @@
+{
+  "suite": "agents",
+  "case": "parse-usage-report",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "usageReport",
+      "value": {
+        "reference": "urp_TEST0001",
+        "currency": "USD",
+        "duplicate": false,
+        "results": [
+          {
+            "result": "ignored",
+            "callRef": null
+          },
+          {
+            "callRef": "call_TEST0001",
+            "result": "adjusted",
+            "reason": "cost_differs",
+            "reported": "0.12",
+            "bookedPolicy": "0.1",
+            "bookedCredit": "0.1",
+            "policyDelta": "0.02",
+            "creditDelta": "0.02"
+          }
+        ],
+        "untagged": {
+          "total": "0.5",
+          "beforePolicy": "0.1",
+          "flagged": true
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "reference": "urp_TEST0001",
+        "currency": "USD",
+        "duplicate": false,
+        "results": [
+          {
+            "result": "ignored"
+          },
+          {
+            "callRef": "call_TEST0001",
+            "result": "adjusted",
+            "reason": "cost_differs",
+            "reported": "0.12",
+            "bookedPolicy": "0.1",
+            "bookedCredit": "0.1",
+            "policyDelta": "0.02",
+            "creditDelta": "0.02"
+          }
+        ],
+        "untagged": {
+          "total": "0.5",
+          "beforePolicy": "0.1",
+          "flagged": true
+        }
+      }
+    }
+  }
+}

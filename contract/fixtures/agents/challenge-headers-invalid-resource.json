@@ -1,0 +1,19 @@
+{
+  "suite": "agents",
+  "case": "challenge-headers-invalid-resource",
+  "input": {
+    "fn": "agentChallengeHeaders",
+    "args": {
+      "resource": {
+        "resource": "nope"
+      },
+      "description": "x"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Invalid URL"
+    }
+  }
+}

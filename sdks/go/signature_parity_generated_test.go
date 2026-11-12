@@ -20,6 +20,15 @@ type operationSignature struct {
 // operationSignatures locks the Go facade surface (presence + arity + per-slot types).
 var operationSignatures = []operationSignature{
 	{"ActivatePlan", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentAuthorize", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentBeginCall", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentComplete", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentFinishCall", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentGate", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentIdentify", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentMcpRoute", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentReportUsage", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AgentVerifyKey", []string{"params"}, []string{"map[string]interface {}"}},
 	{"AssignCredits", []string{"params"}, []string{"map[string]interface {}"}},
 	{"AttachBusinessDetails", []string{"params"}, []string{"map[string]interface {}"}},
 	{"BootstrapMcpProduct", []string{"params"}, []string{"map[string]interface {}"}},
@@ -100,6 +109,15 @@ const expectedUsageActionType = "api_call"
 // Compile-time surface refs: each catalogued method is addressable.
 var (
 	_ = (*solvapay.Client).ActivatePlan
+	_ = (*solvapay.Client).AgentAuthorize
+	_ = (*solvapay.Client).AgentBeginCall
+	_ = (*solvapay.Client).AgentComplete
+	_ = (*solvapay.Client).AgentFinishCall
+	_ = (*solvapay.Client).AgentGate
+	_ = (*solvapay.Client).AgentIdentify
+	_ = (*solvapay.Client).AgentMcpRoute
+	_ = (*solvapay.Client).AgentReportUsage
+	_ = (*solvapay.Client).AgentVerifyKey
 	_ = (*solvapay.Client).AssignCredits
 	_ = (*solvapay.Client).AttachBusinessDetails
 	_ = (*solvapay.Client).BootstrapMcpProduct
@@ -146,10 +164,10 @@ var (
 	_ = (*solvapay.Client).UpdateProduct
 )
 
-func TestOperationSignaturesCountIs45(t *testing.T) {
+func TestOperationSignaturesCountIs54(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 45 {
-		t.Fatalf("operationSignatures len = %d, want 45", got)
+	if got := len(operationSignatures); got != 54 {
+		t.Fatalf("operationSignatures len = %d, want 54", got)
 	}
 }
 

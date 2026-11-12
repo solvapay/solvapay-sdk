@@ -1,0 +1,16 @@
+{
+  "suite": "agents",
+  "case": "canonical-fragment-refused",
+  "input": {
+    "fn": "agentCanonicalResource",
+    "args": {
+      "resource": "https://example.com/mcp#frag"
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "https://example.com/mcp#frag cannot be an OAuth resource: no fragment or credentials"
+    }
+  }
+}

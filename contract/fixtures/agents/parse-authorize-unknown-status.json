@@ -1,0 +1,20 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-unknown-status",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "maybe",
+        "callRef": "call_1"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "error": "Authorize status \"maybe\" is not allowed, refused or waiting"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "suite": "agents",
+  "case": "protected-resource-document",
+  "input": {
+    "fn": "agentProtectedResource",
+    "args": {
+      "resource": {
+        "resource": "https://mcp.example.com/mcp/",
+        "authorizationServer": "https://api.solvapay.test/v1/agent",
+        "serverName": "Example",
+        "documentation": "https://example.com/docs"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "resource": "https://mcp.example.com/mcp",
+      "path": "/.well-known/oauth-protected-resource/mcp",
+      "url": "https://mcp.example.com/.well-known/oauth-protected-resource/mcp",
+      "metadata": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorization_servers": ["https://api.solvapay.test/v1/agent"],
+        "scopes_supported": ["usage"],
+        "bearer_methods_supported": ["header"],
+        "resource_name": "Example",
+        "resource_documentation": "https://example.com/docs"
+      }
+    }
+  }
+}

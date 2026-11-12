@@ -30,6 +30,15 @@ use solvapay_dto::{
 /// Catalogued client operation signatures: name → &[(param_name, required)].
 pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("activate_plan", &[("params", true)]),
+    ("agent_authorize", &[("params", true)]),
+    ("agent_begin_call", &[("params", true)]),
+    ("agent_complete", &[("params", true)]),
+    ("agent_finish_call", &[("params", true)]),
+    ("agent_gate", &[("params", true)]),
+    ("agent_identify", &[("params", true)]),
+    ("agent_mcp_route", &[("params", true)]),
+    ("agent_report_usage", &[("params", true)]),
+    ("agent_verify_key", &[("params", true)]),
     ("assign_credits", &[("params", true)]),
     ("attach_business_details", &[("params", true)]),
     ("bootstrap_mcp_product", &[("params", true)]),
@@ -115,6 +124,33 @@ fn _parity_sink<T>() -> T {
 async fn _assert_typed_surface(c: &Client) {
     let _: Result<ActivatePlanResponseDto, SdkError> =
         c.activate_plan(_parity_sink::<ActivatePlanDto>()).await;
+    let _: Result<Value, SdkError> = c
+        .agent_authorize(_parity_sink::<solvapay_transport::AgentAuthorizeParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_begin_call(_parity_sink::<solvapay_transport::AgentBeginCallParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_complete(_parity_sink::<solvapay_transport::AgentCompleteParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_finish_call(_parity_sink::<solvapay_transport::AgentFinishCallParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_gate(_parity_sink::<solvapay_transport::AgentGateParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_identify(_parity_sink::<solvapay_transport::AgentIdentifyParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_mcp_route(_parity_sink::<solvapay_transport::AgentMcpRouteParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_report_usage(_parity_sink::<solvapay_transport::AgentReportUsageParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
+        .agent_verify_key(_parity_sink::<solvapay_transport::AgentVerifyKeyParams>())
+        .await;
     let _: Result<GrantCustomerCreditsResponse, SdkError> = c
         .assign_credits(_parity_sink::<AssignCreditsRequest>())
         .await;
@@ -250,6 +286,24 @@ async fn _assert_typed_surface(c: &Client) {
 fn _assert_typed_surface_blocking(c: &BlockingClient) {
     let _: Result<ActivatePlanResponseDto, SdkError> =
         c.activate_plan(_parity_sink::<ActivatePlanDto>());
+    let _: Result<Value, SdkError> =
+        c.agent_authorize(_parity_sink::<solvapay_transport::AgentAuthorizeParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_begin_call(_parity_sink::<solvapay_transport::AgentBeginCallParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_complete(_parity_sink::<solvapay_transport::AgentCompleteParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_finish_call(_parity_sink::<solvapay_transport::AgentFinishCallParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_gate(_parity_sink::<solvapay_transport::AgentGateParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_identify(_parity_sink::<solvapay_transport::AgentIdentifyParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_mcp_route(_parity_sink::<solvapay_transport::AgentMcpRouteParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_report_usage(_parity_sink::<solvapay_transport::AgentReportUsageParams>());
+    let _: Result<Value, SdkError> =
+        c.agent_verify_key(_parity_sink::<solvapay_transport::AgentVerifyKeyParams>());
     let _: Result<GrantCustomerCreditsResponse, SdkError> =
         c.assign_credits(_parity_sink::<AssignCreditsRequest>());
     let _: Result<Value, SdkError> =
@@ -334,8 +388,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
 }
 
 #[test]
-fn operation_signatures_count_is_45() {
-    assert_eq!(OPERATION_SIGNATURES.len(), 45);
+fn operation_signatures_count_is_54() {
+    assert_eq!(OPERATION_SIGNATURES.len(), 54);
 }
 
 #[test]

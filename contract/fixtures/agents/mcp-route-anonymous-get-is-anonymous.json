@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-anonymous-get-is-anonymous",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "GET",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "protectedResource": {
+          "resource": "https://mcp.example.com/mcp"
+        },
+        "paidTools": ["paid"],
+        "body": {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "tools/call",
+          "params": {
+            "name": "paid"
+          }
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "anonymous"
+    }
+  }
+}

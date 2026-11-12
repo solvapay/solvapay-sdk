@@ -237,6 +237,42 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
             let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
             client.fetch_jwks(params).await
         })),
+        "agentVerifyKey" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentVerifyKeyParams = parse_args_json(&args_json)?;
+            client.agent_verify_key(params).await
+        })),
+        "agentAuthorize" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentAuthorizeParams = parse_args_json(&args_json)?;
+            client.agent_authorize(params).await
+        })),
+        "agentComplete" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentCompleteParams = parse_args_json(&args_json)?;
+            client.agent_complete(params).await
+        })),
+        "agentReportUsage" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentReportUsageParams = parse_args_json(&args_json)?;
+            client.agent_report_usage(params).await
+        })),
+        "agentIdentify" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentIdentifyParams = parse_args_json(&args_json)?;
+            client.agent_identify(params).await
+        })),
+        "agentBeginCall" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentBeginCallParams = parse_args_json(&args_json)?;
+            client.agent_begin_call(params).await
+        })),
+        "agentFinishCall" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentFinishCallParams = parse_args_json(&args_json)?;
+            client.agent_finish_call(params).await
+        })),
+        "agentGate" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+            client.agent_gate(params).await
+        })),
+        "agentMcpRoute" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::AgentMcpRouteParams = parse_args_json(&args_json)?;
+            client.agent_mcp_route(params).await
+        })),
         other => err_envelope(&SdkError::transport(format!("unknown op: {other}"), false)),
     }
 }

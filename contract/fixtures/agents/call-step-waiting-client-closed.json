@@ -1,0 +1,55 @@
+{
+  "suite": "agents",
+  "case": "call-step-waiting-client-closed",
+  "input": {
+    "fn": "agentCallStep",
+    "args": {
+      "input": {
+        "call": {
+          "requestId": "req_1",
+          "agentToken": "tok",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false
+          },
+          "item": "model-x",
+          "estimate": {
+            "amount": "0.25",
+            "currency": "USD"
+          },
+          "prompt": {
+            "promptHash": "sha256:abc",
+            "toolError": false,
+            "excerpt": "the end"
+          }
+        },
+        "maxWaitSeconds": 60,
+        "nowMs": 1000,
+        "deadlineMs": 60000,
+        "answer": {
+          "status": "waiting",
+          "callRef": "call_TEST0001",
+          "message": "Approval apr_TESTAPR1 for more budget is waiting for your owner.",
+          "approval": {
+            "reference": "apr_TESTAPR1",
+            "expiresAt": "2026-01-01T00:15:00.000Z"
+          },
+          "retryAfterSeconds": 1
+        },
+        "aborted": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refused",
+      "reason": "approval_client_closed",
+      "message": "Approval apr_TESTAPR1 for more budget is waiting for your owner.",
+      "log": {
+        "callRef": "call_TEST0001",
+        "approvalRef": "apr_TESTAPR1"
+      }
+    }
+  }
+}

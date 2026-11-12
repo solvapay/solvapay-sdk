@@ -1,0 +1,25 @@
+{
+  "suite": "agents",
+  "case": "key-result-environment-mismatch",
+  "input": {
+    "fn": "agentKeyResult",
+    "args": {
+      "input": {
+        "verified": {
+          "agentRef": "agt_TESTAGNT",
+          "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "merchantEnvironment": "live"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "environment_mismatch",
+      "detail": "This agent spends in sandbox, and this secret key is for live"
+    }
+  }
+}

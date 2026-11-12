@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "constants",
+  "input": {
+    "fn": "agentConstants",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "serverRefusalReasons": [
+        "customer_not_linked",
+        "ask",
+        "deny",
+        "topup_required",
+        "approval_declined",
+        "approval_expired"
+      ],
+      "reconciliationResults": ["matched", "adjusted", "pending", "already_reconciled", "ignored"],
+      "reconciliationReasons": ["provisional", "expired", "no_debit", "cost_differs"],
+      "environments": ["sandbox", "live"],
+      "agentKeyPrefix": "agk_",
+      "authorizeWaitMaxSeconds": 55,
+      "requestTimeoutMs": 10000,
+      "agentKeyCacheMs": 30000,
+      "clockToleranceSeconds": 30,
+      "promptExcerptMax": 1500,
+      "scope": "usage",
+      "excerptClaim": "px",
+      "clientClaim": "cid",
+      "envClaim": "env"
+    }
+  }
+}

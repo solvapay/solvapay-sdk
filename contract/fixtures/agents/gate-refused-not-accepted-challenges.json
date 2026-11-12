@@ -1,0 +1,56 @@
+{
+  "suite": "agents",
+  "case": "gate-refused-not-accepted-challenges",
+  "input": {
+    "fn": "agentGateResult",
+    "args": {
+      "input": {
+        "identity": {
+          "kind": "agent",
+          "agent": {
+            "agentRef": "agt_TESTAGNT",
+            "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+            "promptExcerpt": false,
+            "environment": "sandbox"
+          }
+        },
+        "begun": {
+          "kind": "refused",
+          "reason": "agent_not_accepted",
+          "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+        },
+        "protectedResource": {
+          "resource": "https://api.example.com/v1",
+          "authorizationServer": "https://api.solvapay.test/v1/agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refused",
+      "status": 401,
+      "refused": {
+        "kind": "refused",
+        "reason": "agent_not_accepted",
+        "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+      },
+      "agent": {
+        "agentRef": "agt_TESTAGNT",
+        "principalRef": "ppl_ABCDEFGHIJKLMNOP",
+        "promptExcerpt": false,
+        "environment": "sandbox"
+      },
+      "challenge": {
+        "WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"SolvaPay did not accept this agent (revoked or not for this merchant).\", resource_metadata=\"https://api.example.com/.well-known/oauth-protected-resource/v1\", scope=\"usage\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate"
+      },
+      "body": {
+        "error": {
+          "type": "agent_not_accepted",
+          "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+        }
+      }
+    }
+  }
+}

@@ -262,6 +262,11 @@ impl ClientShell {
         self
     }
 
+    /// The secret key this shell authenticates with.
+    pub(crate) fn api_key(&self) -> &str {
+        &self.api_key
+    }
+
     /// Epoch-ms from the injected clock hook.
     pub fn now_ms(&self) -> u64 {
         (self.clock)()

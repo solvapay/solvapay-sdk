@@ -5,6 +5,22 @@ use magnus::prelude::*;
 use magnus::{function, method, Error, RClass, RModule};
 
 use crate::client::SolvaPayClient;
+use crate::decisions::agent_amount_string_binding;
+use crate::decisions::agent_call_step_binding;
+use crate::decisions::agent_canonical_resource_binding;
+use crate::decisions::agent_challenge_headers_binding;
+use crate::decisions::agent_complete_body_binding;
+use crate::decisions::agent_constants_binding;
+use crate::decisions::agent_credential_kind_binding;
+use crate::decisions::agent_from_claims_binding;
+use crate::decisions::agent_gate_result_binding;
+use crate::decisions::agent_key_result_binding;
+use crate::decisions::agent_mcp_route_step_binding;
+use crate::decisions::agent_prompt_facts_binding;
+use crate::decisions::agent_protected_resource_binding;
+use crate::decisions::agent_refusal_status_binding;
+use crate::decisions::agent_refusal_tool_result_binding;
+use crate::decisions::agent_secret_key_environment_binding;
 use crate::decisions::append_paid_tool_description_binding;
 use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
@@ -51,10 +67,12 @@ use crate::decisions::get_history_next_binding;
 use crate::decisions::headline_charges_binding;
 use crate::decisions::history_rows_binding;
 use crate::decisions::included_units_binding;
+use crate::decisions::is_agent_key_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
 use crate::decisions::is_error_result_binding;
 use crate::decisions::link_label_binding;
+use crate::decisions::looks_like_jwt_binding;
 use crate::decisions::map_route_error_binding;
 use crate::decisions::meter_name_binding;
 use crate::decisions::next_action_for_binding;
@@ -62,6 +80,7 @@ use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_free_limit_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::overlay_claimed_limits_binding;
+use crate::decisions::parse_agent_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
@@ -485,6 +504,61 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "ensure_output_schema_object_type",
         function!(ensure_output_schema_object_type_binding, 1),
     )?;
+    native.define_singleton_method("agent_constants", function!(agent_constants_binding, 1))?;
+    native.define_singleton_method(
+        "parse_agent_response",
+        function!(parse_agent_response_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_secret_key_environment",
+        function!(agent_secret_key_environment_binding, 1),
+    )?;
+    native.define_singleton_method("is_agent_key", function!(is_agent_key_binding, 1))?;
+    native.define_singleton_method("looks_like_jwt", function!(looks_like_jwt_binding, 1))?;
+    native.define_singleton_method(
+        "agent_credential_kind",
+        function!(agent_credential_kind_binding, 1),
+    )?;
+    native.define_singleton_method("agent_from_claims", function!(agent_from_claims_binding, 1))?;
+    native.define_singleton_method("agent_key_result", function!(agent_key_result_binding, 1))?;
+    native.define_singleton_method(
+        "agent_canonical_resource",
+        function!(agent_canonical_resource_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_protected_resource",
+        function!(agent_protected_resource_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_challenge_headers",
+        function!(agent_challenge_headers_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_prompt_facts",
+        function!(agent_prompt_facts_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_amount_string",
+        function!(agent_amount_string_binding, 1),
+    )?;
+    native.define_singleton_method("agent_call_step", function!(agent_call_step_binding, 1))?;
+    native.define_singleton_method(
+        "agent_complete_body",
+        function!(agent_complete_body_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_refusal_status",
+        function!(agent_refusal_status_binding, 1),
+    )?;
+    native.define_singleton_method("agent_gate_result", function!(agent_gate_result_binding, 1))?;
+    native.define_singleton_method(
+        "agent_refusal_tool_result",
+        function!(agent_refusal_tool_result_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "agent_mcp_route_step",
+        function!(agent_mcp_route_step_binding, 1),
+    )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
         "should_show_tax_row",
@@ -811,5 +885,32 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     client.define_method("mcp_dispatch", method!(SolvaPayClient::mcp_dispatch, 1))?;
     client.define_method("fetch_jwks", method!(SolvaPayClient::fetch_jwks, 1))?;
+    client.define_method(
+        "agent_verify_key",
+        method!(SolvaPayClient::agent_verify_key, 1),
+    )?;
+    client.define_method(
+        "agent_authorize",
+        method!(SolvaPayClient::agent_authorize, 1),
+    )?;
+    client.define_method("agent_complete", method!(SolvaPayClient::agent_complete, 1))?;
+    client.define_method(
+        "agent_report_usage",
+        method!(SolvaPayClient::agent_report_usage, 1),
+    )?;
+    client.define_method("agent_identify", method!(SolvaPayClient::agent_identify, 1))?;
+    client.define_method(
+        "agent_begin_call",
+        method!(SolvaPayClient::agent_begin_call, 1),
+    )?;
+    client.define_method(
+        "agent_finish_call",
+        method!(SolvaPayClient::agent_finish_call, 1),
+    )?;
+    client.define_method("agent_gate", method!(SolvaPayClient::agent_gate, 1))?;
+    client.define_method(
+        "agent_mcp_route",
+        method!(SolvaPayClient::agent_mcp_route, 1),
+    )?;
     Ok(())
 }

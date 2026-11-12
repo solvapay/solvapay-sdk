@@ -77,6 +77,118 @@ pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_
 /// Frozen delay table.
 pub use solvapay_core::balance_poll::topup_balance_poll_delays_ms as TOPUP_BALANCE_POLL_DELAYS_MS;
 
+/// Format an amount as a decimal string with up to 8 places.
+///
+/// # Returns
+///
+/// Decimal string with trailing zeros trimmed.
+pub use solvapay_core::agents::agent_amount_string;
+
+/// Decide the next move of a paid agent call.
+///
+/// # Returns
+///
+/// Step with kind authorize, sleep, allow or refused.
+pub use solvapay_core::agents::agent_call_step;
+
+/// Return the canonical form SolvaPay compares OAuth resources in.
+///
+/// # Returns
+///
+/// ok with the canonical URL, or ok false for a fragment, credentials or an invalid URL.
+pub use solvapay_core::agents::agent_canonical_resource;
+
+/// Build the WWW-Authenticate challenge that sends a host to sign in.
+///
+/// # Returns
+///
+/// ok with the header map, or ok false when the resource is not usable.
+pub use solvapay_core::agents::agent_challenge_headers;
+
+/// Build the complete request body for how a call ended.
+///
+/// # Returns
+///
+/// status, cost with a string amount or null, and interrupted when set.
+pub use solvapay_core::agents::agent_complete_body;
+
+/// Return the frozen agent payment constants.
+///
+/// # Returns
+///
+/// Refusal reasons, reconciliation results and reasons, environments, key prefix, wait and cache limits, claim names.
+pub use solvapay_core::agents::agent_constants;
+
+/// Classify how a presented key is checked.
+///
+/// # Returns
+///
+/// agent_key, agent_token or not_agent.
+pub use solvapay_core::agents::agent_credential_kind;
+
+/// Read the agent a verified token payload names.
+///
+/// # Returns
+///
+/// ok with the agent, or ok false with reason invalid or environment_mismatch.
+pub use solvapay_core::agents::agent_from_claims;
+
+/// Turn an identification and a call outcome into an HTTP gate result.
+///
+/// # Returns
+///
+/// Gate result with kind not_agent, rejected, begin, refused or allowed.
+pub use solvapay_core::agents::agent_gate_result;
+
+/// Decide what an agent key verification answer means.
+///
+/// # Returns
+///
+/// ok with the agent, ok false with the reason, or rethrow when SolvaPay was out of reach.
+pub use solvapay_core::agents::agent_key_result;
+
+/// Decide where one request to an agent-paid MCP server goes.
+///
+/// # Returns
+///
+/// Route with kind pass, response, anonymous, identify, agent or error.
+pub use solvapay_core::agents::agent_mcp_route_step;
+
+/// Compute the prompt facts sent with an authorize.
+///
+/// # Returns
+///
+/// promptHash, toolError and the last 1,500 characters as excerpt.
+pub use solvapay_core::agents::agent_prompt_facts;
+
+/// Build the RFC 9728 view of a protected resource.
+///
+/// # Returns
+///
+/// Canonical resource, metadata path, metadata URL and the metadata document.
+pub use solvapay_core::agents::agent_protected_resource;
+
+/// Map a refusal reason to its HTTP status.
+///
+/// # Returns
+///
+/// 401, 402, 422 or 502, or null for an unknown reason.
+pub use solvapay_core::agents::agent_refusal_status;
+
+/// Shape a refusal as an MCP tool error.
+///
+/// # Returns
+///
+/// Tool result with isError, the sentence as text and structuredContent.refusal.
+pub use solvapay_core::agents::agent_refusal_tool_result;
+
+/// Read the environment a merchant secret key is for.
+///
+/// # Returns
+///
+/// sandbox or live, or null when the prefix does not say.
+pub use solvapay_core::agents::agent_secret_key_environment;
+
 /// Append the paid-tool account hint to a merchant tool description.
 ///
 /// # Arguments
@@ -307,6 +419,13 @@ pub use solvapay_core::pricing_options::headline_charges;
 /// Cap (0 means unlimited), or null when no limit is configured.
 pub use solvapay_core::pricing_options::included_units;
 
+/// Tell whether a presented key is an agent key.
+///
+/// # Returns
+///
+/// True for the agk_ prefix with something after it.
+pub use solvapay_core::agents::is_agent_key;
+
 /// Whether Stripe Tax requires a postal or ZIP code for a country.
 ///
 /// # Returns
@@ -357,6 +476,13 @@ pub use solvapay_core::credit_display::is_zero_decimal_currency;
 /// Label safe to embed in a markdown link.
 pub use solvapay_core::paywall_state::link_label;
 
+/// Tell whether a presented key is a JWS compact token.
+///
+/// # Returns
+///
+/// True for three base64url parts.
+pub use solvapay_core::agents::looks_like_jwt;
+
 /// Read the meter a plan counts against from a per-unit charge, tier, or limit option.
 ///
 /// # Returns
@@ -388,6 +514,13 @@ pub use solvapay_core::paywall_state::next_action_for;
 ///
 /// Normalized `{ meter, cap, scope, windowDays? }` or a 400 helper error.
 pub use solvapay_core::free_limit::normalize_free_limit;
+
+/// Read one agent API answer strictly, field by field.
+///
+/// # Returns
+///
+/// ok with the checked value, or ok false with the first field that did not read.
+pub use solvapay_core::agents::parse_agent_response;
 
 /// Project a PaywallError into the client-facing payload shape.
 ///

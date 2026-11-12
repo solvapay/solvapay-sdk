@@ -295,7 +295,12 @@ fn verify_rs256(jwks: &Value, kid: Option<&str>, signing_input: &[u8], sig: &[u8
 }
 
 #[cfg(feature = "jwt-verify")]
-fn verify_es256(jwks: &Value, kid: Option<&str>, signing_input: &[u8], sig: &[u8]) -> Option<()> {
+pub(crate) fn verify_es256(
+    jwks: &Value,
+    kid: Option<&str>,
+    signing_input: &[u8],
+    sig: &[u8],
+) -> Option<()> {
     use p256::ecdsa::signature::Verifier;
     use p256::ecdsa::{Signature, VerifyingKey};
     use p256::EncodedPoint;
@@ -330,7 +335,7 @@ fn verify_es256(jwks: &Value, kid: Option<&str>, signing_input: &[u8], sig: &[u8
 }
 
 #[cfg(feature = "jwt-verify")]
-fn claim_as_i64(value: &Value) -> Option<i64> {
+pub(crate) fn claim_as_i64(value: &Value) -> Option<i64> {
     match value {
         Value::Number(n) => n.as_i64().or_else(|| n.as_f64().map(|f| f as i64)),
         _ => None,
@@ -338,7 +343,7 @@ fn claim_as_i64(value: &Value) -> Option<i64> {
 }
 
 #[cfg(feature = "jwt-verify")]
-fn base64url_decode(input: &str) -> Option<Vec<u8>> {
+pub(crate) fn base64url_decode(input: &str) -> Option<Vec<u8>> {
     let mut std = String::with_capacity(input.len() + 3);
     for ch in input.chars() {
         match ch {
@@ -357,7 +362,7 @@ fn base64url_decode(input: &str) -> Option<Vec<u8>> {
 }
 
 #[cfg(feature = "jwt-verify")]
-fn base64url_decode_to_string(input: &str) -> Option<String> {
+pub(crate) fn base64url_decode_to_string(input: &str) -> Option<String> {
     String::from_utf8(base64url_decode(input)?).ok()
 }
 

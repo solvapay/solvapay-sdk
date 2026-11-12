@@ -1,0 +1,26 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-unread-agent-key-is-error",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "authorization": "Bearer agk_sandbox_X",
+        "identity": {
+          "kind": "not_agent"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "error",
+      "message": "An agent key reached the agent route, but its agent layer has no verifyAgentKey"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "suite": "agents",
+  "case": "mcp-route-merchant-bearer-passes",
+  "input": {
+    "fn": "agentMcpRouteStep",
+    "args": {
+      "input": {
+        "method": "POST",
+        "path": "/mcp",
+        "issuer": "https://api.solvapay.test/v1/agent",
+        "mcpPath": "/mcp",
+        "serverName": "Example",
+        "authorization": "Bearer sk_live_merchant"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "pass"
+    }
+  }
+}

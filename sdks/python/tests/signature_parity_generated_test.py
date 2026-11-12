@@ -21,6 +21,15 @@ from solvapay.facade import create_solvapay
 
 OPERATION_NAMES = (
     'activate_plan',
+    'agent_authorize',
+    'agent_begin_call',
+    'agent_complete',
+    'agent_finish_call',
+    'agent_gate',
+    'agent_identify',
+    'agent_mcp_route',
+    'agent_report_usage',
+    'agent_verify_key',
     'assign_credits',
     'attach_business_details',
     'bootstrap_mcp_product',

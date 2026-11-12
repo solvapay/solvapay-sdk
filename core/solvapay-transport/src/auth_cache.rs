@@ -34,6 +34,8 @@ pub(crate) struct AuthCaches {
     /// Keyed by the whole presented token, never by a claim decoded from it:
     /// claims are attacker-controlled until the signature has been checked.
     verdicts: Mutex<HashMap<String, CachedVerdict>>,
+    /// Agent key → (SolvaPay's answer about it, expiry ms).
+    agent_keys: Mutex<HashMap<String, (Value, u64)>>,
 }
 
 impl AuthCaches {
@@ -42,6 +44,7 @@ impl AuthCaches {
         Self {
             jwks: Mutex::new(HashMap::new()),
             verdicts: Mutex::new(HashMap::new()),
+            agent_keys: Mutex::new(HashMap::new()),
         }
     }
 
@@ -117,6 +120,42 @@ impl AuthCaches {
                 claims,
                 expires_at_ms: now_ms.saturating_add(ttl),
             },
+        );
+        Ok(())
+    }
+
+    /// Returns the cached answer about an agent key when it has not expired.
+    pub(crate) fn get_agent_key(&self, key: &str, now_ms: u64) -> Result<Option<Value>, SdkError> {
+        let guard = self
+            .agent_keys
+            .lock()
+            .map_err(|_| SdkError::transport("agent key cache poisoned", false))?;
+        Ok(guard
+            .get(key)
+            .and_then(|(answer, exp)| (*exp > now_ms).then(|| answer.clone())))
+    }
+
+    /// Stores an answer about an agent key for [`solvapay_core::agents::AGENT_KEY_CACHE_MS`].
+    ///
+    /// Rejections are kept too, so a revoked key is not re-asked on every call.
+    pub(crate) fn put_agent_key(
+        &self,
+        key: String,
+        answer: Value,
+        now_ms: u64,
+    ) -> Result<(), SdkError> {
+        let mut guard = self
+            .agent_keys
+            .lock()
+            .map_err(|_| SdkError::transport("agent key cache poisoned", false))?;
+        // Drop expired answers so the map stays bounded by live keys.
+        guard.retain(|_, (_, exp)| *exp > now_ms);
+        guard.insert(
+            key,
+            (
+                answer,
+                now_ms.saturating_add(solvapay_core::agents::AGENT_KEY_CACHE_MS),
+            ),
         );
         Ok(())
     }

@@ -2333,6 +2333,7 @@ version = "2.6.0"
 dependencies = [
  "fixture-runner",
  "js-sys",
+ "p256",
  "repo-paths",
  "reqwest",
  "serde",

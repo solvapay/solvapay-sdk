@@ -1,0 +1,20 @@
+{
+  "suite": "agents",
+  "case": "key-result-403-environment-mismatch",
+  "input": {
+    "fn": "agentKeyResult",
+    "args": {
+      "input": {
+        "errorStatus": 403,
+        "errorMessage": "POST /v1/sdk/agent/keys/verifications failed (403): {\"code\":\"environment_mismatch\"}"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "environment_mismatch",
+      "detail": "POST /v1/sdk/agent/keys/verifications failed (403): {\"code\":\"environment_mismatch\"}"
+    }
+  }
+}

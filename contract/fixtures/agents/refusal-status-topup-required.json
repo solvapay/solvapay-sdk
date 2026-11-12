@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-topup-required",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "topup_required"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

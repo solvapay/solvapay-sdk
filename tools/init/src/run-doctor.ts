@@ -74,15 +74,22 @@ const printCheck = (check: DoctorCheckResult): void => {
  * can gate CI / pre-deploy.
  */
 /** Whether the project's `@solvapay/*` packages match npm (`latest`, or `preview` for a preview build). */
-const checkSdkVersions = async (cwd: string, distTags: FetchDistTags): Promise<DoctorCheckResult> => {
+const checkSdkVersions = async (
+  cwd: string,
+  distTags: FetchDistTags,
+): Promise<DoctorCheckResult> => {
   const name = '@solvapay/* versions'
   try {
     const names = await solvapayDependencies(cwd)
-    if (names === null) return { name, ok: true, detail: `no package.json in ${cwd}, nothing to check` }
+    if (names === null)
+      return { name, ok: true, detail: `no package.json in ${cwd}, nothing to check` }
     if (names.length === 0) return { name, ok: true, detail: 'no @solvapay/* dependencies' }
     const outdated = await findOutdatedSolvapayPackages(cwd, names, distTags)
-    if (outdated.length === 0) return { name, ok: true, detail: `${names.length} package(s) match npm` }
-    const behind = outdated.map(o => `${o.name} ${o.installed} (npm ${o.tag} ${o.wanted})`).join(', ')
+    if (outdated.length === 0)
+      return { name, ok: true, detail: `${names.length} package(s) match npm` }
+    const behind = outdated
+      .map(o => `${o.name} ${o.installed} (npm ${o.tag} ${o.wanted})`)
+      .join(', ')
     const command = upgradeCommand(await detectPackageManager(cwd), outdated)
     return { name, ok: false, detail: `behind npm: ${behind}. Upgrade with: ${command}` }
   } catch (error) {

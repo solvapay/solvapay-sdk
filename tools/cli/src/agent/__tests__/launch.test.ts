@@ -59,7 +59,13 @@ beforeEach(async () => {
   listing = { providerRef: PROV, anthropicBaseUrl: MODEL_URL, defaultModel: 'claude-haiku-4-5' }
   claims = [
     { status: 'pending', retryAfterSeconds: 3 },
-    { status: 'approved', agentKey: 'agk_SECRET', agentRef: 'agt_CLAUDE01', providerRef: PROV, merchantName: 'Opper' },
+    {
+      status: 'approved',
+      agentKey: 'agk_SECRET',
+      agentRef: 'agt_CLAUDE01',
+      providerRef: PROV,
+      merchantName: 'Opper',
+    },
   ]
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const path = url.slice(API.length)
@@ -83,7 +89,10 @@ beforeEach(async () => {
       lookups.push(handle)
       return handles[handle]
         ? Response.json({ ...listing, providerRef: handles[handle], handle })
-        : Response.json({ message: `No merchant in the catalog is called ${handle}` }, { status: 404 })
+        : Response.json(
+            { message: `No merchant in the catalog is called ${handle}` },
+            { status: 404 },
+          )
     }
     if (path === `/catalog/listings/${PROV}`) {
       return Response.json(listing)
@@ -100,7 +109,8 @@ beforeEach(async () => {
         { status: 201 },
       )
     }
-    if (path === '/agent/connect-requests/claims') return Response.json(claims.shift() ?? { status: 'claimed' })
+    if (path === '/agent/connect-requests/claims')
+      return Response.json(claims.shift() ?? { status: 'claimed' })
     return new Response('not found', { status: 404 })
   })
 })
@@ -109,7 +119,9 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('launch claude', () => {
   it('connects when no key is saved, then starts Claude Code paying with the key', async () => {
-    expect(await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS, '--', '-p', 'say hi'])).toBe(0)
+    expect(await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS, '--', '-p', 'say hi'])).toBe(
+      0,
+    )
 
     expect(opened).toEqual([{ providerRef: PROV, name: 'Claude Code', client: 'claude' }])
     expect(said.join('\n')).toContain('https://account.example.test/c/KQ7M-RX4D')
@@ -137,12 +149,17 @@ describe('launch claude', () => {
     expect(claude.env).not.toHaveProperty('ANTHROPIC_API_KEY')
     expect(said.join('\n')).toContain('Approve this connection on your phone or in a browser:')
     expect(spendReads).toBe(3)
-    expect(said.at(-1)).toBe('This session: 2 paid calls, 0.0042 USD, paid by agent agt_CLAUDE01 through SolvaPay.')
+    expect(said.at(-1)).toBe(
+      'This session: 2 paid calls, 0.0042 USD, paid by agent agt_CLAUDE01 through SolvaPay.',
+    )
   })
 
   it("takes the model API and model from the merchant's catalog listing", async () => {
     expect(await launch(['claude', PROV, '--api', API])).toBe(0)
-    expect(started[0].env).toMatchObject({ ANTHROPIC_BASE_URL: MODEL_URL, ANTHROPIC_MODEL: 'claude-haiku-4-5' })
+    expect(started[0].env).toMatchObject({
+      ANTHROPIC_BASE_URL: MODEL_URL,
+      ANTHROPIC_MODEL: 'claude-haiku-4-5',
+    })
     expect(await launch(['claude', PROV, '--api', API, '--model', 'claude-sonnet-4-6'])).toBe(0)
     expect(started[1].env.ANTHROPIC_MODEL).toBe('claude-sonnet-4-6')
   })
@@ -154,22 +171,43 @@ describe('launch claude', () => {
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ hasCompletedOnboarding: true })
     expect((await stat(file)).mode & 0o777).toBe(0o600)
 
-    await writeFile(file, JSON.stringify({ hasCompletedOnboarding: true, theme: 'dark', projects: { '/x': {} } }))
+    await writeFile(
+      file,
+      JSON.stringify({ hasCompletedOnboarding: true, theme: 'dark', projects: { '/x': {} } }),
+    )
     await launch(['claude', PROV, '--api', API, ...MODEL_FLAGS])
-    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ hasCompletedOnboarding: true, theme: 'dark', projects: { '/x': {} } })
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({
+      hasCompletedOnboarding: true,
+      theme: 'dark',
+      projects: { '/x': {} },
+    })
   })
 
   it('launches straight away with a saved key, without connecting again', async () => {
-    await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
+    await saveKey(env, {
+      providerRef: PROV,
+      agentKey: 'agk_SECRET',
+      agentRef: 'agt_A',
+      merchantName: 'Opper',
+      api: API,
+    })
     expect(await launch(['claude', PROV, ...MODEL_FLAGS])).toBe(0)
     expect(opened).toEqual([])
     expect(started).toHaveLength(1)
   })
 
   it('fails before Claude Code starts when the key was revoked', async () => {
-    await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
+    await saveKey(env, {
+      providerRef: PROV,
+      agentKey: 'agk_SECRET',
+      agentRef: 'agt_A',
+      merchantName: 'Opper',
+      api: API,
+    })
     revoked = true
-    await expect(launch(['claude', PROV, ...MODEL_FLAGS])).rejects.toThrow(/SolvaPay refused this machine's agent key \(401/)
+    await expect(launch(['claude', PROV, ...MODEL_FLAGS])).rejects.toThrow(
+      /SolvaPay refused this machine's agent key \(401/,
+    )
     expect(started).toEqual([])
     expect((await readKey(env, PROV)).agentKey).toBe('agk_SECRET')
   })
@@ -193,9 +231,15 @@ describe('launch claude', () => {
 
   it('fails when neither the flags nor the listing name a model API and model, or the agent is unknown', async () => {
     listing = { providerRef: PROV }
-    await expect(launch(['claude', PROV, '--api', API])).rejects.toThrow("listing names no model API: pass --model-url")
-    await expect(launch(['claude', PROV, '--api', API, '--model-url', MODEL_URL])).rejects.toThrow('listing names no default model')
-    await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow('launch needs the agent, one of: claude, hermes')
+    await expect(launch(['claude', PROV, '--api', API])).rejects.toThrow(
+      'listing names no model API: pass --model-url',
+    )
+    await expect(launch(['claude', PROV, '--api', API, '--model-url', MODEL_URL])).rejects.toThrow(
+      'listing names no default model',
+    )
+    await expect(launch(['cursor', PROV, ...MODEL_FLAGS])).rejects.toThrow(
+      'launch needs the agent, one of: claude, hermes',
+    )
     expect(opened).toEqual([])
   })
 })
@@ -227,9 +271,22 @@ describe('the merchant by its launch name', () => {
 
 describe('the spend on exit', () => {
   it('says how many calls had not settled when it stopped waiting', async () => {
-    await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
+    await saveKey(env, {
+      providerRef: PROV,
+      agentKey: 'agk_SECRET',
+      agentRef: 'agt_A',
+      merchantName: 'Opper',
+      api: API,
+    })
     vi.stubGlobal('fetch', async (url: string) =>
-      Response.json({ agentRef: 'agt_A', providerRef: PROV, since: url, calls: 1, inFlight: 2, spent: { amount: '0.001', currency: 'USD' } }),
+      Response.json({
+        agentRef: 'agt_A',
+        providerRef: PROV,
+        since: url,
+        calls: 1,
+        inFlight: 2,
+        spent: { amount: '0.001', currency: 'USD' },
+      }),
     )
     const now = vi.spyOn(Date, 'now')
     let clock = 0
@@ -250,8 +307,16 @@ describe('launch hermes', () => {
     expect(opened).toEqual([{ providerRef: PROV, name: 'Hermes', client: 'hermes' }])
     const [hermes] = started
     expect(hermes.command).toBe('hermes')
-    expect(hermes.args).toEqual(['chat', '--model', 'custom:opper:claude-haiku-4-5', '-q', 'say hi'])
-    expect(await readFile(join(env.HERMES_HOME, '.env'), 'utf8')).toBe('SOLVAPAY_KEY_PROV_E4YWS8H8=agk_SECRET\n')
+    expect(hermes.args).toEqual([
+      'chat',
+      '--model',
+      'custom:opper:claude-haiku-4-5',
+      '-q',
+      'say hi',
+    ])
+    expect(await readFile(join(env.HERMES_HOME, '.env'), 'utf8')).toBe(
+      'SOLVAPAY_KEY_PROV_E4YWS8H8=agk_SECRET\n',
+    )
     expect(await readFile(join(env.HERMES_HOME, 'config.yaml'), 'utf8')).toContain(
       `providers:\n  opper:\n    api: ${MODEL_URL}\n    transport: anthropic_messages\n    key_env: SOLVAPAY_KEY_PROV_E4YWS8H8`,
     )

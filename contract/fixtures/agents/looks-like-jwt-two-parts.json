@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "looks-like-jwt-two-parts",
+  "input": {
+    "fn": "looksLikeJwt",
+    "args": {
+      "value": "aaa.bbb"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

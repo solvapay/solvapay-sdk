@@ -7,10 +7,7 @@
       "input": {
         "hasActivePlan": true,
         "nextAction": "topup",
-        "enabledViews": [
-          "checkout",
-          "account"
-        ]
+        "enabledViews": ["checkout", "account"]
       }
     }
   },

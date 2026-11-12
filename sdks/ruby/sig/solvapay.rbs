@@ -91,6 +91,15 @@ module SolvaPay
     @native_client: untyped
     def initialize: (?api_key: String?, ?api_base_url: String?, ?native_client: untyped) -> void
     def activate_plan: (params: Hash[String, untyped]) -> untyped
+    def agent_authorize: (params: Hash[String, untyped]) -> untyped
+    def agent_begin_call: (params: Hash[String, untyped]) -> untyped
+    def agent_complete: (params: Hash[String, untyped]) -> untyped
+    def agent_finish_call: (params: Hash[String, untyped]) -> untyped
+    def agent_gate: (params: Hash[String, untyped]) -> untyped
+    def agent_identify: (params: Hash[String, untyped]) -> untyped
+    def agent_mcp_route: (params: Hash[String, untyped]) -> untyped
+    def agent_report_usage: (params: Hash[String, untyped]) -> untyped
+    def agent_verify_key: (params: Hash[String, untyped]) -> untyped
     def assign_credits: (params: Hash[String, untyped]) -> untyped
     def attach_business_details: (params: Hash[String, untyped]) -> untyped
     def bootstrap_mcp_product: (params: Hash[String, untyped]) -> untyped
@@ -249,6 +258,22 @@ module SolvaPay
   TAX_ID_EXAMPLE_BY_COUNTRY: untyped
   TAX_ID_TYPES: untyped
   TAX_NOT_COLLECTED_NOTE: untyped
+  def self.agent_amount_string: (amount: Float) -> untyped
+  def self.agent_call_step: (input: untyped) -> untyped
+  def self.agent_canonical_resource: (resource: String) -> untyped
+  def self.agent_challenge_headers: (resource: untyped, description: String) -> untyped
+  def self.agent_complete_body: (result: untyped) -> untyped
+  def self.agent_constants: () -> untyped
+  def self.agent_credential_kind: (presented_key: String, accept_agent_keys: bool) -> untyped
+  def self.agent_from_claims: (claims: untyped, ?merchant_environment: String) -> untyped
+  def self.agent_gate_result: (input: untyped) -> untyped
+  def self.agent_key_result: (input: untyped) -> untyped
+  def self.agent_mcp_route_step: (input: untyped) -> untyped
+  def self.agent_prompt_facts: (text: String, tool_error: bool) -> untyped
+  def self.agent_protected_resource: (resource: untyped) -> untyped
+  def self.agent_refusal_status: (reason: String) -> untyped
+  def self.agent_refusal_tool_result: (refused: untyped) -> untyped
+  def self.agent_secret_key_environment: (secret_key: String) -> untyped
   def self.append_paid_tool_description: (?description: String) -> untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped
@@ -280,16 +305,19 @@ module SolvaPay
   def self.get_tax_id_helper_text: (country: String) -> untyped
   def self.headline_charges: (?priced: untyped) -> untyped
   def self.included_units: (?priced: untyped, ?meter: String) -> untyped
+  def self.is_agent_key: (value: String) -> untyped
   def self.is_postal_code_required: (country: String) -> untyped
   def self.is_state_required: (country: String) -> untyped
   def self.is_tax_id_type: (value: String) -> untyped
   def self.is_unlimited_remaining: (remaining: Float) -> untyped
   def self.is_zero_decimal_currency: (currency: String) -> untyped
   def self.link_label: (name: String) -> untyped
+  def self.looks_like_jwt: (value: String) -> untyped
   def self.meter_name: (?priced: untyped) -> untyped
   def self.minor_units_per_major: (currency: String) -> untyped
   def self.next_action_for: (state: Hash[String, untyped]) -> untyped
   def self.normalize_free_limit: (limit: untyped) -> untyped
+  def self.parse_agent_response: (kind: String, value: untyped) -> untyped
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
   def self.paywall_structured_content_schema: () -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped

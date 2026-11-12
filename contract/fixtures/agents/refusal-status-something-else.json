@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-something-else",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "something_else"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

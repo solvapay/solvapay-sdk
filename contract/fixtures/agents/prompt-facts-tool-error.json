@@ -1,0 +1,18 @@
+{
+  "suite": "agents",
+  "case": "prompt-facts-tool-error",
+  "input": {
+    "fn": "agentPromptFacts",
+    "args": {
+      "text": "Summarise the failed run",
+      "toolError": true
+    }
+  },
+  "expect": {
+    "result": {
+      "promptHash": "sha256:6d90fbf07922b90b34c414723d8d0941827ff83e5f2c7594eaa631849522b725",
+      "toolError": true,
+      "excerpt": "Summarise the failed run"
+    }
+  }
+}

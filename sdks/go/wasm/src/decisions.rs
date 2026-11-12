@@ -10,7 +10,11 @@ use solvapay_core::{
 };
 
 use solvapay_core::{
-    append_paid_tool_description, assert_valid_product_ref,
+    agent_amount_string, agent_call_step, agent_canonical_resource, agent_challenge_headers,
+    agent_complete_body, agent_constants, agent_credential_kind, agent_from_claims,
+    agent_gate_result, agent_key_result, agent_mcp_route_step, agent_prompt_facts,
+    agent_protected_resource, agent_refusal_status, agent_refusal_tool_result,
+    agent_secret_key_environment, append_paid_tool_description, assert_valid_product_ref,
     attach_business_details_validation_error, billing_cycle, build_create_customer_params,
     build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate, charges,
     classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
@@ -23,9 +27,10 @@ use solvapay_core::{
     evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
     extract_bearer_token, format_compact_credits, free_limits_agree, free_meter_name_pattern,
     free_tool_description_suffix, gate_next, get_history_next, headline_charges, history_rows,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result, link_label,
-    map_route_error, meter_name, next_action_for, normalize_cancel_response, normalize_free_limit,
-    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
+    included_units, is_agent_key, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
+    link_label, looks_like_jwt, map_route_error, meter_name, next_action_for,
+    normalize_cancel_response, normalize_free_limit, normalize_reactivate_response,
+    overlay_claimed_limits, parse_agent_response, paywall_client_payload,
     paywall_structured_content_schema, pegged_credits_per_unit, per_unit_charge, plan_consequence,
     plan_ladder, plan_pricing_shape, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
@@ -2078,6 +2083,343 @@ pub unsafe extern "C" fn sv_ensure_output_schema_object_type_binding(
         let schema = optional_value(&args, "schema");
         to_value(&ensure_output_schema_object_type(
             schema.as_ref().unwrap_or(&Value::Null),
+        ))
+    }))
+}
+
+// --- agents ---
+
+/// Binding for `agentConstants`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_constants_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&agent_constants())
+    }))
+}
+
+/// Binding for `parseAgentResponse`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_parse_agent_response_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let kind = require_string(&args, "kind")?;
+        let value = optional_value(&args, "value");
+        to_value(&parse_agent_response(
+            &kind,
+            value.as_ref().unwrap_or(&Value::Null),
+        ))
+    }))
+}
+
+/// Binding for `agentSecretKeyEnvironment`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_secret_key_environment_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let secret_key = require_string(&args, "secretKey")?;
+        to_value(&agent_secret_key_environment(&secret_key))
+    }))
+}
+
+/// Binding for `isAgentKey`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_is_agent_key_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(is_agent_key(&value)))
+    }))
+}
+
+/// Binding for `looksLikeJwt`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_looks_like_jwt_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = require_string(&args, "value")?;
+        Ok(Value::Bool(looks_like_jwt(&value)))
+    }))
+}
+
+/// Binding for `agentCredentialKind`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_credential_kind_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let presented_key = require_string(&args, "presentedKey")?;
+        let accept_agent_keys = require_bool(&args, "acceptAgentKeys")?;
+        Ok(Value::String(
+            agent_credential_kind(&presented_key, accept_agent_keys).to_owned(),
+        ))
+    }))
+}
+
+/// Binding for `agentFromClaims`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_from_claims_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let claims = optional_value(&args, "claims");
+        let merchant_environment = optional_string(&args, "merchantEnvironment")?;
+        to_value(&agent_from_claims(
+            claims.as_ref().unwrap_or(&Value::Null),
+            merchant_environment.as_deref(),
+        ))
+    }))
+}
+
+/// Binding for `agentKeyResult`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_key_result_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_key_result(input.as_ref().unwrap_or(&Value::Null)))
+    }))
+}
+
+/// Binding for `agentCanonicalResource`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_canonical_resource_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = require_string(&args, "resource")?;
+        to_value(&agent_canonical_resource(&resource))
+    }))
+}
+
+/// Binding for `agentProtectedResource`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_protected_resource_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = optional_value(&args, "resource");
+        to_value(&agent_protected_resource(
+            resource.as_ref().unwrap_or(&Value::Null),
+        ))
+    }))
+}
+
+/// Binding for `agentChallengeHeaders`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_challenge_headers_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let resource = optional_value(&args, "resource");
+        let description = require_string(&args, "description")?;
+        to_value(&agent_challenge_headers(
+            resource.as_ref().unwrap_or(&Value::Null),
+            &description,
+        ))
+    }))
+}
+
+/// Binding for `agentPromptFacts`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_prompt_facts_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let text = require_string(&args, "text")?;
+        let tool_error = require_bool(&args, "toolError")?;
+        to_value(&agent_prompt_facts(&text, tool_error))
+    }))
+}
+
+/// Binding for `agentAmountString`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_amount_string_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let amount = require_f64(&args, "amount")?;
+        Ok(Value::String(agent_amount_string(amount).to_owned()))
+    }))
+}
+
+/// Binding for `agentCallStep`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_call_step_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_call_step(input.as_ref().unwrap_or(&Value::Null)))
+    }))
+}
+
+/// Binding for `agentCompleteBody`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_complete_body_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let result = optional_value(&args, "result");
+        to_value(&agent_complete_body(
+            result.as_ref().unwrap_or(&Value::Null),
+        ))
+    }))
+}
+
+/// Binding for `agentRefusalStatus`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_refusal_status_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let reason = require_string(&args, "reason")?;
+        to_value(&agent_refusal_status(&reason))
+    }))
+}
+
+/// Binding for `agentGateResult`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_gate_result_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_gate_result(input.as_ref().unwrap_or(&Value::Null)))
+    }))
+}
+
+/// Binding for `agentRefusalToolResult`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_refusal_tool_result_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let refused = optional_value(&args, "refused");
+        to_value(&agent_refusal_tool_result(
+            refused.as_ref().unwrap_or(&Value::Null),
+        ))
+    }))
+}
+
+/// Binding for `agentMcpRouteStep`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_agent_mcp_route_step_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = optional_value(&args, "input");
+        to_value(&agent_mcp_route_step(
+            input.as_ref().unwrap_or(&Value::Null),
         ))
     }))
 }

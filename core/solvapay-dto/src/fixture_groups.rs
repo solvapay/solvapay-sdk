@@ -61,4 +61,13 @@ pub const GROUP_MCP_FNS: &[&str] = &[
     "mcpOauthRequest",
     "mcpDispatch",
     "fetchJwks",
+    "agentVerifyKey",
+    "agentAuthorize",
+    "agentComplete",
+    "agentReportUsage",
+    "agentIdentify",
+    "agentBeginCall",
+    "agentFinishCall",
+    "agentGate",
+    "agentMcpRoute",
 ];

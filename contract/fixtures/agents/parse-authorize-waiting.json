@@ -1,0 +1,35 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-waiting",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "waiting",
+        "callRef": "call_TEST0001",
+        "message": "Approval apr_TESTAPR1 for more budget is waiting for your owner.",
+        "approval": {
+          "reference": "apr_TESTAPR1",
+          "expiresAt": "2026-01-01T00:15:00.000Z"
+        },
+        "retryAfterSeconds": 1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": true,
+      "value": {
+        "status": "waiting",
+        "callRef": "call_TEST0001",
+        "message": "Approval apr_TESTAPR1 for more budget is waiting for your owner.",
+        "approval": {
+          "reference": "apr_TESTAPR1",
+          "expiresAt": "2026-01-01T00:15:00.000Z"
+        },
+        "retryAfterSeconds": 1
+      }
+    }
+  }
+}

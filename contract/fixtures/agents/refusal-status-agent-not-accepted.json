@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-agent-not-accepted",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "agent_not_accepted"
+    }
+  },
+  "expect": {
+    "result": 401
+  }
+}

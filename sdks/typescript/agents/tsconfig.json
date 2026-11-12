@@ -1,0 +1,17 @@
+{
+  "extends": "@solvapay/tsconfig/base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@solvapay/server": ["../server/src"],
+      "@solvapay/core": ["../core/src"]
+    }
+  }
+}

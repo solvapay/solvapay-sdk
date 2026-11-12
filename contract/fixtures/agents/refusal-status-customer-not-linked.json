@@ -1,0 +1,13 @@
+{
+  "suite": "agents",
+  "case": "refusal-status-customer-not-linked",
+  "input": {
+    "fn": "agentRefusalStatus",
+    "args": {
+      "reason": "customer_not_linked"
+    }
+  },
+  "expect": {
+    "result": 402
+  }
+}

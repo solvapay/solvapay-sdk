@@ -583,6 +583,105 @@ impl WasmClient {
         })
         .await
     }
+
+    /// `agentVerifyKey`
+    #[wasm_bindgen(js_name = "agentVerifyKey")]
+    pub async fn agent_verify_key(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentVerifyKeyParams = parse_args_json(&args_json)?;
+            client.agent_verify_key(params).await
+        })
+        .await
+    }
+
+    /// `agentAuthorize`
+    #[wasm_bindgen(js_name = "agentAuthorize")]
+    pub async fn agent_authorize(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentAuthorizeParams = parse_args_json(&args_json)?;
+            client.agent_authorize(params).await
+        })
+        .await
+    }
+
+    /// `agentComplete`
+    #[wasm_bindgen(js_name = "agentComplete")]
+    pub async fn agent_complete(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentCompleteParams = parse_args_json(&args_json)?;
+            client.agent_complete(params).await
+        })
+        .await
+    }
+
+    /// `agentReportUsage`
+    #[wasm_bindgen(js_name = "agentReportUsage")]
+    pub async fn agent_report_usage(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentReportUsageParams = parse_args_json(&args_json)?;
+            client.agent_report_usage(params).await
+        })
+        .await
+    }
+
+    /// `agentIdentify`
+    #[wasm_bindgen(js_name = "agentIdentify")]
+    pub async fn agent_identify(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentIdentifyParams = parse_args_json(&args_json)?;
+            client.agent_identify(params).await
+        })
+        .await
+    }
+
+    /// `agentBeginCall`
+    #[wasm_bindgen(js_name = "agentBeginCall")]
+    pub async fn agent_begin_call(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentBeginCallParams = parse_args_json(&args_json)?;
+            client.agent_begin_call(params).await
+        })
+        .await
+    }
+
+    /// `agentFinishCall`
+    #[wasm_bindgen(js_name = "agentFinishCall")]
+    pub async fn agent_finish_call(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentFinishCallParams = parse_args_json(&args_json)?;
+            client.agent_finish_call(params).await
+        })
+        .await
+    }
+
+    /// `agentGate`
+    #[wasm_bindgen(js_name = "agentGate")]
+    pub async fn agent_gate(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentGateParams = parse_args_json(&args_json)?;
+            client.agent_gate(params).await
+        })
+        .await
+    }
+
+    /// `agentMcpRoute`
+    #[wasm_bindgen(js_name = "agentMcpRoute")]
+    pub async fn agent_mcp_route(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::AgentMcpRouteParams = parse_args_json(&args_json)?;
+            client.agent_mcp_route(params).await
+        })
+        .await
+    }
 }
 
 /// Offline dispatch helper: unknown fn names return an internal-error envelope
@@ -635,7 +734,16 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "mcpResolveAuth"
         | "mcpOauthRequest"
         | "mcpDispatch"
-        | "fetchJwks" => None,
+        | "fetchJwks"
+        | "agentVerifyKey"
+        | "agentAuthorize"
+        | "agentComplete"
+        | "agentReportUsage"
+        | "agentIdentify"
+        | "agentBeginCall"
+        | "agentFinishCall"
+        | "agentGate"
+        | "agentMcpRoute" => None,
         other => Some(internal_error_envelope(format!(
             "unknown WasmClient fn: {other}"
         ))),

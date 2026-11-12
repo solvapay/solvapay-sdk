@@ -350,6 +350,105 @@ export class WasmClient {
         return ret;
     }
     /**
+     * `agentAuthorize`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentAuthorize(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentAuthorize(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentBeginCall`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentBeginCall(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentBeginCall(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentComplete`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentComplete(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentComplete(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentFinishCall`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentFinishCall(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentFinishCall(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentGate`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentGate(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentGate(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentIdentify`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentIdentify(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentIdentify(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentMcpRoute`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentMcpRoute(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentMcpRoute(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentReportUsage`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentReportUsage(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentReportUsage(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `agentVerifyKey`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    agentVerifyKey(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_agentVerifyKey(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
      * `POST /v1/sdk/customers/{customerRef}/credits`
      * @param {string} args_json
      * @returns {Promise<string>}
@@ -855,6 +954,326 @@ export class WasmClient {
     }
 }
 if (Symbol.dispose) WasmClient.prototype[Symbol.dispose] = WasmClient.prototype.free;
+
+/**
+ * Binding for `agentAmountString`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentAmountString(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentAmountString(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentCallStep`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentCallStep(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentCallStep(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentCanonicalResource`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentCanonicalResource(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentCanonicalResource(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentChallengeHeaders`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentChallengeHeaders(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentChallengeHeaders(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentCompleteBody`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentCompleteBody(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentCompleteBody(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentConstants`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentConstants(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentConstants(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentCredentialKind`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentCredentialKind(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentCredentialKind(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentFromClaims`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentFromClaims(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentFromClaims(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentGateResult`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentGateResult(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentGateResult(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentKeyResult`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentKeyResult(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentKeyResult(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentMcpRouteStep`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentMcpRouteStep(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentMcpRouteStep(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentPromptFacts`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentPromptFacts(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentPromptFacts(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentProtectedResource`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentProtectedResource(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentProtectedResource(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentRefusalStatus`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentRefusalStatus(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentRefusalStatus(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentRefusalToolResult`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentRefusalToolResult(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentRefusalToolResult(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `agentSecretKeyEnvironment`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function agentSecretKeyEnvironment(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.agentSecretKeyEnvironment(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
 
 /**
  * Binding for `appendPaidToolDescription`.
@@ -2198,6 +2617,26 @@ export function invokePayableNext(args_json) {
 }
 
 /**
+ * Binding for `isAgentKey`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function isAgentKey(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.isAgentKey(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `isCachedCustomerRefValid`.
  * @param {string} args_json
  * @returns {string}
@@ -2398,6 +2837,26 @@ export function linkLabel(args_json) {
 }
 
 /**
+ * Binding for `looksLikeJwt`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function looksLikeJwt(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.looksLikeJwt(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `makeResponseResult`.
  * @param {string} args_json
  * @returns {string}
@@ -2589,6 +3048,26 @@ export function overlayClaimedLimits(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.overlayClaimedLimits(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `parseAgentResponse`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function parseAgentResponse(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.parseAgentResponse(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -3999,7 +4478,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 658, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 715, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h83695bada2fdd54b);
             return ret;
         },
