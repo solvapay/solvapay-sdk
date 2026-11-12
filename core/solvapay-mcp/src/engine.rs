@@ -616,7 +616,7 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
             ui["_meta"] = json!({
                 "ui": {
                     "csp": desc.csp,
-                    "prefersBorder": false
+                    "prefersBorder": true
                 }
             });
             Ok(rpc_result(

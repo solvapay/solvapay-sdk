@@ -67,7 +67,8 @@ export interface UseUsageReturn {
 export interface UsageSnapshot {
   meterRef: string | null
   total: number | null
-  used: number
+  /** Measured consumption, or `null` when this response did not measure it. */
+  used: number | null
   remaining: number | null
   percentUsed: number | null
   periodStart?: string
@@ -97,8 +98,8 @@ function deriveUsage(
   // `unlimited` already decodes — only a confirmed finite cap produces a
   // total. While limits are loading (or the transport has no `getLimits`)
   // both stay `null`: cap unknown, not cap absent. Never fabricate a
-  // cap as `used + remaining`; `purchase.usage.used` is only ever reset
-  // to zero by the backend.
+  // cap as `used + remaining`. `used` is null when the limits response
+  // did not measure consumption.
   const hasFiniteCap = limits.unlimited === false && limits.remaining !== null
   const remaining = hasFiniteCap ? limits.remaining : null
   const total = typeof limits.limit === 'number' && limits.limit > 0 ? limits.limit : null
@@ -107,11 +108,11 @@ function deriveUsage(
       ? limits.used
       : total !== null && remaining !== null
         ? Math.max(0, total - remaining)
-        : typeof usage?.used === 'number'
-          ? usage.used
-          : 0
+        : null
   const percentUsed =
-    total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
+    total !== null && total > 0 && used !== null
+      ? Math.min(100, Math.round((used / total) * 10000) / 100)
+      : null
   return {
     meterRef: limits.meterName,
     total,

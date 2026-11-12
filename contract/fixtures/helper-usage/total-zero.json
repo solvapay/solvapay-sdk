@@ -20,7 +20,7 @@
     "result": {
       "meterRef": "mtr_requests",
       "total": null,
-      "used": 0,
+      "used": null,
       "remaining": 0,
       "percentUsed": null,
       "purchaseRef": "pur_1"

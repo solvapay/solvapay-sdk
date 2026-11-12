@@ -65,7 +65,7 @@ module SolvaPay
         "request_id" => action["requestId"],
       }
       consequence = action["consequence"]
-      decision["consequence"] = consequence if %w[throttled overage].include?(consequence)
+      decision["consequence"] = consequence if consequence == "overage"
       build_allow_result(
         backend_ref: backend_ref,
         decision: decision,

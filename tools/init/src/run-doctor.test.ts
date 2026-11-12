@@ -85,6 +85,39 @@ describe('runDoctorInDirectory', () => {
     expect(report.checks.find(c => c.name === 'Product readiness')?.ok).toBe(false)
   })
 
+  it('fails the @solvapay/* versions check when an installed package is behind npm', async () => {
+    const { mkdir, mkdtemp, rm, writeFile } = await import('node:fs/promises')
+    const os = await import('node:os')
+    const path = await import('node:path')
+    const cwd = await mkdtemp(path.join(os.tmpdir(), 'doctor-outdated-'))
+    try {
+      await writeFile(
+        path.join(cwd, 'package.json'),
+        JSON.stringify({ dependencies: { '@solvapay/mcp': '^0.4.3' } }),
+      )
+      await mkdir(path.join(cwd, 'node_modules', '@solvapay', 'mcp'), { recursive: true })
+      await writeFile(
+        path.join(cwd, 'node_modules', '@solvapay', 'mcp', 'package.json'),
+        JSON.stringify({ name: '@solvapay/mcp', version: '0.4.3' }),
+      )
+      vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
+      vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, ok: false }))
+
+      const report = await runDoctorInDirectory({
+        cwd,
+        distTags: async () => ({ latest: '0.5.0' }),
+      })
+      const check = report.checks.find(c => c.name === '@solvapay/* versions')
+
+      expect(check?.ok).toBe(false)
+      expect(check?.detail).toContain('@solvapay/mcp 0.4.3 (npm latest 0.5.0)')
+      expect(check?.detail).toContain('install --save-exact @solvapay/mcp@0.5.0')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('targets api-dev when --dev is set', async () => {
     vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)

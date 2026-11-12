@@ -28,7 +28,7 @@ import {
  *
  * 2. **Test Provider with API Key**:
  *    - Valid SolvaPay provider account
- *    - At least one product and usage-based plan configured
+ *    - At least one product and hybrid plan configured
  *
  * 3. **Stripe Test Account**:
  *    - Stripe test mode secret key
@@ -119,7 +119,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   let defaultPlan: { reference: string; name: string; freeUnits?: number }
   let createdFixtureProduct = false
   let createdFixturePlan = false
-  let usageBasedPlan: {
+  let meteredPlan: {
     reference: string
     name: string
     creditsPerUnit?: number
@@ -159,7 +159,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.log('✅ API Client created')
       console.log()
 
-      // Step 2: Ensure dedicated test product and usage-based plan exist
+      // Step 2: Ensure dedicated test product and hybrid plan exist
       console.log('Step 2: Ensuring integration test product and plan...')
 
       // Resolve the provider's default currency so fixture plans pass the
@@ -190,35 +190,36 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
       let plans: any[] = await apiClient.listPlans(defaultProduct.reference)
 
-      usageBasedPlan =
+      meteredPlan =
         plans
           .map((p: Record<string, unknown>) => ({ ...p, ...readMeteredPricing(p) }))
-          .find((p: any) => p.type === 'usage-based' && p.creditsPerUnit > 0 && p.freeUnits > 0) ||
-        null
+          .find((p: any) => p.type === 'hybrid' && p.creditsPerUnit > 0 && p.freeUnits > 0) || null
 
-      if (!usageBasedPlan) {
+      if (!meteredPlan) {
         const createdPlan = await apiClient.createPlan({
           productRef: defaultProduct.reference,
           name: `SDK Payment Integration Usage Plan ${Date.now()}`,
-          description: 'Auto-created usage-based fixture plan',
+          description: 'Auto-created hybrid fixture plan',
           currency: providerCurrency,
           options: buildTestPlanOptions({
-            type: 'usage-based',
+            type: 'hybrid',
             currency: providerCurrency,
+            price: 500,
             creditsPerUnit: 100,
             freeUnits: 5,
             limit: 5,
+            billingCycle: 'monthly',
           }),
           metadata: {
             source: 'sdk-payment-integration-test',
           },
         })
-        usageBasedPlan = { ...createdPlan, ...readMeteredPricing(createdPlan) }
+        meteredPlan = { ...createdPlan, ...readMeteredPricing(createdPlan) }
         createdFixturePlan = true
         plans = await apiClient.listPlans(defaultProduct.reference)
       }
 
-      defaultPlan = usageBasedPlan || { ...plans[0], ...readMeteredPricing(plans[0]) }
+      defaultPlan = meteredPlan || { ...plans[0], ...readMeteredPricing(plans[0]) }
 
       console.log('✅ Fixture product ready:', {
         reference: defaultProduct.reference,
@@ -230,13 +231,13 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         freeUnits: defaultPlan.freeUnits,
       })
 
-      if (usageBasedPlan) {
-        console.log('✅ Usage-based plan found:', {
-          reference: usageBasedPlan.reference,
-          name: usageBasedPlan.name,
+      if (meteredPlan) {
+        console.log('✅ Hybrid plan found:', {
+          reference: meteredPlan.reference,
+          name: meteredPlan.name,
         })
       } else {
-        console.log('⚠️  No usage-based plan found - will use default plan for testing')
+        console.log('⚠️  No hybrid plan found - will use default plan for testing')
       }
       console.log()
 
@@ -279,7 +280,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         const testCustomer = await solvaPay.ensureCustomer(testRef)
 
         // Try to create a payment intent to check if Stripe is configured
-        const planToTest = usageBasedPlan || defaultPlan
+        const planToTest = meteredPlan || defaultPlan
         await createTestPaymentIntent(
           apiClient,
           defaultProduct.reference,
@@ -360,9 +361,9 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         createdFixturePlan &&
         apiClient?.deletePlan &&
         defaultProduct?.reference &&
-        usageBasedPlan?.reference
+        meteredPlan?.reference
       ) {
-        await apiClient.deletePlan(defaultProduct.reference, usageBasedPlan.reference)
+        await apiClient.deletePlan(defaultProduct.reference, meteredPlan.reference)
       }
       if (createdFixtureProduct && apiClient?.deleteProduct && defaultProduct?.reference) {
         await apiClient.deleteProduct(defaultProduct.reference)
@@ -397,7 +398,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       console.log(`\n💳 Creating payment intent for plan: ${planToUse.name}`)
 
@@ -430,7 +431,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       // Ensure customer exists first
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
@@ -468,7 +469,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       // Step 1: Ensure customer exists
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
@@ -504,115 +505,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   })
 
   // ============================================================================
-  // Test 3: Credit System - Granting & Deducting Usage Credits
-  // ============================================================================
-
-  describe('Credit Management - Free Units & Deduction', () => {
-    it('should auto-create purchase with free units when plan has freeUnits > 0', async () => {
-      if ((global as any).__SKIP_PAYMENT_TESTS__) {
-        console.log('⏭️  Skipping: Stripe not configured')
-        return
-      }
-
-      if (!usageBasedPlan || !usageBasedPlan.freeUnits || usageBasedPlan.freeUnits <= 0) {
-        console.log('⏭️  Skipping: Default plan does not have freeUnits > 0')
-        return
-      }
-
-      const planToUse = usageBasedPlan
-      const freeUnitsExpected = Number(planToUse.freeUnits || 0)
-
-      console.log(
-        `\n📋 Testing purchase auto-creation: "${planToUse.name}" with ${freeUnitsExpected} free units`,
-      )
-
-      expect(planToUse.reference).toBeDefined()
-
-      // Create customer and check purchase
-      const testCustomerRef = `test_free_units_${Date.now()}_${Math.random().toString(36).substring(7)}`
-      const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
-
-      const limitsCheck = await apiClient.checkLimits({
-        customerRef: customerRef,
-        productRef: defaultProduct.reference,
-        planRef: planToUse.reference,
-      })
-
-      expect(typeof limitsCheck.withinLimits).toBe('boolean')
-      expect(limitsCheck.remaining).toBeGreaterThanOrEqual(0)
-
-      if (freeUnitsExpected > 0 && limitsCheck.remaining === 0) {
-        console.log(
-          'ℹ️  No immediate free remaining units in this environment; purchase creation verified via checkLimits response',
-        )
-      }
-
-      console.log(`✅ Purchase verified: ${limitsCheck.remaining} units available`)
-    }, 15000)
-
-    it('should deduct exactly 1 credit per trackUsage call', async () => {
-      if ((global as any).__SKIP_PAYMENT_TESTS__) {
-        console.log('⏭️  Skipping: Stripe not configured')
-        return
-      }
-
-      if (!usageBasedPlan) {
-        console.log('⏭️  Skipping: Default plan is not usage-based')
-        return
-      }
-
-      const planToUse = usageBasedPlan
-      console.log(`\n📋 Testing trackUsage credit deduction: "${planToUse.name}"`)
-
-      expect(planToUse.reference).toBeDefined()
-
-      // Create customer and check initial credits
-      const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
-      const initialLimits = await apiClient.checkLimits({
-        customerRef: customerRef,
-        productRef: defaultProduct.reference,
-        planRef: planToUse.reference,
-      })
-
-      const creditsBeforeUsage = initialLimits.remaining
-      expect(creditsBeforeUsage).toBeGreaterThanOrEqual(0)
-
-      if (!initialLimits.withinLimits || creditsBeforeUsage === 0) {
-        console.log(
-          'ℹ️  Environment has no spendable initial units; skipping exact deduction assertion',
-        )
-        return
-      }
-
-      // Track usage to deduct 1 credit
-      await apiClient.trackUsage({
-        customerRef: customerRef,
-        actionType: 'api_call',
-        units: 1,
-        outcome: 'success',
-        productRef: defaultProduct.reference,
-        planRef: planToUse.reference,
-        timestamp: new Date().toISOString(),
-      })
-
-      // Verify credit deduction
-      const limitsAfterUsage = await apiClient.checkLimits({
-        customerRef: customerRef,
-        productRef: defaultProduct.reference,
-        planRef: planToUse.reference,
-      })
-
-      const creditsAfterUsage = limitsAfterUsage.remaining
-      expect(creditsAfterUsage).toBe(creditsBeforeUsage - 1)
-
-      console.log(
-        `✅ trackUsage verified: 1 credit deducted (${creditsBeforeUsage} → ${creditsAfterUsage})`,
-      )
-    }, 15000)
-  })
-
-  // ============================================================================
-  // Test 4: Complete E2E Flow - Payment to Credit Grant to Usage
+  // Test 3: Complete E2E Flow - Payment to Credit Grant to Usage
   // ============================================================================
 
   describe('E2E Flow - Payment → Webhook → Credits → Usage', () => {
@@ -644,7 +537,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       // Create customer and check initial limits
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
@@ -719,7 +612,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
   })
 
   // ============================================================================
-  // Test 5: Payment Failure Scenarios & Error Handling
+  // Test 4: Payment Failure Scenarios & Error Handling
   // ============================================================================
 
   describe('Payment Errors - Declined Cards & Failed Payments', () => {
@@ -733,7 +626,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       // Ensure customer exists first
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
@@ -770,7 +663,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         return
       }
 
-      const planToUse = usageBasedPlan || defaultPlan
+      const planToUse = meteredPlan || defaultPlan
 
       // Ensure customer exists first
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)

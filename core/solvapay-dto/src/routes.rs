@@ -179,6 +179,30 @@ const ROUTES: &[RouteMatch] = &[
     },
     RouteMatch {
         method: "POST",
+        path_template: "/v1/sdk/agent/calls",
+        operation_id: "CallsController_authorize",
+        response_type: None,
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/calls/{callRef}/complete",
+        operation_id: "CallsController_complete",
+        response_type: None,
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/keys/verifications",
+        operation_id: "AgentKeysController_verify",
+        response_type: None,
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/usage-reports",
+        operation_id: "UsageReportsController_report",
+        response_type: None,
+    },
+    RouteMatch {
+        method: "POST",
         path_template: "/v1/sdk/checkout-sessions",
         operation_id: "CheckoutSessionSdkController_createCheckoutSession",
         response_type: Some("CreateCheckoutSessionResponse"),

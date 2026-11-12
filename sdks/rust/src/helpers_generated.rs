@@ -106,7 +106,7 @@ pub use solvapay_core::pricing_options::billing_cycle;
 ///
 /// # Returns
 ///
-/// Customer snapshot with defaults applied, including throttled and overage.
+/// Customer snapshot with defaults applied, including overage.
 pub use solvapay_core::gate_driver::build_customer_snapshot;
 
 /// Build the human-readable paywall gate message from state and gate content.
@@ -150,6 +150,13 @@ pub use solvapay_core::paywall_state::classify_paywall_state;
 ///
 /// Whether the plan has a usage counter even without a per-unit rate.
 pub use solvapay_core::pricing_options::counts_usage;
+
+/// List the meters a recurring plan pays from prepaid credits.
+///
+/// # Returns
+///
+/// Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+pub use solvapay_core::pricing_options::credit_drawn_meters;
 
 /// Coalesce credit-balance channels and derive shortfall and remaining-call counts.
 ///

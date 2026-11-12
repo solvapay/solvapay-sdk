@@ -53,7 +53,6 @@ impl From<solvapay_core::CustomerSnapshot> for CustomerSnapshot {
             remaining: customer.remaining,
             within_limits: serde_json::json!(customer.within_limits),
             plan: customer.plan,
-            throttled: customer.throttled,
             overage: customer.overage,
             is_credit_based: customer.is_credit_based,
         }
@@ -73,8 +72,6 @@ pub struct CustomerSnapshot {
     pub within_limits: Value,
     /// Plan field from limits (may be JSON `null`).
     pub plan: Value,
-    /// `throttled` from limits, or `false` when absent.
-    pub throttled: bool,
     /// `overage` from limits, or `false` when absent.
     pub overage: bool,
     /// True when the limits response carries credit-balance fields.

@@ -552,7 +552,7 @@ class SolvaPay:
             "request_id": action["requestId"],
         }
         consequence = action.get("consequence")
-        if consequence in ("throttled", "overage"):
+        if consequence == "overage":
             decision["consequence"] = consequence
         driver_state = state if isinstance(state, dict) else None
 

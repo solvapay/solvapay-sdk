@@ -403,6 +403,11 @@ export function compileStringFieldInputSchemaJson(args_json: string): string;
 export function countsUsage(args_json: string): string;
 
 /**
+ * Binding for `creditDrawnMeters`.
+ */
+export function creditDrawnMeters(args_json: string): string;
+
+/**
  * Binding for `creditSignals`.
  */
 export function creditSignals(args_json: string): string;
@@ -1066,6 +1071,7 @@ export interface InitOutput {
     readonly coerceCustomerOptions: (a: number, b: number) => [number, number];
     readonly compileStringFieldInputSchemaJson: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];
+    readonly creditDrawnMeters: (a: number, b: number) => [number, number];
     readonly creditSignals: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];

@@ -54,7 +54,6 @@
           "balance": 0,
           "remaining": 3,
           "withinLimits": true,
-          "throttled": false,
           "overage": false,
           "isCreditBased": false
         },

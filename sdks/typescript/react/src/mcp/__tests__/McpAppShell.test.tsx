@@ -121,6 +121,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -160,6 +162,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -209,6 +213,8 @@ describe('<McpAppShell>', () => {
             view: 'usage' as never,
             customer: {
               ref: 'cus_1',
+              email: null,
+              name: null,
               purchase: null,
               paymentMethod: null,
               balance: null,
@@ -232,6 +238,8 @@ describe('<McpAppShell>', () => {
         view: undefined,
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -248,6 +256,8 @@ describe('<McpAppShell>', () => {
 
   const authedCustomer = {
     ref: 'cus_1',
+    email: null,
+    name: null,
     purchase: null,
     paymentMethod: null,
     balance: null,
@@ -354,6 +364,8 @@ describe('<McpAppShell>', () => {
         } as never,
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -382,7 +394,8 @@ describe('<McpAppShell>', () => {
     const privacy = screen.getByRole('link', { name: 'Privacy' })
     expect(terms.getAttribute('href')).toBe('https://solvapay.com/legal/terms')
     expect(privacy.getAttribute('href')).toBe('https://solvapay.com/legal/privacy')
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('renders the SolvaPay legal footer even when the merchant has no terms/privacy URLs', () => {
@@ -395,7 +408,8 @@ describe('<McpAppShell>', () => {
     expect(screen.getByRole('link', { name: 'Privacy' }).getAttribute('href')).toBe(
       'https://solvapay.com/legal/privacy',
     )
-    expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
+    expect(screen.getByText('Provided by SolvaPay')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Provided by SolvaPay' })).toBeNull()
   })
 
   it('does not auto-refresh bootstrap on mount (opening tool result is authoritative)', async () => {
@@ -407,6 +421,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -430,6 +446,8 @@ describe('<McpAppShell>', () => {
       {
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,
@@ -468,6 +486,8 @@ describe('<McpAppShell>', () => {
         view: 'account',
         customer: {
           ref: 'cus_1',
+          email: null,
+          name: null,
           purchase: null,
           paymentMethod: null,
           balance: null,

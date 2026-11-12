@@ -42,6 +42,7 @@ export const classifyReactivateError: (a: number, b: number) => [number, number]
 export const coerceCustomerOptions: (a: number, b: number) => [number, number];
 export const compileStringFieldInputSchemaJson: (a: number, b: number) => [number, number];
 export const countsUsage: (a: number, b: number) => [number, number];
+export const creditDrawnMeters: (a: number, b: number) => [number, number];
 export const creditSignals: (a: number, b: number) => [number, number];
 export const creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
 export const creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];

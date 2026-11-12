@@ -95,6 +95,56 @@ pub struct AttachBusinessDetailsResponse {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallDto {
+    /// Generated wire DTO.
+    #[serde(rename = "agentToken")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_token: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "estimate")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estimate: Option<AuthorizeCallDtoEstimate>,
+    /// Generated wire DTO.
+    #[serde(rename = "item")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub item: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "promptExcerpt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_excerpt: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "promptHash")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_hash: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "requestId")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "toolError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_error: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "wait")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait: Option<i64>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizeCallDtoEstimate {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AutoRechargeConfigDto {
     /// Whether auto-recharge is enabled
     #[serde(rename = "enabled")]
@@ -340,6 +390,10 @@ pub struct BulkCreateUsageRequestEventsItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action_type: Option<BulkCreateUsageRequestEventsItemActionType>,
     /// Generated wire DTO.
+    #[serde(rename = "cost")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<BulkCreateUsageRequestEventsItemCost>,
+    /// Generated wire DTO.
     #[serde(rename = "customerRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub customer_ref: Option<String>,
@@ -409,6 +463,42 @@ pub enum BulkCreateUsageRequestEventsItemActionType {
 }
 
 /// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BulkCreateUsageRequestEventsItemCost {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<BulkCreateUsageRequestEventsItemCostCurrency>,
+    /// Generated wire DTO.
+    #[serde(rename = "source")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<BulkCreateUsageRequestEventsItemCostSource>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BulkCreateUsageRequestEventsItemCostCurrency {
+    /// Wire value `USD`.
+    #[serde(rename = "USD")]
+    Usd,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BulkCreateUsageRequestEventsItemCostSource {
+    /// Wire value `provisional`.
+    #[serde(rename = "provisional")]
+    Provisional,
+    /// Wire value `reported`.
+    #[serde(rename = "reported")]
+    Reported,
+}
+
+/// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BulkCreateUsageRequestEventsItemOutcome {
     /// Wire value `fail`.
@@ -457,6 +547,10 @@ pub struct BulkUsageResultResponse {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum BulkUsageResultResponseCreditDebit {
+    /// Variant `CostDebitSkippedResponse`.
+    CostDebitSkippedResponse(CostDebitSkippedResponse),
+    /// Variant `CostDebitSuccessResponse`.
+    CostDebitSuccessResponse(CostDebitSuccessResponse),
     /// Variant `CreditDebitSkippedResponse`.
     CreditDebitSkippedResponse(CreditDebitSkippedResponse),
     /// Variant `CreditDebitSuccessResponse`.
@@ -837,6 +931,36 @@ pub struct CloneProductDto {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompleteCallDto {
+    /// Generated wire DTO.
+    #[serde(rename = "cost")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CompleteCallDtoCost>,
+    /// Generated wire DTO.
+    #[serde(rename = "interrupted")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interrupted: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "status")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<i64>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompleteCallDtoCost {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigureMcpPlansDto {
     /// Generated wire DTO.
     #[serde(rename = "plans")]
@@ -896,8 +1020,6 @@ pub enum ConfigureMcpPlansDtoPlansItemOptions {
     Variant7(ConfigureMcpPlansDtoPlansItemOptions7),
     /// Variant `Variant8`.
     Variant8(ConfigureMcpPlansDtoPlansItemOptions8),
-    /// Variant `Variant9`.
-    Variant9(ConfigureMcpPlansDtoPlansItemOptions9),
 }
 
 /// Generated wire DTO.
@@ -1109,17 +1231,9 @@ pub struct ConfigureMcpPlansDtoPlansItemOptions3 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on_exceed: Option<ConfigureMcpPlansDtoPlansItemOptions3OnExceed>,
     /// Generated wire DTO.
-    #[serde(rename = "onExceedPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub on_exceed_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "scope")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<ConfigureMcpPlansDtoPlansItemOptions3Scope>,
-    /// Generated wire DTO.
-    #[serde(rename = "uiHint")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ui_hint: Option<ConfigureMcpPlansDtoPlansItemOptions3UiHint>,
     /// Generated wire DTO.
     #[serde(rename = "windowDays")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1137,24 +1251,12 @@ pub enum ConfigureMcpPlansDtoPlansItemOptions3Kind {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConfigureMcpPlansDtoPlansItemOptions3OnExceed {
-    /// Wire value `auto_upgrade`.
-    #[serde(rename = "auto_upgrade")]
-    AutoUpgrade,
     /// Wire value `block`.
     #[serde(rename = "block")]
     Block,
-    /// Wire value `charge`.
-    #[serde(rename = "charge")]
-    Charge,
-    /// Wire value `notify`.
-    #[serde(rename = "notify")]
-    Notify,
-    /// Wire value `throttle`.
-    #[serde(rename = "throttle")]
-    Throttle,
-    /// Wire value `top_up`.
-    #[serde(rename = "top_up")]
-    TopUp,
+    /// Wire value `draw_credits`.
+    #[serde(rename = "draw_credits")]
+    DrawCredits,
 }
 
 /// Generated wire DTO.
@@ -1169,17 +1271,6 @@ pub enum ConfigureMcpPlansDtoPlansItemOptions3Scope {
     /// Wire value `rolling_window`.
     #[serde(rename = "rolling_window")]
     RollingWindow,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConfigureMcpPlansDtoPlansItemOptions3UiHint {
-    /// Wire value `soft_warning`.
-    #[serde(rename = "soft_warning")]
-    SoftWarning,
-    /// Wire value `upgrade_prompt`.
-    #[serde(rename = "upgrade_prompt")]
-    UpgradePrompt,
 }
 
 /// Generated wire DTO.
@@ -1248,10 +1339,6 @@ pub struct ConfigureMcpPlansDtoPlansItemOptions5 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub days: Option<i64>,
     /// Generated wire DTO.
-    #[serde(rename = "downgradeToPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub downgrade_to_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<ConfigureMcpPlansDtoPlansItemOptions5Kind>,
@@ -1282,9 +1369,6 @@ pub enum ConfigureMcpPlansDtoPlansItemOptions5OnEnd {
     /// Wire value `convert`.
     #[serde(rename = "convert")]
     Convert,
-    /// Wire value `downgrade`.
-    #[serde(rename = "downgrade")]
-    Downgrade,
 }
 
 /// Generated wire DTO.
@@ -1378,14 +1462,6 @@ pub enum ConfigureMcpPlansDtoPlansItemOptions6Mode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigureMcpPlansDtoPlansItemOptions7 {
     /// Generated wire DTO.
-    #[serde(rename = "capUnits")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cap_units: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "currency")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<ConfigureMcpPlansDtoPlansItemOptions7Kind>,
@@ -1393,47 +1469,14 @@ pub struct ConfigureMcpPlansDtoPlansItemOptions7 {
     #[serde(rename = "label")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "maxCycles")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_cycles: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "meter")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub meter: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "rateMinor")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rate_minor: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "treatment")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub treatment: Option<ConfigureMcpPlansDtoPlansItemOptions7Treatment>,
 }
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConfigureMcpPlansDtoPlansItemOptions7Kind {
-    /// Wire value `rollover`.
-    #[serde(rename = "rollover")]
-    Rollover,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConfigureMcpPlansDtoPlansItemOptions7Treatment {
-    /// Wire value `carry_forward`.
-    #[serde(rename = "carry_forward")]
-    CarryForward,
-    /// Wire value `credit_money`.
-    #[serde(rename = "credit_money")]
-    CreditMoney,
-    /// Wire value `credit_units`.
-    #[serde(rename = "credit_units")]
-    CreditUnits,
-    /// Wire value `forfeit`.
-    #[serde(rename = "forfeit")]
-    Forfeit,
+    /// Wire value `autoAssigned`.
+    #[serde(rename = "autoAssigned")]
+    AutoAssigned,
 }
 
 /// Generated wire DTO.
@@ -1452,27 +1495,6 @@ pub struct ConfigureMcpPlansDtoPlansItemOptions8 {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConfigureMcpPlansDtoPlansItemOptions8Kind {
-    /// Wire value `autoAssigned`.
-    #[serde(rename = "autoAssigned")]
-    AutoAssigned,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ConfigureMcpPlansDtoPlansItemOptions9 {
-    /// Generated wire DTO.
-    #[serde(rename = "kind")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<ConfigureMcpPlansDtoPlansItemOptions9Kind>,
-    /// Generated wire DTO.
-    #[serde(rename = "label")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConfigureMcpPlansDtoPlansItemOptions9Kind {
     /// Wire value `hidden`.
     #[serde(rename = "hidden")]
     Hidden,
@@ -1506,6 +1528,77 @@ pub struct ConfigureMcpPlansResult {
     #[serde(rename = "product")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub product: Option<SdkProductResponse>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CostDebitSkippedResponse {
+    /// Generated wire DTO.
+    #[serde(rename = "debited")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debited: Option<bool>,
+    /// Generated wire DTO.
+    #[serde(rename = "reason")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<CostDebitSkippedResponseReason>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CostDebitSkippedResponseReason {
+    /// Wire value `customer_not_found`.
+    #[serde(rename = "customer_not_found")]
+    CustomerNotFound,
+    /// Wire value `duplicate`.
+    #[serde(rename = "duplicate")]
+    Duplicate,
+    /// Wire value `record_failed`.
+    #[serde(rename = "record_failed")]
+    RecordFailed,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CostDebitSuccessResponse {
+    /// Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<f64>,
+    /// Exact amount debited, USD decimal string
+    #[serde(rename = "amountUsd")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount_usd: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "autoRecharge")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_recharge: Option<AutoRechargeTriggeredResponse>,
+    /// Balance in whole credits after the debit
+    #[serde(rename = "balanceCredits")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub balance_credits: Option<f64>,
+    /// Exact balance after the debit, USD decimal string
+    #[serde(rename = "balanceUsd")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub balance_usd: Option<String>,
+    /// Set on a debit by reported cost: whether the cost was reported or an estimate
+    #[serde(rename = "costSource")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_source: Option<CostDebitSuccessResponseCostSource>,
+    /// Generated wire DTO.
+    #[serde(rename = "debited")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debited: Option<bool>,
+}
+
+/// Set on a debit by reported cost: whether the cost was reported or an estimate
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CostDebitSuccessResponseCostSource {
+    /// Wire value `provisional`.
+    #[serde(rename = "provisional")]
+    Provisional,
+    /// Wire value `reported`.
+    #[serde(rename = "reported")]
+    Reported,
 }
 
 /// Generated wire DTO.
@@ -1769,8 +1862,6 @@ pub enum CreatePlanRequestOptions {
     Variant7(CreatePlanRequestOptions7),
     /// Variant `Variant8`.
     Variant8(CreatePlanRequestOptions8),
-    /// Variant `Variant9`.
-    Variant9(CreatePlanRequestOptions9),
 }
 
 /// Generated wire DTO.
@@ -1982,17 +2073,9 @@ pub struct CreatePlanRequestOptions3 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on_exceed: Option<CreatePlanRequestOptions3OnExceed>,
     /// Generated wire DTO.
-    #[serde(rename = "onExceedPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub on_exceed_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "scope")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<CreatePlanRequestOptions3Scope>,
-    /// Generated wire DTO.
-    #[serde(rename = "uiHint")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ui_hint: Option<CreatePlanRequestOptions3UiHint>,
     /// Generated wire DTO.
     #[serde(rename = "windowDays")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2010,24 +2093,12 @@ pub enum CreatePlanRequestOptions3Kind {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CreatePlanRequestOptions3OnExceed {
-    /// Wire value `auto_upgrade`.
-    #[serde(rename = "auto_upgrade")]
-    AutoUpgrade,
     /// Wire value `block`.
     #[serde(rename = "block")]
     Block,
-    /// Wire value `charge`.
-    #[serde(rename = "charge")]
-    Charge,
-    /// Wire value `notify`.
-    #[serde(rename = "notify")]
-    Notify,
-    /// Wire value `throttle`.
-    #[serde(rename = "throttle")]
-    Throttle,
-    /// Wire value `top_up`.
-    #[serde(rename = "top_up")]
-    TopUp,
+    /// Wire value `draw_credits`.
+    #[serde(rename = "draw_credits")]
+    DrawCredits,
 }
 
 /// Generated wire DTO.
@@ -2042,17 +2113,6 @@ pub enum CreatePlanRequestOptions3Scope {
     /// Wire value `rolling_window`.
     #[serde(rename = "rolling_window")]
     RollingWindow,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CreatePlanRequestOptions3UiHint {
-    /// Wire value `soft_warning`.
-    #[serde(rename = "soft_warning")]
-    SoftWarning,
-    /// Wire value `upgrade_prompt`.
-    #[serde(rename = "upgrade_prompt")]
-    UpgradePrompt,
 }
 
 /// Generated wire DTO.
@@ -2121,10 +2181,6 @@ pub struct CreatePlanRequestOptions5 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub days: Option<i64>,
     /// Generated wire DTO.
-    #[serde(rename = "downgradeToPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub downgrade_to_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<CreatePlanRequestOptions5Kind>,
@@ -2155,9 +2211,6 @@ pub enum CreatePlanRequestOptions5OnEnd {
     /// Wire value `convert`.
     #[serde(rename = "convert")]
     Convert,
-    /// Wire value `downgrade`.
-    #[serde(rename = "downgrade")]
-    Downgrade,
 }
 
 /// Generated wire DTO.
@@ -2251,14 +2304,6 @@ pub enum CreatePlanRequestOptions6Mode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreatePlanRequestOptions7 {
     /// Generated wire DTO.
-    #[serde(rename = "capUnits")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cap_units: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "currency")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<CreatePlanRequestOptions7Kind>,
@@ -2266,47 +2311,14 @@ pub struct CreatePlanRequestOptions7 {
     #[serde(rename = "label")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "maxCycles")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_cycles: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "meter")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub meter: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "rateMinor")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rate_minor: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "treatment")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub treatment: Option<CreatePlanRequestOptions7Treatment>,
 }
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CreatePlanRequestOptions7Kind {
-    /// Wire value `rollover`.
-    #[serde(rename = "rollover")]
-    Rollover,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CreatePlanRequestOptions7Treatment {
-    /// Wire value `carry_forward`.
-    #[serde(rename = "carry_forward")]
-    CarryForward,
-    /// Wire value `credit_money`.
-    #[serde(rename = "credit_money")]
-    CreditMoney,
-    /// Wire value `credit_units`.
-    #[serde(rename = "credit_units")]
-    CreditUnits,
-    /// Wire value `forfeit`.
-    #[serde(rename = "forfeit")]
-    Forfeit,
+    /// Wire value `autoAssigned`.
+    #[serde(rename = "autoAssigned")]
+    AutoAssigned,
 }
 
 /// Generated wire DTO.
@@ -2325,27 +2337,6 @@ pub struct CreatePlanRequestOptions8 {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CreatePlanRequestOptions8Kind {
-    /// Wire value `autoAssigned`.
-    #[serde(rename = "autoAssigned")]
-    AutoAssigned,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CreatePlanRequestOptions9 {
-    /// Generated wire DTO.
-    #[serde(rename = "kind")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<CreatePlanRequestOptions9Kind>,
-    /// Generated wire DTO.
-    #[serde(rename = "label")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CreatePlanRequestOptions9Kind {
     /// Wire value `hidden`.
     #[serde(rename = "hidden")]
     Hidden,
@@ -2459,6 +2450,10 @@ pub struct CreateUsageRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action_type: Option<CreateUsageRequestActionType>,
     /// Generated wire DTO.
+    #[serde(rename = "cost")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CreateUsageRequestCost>,
+    /// Generated wire DTO.
     #[serde(rename = "customerRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub customer_ref: Option<String>,
@@ -2525,6 +2520,42 @@ pub enum CreateUsageRequestActionType {
     /// Wire value `transaction`.
     #[serde(rename = "transaction")]
     Transaction,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreateUsageRequestCost {
+    /// Generated wire DTO.
+    #[serde(rename = "amount")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<CreateUsageRequestCostCurrency>,
+    /// Generated wire DTO.
+    #[serde(rename = "source")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<CreateUsageRequestCostSource>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CreateUsageRequestCostCurrency {
+    /// Wire value `USD`.
+    #[serde(rename = "USD")]
+    Usd,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CreateUsageRequestCostSource {
+    /// Wire value `provisional`.
+    #[serde(rename = "provisional")]
+    Provisional,
+    /// Wire value `reported`.
+    #[serde(rename = "reported")]
+    Reported,
 }
 
 /// Generated wire DTO.
@@ -2629,18 +2660,24 @@ pub enum CreditDebitSkippedResponseReason {
     /// Wire value `duplicate`.
     #[serde(rename = "duplicate")]
     Duplicate,
+    /// Wire value `free_meter`.
+    #[serde(rename = "free_meter")]
+    FreeMeter,
     /// Wire value `no_active_purchase`.
     #[serde(rename = "no_active_purchase")]
     NoActivePurchase,
     /// Wire value `no_product_ref`.
     #[serde(rename = "no_product_ref")]
     NoProductRef,
-    /// Wire value `plan_billed_at_period_end`.
-    #[serde(rename = "plan_billed_at_period_end")]
-    PlanBilledAtPeriodEnd,
+    /// Wire value `not_credit_drawn`.
+    #[serde(rename = "not_credit_drawn")]
+    NotCreditDrawn,
     /// Wire value `plan_not_credit_based`.
     #[serde(rename = "plan_not_credit_based")]
     PlanNotCreditBased,
+    /// Wire value `within_included`.
+    #[serde(rename = "within_included")]
+    WithinIncluded,
 }
 
 /// Generated wire DTO.
@@ -3115,15 +3152,11 @@ pub struct LimitResponse {
     #[serde(rename = "meterName")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meter_name: Option<String>,
-    /// Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`.
+    /// Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit.
     #[serde(rename = "needsTopUp")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub needs_top_up: Option<bool>,
-    /// Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`.
-    #[serde(rename = "needsUpgrade")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub needs_upgrade: Option<bool>,
-    /// Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`.
+    /// Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`.
     #[serde(rename = "overage")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub overage: Option<bool>,
@@ -3155,14 +3188,6 @@ pub struct LimitResponse {
     #[serde(rename = "remaining")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remaining: Option<f64>,
-    /// Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`.
-    #[serde(rename = "throttled")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub throttled: Option<bool>,
-    /// The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded.
-    #[serde(rename = "upgraded")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub upgraded: Option<bool>,
     /// Consumed usage units this period. Present only when the backend measured a finite cap.
     #[serde(rename = "used")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3287,8 +3312,6 @@ pub enum McpBootstrapDtoPlansItemOptions {
     Variant7(McpBootstrapDtoPlansItemOptions7),
     /// Variant `Variant8`.
     Variant8(McpBootstrapDtoPlansItemOptions8),
-    /// Variant `Variant9`.
-    Variant9(McpBootstrapDtoPlansItemOptions9),
 }
 
 /// Generated wire DTO.
@@ -3500,17 +3523,9 @@ pub struct McpBootstrapDtoPlansItemOptions3 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on_exceed: Option<McpBootstrapDtoPlansItemOptions3OnExceed>,
     /// Generated wire DTO.
-    #[serde(rename = "onExceedPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub on_exceed_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "scope")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<McpBootstrapDtoPlansItemOptions3Scope>,
-    /// Generated wire DTO.
-    #[serde(rename = "uiHint")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ui_hint: Option<McpBootstrapDtoPlansItemOptions3UiHint>,
     /// Generated wire DTO.
     #[serde(rename = "windowDays")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3528,24 +3543,12 @@ pub enum McpBootstrapDtoPlansItemOptions3Kind {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum McpBootstrapDtoPlansItemOptions3OnExceed {
-    /// Wire value `auto_upgrade`.
-    #[serde(rename = "auto_upgrade")]
-    AutoUpgrade,
     /// Wire value `block`.
     #[serde(rename = "block")]
     Block,
-    /// Wire value `charge`.
-    #[serde(rename = "charge")]
-    Charge,
-    /// Wire value `notify`.
-    #[serde(rename = "notify")]
-    Notify,
-    /// Wire value `throttle`.
-    #[serde(rename = "throttle")]
-    Throttle,
-    /// Wire value `top_up`.
-    #[serde(rename = "top_up")]
-    TopUp,
+    /// Wire value `draw_credits`.
+    #[serde(rename = "draw_credits")]
+    DrawCredits,
 }
 
 /// Generated wire DTO.
@@ -3560,17 +3563,6 @@ pub enum McpBootstrapDtoPlansItemOptions3Scope {
     /// Wire value `rolling_window`.
     #[serde(rename = "rolling_window")]
     RollingWindow,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum McpBootstrapDtoPlansItemOptions3UiHint {
-    /// Wire value `soft_warning`.
-    #[serde(rename = "soft_warning")]
-    SoftWarning,
-    /// Wire value `upgrade_prompt`.
-    #[serde(rename = "upgrade_prompt")]
-    UpgradePrompt,
 }
 
 /// Generated wire DTO.
@@ -3639,10 +3631,6 @@ pub struct McpBootstrapDtoPlansItemOptions5 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub days: Option<i64>,
     /// Generated wire DTO.
-    #[serde(rename = "downgradeToPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub downgrade_to_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<McpBootstrapDtoPlansItemOptions5Kind>,
@@ -3673,9 +3661,6 @@ pub enum McpBootstrapDtoPlansItemOptions5OnEnd {
     /// Wire value `convert`.
     #[serde(rename = "convert")]
     Convert,
-    /// Wire value `downgrade`.
-    #[serde(rename = "downgrade")]
-    Downgrade,
 }
 
 /// Generated wire DTO.
@@ -3769,14 +3754,6 @@ pub enum McpBootstrapDtoPlansItemOptions6Mode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpBootstrapDtoPlansItemOptions7 {
     /// Generated wire DTO.
-    #[serde(rename = "capUnits")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cap_units: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "currency")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<McpBootstrapDtoPlansItemOptions7Kind>,
@@ -3784,47 +3761,14 @@ pub struct McpBootstrapDtoPlansItemOptions7 {
     #[serde(rename = "label")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "maxCycles")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_cycles: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "meter")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub meter: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "rateMinor")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rate_minor: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "treatment")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub treatment: Option<McpBootstrapDtoPlansItemOptions7Treatment>,
 }
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum McpBootstrapDtoPlansItemOptions7Kind {
-    /// Wire value `rollover`.
-    #[serde(rename = "rollover")]
-    Rollover,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum McpBootstrapDtoPlansItemOptions7Treatment {
-    /// Wire value `carry_forward`.
-    #[serde(rename = "carry_forward")]
-    CarryForward,
-    /// Wire value `credit_money`.
-    #[serde(rename = "credit_money")]
-    CreditMoney,
-    /// Wire value `credit_units`.
-    #[serde(rename = "credit_units")]
-    CreditUnits,
-    /// Wire value `forfeit`.
-    #[serde(rename = "forfeit")]
-    Forfeit,
+    /// Wire value `autoAssigned`.
+    #[serde(rename = "autoAssigned")]
+    AutoAssigned,
 }
 
 /// Generated wire DTO.
@@ -3843,27 +3787,6 @@ pub struct McpBootstrapDtoPlansItemOptions8 {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum McpBootstrapDtoPlansItemOptions8Kind {
-    /// Wire value `autoAssigned`.
-    #[serde(rename = "autoAssigned")]
-    AutoAssigned,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct McpBootstrapDtoPlansItemOptions9 {
-    /// Generated wire DTO.
-    #[serde(rename = "kind")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<McpBootstrapDtoPlansItemOptions9Kind>,
-    /// Generated wire DTO.
-    #[serde(rename = "label")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum McpBootstrapDtoPlansItemOptions9Kind {
     /// Wire value `hidden`.
     #[serde(rename = "hidden")]
     Hidden,
@@ -5049,10 +4972,10 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "status")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
-    /// Usage billing state for usage-based plans
+    /// Billing period of the active usage window; counts come from `/v1/sdk/limits`
     #[serde(rename = "usage")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub usage: Option<UsageBillingDto>,
+    pub usage: Option<SdkUsagePeriodDto>,
 }
 
 /// Billing cycle
@@ -5093,6 +5016,19 @@ pub enum SdkPurchaseResponseOrigin {
     /// Wire value `paid`.
     #[serde(rename = "paid")]
     Paid,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SdkUsagePeriodDto {
+    /// Billing period of the active usage window; counts come from `/v1/sdk/limits`
+    #[serde(rename = "periodEnd")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_end: Option<String>,
+    /// Billing period of the active usage window; counts come from `/v1/sdk/limits`
+    #[serde(rename = "periodStart")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_start: Option<String>,
 }
 
 /// Generated wire DTO.
@@ -5300,8 +5236,6 @@ pub enum UpdatePlanRequestOptions {
     Variant7(UpdatePlanRequestOptions7),
     /// Variant `Variant8`.
     Variant8(UpdatePlanRequestOptions8),
-    /// Variant `Variant9`.
-    Variant9(UpdatePlanRequestOptions9),
 }
 
 /// Generated wire DTO.
@@ -5513,17 +5447,9 @@ pub struct UpdatePlanRequestOptions3 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on_exceed: Option<UpdatePlanRequestOptions3OnExceed>,
     /// Generated wire DTO.
-    #[serde(rename = "onExceedPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub on_exceed_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "scope")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<UpdatePlanRequestOptions3Scope>,
-    /// Generated wire DTO.
-    #[serde(rename = "uiHint")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ui_hint: Option<UpdatePlanRequestOptions3UiHint>,
     /// Generated wire DTO.
     #[serde(rename = "windowDays")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -5541,24 +5467,12 @@ pub enum UpdatePlanRequestOptions3Kind {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpdatePlanRequestOptions3OnExceed {
-    /// Wire value `auto_upgrade`.
-    #[serde(rename = "auto_upgrade")]
-    AutoUpgrade,
     /// Wire value `block`.
     #[serde(rename = "block")]
     Block,
-    /// Wire value `charge`.
-    #[serde(rename = "charge")]
-    Charge,
-    /// Wire value `notify`.
-    #[serde(rename = "notify")]
-    Notify,
-    /// Wire value `throttle`.
-    #[serde(rename = "throttle")]
-    Throttle,
-    /// Wire value `top_up`.
-    #[serde(rename = "top_up")]
-    TopUp,
+    /// Wire value `draw_credits`.
+    #[serde(rename = "draw_credits")]
+    DrawCredits,
 }
 
 /// Generated wire DTO.
@@ -5573,17 +5487,6 @@ pub enum UpdatePlanRequestOptions3Scope {
     /// Wire value `rolling_window`.
     #[serde(rename = "rolling_window")]
     RollingWindow,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum UpdatePlanRequestOptions3UiHint {
-    /// Wire value `soft_warning`.
-    #[serde(rename = "soft_warning")]
-    SoftWarning,
-    /// Wire value `upgrade_prompt`.
-    #[serde(rename = "upgrade_prompt")]
-    UpgradePrompt,
 }
 
 /// Generated wire DTO.
@@ -5652,10 +5555,6 @@ pub struct UpdatePlanRequestOptions5 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub days: Option<i64>,
     /// Generated wire DTO.
-    #[serde(rename = "downgradeToPricingId")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub downgrade_to_pricing_id: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<UpdatePlanRequestOptions5Kind>,
@@ -5686,9 +5585,6 @@ pub enum UpdatePlanRequestOptions5OnEnd {
     /// Wire value `convert`.
     #[serde(rename = "convert")]
     Convert,
-    /// Wire value `downgrade`.
-    #[serde(rename = "downgrade")]
-    Downgrade,
 }
 
 /// Generated wire DTO.
@@ -5782,14 +5678,6 @@ pub enum UpdatePlanRequestOptions6Mode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UpdatePlanRequestOptions7 {
     /// Generated wire DTO.
-    #[serde(rename = "capUnits")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cap_units: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "currency")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
-    /// Generated wire DTO.
     #[serde(rename = "kind")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<UpdatePlanRequestOptions7Kind>,
@@ -5797,47 +5685,14 @@ pub struct UpdatePlanRequestOptions7 {
     #[serde(rename = "label")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "maxCycles")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_cycles: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "meter")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub meter: Option<String>,
-    /// Generated wire DTO.
-    #[serde(rename = "rateMinor")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rate_minor: Option<i64>,
-    /// Generated wire DTO.
-    #[serde(rename = "treatment")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub treatment: Option<UpdatePlanRequestOptions7Treatment>,
 }
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpdatePlanRequestOptions7Kind {
-    /// Wire value `rollover`.
-    #[serde(rename = "rollover")]
-    Rollover,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum UpdatePlanRequestOptions7Treatment {
-    /// Wire value `carry_forward`.
-    #[serde(rename = "carry_forward")]
-    CarryForward,
-    /// Wire value `credit_money`.
-    #[serde(rename = "credit_money")]
-    CreditMoney,
-    /// Wire value `credit_units`.
-    #[serde(rename = "credit_units")]
-    CreditUnits,
-    /// Wire value `forfeit`.
-    #[serde(rename = "forfeit")]
-    Forfeit,
+    /// Wire value `autoAssigned`.
+    #[serde(rename = "autoAssigned")]
+    AutoAssigned,
 }
 
 /// Generated wire DTO.
@@ -5856,27 +5711,6 @@ pub struct UpdatePlanRequestOptions8 {
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpdatePlanRequestOptions8Kind {
-    /// Wire value `autoAssigned`.
-    #[serde(rename = "autoAssigned")]
-    AutoAssigned,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UpdatePlanRequestOptions9 {
-    /// Generated wire DTO.
-    #[serde(rename = "kind")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub kind: Option<UpdatePlanRequestOptions9Kind>,
-    /// Generated wire DTO.
-    #[serde(rename = "label")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum UpdatePlanRequestOptions9Kind {
     /// Wire value `hidden`.
     #[serde(rename = "hidden")]
     Hidden,
@@ -5976,31 +5810,6 @@ pub enum UpdateProductRequestTaxBehavior {
 
 /// Generated wire DTO.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UsageBillingDto {
-    /// Overage cost in cents
-    #[serde(rename = "overageCost")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub overage_cost: Option<f64>,
-    /// Units exceeding the plan included amount
-    #[serde(rename = "overageUnits")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub overage_units: Option<f64>,
-    /// Period end date
-    #[serde(rename = "periodEnd")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub period_end: Option<String>,
-    /// Period start date
-    #[serde(rename = "periodStart")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub period_start: Option<String>,
-    /// Units consumed in current period
-    #[serde(rename = "used")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub used: Option<f64>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsageRecordResponse {
     /// Generated wire DTO.
     #[serde(rename = "creditDebit")]
@@ -6021,10 +5830,86 @@ pub struct UsageRecordResponse {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum UsageRecordResponseCreditDebit {
+    /// Variant `CostDebitSkippedResponse`.
+    CostDebitSkippedResponse(CostDebitSkippedResponse),
+    /// Variant `CostDebitSuccessResponse`.
+    CostDebitSuccessResponse(CostDebitSuccessResponse),
     /// Variant `CreditDebitSkippedResponse`.
     CreditDebitSkippedResponse(CreditDebitSkippedResponse),
     /// Variant `CreditDebitSuccessResponse`.
     CreditDebitSuccessResponse(CreditDebitSuccessResponse),
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportDto {
+    /// Generated wire DTO.
+    #[serde(rename = "calls")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calls: Option<Vec<UsageReportDtoCallsItem>>,
+    /// Generated wire DTO.
+    #[serde(rename = "currency")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "customerRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "reportId")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report_id: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "source")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "untagged")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub untagged: Option<Vec<UsageReportDtoUntaggedItem>>,
+    /// Generated wire DTO.
+    #[serde(rename = "window")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<UsageReportDtoWindow>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportDtoCallsItem {
+    /// Generated wire DTO.
+    #[serde(rename = "callRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_ref: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "cost")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportDtoUntaggedItem {
+    /// Generated wire DTO.
+    #[serde(rename = "at")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "cost")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UsageReportDtoWindow {
+    /// Generated wire DTO.
+    #[serde(rename = "from")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Generated wire DTO.
+    #[serde(rename = "to")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
 }
 
 /// Generated wire DTO.
@@ -6175,6 +6060,15 @@ pub struct UserInfoUserDto {
     #[serde(rename = "reference")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
+}
+
+/// Generated wire DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VerifyAgentKeyDto {
+    /// Generated wire DTO.
+    #[serde(rename = "agentKey")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_key: Option<String>,
 }
 
 /// Generated wire DTO.

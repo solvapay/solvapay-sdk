@@ -61,7 +61,7 @@ function compileHandler(scenario: McpAuthoringScenario) {
           typeof spec.data === 'object' &&
           !Array.isArray(spec.data) &&
           (spec.data as { echo?: unknown }).echo === 'customer'
-            ? { throttled: ctx.customer.throttled, overage: ctx.customer.overage }
+            ? { overage: ctx.customer.overage }
             : spec.data
         return spec.options === undefined ? ctx.respond(data) : ctx.respond(data, spec.options)
       }

@@ -87,7 +87,6 @@ boundaryTypesTs:
         limit?: number
         autoRecharge?: unknown
         needsTopUp?: boolean
-        needsUpgrade?: boolean
         meterName?: string
         currency?: string
       }
@@ -2907,7 +2906,7 @@ topLevel:
       summary: 'Build the merchant-facing customer snapshot from a limits body.'
       params:
         options: 'Customer ref and last checkLimits body (or null).'
-      returns: 'Customer snapshot with defaults applied, including throttled and overage.'
+      returns: 'Customer snapshot with defaults applied, including overage.'
     sync:
       ts: sync
       py: sync
@@ -4458,6 +4457,27 @@ coreHelpers:
       params:
         options: 'Charge amount, credits per minor unit, and optional USD-to-charge rate.'
       returns: 'Credits per metered unit (0 for a free meter).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  creditDrawnMeters:
+    names:
+      ts: creditDrawnMeters
+      py: credit_drawn_meters
+      rb: credit_drawn_meters
+      go: CreditDrawnMeters
+      rust: credit_drawn_meters
+      c: creditDrawnMeters
+    params: []
+    docs:
+      summary: 'List the meters a recurring plan pays from prepaid credits.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.'
     sync:
       ts: sync
       py: sync

@@ -550,6 +550,14 @@ export function peggedCreditsPerUnit(
 }
 
 /**
+ * List the meters a recurring plan pays from prepaid credits.
+ * @returns Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+ */
+export function creditDrawnMeters(priced: PricedLike | null | undefined): string[] {
+  return dispatchSync('creditDrawnMeters', { priced: priced ?? null })
+}
+
+/**
  * Credits per metered call when the charge currency matches the balance peg.
  * @returns Credits per unit, or null when the rate cannot be established honestly.
  */

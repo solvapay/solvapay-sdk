@@ -537,6 +537,7 @@ export const SHIM_JS_NAMES = [
   'meterName',
   'countsUsage',
   'peggedCreditsPerUnit',
+  'creditDrawnMeters',
   'creditsPerUnitFromBalance',
   'deriveActiveProducts',
   'deriveDefaultView',

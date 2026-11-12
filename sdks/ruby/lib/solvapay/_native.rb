@@ -208,6 +208,7 @@ module SolvaPay
       default_mcp_bearer_expectations
       compile_string_field_input_schema_json
       ensure_output_schema_object_type
+      credit_drawn_meters
       TOPUP_BALANCE_POLL_DELAYS_MS
       BALANCE_RECONCILE_DELAYS_MS
     ].freeze

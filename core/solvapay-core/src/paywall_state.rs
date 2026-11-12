@@ -186,9 +186,6 @@ pub struct PaywallLimits {
     /// Authoritative backend deny reason: prepaid top-up required.
     #[serde(default)]
     pub needs_top_up: Option<bool>,
-    /// Authoritative backend deny reason: auto-upgrade required.
-    #[serde(default)]
-    pub needs_upgrade: Option<bool>,
     /// Meter name used in user-facing included-usage copy.
     #[serde(default)]
     pub meter_name: Option<String>,
@@ -276,8 +273,7 @@ pub struct GateContent {
 ///    purchase / plan ref) must not fall through to `upgrade_required`.
 /// 3. `paywall_reason == "topup_required"` — backend stays authoritative for
 ///    credit-based denials (same rule as Managed MCP).
-/// 4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
-///    `Some(true)`.
+/// 4. Authoritative `needs_top_up` when the backend sent `Some(true)`.
 /// 5. Credit-field presence **and** a real shortfall (`balance < cost`), then
 ///    `balance == 0`, then `cost` unknown && `remaining == 0`.
 /// 6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.
@@ -318,10 +314,6 @@ pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
 
     if limits.needs_top_up == Some(true) {
         return PaywallState::TopupRequired;
-    }
-
-    if limits.needs_upgrade == Some(true) {
-        return PaywallState::UpgradeRequired;
     }
 
     let signals = credit_signals(Some(limits));
@@ -699,21 +691,6 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
             format!("{lead}{topup}{auto}{switch_line}")
         }
         PaywallState::UpgradeRequired => {
-            if has_active_plan(gate) {
-                let plan_name = gate.plan_name.as_deref().unwrap_or("This plan");
-                let lead = format!(
-                    "{plan_name} is active but its included usage is exhausted, and the automatic switch to the next plan did not complete."
-                );
-                return match &ladder {
-                    Some(ladder) => {
-                        format!("{lead} Switch here: {ladder}. {}", account_usage_recovery())
-                    }
-                    None => format!(
-                        "{lead}{}",
-                        recover_clause(url, "switch plan", Some("checkout"), "Open checkout")
-                    ),
-                };
-            }
             match &ladder {
                 Some(ladder) => format!(
                     "You don't have an active plan for this tool. Pick a plan to use this tool: {ladder} (links expire in {CHECKOUT_SESSION_TTL_MINUTES} minutes), or {}. {}",
@@ -924,7 +901,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -950,7 +926,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -972,7 +947,6 @@ mod tests {
             credit_balance: Some(0.0),
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -994,7 +968,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1020,7 +993,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1047,7 +1019,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..PaywallLimits::default()
@@ -1069,7 +1040,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1091,7 +1061,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1113,7 +1082,6 @@ mod tests {
             credit_balance: None,
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1161,7 +1129,6 @@ mod tests {
             credit_balance: Some(100.0),
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1262,7 +1229,6 @@ mod tests {
             credit_balance: None,
             checkout_url: Some("https://pay.test/x".into()),
             needs_top_up: None,
-            needs_upgrade: None,
             meter_name: None,
             currency: None,
             ..Default::default()
@@ -1270,7 +1236,6 @@ mod tests {
         let no_url = PaywallLimits {
             checkout_url: None,
             needs_top_up: None,
-            needs_upgrade: None,
             ..with_url.clone()
         };
         let empty_url = PaywallLimits {
@@ -1355,22 +1320,6 @@ mod tests {
         assert_eq!(
             classify_paywall_state(Some(&limits)),
             PaywallState::TopupRequired
-        );
-    }
-
-    #[test]
-    fn needs_upgrade_flag_is_upgrade() {
-        let limits = PaywallLimits {
-            needs_upgrade: Some(true),
-            plan: Some("pl_pro".into()),
-            remaining: Some(0.0),
-            plans: Some(vec![usage_plan("pl_pro")]),
-            credit_balance: Some(0.0),
-            ..PaywallLimits::default()
-        };
-        assert_eq!(
-            classify_paywall_state(Some(&limits)),
-            PaywallState::UpgradeRequired
         );
     }
 

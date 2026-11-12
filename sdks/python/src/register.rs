@@ -23,6 +23,7 @@ use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::compile_string_field_input_schema_json_binding;
 use crate::decisions::counts_usage_binding;
+use crate::decisions::credit_drawn_meters_binding;
 use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::customer_ref_from_claims_binding;
@@ -297,6 +298,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
         ensure_output_schema_object_type_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(credit_drawn_meters_binding, m)?)?;
     m.add_function(wrap_pyfunction!(format_price_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_show_tax_row_binding, m)?)?;
     m.add_function(wrap_pyfunction!(solvapay_terms_url_binding, m)?)?;

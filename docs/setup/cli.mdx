@@ -1,6 +1,6 @@
 ---
-title: "CLI setup"
-description: "Set up SolvaPay SDK in an existing project, or scaffold a new one from a template."
+title: 'CLI setup'
+description: 'Set up SolvaPay SDK in an existing project, or scaffold a new one from a template.'
 ---
 
 Two CLIs cover the two starting points:
@@ -10,7 +10,7 @@ Two CLIs cover the two starting points:
 
 ## Prerequisites
 
-- Node.js 22 or later
+- Node.js 22 or later (the CLI installs `@solvapay/server`, which requires it)
 - A project directory where you want to add SolvaPay (for `solvapay init`)
 
 ## Run setup
@@ -36,12 +36,12 @@ When you run `npx solvapay init`, the CLI:
 
 ## Files the CLI creates or updates
 
-| File | What changes |
-| --- | --- |
-| `package.json` | TypeScript only — created if missing (after confirmation) |
-| `.env` | Adds or updates `SOLVAPAY_SECRET_KEY` |
-| `.gitignore` | Adds `.env` if needed |
-| `node_modules` and lockfile | Installs base SolvaPay SDK packages |
+| File                        | What changes                                              |
+| --------------------------- | --------------------------------------------------------- |
+| `package.json`              | TypeScript only — created if missing (after confirmation) |
+| `.env`                      | Adds or updates `SOLVAPAY_SECRET_KEY`                     |
+| `.gitignore`                | Adds `.env` if needed                                     |
+| `node_modules` and lockfile | Installs base SolvaPay SDK packages                       |
 
 ## Add stack-specific packages
 
@@ -73,14 +73,15 @@ npm create solvapay my-app -- --type next-auth0
 
 ### Template types
 
-| `--type` | What you get |
-| --- | --- |
-| `mcp` | A paid MCP server. TypeScript (`--language ts`, default) is a Cloudflare Worker with `@solvapay/mcp` and the checkout widget. Python, Ruby, Go, and Rust (`--language python\|ruby\|go\|rust`) scaffold an HTTP `/mcp` server — those languages are preview until production registry publish. `--openapi` is TypeScript-only |
-| `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type |
+| `--type`     | What you get                                                                                                                                                                                                                                                                                                                  |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mcp`        | A paid MCP server. TypeScript (`--language ts`, default) is a Cloudflare Worker with `@solvapay/mcp` and the checkout widget. Python, Ruby, Go, and Rust (`--language python\|ruby\|go\|rust`) scaffold an HTTP `/mcp` server — those languages are preview until production registry publish. `--openapi` is TypeScript-only |
+| `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type                                                                         |
 
 Useful flags: `--language <id>`, `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
-`--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
-skip it). Run `npm create solvapay -- --list-types` to see available templates and languages.
+`--skip-install`, `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
+skip it), and `--offline` (pin SolvaPay packages to the versions the scaffolder ships with instead of
+the registry's latest; without it, a failed registry lookup stops the scaffold). Run `npm create solvapay -- --list-types` to see available templates and languages.
 
 ## Re-run setup safely
 

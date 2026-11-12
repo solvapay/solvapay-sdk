@@ -14,31 +14,46 @@
       "method": "GET",
       "path": "/v1/sdk/platform-config",
       "status": 200,
-      "body": { "stripePublishableKey": "pk_test" }
+      "body": {
+        "stripePublishableKey": "pk_test"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/merchant",
       "status": 200,
-      "body": { "displayName": "Acme" }
+      "body": {
+        "displayName": "Acme"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/products/prd_demo",
       "status": 200,
-      "body": { "name": "Demo" }
+      "body": {
+        "name": "Demo"
+      }
     },
     {
       "method": "GET",
       "path": "/v1/sdk/products/prd_demo/plans",
       "status": 200,
-      "body": { "plans": [{ "name": "Pro" }] }
+      "body": {
+        "plans": [
+          {
+            "name": "Pro"
+          }
+        ]
+      }
     },
     {
       "method": "POST",
       "path": "/v1/sdk/checkout-sessions",
       "status": 200,
-      "body": { "checkoutUrl": "https://checkout.example/s", "sessionId": "cs_1" }
+      "body": {
+        "checkoutUrl": "https://checkout.example/s",
+        "sessionId": "cs_1"
+      }
     }
   ],
   "expect": {
@@ -72,7 +87,7 @@
         }
       ],
       "customer": null,
-      "checkoutUrl": "https://checkout.example/s",
+      "checkoutUrl": null,
       "checkoutPurpose": null,
       "portalUrl": null,
       "autoRechargeUrl": null,

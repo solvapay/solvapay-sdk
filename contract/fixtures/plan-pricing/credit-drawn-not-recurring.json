@@ -1,0 +1,23 @@
+{
+  "suite": "plan-pricing",
+  "case": "credit-drawn-not-recurring",
+  "input": {
+    "fn": "creditDrawnMeters",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": []
+  }
+}

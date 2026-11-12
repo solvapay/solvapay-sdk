@@ -1,5 +1,33 @@
 # @solvapay/mcp changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- a90cfea: Node.js 22 or later is now required (`engines.node` is `>=22`). Node 18 and 20 are end-of-life and get no security fixes, including the 2026-10-21 Node.js security release. The SDK is now tested on Node 22, 24 and 26. On Node 22 the bundled npm 10 installs the MCP template, so the earlier advice to upgrade npm on Node 20 no longer applies.
+
+### Patch Changes
+
+- a90cfea: The optional `@solvapay/mcp-core` peer range now also accepts `^0.5.0`.
+
+## 0.4.5
+
+### Patch Changes
+
+- 760e8db: The UI resource now advertises `prefersBorder: true` on `resources/list` and `resources/read`. The host draws the widget frame.
+
+## 0.4.4
+
+### Patch Changes
+
+- 87ddb16: Narrow the `@solvapay/server` peer to `^2.0.0`. The previous `^1.4.0 || ^2.0.0` branch matched nothing publishable — stable server 1.x stops at 1.3.0, and mcp-core imports `creditSignals` / `FreeLimit` that do not exist there.
+
+## 0.4.3
+
+### Patch Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
 ## 0.4.2
 
 ### Patch Changes

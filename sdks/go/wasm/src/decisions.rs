@@ -15,7 +15,7 @@ use solvapay_core::{
     build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate, charges,
     classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
     classify_paywall_state, classify_reactivate_error, coerce_customer_options,
-    compile_string_field_input_schema_json, counts_usage, credit_signals,
+    compile_string_field_input_schema_json, counts_usage, credit_drawn_meters, credit_signals,
     credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
     decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
     derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
@@ -2062,5 +2062,22 @@ pub unsafe extern "C" fn sv_ensure_output_schema_object_type_binding(
         to_value(&ensure_output_schema_object_type(
             schema.as_ref().unwrap_or(&Value::Null),
         ))
+    }))
+}
+
+// --- plans ---
+
+/// Binding for `creditDrawnMeters`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_credit_drawn_meters_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&credit_drawn_meters(priced.as_ref()))
     }))
 }

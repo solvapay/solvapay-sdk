@@ -2176,6 +2176,55 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "creditDrawnMeters": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
+      }
+    },
     "creditSignals": {
       "capi": {
         "exposed": true

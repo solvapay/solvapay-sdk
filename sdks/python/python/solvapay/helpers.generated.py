@@ -54,7 +54,7 @@ def billing_cycle(priced: Any | None = None) -> Any:
 
 def build_customer_snapshot(customer_ref: str, limits: Any | None = None) -> Any:
     """Build the merchant-facing customer snapshot from a limits body.
-    @returns Customer snapshot with defaults applied, including throttled and overage.
+    @returns Customer snapshot with defaults applied, including overage.
     """
     payload: dict[str, Any] = {}
     payload["customerRef"] = customer_ref
@@ -116,6 +116,16 @@ def counts_usage(priced: Any | None = None) -> Any:
     if priced is not None:
         payload["priced"] = priced
     return call_native_sync("counts_usage", json.dumps(payload))
+
+def credit_drawn_meters(priced: Any | None = None) -> Any:
+    """List the meters a recurring plan pays from prepaid credits.
+    @returns Meter names that bill with no limit or a capped draw_credits limit; empty for a
+    non-recurring plan.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    return call_native_sync("credit_drawn_meters", json.dumps(payload))
 
 def credit_signals(limits: Any | None = None) -> Any:
     """Coalesce credit-balance channels and derive shortfall and remaining-call counts.

@@ -24,6 +24,7 @@ use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::compile_string_field_input_schema_json_binding;
 use crate::decisions::counts_usage_binding;
+use crate::decisions::credit_drawn_meters_binding;
 use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::customer_ref_from_claims_binding;
@@ -479,6 +480,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "ensure_output_schema_object_type",
         function!(ensure_output_schema_object_type_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "credit_drawn_meters",
+        function!(credit_drawn_meters_binding, 1),
     )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(

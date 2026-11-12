@@ -25,7 +25,6 @@ type CustomerView struct {
 	Remaining     any    `json:"remaining"`
 	WithinLimits  any    `json:"withinLimits"`
 	Plan          any    `json:"plan"`
-	Throttled     bool   `json:"throttled"`
 	Overage       bool   `json:"overage"`
 	IsCreditBased bool   `json:"isCreditBased"`
 }

@@ -616,6 +616,7 @@ module.exports.coerceCustomerOptions = nativeBinding.coerceCustomerOptions
 module.exports.compileStringFieldInputSchemaJson = nativeBinding.compileStringFieldInputSchemaJson
 module.exports.COUNTRY_TO_TAX_ID_TYPE = nativeBinding.COUNTRY_TO_TAX_ID_TYPE
 module.exports.countsUsage = nativeBinding.countsUsage
+module.exports.creditDrawnMeters = nativeBinding.creditDrawnMeters
 module.exports.creditSignals = nativeBinding.creditSignals
 module.exports.creditsPerUnitFromBalance = nativeBinding.creditsPerUnitFromBalance
 module.exports.creditsToDisplayMinorUnits = nativeBinding.creditsToDisplayMinorUnits

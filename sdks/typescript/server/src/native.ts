@@ -177,6 +177,7 @@ export type NativeSyncMethod =
   | 'defaultMcpBearerExpectations'
   | 'compileStringFieldInputSchemaJson'
   | 'ensureOutputSchemaObjectType'
+  | 'creditDrawnMeters'
   // Step 37R-d — @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

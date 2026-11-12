@@ -628,7 +628,7 @@ def billing_cycle(priced: object | None = None) -> object | None:
     ...
 def build_customer_snapshot(customer_ref: str, limits: object | None = None) -> object:
     """Build the merchant-facing customer snapshot from a limits body.
-    @returns Customer snapshot with defaults applied, including throttled and overage.
+    @returns Customer snapshot with defaults applied, including overage.
     """
     ...
 def build_gate_message(state: object, gate: object) -> str:
@@ -659,6 +659,12 @@ def classify_paywall_state(limits: object | None = None) -> object:
 def counts_usage(priced: object | None = None) -> bool:
     """True when the plan counts usage via a per-unit charge, limit, or tier.
     @returns Whether the plan has a usage counter even without a per-unit rate.
+    """
+    ...
+def credit_drawn_meters(priced: object | None = None) -> list[str]:
+    """List the meters a recurring plan pays from prepaid credits.
+    @returns Meter names that bill with no limit or a capped draw_credits limit; empty for a
+    non-recurring plan.
     """
     ...
 def credit_signals(limits: object | None = None) -> object:

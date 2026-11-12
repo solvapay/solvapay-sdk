@@ -191,7 +191,6 @@ const NON_CLIENT_FIXTURES = [
   'customer-ref/jwt-beats-header.json',
   'driver-loop/gate-allow-omits-consequence.json',
   'driver-loop/gate-allow-overage-consequence.json',
-  'driver-loop/gate-allow-throttled-consequence.json',
   'driver-loop/gate-handler-generic-error-emits-usage.json',
   'driver-loop/gate-handler-paywall-error-skips-usage.json',
   'driver-loop/gate-handler-success-emits-usage.json',

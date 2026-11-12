@@ -21,9 +21,7 @@ pub struct CustomerView {
     pub within_limits: Value,
     /// Plan field from limits.
     pub plan: Value,
-    /// Served under `onExceed: throttle`.
-    pub throttled: bool,
-    /// Served under `onExceed: charge` past the included cap.
+    /// Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).
     pub overage: bool,
     /// True when the limits response carries credit-balance fields.
     pub is_credit_based: bool,
@@ -37,7 +35,6 @@ impl From<CustomerSnapshot> for CustomerView {
             remaining: snap.remaining,
             within_limits: snap.within_limits,
             plan: snap.plan,
-            throttled: snap.throttled,
             overage: snap.overage,
             is_credit_based: snap.is_credit_based,
         }

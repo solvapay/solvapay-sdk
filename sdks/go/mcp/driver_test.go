@@ -33,9 +33,8 @@ func compileHandler(sc scenario) Handler {
 			}
 			if json.Unmarshal(sc.Handler.Data, &echo) == nil && echo.Echo == "customer" {
 				data = struct {
-					Throttled bool `json:"throttled"`
-					Overage   bool `json:"overage"`
-				}{Throttled: rc.Customer.Throttled, Overage: rc.Customer.Overage}
+					Overage bool `json:"overage"`
+				}{Overage: rc.Customer.Overage}
 			}
 			return rc.Respond(data, sc.Handler.Options)
 		default:

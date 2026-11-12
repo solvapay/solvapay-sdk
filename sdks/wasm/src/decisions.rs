@@ -13,9 +13,9 @@ use serde_json::Value;
 use solvapay_core::{
     assert_valid_product_ref, attach_business_details_validation_error, billing_cycle, charges,
     classify_cancel_error, classify_create_error, classify_lookup_error, classify_reactivate_error,
-    counts_usage, credits_per_unit_from_balance, derive_active_products, derive_default_view,
-    format_compact_credits, free_meter_name_pattern, headline_charges, history_rows,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, meter_name,
+    counts_usage, credit_drawn_meters, credits_per_unit_from_balance, derive_active_products,
+    derive_default_view, format_compact_credits, free_meter_name_pattern, headline_charges,
+    history_rows, included_units, is_cached_customer_ref_valid, is_email_conflict, meter_name,
     normalize_cancel_response, normalize_reactivate_response, pegged_credits_per_unit,
     per_unit_charge, plan_consequence, plan_pricing_shape, require_product_ref,
     resolve_account_state, resolve_display_mode, resolve_narrator_plan_shape, resolve_product_ref,
@@ -1454,6 +1454,18 @@ pub fn ensure_output_schema_object_type_binding(args_json: String) -> String {
         to_value(&ensure_output_schema_object_type(
             schema.as_ref().unwrap_or(&Value::Null),
         ))
+    })
+}
+
+// --- plans ---
+
+/// Binding for `creditDrawnMeters`.
+#[wasm_bindgen(js_name = "creditDrawnMeters")]
+pub fn credit_drawn_meters_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&credit_drawn_meters(priced.as_ref()))
     })
 }
 

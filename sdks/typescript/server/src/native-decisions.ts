@@ -103,6 +103,7 @@ export {
   meterName,
   countsUsage,
   peggedCreditsPerUnit,
+  creditDrawnMeters,
   creditsPerUnitFromBalance,
   isErrorResult,
   mapRouteError,
@@ -185,7 +186,7 @@ export function classifyPaywallState(limits: LimitResponseWithPlan | null): Payw
 
 /**
  * Build the merchant-facing customer snapshot from a limits body.
- * @returns Customer snapshot with defaults applied, including throttled and overage.
+ * @returns Customer snapshot with defaults applied, including overage.
  */
 export function buildCustomerSnapshot(
   customerRef: string,

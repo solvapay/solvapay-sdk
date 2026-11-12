@@ -202,9 +202,6 @@ const freePurchase: PurchaseInfo = {
     isMetered: true,
   },
   usage: {
-    used: 2,
-    overageCost: 0,
-    overageUnits: 0,
     periodEnd: '2026-10-01T00:00:00Z',
   },
 }
@@ -229,9 +226,6 @@ const starterPurchase: PurchaseInfo = {
     isMetered: true,
   },
   usage: {
-    used: 6200,
-    overageCost: 0,
-    overageUnits: 0,
     periodEnd: '2026-09-12T00:00:00Z',
   },
 }
@@ -263,11 +257,8 @@ function seedLimits(partial: Partial<TransportLimitsResult> & { remaining: numbe
       withinLimits: true,
       meterName: 'requests',
       activationRequired: false,
-      throttled: false,
       overage: false,
       needsTopUp: false,
-      needsUpgrade: false,
-      upgraded: false,
       ...partial,
     },
     timestamp: Date.now(),
@@ -389,6 +380,31 @@ describe('McpAccountView', () => {
     expect(
       screen.getByText('Choose a plan to start using it. Calls fail until one is active.'),
     ).toBeTruthy()
+  })
+
+  it('prints the signed-in email and customer ref on inline state A', () => {
+    const ctx = buildCtx({}, [], 0)
+    ctx.purchase.email = 'tommy@solvapay.com'
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    const line = screen.getByText(/Signed in as/)
+    expect(line.textContent).toContain('tommy@solvapay.com')
+    expect(line.querySelector('.solvapay-mcp-signed-in-ref')?.textContent).toBe('cus_abc')
+  })
+
+  it('omits the signed-in line when there is no customer ref', () => {
+    const ctx = buildCtx({}, [], 0)
+    ctx.customerRef = undefined
+    ctx.purchase.customerRef = undefined
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    expect(screen.queryByText(/Signed in as/)).toBeNull()
   })
 
   it('renders an action-button ladder on state A and emphasizes PAYG', () => {
@@ -662,10 +678,7 @@ describe('McpAccountView', () => {
         needsTopUp: true,
         meterName: 'requests',
         activationRequired: false,
-        throttled: false,
         overage: false,
-        needsUpgrade: false,
-        upgraded: false,
       },
       timestamp: Date.now(),
       promise: null,
@@ -899,7 +912,9 @@ describe('McpAccountView', () => {
     expect(screen.getByText('1 call')).toBeTruthy()
     expect(screen.getByText('Of 3 this period.')).toBeTruthy()
     expect(screen.getByText('Resets')).toBeTruthy()
-    expect(screen.getByText('Oct 1, 2026')).toBeTruthy()
+    // The compact cell repeats the date once the reset day has arrived
+    // (`daysUntil` is 0), so this is not a unique node.
+    expect(screen.getAllByText('Oct 1, 2026').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
     expect(screen.getByText('Balance is untouched.')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'warning')
@@ -920,7 +935,7 @@ describe('McpAccountView', () => {
     seedLimits({ remaining: 10000, withinLimits: true })
     const firstRun: PurchaseInfo = {
       ...starterPurchase,
-      usage: { used: 0, overageCost: 0, overageUnits: 0 },
+      usage: {},
     }
     const ctx = buildCtx({}, [firstRun], 0)
     renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
@@ -1020,14 +1035,17 @@ describe('McpAccountView', () => {
   })
 
   it('shows used-of-allowance and a 100% meter on state I without overage money', () => {
-    seedLimits({ remaining: 0, withinLimits: true, overage: true })
+    seedLimits({
+      remaining: 0,
+      withinLimits: true,
+      overage: true,
+      used: 11240,
+      limit: 10000,
+    })
     const onChangePlan = vi.fn()
     const overagePurchase: PurchaseInfo = {
       ...starterPurchase,
       usage: {
-        used: 11240,
-        overageCost: 0,
-        overageUnits: 0,
         periodEnd: '2026-09-12T00:00:00Z',
       },
     }
@@ -1054,37 +1072,45 @@ describe('McpAccountView', () => {
   })
 
   it('restyles cancelled notice on state J with a date status and secondary Reactivate', () => {
-    seedLimits({ remaining: 3800, withinLimits: true })
-    const reactivateRenewal = vi.fn().mockResolvedValue({ success: true })
-    const cancelled: PurchaseInfo = {
-      ...starterPurchase,
-      cancelledAt: '2026-09-04T00:00:00Z',
-      endDate: '2026-10-12T00:00:00Z',
+    // State J requires a future end date. The fixture is 12 Oct 2026, so pin
+    // the clock or the case falls through once that day has passed.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-06T00:00:00Z'))
+    try {
+      seedLimits({ remaining: 3800, withinLimits: true })
+      const reactivateRenewal = vi.fn().mockResolvedValue({ success: true })
+      const cancelled: PurchaseInfo = {
+        ...starterPurchase,
+        cancelledAt: '2026-09-04T00:00:00Z',
+        endDate: '2026-10-12T00:00:00Z',
+      }
+      const ctx = buildCtx({ reactivateRenewal }, [cancelled], 0)
+      renderAccount(ctx, {
+        plans: catalogPlans,
+        product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+        productRef: 'prd_widget',
+        onChangePlan: vi.fn(),
+      })
+      expect(screen.getByText('Active until Oct 12')).toBeTruthy()
+      expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
+      expect(screen.getByText(/days left on this plan/)).toBeTruthy()
+      expect(
+        screen.getByText(
+          'Calls keep working until Oct 12, then stop. You will not be charged again.',
+        ),
+      ).toBeTruthy()
+      expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
+      expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
+      const reactivate = screen.getByRole('button', { name: 'Reactivate Starter' })
+      expect(reactivate).toHaveAttribute('data-variant', 'secondary')
+      fireEvent.click(reactivate)
+      expect(reactivateRenewal).toHaveBeenCalledWith({ purchaseRef: 'pur_starter' })
+      expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
+      expect(screen.queryByText('Undo Cancellation')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    } finally {
+      vi.useRealTimers()
     }
-    const ctx = buildCtx({ reactivateRenewal }, [cancelled], 0)
-    renderAccount(ctx, {
-      plans: catalogPlans,
-      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
-      productRef: 'prd_widget',
-      onChangePlan: vi.fn(),
-    })
-    expect(screen.getByText('Active until Oct 12')).toBeTruthy()
-    expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
-    expect(screen.getByText(/days left on this plan/)).toBeTruthy()
-    expect(
-      screen.getByText(
-        'Calls keep working until Oct 12, then stop. You will not be charged again.',
-      ),
-    ).toBeTruthy()
-    expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
-    const reactivate = screen.getByRole('button', { name: 'Reactivate Starter' })
-    expect(reactivate).toHaveAttribute('data-variant', 'secondary')
-    fireEvent.click(reactivate)
-    expect(reactivateRenewal).toHaveBeenCalledWith({ purchaseRef: 'pur_starter' })
-    expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
-    expect(screen.queryByText('Undo Cancellation')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
   })
 
   const creditHistory = {
@@ -1367,6 +1393,8 @@ describe('McpAccountView', () => {
     expect(website.textContent).not.toMatch('↗')
     expect(screen.getByText('Tommy Berglind')).toBeTruthy()
     expect(screen.getByText('tommy@solvapay.com')).toBeTruthy()
+    expect(screen.getByText('cus_abc')).toHaveClass('solvapay-mcp-signed-in-ref')
+    expect(screen.queryByText(/Signed in as/)).toBeNull()
     expect(screen.getByRole('link', { name: /full account/i })).toBeTruthy()
     expect(screen.queryByText(/verified/i)).toBeNull()
     expect(screen.queryByText(/Identity checked by Stripe/)).toBeNull()

@@ -122,6 +122,11 @@ export function classifyReactivateError(args_json: string): string;
 export function countsUsage(args_json: string): string;
 
 /**
+ * Binding for `creditDrawnMeters`.
+ */
+export function creditDrawnMeters(args_json: string): string;
+
+/**
  * Binding for `creditsPerUnitFromBalance`.
  */
 export function creditsPerUnitFromBalance(args_json: string): string;
@@ -480,6 +485,7 @@ export interface InitOutput {
     readonly classifyLookupError: (a: number, b: number) => [number, number];
     readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly countsUsage: (a: number, b: number) => [number, number];
+    readonly creditDrawnMeters: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly deriveActiveProducts: (a: number, b: number) => [number, number];

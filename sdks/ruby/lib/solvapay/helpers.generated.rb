@@ -74,7 +74,7 @@ module SolvaPay
   end
 
   # Build the merchant-facing customer snapshot from a limits body.
-  # @return Customer snapshot with defaults applied, including throttled and overage.
+  # @return Customer snapshot with defaults applied, including overage.
   def self.build_customer_snapshot(input:)
     args = {} #: Hash[String, untyped]
     args["input"] = input
@@ -127,6 +127,14 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["priced"] = priced unless priced.nil?
     NativeDispatch.call_sync("counts_usage", args)
+  end
+
+  # List the meters a recurring plan pays from prepaid credits.
+  # @return Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+  def self.credit_drawn_meters(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("credit_drawn_meters", args)
   end
 
   # Coalesce credit-balance channels and derive shortfall and remaining-call counts.

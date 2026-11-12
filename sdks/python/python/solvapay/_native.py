@@ -158,6 +158,7 @@ SyncMethod = Literal[
     "default_mcp_bearer_expectations",
     "compile_string_field_input_schema_json",
     "ensure_output_schema_object_type",
+    "credit_drawn_meters",
     # --- @solvapay/core pure logic ---
     "format_price",
     "should_show_tax_row",

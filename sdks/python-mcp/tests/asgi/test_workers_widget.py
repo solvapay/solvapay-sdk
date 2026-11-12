@@ -165,7 +165,6 @@ class ScriptedPayableModule:
         return _ok(
             {
                 "customer_ref": args.get("customerRef"),
-                "throttled": False,
                 "overage": False,
             }
         )

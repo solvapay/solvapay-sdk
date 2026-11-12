@@ -76,8 +76,6 @@ pub struct CustomerSnapshot {
     /// Plan field from limits; omitted when absent / JSON `null`.
     #[serde(default, skip_serializing_if = "Value::is_null")]
     pub plan: Value,
-    /// `throttled` from limits, or `false` when absent.
-    pub throttled: bool,
     /// `overage` from limits, or `false` when absent.
     pub overage: bool,
     /// True when the limits response carries credit-balance fields.
@@ -88,9 +86,7 @@ pub struct CustomerSnapshot {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AllowConsequence {
-    /// Served under `onExceed: throttle`.
-    Throttled,
-    /// Served under `onExceed: charge` past the included cap.
+    /// Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).
     Overage,
 }
 
@@ -180,7 +176,7 @@ pub enum GateAction {
         limits: Value,
         /// Defaults already applied (`creditBalance ?? 0`, `withinLimits ?? true`).
         customer: CustomerSnapshot,
-        /// Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.
+        /// Allow past the included cap (`overage`). Omitted on a plain allow.
         #[serde(skip_serializing_if = "Option::is_none")]
         consequence: Option<AllowConsequence>,
         /// Optional cache mutation.
@@ -610,10 +606,6 @@ fn customer_snapshot(customer_ref: &str, limits: &Value) -> CustomerSnapshot {
             .and_then(|o| o.get("plan"))
             .cloned()
             .unwrap_or(Value::Null),
-        throttled: obj
-            .and_then(|o| o.get("throttled"))
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
         overage: obj
             .and_then(|o| o.get("overage"))
             .and_then(Value::as_bool)
@@ -638,12 +630,9 @@ pub fn build_customer_snapshot(customer_ref: &str, limits: Option<&Value>) -> Cu
     customer_snapshot(customer_ref, limits.unwrap_or(&Value::Null))
 }
 
-/// `throttled` wins over `overage`, matching the TypeScript allow ternary.
+/// `overage` from limits: the only allow consequence the backend still sends.
 fn allow_consequence(limits: &Value) -> Option<AllowConsequence> {
     let obj = limits.as_object()?;
-    if obj.get("throttled").and_then(Value::as_bool) == Some(true) {
-        return Some(AllowConsequence::Throttled);
-    }
     if obj.get("overage").and_then(Value::as_bool) == Some(true) {
         return Some(AllowConsequence::Overage);
     }
@@ -669,7 +658,6 @@ fn parse_free_limit(value: Option<&Value>) -> Result<Option<FreeLimit>, HelperEr
 fn usage_extra_for(state: &GateDriverState, outcome: &str) -> UsageExtra {
     let consequence = state.last_consequence.map(|c| match c {
         AllowConsequence::Overage => "overage",
-        AllowConsequence::Throttled => "throttled",
     });
     resolve_usage_extra(state.free_limit.as_ref(), outcome, consequence)
 }
@@ -779,7 +767,6 @@ mod tests {
                 assert_eq!(customer.balance, 0.0);
                 assert!(customer.within_limits);
                 assert_eq!(customer.remaining, json!(5));
-                assert!(!customer.throttled);
                 assert!(!customer.overage);
                 match cache {
                     Some(GateCacheOp::UpdateRemaining { remaining, .. }) => {
@@ -1049,42 +1036,6 @@ mod tests {
     }
 
     #[test]
-    fn allow_throttled_sets_consequence() {
-        let started = gate_next(None, Some(&start_event("cus_abc"))).unwrap();
-        let miss = gate_next(
-            Some(&serde_json::to_value(&started.state).unwrap()),
-            Some(&json!({ "kind": "limitsCacheEntry", "found": false })),
-        )
-        .unwrap();
-        let out = gate_next(
-            Some(&serde_json::to_value(&miss.state).unwrap()),
-            Some(&json!({
-                "kind": "limitsResult",
-                "limits": {
-                    "withinLimits": true,
-                    "remaining": 0,
-                    "throttled": true,
-                    "overage": true
-                },
-                "nowMs": 1_100,
-            })),
-        )
-        .unwrap();
-        match &out.action {
-            GateAction::Allow {
-                consequence,
-                customer,
-                ..
-            } => {
-                assert_eq!(*consequence, Some(AllowConsequence::Throttled));
-                assert!(customer.throttled);
-                assert!(customer.overage);
-            }
-            other => panic!("unexpected {other:?}"),
-        }
-    }
-
-    #[test]
     fn allow_overage_sets_consequence() {
         let started = gate_next(None, Some(&start_event("cus_abc"))).unwrap();
         let miss = gate_next(
@@ -1145,7 +1096,6 @@ mod tests {
                 "remaining": 4,
                 "withinLimits": true,
                 "plan": "pl_pro",
-                "throttled": true,
                 "overage": false
             })),
         );
@@ -1154,7 +1104,6 @@ mod tests {
         assert_eq!(snap.remaining, json!(4));
         assert!(snap.within_limits);
         assert_eq!(snap.plan, json!("pl_pro"));
-        assert!(snap.throttled);
         assert!(!snap.overage);
         assert!(snap.is_credit_based);
     }

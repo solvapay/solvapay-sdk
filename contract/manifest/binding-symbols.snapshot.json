@@ -2403,6 +2403,55 @@
       "coreCall": "create_topup_payment_intent",
       "clientCallArgs": []
     },
+    "creditDrawnMeters": {
+      "core": "solvapay_core::pricing_options::credit_drawn_meters",
+      "names": {
+        "ts": "creditDrawnMeters",
+        "py": "credit_drawn_meters",
+        "rb": "credit_drawn_meters",
+        "go": "CreditDrawnMeters",
+        "rust": "credit_drawn_meters",
+        "c": "creditDrawnMeters"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "creditDrawnMeters"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 92,
+      "section": "plans",
+      "doc": "Binding for `creditDrawnMeters`.",
+      "docWasm": null,
+      "rustFnName": "credit_drawn_meters_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "credit_drawn_meters",
+      "clientCallArgs": []
+    },
     "creditSignals": {
       "core": "solvapay_core::paywall_state::credit_signals",
       "names": {

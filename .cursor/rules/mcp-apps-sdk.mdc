@@ -39,6 +39,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 - **Fullscreen is the hosted page, not a stretched widget.** Advertise `availableDisplayModes: ['inline', 'fullscreen']` (`SOLVAPAY_MCP_APP_CAPABILITIES`). Read `displayMode` from host context. The host owns the expand affordance — the SDK advertises and reacts, it does not call `requestDisplayMode`. Same React tree; 1000px hosted column with `56px 72px 40px` padding on the shell (outside the 1000px); payment rail 340; management one column; no in-widget header. Below 1000px of measured host width, the container query falls back to the inline stack. One scroll owner. No `pip`. Honors `hostContext.safeAreaInsets` as root padding — not `env(safe-area-inset-*)`.
 - **Shared tokens.** MCP Apps spec names (`--color-*`, `--font-*`, `--border-radius-*`) plus `--solvapay-*` only for branding extras. No parallel `--sp-*` palette. Stripe appearance reads live CSS vars via `getComputedStyle`.
 - **Frame owner sets `--font-sans`.** Hosted: provider `fontFamily`. MCP widget: host `hostContext.styles` / `applyHostStyleVariables`. Do not ship Inter as an override. `--font-mono` stays pinned.
+- **The host owns the outer frame.** `prefersBorder: true` on the UI resource. Never paint a border, background, or radius on the widget root or the surface card (`.solvapay-mcp-card`). Grouping inside a surface uses hairlines only. Root padding comes only from `hostContext.safeAreaInsets`.
 
 ### Text-mode
 

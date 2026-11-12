@@ -24,34 +24,32 @@ fn client(server: &MockServer) -> SolvaPayClient {
     SolvaPayClient::new(ClientShell::new(transport, "sk_test_fixture").with_base_url(server.uri()))
 }
 
-#[tokio::test]
-async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
-    let server = MockServer::start().await;
+async fn mount_bootstrap_stubs(server: &MockServer) {
     Mock::given(method("GET"))
         .and(path("/v1/sdk/platform-config"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "stripePublishableKey": "pk_test"
         })))
-        .mount(&server)
+        .mount(server)
         .await;
     Mock::given(method("GET"))
         .and(path("/v1/sdk/merchant"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "displayName": "Acme"
         })))
-        .mount(&server)
+        .mount(server)
         .await;
     Mock::given(method("GET"))
         .and(path("/v1/sdk/products/prd_demo"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "name": "Demo" })))
-        .mount(&server)
+        .mount(server)
         .await;
     Mock::given(method("GET"))
         .and(path("/v1/sdk/products/prd_demo/plans"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "plans": [{ "name": "Pro" }]
         })))
-        .mount(&server)
+        .mount(server)
         .await;
     Mock::given(method("POST"))
         .and(path("/v1/sdk/checkout-sessions"))
@@ -59,8 +57,14 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
             "checkoutUrl": "https://checkout.example/s",
             "sessionId": "cs_1"
         })))
-        .mount(&server)
+        .mount(server)
         .await;
+}
+
+#[tokio::test]
+async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
+    let server = MockServer::start().await;
+    mount_bootstrap_stubs(&server).await;
 
     let got = client(&server)
         .mcp_bootstrap(McpBootstrapParams {
@@ -80,11 +84,58 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
     assert_eq!(got["product"]["name"], "Demo");
     assert_eq!(got["plans"][0]["name"], "Pro");
     assert_eq!(got["customer"], Value::Null);
-    assert_eq!(got["checkoutUrl"], "https://checkout.example/s");
+    // A hosted checkout session belongs to a customer; none is minted for a
+    // signed-out caller.
+    assert_eq!(got["checkoutUrl"], Value::Null);
     assert_eq!(got["portalUrl"], Value::Null);
     assert_eq!(got["autoRechargeUrl"], Value::Null);
     assert!(got["merchant"].get("identityDisplay").is_some());
     assert!(got["taxIdFields"]["DE"]["label"].is_string());
+}
+
+#[tokio::test]
+async fn mcp_bootstrap_treats_anonymous_as_signed_out() {
+    let server = MockServer::start().await;
+    mount_bootstrap_stubs(&server).await;
+
+    let got = client(&server)
+        .mcp_bootstrap(McpBootstrapParams {
+            view: "account".to_owned(),
+            product_ref: "prd_demo".to_owned(),
+            public_base_url: "https://app.example.com".to_owned(),
+            customer_ref: Some("anonymous".to_owned()),
+        })
+        .await
+        .expect("bootstrap");
+
+    assert_eq!(got["customer"], Value::Null);
+    assert_eq!(got["checkoutUrl"], Value::Null);
+}
+
+#[tokio::test]
+async fn mcp_read_resource_bootstrap_stamps_default_view() {
+    let server = MockServer::start().await;
+    mount_bootstrap_stubs(&server).await;
+
+    let got = client(&server)
+        .mcp_read_resource(McpReadResourceParams {
+            uri: "solvapay://bootstrap.json".to_owned(),
+            config: McpToolConfig {
+                product_ref: "prd_demo".to_owned(),
+                public_base_url: "https://app.example.com".to_owned(),
+                resource_uri: None,
+                views: None,
+                mcp_path: None,
+            },
+            customer_ref: None,
+        })
+        .await
+        .expect("bootstrap resource");
+
+    // Same choice the `account` tool makes when `view` is omitted: no active
+    // plan, so checkout.
+    assert_eq!(got["view"], "checkout");
+    assert_eq!(got["productRef"], "prd_demo");
 }
 
 #[tokio::test]

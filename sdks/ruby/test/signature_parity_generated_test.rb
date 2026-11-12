@@ -66,6 +66,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     charges
     classify_paywall_state
     counts_usage
+    credit_drawn_meters
     credit_signals
     credits_per_unit_from_balance
     credits_to_display_minor_units

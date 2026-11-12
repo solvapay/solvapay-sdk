@@ -9,3 +9,5 @@ services:
     port: 3005
   - name: webhook
     port: 3008
+  - name: agent
+    port: 3013

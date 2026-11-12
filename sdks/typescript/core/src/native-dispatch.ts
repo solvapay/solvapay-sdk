@@ -117,6 +117,7 @@ export type NativeCoreSyncMethod =
   | 'meterName'
   | 'countsUsage'
   | 'peggedCreditsPerUnit'
+  | 'creditDrawnMeters'
   | 'creditsPerUnitFromBalance'
   | 'isErrorResult'
   | 'mapRouteError'

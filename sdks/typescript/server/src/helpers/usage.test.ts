@@ -58,7 +58,7 @@ describe('getUsageCore', () => {
     expect(result).toEqual({
       meterRef: null,
       total: null,
-      used: 0,
+      used: null,
       remaining: null,
       percentUsed: null,
     })
@@ -167,7 +167,7 @@ describe('getUsageCore', () => {
     expect(result).toMatchObject({
       meterRef: null,
       total: null,
-      used: 2,
+      used: null,
       remaining: null,
       percentUsed: null,
       purchaseRef: 'pur_1',

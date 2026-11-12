@@ -1,0 +1,20 @@
+# Keeps the SolvaPay SDK current. Every week, one pull request moves all
+# @solvapay/* packages to npm's latest together, since they are released
+# together and depend on each other's versions. Other dependencies are left
+# to you; add more `groups` or `allow` entries here to cover them.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: '@solvapay/*'
+    groups:
+      solvapay-sdk:
+        patterns:
+          - '@solvapay/*'
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore
+      include: scope

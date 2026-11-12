@@ -49,7 +49,7 @@ export type ActiveProduct = {
 /**
  * Degraded allow reason. Absent on a plain allow.
  */
-export type AllowConsequence = 'throttled' | 'overage'
+export type AllowConsequence = 'overage'
 
 /**
  * Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).
@@ -340,10 +340,6 @@ export type CustomerSnapshot = {
    * Plan field from limits; omitted when absent / JSON `null`.
    */
   plan: unknown
-  /**
-   * `throttled` from limits, or `false` when absent.
-   */
-  throttled: boolean
   /**
    * `overage` from limits, or `false` when absent.
    */
@@ -1289,9 +1285,12 @@ export type UsageSnapshot = {
    */
   total: number | null
   /**
-   * Units used (defaults to `0`).
+   * Consumed units this period: `limits.used` when the backend measured it,
+   * otherwise `total - remaining` when both are finite. `null` when this
+   * response did not measure consumption (no limits, unlimited, or
+   * credit-based) — never an invented `0`.
    */
-  used: number
+  used: number | null
   /**
    * `max(0, total - used)` when `total` is known; else `null`.
    */
@@ -1357,7 +1356,6 @@ export type PaywallDecisionLimits = {
   limit?: number
   autoRecharge?: unknown
   needsTopUp?: boolean
-  needsUpgrade?: boolean
   meterName?: string
   currency?: string
 }

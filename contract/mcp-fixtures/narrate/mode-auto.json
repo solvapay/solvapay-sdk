@@ -73,7 +73,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Acme Knowledge Base — your account**\n\nAcme Knowledge Base is on Unlimited, $500 a month. Unlimited calls, renewing May 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Acme Knowledge Base — your account**\n\nAcme Knowledge Base is on Unlimited, $500 a month. Unlimited calls, renewing May 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_1\n\nTo continue, call `account` with view: \"checkout\"."
         }
       ],
       "structuredContent": {

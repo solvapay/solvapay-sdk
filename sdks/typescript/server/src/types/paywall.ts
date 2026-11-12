@@ -202,12 +202,11 @@ export type PaywallDecision<T> =
       /** Opaque `gate_next` state for `handlerSucceeded` / `handlerFailed`. */
       driverState: unknown
       /**
-       * Set when access is granted with consequences. `throttled` is
-       * `onExceed: throttle` (legacy plans — the builder no longer
-       * offers it). `overage` is `onExceed: charge` past the included
-       * cap. Absent on a plain allow. Derived by the core gate driver.
+       * Set when access is granted past the included cap and the usage
+       * is paid from prepaid credits (`onExceed: draw_credits`). Absent on a
+       * plain allow. Derived from `limits`; not new wire data.
        */
-      consequence?: 'throttled' | 'overage'
+      consequence?: 'overage'
       /**
        * Id minted by `decide()` and reused by `runAllow()` so success /
        * fail tracking shares one idempotency key with the decision.

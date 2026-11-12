@@ -19,7 +19,7 @@
     "result": {
       "meterRef": null,
       "total": null,
-      "used": 5,
+      "used": null,
       "remaining": null,
       "percentUsed": null,
       "purchaseRef": "pur_1"

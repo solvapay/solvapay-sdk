@@ -140,16 +140,9 @@
         "renameAll": "camelCase",
         "variants": [
           {
-            "rustName": "Throttled",
-            "wireName": "throttled",
-            "rustdoc": "Served under `onExceed: throttle`.",
-            "cfgFeature": null,
-            "fields": []
-          },
-          {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Served under `onExceed: charge` past the included cap.",
+            "rustdoc": "Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -1427,19 +1420,6 @@
             }
           },
           {
-            "rustName": "throttled",
-            "wireName": "throttled",
-            "rustdoc": "`throttled` from limits, or `false` when absent.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "overage",
             "wireName": "overage",
             "rustdoc": "`overage` from limits, or `false` when absent.",
@@ -2443,7 +2423,7 @@
               {
                 "rustName": "consequence",
                 "wireName": "consequence",
-                "rustdoc": "Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.",
+                "rustdoc": "Allow past the included cap (`overage`). Omitted on a plain allow.",
                 "optional": true,
                 "skipSerializingIf": "Option::is_none",
                 "serdeDefault": false,
@@ -5716,19 +5696,6 @@
             }
           },
           {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "meter_name",
             "wireName": "meterName",
             "rustdoc": "Meter name used in included-usage copy and recovery fields.",
@@ -6075,19 +6042,6 @@
             "rustName": "needs_top_up",
             "wireName": "needsTopUp",
             "rustdoc": "Authoritative backend deny reason: prepaid top-up required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -8089,7 +8043,7 @@
           {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Past the included cap under `onExceed: charge`.",
+            "rustdoc": "Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -8264,11 +8218,11 @@
           {
             "rustName": "used",
             "wireName": "used",
-            "rustdoc": "Units used (defaults to `0`).",
-            "optional": false,
+            "rustdoc": "Consumed units this period: `limits.used` when the backend measured it,\notherwise `total - remaining` when both are finite. `null` when this\nresponse did not measure consumption (no limits, unlimited, or\ncredit-based) — never an invented `0`.",
+            "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
-            "serializeWith": "serialize_whole_f64",
+            "serializeWith": "serialize_opt_whole_f64",
             "cfgFeature": null,
             "ty": {
               "kind": "f64"
@@ -12331,7 +12285,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` when the backend sent `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",
@@ -12535,6 +12489,31 @@
         "optional": false,
         "ty": {
           "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::pricing_options::credit_drawn_meters": {
+      "name": "credit_drawn_meters",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The meters a recurring plan pays from prepaid credits.\n\nMirrors `creditDrawnMeters` in the platform pricing derive module: a meter\ncounts when the plan is recurring, the meter bills, and it has no limit or\na capped `draw_credits` limit.\n\n# Arguments\n\n* `priced` - Plan or plan snapshot carrying `options`.\n\n# Returns\n\nMeter names in option order. Empty for a non-recurring plan.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
         }
       }
     },
@@ -13776,7 +13755,7 @@
       "name": "resolve_usage_extra",
       "module": "usage_request",
       "implTy": null,
-      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage` / `throttled`); unused on free tools.",
+      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage`); unused on free tools.",
       "params": [
         {
           "rustName": "free_limit",

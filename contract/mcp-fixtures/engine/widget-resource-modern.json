@@ -32,7 +32,7 @@
             "mimeType": "text/html;profile=mcp-app",
             "_meta": {
               "ui": {
-                "prefersBorder": false,
+                "prefersBorder": true,
                 "csp": {
                   "resourceDomains": [
                     "https://js.stripe.com",

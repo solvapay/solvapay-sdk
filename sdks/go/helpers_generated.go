@@ -137,7 +137,7 @@ func BillingCycle(ctx context.Context, priced any) (any, error) {
 }
 
 // BuildCustomerSnapshot build the merchant-facing customer snapshot from a limits body.
-// Returns Customer snapshot with defaults applied, including throttled and overage.
+// Returns Customer snapshot with defaults applied, including overage.
 func BuildCustomerSnapshot(ctx context.Context, customerRef any, limits any) (any, error) {
 	payload, err := json.Marshal(map[string]any{
 		"customerRef": customerRef,
@@ -222,6 +222,18 @@ func CountsUsage(ctx context.Context, priced any) (any, error) {
 		return nil, err
 	}
 	return nativecall.CallSync(ctx, "sv_counts_usage_binding", string(payload))
+}
+
+// CreditDrawnMeters list the meters a recurring plan pays from prepaid credits.
+// Returns Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+func CreditDrawnMeters(ctx context.Context, priced any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"priced": priced,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credit_drawn_meters_binding", string(payload))
 }
 
 // CreditSignals coalesce credit-balance channels and derive shortfall and remaining-call counts.

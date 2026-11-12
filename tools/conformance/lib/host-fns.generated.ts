@@ -170,6 +170,7 @@ export const FIXTURE_SYNC_FNS = [
   'defaultMcpBearerExpectations',
   'compileStringFieldInputSchemaJson',
   'ensureOutputSchemaObjectType',
+  'creditDrawnMeters',
   'formatPrice',
   'shouldShowTaxRow',
   'solvapayTermsUrl',

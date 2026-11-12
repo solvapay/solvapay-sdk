@@ -1,5 +1,46 @@
 # @solvapay/server changelog
 
+## 2.11.0
+
+### Minor Changes
+
+- a90cfea: Node.js 22 or later is now required (`engines.node` is `>=22`). Node 18 and 20 are end-of-life and get no security fixes, including the 2026-10-21 Node.js security release. The SDK is now tested on Node 22, 24 and 26. On Node 22 the bundled npm 10 installs the MCP template, so the earlier advice to upgrade npm on Node 20 no longer applies.
+
+## 2.10.1
+
+### Patch Changes
+
+- Updated dependencies [b3edfd8]
+  - @solvapay/core@1.8.0
+
+## 2.10.0
+
+### Minor Changes
+
+- 07ca69e: `GetUsageResult.used` is `number | null`. `deriveUsageSnapshot` no longer takes `used`. `PurchaseInfo.usage` is the billing period only (`periodStart`, `periodEnd`); counts come from limits.
+
+## 2.9.0
+
+### Minor Changes
+
+- bd029af: Limit checks no longer return `throttled`, `needsUpgrade`, or `upgraded`. `LimitOption.onExceed` is `block` or `draw_credits`; the API still accepts `top_up` and `charge` and stores both as `draw_credits`. Rollover options are gone from the plan types; the API drops them on input. Usage on a recurring plan is paid from prepaid credits, never billed to a card: `overage` (and `consequence: 'overage'`) now means access past the included cap paid from credits. The recurring checkout mandate no longer mentions usage past the included allowance.
+
+### Patch Changes
+
+- 3f7c713: Plan option types match the current pricing contract. `TrialOption.onEnd` is `convert` or `cancel`. `LimitOption.onExceed` no longer includes `notify`, and `uiHint` no longer includes `soft_warning`.
+
+## 2.8.0
+
+### Minor Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
+## 2.7.0
+
+### Minor Changes
+
+- 124d7e2: Declare `creditsPerMinorUnit` and `displayExchangeRate` on `PaywallStructuredContentSchema`. `buildPaywallGate` has been emitting both since the credit-peg work, but the Zod schema did not list them. `registerPayableTool` registers `z.union([outputSchema, PaywallStructuredContentSchema])` as a payable tool's `outputSchema`, and the MCP server publishes it with `io: 'output'`, which emits `additionalProperties: false`. Server-side validation uses Zod, which strips undeclared keys and passed; clients that validate `structuredContent` against the published JSON Schema rejected every gated call with "structured content does not match its output schema". Any paywalled tool whose customer hit a credit shortfall failed on those clients.
+
 ## 2.6.0
 
 ### Minor Changes

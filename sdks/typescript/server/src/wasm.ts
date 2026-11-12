@@ -170,6 +170,7 @@ export type WasmSyncMethod =
   | 'defaultMcpBearerExpectations'
   | 'compileStringFieldInputSchemaJson'
   | 'ensureOutputSchemaObjectType'
+  | 'creditDrawnMeters'
   // @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

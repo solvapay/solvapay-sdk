@@ -46,6 +46,8 @@ export type FromScratchInput = {
   productRef?: string
   skipInstall?: boolean
   skipInit?: boolean
+  /** Pin SolvaPay packages to the versions this release ships with instead of the registry's latest (`--offline`). */
+  offline?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env`. Also rewrites train-language manifests to
@@ -141,6 +143,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
     productRef,
     skipInstall,
     skipInit,
+    offline,
     dev,
   } = input
 
@@ -197,10 +200,12 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   // package (e.g. @solvapay/server-wasm) it would pin a version that installs
   // nowhere. Skipping it keeps the dev lane fully offline.
   if (!dev) {
-    process.stdout.write(`🔄 Resolving latest SolvaPay versions for ${language}…\n`)
-    const versionMap = await resolveLatestVersions(language, undefined, {
-      failOnNotPublished: true,
-    })
+    process.stdout.write(
+      offline
+        ? `🔄 Pinning SolvaPay ${language} packages to the versions this release ships with (--offline)…\n`
+        : `🔄 Resolving latest SolvaPay versions for ${language}…\n`,
+    )
+    const versionMap = await resolveLatestVersions(language, undefined, { offline })
     await patchManifest(language, target, versionMap)
   }
 

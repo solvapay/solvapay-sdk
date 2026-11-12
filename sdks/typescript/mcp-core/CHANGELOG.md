@@ -1,5 +1,55 @@
 # @solvapay/mcp-core changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- a90cfea: Node.js 22 or later is now required (`engines.node` is `>=22`). Node 18 and 20 are end-of-life and get no security fixes, including the 2026-10-21 Node.js security release. The SDK is now tested on Node 22, 24 and 26. On Node 22 the bundled npm 10 installs the MCP template, so the earlier advice to upgrade npm on Node 20 no longer applies.
+
+## 0.4.8
+
+### Patch Changes
+
+- Updated dependencies [b3edfd8]
+  - @solvapay/core@1.8.0
+
+## 0.4.7
+
+### Patch Changes
+
+- 07ca69e: Account bootstrap stamps `nextAction` only when `checkLimits` blocked the call, and adds `isCreditBased`. The default view opens top-up only for that gate. Narration says credits will not help on a capped plan even when the wallet is empty.
+- 8e1cc26: The account tool names who is signed in. `BootstrapCustomer` carries `email` and `name` from the customer record, and the text summary adds `Signed in as: email · customer ref` so a host that only reads the text can quote the ref.
+
+  An anonymous caller is not a customer. A `getCustomerRef` that returns `'anonymous'` is treated as unauthenticated, and the bootstrap no longer tries to mint a hosted checkout session for it; `checkoutUrl` is `null`, which is what the backend already produced by rejecting the ref.
+
+- 97c6831: The bootstrap resource stamps the same default view the account tool picks when `view` is omitted: checkout with no active plan, top-up on a top-up gate, and account otherwise.
+
+## 0.4.6
+
+### Patch Changes
+
+- 815f9a2: Hosted checkout sessions minted by MCP no longer send the synthetic server origin as `returnUrl`. The account link on the hosted page can point at the customer portal.
+- bd029af: Limit checks no longer return `throttled`, `needsUpgrade`, or `upgraded`. `LimitOption.onExceed` is `block` or `draw_credits`; the API still accepts `top_up` and `charge` and stores both as `draw_credits`. Rollover options are gone from the plan types; the API drops them on input. Usage on a recurring plan is paid from prepaid credits, never billed to a card: `overage` (and `consequence: 'overage'`) now means access past the included cap paid from credits. The recurring checkout mandate no longer mentions usage past the included allowance.
+
+## 0.4.5
+
+### Patch Changes
+
+- 87ddb16: Narrow the `@solvapay/server` peer to `^2.0.0`. The previous `^1.4.0 || ^2.0.0` branch matched nothing publishable — stable server 1.x stops at 1.3.0, and mcp-core imports `creditSignals` / `FreeLimit` that do not exist there.
+
+## 0.4.4
+
+### Patch Changes
+
+- af077fe: Add `registerFree` for otherwise-free MCP tools with a per-customer cap declared in code. Tools that name the same `free-*` meter share one allowance; exhaustion emits the existing paywall gate (`paywallReason: 'limit_reached'`). Unidentified callers fail with `identity_required` instead of sharing an anonymous bucket. The scaffolder accepts a `free-capped` operation tier that emits `ctx.registerFree`.
+
+## 0.4.3
+
+### Patch Changes
+
+- b3b5b72: Checkout PAYG amount step now collects the same inline auto-recharge toggle as top-up. The account tool no longer advertises `view: auto-recharge`; leftover stamps still open the account surface.
+- 35da494: MCP account now shows real auto-recharge status and links out to the hosted portal form. Top-up `create_payment_intent` forwards `autoRecharge` so the inline toggle actually persists. `McpAutoRechargeView` and the `views.autoRecharge` override are removed — `view: 'auto-recharge'` renders the account surface.
+
 ## 0.4.2
 
 ### Patch Changes
