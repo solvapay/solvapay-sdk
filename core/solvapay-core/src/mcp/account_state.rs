@@ -252,7 +252,9 @@ pub fn derive_default_view(input: Option<&Value>) -> Result<String, HelperErrorR
         });
     let preferred = if !has_active_plan {
         "checkout"
-    } else if input.get("credits").and_then(Value::as_f64) == Some(0.0) {
+    } else if input.get("nextAction").and_then(Value::as_str) == Some("topup") {
+        // Blocked by a top-up gate. A zero balance alone is not a reason:
+        // plans that do not spend credits sit at zero forever.
         "topup"
     } else {
         "account"

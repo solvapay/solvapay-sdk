@@ -23,10 +23,12 @@ OPERATION_NAMES = (
     'activate_plan',
     'assign_credits',
     'attach_business_details',
+    'authorize_agent_call',
     'bootstrap_mcp_product',
     'cancel_purchase',
     'check_limits',
     'clone_product',
+    'complete_agent_call',
     'configure_mcp_plans',
     'create_checkout_session',
     'create_customer',
@@ -59,12 +61,14 @@ OPERATION_NAMES = (
     'mcp_resolve_auth',
     'process_payment_intent',
     'reactivate_purchase',
+    'report_agent_usage',
     'save_auto_recharge',
     'track_usage',
     'track_usage_bulk',
     'update_customer',
     'update_plan',
     'update_product',
+    'verify_agent_key',
 )
 
 CLIENT_EXTRA_ATTRS = frozenset({

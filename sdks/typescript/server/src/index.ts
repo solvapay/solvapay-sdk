@@ -311,6 +311,21 @@ export {
   validateTopupPaymentIntentParams,
 } from './native-decisions'
 
+// Agent payments decisions (Rust core) — `@solvapay/agents` drives its calls through these.
+export {
+  agentSecretKeyEnvironment,
+  agentCredentialKind,
+  verifyAgentToken,
+  agentKeyVerificationResult,
+  agentPromptFacts,
+  agentProtectedResource,
+  agentAuthChallenge,
+  parseAgentResponse,
+  agentAuthorizeRequest,
+  agentAuthorizeNext,
+  agentCompleteBody,
+} from './native-decisions'
+
 // Export route helpers (generic, framework-agnostic)
 export {
   getAuthenticatedUserCore,

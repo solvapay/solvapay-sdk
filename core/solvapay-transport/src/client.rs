@@ -13,11 +13,11 @@ use solvapay_core::SdkError;
 use solvapay_dto::error_templates::operations;
 use solvapay_dto::{
     ActivatePlanDto, ActivatePlanResponseDto, AssignCreditsRequest, AttachBusinessDetailsParams,
-    AutoRechargeInput, CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides,
-    CloneProductResult, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCheckoutSessionResponse, CreateCustomerRequest, CreateCustomerResult,
-    CreateCustomerSessionRequest, CreateCustomerSessionResponse, CreatePaymentIntentParams,
-    CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
+    AuthorizeCallDto, AutoRechargeInput, CancelPurchaseParams, CheckLimitsRequest,
+    CloneProductOverrides, CloneProductResult, CompleteCallDto, ConfigureMcpPlansDto,
+    CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateCustomerRequest,
+    CreateCustomerResult, CreateCustomerSessionRequest, CreateCustomerSessionResponse,
+    CreatePaymentIntentParams, CreatePaymentIntentResult, CreatePlanParams, CreateProductRequest,
     CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, CustomerResponseMapped,
     DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
     GetCustomerBalanceParams, GetCustomerBalanceResult, GetCustomerParams, GetPaymentMethodParams,
@@ -25,7 +25,7 @@ use solvapay_dto::{
     ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
     SdkMerchantResponseDto, SdkPlatformConfigResponseDto, TrackUsageBulkRequest, TrackUsageRequest,
     UpdateCustomerParams, UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest,
-    UserInfoResponse,
+    UsageReportDto, UserInfoResponse, VerifyAgentKeyDto,
 };
 
 use crate::auth_cache::AuthCaches;
@@ -1167,6 +1167,105 @@ impl SolvaPayClient {
             None,
             Idempotency::None,
             operations::get_credit_activity::DEFAULT,
+        )
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/keys/verifications` — the agent behind an agent key.
+    ///
+    /// Used when a caller presents an agent key (`agk_…`) in place of an agent
+    /// token. 401 for an unknown or revoked key, 403 for another merchant's key
+    /// or one from the other environment.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 42,
+        dto_type = "VerifyAgentKeyDto"
+    )]
+    pub async fn verify_agent_key(&self, params: VerifyAgentKeyDto) -> Result<Value, SdkError> {
+        self.execute_json(
+            Method::Post,
+            "/v1/sdk/agent/keys/verifications".to_owned(),
+            BTreeMap::new(),
+            Some(&params),
+            Idempotency::None,
+            operations::verify_agent_key::DEFAULT,
+        )
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/calls` — authorize a paid agent call.
+    ///
+    /// SolvaPay finds the customer, checks the agent's spend policy and holds
+    /// the estimate against the budget and the balance. With `wait > 0` the
+    /// request may hold that many seconds while the owner decides; a repeat
+    /// with the same `requestId` continues the same call, so a retry is safe.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 43,
+        dto_type = "AuthorizeCallDto"
+    )]
+    pub async fn authorize_agent_call(&self, params: AuthorizeCallDto) -> Result<Value, SdkError> {
+        self.execute_json(
+            Method::Post,
+            "/v1/sdk/agent/calls".to_owned(),
+            BTreeMap::new(),
+            Some(&params),
+            Idempotency::None,
+            operations::authorize_agent_call::DEFAULT,
+        )
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/calls/{callRef}/complete` — settle an allowed call.
+    ///
+    /// Reports the upstream status and cost. A repeat returns the first result
+    /// with `duplicate: true`, so a retry is safe.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 44,
+        dto_type = "CompleteCallDto",
+        split_path_refs = "callRef"
+    )]
+    pub async fn complete_agent_call(
+        &self,
+        call_ref: &str,
+        params: CompleteCallDto,
+    ) -> Result<Value, SdkError> {
+        let path = format!(
+            "/v1/sdk/agent/calls/{}/complete",
+            encode_path_segment(call_ref)
+        );
+        self.execute_json(
+            Method::Post,
+            path,
+            BTreeMap::new(),
+            Some(&params),
+            Idempotency::None,
+            operations::complete_agent_call::DEFAULT,
+        )
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/usage-reports` — reconcile the merchant's own costs.
+    ///
+    /// A repeat with the same `reportId` returns the first report's results.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 45,
+        dto_type = "UsageReportDto"
+    )]
+    pub async fn report_agent_usage(&self, params: UsageReportDto) -> Result<Value, SdkError> {
+        self.execute_json(
+            Method::Post,
+            "/v1/sdk/agent/usage-reports".to_owned(),
+            BTreeMap::new(),
+            Some(&params),
+            Idempotency::None,
+            operations::report_agent_usage::DEFAULT,
         )
         .await
     }

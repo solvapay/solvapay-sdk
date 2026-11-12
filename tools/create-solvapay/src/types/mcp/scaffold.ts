@@ -410,13 +410,11 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
 }
 
 /**
- * Runtime dependencies whose versions we resolve against the npm
- * registry at scaffold time so each new scaffold picks up the latest
- * `@solvapay/*` publish without republishing `create-solvapay`. The
- * `fallback` is used when the registry call fails (offline, blocked
- * network, registry outage) — it mirrors the caret pin currently in
- * `templates/mcp/ts/_base/package.json` so the generated project is still
- * installable in that case.
+ * The `@solvapay/*` runtime packages a TypeScript scaffold pins. Their
+ * versions come from the npm registry's `latest` at scaffold time, so a new
+ * project starts on the current SDK without republishing `create-solvapay`.
+ * A failed lookup stops the scaffold; `--offline` pins the release-train
+ * version on purpose instead.
  */
 export const SOLVAPAY_RUNTIME_DEPS = LANGUAGE_RUNTIME_DEPS.ts
 

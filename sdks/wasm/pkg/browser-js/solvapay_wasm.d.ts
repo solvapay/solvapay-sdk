@@ -122,6 +122,11 @@ export function classifyReactivateError(args_json: string): string;
 export function countsUsage(args_json: string): string;
 
 /**
+ * Binding for `creditDrawnMeters`.
+ */
+export function creditDrawnMeters(args_json: string): string;
+
+/**
  * Binding for `creditsPerUnitFromBalance`.
  */
 export function creditsPerUnitFromBalance(args_json: string): string;

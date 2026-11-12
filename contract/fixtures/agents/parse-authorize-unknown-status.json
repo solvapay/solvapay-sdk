@@ -1,0 +1,21 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-unknown-status",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "maybe",
+        "callRef": "acl_1"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Transport",
+      "status": 400,
+      "details": "Authorize status \"maybe\" is not allowed, refused or waiting"
+    }
+  }
+}

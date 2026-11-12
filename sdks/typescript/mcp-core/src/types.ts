@@ -52,6 +52,14 @@ export type BootstrapPlan = components['schemas']['Plan']
  */
 export interface BootstrapCustomer {
   ref: string
+  /**
+   * Signed-in identity from the customer record. Projected off the
+   * purchase-check result, which carries them only because that helper
+   * looks the customer up. Null when that sub-read returned none.
+   * The whole `customer` is null for an anonymous caller.
+   */
+  email: string | null
+  name: string | null
   purchase: PurchaseCheckResult | null
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null
@@ -71,9 +79,14 @@ export interface BootstrapCustomer {
   creditsPerCall?: number
   /** `max(0, creditsPerCall - balance)` when both are known. */
   shortfallCredits?: number
+  /**
+   * True when the limits response carries credit-balance fields.
+   * False means the plan does not spend credits.
+   */
+  isCreditBased?: boolean
   /** Per-provider auto-recharge snapshot from the limits response. */
   autoRecharge?: LimitAutoRechargeDto
-  /** Same next action the gate would name for this limits result. */
+  /** Present only when the latest `checkLimits` blocked the call. */
   nextAction?: PaywallNextAction
 }
 
@@ -589,13 +602,8 @@ export interface CustomerSnapshot {
   /** Whether the customer is within their usage limits at snapshot time. */
   readonly withinLimits: boolean
   /**
-   * True when this request is served under `onExceed: throttle`
-   * (legacy plans — the builder no longer offers Throttle).
-   */
-  readonly throttled: boolean
-  /**
-   * True when this request is served under `onExceed: charge` past
-   * the included cap.
+   * True when this request is served past the included cap and paid
+   * from prepaid credits (`onExceed: draw_credits`).
    */
   readonly overage: boolean
   /**

@@ -23,12 +23,22 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `TAX_NOT_COLLECTED_NOTE`
 - added symbol `TOPUP_BALANCE_POLL_DELAYS_MS`
 - added symbol `activatePlan`
+- added symbol `agentAuthChallenge`
+- added symbol `agentAuthorizeNext`
+- added symbol `agentAuthorizeRequest`
+- added symbol `agentCompleteBody`
+- added symbol `agentCredentialKind`
+- added symbol `agentKeyVerificationResult`
+- added symbol `agentPromptFacts`
+- added symbol `agentProtectedResource`
+- added symbol `agentSecretKeyEnvironment`
 - added symbol `appendPaidToolDescription`
 - added symbol `assertResponseResult`
 - added symbol `assertValidProductRef`
 - added symbol `assignCredits`
 - added symbol `attachBusinessDetails`
 - added symbol `attachBusinessDetailsValidationError`
+- added symbol `authorizeAgentCall`
 - added symbol `billingCycle`
 - added symbol `bootstrapMcpProduct`
 - added symbol `buildCreateCustomerParams`
@@ -52,6 +62,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `cloneProduct`
 - added symbol `coerceCustomerOptions`
 - added symbol `compileStringFieldInputSchemaJson`
+- added symbol `completeAgentCall`
 - added symbol `configureMcpPlans`
 - added symbol `countsUsage`
 - added symbol `createCheckoutSession`
@@ -61,6 +72,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `createPlan`
 - added symbol `createProduct`
 - added symbol `createTopupPaymentIntent`
+- added symbol `creditDrawnMeters`
 - added symbol `creditSignals`
 - added symbol `creditsPerUnitFromBalance`
 - added symbol `creditsToDisplayMinorUnits`
@@ -145,6 +157,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `normalizeFreeLimit`
 - added symbol `normalizeReactivateResponse`
 - added symbol `overlayClaimedLimits`
+- added symbol `parseAgentResponse`
 - added symbol `paywallErrorToClientPayload`
 - added symbol `paywallStructuredContentSchema`
 - added symbol `paywallToolResult`
@@ -159,6 +172,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `projectUsageSnapshot`
 - added symbol `purchaseUsageIsMetered`
 - added symbol `reactivatePurchase`
+- added symbol `reportAgentUsage`
 - added symbol `requireProductRef`
 - added symbol `resolveAccountState`
 - added symbol `resolveAuthenticatedUser`
@@ -207,6 +221,8 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `validatePublicBaseUrl`
 - added symbol `validatePurchaseRef`
 - added symbol `validateTopupPaymentIntentParams`
+- added symbol `verifyAgentKey`
+- added symbol `verifyAgentToken`
 - added symbol `verifyWebhook`
 - added boundary type `ActiveProduct`
 - added boundary type `AllowConsequence`
@@ -326,10 +342,12 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added `activatePlan` (POST /v1/sdk/activate)
 - added `assignCredits` (POST /v1/sdk/customers/{reference}/credits)
 - added `attachBusinessDetails` (POST /v1/sdk/payment-intents/{processorPaymentId}/business-details)
+- added `authorizeAgentCall` (POST /v1/sdk/agent/calls)
 - added `bootstrapMcpProduct` (POST /v1/sdk/products/mcp/bootstrap)
 - added `cancelPurchase` (POST /v1/sdk/purchases/{purchaseRef}/cancel)
 - added `checkLimits` (POST /v1/sdk/limits)
 - added `cloneProduct` (POST /v1/sdk/products/{productRef}/clone)
+- added `completeAgentCall` (POST /v1/sdk/agent/calls/{callRef}/complete)
 - added `configureMcpPlans` (PUT /v1/sdk/products/{productRef}/mcp/plans)
 - added `createCheckoutSession` (POST /v1/sdk/checkout-sessions)
 - added `createCustomer` (POST /v1/sdk/customers)
@@ -362,12 +380,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added `mcpResolveAuth`
 - added `processPaymentIntent` (POST /v1/sdk/payment-intents/{processorPaymentId}/process)
 - added `reactivatePurchase` (POST /v1/sdk/purchases/{purchaseRef}/reactivate)
+- added `reportAgentUsage` (POST /v1/sdk/agent/usage-reports)
 - added `saveAutoRecharge` (PUT /v1/sdk/auto-recharge)
 - added `trackUsage` (POST /v1/sdk/usages)
 - added `trackUsageBulk` (POST /v1/sdk/usages/bulk)
 - added `updateCustomer` (PATCH /v1/sdk/customers/{reference})
 - added `updatePlan` (PUT /v1/sdk/products/{productRef}/plans/{planRef})
 - added `updateProduct` (PUT /v1/sdk/products/{productRef})
+- added `verifyAgentKey` (POST /v1/sdk/agent/keys/verifications)
 - added error code `webhook.missing_signature`
 - added error code `webhook.malformed_signature`
 - added error code `webhook.timestamp_too_old`
@@ -530,6 +550,78 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `activatePlan` on facade `rust`
 - exposed `activatePlan` on facade `typescript`
 - exposed `activatePlan` on facade `wasm-edge`
+- exposed `agentAuthChallenge` on facade `capi`
+- exposed `agentAuthChallenge` on facade `go`
+- exposed `agentAuthChallenge` on facade `node-native`
+- exposed `agentAuthChallenge` on facade `python`
+- exposed `agentAuthChallenge` on facade `ruby`
+- exposed `agentAuthChallenge` on facade `rust`
+- exposed `agentAuthChallenge` on facade `typescript`
+- exposed `agentAuthChallenge` on facade `wasm-edge`
+- exposed `agentAuthorizeNext` on facade `capi`
+- exposed `agentAuthorizeNext` on facade `go`
+- exposed `agentAuthorizeNext` on facade `node-native`
+- exposed `agentAuthorizeNext` on facade `python`
+- exposed `agentAuthorizeNext` on facade `ruby`
+- exposed `agentAuthorizeNext` on facade `rust`
+- exposed `agentAuthorizeNext` on facade `typescript`
+- exposed `agentAuthorizeNext` on facade `wasm-edge`
+- exposed `agentAuthorizeRequest` on facade `capi`
+- exposed `agentAuthorizeRequest` on facade `go`
+- exposed `agentAuthorizeRequest` on facade `node-native`
+- exposed `agentAuthorizeRequest` on facade `python`
+- exposed `agentAuthorizeRequest` on facade `ruby`
+- exposed `agentAuthorizeRequest` on facade `rust`
+- exposed `agentAuthorizeRequest` on facade `typescript`
+- exposed `agentAuthorizeRequest` on facade `wasm-edge`
+- exposed `agentCompleteBody` on facade `capi`
+- exposed `agentCompleteBody` on facade `go`
+- exposed `agentCompleteBody` on facade `node-native`
+- exposed `agentCompleteBody` on facade `python`
+- exposed `agentCompleteBody` on facade `ruby`
+- exposed `agentCompleteBody` on facade `rust`
+- exposed `agentCompleteBody` on facade `typescript`
+- exposed `agentCompleteBody` on facade `wasm-edge`
+- exposed `agentCredentialKind` on facade `capi`
+- exposed `agentCredentialKind` on facade `go`
+- exposed `agentCredentialKind` on facade `node-native`
+- exposed `agentCredentialKind` on facade `python`
+- exposed `agentCredentialKind` on facade `ruby`
+- exposed `agentCredentialKind` on facade `rust`
+- exposed `agentCredentialKind` on facade `typescript`
+- exposed `agentCredentialKind` on facade `wasm-edge`
+- exposed `agentKeyVerificationResult` on facade `capi`
+- exposed `agentKeyVerificationResult` on facade `go`
+- exposed `agentKeyVerificationResult` on facade `node-native`
+- exposed `agentKeyVerificationResult` on facade `python`
+- exposed `agentKeyVerificationResult` on facade `ruby`
+- exposed `agentKeyVerificationResult` on facade `rust`
+- exposed `agentKeyVerificationResult` on facade `typescript`
+- exposed `agentKeyVerificationResult` on facade `wasm-edge`
+- exposed `agentPromptFacts` on facade `capi`
+- exposed `agentPromptFacts` on facade `go`
+- exposed `agentPromptFacts` on facade `node-native`
+- exposed `agentPromptFacts` on facade `python`
+- exposed `agentPromptFacts` on facade `ruby`
+- exposed `agentPromptFacts` on facade `rust`
+- exposed `agentPromptFacts` on facade `typescript`
+- exposed `agentPromptFacts` on facade `wasm-edge`
+- exposed `agentProtectedResource` on facade `capi`
+- exposed `agentProtectedResource` on facade `go`
+- exposed `agentProtectedResource` on facade `node-native`
+- exposed `agentProtectedResource` on facade `python`
+- exposed `agentProtectedResource` on facade `ruby`
+- exposed `agentProtectedResource` on facade `rust`
+- exposed `agentProtectedResource` on facade `typescript`
+- exposed `agentProtectedResource` on facade `wasm-edge`
+- exposed `agentSecretKeyEnvironment` on facade `capi`
+- exposed `agentSecretKeyEnvironment` on facade `go`
+- exposed `agentSecretKeyEnvironment` on facade `node-native`
+- exposed `agentSecretKeyEnvironment` on facade `python`
+- exposed `agentSecretKeyEnvironment` on facade `ruby`
+- exposed `agentSecretKeyEnvironment` on facade `rust`
+- exposed `agentSecretKeyEnvironment` on facade `typescript`
+- exposed `agentSecretKeyEnvironment` on facade `wasm-edge`
 - exposed `appendPaidToolDescription` on facade `capi`
 - exposed `appendPaidToolDescription` on facade `go`
 - exposed `appendPaidToolDescription` on facade `node-native`
@@ -578,6 +670,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `attachBusinessDetailsValidationError` on facade `typescript`
 - exposed `attachBusinessDetailsValidationError` on facade `wasm-browser`
 - exposed `attachBusinessDetailsValidationError` on facade `wasm-edge`
+- exposed `authorizeAgentCall` on facade `capi`
+- exposed `authorizeAgentCall` on facade `go`
+- exposed `authorizeAgentCall` on facade `node-native`
+- exposed `authorizeAgentCall` on facade `python`
+- exposed `authorizeAgentCall` on facade `ruby`
+- exposed `authorizeAgentCall` on facade `rust`
+- exposed `authorizeAgentCall` on facade `typescript`
+- exposed `authorizeAgentCall` on facade `wasm-edge`
 - exposed `billingCycle` on facade `capi`
 - exposed `billingCycle` on facade `go`
 - exposed `billingCycle` on facade `node-native`
@@ -748,6 +848,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `compileStringFieldInputSchemaJson` on facade `rust`
 - exposed `compileStringFieldInputSchemaJson` on facade `typescript`
 - exposed `compileStringFieldInputSchemaJson` on facade `wasm-edge`
+- exposed `completeAgentCall` on facade `capi`
+- exposed `completeAgentCall` on facade `go`
+- exposed `completeAgentCall` on facade `node-native`
+- exposed `completeAgentCall` on facade `python`
+- exposed `completeAgentCall` on facade `ruby`
+- exposed `completeAgentCall` on facade `rust`
+- exposed `completeAgentCall` on facade `typescript`
+- exposed `completeAgentCall` on facade `wasm-edge`
 - exposed `configureMcpPlans` on facade `capi`
 - exposed `configureMcpPlans` on facade `go`
 - exposed `configureMcpPlans` on facade `node-native`
@@ -821,6 +929,15 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `createTopupPaymentIntent` on facade `rust`
 - exposed `createTopupPaymentIntent` on facade `typescript`
 - exposed `createTopupPaymentIntent` on facade `wasm-edge`
+- exposed `creditDrawnMeters` on facade `capi`
+- exposed `creditDrawnMeters` on facade `go`
+- exposed `creditDrawnMeters` on facade `node-native`
+- exposed `creditDrawnMeters` on facade `python`
+- exposed `creditDrawnMeters` on facade `ruby`
+- exposed `creditDrawnMeters` on facade `rust`
+- exposed `creditDrawnMeters` on facade `typescript`
+- exposed `creditDrawnMeters` on facade `wasm-browser`
+- exposed `creditDrawnMeters` on facade `wasm-edge`
 - exposed `creditSignals` on facade `capi`
 - exposed `creditSignals` on facade `go`
 - exposed `creditSignals` on facade `node-native`
@@ -1451,6 +1568,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `overlayClaimedLimits` on facade `rust`
 - exposed `overlayClaimedLimits` on facade `typescript`
 - exposed `overlayClaimedLimits` on facade `wasm-edge`
+- exposed `parseAgentResponse` on facade `capi`
+- exposed `parseAgentResponse` on facade `go`
+- exposed `parseAgentResponse` on facade `node-native`
+- exposed `parseAgentResponse` on facade `python`
+- exposed `parseAgentResponse` on facade `ruby`
+- exposed `parseAgentResponse` on facade `rust`
+- exposed `parseAgentResponse` on facade `typescript`
+- exposed `parseAgentResponse` on facade `wasm-edge`
 - exposed `paywallErrorToClientPayload` on facade `capi`
 - exposed `paywallErrorToClientPayload` on facade `go`
 - exposed `paywallErrorToClientPayload` on facade `node-native`
@@ -1553,6 +1678,14 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `reactivatePurchase` on facade `rust`
 - exposed `reactivatePurchase` on facade `typescript`
 - exposed `reactivatePurchase` on facade `wasm-edge`
+- exposed `reportAgentUsage` on facade `capi`
+- exposed `reportAgentUsage` on facade `go`
+- exposed `reportAgentUsage` on facade `node-native`
+- exposed `reportAgentUsage` on facade `python`
+- exposed `reportAgentUsage` on facade `ruby`
+- exposed `reportAgentUsage` on facade `rust`
+- exposed `reportAgentUsage` on facade `typescript`
+- exposed `reportAgentUsage` on facade `wasm-edge`
 - exposed `requireProductRef` on facade `capi`
 - exposed `requireProductRef` on facade `go`
 - exposed `requireProductRef` on facade `node-native`
@@ -1885,6 +2018,22 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `validateTopupPaymentIntentParams` on facade `rust`
 - exposed `validateTopupPaymentIntentParams` on facade `typescript`
 - exposed `validateTopupPaymentIntentParams` on facade `wasm-edge`
+- exposed `verifyAgentKey` on facade `capi`
+- exposed `verifyAgentKey` on facade `go`
+- exposed `verifyAgentKey` on facade `node-native`
+- exposed `verifyAgentKey` on facade `python`
+- exposed `verifyAgentKey` on facade `ruby`
+- exposed `verifyAgentKey` on facade `rust`
+- exposed `verifyAgentKey` on facade `typescript`
+- exposed `verifyAgentKey` on facade `wasm-edge`
+- exposed `verifyAgentToken` on facade `capi`
+- exposed `verifyAgentToken` on facade `go`
+- exposed `verifyAgentToken` on facade `node-native`
+- exposed `verifyAgentToken` on facade `python`
+- exposed `verifyAgentToken` on facade `ruby`
+- exposed `verifyAgentToken` on facade `rust`
+- exposed `verifyAgentToken` on facade `typescript`
+- exposed `verifyAgentToken` on facade `wasm-edge`
 - exposed `verifyWebhook` on facade `capi`
 - exposed `verifyWebhook` on facade `go`
 - exposed `verifyWebhook` on facade `node-native`

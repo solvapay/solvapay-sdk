@@ -1,0 +1,91 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "reportAgentUsage",
+    "args": {
+      "reportId": "rep_fixture",
+      "customerRef": "cus_fixture",
+      "source": "opper:/v2/analytics/usage",
+      "window": {
+        "from": "2026-06-30T00:00:00Z",
+        "to": "2026-07-01T00:00:00Z"
+      },
+      "currency": "USD",
+      "calls": [
+        {
+          "callRef": "acl_fixture",
+          "cost": "0.0100"
+        }
+      ],
+      "untagged": []
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "report-agent-usage-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/usage-reports",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "reportId": "rep_fixture",
+        "customerRef": "cus_fixture",
+        "source": "opper:/v2/analytics/usage",
+        "window": {
+          "from": "2026-06-30T00:00:00Z",
+          "to": "2026-07-01T00:00:00Z"
+        },
+        "currency": "USD",
+        "calls": [
+          {
+            "callRef": "acl_fixture",
+            "cost": "0.0100"
+          }
+        ],
+        "untagged": []
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "urp_fixture",
+        "currency": "USD",
+        "duplicate": false,
+        "results": [
+          {
+            "callRef": "acl_fixture",
+            "result": "matched",
+            "reported": "0.0100"
+          }
+        ],
+        "untagged": {
+          "total": "0",
+          "beforePolicy": "0",
+          "flagged": false
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "urp_fixture",
+      "currency": "USD",
+      "duplicate": false,
+      "results": [
+        {
+          "callRef": "acl_fixture",
+          "result": "matched",
+          "reported": "0.0100"
+        }
+      ],
+      "untagged": {
+        "total": "0",
+        "beforePolicy": "0",
+        "flagged": false
+      }
+    }
+  }
+}

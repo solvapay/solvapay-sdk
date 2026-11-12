@@ -11,10 +11,12 @@ class SignatureParityGeneratedTest < Minitest::Test
     "activate_plan" => [[:keyreq, :params]],
     "assign_credits" => [[:keyreq, :params]],
     "attach_business_details" => [[:keyreq, :params]],
+    "authorize_agent_call" => [[:keyreq, :params]],
     "bootstrap_mcp_product" => [[:keyreq, :params]],
     "cancel_purchase" => [[:keyreq, :params]],
     "check_limits" => [[:keyreq, :params]],
     "clone_product" => [[:keyreq, :product_ref], [:key, :overrides]],
+    "complete_agent_call" => [[:keyreq, :call_ref], [:keyreq, :params]],
     "configure_mcp_plans" => [[:keyreq, :product_ref], [:keyreq, :params]],
     "create_checkout_session" => [[:keyreq, :params]],
     "create_customer" => [[:keyreq, :params]],
@@ -47,15 +49,26 @@ class SignatureParityGeneratedTest < Minitest::Test
     "mcp_resolve_auth" => [[:keyreq, :params]],
     "process_payment_intent" => [[:keyreq, :params]],
     "reactivate_purchase" => [[:keyreq, :params]],
+    "report_agent_usage" => [[:keyreq, :params]],
     "save_auto_recharge" => [[:keyreq, :params]],
     "track_usage" => [[:keyreq, :params]],
     "track_usage_bulk" => [[:keyreq, :params]],
     "update_customer" => [[:keyreq, :customer_ref], [:keyreq, :params]],
     "update_plan" => [[:keyreq, :product_ref], [:keyreq, :plan_ref], [:keyreq, :params]],
     "update_product" => [[:keyreq, :product_ref], [:keyreq, :params]],
+    "verify_agent_key" => [[:keyreq, :params]],
   }.freeze
 
   GENERATED_HELPERS = %w[
+    agent_auth_challenge
+    agent_authorize_next
+    agent_authorize_request
+    agent_complete_body
+    agent_credential_kind
+    agent_key_verification_result
+    agent_prompt_facts
+    agent_protected_resource
+    agent_secret_key_environment
     append_paid_tool_description
     assert_valid_product_ref
     billing_cycle
@@ -66,6 +79,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     charges
     classify_paywall_state
     counts_usage
+    credit_drawn_meters
     credit_signals
     credits_per_unit_from_balance
     credits_to_display_minor_units
@@ -96,6 +110,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     minor_units_per_major
     next_action_for
     normalize_free_limit
+    parse_agent_response
     paywall_error_to_client_payload
     paywall_structured_content_schema
     pegged_credits_per_unit
@@ -119,6 +134,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     trial_days
     usage_rate
     validate_business_details
+    verify_agent_token
   ].freeze
 
   EXPECTED_LIMITS_CACHE_TTL_MS = 10000
@@ -130,8 +146,8 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_REQUEST_ID_FORMAT = "solvapay_{epochMs}_{random9}"
   EXPECTED_USAGE_ACTION_TYPE = "api_call"
 
-  def test_all_45_client_operations_have_exact_keyword_signatures
-    assert_equal 45, OPERATION_SIGNATURES.length
+  def test_all_49_client_operations_have_exact_keyword_signatures
+    assert_equal 49, OPERATION_SIGNATURES.length
     OPERATION_SIGNATURES.each do |name, expected|
       method = SolvaPay::Client.instance_method(name)
       assert_equal expected, method.parameters, name

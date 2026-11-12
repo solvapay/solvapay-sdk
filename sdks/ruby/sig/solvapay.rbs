@@ -93,10 +93,12 @@ module SolvaPay
     def activate_plan: (params: Hash[String, untyped]) -> untyped
     def assign_credits: (params: Hash[String, untyped]) -> untyped
     def attach_business_details: (params: Hash[String, untyped]) -> untyped
+    def authorize_agent_call: (params: Hash[String, untyped]) -> untyped
     def bootstrap_mcp_product: (params: Hash[String, untyped]) -> untyped
     def cancel_purchase: (params: Hash[String, untyped]) -> untyped
     def check_limits: (params: Hash[String, untyped]) -> untyped
     def clone_product: (product_ref: String, ?overrides: Hash[String, untyped]) -> untyped
+    def complete_agent_call: (call_ref: String, params: Hash[String, untyped]) -> untyped
     def configure_mcp_plans: (product_ref: String, params: Hash[String, untyped]) -> untyped
     def create_checkout_session: (params: Hash[String, untyped]) -> untyped
     def create_customer: (params: Hash[String, untyped]) -> untyped
@@ -129,12 +131,14 @@ module SolvaPay
     def mcp_resolve_auth: (params: Hash[String, untyped]) -> untyped
     def process_payment_intent: (params: Hash[String, untyped]) -> untyped
     def reactivate_purchase: (params: Hash[String, untyped]) -> untyped
+    def report_agent_usage: (params: Hash[String, untyped]) -> untyped
     def save_auto_recharge: (params: Hash[String, untyped]) -> untyped
     def track_usage: (params: Hash[String, untyped]) -> untyped
     def track_usage_bulk: (params: Hash[String, untyped]) -> untyped
     def update_customer: (customer_ref: String, params: Hash[String, untyped]) -> untyped
     def update_plan: (product_ref: String, plan_ref: String, params: Hash[String, untyped]) -> untyped
     def update_product: (product_ref: String, params: Hash[String, untyped]) -> untyped
+    def verify_agent_key: (params: Hash[String, untyped]) -> untyped
   end
 
   # Generated driver loops (drivers.generated.rb).
@@ -249,6 +253,15 @@ module SolvaPay
   TAX_ID_EXAMPLE_BY_COUNTRY: untyped
   TAX_ID_TYPES: untyped
   TAX_NOT_COLLECTED_NOTE: untyped
+  def self.agent_auth_challenge: (?input: untyped) -> untyped
+  def self.agent_authorize_next: (?input: untyped) -> untyped
+  def self.agent_authorize_request: (?input: untyped) -> untyped
+  def self.agent_complete_body: (?input: untyped) -> untyped
+  def self.agent_credential_kind: (value: String) -> untyped
+  def self.agent_key_verification_result: (?input: untyped) -> untyped
+  def self.agent_prompt_facts: (text: String, tool_error: bool) -> untyped
+  def self.agent_protected_resource: (?input: untyped) -> untyped
+  def self.agent_secret_key_environment: (secret_key: String) -> untyped
   def self.append_paid_tool_description: (?description: String) -> untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped
@@ -259,6 +272,7 @@ module SolvaPay
   def self.charges: (?priced: untyped) -> untyped
   def self.classify_paywall_state: (input: Hash[String, untyped]) -> untyped
   def self.counts_usage: (?priced: untyped) -> untyped
+  def self.credit_drawn_meters: (?priced: untyped) -> untyped
   def self.credit_signals: (?limits: Hash[String, untyped]) -> untyped
   def self.credits_per_unit_from_balance: (?priced: untyped, ?balance: untyped, ?meter: String) -> untyped
   def self.credits_to_display_minor_units: (credits: Float, credits_per_minor_unit: Float, display_exchange_rate: Float, display_currency: String) -> untyped
@@ -289,6 +303,7 @@ module SolvaPay
   def self.minor_units_per_major: (currency: String) -> untyped
   def self.next_action_for: (state: Hash[String, untyped]) -> untyped
   def self.normalize_free_limit: (limit: untyped) -> untyped
+  def self.parse_agent_response: (kind: String, ?value: untyped) -> untyped
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
   def self.paywall_structured_content_schema: () -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped
@@ -312,4 +327,5 @@ module SolvaPay
   def self.trial_days: (?priced: untyped) -> untyped
   def self.usage_rate: (?priced: untyped, ?meter: String) -> untyped
   def self.validate_business_details: () -> untyped
+  def self.verify_agent_token: (?input: untyped) -> untyped
 end

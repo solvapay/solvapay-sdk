@@ -71,12 +71,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Top up — Demo**\n\nCheckout: [Add credits](https://checkout.example/s) (expires in 15 minutes)\nTo continue, call `account` with view: \"account\"."
-        },
-        {
-          "type": "resource_link",
-          "uri": "https://checkout.example/s",
-          "name": "Add credits"
+          "text": "**Top up — Demo**\n\nTo continue, call `account` with view: \"account\"."
         }
       ],
       "structuredContent": {
@@ -261,7 +256,7 @@
             "helperText": "Enter your EIN, e.g. 12-3456789"
           }
         },
-        "checkoutUrl": "https://checkout.example/s",
+        "checkoutUrl": null,
         "checkoutPurpose": "credit_topup",
         "portalUrl": null,
         "autoRechargeUrl": null

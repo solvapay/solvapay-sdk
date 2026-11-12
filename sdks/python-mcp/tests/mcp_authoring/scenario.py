@@ -72,7 +72,6 @@ class Limits(StrictModel):
     balance: Any | None = None
     product: Any | None = None
     meterName: str | None = None
-    throttled: bool | None = None
     overage: bool | None = None
 
 

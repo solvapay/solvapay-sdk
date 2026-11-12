@@ -44,6 +44,8 @@ export type FromOpenapiInput = {
   nonInteractive: boolean
   skipInstall?: boolean
   skipInit?: boolean
+  /** Pin `@solvapay/*` to the versions this release ships with instead of npm's latest (`--offline`). */
+  offline?: boolean
   /**
    * When true, rewrite path deps and default the API origin to api-dev
    * unless `options.apiBaseUrl` is set. The resolved origin is written
@@ -99,6 +101,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     nonInteractive,
     skipInstall,
     skipInit,
+    offline,
     dev,
   } = input
 
@@ -158,8 +161,12 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     await rm(tmpSelectionsPath, { force: true })
   }
 
-  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
-  const versionMap = await resolveLatestSolvapayVersions()
+  process.stdout.write(
+    offline
+      ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
+      : '🔄 Resolving latest @solvapay/* versions from npm registry…\n',
+  )
+  const versionMap = await resolveLatestSolvapayVersions(undefined, { offline })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)

@@ -11,7 +11,7 @@
     "result": {
       "meterRef": null,
       "total": null,
-      "used": 0,
+      "used": null,
       "remaining": null,
       "percentUsed": null
     }

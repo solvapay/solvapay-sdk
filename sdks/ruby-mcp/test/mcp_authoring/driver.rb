@@ -71,7 +71,6 @@ module McpAuthoring
           data = stringify(spec.data)
           if data.is_a?(Hash) && data["echo"] == "customer"
             data = {
-              "throttled" => ctx.customer["throttled"],
               "overage" => ctx.customer["overage"],
             }
           end

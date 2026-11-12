@@ -460,6 +460,91 @@ pub fn meter_name(priced: Option<&Value>) -> Option<String> {
     first_limit(priced, None).and_then(|limit| limit.meter)
 }
 
+/// Meters named on the plan's options, in first-seen order: per-unit charges,
+/// tier bands and limits.
+fn meter_keys(priced: Option<&Value>) -> Vec<String> {
+    let mut seen: Vec<String> = Vec::new();
+    for option in options_of(priced) {
+        let kind = option.get("kind").and_then(Value::as_str);
+        let meter = match kind {
+            Some("charge") if option.get("per").and_then(Value::as_str) == Some("unit") => {
+                option.get("meter")
+            }
+            Some("tier") => option.get("charge").and_then(|charge| charge.get("meter")),
+            Some("limit") => option.get("meter"),
+            _ => None,
+        };
+        if let Some(name) = meter
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+        {
+            if !seen.iter().any(|item| item == name) {
+                seen.push(name.to_owned());
+            }
+        }
+    }
+    seen
+}
+
+/// True when the meter bills at a positive per-unit or tier rate.
+fn meter_bills(priced: Option<&Value>, meter: &str) -> bool {
+    let per_unit = charges(priced).into_iter().any(|charge| {
+        charge.per == ChargePer::Unit
+            && charge.meter.as_deref() == Some(meter)
+            && charge.amount_minor > 0.0
+    });
+    per_unit
+        || tier_bands(priced, Some(meter))
+            .iter()
+            .any(|band| band.charge.amount_minor > 0.0)
+}
+
+/// The meters a recurring plan pays from prepaid credits.
+///
+/// Mirrors `creditDrawnMeters` in the platform pricing derive module: a meter
+/// counts when the plan is recurring, the meter bills, and it has no limit or
+/// a capped `draw_credits` limit.
+///
+/// # Arguments
+///
+/// * `priced` - Plan or plan snapshot carrying `options`.
+///
+/// # Returns
+///
+/// Meter names in option order. Empty for a non-recurring plan.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 92,
+    ts_param_types = "priced:PricedLike | null | undefined"
+)]
+pub fn credit_drawn_meters(priced: Option<&Value>) -> Vec<String> {
+    if billing_cycle(priced).is_none() {
+        return Vec::new();
+    }
+    meter_keys(priced)
+        .into_iter()
+        .filter(|meter| {
+            if !meter_bills(priced, meter) {
+                return false;
+            }
+            let limit = options_of(priced).into_iter().find(|option| {
+                option.get("kind").and_then(Value::as_str) == Some("limit")
+                    && option.get("meter").and_then(Value::as_str) == Some(meter.as_str())
+                    && option.get("cap").and_then(Value::as_f64).is_some()
+            });
+            match limit {
+                None => true,
+                Some(limit) => {
+                    limit.get("onExceed").and_then(Value::as_str) == Some("draw_credits")
+                        && limit.get("cap").and_then(Value::as_f64).unwrap_or(0.0) > 0.0
+                }
+            }
+        })
+        .collect()
+}
+
 /// True when the plan counts usage: a per-unit charge, a limit, or a tier.
 #[crate::solvapay_export(
     artifact = "decisions",

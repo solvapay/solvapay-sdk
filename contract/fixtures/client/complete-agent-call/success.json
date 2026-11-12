@@ -1,0 +1,58 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "completeAgentCall",
+    "args": {
+      "callRef": "acl_fixture",
+      "status": 200,
+      "cost": {
+        "amount": "0.0100",
+        "currency": "USD"
+      }
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "complete-agent-call-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/calls/acl_fixture/complete",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "status": 200,
+        "cost": {
+          "amount": "0.0100",
+          "currency": "USD"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "callRef": "acl_fixture",
+        "settled": true,
+        "source": "reported",
+        "amount": {
+          "amount": "0.0100",
+          "currency": "USD"
+        },
+        "duplicate": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "callRef": "acl_fixture",
+      "settled": true,
+      "source": "reported",
+      "amount": {
+        "amount": "0.0100",
+        "currency": "USD"
+      },
+      "duplicate": false
+    }
+  }
+}

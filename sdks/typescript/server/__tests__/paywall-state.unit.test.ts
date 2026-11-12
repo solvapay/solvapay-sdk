@@ -171,30 +171,6 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'topup_required' })
   })
 
-  it('prefers authoritative needsUpgrade over a usage-based zero-balance heuristic', () => {
-    // DEV-824: needsUpgrade beats the "usage-based + zero credits →
-    // topup" inference so an auto-upgrade deny is not mis-routed to
-    // the topup tool.
-    const state = classifyPaywallState(
-      limits({
-        plan: 'pln_usage',
-        plans: [
-          {
-            reference: 'pln_usage',
-            name: 'Usage',
-            type: 'usage-based',
-            price: 0,
-            currency: 'USD',
-            requiresPayment: true,
-          },
-        ],
-        balance: { creditBalance: 0, creditsPerUnit: 1, currency: 'USD' },
-        needsUpgrade: true,
-      }),
-    )
-    expect(state).toEqual({ kind: 'upgrade_required' })
-  })
-
   it('still prefers activationRequired over authoritative needsTopUp', () => {
     const state = classifyPaywallState(
       limits({

@@ -21,6 +21,7 @@ panic-probe = []
 edge = [
     "solvapay-core/client-full",
     "solvapay-core/webhook-verify",
+    "solvapay-core/agent-verify",
     "solvapay-mcp-core/engine",
     "dep:solvapay-dto",
     "dep:solvapay-transport",

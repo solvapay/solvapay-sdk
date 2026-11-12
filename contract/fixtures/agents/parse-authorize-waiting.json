@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "parse-authorize-waiting",
+  "input": {
+    "fn": "parseAgentResponse",
+    "args": {
+      "kind": "authorize",
+      "value": {
+        "status": "waiting",
+        "callRef": "acl_1",
+        "message": "Waiting for the owner.",
+        "approval": {
+          "reference": "apr_1",
+          "expiresAt": "2026-07-01T00:10:00Z"
+        },
+        "retryAfterSeconds": 2,
+        "extra": "dropped"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "waiting",
+      "callRef": "acl_1",
+      "message": "Waiting for the owner.",
+      "approval": {
+        "reference": "apr_1",
+        "expiresAt": "2026-07-01T00:10:00Z"
+      },
+      "retryAfterSeconds": 2
+    }
+  }
+}

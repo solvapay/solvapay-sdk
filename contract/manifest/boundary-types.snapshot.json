@@ -140,16 +140,9 @@
         "renameAll": "camelCase",
         "variants": [
           {
-            "rustName": "Throttled",
-            "wireName": "throttled",
-            "rustdoc": "Served under `onExceed: throttle`.",
-            "cfgFeature": null,
-            "fields": []
-          },
-          {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Served under `onExceed: charge` past the included cap.",
+            "rustdoc": "Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -1427,19 +1420,6 @@
             }
           },
           {
-            "rustName": "throttled",
-            "wireName": "throttled",
-            "rustdoc": "`throttled` from limits, or `false` when absent.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "overage",
             "wireName": "overage",
             "rustdoc": "`overage` from limits, or `false` when absent.",
@@ -2443,7 +2423,7 @@
               {
                 "rustName": "consequence",
                 "wireName": "consequence",
-                "rustdoc": "Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.",
+                "rustdoc": "Allow past the included cap (`overage`). Omitted on a plain allow.",
                 "optional": true,
                 "skipSerializingIf": "Option::is_none",
                 "serdeDefault": false,
@@ -5716,19 +5696,6 @@
             }
           },
           {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
             "rustName": "meter_name",
             "wireName": "meterName",
             "rustdoc": "Meter name used in included-usage copy and recovery fields.",
@@ -6075,19 +6042,6 @@
             "rustName": "needs_top_up",
             "wireName": "needsTopUp",
             "rustdoc": "Authoritative backend deny reason: prepaid top-up required.",
-            "optional": true,
-            "skipSerializingIf": null,
-            "serdeDefault": true,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "bool"
-            }
-          },
-          {
-            "rustName": "needs_upgrade",
-            "wireName": "needsUpgrade",
-            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
             "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": true,
@@ -8089,7 +8043,7 @@
           {
             "rustName": "Overage",
             "wireName": "overage",
-            "rustdoc": "Past the included cap under `onExceed: charge`.",
+            "rustdoc": "Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).",
             "cfgFeature": null,
             "fields": []
           }
@@ -8264,11 +8218,11 @@
           {
             "rustName": "used",
             "wireName": "used",
-            "rustdoc": "Units used (defaults to `0`).",
-            "optional": false,
+            "rustdoc": "Consumed units this period: `limits.used` when the backend measured it,\notherwise `total - remaining` when both are finite. `null` when this\nresponse did not measure consumption (no limits, unlimited, or\ncredit-based) — never an invented `0`.",
+            "optional": true,
             "skipSerializingIf": null,
             "serdeDefault": false,
-            "serializeWith": "serialize_whole_f64",
+            "serializeWith": "serialize_opt_whole_f64",
             "cfgFeature": null,
             "ty": {
               "kind": "f64"
@@ -8527,6 +8481,320 @@
         "ty": {
           "kind": "named",
           "name": "HelperErrorResult"
+        }
+      }
+    },
+    "solvapay_core::agents::agent_auth_challenge": {
+      "name": "agent_auth_challenge",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "The 401 that sends a host to sign the owner in, or refresh, and retry.\n\n# Arguments\n\n* `input` - The [`agent_protected_resource`] input plus `description` (why)\n  and an optional `jsonRpcId`.\n\n# Returns\n\n`{ status: 401, headers, body }`. `WWW-Authenticate` carries `error` and\n`error_description` (ChatGPT requires both), the metadata URL and the one\nscope; `body` is a JSON-RPC error with code -32001.\n\n# Errors\n\nAs [`agent_protected_resource`], or a missing `description`.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_authorize_next": {
+      "name": "agent_authorize_next",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "What to do with one authorize answer.\n\n# Arguments\n\n* `input` - `{ response }` with the authorize body, or `{ errorStatus }`\n  (`null` when SolvaPay could not be reached); plus `maxWaitSeconds`,\n  `nowMs`, `deadlineMs` and `aborted` (the caller went away).\n\n# Returns\n\n`{ kind: 'allow', callRef, reservation }`,\n`{ kind: 'refuse', reason, message, callRef?, approvalRef? }`, or\n`{ kind: 'retry', sleepMs, callRef, approvalRef }`: ask again with the same\nrequest id after `sleepMs`. A failed authorize is never let through:\n401 / 403 is `agent_not_accepted`, anything else `unavailable`.\n\n# Errors\n\nWhen the response is malformed (see [`parse_agent_response`]).",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_authorize_request": {
+      "name": "agent_authorize_request",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "The body of one authorize request.\n\n# Arguments\n\n* `input` - `{ agentToken, requestId, item, estimate: { amount, currency },\n  prompt?: { promptHash, toolError, excerpt }, promptExcerptAllowed, nowMs, deadlineMs }`.\n\n# Returns\n\nThe `authorizeAgentCall` body. `wait` is the seconds left before the\ndeadline, at most 55. The prompt's end is included only when the agent's\ntoken says its owner opted in.\n\n# Errors\n\nWhen a required field is missing.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_complete_body": {
+      "name": "agent_complete_body",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "The body that completes an allowed call.\n\n# Arguments\n\n* `input` - `{ status, cost: { amount: number, currency } | null, interrupted? }`:\n  how the upstream answered. A call that never reached the upstream is\n  `{ status: 502, cost: null, interrupted }`, so nothing is charged.\n\n# Returns\n\nThe `completeAgentCall` body; the cost amount as a decimal string with up\nto 8 places.\n\n# Errors\n\nWhen `status` is missing or `cost` is malformed.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_credential_kind": {
+      "name": "agent_credential_kind",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "What kind of credential a caller presented.\n\n# Arguments\n\n* `value` - The presented key or token.\n\n# Returns\n\n`agentKey` for `agk_…`, `jwt` for a JWS compact token (an agent token\ncandidate), otherwise `other`: the merchant's own auth decides.",
+      "params": [
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::agents::agent_key_verification_result": {
+      "name": "agent_key_verification_result",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "Turn SolvaPay's answer about an agent key into the same result a token gives.\n\n# Arguments\n\n* `input` - `{ verified }` with the `verifyAgentKey` response, or\n  `{ errorStatus, errorMessage }` for its 401 / 403; plus the merchant's\n  `environment`. Any other failure is the host's to throw: every paid call\n  would fail the same way.\n\n# Returns\n\n`{ ok: true, agent }` or `{ ok: false, reason, detail }`.\n\n# Errors\n\nWhen `verified` is malformed, or the error status is not 401 / 403.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_prompt_facts": {
+      "name": "agent_prompt_facts",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "What SolvaPay's classifier gets from a call's prompt.\n\n# Arguments\n\n* `text` - The prompt text the merchant picked (an LLM proxy: the last user\n  turn; an MCP tool: its input). Repeats of the same text show loops.\n* `tool_error` - The prompt carries a tool result marked as an error.\n\n# Returns\n\n`{ promptHash: 'sha256:…', toolError, excerpt }`. `excerpt` is the last\n1,500 UTF-16 code units; a surrogate pair cut by that boundary is dropped\nwhole. It is sent only when the agent's token allows it (`px`).",
+      "params": [
+        {
+          "rustName": "text",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "tool_error",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "bool"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      }
+    },
+    "solvapay_core::agents::agent_protected_resource": {
+      "name": "agent_protected_resource",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "Everything a merchant serves about itself as an OAuth protected resource.\n\n# Arguments\n\n* `input` - `{ resource, authorizationServer, metadataPath?, serverName?, documentation? }`.\n  `resource` is the MCP or API URL with its path; `authorizationServer` is\n  SolvaPay's agent issuer.\n\n# Returns\n\n`{ resource, metadataPath, metadataUrl, metadata }`: the canonical resource\n(and expected `aud`), where the RFC 9728 document is served (by default\npath-suffixed, which hosts try first), its absolute URL, and the document.\n\n# Errors\n\nWhen `resource` is not an absolute http(s) URL, or has a fragment or credentials.",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::agent_secret_key_environment": {
+      "name": "agent_secret_key_environment",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "The environment a merchant secret key is for, from its prefix.\n\n# Arguments\n\n* `secret_key` - The merchant's SolvaPay secret key.\n\n# Returns\n\n`sandbox` for `sk_sandbox_…`, `live` for `sk_live_…`, otherwise `null`.",
+      "params": [
+        {
+          "rustName": "secret_key",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::agents::parse_agent_response": {
+      "name": "parse_agent_response",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "Read one of SolvaPay's agent answers strictly: a paid call goes ahead, and\nbooks are settled, on it, so a misread must fail rather than guess.\n\n# Arguments\n\n* `kind` - `verifiedKey`, `authorize`, `complete` or `usageReport`.\n* `value` - The response body as received.\n\n# Returns\n\nThe response with only the documented fields, each checked.\n\n# Errors\n\nNaming the first field that is missing or of the wrong type or value.",
+      "params": [
+        {
+          "rustName": "kind",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "value",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
+    "solvapay_core::agents::verify_agent_token": {
+      "name": "verify_agent_token",
+      "module": "agents",
+      "implTy": null,
+      "rustdoc": "Verify a SolvaPay agent token.\n\nAgent tokens are ES256 JWTs signed by SolvaPay's agent service and issued\nfor one merchant: `aud` is its provider reference, or this server's OAuth\nresource for a token a host got by OAuth.\n\n# Arguments\n\n* `input` - `{ token, jwks, issuer, providerRef, resource?, environment?, nowUnixSecs }`.\n  `jwks` is the issuer's published key set (`<issuer>/jwks.json`); fetching\n  and caching it is the host's job. `environment` is the merchant's\n  (`agentSecretKeyEnvironment`); an agent from the other one is refused.\n\n# Returns\n\n`{ ok: true, agent: { agentRef, principalRef, tokenId, expiresAt, promptExcerpt,\nenvironment, clientId? } }` (`expiresAt` in Unix seconds), or\n`{ ok: false, reason: 'expired' | 'invalid' | 'environment_mismatch', detail }`.\n\n# Errors\n\nWhen `input` itself is malformed (missing token, keys, issuer or clock).",
+      "params": [
+        {
+          "rustName": "input",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
         }
       }
     },
@@ -10551,6 +10819,110 @@
         }
       }
     },
+    "solvapay_core::jwt_es256::Es256Error::as_str": {
+      "name": "as_str",
+      "module": "jwt_es256",
+      "implTy": "Es256Error",
+      "rustdoc": "Short reason for logs and rejection details.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::jwt_es256::verify_es256_jwt": {
+      "name": "verify_es256_jwt",
+      "module": "jwt_es256",
+      "implTy": null,
+      "rustdoc": "Verify a compact ES256 JWS and return its payload object.\n\nChecks the structure, that `alg` is `ES256`, and the signature. Does not\ncheck any claim.\n\n# Errors\n\n[`Es256Error`] naming the first check that failed.",
+      "params": [
+        {
+          "rustName": "token",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "jwks",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "Es256Error"
+          }
+        }
+      }
+    },
+    "solvapay_core::jwt_es256::verify_es256_signature": {
+      "name": "verify_es256_signature",
+      "module": "jwt_es256",
+      "implTy": null,
+      "rustdoc": "Verify an ES256 signature over `signing_input` with a P-256 key from `jwks`.\n\nTries every `kty: EC`, `crv: P-256` key, narrowed to `kid` when given.\nThe signature is the JWS raw `r || s` form (64 bytes).",
+      "params": [
+        {
+          "rustName": "jwks",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "kid",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "signing_input",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "vec",
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            }
+          }
+        },
+        {
+          "rustName": "sig",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "vec",
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            }
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
     "solvapay_core::jwt_util::base64url_decode": {
       "name": "base64url_decode",
       "module": "jwt_util",
@@ -12331,7 +12703,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` **or** `paywall_reason == \"activation_required\"`.\n2. `paywall_reason == \"limit_reached\"` — free-allowance exhaustion (no\n   purchase / plan ref) must not fall through to `upgrade_required`.\n3. `paywall_reason == \"topup_required\"` — backend stays authoritative for\n   credit-based denials (same rule as Managed MCP).\n4. Authoritative `needs_top_up` when the backend sent `Some(true)`.\n5. Credit-field presence **and** a real shortfall (`balance < cost`), then\n   `balance == 0`, then `cost` unknown && `remaining == 0`.\n6. `(purchase_ref || active_plan_ref)` && `remaining <= 0` → `limit_reached`.\n7. Floor: never `upgrade_required` when credit fields or a purchase are\n   present. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",
@@ -12535,6 +12907,31 @@
         "optional": false,
         "ty": {
           "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::pricing_options::credit_drawn_meters": {
+      "name": "credit_drawn_meters",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The meters a recurring plan pays from prepaid credits.\n\nMirrors `creditDrawnMeters` in the platform pricing derive module: a meter\ncounts when the plan is recurring, the meter bills, and it has no limit or\na capped `draw_credits` limit.\n\n# Arguments\n\n* `priced` - Plan or plan snapshot carrying `options`.\n\n# Returns\n\nMeter names in option order. Empty for a non-recurring plan.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
         }
       }
     },
@@ -13776,7 +14173,7 @@
       "name": "resolve_usage_extra",
       "module": "usage_request",
       "implTy": null,
-      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage` / `throttled`); unused on free tools.",
+      "rustdoc": "Derive `trackUsage` extra metadata from a free limit and the outcome.\n\nRules:\n- free tool → `meterName` only\n- non-free + `outcome == success` → `usageClass` `overage` or `included`\n- otherwise → empty\n\n# Arguments\n\n* `free_limit` - Present for `registerFree` tools.\n* `outcome` - `success` / `fail` / `paywall`.\n* `consequence` - Allow consequence (`overage`); unused on free tools.",
       "params": [
         {
           "rustName": "free_limit",

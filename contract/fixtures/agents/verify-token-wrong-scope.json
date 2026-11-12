@@ -1,0 +1,33 @@
+{
+  "suite": "agents",
+  "case": "verify-token-wrong-scope",
+  "input": {
+    "fn": "verifyAgentToken",
+    "args": {
+      "input": {
+        "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImZpeHR1cmUta2V5In0.eyJpc3MiOiJodHRwczovL2FwaS5zb2x2YXBheS5jb20vdjEvYWdlbnQiLCJhdWQiOiJwcm92X2ZpeHR1cmUiLCJzdWIiOiJhZ3RfZml4dHVyZSIsInByaW5jaXBhbCI6InBwbF9maXh0dXJlIiwic2NvcGUiOiJhZG1pbiIsImVudiI6InNhbmRib3giLCJqdGkiOiJhdGtfZml4dHVyZSIsImlhdCI6MTc4Mjg2NDAwMCwiZXhwIjoxNzgyODY3NjAwLCJweCI6dHJ1ZX0.q8xfArhZu5tlqU_GUIifKMBKLyHw_qYeoPHHucwssAbBn2rtGnIPDixWkCp4weUyXJm_aTSUyZ7p-wAWWUV5lg",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "EC",
+              "x": "PQJgqQsjw2LuzKSogSqniCbPU6H799AiSVczk-ygy3Q",
+              "y": "Pq8oJ-4m3zlS9SkEAEWJ8gLrxDR5T6V3eV_AZ7FIlAU",
+              "crv": "P-256",
+              "kid": "fixture-key"
+            }
+          ]
+        },
+        "issuer": "https://api.solvapay.com/v1/agent",
+        "providerRef": "prov_fixture",
+        "nowUnixSecs": 1782865000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "ok": false,
+      "reason": "invalid",
+      "detail": "scope is not usage"
+    }
+  }
+}

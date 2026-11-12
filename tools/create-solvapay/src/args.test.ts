@@ -66,6 +66,11 @@ describe('parseArgs', () => {
     expect(parseArgs(['--skip-init']).skipInit).toBe(true)
   })
 
+  it('parses --offline', () => {
+    expect(parseArgs(['--offline']).offline).toBe(true)
+    expect(parseArgs([]).offline).toBe(false)
+  })
+
   it('parses --dev and defaults to false', () => {
     expect(parseArgs([]).dev).toBe(false)
     expect(parseArgs(['--dev']).dev).toBe(true)

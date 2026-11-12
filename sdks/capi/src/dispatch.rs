@@ -7,15 +7,16 @@
 use serde_json::{Map, Value};
 use solvapay_core::SdkError;
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 use solvapay_transport::SolvaPayClient;
 
@@ -236,6 +237,25 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
         "fetchJwks" => runtime::runtime().block_on(run_envelope(async move {
             let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
             client.fetch_jwks(params).await
+        })),
+        "verifyAgentKey" => runtime::runtime().block_on(run_envelope(async move {
+            let params: VerifyAgentKeyDto = parse_args_json(&args_json)?;
+            client.verify_agent_key(params).await
+        })),
+        "authorizeAgentCall" => runtime::runtime().block_on(run_envelope(async move {
+            let params: AuthorizeCallDto = parse_args_json(&args_json)?;
+            client.authorize_agent_call(params).await
+        })),
+        "completeAgentCall" => runtime::runtime().block_on(run_envelope(async move {
+            let (refs, body) = split_path_refs(&args_json, &["callRef"])?;
+            let params: CompleteCallDto = serde_json::from_value(body).map_err(|err| {
+                SdkError::transport(format!("invalid completeAgentCall body: {err}"), false)
+            })?;
+            client.complete_agent_call(&refs[0], params).await
+        })),
+        "reportAgentUsage" => runtime::runtime().block_on(run_envelope(async move {
+            let params: UsageReportDto = parse_args_json(&args_json)?;
+            client.report_agent_usage(params).await
         })),
         other => err_envelope(&SdkError::transport(format!("unknown op: {other}"), false)),
     }

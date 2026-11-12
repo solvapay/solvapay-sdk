@@ -31,7 +31,7 @@ function clientWithLimits(body: LimitResponseWithPlan): SolvaPayClient {
 }
 
 describe('factory.checkLimits — outcome flags survive the factory boundary', () => {
-  const flags = ['throttled', 'overage', 'needsTopUp', 'needsUpgrade', 'upgraded'] as const
+  const flags = ['overage', 'needsTopUp'] as const
 
   it.each(flags)('returns %s from a stubbed /v1/sdk/limits body with no cast', async flag => {
     // Would fail if factory.checkLimits() went back to the 8-field
@@ -49,22 +49,6 @@ describe('factory.checkLimits — outcome flags survive the factory boundary', (
 })
 
 describe('paywall.decide — allow-with-consequences is distinguishable', () => {
-  it('sets consequence: throttled on an allow when the limits body is throttled', async () => {
-    const solvaPay = createSolvaPay({
-      apiClient: clientWithLimits(limits({ throttled: true, remaining: 0 })),
-    })
-
-    const decision = await solvaPay.paywall.decide(
-      { auth: { customer_ref: 'cus_flag' } },
-      { product: 'prd_api' },
-    )
-
-    expect(decision.outcome).toBe('allow')
-    if (decision.outcome !== 'allow') throw new Error('unreachable')
-    expect(decision.consequence).toBe('throttled')
-    expect(decision.limits.throttled).toBe(true)
-  })
-
   it('sets consequence: overage on an allow when the limits body is overage', async () => {
     const solvaPay = createSolvaPay({
       apiClient: clientWithLimits(limits({ overage: true, remaining: 0 })),

@@ -1,0 +1,7 @@
+{
+  "workerName": "headers-smoke",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": { "kind": "apiKey", "in": "header", "name": "X-Api-Key", "key": "smoke-key" },
+  "mode": "one-to-one",
+  "operations": [{ "operationId": "getReport", "tier": "free" }]
+}

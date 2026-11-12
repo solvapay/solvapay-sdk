@@ -35,8 +35,8 @@ func TestDriverLoopCorpusIsComplete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 8 {
-		t.Fatalf("driver-loop fixtures = %d, want 8 (%v)", len(entries), entries)
+	if len(entries) != 7 {
+		t.Fatalf("driver-loop fixtures = %d, want 7 (%v)", len(entries), entries)
 	}
 }
 

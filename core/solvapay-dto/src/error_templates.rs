@@ -41,10 +41,12 @@ pub const OPERATION_NAMES: &[&str] = &[
     "activatePlan",
     "assignCredits",
     "attachBusinessDetails",
+    "authorizeAgentCall",
     "bootstrapMcpProduct",
     "cancelPurchase",
     "checkLimits",
     "cloneProduct",
+    "completeAgentCall",
     "configureMcpPlans",
     "createCheckoutSession",
     "createCustomer",
@@ -77,12 +79,14 @@ pub const OPERATION_NAMES: &[&str] = &[
     "mcpResolveAuth",
     "processPaymentIntent",
     "reactivatePurchase",
+    "reportAgentUsage",
     "saveAutoRecharge",
     "trackUsage",
     "trackUsageBulk",
     "updateCustomer",
     "updatePlan",
     "updateProduct",
+    "verifyAgentKey",
 ];
 
 /// Per-operation HTTP / validation message templates.
@@ -101,6 +105,11 @@ pub mod operations {
     pub mod attach_business_details {
         /// Default failure template.
         pub const DEFAULT: &str = "Attach business details failed ({status}): {body}";
+    }
+    /// Templates for `authorizeAgentCall`.
+    pub mod authorize_agent_call {
+        /// Default failure template.
+        pub const DEFAULT: &str = "authorizeAgentCall failed ({status}): {body}";
     }
     /// Templates for `bootstrapMcpProduct`.
     pub mod bootstrap_mcp_product {
@@ -133,6 +142,11 @@ pub mod operations {
     pub mod clone_product {
         /// Default failure template.
         pub const DEFAULT: &str = "Clone product failed ({status}): {body}";
+    }
+    /// Templates for `completeAgentCall`.
+    pub mod complete_agent_call {
+        /// Default failure template.
+        pub const DEFAULT: &str = "completeAgentCall failed ({status}): {body}";
     }
     /// Templates for `configureMcpPlans`.
     pub mod configure_mcp_plans {
@@ -315,6 +329,11 @@ pub mod operations {
         /// Stable code for each [`CASES`] entry (`None` when unset).
         pub const CASE_CODE: &[Option<&str>] = &[None, None, None, None, None];
     }
+    /// Templates for `reportAgentUsage`.
+    pub mod report_agent_usage {
+        /// Default failure template.
+        pub const DEFAULT: &str = "reportAgentUsage failed ({status}): {body}";
+    }
     /// Templates for `saveAutoRecharge`.
     pub mod save_auto_recharge {
         /// Default failure template.
@@ -344,5 +363,10 @@ pub mod operations {
     pub mod update_product {
         /// Default failure template.
         pub const DEFAULT: &str = "Update product failed ({status}): {body}";
+    }
+    /// Templates for `verifyAgentKey`.
+    pub mod verify_agent_key {
+        /// Default failure template.
+        pub const DEFAULT: &str = "verifyAgentKey failed ({status}): {body}";
     }
 }

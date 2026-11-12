@@ -1,0 +1,27 @@
+{
+  "suite": "plan-pricing",
+  "case": "credit-drawn-zero-rate",
+  "input": {
+    "fn": "creditDrawnMeters",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 0,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": []
+  }
+}

@@ -54,8 +54,6 @@ const running: AccountLimitsLike = {
   activationRequired: false,
   overage: false,
   needsTopUp: false,
-  needsUpgrade: false,
-  throttled: false,
 }
 
 const atCap: AccountLimitsLike = {
@@ -142,24 +140,6 @@ describe('resolveAccountState precedence', () => {
         limits: { ...running, remaining: 0, withinLimits: false },
       }),
     ).toBe('D')
-  })
-
-  it('throttled stays on the running plan-shape state (B)', () => {
-    expect(
-      resolveAccountState({
-        purchase: purchase(payg),
-        limits: { ...running, throttled: true },
-      }),
-    ).toBe('B')
-  })
-
-  it('needsUpgrade stays on the running plan-shape state (C)', () => {
-    expect(
-      resolveAccountState({
-        purchase: purchase(starter),
-        limits: { ...running, needsUpgrade: true },
-      }),
-    ).toBe('C')
   })
 })
 

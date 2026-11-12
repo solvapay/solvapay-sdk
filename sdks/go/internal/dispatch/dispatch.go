@@ -25,10 +25,12 @@ var Signatures = []Signature{
 	{"ActivatePlan", []string{"params"}},
 	{"AssignCredits", []string{"params"}},
 	{"AttachBusinessDetails", []string{"params"}},
+	{"AuthorizeAgentCall", []string{"params"}},
 	{"BootstrapMcpProduct", []string{"params"}},
 	{"CancelPurchase", []string{"params"}},
 	{"CheckLimits", []string{"params"}},
 	{"CloneProduct", []string{"productRef", "overrides"}},
+	{"CompleteAgentCall", []string{"callRef", "params"}},
 	{"ConfigureMcpPlans", []string{"productRef", "params"}},
 	{"CreateCheckoutSession", []string{"params"}},
 	{"CreateCustomer", []string{"params"}},
@@ -61,12 +63,14 @@ var Signatures = []Signature{
 	{"McpResolveAuth", []string{"params"}},
 	{"ProcessPaymentIntent", []string{"params"}},
 	{"ReactivatePurchase", []string{"params"}},
+	{"ReportAgentUsage", []string{"params"}},
 	{"SaveAutoRecharge", []string{"params"}},
 	{"TrackUsage", []string{"params"}},
 	{"TrackUsageBulk", []string{"params"}},
 	{"UpdateCustomer", []string{"customerRef", "params"}},
 	{"UpdatePlan", []string{"productRef", "planRef", "params"}},
 	{"UpdateProduct", []string{"productRef", "params"}},
+	{"VerifyAgentKey", []string{"params"}},
 }
 
 // Call invokes a camelCase (or PascalCase) client method with JSON-like args.

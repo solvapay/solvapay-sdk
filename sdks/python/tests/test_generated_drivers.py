@@ -20,7 +20,7 @@ def _load_drivers():
 def test_driver_loop_corpus_is_complete() -> None:
     root = Path(__file__).resolve().parents[3] / "contract" / "fixtures" / "driver-loop"
     files = sorted(path.name for path in root.glob("*.json"))
-    assert len(files) == 8, files
+    assert len(files) == 7, files
 
 
 def test_generated_gate_loop_cache_hit_allow() -> None:

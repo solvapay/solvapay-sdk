@@ -9,11 +9,11 @@ use serde_json::json;
 use std::collections::BTreeMap;
 
 #[test]
-fn scenarios_cover_thirty_six_ops_in_dependency_order() {
-    // Live drivers ship 40 scenarios (38 unique ops + 2 bogus probes).
-    assert_eq!(SCENARIOS.len(), 40);
+fn scenarios_cover_every_op_in_dependency_order() {
+    // Live drivers ship 44 scenarios (42 unique ops + 2 bogus probes; agent ops are probes only).
+    assert_eq!(SCENARIOS.len(), 44);
     let unique_ops: std::collections::BTreeSet<&str> = SCENARIOS.iter().map(|s| s.op).collect();
-    assert_eq!(unique_ops.len(), 38);
+    assert_eq!(unique_ops.len(), 42);
     assert_eq!(SCENARIOS[0].id, "getMerchant");
     assert_eq!(SCENARIOS[0].op, "getMerchant");
     assert_eq!(SCENARIOS[SCENARIOS.len() - 1].id, "deleteProduct");

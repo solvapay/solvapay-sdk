@@ -67,6 +67,456 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "agentAuthChallenge": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentAuthorizeNext": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentAuthorizeRequest": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCompleteBody": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentCredentialKind": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentKeyVerificationResult": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentPromptFacts": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentProtectedResource": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "agentSecretKeyEnvironment": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
     "appendPaidToolDescription": {
       "capi": {
         "exposed": true
@@ -365,6 +815,56 @@
       },
       "wasm-browser": {
         "exposed": true
+      }
+    },
+    "authorizeAgentCall": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
     "BALANCE_RECONCILE_DELAYS_MS": {
@@ -1678,6 +2178,56 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "completeAgentCall": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
     "configureMcpPlans": {
       "capi": {
         "exposed": true
@@ -2174,6 +2724,55 @@
       "wasm-browser": {
         "exposed": false,
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "creditDrawnMeters": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": true
       }
     },
     "creditSignals": {
@@ -6466,6 +7065,56 @@
         "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
       }
     },
+    "parseAgentResponse": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
     "paywallErrorToClientPayload": {
       "capi": {
         "exposed": true
@@ -7176,6 +7825,56 @@
       }
     },
     "reactivatePurchase": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "reportAgentUsage": {
       "capi": {
         "exposed": true
       },
@@ -10140,6 +10839,106 @@
       "ruby": {
         "exposed": false,
         "reason": "no public Ruby declaration; only a native dispatch name mentions it"
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "verifyAgentKey": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
+      },
+      "ruby-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "rust": {
+        "exposed": true
+      },
+      "rust-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "typescript": {
+        "exposed": true
+      },
+      "typescript-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "wasm-edge": {
+        "exposed": true
+      },
+      "wasm-browser": {
+        "exposed": false,
+        "reason": "needs secret-key transport, webhook verification, or authenticated-user resolution; compiled out of the browser profile (§7.1)"
+      }
+    },
+    "verifyAgentToken": {
+      "capi": {
+        "exposed": true
+      },
+      "go": {
+        "exposed": true
+      },
+      "go-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "node-native": {
+        "exposed": true
+      },
+      "python": {
+        "exposed": true
+      },
+      "python-mcp": {
+        "exposed": false,
+        "na": true
+      },
+      "ruby": {
+        "exposed": true
       },
       "ruby-mcp": {
         "exposed": false,

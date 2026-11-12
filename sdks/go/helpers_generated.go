@@ -98,6 +98,115 @@ func TOPUP_BALANCE_POLL_DELAYS_MS(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_topup_balance_poll_delays_ms_binding", "{}")
 }
 
+// AgentAuthChallenge build the 401 that sends a host to sign the owner in and retry.
+// Returns `{ status: 401, headers, body }`.
+func AgentAuthChallenge(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_auth_challenge_binding", string(payload))
+}
+
+// AgentAuthorizeNext decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+// Returns `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+func AgentAuthorizeNext(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_authorize_next_binding", string(payload))
+}
+
+// AgentAuthorizeRequest build the body of one authorize request, with the wait left before the deadline.
+// Returns The authorizeAgentCall body.
+func AgentAuthorizeRequest(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_authorize_request_binding", string(payload))
+}
+
+// AgentCompleteBody build the body that completes an allowed call from how the upstream answered.
+// Returns The completeAgentCall body.
+func AgentCompleteBody(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_complete_body_binding", string(payload))
+}
+
+// AgentCredentialKind classify a presented credential as an agent key, a JWT (agent token candidate) or something else.
+// Returns `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+func AgentCredentialKind(ctx context.Context, value any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"value": value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_credential_kind_binding", string(payload))
+}
+
+// AgentKeyVerificationResult turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token gives.
+// Returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+func AgentKeyVerificationResult(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_key_verification_result_binding", string(payload))
+}
+
+// AgentPromptFacts hash a call's prompt and take its end for SolvaPay's classifier.
+// Returns `{ promptHash, toolError, excerpt }`.
+func AgentPromptFacts(ctx context.Context, text any, toolError any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"text":      text,
+		"toolError": toolError,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_prompt_facts_binding", string(payload))
+}
+
+// AgentProtectedResource describe a merchant server as an OAuth protected resource (RFC 9728).
+// Returns `{ resource, metadataPath, metadataUrl, metadata }`.
+func AgentProtectedResource(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_protected_resource_binding", string(payload))
+}
+
+// AgentSecretKeyEnvironment read which environment a merchant secret key is for from its prefix.
+// Returns `sandbox`, `live`, or null when the prefix says neither.
+func AgentSecretKeyEnvironment(ctx context.Context, secretKey any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"secretKey": secretKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_agent_secret_key_environment_binding", string(payload))
+}
+
 // AppendPaidToolDescription append the paid-tool account hint to a merchant tool description.
 // The description parameter is Optional merchant-authored description; trailing whitespace is stripped.
 // Returns Description plus hint, or the hint alone when no description is present.
@@ -137,7 +246,7 @@ func BillingCycle(ctx context.Context, priced any) (any, error) {
 }
 
 // BuildCustomerSnapshot build the merchant-facing customer snapshot from a limits body.
-// Returns Customer snapshot with defaults applied, including throttled and overage.
+// Returns Customer snapshot with defaults applied, including overage.
 func BuildCustomerSnapshot(ctx context.Context, customerRef any, limits any) (any, error) {
 	payload, err := json.Marshal(map[string]any{
 		"customerRef": customerRef,
@@ -222,6 +331,18 @@ func CountsUsage(ctx context.Context, priced any) (any, error) {
 		return nil, err
 	}
 	return nativecall.CallSync(ctx, "sv_counts_usage_binding", string(payload))
+}
+
+// CreditDrawnMeters list the meters a recurring plan pays from prepaid credits.
+// Returns Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+func CreditDrawnMeters(ctx context.Context, priced any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"priced": priced,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credit_drawn_meters_binding", string(payload))
 }
 
 // CreditSignals coalesce credit-balance channels and derive shortfall and remaining-call counts.
@@ -600,6 +721,19 @@ func NormalizeFreeLimit(ctx context.Context, limit any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_normalize_free_limit_binding", string(payload))
 }
 
+// ParseAgentResponse read one of SolvaPay's agent answers strictly, field by field.
+// Returns The response with only its documented fields, each checked.
+func ParseAgentResponse(ctx context.Context, kind any, value any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"kind":  kind,
+		"value": value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_parse_agent_response_binding", string(payload))
+}
+
 // PaywallErrorToClientPayload project a PaywallError into the client-facing payload shape.
 // Returns Client payload object for paywall responses.
 func PaywallErrorToClientPayload(ctx context.Context, message any, structuredContent any) (any, error) {
@@ -854,4 +988,16 @@ func ValidateBusinessDetails(ctx context.Context) (any, error) {
 		return nil, err
 	}
 	return nativecall.CallSync(ctx, "sv_validate_business_details_binding", string(payload))
+}
+
+// VerifyAgentToken verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+// Returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+func VerifyAgentToken(ctx context.Context, input any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"input": input,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_verify_agent_token_binding", string(payload))
 }

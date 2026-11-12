@@ -54,7 +54,7 @@ def _parse_manifest_operation_ts_names(manifest_text: str) -> list[str]:
 
 def test_covers_every_manifest_client_operation() -> None:
     ops = _parse_manifest_operation_ts_names(MANIFEST_PATH.read_text(encoding="utf-8"))
-    assert len(ops) == 45
+    assert len(ops) == 49
 
     # as_posix(): Windows Path.str uses `\`, which breaks the `client/` prefix.
     relative = [path.relative_to(FIXTURES_ROOT).as_posix() for path in FIXTURE_FILES]
@@ -76,7 +76,7 @@ def test_covers_every_manifest_client_operation() -> None:
                 f"{op_ts} ({method_dir}): success={has_success} error={has_error} "
                 f"files=[{', '.join(files)}]"
             )
-    assert routed == 38
+    assert routed == 42
     assert missing == []
 
 

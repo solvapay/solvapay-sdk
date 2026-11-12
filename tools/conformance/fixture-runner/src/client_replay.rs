@@ -17,15 +17,16 @@ use serde_json::{Map, Value};
 use solvapay_core::SdkError;
 use solvapay_dto::error_templates::OPERATION_NAMES;
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 use solvapay_transport::{
     mulberry32, BoxFuture, ClientShell, HttpRequest, HttpResponse, SharedTransport, SolvaPayClient,
@@ -283,10 +284,12 @@ const DISPATCH_FNS: &[&str] = &[
     "activatePlan",
     "assignCredits",
     "attachBusinessDetails",
+    "authorizeAgentCall",
     "bootstrapMcpProduct",
     "cancelPurchase",
     "checkLimits",
     "cloneProduct",
+    "completeAgentCall",
     "configureMcpPlans",
     "createCheckoutSession",
     "createCustomer",
@@ -312,12 +315,14 @@ const DISPATCH_FNS: &[&str] = &[
     "listPurchases",
     "processPaymentIntent",
     "reactivatePurchase",
+    "reportAgentUsage",
     "saveAutoRecharge",
     "trackUsage",
     "trackUsageBulk",
     "updateCustomer",
     "updatePlan",
     "updateProduct",
+    "verifyAgentKey",
 ];
 
 /// Returns whether the dispatch table covers every routed `OPERATION_NAMES` entry.
@@ -502,6 +507,25 @@ pub async fn dispatch(
             let params: DisableAutoRechargeParams = parse_args(&map)?;
             client.disable_auto_recharge(params).await
         }
+        "verifyAgentKey" => {
+            let params: VerifyAgentKeyDto = parse_args(&map)?;
+            client.verify_agent_key(params).await
+        }
+        "authorizeAgentCall" => {
+            let params: AuthorizeCallDto = parse_args(&map)?;
+            client.authorize_agent_call(params).await
+        }
+        "completeAgentCall" => {
+            let call_ref = require_str(&map, "callRef")?;
+            let mut body = map.clone();
+            body.remove("callRef");
+            let params: CompleteCallDto = parse_args(&body)?;
+            client.complete_agent_call(&call_ref, params).await
+        }
+        "reportAgentUsage" => {
+            let params: UsageReportDto = parse_args(&map)?;
+            client.report_agent_usage(params).await
+        }
         other => Err(SdkError::transport(
             format!("unsupported client-conformance fn: {other}"),
             false,
@@ -558,6 +582,6 @@ mod coverage_tests {
             "DISPATCH_FNS must equal routed error_templates::OPERATION_NAMES"
         );
         assert!(dispatch_covers_all_operations());
-        assert_eq!(DISPATCH_FNS.len(), 38);
+        assert_eq!(DISPATCH_FNS.len(), 42);
     }
 }

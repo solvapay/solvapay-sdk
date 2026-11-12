@@ -16,7 +16,7 @@ publish = true
 default = ["server", "engine"]
 server = ["solvapay-core/server", "jwt-verify"]
 # RS256/ES256 + HS256 for MCP bearer verification. Off the browser wasm graph.
-jwt-verify = ["dep:hmac", "dep:sha2", "dep:sha2-rsa", "dep:subtle", "dep:rsa", "dep:p256", "dep:getrandom"]
+jwt-verify = ["dep:hmac", "dep:sha2", "dep:sha2-rsa", "dep:subtle", "dep:rsa", "dep:getrandom", "solvapay-core/agent-verify"]
 engine = ["server"]
 
 [dependencies]
@@ -30,7 +30,6 @@ sha2 = { workspace = true, optional = true }
 sha2-rsa = { package = "sha2", version = "0.10.9", features = ["oid"], optional = true }
 subtle = { workspace = true, optional = true }
 rsa = { workspace = true, optional = true }
-p256 = { workspace = true, optional = true }
 getrandom = { version = "0.2.17", optional = true }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]

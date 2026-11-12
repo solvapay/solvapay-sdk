@@ -466,7 +466,7 @@ def _install_dispatch(server: Server[object]) -> None:
                 },
             )
             if isinstance(desc_raw, dict) and isinstance(desc_raw.get("csp"), dict):
-                ui_meta = {"ui": {"csp": desc_raw["csp"], "prefersBorder": False}}
+                ui_meta = {"ui": {"csp": desc_raw["csp"], "prefersBorder": True}}
         if isinstance(raw, dict) and isinstance(raw.get("resources"), list):
             for item in raw["resources"]:
                 if isinstance(item, dict):
@@ -508,7 +508,7 @@ def _install_dispatch(server: Server[object]) -> None:
                     ),
                 },
             )
-            ui: dict[str, object] = {"prefersBorder": False}
+            ui: dict[str, object] = {"prefersBorder": True}
             if isinstance(desc_raw, dict) and isinstance(desc_raw.get("csp"), dict):
                 ui["csp"] = desc_raw["csp"]
             return ReadResourceResult(

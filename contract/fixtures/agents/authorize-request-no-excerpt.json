@@ -1,0 +1,40 @@
+{
+  "suite": "agents",
+  "case": "authorize-request-no-excerpt",
+  "input": {
+    "fn": "agentAuthorizeRequest",
+    "args": {
+      "input": {
+        "agentToken": "t",
+        "requestId": "req_1",
+        "item": "gpt-5",
+        "estimate": {
+          "amount": "0.02",
+          "currency": "USD"
+        },
+        "prompt": {
+          "promptHash": "sha256:abc",
+          "toolError": false,
+          "excerpt": "tail"
+        },
+        "promptExcerptAllowed": false,
+        "nowMs": 1000,
+        "deadlineMs": 121000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "agentToken": "t",
+      "requestId": "req_1",
+      "item": "gpt-5",
+      "estimate": {
+        "amount": "0.02",
+        "currency": "USD"
+      },
+      "wait": 55,
+      "promptHash": "sha256:abc",
+      "toolError": false
+    }
+  }
+}

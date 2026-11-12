@@ -51,6 +51,10 @@ module SolvaPay
       mcp_oauth_request
       mcp_dispatch
       fetch_jwks
+      verify_agent_key
+      authorize_agent_call
+      complete_agent_call
+      report_agent_usage
     ].freeze
 
     SYNC_METHODS = %w[
@@ -208,6 +212,18 @@ module SolvaPay
       default_mcp_bearer_expectations
       compile_string_field_input_schema_json
       ensure_output_schema_object_type
+      credit_drawn_meters
+      agent_secret_key_environment
+      agent_credential_kind
+      verify_agent_token
+      agent_key_verification_result
+      agent_prompt_facts
+      agent_protected_resource
+      agent_auth_challenge
+      parse_agent_response
+      agent_authorize_request
+      agent_authorize_next
+      agent_complete_body
       TOPUP_BALANCE_POLL_DELAYS_MS
       BALANCE_RECONCILE_DELAYS_MS
     ].freeze

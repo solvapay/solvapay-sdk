@@ -58,7 +58,11 @@ ClientMethod = Literal[
     "mcp_resolve_auth",
     "mcp_oauth_request",
     "mcp_dispatch",
-    "fetch_jwks",]
+    "fetch_jwks",
+    "verify_agent_key",
+    "authorize_agent_call",
+    "complete_agent_call",
+    "report_agent_usage",]
 
 SyncMethod = Literal[
     "classify_customer_ref",
@@ -158,6 +162,18 @@ SyncMethod = Literal[
     "default_mcp_bearer_expectations",
     "compile_string_field_input_schema_json",
     "ensure_output_schema_object_type",
+    "credit_drawn_meters",
+    "agent_secret_key_environment",
+    "agent_credential_kind",
+    "verify_agent_token",
+    "agent_key_verification_result",
+    "agent_prompt_facts",
+    "agent_protected_resource",
+    "agent_auth_challenge",
+    "parse_agent_response",
+    "agent_authorize_request",
+    "agent_authorize_next",
+    "agent_complete_body",
     # --- @solvapay/core pure logic ---
     "format_price",
     "should_show_tax_row",

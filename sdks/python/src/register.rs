@@ -4,6 +4,15 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use crate::decisions::agent_auth_challenge_binding;
+use crate::decisions::agent_authorize_next_binding;
+use crate::decisions::agent_authorize_request_binding;
+use crate::decisions::agent_complete_body_binding;
+use crate::decisions::agent_credential_kind_binding;
+use crate::decisions::agent_key_verification_result_binding;
+use crate::decisions::agent_prompt_facts_binding;
+use crate::decisions::agent_protected_resource_binding;
+use crate::decisions::agent_secret_key_environment_binding;
 use crate::decisions::append_paid_tool_description_binding;
 use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
@@ -23,6 +32,7 @@ use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::compile_string_field_input_schema_json_binding;
 use crate::decisions::counts_usage_binding;
+use crate::decisions::credit_drawn_meters_binding;
 use crate::decisions::credit_signals_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::customer_ref_from_claims_binding;
@@ -60,6 +70,7 @@ use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_free_limit_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::overlay_claimed_limits_binding;
+use crate::decisions::parse_agent_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::paywall_structured_content_schema_binding;
 use crate::decisions::pegged_credits_per_unit_binding;
@@ -101,6 +112,7 @@ use crate::decisions::validate_list_plans_params_binding;
 use crate::decisions::validate_process_payment_intent_params_binding;
 use crate::decisions::validate_purchase_ref_binding;
 use crate::decisions::validate_topup_payment_intent_params_binding;
+use crate::decisions::verify_agent_token_binding;
 use crate::payload_builders::assert_response_result_binding;
 use crate::payload_builders::balance_reconcile_delays_ms_binding;
 use crate::payload_builders::build_payable_tool_result_binding;
@@ -297,6 +309,18 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
         ensure_output_schema_object_type_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(credit_drawn_meters_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_secret_key_environment_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_credential_kind_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(verify_agent_token_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_key_verification_result_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_prompt_facts_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_protected_resource_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_auth_challenge_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_agent_response_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_authorize_request_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_authorize_next_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(agent_complete_body_binding, m)?)?;
     m.add_function(wrap_pyfunction!(format_price_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_show_tax_row_binding, m)?)?;
     m.add_function(wrap_pyfunction!(solvapay_terms_url_binding, m)?)?;

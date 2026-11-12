@@ -1,0 +1,23 @@
+{
+  "suite": "agents",
+  "case": "authorize-next-not-accepted",
+  "input": {
+    "fn": "agentAuthorizeNext",
+    "args": {
+      "input": {
+        "errorStatus": 401,
+        "maxWaitSeconds": 30,
+        "nowMs": 0,
+        "deadlineMs": 30000,
+        "aborted": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refuse",
+      "reason": "agent_not_accepted",
+      "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+    }
+  }
+}

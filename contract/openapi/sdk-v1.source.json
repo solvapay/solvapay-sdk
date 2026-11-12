@@ -709,6 +709,41 @@
         ],
         "type": "object"
       },
+      "ApproveWithPasskeyDto": {
+        "properties": {
+          "passkey": {
+            "properties": {
+              "clientExtensionResults": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "rawId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "response": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "public-key"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "passkey"
+        ],
+        "type": "object"
+      },
       "AssignPlanRequest": {
         "properties": {
           "planRef": {
@@ -769,6 +804,191 @@
           "taxBreakdown"
         ],
         "type": "object"
+      },
+      "AuthorizeCallDto": {
+        "properties": {
+          "agentToken": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "estimate": {
+            "properties": {
+              "amount": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "currency": {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "item": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "promptExcerpt": {
+            "maxLength": 1500,
+            "type": "string"
+          },
+          "promptHash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "toolError": {
+            "type": "boolean"
+          },
+          "wait": {
+            "default": 0,
+            "exclusiveMaximum": false,
+            "exclusiveMinimum": false,
+            "maximum": 55,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agentToken",
+          "requestId",
+          "estimate"
+        ],
+        "type": "object"
+      },
+      "AuthorizeCallResponseDto": {
+        "oneOf": [
+          {
+            "properties": {
+              "callRef": {
+                "type": "string"
+              },
+              "reservation": {
+                "properties": {
+                  "expiresAt": {
+                    "type": "string"
+                  },
+                  "held": {
+                    "properties": {
+                      "amount": {
+                        "pattern": "^\\d+(\\.\\d{1,8})?$",
+                        "type": "string"
+                      },
+                      "currency": {
+                        "pattern": "^[A-Z]{3}$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount",
+                      "currency"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "held",
+                  "expiresAt"
+                ],
+                "type": "object"
+              },
+              "status": {
+                "enum": [
+                  "allowed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "reservation"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "callRef": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "enum": [
+                  "customer_not_linked",
+                  "ask",
+                  "deny",
+                  "topup_required",
+                  "approval_declined",
+                  "approval_expired"
+                ],
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "refused"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "approval": {
+                "properties": {
+                  "expiresAt": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reference",
+                  "expiresAt"
+                ],
+                "type": "object"
+              },
+              "callRef": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryAfterSeconds": {
+                "type": "integer"
+              },
+              "status": {
+                "enum": [
+                  "waiting"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "callRef",
+              "message",
+              "approval",
+              "retryAfterSeconds"
+            ],
+            "type": "object"
+          }
+        ]
       },
       "AutoRechargeConfigDto": {
         "properties": {
@@ -1195,6 +1415,33 @@
                   ],
                   "type": "string"
                 },
+                "cost": {
+                  "properties": {
+                    "amount": {
+                      "pattern": "^\\d+(\\.\\d{1,8})?$",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "enum": [
+                        "USD"
+                      ],
+                      "type": "string"
+                    },
+                    "source": {
+                      "enum": [
+                        "reported",
+                        "provisional"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency",
+                    "source"
+                  ],
+                  "type": "object"
+                },
                 "customerRef": {
                   "maxLength": 20,
                   "minLength": 1,
@@ -1299,6 +1546,12 @@
               },
               {
                 "$ref": "#/components/schemas/CreditDebitSkippedResponse"
+              },
+              {
+                "$ref": "#/components/schemas/CostDebitSuccessResponse"
+              },
+              {
+                "$ref": "#/components/schemas/CostDebitSkippedResponse"
               }
             ]
           },
@@ -1501,6 +1754,95 @@
         ],
         "type": "object"
       },
+      "CatalogListingDto": {
+        "properties": {
+          "anthropicBaseUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "defaultModel": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          },
+          "handle": {
+            "maxLength": 63,
+            "minLength": 3,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$",
+            "type": "string"
+          },
+          "legalAddress": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "legalName": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "mcpUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "priceExample": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "refundPolicyUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "regions": {
+            "default": [],
+            "items": {
+              "maxLength": 10,
+              "minLength": 2,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
+          "summary": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "maxLength": 40,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
+          "termsUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "websiteUrl": {
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "summary",
+          "mcpUrl",
+          "listed"
+        ],
+        "type": "object"
+      },
       "CheckLimitRequest": {
         "properties": {
           "customerRef": {
@@ -1615,6 +1957,19 @@
         ],
         "type": "object"
       },
+      "ClaimConnectRequestDto": {
+        "properties": {
+          "pollSecret": {
+            "maxLength": 200,
+            "minLength": 16,
+            "type": "string"
+          }
+        },
+        "required": [
+          "pollSecret"
+        ],
+        "type": "object"
+      },
       "ClonePlanDto": {
         "properties": {
           "name": {
@@ -1634,6 +1989,83 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "CompleteCallDto": {
+        "properties": {
+          "cost": {
+            "nullable": true,
+            "properties": {
+              "amount": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "currency": {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "interrupted": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "exclusiveMaximum": false,
+            "exclusiveMinimum": false,
+            "maximum": 599,
+            "minimum": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "cost"
+        ],
+        "type": "object"
+      },
+      "CompleteCallResponseDto": {
+        "properties": {
+          "amount": {
+            "properties": {
+              "amount": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "currency": {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "callRef": {
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "settled": {
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "reported",
+              "provisional",
+              "none"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "callRef",
+          "settled",
+          "source",
+          "amount",
+          "duplicate"
+        ],
         "type": "object"
       },
       "ConfigureMcpPlansDto": {
@@ -1831,15 +2263,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -1847,13 +2272,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -1918,9 +2336,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -1933,8 +2348,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -2000,56 +2414,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -2154,6 +2518,115 @@
         ],
         "type": "object"
       },
+      "ConfirmAccountCardSetupDto": {
+        "properties": {
+          "setupIntentId": {
+            "pattern": "^seti_[A-Za-z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "setupIntentId"
+        ],
+        "type": "object"
+      },
+      "ConfirmCardCopyDto": {
+        "properties": {
+          "setupIntentId": {
+            "pattern": "^seti_[A-Za-z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "setupIntentId"
+        ],
+        "type": "object"
+      },
+      "ConnectAgentDto": {
+        "properties": {
+          "connectRequestRef": {
+            "pattern": "^acr_[A-Z0-9]+$",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "policy": {
+            "properties": {
+              "limits": {
+                "properties": {
+                  "concurrency": {
+                    "enum": [
+                      "sequential",
+                      "parallel"
+                    ],
+                    "type": "string"
+                  },
+                  "dailyLimitUsd": {
+                    "nullable": true,
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "lowWaterUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "maxCallsPerMinute": {
+                    "exclusiveMaximum": false,
+                    "exclusiveMinimum": false,
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "maxTopupAmountUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "perCallCapUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "weeklyLimitUsd": {
+                    "nullable": true,
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "monthlyBudgetUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "promptExcerpt": {
+                "type": "boolean"
+              },
+              "purpose": {
+                "maxLength": 280,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "providerRef": {
+            "pattern": "^prov_[A-Z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connectRequestRef",
+          "providerRef",
+          "name",
+          "policy"
+        ],
+        "type": "object"
+      },
       "ConnectedAccountStatusResponse": {
         "properties": {
           "accountId": {
@@ -2195,6 +2668,80 @@
         ],
         "type": "object"
       },
+      "CostDebitSkippedResponse": {
+        "properties": {
+          "debited": {
+            "enum": [
+              false
+            ],
+            "type": "number"
+          },
+          "reason": {
+            "enum": [
+              "duplicate",
+              "customer_not_found",
+              "record_failed"
+            ],
+            "example": "duplicate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "debited",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "CostDebitSuccessResponse": {
+        "properties": {
+          "amount": {
+            "description": "Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)",
+            "example": 0,
+            "type": "number"
+          },
+          "amountUsd": {
+            "description": "Exact amount debited, USD decimal string",
+            "example": "0.000043",
+            "type": "string"
+          },
+          "autoRecharge": {
+            "$ref": "#/components/schemas/AutoRechargeTriggeredResponse"
+          },
+          "balanceCredits": {
+            "description": "Balance in whole credits after the debit",
+            "example": 30000,
+            "type": "number"
+          },
+          "balanceUsd": {
+            "description": "Exact balance after the debit, USD decimal string",
+            "example": "2.999957",
+            "type": "string"
+          },
+          "costSource": {
+            "description": "Set on a debit by reported cost: whether the cost was reported or an estimate",
+            "enum": [
+              "reported",
+              "provisional"
+            ],
+            "type": "string"
+          },
+          "debited": {
+            "enum": [
+              true
+            ],
+            "type": "number"
+          }
+        },
+        "required": [
+          "debited",
+          "costSource",
+          "amount",
+          "amountUsd",
+          "balanceCredits",
+          "balanceUsd"
+        ],
+        "type": "object"
+      },
       "CreateAccountLinkDto": {
         "properties": {
           "refreshUrl": {
@@ -2209,6 +2756,24 @@
         "required": [
           "returnUrl",
           "refreshUrl"
+        ],
+        "type": "object"
+      },
+      "CreateAgentDto": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "providerRef": {
+            "pattern": "^prov_[A-Z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "providerRef",
+          "name"
         ],
         "type": "object"
       },
@@ -2539,15 +3104,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -2555,13 +3113,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -2626,9 +3177,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -2641,8 +3189,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -2708,56 +3255,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -3183,15 +3680,8 @@
                     "onExceed": {
                       "enum": [
                         "block",
-                        "throttle",
-                        "charge",
-                        "notify",
-                        "top_up",
-                        "auto_upgrade"
+                        "draw_credits"
                       ],
-                      "type": "string"
-                    },
-                    "onExceedPricingId": {
                       "type": "string"
                     },
                     "scope": {
@@ -3199,13 +3689,6 @@
                         "billing_period",
                         "lifetime",
                         "rolling_window"
-                      ],
-                      "type": "string"
-                    },
-                    "uiHint": {
-                      "enum": [
-                        "upgrade_prompt",
-                        "soft_warning"
                       ],
                       "type": "string"
                     },
@@ -3270,9 +3753,6 @@
                       "minimum": 1,
                       "type": "integer"
                     },
-                    "downgradeToPricingId": {
-                      "type": "string"
-                    },
                     "kind": {
                       "enum": [
                         "trial"
@@ -3285,8 +3765,7 @@
                     "onEnd": {
                       "enum": [
                         "convert",
-                        "cancel",
-                        "downgrade"
+                        "cancel"
                       ],
                       "type": "string"
                     }
@@ -3352,56 +3831,6 @@
                     "mode",
                     "value",
                     "duration"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "capUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "enum": [
-                        "rollover"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "maxCycles": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "meter": {
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "rateMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "treatment": {
-                      "enum": [
-                        "forfeit",
-                        "carry_forward",
-                        "credit_units",
-                        "credit_money"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "meter",
-                    "treatment"
                   ],
                   "type": "object"
                 },
@@ -3720,6 +4149,76 @@
         },
         "type": "object"
       },
+      "CreateSpendPolicyDto": {
+        "properties": {
+          "agentRef": {
+            "maxLength": 20,
+            "pattern": "^agt_[A-Z0-9]+$",
+            "type": "string"
+          },
+          "limits": {
+            "properties": {
+              "concurrency": {
+                "enum": [
+                  "sequential",
+                  "parallel"
+                ],
+                "type": "string"
+              },
+              "dailyLimitUsd": {
+                "nullable": true,
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "lowWaterUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "maxCallsPerMinute": {
+                "exclusiveMaximum": false,
+                "exclusiveMinimum": false,
+                "maximum": 10000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "maxTopupAmountUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "perCallCapUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "weeklyLimitUsd": {
+                "nullable": true,
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "monthlyBudgetUsd": {
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "type": "string"
+          },
+          "promptExcerpt": {
+            "type": "boolean"
+          },
+          "purpose": {
+            "maxLength": 280,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentRef",
+          "monthlyBudgetUsd"
+        ],
+        "type": "object"
+      },
       "CreateStripePaymentDto": {
         "properties": {
           "amount": {
@@ -3817,6 +4316,28 @@
               "custom"
             ],
             "type": "string"
+          },
+          "cost": {
+            "properties": {
+              "amount": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "currency": {
+                "enum": [
+                  "USD"
+                ],
+                "type": "string"
+              },
+              "source": {
+                "enum": [
+                  "reported",
+                  "provisional"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
           },
           "customerRef": {
             "maxLength": 20,
@@ -4024,7 +4545,9 @@
               "customer_not_found",
               "no_active_purchase",
               "plan_not_credit_based",
-              "plan_billed_at_period_end"
+              "not_credit_drawn",
+              "within_included",
+              "free_meter"
             ],
             "example": "duplicate",
             "type": "string"
@@ -4115,13 +4638,44 @@
             "example": -10,
             "type": "number"
           },
+          "amountMoney": {
+            "description": "Exact amount in USD, decimal string (debits by reported cost; negative for a debit)",
+            "example": "-0.0748165",
+            "type": "string"
+          },
           "balance": {
             "description": "Running balance after this entry (credits)",
             "example": 1190,
             "type": "number"
           },
+          "balanceMoney": {
+            "description": "Exact running balance in USD, decimal string",
+            "example": "2.2005",
+            "type": "string"
+          },
+          "callRef": {
+            "description": "The call a cost debit settled (call_…)",
+            "type": "string"
+          },
+          "costSource": {
+            "description": "How a cost debit was arrived at; `reconciled` on an ADJUSTMENT that corrects a call to the merchant usage",
+            "enum": [
+              "reported",
+              "provisional",
+              "reconciled"
+            ],
+            "type": "string"
+          },
+          "decisionRef": {
+            "description": "The spend policy decision an agent's cost debit is bound to (dec_…)",
+            "type": "string"
+          },
           "idempotencyKey": {
             "description": "Provider-scoped idempotency key",
+            "type": "string"
+          },
+          "lotRef": {
+            "description": "The lot a TOPUP paid for (lot_…)",
             "type": "string"
           },
           "meta": {
@@ -4157,6 +4711,11 @@
             "description": "Entry timestamp",
             "example": "2025-10-01T00:00:00.000Z",
             "type": "string"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "description": "The usage event behind a debit, when read with withUsage=true",
+            "type": "object"
           },
           "usageRef": {
             "description": "Usage event reference (USAGE debits)",
@@ -4629,15 +5188,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -4645,13 +5197,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -4716,9 +5261,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -4731,8 +5273,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -4798,56 +5339,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -5039,7 +5530,10 @@
             "additionalProperties": {},
             "type": "object"
           },
-          "stripeAccountId": {
+          "stripeAgreementAccepted": {
+            "type": "boolean"
+          },
+          "stripeLinkId": {
             "type": "string"
           }
         },
@@ -5433,15 +5927,11 @@
             "type": "string"
           },
           "needsTopUp": {
-            "description": "Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`.",
-            "type": "boolean"
-          },
-          "needsUpgrade": {
-            "description": "Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`.",
+            "description": "Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit.",
             "type": "boolean"
           },
           "overage": {
-            "description": "Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`.",
+            "description": "Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`.",
             "type": "boolean"
           },
           "paywallReason": {
@@ -5485,14 +5975,6 @@
             "description": "Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).",
             "example": 997,
             "type": "number"
-          },
-          "throttled": {
-            "description": "Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`.",
-            "type": "boolean"
-          },
-          "upgraded": {
-            "description": "The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded.",
-            "type": "boolean"
           },
           "used": {
             "description": "Consumed usage units this period. Present only when the backend measured a finite cap.",
@@ -5733,15 +6215,8 @@
                           "onExceed": {
                             "enum": [
                               "block",
-                              "throttle",
-                              "charge",
-                              "notify",
-                              "top_up",
-                              "auto_upgrade"
+                              "draw_credits"
                             ],
-                            "type": "string"
-                          },
-                          "onExceedPricingId": {
                             "type": "string"
                           },
                           "scope": {
@@ -5749,13 +6224,6 @@
                               "billing_period",
                               "lifetime",
                               "rolling_window"
-                            ],
-                            "type": "string"
-                          },
-                          "uiHint": {
-                            "enum": [
-                              "upgrade_prompt",
-                              "soft_warning"
                             ],
                             "type": "string"
                           },
@@ -5820,9 +6288,6 @@
                             "minimum": 1,
                             "type": "integer"
                           },
-                          "downgradeToPricingId": {
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "trial"
@@ -5835,8 +6300,7 @@
                           "onEnd": {
                             "enum": [
                               "convert",
-                              "cancel",
-                              "downgrade"
+                              "cancel"
                             ],
                             "type": "string"
                           }
@@ -5902,56 +6366,6 @@
                           "mode",
                           "value",
                           "duration"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "capUnits": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "kind": {
-                            "enum": [
-                              "rollover"
-                            ],
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "maxCycles": {
-                            "exclusiveMinimum": false,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "meter": {
-                            "minLength": 1,
-                            "type": "string"
-                          },
-                          "rateMinor": {
-                            "exclusiveMinimum": false,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "treatment": {
-                            "enum": [
-                              "forfeit",
-                              "carry_forward",
-                              "credit_units",
-                              "credit_money"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "meter",
-                          "treatment"
                         ],
                         "type": "object"
                       },
@@ -6378,6 +6792,326 @@
         ],
         "type": "object"
       },
+      "OAuthConsentDto": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "policy": {
+            "properties": {
+              "limits": {
+                "properties": {
+                  "concurrency": {
+                    "enum": [
+                      "sequential",
+                      "parallel"
+                    ],
+                    "type": "string"
+                  },
+                  "dailyLimitUsd": {
+                    "nullable": true,
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "lowWaterUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "maxCallsPerMinute": {
+                    "exclusiveMaximum": false,
+                    "exclusiveMinimum": false,
+                    "maximum": 10000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "maxTopupAmountUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "perCallCapUsd": {
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "weeklyLimitUsd": {
+                    "nullable": true,
+                    "pattern": "^\\d+(\\.\\d{1,8})?$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "monthlyBudgetUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "promptExcerpt": {
+                "type": "boolean"
+              },
+              "purpose": {
+                "maxLength": 280,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "providerRef": {
+            "pattern": "^prov_[A-Z0-9]+$",
+            "type": "string"
+          },
+          "sessionRef": {
+            "pattern": "^oas_[A-Za-z0-9_-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionRef",
+          "providerRef",
+          "name"
+        ],
+        "type": "object"
+      },
+      "OnboardingStartDto": {
+        "properties": {
+          "businessEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "businessType": {
+            "enum": [
+              "individual",
+              "company"
+            ],
+            "type": "string"
+          },
+          "defaultCurrency": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "emailPreferences": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "legalEntity": {
+            "properties": {
+              "additionalActivities": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "address": {
+                "properties": {
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "line1": {
+                    "type": "string"
+                  },
+                  "line2": {
+                    "type": "string"
+                  },
+                  "line3": {
+                    "type": "string"
+                  },
+                  "postcode": {
+                    "type": "string"
+                  },
+                  "stateOrCounty": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "bankAccount": {
+                "properties": {
+                  "accountHolderName": {
+                    "type": "string"
+                  },
+                  "accountHolderType": {
+                    "enum": [
+                      "individual",
+                      "company"
+                    ],
+                    "type": "string"
+                  },
+                  "accountNumber": {
+                    "type": "string"
+                  },
+                  "accountNumberLast4": {
+                    "type": "string"
+                  },
+                  "accountType": {
+                    "type": "string"
+                  },
+                  "bankCode": {
+                    "type": "string"
+                  },
+                  "bankName": {
+                    "type": "string"
+                  },
+                  "bic": {
+                    "type": "string"
+                  },
+                  "branchCode": {
+                    "type": "string"
+                  },
+                  "bsb": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "iban": {
+                    "type": "string"
+                  },
+                  "ibanLast4": {
+                    "type": "string"
+                  },
+                  "institutionNumber": {
+                    "type": "string"
+                  },
+                  "routingNumber": {
+                    "type": "string"
+                  },
+                  "routingNumberLast4": {
+                    "type": "string"
+                  },
+                  "sortCode": {
+                    "type": "string"
+                  },
+                  "sortCodeLast4": {
+                    "type": "string"
+                  },
+                  "transitNumber": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "companyNumber": {
+                "type": "string"
+              },
+              "companyRegistrationDoc": {
+                "nullable": true,
+                "properties": {
+                  "originalName": {
+                    "type": "string"
+                  },
+                  "storageKey": {
+                    "type": "string"
+                  },
+                  "stripeFileId": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "mainActivity": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "people": {
+                "items": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "personIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "taxId": {
+                "type": "string"
+              },
+              "vatNumber": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "minTopUpMinor": {
+            "exclusiveMinimum": false,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "stripeAgreementAccepted": {
+            "type": "boolean"
+          },
+          "supportEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "supportTelephone": {
+            "type": "string"
+          },
+          "supportedTopupCurrencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "theme": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "topupTaxBehavior": {
+            "enum": [
+              "auto",
+              "inclusive",
+              "exclusive"
+            ],
+            "type": "string"
+          },
+          "website": {
+            "oneOf": [
+              {
+                "format": "uri",
+                "type": "string"
+              },
+              {
+                "enum": [
+                  ""
+                ],
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "website",
+          "stripeAgreementAccepted"
+        ],
+        "type": "object"
+      },
       "OneTimePurchaseInfo": {
         "properties": {
           "amount": {
@@ -6423,6 +7157,46 @@
           "completedAt",
           "createdAt"
         ],
+        "type": "object"
+      },
+      "OpenConnectRequestDto": {
+        "properties": {
+          "client": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "providerRef": {
+            "pattern": "^prov_[A-Z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "providerRef",
+          "name",
+          "client"
+        ],
+        "type": "object"
+      },
+      "OpenLotDto": {
+        "properties": {
+          "agentRef": {
+            "pattern": "^agt_[A-Z0-9]+$",
+            "type": "string"
+          },
+          "amountMinor": {
+            "default": 250,
+            "exclusiveMaximum": false,
+            "exclusiveMinimum": false,
+            "maximum": 3000,
+            "minimum": 50,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "PaymentLinkDetailsResponse": {
@@ -6899,15 +7673,8 @@
                         "onExceed": {
                           "enum": [
                             "block",
-                            "throttle",
-                            "charge",
-                            "notify",
-                            "top_up",
-                            "auto_upgrade"
+                            "draw_credits"
                           ],
-                          "type": "string"
-                        },
-                        "onExceedPricingId": {
                           "type": "string"
                         },
                         "scope": {
@@ -6915,13 +7682,6 @@
                             "billing_period",
                             "lifetime",
                             "rolling_window"
-                          ],
-                          "type": "string"
-                        },
-                        "uiHint": {
-                          "enum": [
-                            "upgrade_prompt",
-                            "soft_warning"
                           ],
                           "type": "string"
                         },
@@ -6986,9 +7746,6 @@
                           "minimum": 1,
                           "type": "integer"
                         },
-                        "downgradeToPricingId": {
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "trial"
@@ -7001,8 +7758,7 @@
                         "onEnd": {
                           "enum": [
                             "convert",
-                            "cancel",
-                            "downgrade"
+                            "cancel"
                           ],
                           "type": "string"
                         }
@@ -7068,56 +7824,6 @@
                         "mode",
                         "value",
                         "duration"
-                      ],
-                      "type": "object"
-                    },
-                    {
-                      "properties": {
-                        "capUnits": {
-                          "exclusiveMinimum": false,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "kind": {
-                          "enum": [
-                            "rollover"
-                          ],
-                          "type": "string"
-                        },
-                        "label": {
-                          "type": "string"
-                        },
-                        "maxCycles": {
-                          "exclusiveMinimum": false,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "meter": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
-                        "rateMinor": {
-                          "exclusiveMinimum": false,
-                          "minimum": 0,
-                          "type": "integer"
-                        },
-                        "treatment": {
-                          "enum": [
-                            "forfeit",
-                            "carry_forward",
-                            "credit_units",
-                            "credit_money"
-                          ],
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "kind",
-                        "meter",
-                        "treatment"
                       ],
                       "type": "object"
                     },
@@ -7781,11 +8487,6 @@
             "example": "Renewal cancelled successfully",
             "type": "string"
           },
-          "purchase": {
-            "additionalProperties": true,
-            "description": "The updated purchase document",
-            "type": "object"
-          },
           "success": {
             "description": "Whether the operation succeeded",
             "example": true,
@@ -7794,7 +8495,6 @@
         },
         "required": [
           "success",
-          "purchase",
           "message"
         ],
         "type": "object"
@@ -8111,6 +8811,44 @@
         ],
         "type": "object"
       },
+      "PushSubscriptionDto": {
+        "properties": {
+          "endpoint": {
+            "format": "uri",
+            "type": "string"
+          },
+          "keys": {
+            "properties": {
+              "auth": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "p256dh": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "type": "object"
+      },
+      "PushUnsubscribeDto": {
+        "properties": {
+          "endpoint": {
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "type": "object"
+      },
       "PutAutoRechargeDto": {
         "properties": {
           "currency": {
@@ -8353,6 +9091,18 @@
         ],
         "type": "object"
       },
+      "ReplaceCardDto": {
+        "properties": {
+          "with": {
+            "pattern": "^apm_[A-Z0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "with"
+        ],
+        "type": "object"
+      },
       "ResetOnboardingDto": {
         "properties": {
           "clearAllData": {
@@ -8388,14 +9138,14 @@
             ],
             "nullable": true
           },
-          "totalMRR": {
+          "totalNetRevenue": {
             "type": "number"
           }
         },
         "required": [
           "products",
           "activeProductCount",
-          "totalMRR",
+          "totalNetRevenue",
           "currency"
         ],
         "type": "object"
@@ -9173,10 +9923,10 @@
           "usage": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/UsageBillingDto"
+                "$ref": "#/components/schemas/SdkUsagePeriodDto"
               }
             ],
-            "description": "Usage billing state for usage-based plans"
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`"
           }
         },
         "required": [
@@ -9189,6 +9939,21 @@
           "isRecurring",
           "createdAt"
         ],
+        "type": "object"
+      },
+      "SdkUsagePeriodDto": {
+        "properties": {
+          "periodEnd": {
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`",
+            "example": "2025-11-01T00:00:00Z",
+            "type": "string"
+          },
+          "periodStart": {
+            "description": "Billing period of the active usage window; counts come from `/v1/sdk/limits`",
+            "example": "2025-10-01T00:00:00Z",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "SelectCustomerSessionProductDto": {
@@ -9471,13 +10236,18 @@
       "StripeOAuthCallbackResponse": {
         "properties": {
           "accountId": {
-            "description": "Linked Stripe account ID (present on success)",
+            "description": "Linked Stripe account ID (present on success; the go-live flow returns linkId instead)",
             "example": "acct_1A2B3C4D",
             "type": "string"
           },
           "error": {
             "description": "Error message (present when success is false)",
             "example": "Invalid or expired OAuth state",
+            "type": "string"
+          },
+          "linkId": {
+            "description": "Opaque handle the go-live flow quotes back in place of the account ID (present on a successful go-live exchange)",
+            "example": "0f3a1c62-9c5d-4f0b-8a7d-6b0c2b4e1f90",
             "type": "string"
           },
           "source": {
@@ -9506,6 +10276,241 @@
         },
         "required": [
           "success"
+        ],
+        "type": "object"
+      },
+      "SubmitVerificationDto": {
+        "properties": {
+          "businessEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "businessType": {
+            "enum": [
+              "individual",
+              "company"
+            ],
+            "type": "string"
+          },
+          "defaultCurrency": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "emailPreferences": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "legalEntity": {
+            "properties": {
+              "additionalActivities": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "address": {
+                "properties": {
+                  "city": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "line1": {
+                    "type": "string"
+                  },
+                  "line2": {
+                    "type": "string"
+                  },
+                  "line3": {
+                    "type": "string"
+                  },
+                  "postcode": {
+                    "type": "string"
+                  },
+                  "stateOrCounty": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "bankAccount": {
+                "properties": {
+                  "accountHolderName": {
+                    "type": "string"
+                  },
+                  "accountHolderType": {
+                    "enum": [
+                      "individual",
+                      "company"
+                    ],
+                    "type": "string"
+                  },
+                  "accountNumber": {
+                    "type": "string"
+                  },
+                  "accountNumberLast4": {
+                    "type": "string"
+                  },
+                  "accountType": {
+                    "type": "string"
+                  },
+                  "bankCode": {
+                    "type": "string"
+                  },
+                  "bankName": {
+                    "type": "string"
+                  },
+                  "bic": {
+                    "type": "string"
+                  },
+                  "branchCode": {
+                    "type": "string"
+                  },
+                  "bsb": {
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "iban": {
+                    "type": "string"
+                  },
+                  "ibanLast4": {
+                    "type": "string"
+                  },
+                  "institutionNumber": {
+                    "type": "string"
+                  },
+                  "routingNumber": {
+                    "type": "string"
+                  },
+                  "routingNumberLast4": {
+                    "type": "string"
+                  },
+                  "sortCode": {
+                    "type": "string"
+                  },
+                  "sortCodeLast4": {
+                    "type": "string"
+                  },
+                  "transitNumber": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "companyNumber": {
+                "type": "string"
+              },
+              "companyRegistrationDoc": {
+                "nullable": true,
+                "properties": {
+                  "originalName": {
+                    "type": "string"
+                  },
+                  "storageKey": {
+                    "type": "string"
+                  },
+                  "stripeFileId": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "mainActivity": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "people": {
+                "items": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "personIds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "taxId": {
+                "type": "string"
+              },
+              "vatNumber": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "minTopUpMinor": {
+            "exclusiveMinimum": false,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "stripeAgreementAccepted": {
+            "type": "boolean"
+          },
+          "supportEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "supportTelephone": {
+            "type": "string"
+          },
+          "supportedTopupCurrencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "theme": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "topupTaxBehavior": {
+            "enum": [
+              "auto",
+              "inclusive",
+              "exclusive"
+            ],
+            "type": "string"
+          },
+          "website": {
+            "oneOf": [
+              {
+                "format": "uri",
+                "type": "string"
+              },
+              {
+                "enum": [
+                  ""
+                ],
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "website"
         ],
         "type": "object"
       },
@@ -10356,8 +11361,16 @@
           },
           "tosAcceptance": {
             "properties": {
+              "date": {
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "type": "integer"
+              },
               "ip": {
                 "minLength": 1,
+                "type": "string"
+              },
+              "userAgent": {
                 "type": "string"
               }
             },
@@ -10687,15 +11700,8 @@
                     "onExceed": {
                       "enum": [
                         "block",
-                        "throttle",
-                        "charge",
-                        "notify",
-                        "top_up",
-                        "auto_upgrade"
+                        "draw_credits"
                       ],
-                      "type": "string"
-                    },
-                    "onExceedPricingId": {
                       "type": "string"
                     },
                     "scope": {
@@ -10703,13 +11709,6 @@
                         "billing_period",
                         "lifetime",
                         "rolling_window"
-                      ],
-                      "type": "string"
-                    },
-                    "uiHint": {
-                      "enum": [
-                        "upgrade_prompt",
-                        "soft_warning"
                       ],
                       "type": "string"
                     },
@@ -10774,9 +11773,6 @@
                       "minimum": 1,
                       "type": "integer"
                     },
-                    "downgradeToPricingId": {
-                      "type": "string"
-                    },
                     "kind": {
                       "enum": [
                         "trial"
@@ -10789,8 +11785,7 @@
                     "onEnd": {
                       "enum": [
                         "convert",
-                        "cancel",
-                        "downgrade"
+                        "cancel"
                       ],
                       "type": "string"
                     }
@@ -10856,56 +11851,6 @@
                     "mode",
                     "value",
                     "duration"
-                  ],
-                  "type": "object"
-                },
-                {
-                  "properties": {
-                    "capUnits": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "enum": [
-                        "rollover"
-                      ],
-                      "type": "string"
-                    },
-                    "label": {
-                      "type": "string"
-                    },
-                    "maxCycles": {
-                      "exclusiveMinimum": false,
-                      "minimum": 1,
-                      "type": "integer"
-                    },
-                    "meter": {
-                      "minLength": 1,
-                      "type": "string"
-                    },
-                    "rateMinor": {
-                      "exclusiveMinimum": false,
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    "treatment": {
-                      "enum": [
-                        "forfeit",
-                        "carry_forward",
-                        "credit_units",
-                        "credit_money"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "meter",
-                    "treatment"
                   ],
                   "type": "object"
                 },
@@ -11401,6 +12346,14 @@
             "additionalProperties": {},
             "type": "object"
           },
+          "topupTaxBehavior": {
+            "enum": [
+              "auto",
+              "inclusive",
+              "exclusive"
+            ],
+            "type": "string"
+          },
           "website": {
             "oneOf": [
               {
@@ -11419,6 +12372,80 @@
         "required": [
           "website"
         ],
+        "type": "object"
+      },
+      "UpdateSpendPolicyDto": {
+        "properties": {
+          "limits": {
+            "properties": {
+              "concurrency": {
+                "enum": [
+                  "sequential",
+                  "parallel"
+                ],
+                "type": "string"
+              },
+              "dailyLimitUsd": {
+                "nullable": true,
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "lowWaterUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "maxCallsPerMinute": {
+                "exclusiveMaximum": false,
+                "exclusiveMinimum": false,
+                "maximum": 10000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "maxTopupAmountUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "perCallCapUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "periodBudgetUsd": {
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "weeklyLimitUsd": {
+                "nullable": true,
+                "pattern": "^\\d+(\\.\\d{1,8})?$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "monthlyBudgetUsd": {
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "type": "string"
+          },
+          "promptExcerpt": {
+            "type": "boolean"
+          },
+          "purpose": {
+            "maxLength": 280,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "paused",
+              "revoked"
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "UpdateUserRoleDto": {
@@ -11598,6 +12625,12 @@
               },
               {
                 "$ref": "#/components/schemas/CreditDebitSkippedResponse"
+              },
+              {
+                "$ref": "#/components/schemas/CostDebitSuccessResponse"
+              },
+              {
+                "$ref": "#/components/schemas/CostDebitSkippedResponse"
               }
             ]
           },
@@ -11613,6 +12646,182 @@
         "required": [
           "success",
           "reference"
+        ],
+        "type": "object"
+      },
+      "UsageReportDto": {
+        "properties": {
+          "calls": {
+            "items": {
+              "properties": {
+                "callRef": {
+                  "maxLength": 20,
+                  "pattern": "^call_[A-Z0-9]+$",
+                  "type": "string"
+                },
+                "cost": {
+                  "pattern": "^\\d+(\\.\\d{1,8})?$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "callRef",
+                "cost"
+              ],
+              "type": "object"
+            },
+            "maxItems": 10000,
+            "type": "array"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          "customerRef": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "reportId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:.-]+$",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "untagged": {
+            "items": {
+              "properties": {
+                "at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "cost": {
+                  "pattern": "^\\d+(\\.\\d{1,8})?$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at",
+                "cost"
+              ],
+              "type": "object"
+            },
+            "maxItems": 2000,
+            "type": "array"
+          },
+          "window": {
+            "properties": {
+              "from": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "to": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "reportId",
+          "customerRef",
+          "source",
+          "currency",
+          "window",
+          "calls",
+          "untagged"
+        ],
+        "type": "object"
+      },
+      "UsageReportResponseDto": {
+        "properties": {
+          "currency": {
+            "enum": [
+              "USD"
+            ],
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "properties": {
+                "bookedCredit": {
+                  "type": "string"
+                },
+                "bookedPolicy": {
+                  "type": "string"
+                },
+                "callRef": {
+                  "type": "string"
+                },
+                "creditDelta": {
+                  "type": "string"
+                },
+                "policyDelta": {
+                  "type": "string"
+                },
+                "reason": {
+                  "enum": [
+                    "provisional",
+                    "expired",
+                    "no_debit",
+                    "cost_differs"
+                  ],
+                  "type": "string"
+                },
+                "reported": {
+                  "type": "string"
+                },
+                "result": {
+                  "enum": [
+                    "matched",
+                    "adjusted",
+                    "pending",
+                    "already_reconciled",
+                    "ignored"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "callRef",
+                "result"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "untagged": {
+            "properties": {
+              "beforePolicy": {
+                "type": "string"
+              },
+              "flagged": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "reference",
+          "currency",
+          "duplicate",
+          "results",
+          "untagged"
         ],
         "type": "object"
       },
@@ -11876,6 +13085,45 @@
         "required": [
           "reference",
           "email"
+        ],
+        "type": "object"
+      },
+      "VerifiedAgentKeyResponseDto": {
+        "properties": {
+          "agentRef": {
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "sandbox",
+              "live"
+            ],
+            "type": "string"
+          },
+          "principalRef": {
+            "type": "string"
+          },
+          "promptExcerpt": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agentRef",
+          "principalRef",
+          "promptExcerpt",
+          "environment"
+        ],
+        "type": "object"
+      },
+      "VerifyAgentKeyDto": {
+        "properties": {
+          "agentKey": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentKey"
         ],
         "type": "object"
       },
@@ -12352,7 +13600,7 @@
     "securitySchemes": {
       "SecretKey": {
         "bearerFormat": "JWT",
-        "description": "Provider secret API key (sk_live_… / sk_test_…) supplied as a Bearer token.",
+        "description": "Provider secret API key (sk_sandbox_… / sk_live_…) supplied as a Bearer token.",
         "scheme": "bearer",
         "type": "http"
       },
@@ -12413,6 +13661,187 @@
         "summary": "Activate a plan for a customer",
         "tags": [
           "Activation"
+        ]
+      }
+    },
+    "/v1/sdk/agent/calls": {
+      "post": {
+        "operationId": "CallsController_authorize",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeCallDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizeCallResponseDto"
+                }
+              }
+            },
+            "description": "allowed, refused or waiting"
+          },
+          "401": {
+            "description": "The agent token is invalid or the agent is revoked"
+          },
+          "403": {
+            "description": "The agent token is for another merchant, or agent payments are not enabled"
+          }
+        },
+        "security": [
+          {
+            "SecretKey": []
+          }
+        ],
+        "summary": "Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance",
+        "tags": [
+          "Agent calls"
+        ]
+      }
+    },
+    "/v1/sdk/agent/calls/{callRef}/complete": {
+      "post": {
+        "operationId": "CallsController_complete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "callRef",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteCallDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteCallResponseDto"
+                }
+              }
+            },
+            "description": "How the call was settled; a repeat returns the first result"
+          },
+          "404": {
+            "description": "No such call for this merchant"
+          },
+          "409": {
+            "description": "The call was refused or is still held"
+          }
+        },
+        "security": [
+          {
+            "SecretKey": []
+          }
+        ],
+        "summary": "Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost",
+        "tags": [
+          "Agent calls"
+        ]
+      }
+    },
+    "/v1/sdk/agent/keys/verifications": {
+      "post": {
+        "operationId": "AgentKeysController_verify",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyAgentKeyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifiedAgentKeyResponseDto"
+                }
+              }
+            },
+            "description": "The agent, its principal and the excerpt setting"
+          },
+          "401": {
+            "description": "Unknown or revoked agent key"
+          },
+          "403": {
+            "description": "The key is for another merchant, or for the other environment"
+          }
+        },
+        "security": [
+          {
+            "SecretKey": []
+          }
+        ],
+        "summary": "Read the agent behind an agent key issued for this merchant",
+        "tags": [
+          "Agent keys"
+        ]
+      }
+    },
+    "/v1/sdk/agent/usage-reports": {
+      "post": {
+        "operationId": "UsageReportsController_report",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageReportDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageReportResponseDto"
+                }
+              }
+            },
+            "description": "Per decision: matched, adjusted, pending, already reconciled or ignored"
+          },
+          "404": {
+            "description": "Not an agent buyer of this merchant"
+          },
+          "422": {
+            "description": "The window is too recent or too long"
+          }
+        },
+        "security": [
+          {
+            "SecretKey": []
+          }
+        ],
+        "summary": "Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it",
+        "tags": [
+          "Agent spend decisions"
         ]
       }
     },
@@ -14349,7 +15778,7 @@
         ]
       },
       "post": {
-        "description": "Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.",
+        "description": "Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.",
         "operationId": "PlanSdkController_createPlan",
         "parameters": [
           {
@@ -14939,6 +16368,15 @@
           },
           "400": {
             "description": "Validation failed"
+          },
+          "403": {
+            "description": "decision_customer_mismatch: a cost names a decision made for another customer"
+          },
+          "409": {
+            "description": "decision_already_debited: the decision was already debited by another usage event"
+          },
+          "422": {
+            "description": "decision_not_found: a cost names a decision this provider does not have"
           }
         },
         "security": [
@@ -14980,6 +16418,15 @@
           },
           "400": {
             "description": "Validation failed"
+          },
+          "403": {
+            "description": "decision_customer_mismatch: a cost names a decision made for another customer"
+          },
+          "409": {
+            "description": "decision_already_debited: the decision was already debited by another usage event"
+          },
+          "422": {
+            "description": "decision_not_found: a cost names a decision this provider does not have"
           }
         },
         "security": [

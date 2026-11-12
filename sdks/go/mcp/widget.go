@@ -100,7 +100,7 @@ func widgetUIMeta(csp CSP) mcpsdk.Meta {
 				"connectDomains":  csp.ConnectDomains,
 				"frameDomains":    csp.FrameDomains,
 			},
-			"prefersBorder": false,
+			"prefersBorder": true,
 		},
 	}
 }

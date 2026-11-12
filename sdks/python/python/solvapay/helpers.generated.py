@@ -24,6 +24,87 @@ def state_required_countries() -> Any:
     payload: dict[str, Any] = {}
     return call_native_sync("STATE_REQUIRED_COUNTRIES", json.dumps(payload))
 
+def agent_auth_challenge(input: Any | None = None) -> Any:
+    """Build the 401 that sends a host to sign the owner in and retry.
+    @returns `{ status: 401, headers, body }`.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_auth_challenge", json.dumps(payload))
+
+def agent_authorize_next(input: Any | None = None) -> Any:
+    """Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+    @returns `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_authorize_next", json.dumps(payload))
+
+def agent_authorize_request(input: Any | None = None) -> Any:
+    """Build the body of one authorize request, with the wait left before the deadline.
+    @returns The authorizeAgentCall body.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_authorize_request", json.dumps(payload))
+
+def agent_complete_body(input: Any | None = None) -> Any:
+    """Build the body that completes an allowed call from how the upstream answered.
+    @returns The completeAgentCall body.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_complete_body", json.dumps(payload))
+
+def agent_credential_kind(value: str) -> Any:
+    """Classify a presented credential as an agent key, a JWT (agent token candidate) or something
+    else.
+    @returns `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+    """
+    payload: dict[str, Any] = {}
+    payload["value"] = value
+    return call_native_sync("agent_credential_kind", json.dumps(payload))
+
+def agent_key_verification_result(input: Any | None = None) -> Any:
+    """Turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token
+    gives.
+    @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_key_verification_result", json.dumps(payload))
+
+def agent_prompt_facts(text: str, tool_error: bool) -> Any:
+    """Hash a call's prompt and take its end for SolvaPay's classifier.
+    @returns `{ promptHash, toolError, excerpt }`.
+    """
+    payload: dict[str, Any] = {}
+    payload["text"] = text
+    payload["toolError"] = tool_error
+    return call_native_sync("agent_prompt_facts", json.dumps(payload))
+
+def agent_protected_resource(input: Any | None = None) -> Any:
+    """Describe a merchant server as an OAuth protected resource (RFC 9728).
+    @returns `{ resource, metadataPath, metadataUrl, metadata }`.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("agent_protected_resource", json.dumps(payload))
+
+def agent_secret_key_environment(secret_key: str) -> Any:
+    """Read which environment a merchant secret key is for from its prefix.
+    @returns `sandbox`, `live`, or null when the prefix says neither.
+    """
+    payload: dict[str, Any] = {}
+    payload["secretKey"] = secret_key
+    return call_native_sync("agent_secret_key_environment", json.dumps(payload))
+
 def append_paid_tool_description(description: str | None = None) -> Any:
     """Append the paid-tool account hint to a merchant tool description.
     @param description Optional merchant-authored description; trailing whitespace is stripped.
@@ -54,7 +135,7 @@ def billing_cycle(priced: Any | None = None) -> Any:
 
 def build_customer_snapshot(customer_ref: str, limits: Any | None = None) -> Any:
     """Build the merchant-facing customer snapshot from a limits body.
-    @returns Customer snapshot with defaults applied, including throttled and overage.
+    @returns Customer snapshot with defaults applied, including overage.
     """
     payload: dict[str, Any] = {}
     payload["customerRef"] = customer_ref
@@ -116,6 +197,16 @@ def counts_usage(priced: Any | None = None) -> Any:
     if priced is not None:
         payload["priced"] = priced
     return call_native_sync("counts_usage", json.dumps(payload))
+
+def credit_drawn_meters(priced: Any | None = None) -> Any:
+    """List the meters a recurring plan pays from prepaid credits.
+    @returns Meter names that bill with no limit or a capped draw_credits limit; empty for a
+    non-recurring plan.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    return call_native_sync("credit_drawn_meters", json.dumps(payload))
 
 def credit_signals(limits: Any | None = None) -> Any:
     """Coalesce credit-balance channels and derive shortfall and remaining-call counts.
@@ -407,6 +498,16 @@ def normalize_free_limit(limit: Any) -> Any:
     payload["limit"] = limit
     return call_native_sync("normalize_free_limit", json.dumps(payload))
 
+def parse_agent_response(kind: str, value: Any | None = None) -> Any:
+    """Read one of SolvaPay's agent answers strictly, field by field.
+    @returns The response with only its documented fields, each checked.
+    """
+    payload: dict[str, Any] = {}
+    payload["kind"] = kind
+    if value is not None:
+        payload["value"] = value
+    return call_native_sync("parse_agent_response", json.dumps(payload))
+
 def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
     """Project a PaywallError into the client-facing payload shape.
     @returns Client payload object for paywall responses.
@@ -610,6 +711,15 @@ def validate_business_details() -> Any:
     """
     payload: dict[str, Any] = {}
     return call_native_sync("validate_business_details", json.dumps(payload))
+
+def verify_agent_token(input: Any | None = None) -> Any:
+    """Verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+    @returns `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+    """
+    payload: dict[str, Any] = {}
+    if input is not None:
+        payload["input"] = input
+    return call_native_sync("verify_agent_token", json.dumps(payload))
 
 _CONSTANT_IDS = frozenset({
     # Client-side balance reconciliation backoff after async credit top-ups, in milliseconds.

@@ -2203,6 +2203,7 @@ name = "solvapay-core"
 version = "2.6.0"
 dependencies = [
  "hmac 0.13.0",
+ "p256",
  "repo-paths",
  "serde",
  "serde_json",
@@ -2268,7 +2269,6 @@ version = "2.6.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac 0.13.0",
- "p256",
  "repo-paths",
  "rsa",
  "serde",

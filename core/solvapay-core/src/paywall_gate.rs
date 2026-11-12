@@ -61,9 +61,6 @@ pub struct PaywallGateLimits {
     /// Authoritative backend deny reason: prepaid top-up required.
     #[serde(default)]
     pub needs_top_up: Option<bool>,
-    /// Authoritative backend deny reason: auto-upgrade required.
-    #[serde(default)]
-    pub needs_upgrade: Option<bool>,
     /// Meter name used in included-usage copy and recovery fields.
     #[serde(default)]
     pub meter_name: Option<String>,
@@ -464,7 +461,6 @@ fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> Paywa
         limit: limits.limit,
         checkout_url: limits.checkout_url.clone(),
         needs_top_up: limits.needs_top_up,
-        needs_upgrade: limits.needs_upgrade,
         meter_name: limits.meter_name.clone(),
         currency: limits.currency.clone(),
         auto_recharge: limits.auto_recharge.clone(),

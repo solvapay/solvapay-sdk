@@ -12,15 +12,18 @@
 
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, assert_response_result, assert_valid_product_ref,
-    attach_business_details_validation_error, balance_reconcile_delays_ms, billing_cycle,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_payable_tool_result, build_paywall_gate, build_prompt_descriptor_metadata,
-    build_prompt_user_message, build_tool_descriptor_metadata, business_country_display_names,
-    business_country_options_table, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
+    agent_auth_challenge, agent_authorize_next, agent_authorize_request, agent_complete_body,
+    agent_credential_kind, agent_key_verification_result, agent_prompt_facts,
+    agent_protected_resource, agent_secret_key_environment, append_paid_tool_description,
+    assert_response_result, assert_valid_product_ref, attach_business_details_validation_error,
+    balance_reconcile_delays_ms, billing_cycle, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
+    build_paywall_gate, build_prompt_descriptor_metadata, build_prompt_user_message,
+    build_tool_descriptor_metadata, business_country_display_names, business_country_options_table,
+    charges, classify_cancel_error, classify_create_error, classify_customer_ref,
+    classify_lookup_error, classify_paywall_state, classify_reactivate_error,
+    coerce_customer_options, compile_string_field_input_schema_json, country_to_tax_id_type,
+    counts_usage, credit_drawn_meters, credit_signals, credits_per_unit_from_balance,
     credits_to_display_minor_units, customer_ref_from_claims, decide_paywall_outcome,
     decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
     derive_default_view, derive_icons, derive_tax_id_type, ensure_customer_next,
@@ -38,16 +41,16 @@ use solvapay_core::{
     link_label, make_response_result, map_route_error, mcp_tool_names_json, mcp_view_maps,
     meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
     normalize_free_limit, normalize_reactivate_response, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
-    postal_code_required_countries, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
-    resolve_authenticated_user, resolve_buyer_country, resolve_check_limits_params,
-    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
-    resolve_mandate_legal_docs, resolve_narrator_plan_shape, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, resolve_seller_identity_display,
-    resolve_tax_behavior, resolve_tax_treatment_note, resolve_usage_extra, reverse_charge_note,
-    select_active_plan_purchase, select_active_purchases,
+    parse_agent_response, paywall_client_payload, paywall_structured_content_schema,
+    paywall_tool_result, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder,
+    plan_pricing_shape, postal_code_required_countries, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, purchase_usage_is_metered,
+    require_product_ref, resolve_account_state, resolve_authenticated_user, resolve_buyer_country,
+    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
+    resolve_fallback_gate_limits, resolve_mandate_legal_docs, resolve_narrator_plan_shape,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_return_url,
+    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
+    resolve_usage_extra, reverse_charge_note, select_active_plan_purchase, select_active_purchases,
     seller_tax_identifier_display_label_by_type, should_retry_usage_error, should_show_tax_row,
     solvapay_privacy_url, solvapay_terms_url, solvapay_website_url, state_required_countries,
     supported_business_countries, tax_behaviors, tax_exclusive_currencies,
@@ -57,7 +60,7 @@ use solvapay_core::{
     validate_business_details, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_public_base_url, validate_purchase_ref,
-    validate_topup_payment_intent_params, AuthResolutionInput, Backoff,
+    validate_topup_payment_intent_params, verify_agent_token, AuthResolutionInput, Backoff,
     BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
     CreditsToDisplayInput, FreeLimit, FreeLimitInput, GateContent, MandateLegalInput,
     MerchantBranding, PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits,
@@ -136,6 +139,15 @@ const HELPER_OPS: &[&str] = &[
     "TAX_ID_TYPES",
     "TAX_NOT_COLLECTED_NOTE",
     "TOPUP_BALANCE_POLL_DELAYS_MS",
+    "agentAuthChallenge",
+    "agentAuthorizeNext",
+    "agentAuthorizeRequest",
+    "agentCompleteBody",
+    "agentCredentialKind",
+    "agentKeyVerificationResult",
+    "agentPromptFacts",
+    "agentProtectedResource",
+    "agentSecretKeyEnvironment",
     "appendPaidToolDescription",
     "assertResponseResult",
     "assertValidProductRef",
@@ -160,6 +172,7 @@ const HELPER_OPS: &[&str] = &[
     "coerceCustomerOptions",
     "compileStringFieldInputSchemaJson",
     "countsUsage",
+    "creditDrawnMeters",
     "creditSignals",
     "creditsPerUnitFromBalance",
     "creditsToDisplayMinorUnits",
@@ -222,6 +235,7 @@ const HELPER_OPS: &[&str] = &[
     "normalizeFreeLimit",
     "normalizeReactivateResponse",
     "overlayClaimedLimits",
+    "parseAgentResponse",
     "paywallErrorToClientPayload",
     "paywallStructuredContentSchema",
     "paywallToolResult",
@@ -276,6 +290,7 @@ const HELPER_OPS: &[&str] = &[
     "validatePublicBaseUrl",
     "validatePurchaseRef",
     "validateTopupPaymentIntentParams",
+    "verifyAgentToken",
 ];
 /// Dispatch a core helper. `None` means `op` is not in this table.
 pub(crate) fn try_dispatch(op: &str, args_json: &str) -> Option<String> {
@@ -354,6 +369,52 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
         "TOPUP_BALANCE_POLL_DELAYS_MS" => {
             let _args = args_map(args_json)?;
             to_value(&topup_balance_poll_delays_ms())
+        }
+        "agentAuthChallenge" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_auth_challenge(input.as_ref()))
+        }
+        "agentAuthorizeNext" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_authorize_next(input.as_ref()))
+        }
+        "agentAuthorizeRequest" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_authorize_request(input.as_ref()))
+        }
+        "agentCompleteBody" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_complete_body(input.as_ref()))
+        }
+        "agentCredentialKind" => {
+            let args = args_map(args_json)?;
+            let value = require_string(&args, "value")?;
+            Ok(Value::String(agent_credential_kind(&value).to_owned()))
+        }
+        "agentKeyVerificationResult" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_key_verification_result(input.as_ref()))
+        }
+        "agentPromptFacts" => {
+            let args = args_map(args_json)?;
+            let text = require_string(&args, "text")?;
+            let tool_error = require_bool(&args, "toolError")?;
+            to_value(&agent_prompt_facts(&text, tool_error))
+        }
+        "agentProtectedResource" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(agent_protected_resource(input.as_ref()))
+        }
+        "agentSecretKeyEnvironment" => {
+            let args = args_map(args_json)?;
+            let secret_key = require_string(&args, "secretKey")?;
+            to_value(&agent_secret_key_environment(&secret_key))
         }
         "appendPaidToolDescription" => {
             let args = args_map(args_json)?;
@@ -526,6 +587,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let args = args_map(args_json)?;
             let priced = optional_value(&args, "priced");
             Ok(Value::Bool(counts_usage(priced.as_ref())))
+        }
+        "creditDrawnMeters" => {
+            let args = args_map(args_json)?;
+            let priced = optional_value(&args, "priced");
+            to_value(&credit_drawn_meters(priced.as_ref()))
         }
         "creditSignals" => {
             let args = args_map(args_json)?;
@@ -1007,6 +1073,12 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
                 claimed,
             ))
         }
+        "parseAgentResponse" => {
+            let args = args_map(args_json)?;
+            let kind = require_string(&args, "kind")?;
+            let value = optional_value(&args, "value");
+            result_as_value(parse_agent_response(&kind, value.as_ref()))
+        }
         "paywallErrorToClientPayload" => {
             let args = args_map(args_json)?;
             let _message = require_string(&args, "message")?;
@@ -1450,6 +1522,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
                 amount,
                 currency.as_deref(),
             ))
+        }
+        "verifyAgentToken" => {
+            let args = args_map(args_json)?;
+            let input = optional_value(&args, "input");
+            result_as_value(verify_agent_token(input.as_ref()))
         }
         other => Err(SdkError::transport(format!("unknown op: {other}"), false)),
     }

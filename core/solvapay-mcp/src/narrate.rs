@@ -453,6 +453,13 @@ fn remaining_of_total(usage: Option<&Value>) -> Option<String> {
     ))
 }
 
+/// True when the latest limits response says this plan does not spend credits.
+fn credits_unused(customer: Option<&Value>) -> bool {
+    let limits = customer.and_then(|c| c.get("limits"));
+    let parsed = limits.and_then(|l| serde_json::from_value::<PaywallLimits>(l.clone()).ok());
+    !credit_signals(parsed.as_ref()).is_credit_based
+}
+
 fn used_of_total(usage: Option<&Value>) -> Option<String> {
     let usage = usage?;
     let used = usage.get("used").and_then(Value::as_f64)?;
@@ -716,11 +723,7 @@ fn narrate_account_body(
             } else {
                 "After your first call".to_owned()
             };
-            let limits = customer.and_then(|c| c.get("limits"));
-            let parsed =
-                limits.and_then(|l| serde_json::from_value::<PaywallLimits>(l.clone()).ok());
-            let credits_unused = !credit_signals(parsed.as_ref()).is_credit_based;
-            let tail = if credits_unused {
+            let tail = if credits_unused(customer) {
                 "Credits are not used on this plan. Call `account` with view: 'checkout' to switch."
             } else {
                 "Call `account` with view: 'checkout' to switch."
@@ -793,7 +796,7 @@ fn narrate_account_body(
             } else {
                 format!(" {}.", join_or(&others))
             };
-            let anti_trap = if credits > 0.0 && plan_shape != Some(NarratorPlanShape::UsageBased) {
+            let anti_trap = if credits_unused(customer) {
                 format!(" Adding credits will not help, because {plan_name} does not spend them.")
             } else {
                 String::new()
@@ -808,7 +811,7 @@ fn narrate_account_body(
                 .map(|used| format!(": {used} used"))
                 .unwrap_or_default();
             format!(
-                "{product} is over its {plan_name} allowance{used_bit}. Calls still work. Call `account` with view: 'checkout' for a higher limit."
+                "{product} is over its {plan_name} allowance{used_bit}. Calls still work, paid from your credits. Call `account` with view: 'checkout' for a higher limit."
             )
         }
         _ => {
@@ -895,6 +898,9 @@ pub fn narrate_manage_account(data: &Value) -> Value {
         customer,
         &plans,
     ));
+    if let Some(identity) = identity_row(customer) {
+        lines.push(identity);
+    }
     if state == "A" || state == "H" {
         if let Some(bal) = balance_row(customer) {
             lines.push(bal);
@@ -912,6 +918,27 @@ pub fn narrate_manage_account(data: &Value) -> Value {
         free.and_then(|p| p.get("reference").and_then(Value::as_str)),
     ));
     narrate_manage_output(lines.join("\n"), recovery_links(data))
+}
+
+/// Who is signed in, for hosts that only read `content[].text`. The
+/// bootstrap leaves `customer` null for an anonymous caller, so a present
+/// ref is a signed-in customer. A missing email leaves the ref alone.
+fn identity_row(customer: Option<&Value>) -> Option<String> {
+    let customer = customer?;
+    let reference = customer
+        .get("ref")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())?;
+    let email = customer
+        .get("email")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    Some(match email {
+        Some(email) => format!("Signed in as: {email} · {reference}"),
+        None => format!("Signed in as: {reference}"),
+    })
 }
 
 fn recovery_links(data: &Value) -> Vec<Value> {

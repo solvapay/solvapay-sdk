@@ -18,12 +18,13 @@
         "remaining": 0,
         "plan": "pl_pro",
         "creditBalance": 0,
-        "throttled": true,
-        "overage": false
+        "overage": true
       },
       "handler": {
         "kind": "respond",
-        "data": { "echo": "customer" }
+        "data": {
+          "echo": "customer"
+        }
       }
     }
   },
@@ -33,12 +34,11 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"throttled\":true,\"overage\":false}"
+            "text": "{\"overage\":true}"
           }
         ],
         "structuredContent": {
-          "throttled": true,
-          "overage": false
+          "overage": true
         }
       },
       "usage": [

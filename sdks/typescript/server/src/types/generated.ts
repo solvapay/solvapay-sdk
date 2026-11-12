@@ -28,6 +28,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sdk/agent/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance */
+        post: operations["CallsController_authorize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/agent/calls/{callRef}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost */
+        post: operations["CallsController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/agent/keys/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read the agent behind an agent key issued for this merchant */
+        post: operations["AgentKeysController_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sdk/agent/usage-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it */
+        post: operations["UsageReportsController_report"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sdk/auto-recharge": {
         parameters: {
             query?: never;
@@ -555,7 +623,7 @@ export interface paths {
         put?: never;
         /**
          * Create a plan for a product
-         * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
+         * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
          */
         post: operations["PlanSdkController_createPlan"];
         delete?: never;
@@ -836,6 +904,49 @@ export interface components {
             /** @description Calculated tax breakdown */
             taxBreakdown: components["schemas"]["TaxBreakdownDto"];
         };
+        AuthorizeCallDto: {
+            agentToken: string;
+            estimate: {
+                amount?: string;
+                currency?: string;
+            };
+            item?: string;
+            promptExcerpt?: string;
+            promptHash?: string;
+            requestId: string;
+            toolError?: boolean;
+            /** @default 0 */
+            wait: number;
+        };
+        AuthorizeCallResponseDto: {
+            callRef: string;
+            reservation: {
+                expiresAt: string;
+                held: {
+                    amount: string;
+                    currency: string;
+                };
+            };
+            /** @enum {string} */
+            status: "allowed";
+        } | {
+            callRef: string;
+            message: string;
+            /** @enum {string} */
+            reason: "customer_not_linked" | "ask" | "deny" | "topup_required" | "approval_declined" | "approval_expired";
+            /** @enum {string} */
+            status: "refused";
+        } | {
+            approval: {
+                expiresAt: string;
+                reference: string;
+            };
+            callRef: string;
+            message: string;
+            retryAfterSeconds: number;
+            /** @enum {string} */
+            status: "waiting";
+        };
         AutoRechargeConfigDto: {
             /**
              * Whether auto-recharge is enabled
@@ -995,6 +1106,13 @@ export interface components {
                  * @enum {string}
                  */
                 actionType: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+                cost?: {
+                    amount: string;
+                    /** @enum {string} */
+                    currency: "USD";
+                    /** @enum {string} */
+                    source: "reported" | "provisional";
+                };
                 customerRef: string;
                 description?: string;
                 duration?: number;
@@ -1027,7 +1145,7 @@ export interface components {
             success: boolean;
         };
         BulkUsageResultResponse: {
-            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"];
+            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"] | components["schemas"]["CostDebitSuccessResponse"] | components["schemas"]["CostDebitSkippedResponse"];
             /** @example usage_A1B2C3D4 */
             reference: string;
         };
@@ -1084,6 +1202,25 @@ export interface components {
         CloneProductDto: {
             name?: string;
         };
+        CompleteCallDto: {
+            cost: {
+                amount?: string;
+                currency?: string;
+            } | null;
+            interrupted?: string;
+            status: number;
+        };
+        CompleteCallResponseDto: {
+            amount: {
+                amount?: string;
+                currency?: string;
+            };
+            callRef: string;
+            duplicate: boolean;
+            settled: boolean;
+            /** @enum {string} */
+            source: "reported" | "provisional" | "none";
+        };
         ConfigureMcpPlansDto: {
             plans?: {
                 currency?: string;
@@ -1133,12 +1270,9 @@ export interface components {
                     label?: string;
                     meter: string;
                     /** @enum {string} */
-                    onExceed: "block" | "throttle" | "charge" | "notify" | "top_up" | "auto_upgrade";
-                    onExceedPricingId?: string;
+                    onExceed: "block" | "draw_credits";
                     /** @enum {string} */
                     scope: "billing_period" | "lifetime" | "rolling_window";
-                    /** @enum {string} */
-                    uiHint?: "upgrade_prompt" | "soft_warning";
                     windowDays?: number;
                 } | {
                     feature: string;
@@ -1149,12 +1283,11 @@ export interface components {
                     value: boolean | number | string;
                 } | {
                     days: number;
-                    downgradeToPricingId?: string;
                     /** @enum {string} */
                     kind: "trial";
                     label?: string;
                     /** @enum {string} */
-                    onEnd: "convert" | "cancel" | "downgrade";
+                    onEnd: "convert" | "cancel";
                 } | {
                     /** @enum {string} */
                     appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -1168,17 +1301,6 @@ export interface components {
                     /** @enum {string} */
                     mode: "percentage" | "fixed";
                     value: number;
-                } | {
-                    capUnits?: number;
-                    currency?: string;
-                    /** @enum {string} */
-                    kind: "rollover";
-                    label?: string;
-                    maxCycles?: number;
-                    meter: string;
-                    rateMinor?: number;
-                    /** @enum {string} */
-                    treatment: "forfeit" | "carry_forward" | "credit_units" | "credit_money";
                 } | {
                     /** @enum {string} */
                     kind: "autoAssigned";
@@ -1205,6 +1327,45 @@ export interface components {
             };
             /** @description Updated product */
             product: components["schemas"]["SdkProductResponse"];
+        };
+        CostDebitSkippedResponse: {
+            /** @enum {number} */
+            debited: false;
+            /**
+             * @example duplicate
+             * @enum {string}
+             */
+            reason: "duplicate" | "customer_not_found" | "record_failed";
+        };
+        CostDebitSuccessResponse: {
+            /**
+             * Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)
+             * @example 0
+             */
+            amount: number;
+            /**
+             * Exact amount debited, USD decimal string
+             * @example 0.000043
+             */
+            amountUsd: string;
+            autoRecharge?: components["schemas"]["AutoRechargeTriggeredResponse"];
+            /**
+             * Balance in whole credits after the debit
+             * @example 30000
+             */
+            balanceCredits: number;
+            /**
+             * Exact balance after the debit, USD decimal string
+             * @example 2.999957
+             */
+            balanceUsd: string;
+            /**
+             * Set on a debit by reported cost: whether the cost was reported or an estimate
+             * @enum {string}
+             */
+            costSource: "reported" | "provisional";
+            /** @enum {number} */
+            debited: true;
         };
         CreateCheckoutSessionRequest: {
             customerRef: string;
@@ -1329,12 +1490,9 @@ export interface components {
                 label?: string;
                 meter: string;
                 /** @enum {string} */
-                onExceed: "block" | "throttle" | "charge" | "notify" | "top_up" | "auto_upgrade";
-                onExceedPricingId?: string;
+                onExceed: "block" | "draw_credits";
                 /** @enum {string} */
                 scope: "billing_period" | "lifetime" | "rolling_window";
-                /** @enum {string} */
-                uiHint?: "upgrade_prompt" | "soft_warning";
                 windowDays?: number;
             } | {
                 feature: string;
@@ -1345,12 +1503,11 @@ export interface components {
                 value: boolean | number | string;
             } | {
                 days: number;
-                downgradeToPricingId?: string;
                 /** @enum {string} */
                 kind: "trial";
                 label?: string;
                 /** @enum {string} */
-                onEnd: "convert" | "cancel" | "downgrade";
+                onEnd: "convert" | "cancel";
             } | {
                 /** @enum {string} */
                 appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -1364,17 +1521,6 @@ export interface components {
                 /** @enum {string} */
                 mode: "percentage" | "fixed";
                 value: number;
-            } | {
-                capUnits?: number;
-                currency?: string;
-                /** @enum {string} */
-                kind: "rollover";
-                label?: string;
-                maxCycles?: number;
-                meter: string;
-                rateMinor?: number;
-                /** @enum {string} */
-                treatment: "forfeit" | "carry_forward" | "credit_units" | "credit_money";
             } | {
                 /** @enum {string} */
                 kind: "autoAssigned";
@@ -1413,6 +1559,13 @@ export interface components {
              * @enum {string}
              */
             actionType: "transaction" | "api_call" | "hour" | "email" | "storage" | "custom";
+            cost?: {
+                amount?: string;
+                /** @enum {string} */
+                currency?: "USD";
+                /** @enum {string} */
+                source?: "reported" | "provisional";
+            };
             customerRef: string;
             description?: string;
             duration?: number;
@@ -1477,7 +1630,7 @@ export interface components {
              * @example duplicate
              * @enum {string}
              */
-            reason: "duplicate" | "no_product_ref" | "customer_not_found" | "no_active_purchase" | "plan_not_credit_based" | "plan_billed_at_period_end";
+            reason: "duplicate" | "no_product_ref" | "customer_not_found" | "no_active_purchase" | "plan_not_credit_based" | "not_credit_drawn" | "within_included" | "free_meter";
         };
         CreditDebitSuccessResponse: {
             /**
@@ -1721,11 +1874,9 @@ export interface components {
              * @example requests
              */
             meterName?: string;
-            /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
+            /** @description Access is blocked until prepaid credits cover the next unit — past an included cap with `onExceed: draw_credits`, or from the first unit on a recurring meter with no limit. */
             needsTopUp?: boolean;
-            /** @description Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`. */
-            needsUpgrade?: boolean;
-            /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
+            /** @description Access is granted past the included cap and the usage is paid from prepaid credits — `onExceed: draw_credits`. */
             overage?: boolean;
             /**
              * Authoritative paywall classification shared with Managed MCP. Present on denial responses only.
@@ -1747,10 +1898,6 @@ export interface components {
              * @example 997
              */
             remaining: number;
-            /** @description Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`. */
-            throttled?: boolean;
-            /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
-            upgraded?: boolean;
             /** @description Consumed usage units this period. Present only when the backend measured a finite cap. */
             used?: number;
             /**
@@ -1818,12 +1965,9 @@ export interface components {
                     label?: string;
                     meter: string;
                     /** @enum {string} */
-                    onExceed: "block" | "throttle" | "charge" | "notify" | "top_up" | "auto_upgrade";
-                    onExceedPricingId?: string;
+                    onExceed: "block" | "draw_credits";
                     /** @enum {string} */
                     scope: "billing_period" | "lifetime" | "rolling_window";
-                    /** @enum {string} */
-                    uiHint?: "upgrade_prompt" | "soft_warning";
                     windowDays?: number;
                 } | {
                     feature: string;
@@ -1834,12 +1978,11 @@ export interface components {
                     value: boolean | number | string;
                 } | {
                     days: number;
-                    downgradeToPricingId?: string;
                     /** @enum {string} */
                     kind: "trial";
                     label?: string;
                     /** @enum {string} */
-                    onEnd: "convert" | "cancel" | "downgrade";
+                    onEnd: "convert" | "cancel";
                 } | {
                     /** @enum {string} */
                     appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -1853,17 +1996,6 @@ export interface components {
                     /** @enum {string} */
                     mode: "percentage" | "fixed";
                     value: number;
-                } | {
-                    capUnits?: number;
-                    currency?: string;
-                    /** @enum {string} */
-                    kind: "rollover";
-                    label?: string;
-                    maxCycles?: number;
-                    meter: string;
-                    rateMinor?: number;
-                    /** @enum {string} */
-                    treatment: "forfeit" | "carry_forward" | "credit_units" | "credit_money";
                 } | {
                     /** @enum {string} */
                     kind: "autoAssigned";
@@ -2646,8 +2778,20 @@ export interface components {
              * @example active
              */
             status: string;
-            /** @description Usage billing state for usage-based plans */
-            usage?: components["schemas"]["UsageBillingDto"];
+            /** @description Billing period of the active usage window; counts come from `/v1/sdk/limits` */
+            usage?: components["schemas"]["SdkUsagePeriodDto"];
+        };
+        SdkUsagePeriodDto: {
+            /**
+             * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+             * @example 2025-11-01T00:00:00Z
+             */
+            periodEnd?: string;
+            /**
+             * Billing period of the active usage window; counts come from `/v1/sdk/limits`
+             * @example 2025-10-01T00:00:00Z
+             */
+            periodStart?: string;
         };
         TaxBreakdownDto: {
             /** @description ISO 4217 currency code */
@@ -2734,12 +2878,9 @@ export interface components {
                 label?: string;
                 meter: string;
                 /** @enum {string} */
-                onExceed: "block" | "throttle" | "charge" | "notify" | "top_up" | "auto_upgrade";
-                onExceedPricingId?: string;
+                onExceed: "block" | "draw_credits";
                 /** @enum {string} */
                 scope: "billing_period" | "lifetime" | "rolling_window";
-                /** @enum {string} */
-                uiHint?: "upgrade_prompt" | "soft_warning";
                 windowDays?: number;
             } | {
                 feature: string;
@@ -2750,12 +2891,11 @@ export interface components {
                 value: boolean | number | string;
             } | {
                 days: number;
-                downgradeToPricingId?: string;
                 /** @enum {string} */
                 kind: "trial";
                 label?: string;
                 /** @enum {string} */
-                onEnd: "convert" | "cancel" | "downgrade";
+                onEnd: "convert" | "cancel";
             } | {
                 /** @enum {string} */
                 appliesTo?: "recurring" | "setup" | "usage" | "all";
@@ -2769,17 +2909,6 @@ export interface components {
                 /** @enum {string} */
                 mode: "percentage" | "fixed";
                 value: number;
-            } | {
-                capUnits?: number;
-                currency?: string;
-                /** @enum {string} */
-                kind: "rollover";
-                label?: string;
-                maxCycles?: number;
-                meter: string;
-                rateMinor?: number;
-                /** @enum {string} */
-                treatment: "forfeit" | "carry_forward" | "credit_units" | "credit_money";
             } | {
                 /** @enum {string} */
                 kind: "autoAssigned";
@@ -2810,39 +2939,56 @@ export interface components {
             /** @enum {string} */
             taxBehavior?: "auto" | "inclusive" | "exclusive";
         };
-        UsageBillingDto: {
-            /**
-             * Overage cost in cents
-             * @example 0
-             */
-            overageCost: number;
-            /**
-             * Units exceeding the plan included amount
-             * @example 0
-             */
-            overageUnits: number;
-            /**
-             * Period end date
-             * @example 2025-11-01T00:00:00Z
-             */
-            periodEnd?: string;
-            /**
-             * Period start date
-             * @example 2025-10-01T00:00:00Z
-             */
-            periodStart?: string;
-            /**
-             * Units consumed in current period
-             * @example 150
-             */
-            used: number;
-        };
         UsageRecordResponse: {
-            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"];
+            creditDebit?: components["schemas"]["CreditDebitSuccessResponse"] | components["schemas"]["CreditDebitSkippedResponse"] | components["schemas"]["CostDebitSuccessResponse"] | components["schemas"]["CostDebitSkippedResponse"];
             /** @example usage_A1B2C3D4 */
             reference: string;
             /** @example true */
             success: boolean;
+        };
+        UsageReportDto: {
+            calls: {
+                callRef: string;
+                cost: string;
+            }[];
+            currency: string;
+            customerRef: string;
+            reportId: string;
+            source: string;
+            untagged: {
+                /** Format: date-time */
+                at: string;
+                cost: string;
+            }[];
+            window: {
+                /** Format: date-time */
+                from?: string;
+                /** Format: date-time */
+                to?: string;
+            };
+        };
+        UsageReportResponseDto: {
+            /** @enum {string} */
+            currency: "USD";
+            duplicate: boolean;
+            reference: string;
+            results: {
+                bookedCredit?: string;
+                bookedPolicy?: string;
+                callRef: string;
+                creditDelta?: string;
+                policyDelta?: string;
+                /** @enum {string} */
+                reason?: "provisional" | "expired" | "no_debit" | "cost_differs";
+                reported?: string;
+                /** @enum {string} */
+                result: "matched" | "adjusted" | "pending" | "already_reconciled" | "ignored";
+            }[];
+            untagged: {
+                beforePolicy?: string;
+                flagged?: boolean;
+                total?: string;
+            };
         };
         UserInfoPlanDto: {
             /** @example monthly */
@@ -2930,6 +3076,16 @@ export interface components {
             name?: string | null;
             /** @example cus_3C4D5E6F */
             reference: string;
+        };
+        VerifiedAgentKeyResponseDto: {
+            agentRef: string;
+            /** @enum {string} */
+            environment: "sandbox" | "live";
+            principalRef: string;
+            promptExcerpt: boolean;
+        };
+        VerifyAgentKeyDto: {
+            agentKey: string;
         };
         WebhookEventCategoryDto: {
             /**
@@ -3038,6 +3194,160 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ActivatePlanResponseDto"];
                 };
+            };
+        };
+    };
+    CallsController_authorize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizeCallDto"];
+            };
+        };
+        responses: {
+            /** @description allowed, refused or waiting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizeCallResponseDto"];
+                };
+            };
+            /** @description The agent token is invalid or the agent is revoked */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The agent token is for another merchant, or agent payments are not enabled */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CallsController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                callRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteCallDto"];
+            };
+        };
+        responses: {
+            /** @description How the call was settled; a repeat returns the first result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompleteCallResponseDto"];
+                };
+            };
+            /** @description No such call for this merchant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The call was refused or is still held */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentKeysController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyAgentKeyDto"];
+            };
+        };
+        responses: {
+            /** @description The agent, its principal and the excerpt setting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifiedAgentKeyResponseDto"];
+                };
+            };
+            /** @description Unknown or revoked agent key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The key is for another merchant, or for the other environment */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageReportsController_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageReportDto"];
+            };
+        };
+        responses: {
+            /** @description Per decision: matched, adjusted, pending, already reconciled or ignored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReportResponseDto"];
+                };
+            };
+            /** @description Not an agent buyer of this merchant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The window is too recent or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4568,6 +4878,27 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description decision_customer_mismatch: a cost names a decision made for another customer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description decision_already_debited: the decision was already debited by another usage event */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description decision_not_found: a cost names a decision this provider does not have */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     UsageSdkController_recordBulkUsage: {
@@ -4594,6 +4925,27 @@ export interface operations {
             };
             /** @description Validation failed */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description decision_customer_mismatch: a cost names a decision made for another customer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description decision_already_debited: the decision was already debited by another usage event */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description decision_not_found: a cost names a decision this provider does not have */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

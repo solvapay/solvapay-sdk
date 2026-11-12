@@ -1,0 +1,57 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "authorizeAgentCall",
+    "args": {
+      "agentToken": "eyJ.fixture.token",
+      "requestId": "req_fixture",
+      "item": "gpt-5",
+      "estimate": {
+        "amount": "0.0125",
+        "currency": "USD"
+      },
+      "promptHash": "sha256:abc",
+      "wait": 30
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "authorize-agent-call-refused",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/agent/calls",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "agentToken": "eyJ.fixture.token",
+        "requestId": "req_fixture",
+        "item": "gpt-5",
+        "estimate": {
+          "amount": "0.0125",
+          "currency": "USD"
+        },
+        "promptHash": "sha256:abc",
+        "wait": 30
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "refused",
+        "callRef": "acl_fixture",
+        "reason": "topup_required",
+        "message": "Add credits to continue."
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "refused",
+      "callRef": "acl_fixture",
+      "reason": "topup_required",
+      "message": "Add credits to continue."
+    }
+  }
+}

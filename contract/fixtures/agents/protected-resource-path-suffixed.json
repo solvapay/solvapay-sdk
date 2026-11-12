@@ -1,0 +1,34 @@
+{
+  "suite": "agents",
+  "case": "protected-resource-path-suffixed",
+  "input": {
+    "fn": "agentProtectedResource",
+    "args": {
+      "input": {
+        "resource": "https://mcp.example.com:443/mcp/",
+        "authorizationServer": "https://api.solvapay.com/v1/agent",
+        "serverName": "Acme"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "resource": "https://mcp.example.com/mcp",
+      "metadataPath": "/.well-known/oauth-protected-resource/mcp",
+      "metadataUrl": "https://mcp.example.com/.well-known/oauth-protected-resource/mcp",
+      "metadata": {
+        "resource": "https://mcp.example.com/mcp",
+        "authorization_servers": [
+          "https://api.solvapay.com/v1/agent"
+        ],
+        "scopes_supported": [
+          "usage"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ],
+        "resource_name": "Acme"
+      }
+    }
+  }
+}

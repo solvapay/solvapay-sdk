@@ -1,6 +1,6 @@
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import prettierConfig from 'eslint-config-prettier';
+import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
+import prettierConfig from 'eslint-config-prettier'
 
 export default tseslint.config(
   js.configs.recommended,
@@ -23,6 +23,21 @@ export default tseslint.config(
     },
   },
   {
+    // Plain ESM helpers (the solvapay CLI's launcher) run on Node without types.
+    // Scoped to them: other .mjs files declare their globals in a comment.
+    files: ['tools/cli/src/agent/**/*.mjs', 'sdks/typescript/agents/bin/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     ignores: [
       'dist',
       'node_modules',
@@ -34,5 +49,4 @@ export default tseslint.config(
       '**/*.generated.d.ts',
     ],
   },
-);
-
+)

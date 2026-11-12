@@ -1,0 +1,25 @@
+{
+  "suite": "agents",
+  "case": "complete-body-reported",
+  "input": {
+    "fn": "agentCompleteBody",
+    "args": {
+      "input": {
+        "status": 200,
+        "cost": {
+          "amount": 0.0125,
+          "currency": "USD"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "cost": {
+        "amount": "0.0125",
+        "currency": "USD"
+      }
+    }
+  }
+}

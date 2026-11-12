@@ -1,0 +1,40 @@
+{
+  "suite": "plan-pricing",
+  "case": "credit-drawn-capped-draw-credits",
+  "input": {
+    "fn": "creditDrawnMeters",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 1900,
+            "currency": "usd"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          },
+          {
+            "kind": "limit",
+            "cap": 10,
+            "scope": "billing_period",
+            "meter": "requests",
+            "onExceed": "draw_credits"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": ["requests"]
+  }
+}

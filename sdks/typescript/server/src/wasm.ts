@@ -70,6 +70,10 @@ export type WasmClientMethod =
   | 'mcpOauthRequest'
   | 'mcpDispatch'
   | 'fetchJwks'
+  | 'verifyAgentKey'
+  | 'authorizeAgentCall'
+  | 'completeAgentCall'
+  | 'reportAgentUsage'
 
 /** Sync pure-logic envelope functions on the WASM binding (edge profile). */
 export type WasmSyncMethod =
@@ -170,6 +174,18 @@ export type WasmSyncMethod =
   | 'defaultMcpBearerExpectations'
   | 'compileStringFieldInputSchemaJson'
   | 'ensureOutputSchemaObjectType'
+  | 'creditDrawnMeters'
+  | 'agentSecretKeyEnvironment'
+  | 'agentCredentialKind'
+  | 'verifyAgentToken'
+  | 'agentKeyVerificationResult'
+  | 'agentPromptFacts'
+  | 'agentProtectedResource'
+  | 'agentAuthChallenge'
+  | 'parseAgentResponse'
+  | 'agentAuthorizeRequest'
+  | 'agentAuthorizeNext'
+  | 'agentCompleteBody'
   // @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

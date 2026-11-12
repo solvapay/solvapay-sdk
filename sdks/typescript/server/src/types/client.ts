@@ -449,6 +449,27 @@ export interface SolvaPayClient {
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
   disableAutoRecharge?(params: DisableAutoRechargeParams): Promise<DisableAutoRechargeSdkResponse>
 
+  // POST: /v1/sdk/agent/keys/verifications
+  verifyAgentKey?(
+    params: components['schemas']['VerifyAgentKeyDto'],
+  ): Promise<components['schemas']['VerifiedAgentKeyResponseDto']>
+
+  // POST: /v1/sdk/agent/calls — may hold up to `wait` seconds while the owner decides
+  authorizeAgentCall?(
+    params: components['schemas']['AuthorizeCallDto'],
+  ): Promise<components['schemas']['AuthorizeCallResponseDto']>
+
+  // POST: /v1/sdk/agent/calls/{callRef}/complete
+  completeAgentCall?(
+    callRef: string,
+    params: components['schemas']['CompleteCallDto'],
+  ): Promise<components['schemas']['CompleteCallResponseDto']>
+
+  // POST: /v1/sdk/agent/usage-reports
+  reportAgentUsage?(
+    params: components['schemas']['UsageReportDto'],
+  ): Promise<components['schemas']['UsageReportResponseDto']>
+
   /** Fan out merchant, product, plans, and customer snapshots for the MCP widget. */
   mcpBootstrap?(params: unknown): Promise<unknown>
 

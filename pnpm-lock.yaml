@@ -241,7 +241,7 @@ importers:
         version: link:../../../sdks/typescript/react-supabase
       '@solvapay/server':
         specifier: ^2.6.0
-        version: 2.6.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
+        version: link:../../../sdks/typescript/server
       '@stripe/react-stripe-js':
         specifier: ^6.0.0
         version: 6.1.0(@stripe/stripe-js@9.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -965,7 +965,7 @@ importers:
         version: link:../../../sdks/typescript/core
       '@solvapay/server':
         specifier: ^2.0.0
-        version: 2.6.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)
+        version: link:../../../sdks/typescript/server
 
   examples/typescript/supabase-edge-mcp:
     devDependencies:
@@ -1165,6 +1165,43 @@ importers:
       '@solvapay/server-native-win32-x64-msvc':
         specifier: file:npm/win32-x64-msvc
         version: file:sdks/node-native/npm/win32-x64-msvc
+
+  sdks/typescript/agents:
+    dependencies:
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../server
+      jose:
+        specifier: ^6.2.2
+        version: 6.2.10
+      solvapay:
+        specifier: workspace:*
+        version: link:../../../tools/cli
+    devDependencies:
+      '@modelcontextprotocol/core':
+        specifier: 2.0.0
+        version: 2.0.0
+      '@modelcontextprotocol/sdk':
+        specifier: 1.29.0
+        version: 1.29.0(supports-color@10.2.2)(zod@4.3.6)
+      '@modelcontextprotocol/server':
+        specifier: 2.0.0
+        version: 2.0.0
+      '@types/node':
+        specifier: ^25.5.2
+        version: 25.5.2
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.3
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   sdks/typescript/auth:
     dependencies:
@@ -1459,19 +1496,22 @@ importers:
       '@solvapay/init':
         specifier: workspace:^
         version: link:../init
+      yaml:
+        specifier: 2.8.1
+        version: 2.8.1
     devDependencies:
       '@solvapay/tsconfig':
         specifier: workspace:*
         version: link:../../internal/tsconfig
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.8.1)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1))
 
   tools/create-solvapay:
     dependencies:
@@ -4314,6 +4354,9 @@ packages:
   '@smithy/core@3.24.6':
     resolution: {integrity: sha512-wBXDRup6UU97VKyaiRo8AssnfStPtG0oAAfpq/bC0a1YYau8pM86YB4kM6ccoVi1mS8l/UHbn9oDM+7uozr/ug==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.3.8':
     resolution: {integrity: sha512-5cAM+KZC02sTqDt6NaLXyu50M/GNMd1eTzDVR8Lb0BBsVtu7RWHo47VPPEEv1vt3Yub6uzr+M5FHC+GtoT0USg==}
@@ -4459,70 +4502,57 @@ packages:
     resolution: {integrity: sha512-oTt3OP9NcJkrySCSCCdSbP6XLSMNgOmt/ulaiYtb0Ng6tfEWtXQ1mwfyqmLd+GapmDUjbU2mgkf7QIq9H4ij/g==}
     engines: {node: '>=18.0.0'}
 
-  '@solvapay/core@1.7.1':
-    resolution: {integrity: sha512-i+a9gqDMNBCyTsWPHIqheKih9J9zNZmKe8UmmQn93Ah/sVJs2x+6ZNolPJ4KiNkP33r2S7Qs25VXa5Nk6CONKg==}
-
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     resolution: {directory: sdks/node-native/npm/darwin-arm64, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [arm64]
     os: [darwin]
 
   '@solvapay/server-native-darwin-x64@file:sdks/node-native/npm/darwin-x64':
     resolution: {directory: sdks/node-native/npm/darwin-x64, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [x64]
     os: [darwin]
 
   '@solvapay/server-native-linux-arm64-gnu@file:sdks/node-native/npm/linux-arm64-gnu':
     resolution: {directory: sdks/node-native/npm/linux-arm64-gnu, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
   '@solvapay/server-native-linux-arm64-musl@file:sdks/node-native/npm/linux-arm64-musl':
     resolution: {directory: sdks/node-native/npm/linux-arm64-musl, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
   '@solvapay/server-native-linux-x64-gnu@file:sdks/node-native/npm/linux-x64-gnu':
     resolution: {directory: sdks/node-native/npm/linux-x64-gnu, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
   '@solvapay/server-native-linux-x64-musl@file:sdks/node-native/npm/linux-x64-musl':
     resolution: {directory: sdks/node-native/npm/linux-x64-musl, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
   '@solvapay/server-native-win32-arm64-msvc@file:sdks/node-native/npm/win32-arm64-msvc':
     resolution: {directory: sdks/node-native/npm/win32-arm64-msvc, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [arm64]
     os: [win32]
 
   '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     resolution: {directory: sdks/node-native/npm/win32-x64-msvc, type: directory}
-    engines: {node: '>= 18'}
+    engines: {node: '>=22'}
     cpu: [x64]
     os: [win32]
-
-  '@solvapay/server@2.6.0':
-    resolution: {integrity: sha512-pIJhn20AlMZbbo45D6D6zEpM5nwZVHf+ApImYBw8fDhtObggnev2QmI7S+R+qwudNK0XXVVeLGnA5P7zvwrAPQ==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@solvapay/auth': ^1.1.0
-      zod: ^4.2.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
@@ -8309,6 +8339,11 @@ packages:
   yaml-ast-parser@0.0.43:
     resolution: {integrity: sha512-2PTINUwsRqSd+s8XxKaJWQlUuEMHJQyEuh2edBbW8KNJz0SJPwUSD2zRWqezFEdN7IzAgeuYHFUCF7o8zRdZ0A==}
 
+  yaml@2.8.1:
+    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yaml@2.9.0:
     resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
     engines: {node: '>= 14.6'}
@@ -9334,7 +9369,7 @@ snapshots:
   '@commitlint/config-validator@21.2.0':
     dependencies:
       '@commitlint/types': 21.2.0
-      ajv: 8.18.0
+      ajv: 8.20.0
 
   '@commitlint/ensure@21.2.0':
     dependencies:
@@ -9956,7 +9991,6 @@ snapshots:
   '@hono/node-server@1.19.17(hono@4.13.4)':
     dependencies:
       hono: 4.13.4
-    optional: true
 
   '@humanfs/core@0.19.1': {}
 
@@ -10293,7 +10327,6 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@4.3.6)
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   '@modelcontextprotocol/server@2.0.0':
     dependencies:
@@ -11271,10 +11304,6 @@ snapshots:
       '@smithy/core': 3.24.6
       tslib: 2.8.1
 
-  '@solvapay/core@1.7.1':
-    dependencies:
-      zod: 4.3.6
-
   '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     optional: true
 
@@ -11298,13 +11327,6 @@ snapshots:
 
   '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     optional: true
-
-  '@solvapay/server@2.6.0(@solvapay/auth@sdks+typescript+auth)(zod@4.3.6)':
-    dependencies:
-      '@solvapay/auth': link:sdks/typescript/auth
-      '@solvapay/core': 1.7.1
-    optionalDependencies:
-      zod: 4.3.6
 
   '@speed-highlight/core@1.2.15': {}
 
@@ -11769,6 +11791,14 @@ snapshots:
     optionalDependencies:
       vite: 8.0.6(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0)
 
+  '@vitest/mocker@4.1.3(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.1.3
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1)
+
   '@vitest/mocker@4.1.3(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.3
@@ -11831,7 +11861,6 @@ snapshots:
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
       ajv: 8.20.0
-    optional: true
 
   ajv@6.14.0:
     dependencies:
@@ -11843,7 +11872,7 @@ snapshots:
   ajv@8.18.0:
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.0
+      fast-uri: 3.1.6
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
@@ -11853,7 +11882,6 @@ snapshots:
       fast-uri: 3.1.6
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
-    optional: true
 
   ansi-colors@4.1.3: {}
 
@@ -12250,7 +12278,6 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
-    optional: true
 
   cosmiconfig-typescript-loader@6.2.0(@types/node@25.5.2)(cosmiconfig@9.0.1(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
@@ -12828,7 +12855,6 @@ snapshots:
       ip-address: 10.5.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   express@5.2.1(supports-color@10.2.2):
     dependencies:
@@ -12906,8 +12932,7 @@ snapshots:
 
   fast-uri@3.1.0: {}
 
-  fast-uri@3.1.6:
-    optional: true
+  fast-uri@3.1.6: {}
 
   fast-wrap-ansi@0.2.2:
     dependencies:
@@ -13326,8 +13351,7 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
-  ip-address@10.5.0:
-    optional: true
+  ip-address@10.5.0: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -13599,8 +13623,7 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  json-schema-typed@8.0.2:
-    optional: true
+  json-schema-typed@8.0.2: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -14386,7 +14409,7 @@ snapshots:
 
   openid-client@6.8.4:
     dependencies:
-      jose: 6.2.2
+      jose: 6.2.10
       oauth4webapi: 3.8.6
 
   optionator@0.9.4:
@@ -14550,6 +14573,15 @@ snapshots:
   pluralize@8.0.0: {}
 
   possible-typed-array-names@1.1.0: {}
+
+  postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.8.1):
+    dependencies:
+      lilconfig: 3.1.3
+    optionalDependencies:
+      jiti: 2.7.0
+      postcss: 8.5.26
+      tsx: 4.23.12
+      yaml: 2.8.1
 
   postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
@@ -15298,6 +15330,34 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  tsup@8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.8.1):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.27.4)
+      cac: 6.7.14
+      chokidar: 4.0.3
+      consola: 3.4.2
+      debug: 4.4.3(supports-color@10.2.2)
+      esbuild: 0.27.4
+      fix-dts-default-cjs-exports: 1.0.1
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(jiti@2.7.0)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.8.1)
+      resolve-from: 5.0.0
+      rollup: 4.60.1
+      source-map: 0.7.6
+      sucrase: 3.35.1
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.15
+      tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.5.26
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
   tsup@8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.27.4)
@@ -15559,6 +15619,22 @@ snapshots:
       tsx: 4.23.12
       yaml: 2.9.0
 
+  vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.4
+      postcss: 8.5.26
+      rolldown: 1.0.0-rc.13
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 25.5.2
+      esbuild: 0.28.0
+      fsevents: 2.3.3
+      jiti: 2.7.0
+      terser: 5.16.9
+      tsx: 4.23.12
+      yaml: 2.8.1
+
   vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
@@ -15596,6 +15672,35 @@ snapshots:
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 8.0.6(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.9.0)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.5.2
+      '@vitest/coverage-v8': 4.1.3(vitest@4.1.3)
+      jsdom: 29.0.2(@noble/hashes@2.0.1)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1)):
+    dependencies:
+      '@vitest/expect': 4.1.3
+      '@vitest/mocker': 4.1.3(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1))
+      '@vitest/pretty-format': 4.1.3
+      '@vitest/runner': 4.1.3
+      '@vitest/snapshot': 4.1.3
+      '@vitest/spy': 4.1.3
+      '@vitest/utils': 4.1.3
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.1
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.12)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.2
@@ -15774,6 +15879,8 @@ snapshots:
 
   yaml-ast-parser@0.0.43: {}
 
+  yaml@2.8.1: {}
+
   yaml@2.9.0: {}
 
   yargs-parser@21.1.1: {}
@@ -15817,7 +15924,6 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.3.6):
     dependencies:
       zod: 4.3.6
-    optional: true
 
   zod-validation-error@4.0.2(zod@4.3.6):
     dependencies:

@@ -142,6 +142,6 @@ mod coverage_tests {
     #[test]
     fn dispatch_table_matches_operation_names() {
         assert!(dispatch_covers_all_operations());
-        assert_eq!(dispatch_operation_names().len(), 38);
+        assert_eq!(dispatch_operation_names().len(), 42);
     }
 }

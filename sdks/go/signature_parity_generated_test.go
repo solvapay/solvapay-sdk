@@ -22,10 +22,12 @@ var operationSignatures = []operationSignature{
 	{"ActivatePlan", []string{"params"}, []string{"map[string]interface {}"}},
 	{"AssignCredits", []string{"params"}, []string{"map[string]interface {}"}},
 	{"AttachBusinessDetails", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AuthorizeAgentCall", []string{"params"}, []string{"map[string]interface {}"}},
 	{"BootstrapMcpProduct", []string{"params"}, []string{"map[string]interface {}"}},
 	{"CancelPurchase", []string{"params"}, []string{"map[string]interface {}"}},
 	{"CheckLimits", []string{"params"}, []string{"map[string]interface {}"}},
 	{"CloneProduct", []string{"productRef", "overrides"}, []string{"string", "map[string]interface {}"}},
+	{"CompleteAgentCall", []string{"callRef", "params"}, []string{"string", "map[string]interface {}"}},
 	{"ConfigureMcpPlans", []string{"productRef", "params"}, []string{"string", "map[string]interface {}"}},
 	{"CreateCheckoutSession", []string{"params"}, []string{"map[string]interface {}"}},
 	{"CreateCustomer", []string{"params"}, []string{"map[string]interface {}"}},
@@ -58,12 +60,14 @@ var operationSignatures = []operationSignature{
 	{"McpResolveAuth", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ProcessPaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ReactivatePurchase", []string{"params"}, []string{"map[string]interface {}"}},
+	{"ReportAgentUsage", []string{"params"}, []string{"map[string]interface {}"}},
 	{"SaveAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
 	{"TrackUsage", []string{"params"}, []string{"map[string]interface {}"}},
 	{"TrackUsageBulk", []string{"params"}, []string{"map[string]interface {}"}},
 	{"UpdateCustomer", []string{"customerRef", "params"}, []string{"string", "map[string]interface {}"}},
 	{"UpdatePlan", []string{"productRef", "planRef", "params"}, []string{"string", "string", "map[string]interface {}"}},
 	{"UpdateProduct", []string{"productRef", "params"}, []string{"string", "map[string]interface {}"}},
+	{"VerifyAgentKey", []string{"params"}, []string{"map[string]interface {}"}},
 }
 
 // extraClientMethods are exported Client methods that are not catalog operations.
@@ -102,10 +106,12 @@ var (
 	_ = (*solvapay.Client).ActivatePlan
 	_ = (*solvapay.Client).AssignCredits
 	_ = (*solvapay.Client).AttachBusinessDetails
+	_ = (*solvapay.Client).AuthorizeAgentCall
 	_ = (*solvapay.Client).BootstrapMcpProduct
 	_ = (*solvapay.Client).CancelPurchase
 	_ = (*solvapay.Client).CheckLimits
 	_ = (*solvapay.Client).CloneProduct
+	_ = (*solvapay.Client).CompleteAgentCall
 	_ = (*solvapay.Client).ConfigureMcpPlans
 	_ = (*solvapay.Client).CreateCheckoutSession
 	_ = (*solvapay.Client).CreateCustomer
@@ -138,18 +144,20 @@ var (
 	_ = (*solvapay.Client).McpResolveAuth
 	_ = (*solvapay.Client).ProcessPaymentIntent
 	_ = (*solvapay.Client).ReactivatePurchase
+	_ = (*solvapay.Client).ReportAgentUsage
 	_ = (*solvapay.Client).SaveAutoRecharge
 	_ = (*solvapay.Client).TrackUsage
 	_ = (*solvapay.Client).TrackUsageBulk
 	_ = (*solvapay.Client).UpdateCustomer
 	_ = (*solvapay.Client).UpdatePlan
 	_ = (*solvapay.Client).UpdateProduct
+	_ = (*solvapay.Client).VerifyAgentKey
 )
 
-func TestOperationSignaturesCountIs45(t *testing.T) {
+func TestOperationSignaturesCountIs49(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 45 {
-		t.Fatalf("operationSignatures len = %d, want 45", got)
+	if got := len(operationSignatures); got != 49 {
+		t.Fatalf("operationSignatures len = %d, want 49", got)
 	}
 }
 

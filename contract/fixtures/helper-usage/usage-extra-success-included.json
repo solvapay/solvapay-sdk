@@ -4,8 +4,7 @@
   "input": {
     "fn": "resolveUsageExtra",
     "args": {
-      "outcome": "success",
-      "consequence": "throttled"
+      "outcome": "success"
     }
   },
   "expect": {

@@ -72,12 +72,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Welcome to Demo**\n\nDemo has no plan yet. Pro requires no payment. Reply with a plan name to activate it.\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
-        },
-        {
-          "type": "resource_link",
-          "uri": "https://checkout.example/s",
-          "name": "Open checkout"
+          "text": "**Welcome to Demo**\n\nDemo has no plan yet. Pro requires no payment. Reply with a plan name to activate it.\n\nTo continue, call `account` with view: \"checkout\"."
         }
       ],
       "structuredContent": {
@@ -262,7 +257,7 @@
             "helperText": "Enter your EIN, e.g. 12-3456789"
           }
         },
-        "checkoutUrl": "https://checkout.example/s",
+        "checkoutUrl": null,
         "checkoutPurpose": null,
         "portalUrl": null,
         "autoRechargeUrl": null

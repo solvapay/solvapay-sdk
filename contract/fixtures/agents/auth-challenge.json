@@ -1,0 +1,34 @@
+{
+  "suite": "agents",
+  "case": "auth-challenge",
+  "input": {
+    "fn": "agentAuthChallenge",
+    "args": {
+      "input": {
+        "resource": "https://mcp.example.com:443/mcp/",
+        "authorizationServer": "https://api.solvapay.com/v1/agent",
+        "serverName": "Acme",
+        "description": "Sign in to pay with SolvaPay",
+        "jsonRpcId": 3
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay with SolvaPay\", resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "error": {
+          "code": -32001,
+          "message": "Sign in to pay with SolvaPay"
+        }
+      }
+    }
+  }
+}

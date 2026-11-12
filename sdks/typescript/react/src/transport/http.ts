@@ -268,7 +268,7 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       const url = `${base}?${params.toString()}`
       // The wire format is the full `LimitResponseWithPlan` from
       // `checkLimitsCore`. Project the fields `useLimits` consumes,
-      // including the five `onExceed` outcome flags. `plans` /
+      // including the `onExceed` outcome flags. `plans` /
       // `balance` / `product` stay off this surface — they duplicate
       // `usePlans` / `useBalance`.
       const data = await request<{
@@ -276,11 +276,8 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         remaining: number
         meterName?: string | null
         activationRequired?: boolean
-        throttled?: boolean
         overage?: boolean
         needsTopUp?: boolean
-        needsUpgrade?: boolean
-        upgraded?: boolean
         used?: number
         limit?: number
       }>(config, url, {
@@ -293,11 +290,8 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         remaining: data.remaining,
         meterName: data.meterName ?? null,
         activationRequired: data.activationRequired ?? false,
-        throttled: data.throttled,
         overage: data.overage,
         needsTopUp: data.needsTopUp,
-        needsUpgrade: data.needsUpgrade,
-        upgraded: data.upgraded,
         ...(data.used !== undefined ? { used: data.used } : {}),
         ...(data.limit !== undefined ? { limit: data.limit } : {}),
       }

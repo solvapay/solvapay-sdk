@@ -12,7 +12,7 @@ use crate::random::{iso8601_millis, random9_from_f64};
 pub enum UsageClass {
     /// Counted against the included allowance.
     Included,
-    /// Past the included cap under `onExceed: charge`.
+    /// Past the included cap, paid from prepaid credits (`onExceed: draw_credits`).
     Overage,
 }
 
@@ -134,7 +134,7 @@ pub fn build_usage_request(
 ///
 /// * `free_limit` - Present for `registerFree` tools.
 /// * `outcome` - `success` / `fail` / `paywall`.
-/// * `consequence` - Allow consequence (`overage` / `throttled`); unused on free tools.
+/// * `consequence` - Allow consequence (`overage`); unused on free tools.
 #[must_use]
 #[crate::solvapay_export(
     artifact = "decisions",

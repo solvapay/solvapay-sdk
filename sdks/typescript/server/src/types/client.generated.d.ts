@@ -57,6 +57,12 @@ export interface SolvaPayClientGenerated {
  */
   attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 /**
+ * Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance
+ * @param params The agent token, the merchant's request id, an optional item label, the estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55) this request may hold while the owner decides.
+ * @returns `allowed` with the reservation held, `refused` with a reason and a sentence for the human, or `waiting` with the approval and when to ask again with the same request id.
+ */
+  authorizeAgentCall(params: components['schemas']['AuthorizeCallDto']): Promise<components['schemas']['AuthorizeCallResponseDto']>
+/**
  * Bootstrap an MCP product with default plans and tooling.
  * @param params MCP bootstrap request payload.
  * @returns Bootstrap result including product and plan refs.
@@ -80,6 +86,13 @@ export interface SolvaPayClientGenerated {
  * @returns The cloned product projection.
  */
   cloneProduct?(productRef: string, overrides?: overlays.CloneProductOverrides): Promise<overlays.CloneProductResult>
+/**
+ * Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost
+ * @param callRef The call reference `authorizeAgentCall` returned.
+ * @param params The status the upstream answered with, the cost it reported (or `null`), and `interrupted` when the answer broke before it finished.
+ * @returns How the call was settled: `settled` is false when the upstream answered an error, `source` says whether the reported cost or the estimate was used, and a repeat returns the first result with `duplicate: true`.
+ */
+  completeAgentCall(callRef: string, params: components['schemas']['CompleteCallDto']): Promise<components['schemas']['CompleteCallResponseDto']>
 /**
  * Configure MCP plans for an existing product.
  * @param params MCP plan configuration payload.
@@ -264,6 +277,12 @@ export interface SolvaPayClientGenerated {
  */
   reactivatePurchase?(params: overlays.ReactivatePurchaseParams): Promise<components['schemas']['SdkPurchaseResponse']>
 /**
+ * Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it
+ * @param params The merchant's usage for one customer and window: a report id, the source, the window, the currency, each call's cost by call reference, and usage without a decision.
+ * @returns Per call, how SolvaPay reconciled it (matched, adjusted, pending, already reconciled or ignored), plus the untagged totals and whether they are flagged.
+ */
+  reportAgentUsage(params: components['schemas']['UsageReportDto']): Promise<components['schemas']['UsageReportResponseDto']>
+/**
  * Create or update auto-recharge configuration for a customer.
  * @param params Auto-recharge settings to persist.
  * @returns Saved auto-recharge configuration.
@@ -299,6 +318,12 @@ export interface SolvaPayClientGenerated {
  * @returns The updated product projection.
  */
   updateProduct?(productRef: string, params: components['schemas']['UpdateProductRequest']): Promise<SdkProductResponse>
+/**
+ * Read the agent behind an agent key issued for this merchant
+ * @param params Body with `agentKey`: the agent key (`agk_…`) the caller presented in place of an agent token.
+ * @returns The agent behind the key: `agentRef`, its pairwise `principalRef` at this merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown or revoked key, 403 for another merchant's key or the other environment's.
+ */
+  verifyAgentKey(params: components['schemas']['VerifyAgentKeyDto']): Promise<components['schemas']['VerifiedAgentKeyResponseDto']>
 }
 
 /**

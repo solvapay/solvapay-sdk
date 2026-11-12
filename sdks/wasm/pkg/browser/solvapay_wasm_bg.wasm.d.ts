@@ -25,6 +25,7 @@ export const classifyCreateError: (a: number, b: number) => [number, number];
 export const classifyLookupError: (a: number, b: number) => [number, number];
 export const classifyReactivateError: (a: number, b: number) => [number, number];
 export const countsUsage: (a: number, b: number) => [number, number];
+export const creditDrawnMeters: (a: number, b: number) => [number, number];
 export const creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
 export const creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
 export const deriveActiveProducts: (a: number, b: number) => [number, number];

@@ -16,15 +16,16 @@ use napi_derive::napi;
 use serde_json::{Map, Value};
 use solvapay_core::SdkError;
 use solvapay_dto::{
-    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, CancelPurchaseParams,
-    CheckLimitsRequest, CloneProductOverrides, ConfigureMcpPlansDto, CreateCheckoutSessionRequest,
-    CreateCustomerRequest, CreateCustomerSessionRequest, CreatePaymentIntentParams,
-    CreatePlanParams, CreateProductRequest, CreateTopupPaymentIntentParams,
-    DisableAutoRechargeParams, GetAutoRechargeParams, GetCreditActivityParams,
-    GetCustomerBalanceParams, GetCustomerParams, GetPaymentMethodParams, GetUserInfoParams,
-    ListPurchasesParams, McpBootstrapDto, ProcessPaymentIntentParams, ReactivatePurchaseParams,
-    SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams,
-    UpdatePlanRequest, UpdateProductRequest,
+    ActivatePlanDto, AssignCreditsRequest, AttachBusinessDetailsParams, AuthorizeCallDto,
+    CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CompleteCallDto,
+    ConfigureMcpPlansDto, CreateCheckoutSessionRequest, CreateCustomerRequest,
+    CreateCustomerSessionRequest, CreatePaymentIntentParams, CreatePlanParams,
+    CreateProductRequest, CreateTopupPaymentIntentParams, DisableAutoRechargeParams,
+    GetAutoRechargeParams, GetCreditActivityParams, GetCustomerBalanceParams, GetCustomerParams,
+    GetPaymentMethodParams, GetUserInfoParams, ListPurchasesParams, McpBootstrapDto,
+    ProcessPaymentIntentParams, ReactivatePurchaseParams, SaveAutoRechargeParams,
+    TrackUsageBulkRequest, TrackUsageRequest, UpdateCustomerParams, UpdatePlanRequest,
+    UpdateProductRequest, UsageReportDto, VerifyAgentKeyDto,
 };
 use solvapay_transport::{ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient};
 
@@ -582,6 +583,55 @@ impl NativeClient {
         })
         .await
     }
+
+    // --- Group C -------------------------------------------------------------
+
+    /// `POST /v1/sdk/agent/keys/verifications`
+    #[napi(js_name = "verifyAgentKey")]
+    pub async fn verify_agent_key(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: VerifyAgentKeyDto = parse_args_json(&args_json)?;
+            client.verify_agent_key(params).await
+        })
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/calls`
+    #[napi(js_name = "authorizeAgentCall")]
+    pub async fn authorize_agent_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: AuthorizeCallDto = parse_args_json(&args_json)?;
+            client.authorize_agent_call(params).await
+        })
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/calls/{callRef}/complete`
+    #[napi(js_name = "completeAgentCall")]
+    pub async fn complete_agent_call(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let (refs, body) = split_path_refs(&args_json, &["callRef"])?;
+            let params: CompleteCallDto = serde_json::from_value(body).map_err(|err| {
+                SdkError::transport(format!("invalid completeAgentCall body: {err}"), false)
+            })?;
+            client.complete_agent_call(&refs[0], params).await
+        })
+        .await
+    }
+
+    /// `POST /v1/sdk/agent/usage-reports`
+    #[napi(js_name = "reportAgentUsage")]
+    pub async fn report_agent_usage(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: UsageReportDto = parse_args_json(&args_json)?;
+            client.report_agent_usage(params).await
+        })
+        .await
+    }
 }
 
 /// Offline dispatch helper: unknown fn names return an internal-error envelope
@@ -634,7 +684,11 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "mcpResolveAuth"
         | "mcpOauthRequest"
         | "mcpDispatch"
-        | "fetchJwks" => None,
+        | "fetchJwks"
+        | "verifyAgentKey"
+        | "authorizeAgentCall"
+        | "completeAgentCall"
+        | "reportAgentUsage" => None,
         other => Some(internal_error_envelope(format!(
             "unknown NativeClient fn: {other}"
         ))),

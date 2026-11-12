@@ -10,7 +10,7 @@ export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust', 'c'] as const
 export type Language = (typeof LANGUAGES)[number]
 
 /** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
-export const EXPECTED_ROUTED_OPERATION_COUNT = 38
+export const EXPECTED_ROUTED_OPERATION_COUNT = 42
 export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 7
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
@@ -415,9 +415,13 @@ export type BindingResidue = z.infer<typeof BindingResidueSchema>
  * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
  */
 export const SHIM_JS_NAMES = [
-  // Client dispatch (38 routed + 6 MCP composite)
+  // Client dispatch (42 routed + 6 MCP composite)
   'activatePlan',
   'assignCredits',
+  'authorizeAgentCall',
+  'completeAgentCall',
+  'reportAgentUsage',
+  'verifyAgentKey',
   'attachBusinessDetails',
   'bootstrapMcpProduct',
   'cancelPurchase',
@@ -537,6 +541,18 @@ export const SHIM_JS_NAMES = [
   'meterName',
   'countsUsage',
   'peggedCreditsPerUnit',
+  'creditDrawnMeters',
+  'agentSecretKeyEnvironment',
+  'agentCredentialKind',
+  'verifyAgentToken',
+  'agentKeyVerificationResult',
+  'agentPromptFacts',
+  'agentProtectedResource',
+  'agentAuthChallenge',
+  'parseAgentResponse',
+  'agentAuthorizeRequest',
+  'agentAuthorizeNext',
+  'agentCompleteBody',
   'creditsPerUnitFromBalance',
   'deriveActiveProducts',
   'deriveDefaultView',

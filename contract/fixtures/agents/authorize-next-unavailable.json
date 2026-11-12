@@ -1,0 +1,23 @@
+{
+  "suite": "agents",
+  "case": "authorize-next-unavailable",
+  "input": {
+    "fn": "agentAuthorizeNext",
+    "args": {
+      "input": {
+        "errorStatus": null,
+        "maxWaitSeconds": 30,
+        "nowMs": 0,
+        "deadlineMs": 30000,
+        "aborted": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "refuse",
+      "reason": "unavailable",
+      "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+    }
+  }
+}

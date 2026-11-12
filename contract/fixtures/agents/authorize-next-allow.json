@@ -1,0 +1,39 @@
+{
+  "suite": "agents",
+  "case": "authorize-next-allow",
+  "input": {
+    "fn": "agentAuthorizeNext",
+    "args": {
+      "input": {
+        "response": {
+          "status": "allowed",
+          "callRef": "acl_1",
+          "reservation": {
+            "held": {
+              "amount": "0.02",
+              "currency": "USD"
+            },
+            "expiresAt": "2026-07-01T00:05:00Z"
+          }
+        },
+        "maxWaitSeconds": 30,
+        "nowMs": 0,
+        "deadlineMs": 30000,
+        "aborted": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "allow",
+      "callRef": "acl_1",
+      "reservation": {
+        "held": {
+          "amount": "0.02",
+          "currency": "USD"
+        },
+        "expiresAt": "2026-07-01T00:05:00Z"
+      }
+    }
+  }
+}

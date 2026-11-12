@@ -18,7 +18,11 @@ import { resolveRateDisplay } from '../account-state'
 import { formatProductTerms, type ActiveProduct } from '../derive-active-products'
 import { resolvePlanActions, resolvePlanShape, type PlanLike } from '../plan-actions'
 import { SplitRow } from '../primitives'
-import { AccountIdentityFooter, CreditActivitySection } from './accountFullscreen'
+import {
+  AccountIdentityFooter,
+  AccountSignedInAs,
+  CreditActivitySection,
+} from './accountFullscreen'
 import { BalanceStrip, PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -154,6 +158,7 @@ export function CreditAccountPanel({
             />
           </>
         ) : null}
+        {isFullscreen ? null : <AccountSignedInAs />}
       </div>
       {isFullscreen && productRef ? (
         <CreditActivitySection

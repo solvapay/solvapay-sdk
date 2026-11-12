@@ -60,6 +60,20 @@ const proPlan: Plan = {
   creditsPerUnit: 0,
 }
 
+const hybridPlan: Plan = {
+  reference: 'pln_basic',
+  name: 'Basic',
+  price: 1900,
+  currency: 'usd',
+  requiresPayment: true,
+  type: 'hybrid',
+  options: [
+    { kind: 'billingCycle', interval: 'month' },
+    { kind: 'charge', per: 'flat', amountMinor: 1900, currency: 'usd' },
+    { kind: 'charge', per: 'unit', amountMinor: 2, currency: 'usd', meter: 'requests' },
+  ],
+}
+
 function makeTransport(
   overrides: Partial<NonNullable<SolvaPayConfig['transport']>> = {},
 ): NonNullable<SolvaPayConfig['transport']> {
@@ -574,6 +588,84 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(activate).toHaveBeenCalledTimes(2)
     expect(activate).toHaveBeenLastCalledWith({ productRef, planRef: 'pln_payg' })
   })
+
+  it('stays on the plan step and reports an error when activation returns payment_required', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'payment_required' })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      credits: 500,
+    })
+    const onError = vi.fn()
+    const onPurchaseSuccess = vi.fn()
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, onError, onPurchaseSuccess }),
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(result.current.step).toBe('plan')
+    expect(result.current.status).toBe('error')
+    expect(result.current.error).toBe('This plan requires payment. Please select a different plan.')
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), 'activate')
+    expect(onPurchaseSuccess).not.toHaveBeenCalled()
+    expect(result.current.successMeta).toBeNull()
+  })
+
+  it('surfaces the invalid-plan message and stays on the plan step', async () => {
+    const activate = vi.fn().mockResolvedValue({
+      status: 'invalid',
+      message: 'That plan is not on this product.',
+    })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(result.current.step).toBe('plan')
+    expect(result.current.status).toBe('error')
+    expect(result.current.error).toBe('That plan is not on this product.')
+  })
+
+  it('opens the amount step when activation returns topup_required', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'topup_required' })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      credits: 500,
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(result.current.step).toBe('amount')
+    expect(result.current.status).toBe('idle')
+    expect(result.current.error).toBeNull()
+    expect(result.current.successMeta).toBeNull()
+  })
 })
 
 // ------------------------------------------------------------------
@@ -581,6 +673,30 @@ describe('useCheckoutFlow — PAYG branch', () => {
 // ------------------------------------------------------------------
 
 describe('useCheckoutFlow — Recurring branch', () => {
+  it('routes a hybrid plan through payment without calling activatePlan', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const { Wrapper, transport } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      plans: [paygPlan, proPlan, hybridPlan],
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_basic')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_basic'))
+    expect(result.current.branch).toBe('recurring')
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(result.current.step).toBe('payment')
+    expect(activate).not.toHaveBeenCalled()
+    expect(transport.activatePlan).not.toHaveBeenCalled()
+  })
+
   it('advance() from plan → payment skips amount and does not call activatePlan', async () => {
     const { Wrapper, transport } = makeWrapper()
     const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
@@ -618,8 +734,62 @@ describe('useCheckoutFlow — Recurring branch', () => {
       branch: 'recurring',
       currency: 'USD',
       chargedTodayMinor: 1800,
+      creditNote: null,
     })
     expect(onPurchaseSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  const hybridAllowance: Plan = {
+    reference: 'pln_hybrid',
+    name: 'Pro',
+    price: 1900,
+    currency: 'usd',
+    requiresPayment: true,
+    type: 'hybrid',
+    options: [
+      { kind: 'billingCycle', interval: 'month' },
+      { kind: 'charge', per: 'flat', amountMinor: 1900, currency: 'usd' },
+      { kind: 'charge', per: 'unit', amountMinor: 2, currency: 'usd', meter: 'requests' },
+      {
+        kind: 'limit',
+        cap: 10,
+        scope: 'billing_period',
+        meter: 'requests',
+        onExceed: 'draw_credits',
+      },
+    ],
+  }
+
+  async function activateHybrid(credits: number) {
+    const { Wrapper } = makeWrapper({ plans: [hybridAllowance], credits })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.selectPlan('pln_hybrid')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_hybrid'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    return result
+  }
+
+  it('records a credit note for a hybrid plan when the wallet is empty', async () => {
+    const result = await activateHybrid(0)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'recurring',
+      creditNote: 'Usage past your 10 included requests is paid from credits. Your balance is 0.',
+    })
+  })
+
+  it('omits the credit note when the hybrid wallet is funded', async () => {
+    const result = await activateHybrid(500)
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'recurring',
+      creditNote: null,
+    })
   })
 })
 

@@ -7,6 +7,14 @@ import {
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
 } from './env'
+import { detectPackageManager } from './project'
+import {
+  fetchDistTags,
+  findOutdatedSolvapayPackages,
+  solvapayDependencies,
+  upgradeCommand,
+  type FetchDistTags,
+} from './sdk-versions'
 
 export type DoctorCommandOptions = {
   /** Target api-dev.solvapay.com (same as `solvapay init --dev`). */
@@ -18,6 +26,8 @@ export type DoctorCommandOptions = {
 export type RunDoctorInDirectoryOptions = {
   cwd: string
   options?: DoctorCommandOptions
+  /** npm dist-tag lookup, injectable for tests. */
+  distTags?: FetchDistTags
 }
 
 export type DoctorCheckResult = {
@@ -63,9 +73,34 @@ const printCheck = (check: DoctorCheckResult): void => {
  * Exits non-zero (via `report.ok === false`) when any hard check fails so it
  * can gate CI / pre-deploy.
  */
+/** Whether the project's `@solvapay/*` packages match npm (`latest`, or `preview` for a preview build). */
+const checkSdkVersions = async (
+  cwd: string,
+  distTags: FetchDistTags,
+): Promise<DoctorCheckResult> => {
+  const name = '@solvapay/* versions'
+  try {
+    const names = await solvapayDependencies(cwd)
+    if (names === null)
+      return { name, ok: true, detail: `no package.json in ${cwd}, nothing to check` }
+    if (names.length === 0) return { name, ok: true, detail: 'no @solvapay/* dependencies' }
+    const outdated = await findOutdatedSolvapayPackages(cwd, names, distTags)
+    if (outdated.length === 0)
+      return { name, ok: true, detail: `${names.length} package(s) match npm` }
+    const behind = outdated
+      .map(o => `${o.name} ${o.installed} (npm ${o.tag} ${o.wanted})`)
+      .join(', ')
+    const command = upgradeCommand(await detectPackageManager(cwd), outdated)
+    return { name, ok: false, detail: `behind npm: ${behind}. Upgrade with: ${command}` }
+  } catch (error) {
+    return { name, ok: false, detail: error instanceof Error ? error.message : String(error) }
+  }
+}
+
 export const runDoctorInDirectory = async ({
   cwd,
   options = {},
+  distTags = fetchDistTags,
 }: RunDoctorInDirectoryOptions): Promise<DoctorReport> => {
   const checks: DoctorCheckResult[] = []
   const apiBaseUrl = await resolveApiBaseUrl(cwd, options)
@@ -176,6 +211,8 @@ export const runDoctorInDirectory = async ({
       })
     }
   }
+
+  checks.push(await checkSdkVersions(cwd, distTags))
 
   const debugRaw = process.env.SOLVAPAY_DEBUG
   checks.push({

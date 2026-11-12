@@ -5,48 +5,51 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    append_paid_tool_description, assert_valid_product_ref,
-    attach_business_details_validation_error, balance_reconcile_delays_ms, billing_cycle,
-    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
-    build_payable_tool_result, build_paywall_gate, business_country_display_names,
-    business_country_options_table, charges, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
-    customer_ref_from_claims, decide_paywall_outcome, decode_jwt_payload_unverified,
-    default_mcp_bearer_expectations, derive_active_products, derive_default_view,
-    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
-    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
-    format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
-    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, gate_next,
-    get_business_country_options, get_customer_address_field_errors, get_history_next,
-    get_postal_code_field_label, get_postal_code_placeholder,
-    get_seller_tax_identifier_display_label, get_state_field_label, headline_charges, history_rows,
-    included_units, invoke_payable_next, is_cached_customer_ref_valid,
-    is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
-    is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
-    link_label, mcp_view_maps, meter_name, minor_units_per_major, next_action_for,
-    normalize_cancel_response, normalize_free_limit, normalize_reactivate_response,
-    overlay_claimed_limits, paywall_client_payload, paywall_structured_content_schema,
-    paywall_tool_result, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder,
-    plan_pricing_shape, postal_code_required_countries, project_topup_process_outcome,
-    purchase_usage_is_metered, require_product_ref, resolve_account_state, resolve_buyer_country,
-    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_mandate_legal_docs, resolve_narrator_plan_shape,
-    resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
-    resolve_usage_extra, reverse_charge_note, select_active_plan_purchase,
-    should_retry_usage_error, should_show_tax_row, solvapay_privacy_url, solvapay_terms_url,
-    solvapay_website_url, state_required_countries, supported_business_countries, tax_behaviors,
+    agent_auth_challenge, agent_authorize_next, agent_authorize_request, agent_complete_body,
+    agent_credential_kind, agent_key_verification_result, agent_prompt_facts,
+    agent_protected_resource, agent_secret_key_environment, append_paid_tool_description,
+    assert_valid_product_ref, attach_business_details_validation_error,
+    balance_reconcile_delays_ms, billing_cycle, build_create_customer_params,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
+    build_paywall_gate, business_country_display_names, business_country_options_table, charges,
+    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
+    compile_string_field_input_schema_json, country_to_tax_id_type, counts_usage,
+    credit_drawn_meters, credit_signals, credits_per_unit_from_balance, customer_ref_from_claims,
+    decide_paywall_outcome, decode_jwt_payload_unverified, default_mcp_bearer_expectations,
+    derive_active_products, derive_default_view, ensure_customer_next,
+    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
+    extract_backend_customer_ref, extract_bearer_token, format_compact_credits, format_price,
+    format_subtotal_label, format_vat_summary_label, free_limits_agree, free_meter_name_pattern,
+    free_tool_description_suffix, gate_next, get_business_country_options,
+    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
+    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
+    headline_charges, history_rows, included_units, invoke_payable_next,
+    is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
+    is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
+    is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, minor_units_per_major,
+    next_action_for, normalize_cancel_response, normalize_free_limit,
+    normalize_reactivate_response, overlay_claimed_limits, parse_agent_response,
+    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    postal_code_required_countries, project_topup_process_outcome, purchase_usage_is_metered,
+    require_product_ref, resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
+    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
+    resolve_mandate_legal_docs, resolve_narrator_plan_shape, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_tax_treatment_note, resolve_usage_extra,
+    reverse_charge_note, select_active_plan_purchase, should_retry_usage_error,
+    should_show_tax_row, solvapay_privacy_url, solvapay_terms_url, solvapay_website_url,
+    state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
     trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, BusinessDetailsInput, FreeLimit, FreeLimitInput,
-    GateContent, MandateLegalInput, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
-    ResponseEnvelope,
+    validate_topup_payment_intent_params, verify_agent_token, BusinessDetailsInput, FreeLimit,
+    FreeLimitInput, GateContent, MandateLegalInput, PaywallGate, PaywallGateLimits, PaywallLimits,
+    PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -143,6 +146,61 @@ fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingE
 fn invoke_topup_balance_poll_delays_ms(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&topup_balance_poll_delays_ms())
+}
+
+fn invoke_agent_auth_challenge(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_auth_challenge(input.as_ref()))
+}
+
+fn invoke_agent_authorize_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_authorize_next(input.as_ref()))
+}
+
+fn invoke_agent_authorize_request(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_authorize_request(input.as_ref()))
+}
+
+fn invoke_agent_complete_body(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_complete_body(input.as_ref()))
+}
+
+fn invoke_agent_credential_kind(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let value = require_string(&args, "value")?;
+    Ok(Value::String(agent_credential_kind(&value).to_owned()))
+}
+
+fn invoke_agent_key_verification_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_key_verification_result(input.as_ref()))
+}
+
+fn invoke_agent_prompt_facts(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let text = require_string(&args, "text")?;
+    let tool_error = require_bool(&args, "toolError")?;
+    to_value(&agent_prompt_facts(&text, tool_error))
+}
+
+fn invoke_agent_protected_resource(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(agent_protected_resource(input.as_ref()))
+}
+
+fn invoke_agent_secret_key_environment(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let secret_key = require_string(&args, "secretKey")?;
+    to_value(&agent_secret_key_environment(&secret_key))
 }
 
 fn invoke_append_paid_tool_description(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -335,6 +393,12 @@ fn invoke_counts_usage(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     Ok(Value::Bool(counts_usage(priced.as_ref())))
+}
+
+fn invoke_credit_drawn_meters(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&credit_drawn_meters(priced.as_ref()))
 }
 
 fn invoke_credit_signals(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -892,6 +956,13 @@ fn invoke_overlay_claimed_limits(input: &FixtureInput) -> Result<Value, BindingE
     ))
 }
 
+fn invoke_parse_agent_response(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let kind = require_string(&args, "kind")?;
+    let value = optional_value(&args, "value");
+    result_as_value(parse_agent_response(&kind, value.as_ref()))
+}
+
 fn invoke_paywall_error_to_client_payload(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let _message = require_string(&args, "message")?;
@@ -1351,6 +1422,12 @@ fn invoke_validate_topup_payment_intent_params(
         amount,
         currency.as_deref(),
     ))
+}
+
+fn invoke_verify_agent_token(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = optional_value(&args, "input");
+    result_as_value(verify_agent_token(input.as_ref()))
 }
 
 /// Builds the default [`BindingRegistry`] from generated wrap bodies plus chrome-routed hand-written helpers.
@@ -2422,6 +2499,90 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "creditDrawnMeters",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_credit_drawn_meters(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentSecretKeyEnvironment",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_secret_key_environment(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCredentialKind",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_credential_kind(&fixture.input)),
+        },
+    );
+    registry.register(
+        "verifyAgentToken",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_verify_agent_token(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentKeyVerificationResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_key_verification_result(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentPromptFacts",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_prompt_facts(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentProtectedResource",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_protected_resource(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentAuthChallenge",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_auth_challenge(&fixture.input)),
+        },
+    );
+    registry.register(
+        "parseAgentResponse",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_parse_agent_response(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentAuthorizeRequest",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_authorize_request(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentAuthorizeNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_authorize_next(&fixture.input)),
+        },
+    );
+    registry.register(
+        "agentCompleteBody",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_agent_complete_body(&fixture.input)),
+        },
+    );
+    registry.register(
         "TOPUP_BALANCE_POLL_DELAYS_MS",
         Binding {
             id: "core",
@@ -2518,6 +2679,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "authorizeAgentCall",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
         "bootstrapMcpProduct",
         Binding {
             id: "client",
@@ -2540,6 +2708,13 @@ pub fn create_default_registry() -> BindingRegistry {
     );
     registry.register(
         "cloneProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "completeAgentCall",
         Binding {
             id: "client",
             invoke: Box::new(crate::client_replay::invoke),
@@ -2770,6 +2945,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "reportAgentUsage",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
         "saveAutoRecharge",
         Binding {
             id: "client",
@@ -2806,6 +2988,13 @@ pub fn create_default_registry() -> BindingRegistry {
     );
     registry.register(
         "updateProduct",
+        Binding {
+            id: "client",
+            invoke: Box::new(crate::client_replay::invoke),
+        },
+    );
+    registry.register(
+        "verifyAgentKey",
         Binding {
             id: "client",
             invoke: Box::new(crate::client_replay::invoke),

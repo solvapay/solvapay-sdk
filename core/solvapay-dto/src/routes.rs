@@ -179,6 +179,30 @@ const ROUTES: &[RouteMatch] = &[
     },
     RouteMatch {
         method: "POST",
+        path_template: "/v1/sdk/agent/calls",
+        operation_id: "CallsController_authorize",
+        response_type: Some("AuthorizeCallResponseDto"),
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/calls/{callRef}/complete",
+        operation_id: "CallsController_complete",
+        response_type: Some("CompleteCallResponseDto"),
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/keys/verifications",
+        operation_id: "AgentKeysController_verify",
+        response_type: Some("VerifiedAgentKeyResponseDto"),
+    },
+    RouteMatch {
+        method: "POST",
+        path_template: "/v1/sdk/agent/usage-reports",
+        operation_id: "UsageReportsController_report",
+        response_type: Some("UsageReportResponseDto"),
+    },
+    RouteMatch {
+        method: "POST",
         path_template: "/v1/sdk/checkout-sessions",
         operation_id: "CheckoutSessionSdkController_createCheckoutSession",
         response_type: Some("CreateCheckoutSessionResponse"),
@@ -366,6 +390,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }
+        "AuthorizeCallResponseDto" => {
+            let parsed: schemas::AuthorizeCallResponseDto =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
         "AutoRechargeGetResponse" => {
             let parsed: schemas::AutoRechargeGetResponse =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
@@ -373,6 +402,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
         }
         "BulkUsageResponse" => {
             let parsed: schemas::BulkUsageResponse =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
+        "CompleteCallResponseDto" => {
+            let parsed: schemas::CompleteCallResponseDto =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }
@@ -541,6 +575,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }
+        "UsageReportResponseDto" => {
+            let parsed: schemas::UsageReportResponseDto =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
         "UserInfoResponse" => {
             let parsed: schemas::UserInfoResponse =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
@@ -548,6 +587,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
         }
         "Vec<WebhookEventCategoryDto>" => {
             let parsed: Vec<schemas::WebhookEventCategoryDto> =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
+        "VerifiedAgentKeyResponseDto" => {
+            let parsed: schemas::VerifiedAgentKeyResponseDto =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }

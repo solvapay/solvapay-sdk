@@ -54,6 +54,37 @@ function isErrorCase(fileName: string): boolean {
 const fixtureFiles = discoverFixtureFiles(FIXTURES_ROOT)
 
 const NON_CLIENT_FIXTURES = [
+  'agents/auth-challenge.json',
+  'agents/authorize-next-allow.json',
+  'agents/authorize-next-no-wait.json',
+  'agents/authorize-next-not-accepted.json',
+  'agents/authorize-next-retry.json',
+  'agents/authorize-next-timed-out.json',
+  'agents/authorize-next-unavailable.json',
+  'agents/authorize-request-no-excerpt.json',
+  'agents/authorize-request-with-excerpt.json',
+  'agents/complete-body-released.json',
+  'agents/complete-body-reported.json',
+  'agents/credential-kind-agent-key.json',
+  'agents/credential-kind-jwt.json',
+  'agents/credential-kind-other.json',
+  'agents/key-verification-accepted.json',
+  'agents/key-verification-environment-mismatch.json',
+  'agents/parse-authorize-unknown-status.json',
+  'agents/parse-authorize-waiting.json',
+  'agents/prompt-facts-excerpt-tail.json',
+  'agents/prompt-facts-short.json',
+  'agents/protected-resource-path-suffixed.json',
+  'agents/secret-key-env-live.json',
+  'agents/secret-key-env-sandbox.json',
+  'agents/secret-key-env-unknown.json',
+  'agents/verify-token-bad-signature.json',
+  'agents/verify-token-environment-mismatch.json',
+  'agents/verify-token-expired.json',
+  'agents/verify-token-oauth-resource.json',
+  'agents/verify-token-other-merchant.json',
+  'agents/verify-token-valid.json',
+  'agents/verify-token-wrong-scope.json',
   'auth/extract-bearer-case-insensitive.json',
   'business-details/address/postal-countries.json',
   'business-details/address/postal-label-us.json',
@@ -191,7 +222,6 @@ const NON_CLIENT_FIXTURES = [
   'customer-ref/jwt-beats-header.json',
   'driver-loop/gate-allow-omits-consequence.json',
   'driver-loop/gate-allow-overage-consequence.json',
-  'driver-loop/gate-allow-throttled-consequence.json',
   'driver-loop/gate-handler-generic-error-emits-usage.json',
   'driver-loop/gate-handler-paywall-error-skips-usage.json',
   'driver-loop/gate-handler-success-emits-usage.json',
@@ -484,7 +514,6 @@ const NON_CLIENT_FIXTURES = [
   'paywall/classification/credit-allow-no-plan.json',
   'paywall/classification/needs-topup-flag.json',
   'paywall/classification/needs-topup-overrides-usage-heuristic.json',
-  'paywall/classification/needs-upgrade-flag.json',
   'paywall/classification/null-limits.json',
   'paywall/classification/plans-none-match.json',
   'paywall/classification/reason-limit-reached.json',
@@ -494,7 +523,6 @@ const NON_CLIENT_FIXTURES = [
   'paywall/classification/row-5-payg-shortfall.json',
   'paywall/classification/row-6-zero-balance-credit-fields.json',
   'paywall/classification/row-7-included-usage-purchase-ref.json',
-  'paywall/classification/row-9-failed-auto-upgrade.json',
   'paywall/classification/usage-based-nested-balance-0.json',
   'paywall/classification/usage-based-nonzero-balance.json',
   'paywall/classification/usage-based-remaining-0-fallback.json',
@@ -619,6 +647,12 @@ const NON_CLIENT_FIXTURES = [
   'plan-pricing/counts-usage-from-limit.json',
   'plan-pricing/counts-usage-payg.json',
   'plan-pricing/counts-usage-pro-false.json',
+  'plan-pricing/credit-drawn-block-limit.json',
+  'plan-pricing/credit-drawn-capped-draw-credits.json',
+  'plan-pricing/credit-drawn-no-limit.json',
+  'plan-pricing/credit-drawn-not-recurring.json',
+  'plan-pricing/credit-drawn-unlimited-cap.json',
+  'plan-pricing/credit-drawn-zero-rate.json',
   'plan-pricing/credits-currency-mismatch.json',
   'plan-pricing/credits-free-meter-null.json',
   'plan-pricing/credits-from-sek-balance.json',
@@ -738,7 +772,7 @@ describe('contract fixtures', () => {
       operations: Record<string, { names: { ts: string } }>
     }
     const operationIds = Object.keys(manifest.operations)
-    expect(operationIds.length).toBe(45)
+    expect(operationIds.length).toBe(49)
 
     const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
     const missing: string[] = []
@@ -765,7 +799,7 @@ describe('contract fixtures', () => {
       const methodDir = camelToKebab(manifest.operations[opId]?.names.ts ?? opId)
       return relative.some(f => f.startsWith(`client/${methodDir}/`))
     })
-    expect(routed.length).toBe(38)
+    expect(routed.length).toBe(42)
   })
 
   it.each(fixtureFiles.map(file => [path.relative(FIXTURES_ROOT, file), file]))(

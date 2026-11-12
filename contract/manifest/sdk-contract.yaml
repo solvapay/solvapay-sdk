@@ -87,7 +87,6 @@ boundaryTypesTs:
         limit?: number
         autoRecharge?: unknown
         needsTopUp?: boolean
-        needsUpgrade?: boolean
         meterName?: string
         currency?: string
       }
@@ -156,6 +155,50 @@ boundaryTypesTs:
       }
 
 operations:
+  authorizeAgentCall:
+    route:
+      method: POST
+      path: /v1/sdk/agent/calls
+    names:
+      ts: authorizeAgentCall
+      py: authorize_agent_call
+      rb: authorize_agent_call
+      go: AuthorizeAgentCall
+      rust: authorize_agent_call
+      c: authorizeAgentCall
+    optionalOnClient: false
+    request: AuthorizeCallDto
+    response: AuthorizeCallResponseDto
+    overlays:
+      - AuthorizeCallResponseDto
+      - AuthorizeCallDto
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "authorizeAgentCall failed ({status}): {body}"
+      cases: []
+    params:
+      - name: params
+        ref: AuthorizeCallDto
+        required: true
+    docs:
+      summary: "Authorize a paid agent call: the customer, the agent's spend policy and the estimate held against budget and balance"
+      params:
+        params: 'The agent token, the merchant''s request id, an optional item label, the estimate as an amount and currency, optional prompt facts, and `wait`: seconds (0 to 55) this request may hold while the owner decides.'
+      returns: '`allowed` with the reservation held, `refused` with a reason and a sentence for the human, or `waiting` with the approval and when to ask again with the same request id.'
+    sync:
+      ts: async
+      py:
+        - async
+        - blocking
+      rb: blocking
+      go: blocking
+      rust:
+        - async
+        - blocking
+      c: blocking
   checkLimits:
     route:
       method: POST
@@ -193,6 +236,54 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
+  completeAgentCall:
+    route:
+      method: POST
+      path: /v1/sdk/agent/calls/{callRef}/complete
+    names:
+      ts: completeAgentCall
+      py: complete_agent_call
+      rb: complete_agent_call
+      go: CompleteAgentCall
+      rust: complete_agent_call
+      c: completeAgentCall
+    optionalOnClient: false
+    request: CompleteCallDto
+    response: CompleteCallResponseDto
+    overlays:
+      - CompleteCallResponseDto
+      - CompleteCallDto
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "completeAgentCall failed ({status}): {body}"
+      cases: []
+    params:
+      - name: callRef
+        type: string
+        required: true
+      - name: params
+        ref: CompleteCallDto
+        required: true
+    docs:
+      summary: "Complete an allowed agent call: settle the spend policy and debit the call's customer at the reported cost"
+      params:
+        callRef: 'The call reference `authorizeAgentCall` returned.'
+        params: 'The status the upstream answered with, the cost it reported (or `null`), and `interrupted` when the answer broke before it finished.'
+      returns: 'How the call was settled: `settled` is false when the upstream answered an error, `source` says whether the reported cost or the estimate was used, and a repeat returns the first result with `duplicate: true`.'
+    sync:
+      ts: async
+      py:
+        - async
+        - blocking
+      rb: blocking
+      go: blocking
+      rust:
+        - async
+        - blocking
       c: blocking
   getCreditActivity:
     route:
@@ -269,6 +360,50 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
+  reportAgentUsage:
+    route:
+      method: POST
+      path: /v1/sdk/agent/usage-reports
+    names:
+      ts: reportAgentUsage
+      py: report_agent_usage
+      rb: report_agent_usage
+      go: ReportAgentUsage
+      rust: report_agent_usage
+      c: reportAgentUsage
+    optionalOnClient: false
+    request: UsageReportDto
+    response: UsageReportResponseDto
+    overlays:
+      - UsageReportResponseDto
+      - UsageReportDto
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "reportAgentUsage failed ({status}): {body}"
+      cases: []
+    params:
+      - name: params
+        ref: UsageReportDto
+        required: true
+    docs:
+      summary: Report the merchant's own cost of each decided agent call; SolvaPay corrects the spend policy and the credits to it
+      params:
+        params: 'The merchant''s usage for one customer and window: a report id, the source, the window, the currency, each call''s cost by call reference, and usage without a decision.'
+      returns: 'Per call, how SolvaPay reconciled it (matched, adjusted, pending, already reconciled or ignored), plus the untagged totals and whether they are flagged.'
+    sync:
+      ts: async
+      py:
+        - async
+        - blocking
+      rb: blocking
+      go: blocking
+      rust:
+        - async
+        - blocking
       c: blocking
   trackUsage:
     route:
@@ -1904,6 +2039,50 @@ operations:
       rust: [async, blocking]
       c: blocking
 
+  verifyAgentKey:
+    route:
+      method: POST
+      path: /v1/sdk/agent/keys/verifications
+    names:
+      ts: verifyAgentKey
+      py: verify_agent_key
+      rb: verify_agent_key
+      go: VerifyAgentKey
+      rust: verify_agent_key
+      c: verifyAgentKey
+    optionalOnClient: false
+    request: VerifyAgentKeyDto
+    response: VerifiedAgentKeyResponseDto
+    overlays:
+      - VerifiedAgentKeyResponseDto
+      - VerifyAgentKeyDto
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: "verifyAgentKey failed ({status}): {body}"
+      cases: []
+    params:
+      - name: params
+        ref: VerifyAgentKeyDto
+        required: true
+    docs:
+      summary: Read the agent behind an agent key issued for this merchant
+      params:
+        params: 'Body with `agentKey`: the agent key (`agk_…`) the caller presented in place of an agent token.'
+      returns: 'The agent behind the key: `agentRef`, its pairwise `principalRef` at this merchant, whether the prompt excerpt may be sent, and its environment. 401 for an unknown or revoked key, 403 for another merchant''s key or the other environment''s.'
+    sync:
+      ts: async
+      py:
+        - async
+        - blocking
+      rb: blocking
+      go: blocking
+      rust:
+        - async
+        - blocking
+      c: blocking
 overlays:
   McpJsonValue:
     kind: synthetic
@@ -2907,7 +3086,7 @@ topLevel:
       summary: 'Build the merchant-facing customer snapshot from a limits body.'
       params:
         options: 'Customer ref and last checkLimits body (or null).'
-      returns: 'Customer snapshot with defaults applied, including throttled and overage.'
+      returns: 'Customer snapshot with defaults applied, including overage.'
     sync:
       ts: sync
       py: sync
@@ -4458,6 +4637,260 @@ coreHelpers:
       params:
         options: 'Charge amount, credits per minor unit, and optional USD-to-charge rate.'
       returns: 'Credits per metered unit (0 for a free meter).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentSecretKeyEnvironment:
+    names:
+      ts: agentSecretKeyEnvironment
+      py: agent_secret_key_environment
+      rb: agent_secret_key_environment
+      go: AgentSecretKeyEnvironment
+      rust: agent_secret_key_environment
+      c: agentSecretKeyEnvironment
+    params: []
+    docs:
+      summary: 'Read which environment a merchant secret key is for from its prefix.'
+      params:
+        secretKey: 'The merchant''s SolvaPay secret key.'
+      returns: '`sandbox`, `live`, or null when the prefix says neither.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCredentialKind:
+    names:
+      ts: agentCredentialKind
+      py: agent_credential_kind
+      rb: agent_credential_kind
+      go: AgentCredentialKind
+      rust: agent_credential_kind
+      c: agentCredentialKind
+    params: []
+    docs:
+      summary: 'Classify a presented credential as an agent key, a JWT (agent token candidate) or something else.'
+      params:
+        value: 'The presented key or token.'
+      returns: '`agentKey`, `jwt`, or `other` (the merchant''s own auth decides).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  verifyAgentToken:
+    names:
+      ts: verifyAgentToken
+      py: verify_agent_token
+      rb: verify_agent_token
+      go: VerifyAgentToken
+      rust: verify_agent_token
+      c: verifyAgentToken
+    params: []
+    docs:
+      summary: 'Verify a SolvaPay agent token (ES256) against the issuer''s JWKS, audience and environment.'
+      params:
+        input: 'Token, JWKS, issuer, provider reference, optional OAuth resource and merchant environment, and the clock.'
+      returns: '`{ ok: true, agent }` or `{ ok: false, reason, detail }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentKeyVerificationResult:
+    names:
+      ts: agentKeyVerificationResult
+      py: agent_key_verification_result
+      rb: agent_key_verification_result
+      go: AgentKeyVerificationResult
+      rust: agent_key_verification_result
+      c: agentKeyVerificationResult
+    params: []
+    docs:
+      summary: 'Turn SolvaPay''s answer about an agent key (or its 401 / 403) into the same result a token gives.'
+      params:
+        input: 'The verifyAgentKey answer or its error status and message, plus the merchant''s environment.'
+      returns: '`{ ok: true, agent }` or `{ ok: false, reason, detail }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentPromptFacts:
+    names:
+      ts: agentPromptFacts
+      py: agent_prompt_facts
+      rb: agent_prompt_facts
+      go: AgentPromptFacts
+      rust: agent_prompt_facts
+      c: agentPromptFacts
+    params: []
+    docs:
+      summary: 'Hash a call''s prompt and take its end for SolvaPay''s classifier.'
+      params:
+        text: 'The prompt text the merchant picked.'
+        toolError: 'The prompt carries a tool result marked as an error.'
+      returns: '`{ promptHash, toolError, excerpt }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentProtectedResource:
+    names:
+      ts: agentProtectedResource
+      py: agent_protected_resource
+      rb: agent_protected_resource
+      go: AgentProtectedResource
+      rust: agent_protected_resource
+      c: agentProtectedResource
+    params: []
+    docs:
+      summary: 'Describe a merchant server as an OAuth protected resource (RFC 9728).'
+      params:
+        input: 'The resource URL, SolvaPay''s agent issuer, and optional metadata path, server name and documentation.'
+      returns: '`{ resource, metadataPath, metadataUrl, metadata }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentAuthChallenge:
+    names:
+      ts: agentAuthChallenge
+      py: agent_auth_challenge
+      rb: agent_auth_challenge
+      go: AgentAuthChallenge
+      rust: agent_auth_challenge
+      c: agentAuthChallenge
+    params: []
+    docs:
+      summary: 'Build the 401 that sends a host to sign the owner in and retry.'
+      params:
+        input: 'The protected-resource input plus a description and optional JSON-RPC id.'
+      returns: '`{ status: 401, headers, body }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  parseAgentResponse:
+    names:
+      ts: parseAgentResponse
+      py: parse_agent_response
+      rb: parse_agent_response
+      go: ParseAgentResponse
+      rust: parse_agent_response
+      c: parseAgentResponse
+    params: []
+    docs:
+      summary: 'Read one of SolvaPay''s agent answers strictly, field by field.'
+      params:
+        kind: '`verifiedKey`, `authorize`, `complete` or `usageReport`.'
+        value: 'The response body as received.'
+      returns: 'The response with only its documented fields, each checked.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentAuthorizeRequest:
+    names:
+      ts: agentAuthorizeRequest
+      py: agent_authorize_request
+      rb: agent_authorize_request
+      go: AgentAuthorizeRequest
+      rust: agent_authorize_request
+      c: agentAuthorizeRequest
+    params: []
+    docs:
+      summary: 'Build the body of one authorize request, with the wait left before the deadline.'
+      params:
+        input: 'The call, its prompt facts, whether the excerpt may be sent, and the clock and deadline.'
+      returns: 'The authorizeAgentCall body.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentAuthorizeNext:
+    names:
+      ts: agentAuthorizeNext
+      py: agent_authorize_next
+      rb: agent_authorize_next
+      go: AgentAuthorizeNext
+      rust: agent_authorize_next
+      c: agentAuthorizeNext
+    params: []
+    docs:
+      summary: 'Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.'
+      params:
+        input: 'The authorize answer or its error status, the longest wait, the clock, the deadline and whether the caller went away.'
+      returns: '`{ kind: ''allow'' | ''refuse'' | ''retry'', … }`.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  agentCompleteBody:
+    names:
+      ts: agentCompleteBody
+      py: agent_complete_body
+      rb: agent_complete_body
+      go: AgentCompleteBody
+      rust: agent_complete_body
+      c: agentCompleteBody
+    params: []
+    docs:
+      summary: 'Build the body that completes an allowed call from how the upstream answered.'
+      params:
+        input: 'The upstream status, its reported cost or null, and why the answer broke, if it did.'
+      returns: 'The completeAgentCall body.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  creditDrawnMeters:
+    names:
+      ts: creditDrawnMeters
+      py: credit_drawn_meters
+      rb: credit_drawn_meters
+      go: CreditDrawnMeters
+      rust: credit_drawn_meters
+      c: creditDrawnMeters
+    params: []
+    docs:
+      summary: 'List the meters a recurring plan pays from prepaid credits.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.'
     sync:
       ts: sync
       py: sync

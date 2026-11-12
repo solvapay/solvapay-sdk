@@ -1,0 +1,11 @@
+{
+  "workerName": "int64-smoke",
+  "mcpPublicBaseUrl": "http://localhost:8787",
+  "upstreamAuth": { "kind": "none" },
+  "mode": "one-to-one",
+  "operations": [
+    { "operationId": "getWidget", "tier": "free" },
+    { "operationId": "createWidget", "tier": "paid" },
+    { "operationId": "setWidgetLabel", "tier": "paid" }
+  ]
+}

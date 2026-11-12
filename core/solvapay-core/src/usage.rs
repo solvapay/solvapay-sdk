@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::serde_util::{serialize_opt_whole_f64, serialize_whole_f64};
+use crate::serde_util::serialize_opt_whole_f64;
 
 /// Usage snapshot projected from an active purchase (or none).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -14,9 +14,12 @@ pub struct UsageSnapshot {
     /// `limits.limit` when that value is `> 0`; else `null`. Never `used + remaining`.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub total: Option<f64>,
-    /// Units used (defaults to `0`).
-    #[serde(serialize_with = "serialize_whole_f64")]
-    pub used: f64,
+    /// Consumed units this period: `limits.used` when the backend measured it,
+    /// otherwise `total - remaining` when both are finite. `null` when this
+    /// response did not measure consumption (no limits, unlimited, or
+    /// credit-based) — never an invented `0`.
+    #[serde(serialize_with = "serialize_opt_whole_f64")]
+    pub used: Option<f64>,
     /// `max(0, total - used)` when `total` is known; else `null`.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub remaining: Option<f64>,
@@ -63,10 +66,6 @@ pub fn project_usage_snapshot(
 ) -> UsageSnapshot {
     let purchase = active_purchase.filter(|v| !v.is_null());
     let usage = purchase.and_then(|p| p.get("usage"));
-    let caller_used = usage
-        .and_then(|u| u.get("used"))
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
     let limits = limits.filter(|v| !v.is_null());
     let remaining_raw = limits
         .and_then(|l| l.get("remaining"))
@@ -77,21 +76,22 @@ pub fn project_usage_snapshot(
         .and_then(|l| l.get("limit"))
         .and_then(Value::as_f64)
         .filter(|limit| *limit > 0.0);
+    // Consumption comes from `checkLimits` only. `purchase.usage.used` is
+    // only ever reset to zero by the backend, so it is never a source.
     let used = limits
         .and_then(|l| l.get("used"))
         .and_then(Value::as_f64)
-        .unwrap_or_else(|| match (total, remaining) {
-            (Some(total), Some(remaining)) => (total - remaining).max(0.0),
-            _ => caller_used,
+        .or_else(|| match (total, remaining) {
+            (Some(total), Some(remaining)) => Some((total - remaining).max(0.0)),
+            _ => None,
         });
-    let percent_used = total.and_then(|t| {
-        if t > 0.0 {
+    let percent_used = match (total, used) {
+        (Some(t), Some(used)) if t > 0.0 => {
             let pct = ((used / t) * 10_000.0).round() / 100.0;
             Some(pct.min(100.0))
-        } else {
-            None
         }
-    });
+        _ => None,
+    };
     let meter_ref = limits
         .and_then(|l| l.get("meterName").or_else(|| l.get("meterRef")))
         .and_then(Value::as_str)
@@ -218,7 +218,7 @@ mod tests {
         let snap = project_usage_snapshot(None, None);
         assert_eq!(snap.meter_ref, None);
         assert_eq!(snap.total, None);
-        assert_eq!(snap.used, 0.0);
+        assert_eq!(snap.used, None);
         assert_eq!(snap.remaining, None);
         assert_eq!(snap.percent_used, None);
         assert_eq!(snap.purchase_ref, None);
@@ -235,7 +235,7 @@ mod tests {
         let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.meter_ref.as_deref(), Some("mtr_legacy"));
         assert_eq!(snap.total, Some(10.0));
-        assert_eq!(snap.used, 2.0);
+        assert_eq!(snap.used, Some(2.0));
         assert_eq!(snap.remaining, Some(8.0));
         assert_eq!(snap.percent_used, Some(20.0));
         assert_eq!(snap.purchase_ref.as_deref(), Some("pur_1"));
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(snap.total, None);
         assert_eq!(snap.remaining, None);
         assert_eq!(snap.percent_used, None);
-        assert_eq!(snap.used, 5.0);
+        assert_eq!(snap.used, None);
     }
 
     #[test]
@@ -349,7 +349,7 @@ mod tests {
         let snap = project_usage_snapshot(Some(&purchase), None);
         assert_eq!(snap.meter_ref, None);
         assert_eq!(snap.total, None);
-        assert_eq!(snap.used, 5.0);
+        assert_eq!(snap.used, None);
         assert_eq!(snap.purchase_ref.as_deref(), Some("pur_1"));
     }
 }

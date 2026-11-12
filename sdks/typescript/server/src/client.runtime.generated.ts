@@ -9,10 +9,12 @@ export type NativeClientMethod =
   | 'activatePlan'
   | 'assignCredits'
   | 'attachBusinessDetails'
+  | 'authorizeAgentCall'
   | 'bootstrapMcpProduct'
   | 'cancelPurchase'
   | 'checkLimits'
   | 'cloneProduct'
+  | 'completeAgentCall'
   | 'configureMcpPlans'
   | 'createCheckoutSession'
   | 'createCustomer'
@@ -45,12 +47,14 @@ export type NativeClientMethod =
   | 'mcpResolveAuth'
   | 'processPaymentIntent'
   | 'reactivatePurchase'
+  | 'reportAgentUsage'
   | 'saveAutoRecharge'
   | 'trackUsage'
   | 'trackUsageBulk'
   | 'updateCustomer'
   | 'updatePlan'
   | 'updateProduct'
+  | 'verifyAgentKey'
 
 export type ClientRuntimeDispatch = <T>(fn: NativeClientMethod, params: unknown) => Promise<T>
 
@@ -67,6 +71,9 @@ export function createGeneratedClientOperations(
     async attachBusinessDetails(params) {
       return dispatchClient('attachBusinessDetails', params)
     },
+    async authorizeAgentCall(params) {
+      return dispatchClient('authorizeAgentCall', params)
+    },
     async bootstrapMcpProduct(params) {
       return dispatchClient('bootstrapMcpProduct', params)
     },
@@ -78,6 +85,9 @@ export function createGeneratedClientOperations(
     },
     async cloneProduct(productRef, overrides) {
       return dispatchClient('cloneProduct', { productRef, ...(overrides ?? {}) })
+    },
+    async completeAgentCall(callRef, params) {
+      return dispatchClient('completeAgentCall', { callRef, ...params })
     },
     async configureMcpPlans(productRef, params) {
       return dispatchClient('configureMcpPlans', { productRef, ...params })
@@ -175,6 +185,9 @@ export function createGeneratedClientOperations(
     async reactivatePurchase(params) {
       return dispatchClient('reactivatePurchase', params)
     },
+    async reportAgentUsage(params) {
+      return dispatchClient('reportAgentUsage', params)
+    },
     async saveAutoRecharge(params) {
       return dispatchClient('saveAutoRecharge', params)
     },
@@ -192,6 +205,9 @@ export function createGeneratedClientOperations(
     },
     async updateProduct(productRef, params) {
       return dispatchClient('updateProduct', { productRef, ...params })
+    },
+    async verifyAgentKey(params) {
+      return dispatchClient('verifyAgentKey', params)
     },
   }
 }

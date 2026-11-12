@@ -47,6 +47,79 @@ module SolvaPay
   # Top-up payment-intent balance poll backoff, in milliseconds.
   # @return Frozen delay table.
   TOPUP_BALANCE_POLL_DELAYS_MS = NativeDispatch.call_sync("TOPUP_BALANCE_POLL_DELAYS_MS", {}).freeze
+  # Build the 401 that sends a host to sign the owner in and retry.
+  # @return `{ status: 401, headers, body }`.
+  def self.agent_auth_challenge(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_auth_challenge", args)
+  end
+
+  # Decide what to do with one authorize answer: allow, refuse, or ask again after a pause.
+  # @return `{ kind: 'allow' | 'refuse' | 'retry', … }`.
+  def self.agent_authorize_next(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_authorize_next", args)
+  end
+
+  # Build the body of one authorize request, with the wait left before the deadline.
+  # @return The authorizeAgentCall body.
+  def self.agent_authorize_request(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_authorize_request", args)
+  end
+
+  # Build the body that completes an allowed call from how the upstream answered.
+  # @return The completeAgentCall body.
+  def self.agent_complete_body(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_complete_body", args)
+  end
+
+  # Classify a presented credential as an agent key, a JWT (agent token candidate) or something else.
+  # @return `agentKey`, `jwt`, or `other` (the merchant's own auth decides).
+  def self.agent_credential_kind(value:)
+    args = {} #: Hash[String, untyped]
+    args["value"] = value
+    NativeDispatch.call_sync("agent_credential_kind", args)
+  end
+
+  # Turn SolvaPay's answer about an agent key (or its 401 / 403) into the same result a token gives.
+  # @return `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+  def self.agent_key_verification_result(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_key_verification_result", args)
+  end
+
+  # Hash a call's prompt and take its end for SolvaPay's classifier.
+  # @return `{ promptHash, toolError, excerpt }`.
+  def self.agent_prompt_facts(text:, tool_error:)
+    args = {} #: Hash[String, untyped]
+    args["text"] = text
+    args["toolError"] = tool_error
+    NativeDispatch.call_sync("agent_prompt_facts", args)
+  end
+
+  # Describe a merchant server as an OAuth protected resource (RFC 9728).
+  # @return `{ resource, metadataPath, metadataUrl, metadata }`.
+  def self.agent_protected_resource(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("agent_protected_resource", args)
+  end
+
+  # Read which environment a merchant secret key is for from its prefix.
+  # @return `sandbox`, `live`, or null when the prefix says neither.
+  def self.agent_secret_key_environment(secret_key:)
+    args = {} #: Hash[String, untyped]
+    args["secretKey"] = secret_key
+    NativeDispatch.call_sync("agent_secret_key_environment", args)
+  end
+
   # Append the paid-tool account hint to a merchant tool description.
   # @param description Optional merchant-authored description; trailing whitespace is stripped.
   # @return Description plus hint, or the hint alone when no description is present.
@@ -74,7 +147,7 @@ module SolvaPay
   end
 
   # Build the merchant-facing customer snapshot from a limits body.
-  # @return Customer snapshot with defaults applied, including throttled and overage.
+  # @return Customer snapshot with defaults applied, including overage.
   def self.build_customer_snapshot(input:)
     args = {} #: Hash[String, untyped]
     args["input"] = input
@@ -127,6 +200,14 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["priced"] = priced unless priced.nil?
     NativeDispatch.call_sync("counts_usage", args)
+  end
+
+  # List the meters a recurring plan pays from prepaid credits.
+  # @return Meter names that bill with no limit or a capped draw_credits limit; empty for a non-recurring plan.
+  def self.credit_drawn_meters(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("credit_drawn_meters", args)
   end
 
   # Coalesce credit-balance channels and derive shortfall and remaining-call counts.
@@ -387,6 +468,15 @@ module SolvaPay
     NativeDispatch.call_sync("normalize_free_limit", args)
   end
 
+  # Read one of SolvaPay's agent answers strictly, field by field.
+  # @return The response with only its documented fields, each checked.
+  def self.parse_agent_response(kind:, value: nil)
+    args = {} #: Hash[String, untyped]
+    args["kind"] = kind
+    args["value"] = value unless value.nil?
+    NativeDispatch.call_sync("parse_agent_response", args)
+  end
+
   # Project a PaywallError into the client-facing payload shape.
   # @return Client payload object for paywall responses.
   def self.paywall_error_to_client_payload(error:)
@@ -561,5 +651,13 @@ module SolvaPay
   def self.validate_business_details
     args = {} #: Hash[String, untyped]
     NativeDispatch.call_sync("validate_business_details", args)
+  end
+
+  # Verify a SolvaPay agent token (ES256) against the issuer's JWKS, audience and environment.
+  # @return `{ ok: true, agent }` or `{ ok: false, reason, detail }`.
+  def self.verify_agent_token(input: nil)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input unless input.nil?
+    NativeDispatch.call_sync("verify_agent_token", args)
   end
 end
