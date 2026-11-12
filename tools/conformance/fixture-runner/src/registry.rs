@@ -12,32 +12,33 @@ use solvapay_core::{
     business_country_options_table, charges, classify_cancel_error, classify_create_error,
     classify_customer_ref, classify_lookup_error, classify_paywall_state,
     classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
-    customer_ref_from_claims, decide_paywall_outcome, decode_jwt_payload_unverified,
-    default_mcp_bearer_expectations, derive_active_products, derive_default_view,
-    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
-    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
-    format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
-    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, gate_next,
-    get_business_country_options, get_customer_address_field_errors, get_history_next,
-    get_postal_code_field_label, get_postal_code_placeholder,
-    get_seller_tax_identifier_display_label, get_state_field_label, headline_charges, history_rows,
-    included_units, invoke_payable_next, is_cached_customer_ref_valid,
-    is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
-    is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
-    link_label, mcp_view_maps, meter_name, minor_units_per_major, next_action_for,
-    normalize_cancel_response, normalize_free_limit, normalize_reactivate_response,
-    overlay_claimed_limits, paywall_client_payload, paywall_structured_content_schema,
-    paywall_tool_result, pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder,
-    plan_pricing_shape, postal_code_required_countries, project_topup_process_outcome,
-    purchase_usage_is_metered, require_product_ref, resolve_account_state, resolve_buyer_country,
-    resolve_check_limits_params, resolve_customer_ref, resolve_display_mode,
-    resolve_fallback_gate_limits, resolve_mandate_legal_docs, resolve_narrator_plan_shape,
-    resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
-    resolve_usage_extra, reverse_charge_note, select_active_plan_purchase,
-    should_retry_usage_error, should_show_tax_row, solvapay_privacy_url, solvapay_terms_url,
-    solvapay_website_url, state_required_countries, supported_business_countries, tax_behaviors,
+    country_to_tax_id_type, counts_usage, credit_drawn_meters, credit_signals,
+    credits_per_unit_from_balance, customer_ref_from_claims, decide_paywall_outcome,
+    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
+    derive_default_view, ensure_customer_next, ensure_output_schema_object_type,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_claimed_limits,
+    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
+    extract_bearer_token, format_compact_credits, format_price, format_subtotal_label,
+    format_vat_summary_label, free_limits_agree, free_meter_name_pattern,
+    free_tool_description_suffix, gate_next, get_business_country_options,
+    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
+    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
+    headline_charges, history_rows, included_units, invoke_payable_next,
+    is_cached_customer_ref_valid, is_customer_address_complete, is_email_conflict, is_error_result,
+    is_postal_code_required, is_state_required, is_tax_id_type, is_unlimited_remaining,
+    is_zero_decimal_currency, link_label, mcp_view_maps, meter_name, minor_units_per_major,
+    next_action_for, normalize_cancel_response, normalize_free_limit,
+    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
+    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    postal_code_required_countries, project_topup_process_outcome, purchase_usage_is_metered,
+    require_product_ref, resolve_account_state, resolve_buyer_country, resolve_check_limits_params,
+    resolve_customer_ref, resolve_display_mode, resolve_fallback_gate_limits,
+    resolve_mandate_legal_docs, resolve_narrator_plan_shape, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_tax_treatment_note, resolve_usage_extra,
+    reverse_charge_note, select_active_plan_purchase, should_retry_usage_error,
+    should_show_tax_row, solvapay_privacy_url, solvapay_terms_url, solvapay_website_url,
+    state_required_countries, supported_business_countries, tax_behaviors,
     tax_exclusive_currencies, tax_id_example_by_country, tax_id_types, tax_not_collected_note,
     tier_bands, tier_meters, to_major_units, topup_balance_poll_delays_ms, topup_process_next,
     trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
@@ -335,6 +336,12 @@ fn invoke_counts_usage(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     Ok(Value::Bool(counts_usage(priced.as_ref())))
+}
+
+fn invoke_credit_drawn_meters(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&credit_drawn_meters(priced.as_ref()))
 }
 
 fn invoke_credit_signals(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -2375,6 +2382,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(|fixture| invoke_format_compact_credits(&fixture.input)),
+        },
+    );
+    registry.register(
+        "creditDrawnMeters",
+        Binding {
+            id: "core",
+            invoke: Box::new(|fixture| invoke_credit_drawn_meters(&fixture.input)),
         },
     );
     registry.register(

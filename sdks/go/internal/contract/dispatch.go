@@ -168,6 +168,7 @@ var SyncExports = map[string]string{
 	"resolveDisplayMode":                          "sv_resolve_display_mode_binding",
 	"planConsequence":                             "sv_plan_consequence_binding",
 	"formatCompactCredits":                        "sv_format_compact_credits_binding",
+	"creditDrawnMeters":                           "sv_credit_drawn_meters_binding",
 	"extractBearerToken":                          "sv_extract_bearer_token_binding",
 	"decodeJwtPayloadUnverified":                  "sv_decode_jwt_payload_unverified_binding",
 	"customerRefFromClaims":                       "sv_customer_ref_from_claims_binding",

@@ -480,6 +480,14 @@ export function tierMeters(priced: PricedLike | null | undefined): string[] {
 }
 
 /**
+ * List the meters a recurring plan pays from prepaid credits.
+ * @returns Meter names that bill and have no limit or a capped draw_credits limit; empty for a non-recurring plan.
+ */
+export function creditDrawnMeters(priced: PricedLike | null | undefined): string[] {
+  return dispatchSync('creditDrawnMeters', { priced: priced ?? null })
+}
+
+/**
  * Return what one metered unit costs, from a per-unit charge or the first priced band.
  * @returns The entry rate, with tiered true when that rate is the floor of a stack.
  */

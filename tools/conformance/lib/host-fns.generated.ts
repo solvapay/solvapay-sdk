@@ -164,6 +164,7 @@ export const FIXTURE_SYNC_FNS = [
   'resolveDisplayMode',
   'planConsequence',
   'formatCompactCredits',
+  'creditDrawnMeters',
   'extractBearerToken',
   'decodeJwtPayloadUnverified',
   'customerRefFromClaims',

@@ -671,6 +671,103 @@ struct LimitCap {
     meter: Option<String>,
 }
 
+/// Every meter the plan names, in first-seen order: per-unit charges, tier
+/// bands, and limits.
+fn meter_keys(priced: Option<&Value>) -> Vec<String> {
+    let mut seen: Vec<String> = Vec::new();
+    let mut add = |meter: Option<&Value>| {
+        if let Some(name) = meter
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+        {
+            if !seen.iter().any(|existing| existing == name) {
+                seen.push(name.to_owned());
+            }
+        }
+    };
+    for option in options_of(priced) {
+        match option.get("kind").and_then(Value::as_str) {
+            Some("charge") if option.get("per").and_then(Value::as_str) == Some("unit") => {
+                add(option.get("meter"));
+            }
+            Some("tier") => {
+                if let Some(charge) = option.get("charge").filter(|value| value.is_object()) {
+                    add(charge.get("meter"));
+                }
+            }
+            Some("limit") => add(option.get("meter")),
+            _ => {}
+        }
+    }
+    seen
+}
+
+/// True when `meter` bills at a positive rate: a per-unit charge, or a tier band.
+fn meter_bills(priced: Option<&Value>, meter: &str) -> bool {
+    let per_unit = charges(priced).into_iter().any(|charge| {
+        charge.per == ChargePer::Unit
+            && charge.meter.as_deref() == Some(meter)
+            && is_strictly_positive(charge.amount_minor)
+    });
+    per_unit
+        || tier_bands(priced, Some(meter))
+            .into_iter()
+            .any(|band| is_strictly_positive(band.charge.amount_minor))
+}
+
+/// The first limit on `meter` with a numeric cap: `(cap, onExceed)`.
+/// `onExceed` is empty when the option does not carry a string.
+fn limit_for_meter(priced: Option<&Value>, meter: &str) -> Option<(f64, String)> {
+    for option in options_of(priced) {
+        if option.get("kind").and_then(Value::as_str) != Some("limit")
+            || option.get("meter").and_then(Value::as_str) != Some(meter)
+        {
+            continue;
+        }
+        let Some(cap) = option.get("cap").and_then(Value::as_f64) else {
+            continue;
+        };
+        let on_exceed = option
+            .get("onExceed")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        return Some((cap, on_exceed));
+    }
+    None
+}
+
+/// The meters a recurring plan pays from prepaid credits.
+///
+/// Mirrors `creditDrawnMeters` in the platform pricing derive module: a meter
+/// counts when the plan is recurring, the meter bills at a positive rate, and
+/// it has no limit or a capped `draw_credits` limit. Empty for a
+/// non-recurring plan.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 66,
+    ts_param_types = "priced:PricedLike | null | undefined"
+)]
+pub fn credit_drawn_meters(priced: Option<&Value>) -> Vec<String> {
+    if billing_cycle(priced).is_none() {
+        return Vec::new();
+    }
+    meter_keys(priced)
+        .into_iter()
+        .filter(|meter| {
+            if !meter_bills(priced, meter) {
+                return false;
+            }
+            match limit_for_meter(priced, meter) {
+                None => true,
+                Some((cap, on_exceed)) => on_exceed == "draw_credits" && is_strictly_positive(cap),
+            }
+        })
+        .collect()
+}
+
 /// Return the first matching limit option, optionally filtered by meter name.
 #[allow(clippy::cast_possible_truncation)]
 fn first_limit(priced: Option<&Value>, meter: Option<&str>) -> Option<LimitCap> {
@@ -1176,6 +1273,78 @@ mod tests {
         assert_eq!(
             credits_per_unit_from_balance(Some(&two_meter_plan()), Some(&usd_balance()), None),
             Some(200)
+        );
+    }
+
+    fn credit_cycle() -> Value {
+        json!({ "kind": "billingCycle", "interval": "month" })
+    }
+
+    fn credit_flat() -> Value {
+        json!({ "kind": "charge", "per": "flat", "amountMinor": 1900, "currency": "usd" })
+    }
+
+    fn credit_requests(amount_minor: i64) -> Value {
+        json!({ "kind": "charge", "per": "unit", "amountMinor": amount_minor, "currency": "usd", "meter": "requests" })
+    }
+
+    #[test]
+    fn credit_drawn_includes_capped_draw_credits_meter() {
+        let plan = json!({ "options": [
+            credit_cycle(), credit_flat(), credit_requests(2),
+            { "kind": "limit", "cap": 10, "scope": "billing_period", "meter": "requests", "onExceed": "draw_credits" }
+        ]});
+        assert_eq!(
+            credit_drawn_meters(Some(&plan)),
+            vec!["requests".to_owned()]
+        );
+    }
+
+    #[test]
+    fn credit_drawn_includes_billing_meter_without_limit() {
+        let plan = json!({ "options": [credit_cycle(), credit_flat(), credit_requests(2)] });
+        assert_eq!(
+            credit_drawn_meters(Some(&plan)),
+            vec!["requests".to_owned()]
+        );
+    }
+
+    #[test]
+    fn credit_drawn_skips_block_limit_and_zero_cap() {
+        let blocked = json!({ "options": [
+            credit_cycle(), credit_requests(2),
+            { "kind": "limit", "cap": 10, "meter": "requests", "onExceed": "block" }
+        ]});
+        assert!(credit_drawn_meters(Some(&blocked)).is_empty());
+        let zero_cap = json!({ "options": [
+            credit_cycle(), credit_requests(2),
+            { "kind": "limit", "cap": 0, "meter": "requests", "onExceed": "draw_credits" }
+        ]});
+        assert!(credit_drawn_meters(Some(&zero_cap)).is_empty());
+    }
+
+    #[test]
+    fn credit_drawn_empty_when_not_recurring_or_not_billing() {
+        let payg = json!({ "options": [credit_requests(2)] });
+        assert!(credit_drawn_meters(Some(&payg)).is_empty());
+        let zero_rate = json!({ "options": [credit_cycle(), credit_requests(0)] });
+        assert!(credit_drawn_meters(Some(&zero_rate)).is_empty());
+        let flat_only = json!({ "options": [credit_cycle(), credit_flat()] });
+        assert!(credit_drawn_meters(Some(&flat_only)).is_empty());
+        assert!(credit_drawn_meters(None).is_empty());
+    }
+
+    #[test]
+    fn credit_drawn_counts_tiered_meters_in_first_seen_order() {
+        let plan = json!({ "options": [
+            credit_cycle(),
+            { "kind": "tier", "from": 0, "to": null, "mode": "graduated",
+              "charge": { "per": "unit", "amountMinor": 3, "currency": "usd", "meter": "tokens" } },
+            credit_requests(2)
+        ]});
+        assert_eq!(
+            credit_drawn_meters(Some(&plan)),
+            vec!["tokens".to_owned(), "requests".to_owned()]
         );
     }
 }

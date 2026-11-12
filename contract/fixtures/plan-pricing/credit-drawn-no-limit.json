@@ -1,0 +1,35 @@
+{
+  "suite": "plan-pricing",
+  "case": "credit-drawn-no-limit",
+  "input": {
+    "fn": "creditDrawnMeters",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 1900,
+            "currency": "usd"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      "requests"
+    ]
+  }
+}

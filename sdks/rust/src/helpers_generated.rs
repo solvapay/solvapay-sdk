@@ -151,6 +151,13 @@ pub use solvapay_core::paywall_state::classify_paywall_state;
 /// Whether the plan has a usage counter even without a per-unit rate.
 pub use solvapay_core::pricing_options::counts_usage;
 
+/// List the meters a recurring plan pays from prepaid credits.
+///
+/// # Returns
+///
+/// Meter names that bill and have no limit or a capped draw_credits limit; empty for a non-recurring plan.
+pub use solvapay_core::pricing_options::credit_drawn_meters;
+
 /// Coalesce credit-balance channels and derive shortfall and remaining-call counts.
 ///
 /// # Arguments

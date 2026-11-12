@@ -224,6 +224,18 @@ func CountsUsage(ctx context.Context, priced any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_counts_usage_binding", string(payload))
 }
 
+// CreditDrawnMeters list the meters a recurring plan pays from prepaid credits.
+// Returns Meter names that bill and have no limit or a capped draw_credits limit; empty for a non-recurring plan.
+func CreditDrawnMeters(ctx context.Context, priced any) (any, error) {
+	payload, err := json.Marshal(map[string]any{
+		"priced": priced,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nativecall.CallSync(ctx, "sv_credit_drawn_meters_binding", string(payload))
+}
+
 // CreditSignals coalesce credit-balance channels and derive shortfall and remaining-call counts.
 // The limits parameter is Limits response, or null/absent when no check has run.
 // Returns Credit signals including isCreditBased and optional shortfall fields.

@@ -382,7 +382,8 @@ mod tests {
 
     #[test]
     fn measured_used_wins_and_serializes_whole() {
-        let limits = json!({ "remaining": 3800, "meterName": "requests", "used": 6200, "limit": 10000 });
+        let limits =
+            json!({ "remaining": 3800, "meterName": "requests", "used": 6200, "limit": 10000 });
         let snap = project_usage_snapshot(None, Some(&limits));
         assert_eq!(snap.used, Some(6200.0));
         assert_eq!(snap.percent_used, Some(62.0));

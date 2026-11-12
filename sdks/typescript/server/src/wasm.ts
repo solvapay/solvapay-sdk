@@ -164,6 +164,7 @@ export type WasmSyncMethod =
   | 'resolveDisplayMode'
   | 'planConsequence'
   | 'formatCompactCredits'
+  | 'creditDrawnMeters'
   | 'extractBearerToken'
   | 'decodeJwtPayloadUnverified'
   | 'customerRefFromClaims'

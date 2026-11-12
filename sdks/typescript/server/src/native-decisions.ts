@@ -96,6 +96,7 @@ export {
   perUnitCharge,
   tierBands,
   tierMeters,
+  creditDrawnMeters,
   usageRate,
   billingCycle,
   trialDays,

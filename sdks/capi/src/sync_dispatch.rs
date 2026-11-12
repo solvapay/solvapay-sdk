@@ -20,26 +20,27 @@ use solvapay_core::{
     business_country_options_table, charges, classify_cancel_error, classify_create_error,
     classify_customer_ref, classify_lookup_error, classify_paywall_state,
     classify_reactivate_error, coerce_customer_options, compile_string_field_input_schema_json,
-    country_to_tax_id_type, counts_usage, credit_signals, credits_per_unit_from_balance,
-    credits_to_display_minor_units, customer_ref_from_claims, decide_paywall_outcome,
-    decode_jwt_payload_unverified, default_mcp_bearer_expectations, derive_active_products,
-    derive_default_view, derive_icons, derive_tax_id_type, ensure_customer_next,
-    ensure_output_schema_object_type, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_claimed_limits, evaluate_fresh_limits, evaluate_product_readiness,
-    extract_backend_customer_ref, extract_bearer_token, format_compact_credits, format_price,
-    format_subtotal_label, format_vat_summary_label, free_limits_agree, free_meter_name_pattern,
-    free_tool_description_suffix, gate_next, get_business_country_options,
-    get_customer_address_field_errors, get_history_next, get_postal_code_field_label,
-    get_postal_code_placeholder, get_seller_tax_identifier_display_label, get_state_field_label,
-    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, headline_charges,
-    history_rows, included_units, invoke_payable_next, is_cached_customer_ref_valid,
-    is_customer_address_complete, is_email_conflict, is_error_result, is_postal_code_required,
-    is_state_required, is_tax_id_type, is_unlimited_remaining, is_zero_decimal_currency,
-    link_label, make_response_result, map_route_error, mcp_tool_names_json, mcp_view_maps,
-    meter_name, minor_units_per_major, next_action_for, normalize_cancel_response,
-    normalize_free_limit, normalize_reactivate_response, overlay_claimed_limits,
-    paywall_client_payload, paywall_structured_content_schema, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
+    country_to_tax_id_type, counts_usage, credit_drawn_meters, credit_signals,
+    credits_per_unit_from_balance, credits_to_display_minor_units, customer_ref_from_claims,
+    decide_paywall_outcome, decode_jwt_payload_unverified, default_mcp_bearer_expectations,
+    derive_active_products, derive_default_view, derive_icons, derive_tax_id_type,
+    ensure_customer_next, ensure_output_schema_object_type, evaluate_balance_observation,
+    evaluate_cached_limits, evaluate_claimed_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, extract_bearer_token,
+    format_compact_credits, format_price, format_subtotal_label, format_vat_summary_label,
+    free_limits_agree, free_meter_name_pattern, free_tool_description_suffix, gate_next,
+    get_business_country_options, get_customer_address_field_errors, get_history_next,
+    get_postal_code_field_label, get_postal_code_placeholder,
+    get_seller_tax_identifier_display_label, get_state_field_label, get_tax_id_example,
+    get_tax_id_field_label, get_tax_id_helper_text, headline_charges, history_rows, included_units,
+    invoke_payable_next, is_cached_customer_ref_valid, is_customer_address_complete,
+    is_email_conflict, is_error_result, is_postal_code_required, is_state_required, is_tax_id_type,
+    is_unlimited_remaining, is_zero_decimal_currency, link_label, make_response_result,
+    map_route_error, mcp_tool_names_json, mcp_view_maps, meter_name, minor_units_per_major,
+    next_action_for, normalize_cancel_response, normalize_free_limit,
+    normalize_reactivate_response, overlay_claimed_limits, paywall_client_payload,
+    paywall_structured_content_schema, paywall_tool_result, pegged_credits_per_unit,
+    per_unit_charge, plan_consequence, plan_ladder, plan_pricing_shape,
     postal_code_required_countries, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, purchase_usage_is_metered, require_product_ref, resolve_account_state,
     resolve_authenticated_user, resolve_buyer_country, resolve_check_limits_params,
@@ -160,6 +161,7 @@ const HELPER_OPS: &[&str] = &[
     "coerceCustomerOptions",
     "compileStringFieldInputSchemaJson",
     "countsUsage",
+    "creditDrawnMeters",
     "creditSignals",
     "creditsPerUnitFromBalance",
     "creditsToDisplayMinorUnits",
@@ -526,6 +528,11 @@ fn dispatch_helper(op: &str, args_json: &str) -> Result<Value, SdkError> {
             let args = args_map(args_json)?;
             let priced = optional_value(&args, "priced");
             Ok(Value::Bool(counts_usage(priced.as_ref())))
+        }
+        "creditDrawnMeters" => {
+            let args = args_map(args_json)?;
+            let priced = optional_value(&args, "priced");
+            to_value(&credit_drawn_meters(priced.as_ref()))
         }
         "creditSignals" => {
             let args = args_map(args_json)?;

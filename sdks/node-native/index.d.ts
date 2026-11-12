@@ -199,6 +199,9 @@ export declare function COUNTRY_TO_TAX_ID_TYPE(argsJson: string): string
 /** Binding for `countsUsage`. */
 export declare function countsUsage(argsJson: string): string
 
+/** Binding for `creditDrawnMeters`. */
+export declare function creditDrawnMeters(argsJson: string): string
+
 /** Binding for `creditSignals`. */
 export declare function creditSignals(argsJson: string): string
 

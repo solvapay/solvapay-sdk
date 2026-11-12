@@ -152,6 +152,7 @@ SyncMethod = Literal[
     "resolve_display_mode",
     "plan_consequence",
     "format_compact_credits",
+    "credit_drawn_meters",
     "extract_bearer_token",
     "decode_jwt_payload_unverified",
     "customer_ref_from_claims",

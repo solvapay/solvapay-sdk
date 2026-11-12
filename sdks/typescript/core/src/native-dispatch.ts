@@ -110,6 +110,7 @@ export type NativeCoreSyncMethod =
   | 'perUnitCharge'
   | 'tierBands'
   | 'tierMeters'
+  | 'creditDrawnMeters'
   | 'usageRate'
   | 'billingCycle'
   | 'trialDays'

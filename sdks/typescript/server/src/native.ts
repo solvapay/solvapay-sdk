@@ -171,6 +171,7 @@ export type NativeSyncMethod =
   | 'resolveDisplayMode'
   | 'planConsequence'
   | 'formatCompactCredits'
+  | 'creditDrawnMeters'
   | 'extractBearerToken'
   | 'decodeJwtPayloadUnverified'
   | 'customerRefFromClaims'

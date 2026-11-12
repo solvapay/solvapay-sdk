@@ -61,6 +61,7 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - added symbol `createPlan`
 - added symbol `createProduct`
 - added symbol `createTopupPaymentIntent`
+- added symbol `creditDrawnMeters`
 - added symbol `creditSignals`
 - added symbol `creditsPerUnitFromBalance`
 - added symbol `creditsToDisplayMinorUnits`
@@ -821,6 +822,15 @@ Core surface: added symbol `BALANCE_RECONCILE_DELAYS_MS`, added symbol `BUSINESS
 - exposed `createTopupPaymentIntent` on facade `rust`
 - exposed `createTopupPaymentIntent` on facade `typescript`
 - exposed `createTopupPaymentIntent` on facade `wasm-edge`
+- exposed `creditDrawnMeters` on facade `capi`
+- exposed `creditDrawnMeters` on facade `go`
+- exposed `creditDrawnMeters` on facade `node-native`
+- exposed `creditDrawnMeters` on facade `python`
+- exposed `creditDrawnMeters` on facade `ruby`
+- exposed `creditDrawnMeters` on facade `rust`
+- exposed `creditDrawnMeters` on facade `typescript`
+- exposed `creditDrawnMeters` on facade `wasm-browser`
+- exposed `creditDrawnMeters` on facade `wasm-edge`
 - exposed `creditSignals` on facade `capi`
 - exposed `creditSignals` on facade `go`
 - exposed `creditSignals` on facade `node-native`

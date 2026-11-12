@@ -1,0 +1,42 @@
+{
+  "suite": "plan-pricing",
+  "case": "credit-drawn-tiered-first-seen-order",
+  "input": {
+    "fn": "creditDrawnMeters",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 3,
+              "currency": "usd",
+              "meter": "tokens"
+            }
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "usd",
+            "meter": "requests"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      "tokens",
+      "requests"
+    ]
+  }
+}

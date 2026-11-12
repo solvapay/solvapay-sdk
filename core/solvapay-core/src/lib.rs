@@ -174,10 +174,10 @@ pub use paywall_state::{
 };
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{
-    billing_cycle, charges, counts_usage, credits_per_unit_from_balance, headline_charges,
-    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, plan_pricing_shape,
-    tier_bands, tier_meters, trial_days, usage_rate, BillingCycle, BillingInterval, Charge,
-    ChargePer, PlanPricingShape, PricingShape, Tier, TierMode, UsageRate,
+    billing_cycle, charges, counts_usage, credit_drawn_meters, credits_per_unit_from_balance,
+    headline_charges, included_units, meter_name, pegged_credits_per_unit, per_unit_charge,
+    plan_pricing_shape, tier_bands, tier_meters, trial_days, usage_rate, BillingCycle,
+    BillingInterval, Charge, ChargePer, PlanPricingShape, PricingShape, Tier, TierMode, UsageRate,
 };
 pub use product::validate_get_product_params;
 pub use product_readiness::{

@@ -12514,6 +12514,31 @@
         }
       }
     },
+    "solvapay_core::pricing_options::credit_drawn_meters": {
+      "name": "credit_drawn_meters",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The meters a recurring plan pays from prepaid credits.\n\nMirrors `creditDrawnMeters` in the platform pricing derive module: a meter\ncounts when the plan is recurring, the meter bills at a positive rate, and\nit has no limit or a capped `draw_credits` limit. Empty for a\nnon-recurring plan.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
+        }
+      }
+    },
     "solvapay_core::pricing_options::credits_per_unit_from_balance": {
       "name": "credits_per_unit_from_balance",
       "module": "pricing_options",

@@ -4296,6 +4296,27 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+  creditDrawnMeters:
+    names:
+      ts: creditDrawnMeters
+      py: credit_drawn_meters
+      rb: credit_drawn_meters
+      go: CreditDrawnMeters
+      rust: credit_drawn_meters
+      c: creditDrawnMeters
+    params: []
+    docs:
+      summary: 'List the meters a recurring plan pays from prepaid credits.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter names that bill and have no limit or a capped draw_credits limit; empty for a non-recurring plan.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   usageRate:
     names:
       ts: usageRate

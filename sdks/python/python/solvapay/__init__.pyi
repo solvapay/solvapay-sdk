@@ -661,6 +661,12 @@ def counts_usage(priced: object | None = None) -> bool:
     @returns Whether the plan has a usage counter even without a per-unit rate.
     """
     ...
+def credit_drawn_meters(priced: object | None = None) -> list[str]:
+    """List the meters a recurring plan pays from prepaid credits.
+    @returns Meter names that bill and have no limit or a capped draw_credits limit; empty for a
+    non-recurring plan.
+    """
+    ...
 def credit_signals(limits: object | None = None) -> object:
     """Coalesce credit-balance channels and derive shortfall and remaining-call counts.
     @param limits Limits response, or null/absent when no check has run.

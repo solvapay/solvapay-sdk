@@ -191,6 +191,7 @@ const _: fn(Option<&str>) -> Option<HelperErrorResult> =
 const _: fn(Option<&Value>) -> Option<BillingCycle> = solvapay_core::pricing_options::billing_cycle;
 const _: fn(Option<&Value>) -> Vec<Charge> = solvapay_core::pricing_options::charges;
 const _: fn(Option<&Value>) -> bool = solvapay_core::pricing_options::counts_usage;
+const _: fn(Option<&Value>) -> Vec<String> = solvapay_core::pricing_options::credit_drawn_meters;
 const _: fn(Option<&Value>, Option<&Value>, Option<&str>) -> Option<i64> =
     solvapay_core::pricing_options::credits_per_unit_from_balance;
 const _: fn(Option<&Value>) -> Vec<Charge> = solvapay_core::pricing_options::headline_charges;
