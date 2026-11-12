@@ -272,7 +272,9 @@ export const SURFACES: readonly Surface[] = [
         'python-mcp.prepare',
         'Python MCP prepare',
         'uv',
-        ['sync', '--extra', 'dev'],
+        // `solvapay` is a path dependency built once and cached by uv. Reinstall
+        // it so the suite runs against the Rust core as it is now.
+        ['sync', '--extra', 'dev', '--reinstall-package', 'solvapay'],
         pythonMcpCwd,
         pythonRequires,
       ),

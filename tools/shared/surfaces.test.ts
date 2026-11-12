@@ -45,7 +45,13 @@ describe('surfaces registry', () => {
     expect(ids).not.toContain('ruby-mcp.compile')
     const pythonMcp = SURFACES.find(surface => surface.id === 'python-mcp')
     expect(pythonMcp?.livePrepare).toBe(false)
-    expect(pythonMcp?.prepare?.[0]?.args).toEqual(['sync', '--extra', 'dev'])
+    expect(pythonMcp?.prepare?.[0]?.args).toEqual([
+      'sync',
+      '--extra',
+      'dev',
+      '--reinstall-package',
+      'solvapay',
+    ])
   })
 
   it('should fall back to build when a native surface has no prepare', () => {

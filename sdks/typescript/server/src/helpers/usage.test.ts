@@ -58,7 +58,7 @@ describe('getUsageCore', () => {
     expect(result).toEqual({
       meterRef: null,
       total: null,
-      used: 0,
+      used: null,
       remaining: null,
       percentUsed: null,
     })
@@ -156,6 +156,8 @@ describe('getUsageCore', () => {
           status: 'active',
           productRef: 'prd_1',
           planSnapshot: { isMetered: false },
+          // A backend that still emits the retired counter must not turn
+          // "unmeasured" into 2.
           usage: { used: 2 },
         },
       ],
@@ -167,7 +169,7 @@ describe('getUsageCore', () => {
     expect(result).toMatchObject({
       meterRef: null,
       total: null,
-      used: 2,
+      used: null,
       remaining: null,
       percentUsed: null,
       purchaseRef: 'pur_1',
