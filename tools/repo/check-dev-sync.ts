@@ -51,7 +51,15 @@ const INTERNAL_PACKAGES = new Set(['demo-services', 'test-utils', 'tsconfig'])
  * Dev paths this branch removed on purpose. They must not surface as drops:
  * the replacement lives somewhere `rewriteDevPath` cannot point at.
  */
-const DELIBERATELY_DELETED = new Set(['examples/cloudflare-workers-mcp/scripts/preflight-dev.mjs'])
+const DELIBERATELY_DELETED = new Set([
+  'examples/cloudflare-workers-mcp/scripts/preflight-dev.mjs',
+  // The MCP checkout wrapper lives in the Rust transport (`mcp_bootstrap`,
+  // `mcp_call_builtin_tool`), which never sends a `returnUrl`.
+  'packages/mcp-core/src/hosted-checkout.ts',
+  // Scaffold pins come from the release train (`checks:template-pins`),
+  // not from a script that copies npm's `latest` into the template.
+  'packages/create-solvapay/scripts/sync-sdk-pins.mjs',
+])
 
 /**
  * Dev hunks ported with an intentional rewrite. They must not surface as
@@ -60,10 +68,16 @@ const DELIBERATELY_DELETED = new Set(['examples/cloudflare-workers-mcp/scripts/p
  * - `packages/init/src/env.ts` — non-TTY overwrite throws; dev calls `process.exit`.
  * - `packages/init/src/run-init.test.ts` — tests assert `{ cwd, yes }` rather than
  *   a `confirmOverwrite` closure.
+ * - `packages/create-solvapay/package.json`, `src/types/mcp/from-openapi.ts` —
+ *   strict registry resolution and `--offline` live in the multi-language
+ *   resolver (`tools/init/src/language/versions.ts`); there is no
+ *   `sync:sdk-pins` script and no `resolveSolvapayVersions` export.
  */
 const ACCEPTED_REWRITES = new Set([
   '4f5a484721b8:packages/init/src/env.ts',
   '4f5a484721b8:packages/init/src/run-init.test.ts',
+  '6f8eb1e20b37:packages/create-solvapay/package.json',
+  '6f8eb1e20b37:packages/create-solvapay/src/types/mcp/from-openapi.ts',
 ])
 
 export function isAcceptedRewrite(commit: string, devPath: string): boolean {

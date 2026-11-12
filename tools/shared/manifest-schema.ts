@@ -530,6 +530,7 @@ export const SHIM_JS_NAMES = [
   'perUnitCharge',
   'tierBands',
   'tierMeters',
+  'creditDrawnMeters',
   'usageRate',
   'billingCycle',
   'trialDays',
