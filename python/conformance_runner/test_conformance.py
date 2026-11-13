@@ -237,7 +237,7 @@ def _server_for(args: dict[str, Any]) -> Any:
             api_base_url=CONFORMANCE_API,
             product_ref=args["productRef"],
         ),
-        public_base_url=CONFORMANCE_PUBLIC_URL,
+        public_base_url=args.get("publicBaseUrl", CONFORMANCE_PUBLIC_URL),
         resource_uri=RESOURCE_URI,
         get_customer_ref=lambda _args, _context: customer,
         views=args.get("views"),
