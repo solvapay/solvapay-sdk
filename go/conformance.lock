@@ -1,0 +1,29 @@
+{
+  "comment": "Written by go run ./cmd/pin. Do not edit.",
+  "cases": {
+    "webhook-verification/empty-v1.json": "sha256:e1bdd8176eb595fb2ba4c466a56f816d17331c38a5da570e5ba9582c1ccaa638",
+    "webhook-verification/extra-parts-and-spaces.json": "sha256:5378e08509b13f4ee59673b843fe55df56de7a5d6556081e2681337e1271b244",
+    "webhook-verification/first-v1-is-used.json": "sha256:57ade475d40afe4d54a7070c79930353e136986fbb99abc7ba0323524a79b952",
+    "webhook-verification/missing-signature.json": "sha256:38767e53e43424d4434a7b24bfa0289b782a8f34ad63ba59a03fe0bed7e19774",
+    "webhook-verification/missing-timestamp.json": "sha256:754b9b0b1954ec2f7d58065442edc828b3fa886f15d2fef500b3f1162f518c25",
+    "webhook-verification/missing-v1.json": "sha256:a2252f502df14cc431e867fe3c1283d330a6375f66c016bdc678b905d7b7848d",
+    "webhook-verification/not-a-signature-header.json": "sha256:1926e2ab7aee66d2303d3adfa8684bc15ce13340e57962224e12d68b3ad85b33",
+    "webhook-verification/parts-in-any-order.json": "sha256:6670cfa6d9ae589389138e44b5999879033b1c14f160cd71c02ab95da002745f",
+    "webhook-verification/secret-without-prefix.json": "sha256:1f5cce98d661a20fd5b4a7b7521610807b118304a403d5f98bd6305f90a2dbf2",
+    "webhook-verification/signed-body-not-json.json": "sha256:e35f34ed7652d15a47023584144dcb1ec4bed93f65e6d89d94590de33aa06515",
+    "webhook-verification/tampered-body.json": "sha256:93cc2d89c5f366781be272f521e5fcf50bbaa2733866bb3dcf9634c7c740f8f5",
+    "webhook-verification/tampered-timestamp.json": "sha256:3ff105624e8879af74449f28a966053c64e36b6efecbe9a58105846f79ee8d64",
+    "webhook-verification/timestamp-not-a-number.json": "sha256:87af4f8ab0911429ca2286d8b619187566585793fba5c1b8a60024b28f53057b",
+    "webhook-verification/timestamp-too-far-ahead.json": "sha256:d3c1c201146771c0f6cb3541a642e0656f60524a8ee5f7a5c0843ba05069df40",
+    "webhook-verification/timestamp-too-old.json": "sha256:16ba2e0e6175639d14a52510d8e71c4ce8bf4fbb1d93dd412efd7df80a6d8499",
+    "webhook-verification/trailing-newline-matters.json": "sha256:b6803aa5eeeda2fa1e7c31c775787f03782975f03eb840563bd1216bca5d2881",
+    "webhook-verification/trailing-newline-stripped.json": "sha256:22d2f1feb004dee06a2d81fd8e90ad1ede04f225a4d119d4b092bb65bfef8424",
+    "webhook-verification/truncated-signature.json": "sha256:c2dff75afb1412003c5dc3527cc22e7bf418f0dbc4899a2db1cf027dd2aef49c",
+    "webhook-verification/unicode-body.json": "sha256:a0df44031d42de9790af9ef8c44354359da55b44a850f699578d00c36c4f480c",
+    "webhook-verification/uppercase-hex.json": "sha256:fc4892c3e9164b13e83a9dd5b61283bd7e1f58f7dcc9546b5b28e39078f4f430",
+    "webhook-verification/valid-at-tolerance-future.json": "sha256:fc2eea51fd4fd9438bc4ee904a79bf2b6151e235ffaa6583bd0b6beba93b1906",
+    "webhook-verification/valid-at-tolerance-past.json": "sha256:154e1f1225e868e87c10413a34cd9f6ba9414444c43d901d8f36621e9a148b69",
+    "webhook-verification/valid-signature.json": "sha256:253440bbfea96b4493071b0a59c618349130356f66f48ed6c1ef9b272d856638",
+    "webhook-verification/wrong-secret.json": "sha256:a30573b34f9ef8a15ebff887b7dc2d7b0e14c07b6d388a5838f077cb7c3b1ff0"
+  }
+}
