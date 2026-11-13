@@ -441,7 +441,15 @@ func (s *MCPServer) logDCRFailure(status int, body string) {
 // plus the OAuth discovery documents and endpoints. A path nothing serves is
 // a 404 not_found.
 func (s *MCPServer) Handler() http.Handler {
-	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s.server }, &mcp.StreamableHTTPOptions{Logger: s.logger})
+	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s.server }, &mcp.StreamableHTTPOptions{
+		Logger: s.logger,
+		// The MCP SDK refuses a request that arrives on a loopback address with
+		// a public Host, against DNS rebinding of unauthenticated local servers.
+		// That is every request behind a tunnel or proxy on the same machine
+		// (ngrok, cloudflared, nginx). This endpoint answers nothing without a
+		// token SolvaPay verified, so it serves them, as TypeScript and Python do.
+		DisableLocalhostProtection: true,
+	})
 	verified := auth.RequireBearerToken(func(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {
 		info, err := s.verifier.verify(ctx, token)
 		if err != nil {
