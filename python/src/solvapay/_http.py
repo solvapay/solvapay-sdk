@@ -70,10 +70,11 @@ def _error_from_response(response: httpx.Response) -> SolvaPayError:
     message: Any = body.get("message") if isinstance(body, dict) else None
     if isinstance(message, list):
         message = "; ".join(str(part) for part in message)
+    # Only a non-empty string is the API's own code, as in the TypeScript SDK.
     code = body.get("code") if isinstance(body, dict) else None
     return SolvaPayError(
         str(message or f"The SolvaPay API answered {status}"),
-        code=str(code) if code else f"http_{status}",
+        code=code if isinstance(code, str) and code else f"http_{status}",
         status=status,
         body=body,
     )

@@ -96,6 +96,46 @@ def tool_outcome(result: CallToolResult, *, whole_json_only: bool = False) -> di
     return outcome
 
 
+# ---- API error messages in tool errors (cases ``transport-tools/errors-*``) ----
+#
+# A tool error's text that is an API error answer's message compares as
+# ``<api message>``: Python writes the API's own message, TypeScript
+# ``"<Operation> failed (<status>): <body>"`` (see Known divergences). The status
+# and the SDK's own sentences still compare.
+
+API_MESSAGE = "<api message>"
+
+
+def _api_message(exchange: dict[str, Any]) -> str:
+    """The message ``SolvaPayError`` carries for this answer (``_http._error_from_response``)."""
+    body = exchange["body"]
+    message = body.get("message") if isinstance(body, dict) else None
+    if isinstance(message, list):
+        message = "; ".join(str(part) for part in message)
+    return str(message or f"The SolvaPay API answered {exchange.get('status', 200)}")
+
+
+def without_api_messages(outcome: dict[str, Any], api: list[dict[str, Any]]) -> dict[str, Any]:
+    if outcome.get("isError") is not True:
+        return outcome
+    messages = {_api_message(e) for e in api if e.get("status", 200) >= 400}
+
+    def replace(value: Any) -> Any:
+        if isinstance(value, str):
+            return API_MESSAGE if value in messages else value
+        if isinstance(value, list):
+            return [replace(v) for v in value]
+        if isinstance(value, dict):
+            return {k: replace(v) for k, v in value.items()}
+        return value
+
+    replaced: dict[str, Any] = replace(outcome)
+    return replaced
+
+
+# ---- end API error messages ----
+
+
 async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
     customer = args.get("customerRef")
     mcp = create_solvapay_mcp_server(
@@ -126,7 +166,7 @@ async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
             ).mock(side_effect=responses)
         result = await mcp.server.call_tool(args["tool"], args.get("arguments", {}))
     assert isinstance(result, CallToolResult)
-    return tool_outcome(result)
+    return without_api_messages(tool_outcome(result), args.get("api", []))
 
 
 OPERATIONS: dict[str, Operation] = {
@@ -579,7 +619,8 @@ async def run_scenario(
         raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
 
     outcomes = []
-    with respx.mock(assert_all_mocked=True) as router:
+    # Each step checks its own exchanges were used; a scenario may make no call at all.
+    with respx.mock(assert_all_mocked=True, assert_all_called=False) as router:
         router.route(host=CONFORMANCE_API.removeprefix("https://")).mock(side_effect=answer)
         for index, step in enumerate(data["steps"]):
             clock.now = datetime.fromisoformat(step["clock"].replace("Z", "+00:00"))
