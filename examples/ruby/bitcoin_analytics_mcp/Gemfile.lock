@@ -1,0 +1,42 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    bigdecimal (4.1.3)
+    hana (1.3.7)
+    json_schemer (2.5.0)
+      bigdecimal
+      hana (~> 1.3)
+      regexp_parser (~> 2.0)
+      simpleidn (~> 0.2)
+    mcp (1.10.0)
+      json_schemer (>= 2.4)
+    nio4r (2.7.5)
+    puma (8.0.3)
+      nio4r (~> 2.0)
+    regexp_parser (2.13.1)
+    simpleidn (0.3.0)
+
+PLATFORMS
+  aarch64-linux
+  arm64-darwin
+  ruby
+  x86_64-darwin
+  x86_64-linux
+
+DEPENDENCIES
+  mcp (~> 1.3)
+  puma (~> 8.0)
+
+CHECKSUMS
+  bigdecimal (4.1.3) sha256=61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66
+  bundler (4.0.18) sha256=02d9a17429de1847b4e0c9f27a9ee4b20c0a74c0a641b4e77195d6019e3618ac
+  hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
+  json_schemer (2.5.0) sha256=2f01fb4cce721a4e08dd068fc2030cffd0702a7f333f1ea2be6e8991f00ae396
+  mcp (1.10.0) sha256=0ced6143750f865330fdf3e37fc82309a9bcb175d8e9ed435c89599967d35e60
+  nio4r (2.7.5) sha256=6c90168e48fb5f8e768419c93abb94ba2b892a1d0602cb06eef16d8b7df1dca1
+  puma (8.0.3) sha256=6383a60bbc3d9495b2e453d93e60cefa817f7e854a302a5013f31fd9f514a5f3
+  regexp_parser (2.13.1) sha256=5aedb6b7c35688f51e86eef17a15374dfd287c83f4ca644b2c5f3ec50a33b44b
+  simpleidn (0.3.0) sha256=12ca730bed2f3db04d11e9bfd1bca3e11fb37f55b21eb2e9793fb5814bf54d03
+
+BUNDLED WITH
+  4.0.18

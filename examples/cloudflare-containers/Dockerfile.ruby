@@ -20,7 +20,7 @@ WORKDIR /src/sdks/ruby-mcp
 RUN bundle install
 WORKDIR /src/examples/ruby/bitcoin_analytics_mcp
 COPY examples/ruby/bitcoin_analytics_mcp ./
-RUN gem install puma --no-document
+RUN bundle install
 
 FROM --platform=linux/amd64 ruby:3.3-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 \
@@ -34,4 +34,4 @@ ENV RUBYLIB=/src/sdks/ruby/lib:/src/sdks/ruby-mcp/lib
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=3030
 EXPOSE 3030
-CMD ["ruby", "main.rb", "--mode", "http"]
+CMD ["bundle", "exec", "ruby", "main.rb", "--mode", "http"]

@@ -1,0 +1,9 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+# The SolvaPay gems load from this checkout (`-I sdks/ruby/lib -I
+# sdks/ruby-mcp/lib`), so only their third-party dependencies are listed.
+# `mcp` matches the constraint in sdks/ruby-mcp/solvapay-mcp.gemspec.
+gem "mcp", "~> 1.3"
+gem "puma", "~> 8.0"

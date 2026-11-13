@@ -163,7 +163,8 @@ echo "MCP endpoint: ${MCP_PUBLIC_BASE_URL}/mcp"
 
 stop_mcp_example_on_port "${MCP_PORT}"
 
-ruby \
+bundle install --quiet
+bundle exec ruby \
   -I"${REPO_ROOT}/sdks/ruby/lib" \
   -I"${REPO_ROOT}/sdks/ruby-mcp/lib" \
   main.rb --mode http &

@@ -31,7 +31,8 @@ export MCP_PUBLIC_BASE_URL
 export MCP_SOURCE="${MCP_SOURCE:-live}"
 export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
-exec ruby \
+bundle install --quiet
+exec bundle exec ruby \
   -I"${REPO_ROOT}/sdks/ruby/lib" \
   -I"${REPO_ROOT}/sdks/ruby-mcp/lib" \
   main.rb --mode http

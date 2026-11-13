@@ -232,10 +232,13 @@ const EXAMPLES: Example[] = [
     id: 'ruby-bitcoin',
     label: 'Ruby bitcoin_analytics_mcp',
     cwd: ['ruby', 'bitcoin_analytics_mcp'],
-    // As `scripts/http.sh` runs it: plain ruby with the SDK load paths. Needs
-    // the `sdks/ruby-mcp` bundle installed and `gem install puma`.
-    command: 'ruby',
+    // As `scripts/http.sh` runs it: the example's own bundle (mcp, puma) with
+    // the SDK load paths from this checkout.
+    prepare: [{ command: 'bundle', args: ['install', '--quiet'] }],
+    command: 'bundle',
     args: [
+      'exec',
+      'ruby',
       `-I${path.join(sdkDir('ruby'), 'lib')}`,
       `-I${path.join(sdkDir('rubyMcp'), 'lib')}`,
       'main.rb',

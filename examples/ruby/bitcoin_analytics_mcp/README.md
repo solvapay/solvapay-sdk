@@ -145,8 +145,8 @@ ruby main.rb --mode demo --gate
 HTTP serve binds `127.0.0.1:3030` by default — the same reserved
 `mcpapp` origin as stock-research and weather-mcp
 (`https://appmcp.<your-subdomain>.ngrok.app` → `localhost:3030`). Only one of
-those examples can own the origin at a time. Requires Puma
-(`gem install puma`).
+those examples can own the origin at a time. The scripts install the
+example's bundle (`mcp`, `puma`) from its `Gemfile` before starting.
 
 ```bash
 # from repo root — copies the same .env keys as weather-mcp / stock-research

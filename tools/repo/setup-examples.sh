@@ -124,14 +124,15 @@ if [ -z "$have" ] || ! version_ge "$have" "$RUBY_MIN"; then
 fi
 if [ -n "$have" ] && version_ge "$have" "$RUBY_MIN"; then
   row "ruby" "ok" "$have ($(command -v ruby))"
-  if ruby -e 'require "puma"' >/dev/null 2>&1; then
-    row "puma gem" "ok" ""
+  RUBY_EXAMPLE="examples/ruby/bitcoin_analytics_mcp"
+  if (cd "$RUBY_EXAMPLE" && bundle check >/dev/null 2>&1); then
+    row "ruby example gems" "ok" "$RUBY_EXAMPLE/Gemfile"
   elif [ "$CHECK_ONLY" = 1 ]; then
-    row "puma gem" "missing" ""
-    miss "puma gem"
+    row "ruby example gems" "missing" "$RUBY_EXAMPLE/Gemfile"
+    miss "ruby example gems (bundle install in $RUBY_EXAMPLE)"
   else
-    gem install puma --no-document >/dev/null
-    row "puma gem" "installed" ""
+    (cd "$RUBY_EXAMPLE" && bundle install --quiet)
+    row "ruby example gems" "installed" "$RUBY_EXAMPLE/Gemfile"
   fi
 else
   row "ruby" "missing" "found ${have:-none}, need >= $RUBY_MIN"
