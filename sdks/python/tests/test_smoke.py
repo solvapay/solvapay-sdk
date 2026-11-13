@@ -72,7 +72,10 @@ class _MerchantHandler(BaseHTTPRequestHandler):
 @pytest.fixture()
 def mock_api() -> str:
     server = HTTPServer(("127.0.0.1", 0), _MerchantHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    # A short poll interval, so shutdown() below doesn't wait up to 0.5 s.
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+    )
     thread.start()
     host, port = server.server_address
     base = f"http://{host}:{port}"

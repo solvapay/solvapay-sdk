@@ -137,14 +137,18 @@ pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
     out.push_str("async def test_client_sync_matrix(name: str) -> None:\n");
     out.push_str("    pytest.importorskip('solvapay._solvapay')\n");
     out.push_str("    from solvapay._solvapay import SolvaPayClient\n\n");
-    out.push_str("    client = SolvaPayClient('sk_parity', 'http://127.0.0.1:1')\n");
-    out.push_str("    result = getattr(client, name)('{}')\n");
-    out.push_str("    assert inspect.isawaitable(result), name\n");
-    out.push_str("    if hasattr(result, 'cancel'):\n");
-    out.push_str("        result.cancel()\n");
-    out.push_str("    blocking = getattr(client, f'{name}_blocking')('{}')\n");
-    out.push_str("    assert isinstance(blocking, str), name\n");
-    out.push_str("    assert not inspect.isawaitable(blocking), name\n\n");
+    out.push_str("    from contract.stub_backend import StubBackend\n\n");
+    out.push_str("    # A 400 answers at once and is not retried. A closed port was retried twice,\n");
+    out.push_str("    # 500 ms apart, so each blocking call waited a second before failing.\n");
+    out.push_str("    with StubBackend(response_status=400, response_body={'message': 'parity'}) as stub:\n");
+    out.push_str("        client = SolvaPayClient('sk_parity', stub.base_url)\n");
+    out.push_str("        result = getattr(client, name)('{}')\n");
+    out.push_str("        assert inspect.isawaitable(result), name\n");
+    out.push_str("        if hasattr(result, 'cancel'):\n");
+    out.push_str("            result.cancel()\n");
+    out.push_str("        blocking = getattr(client, f'{name}_blocking')('{}')\n");
+    out.push_str("        assert isinstance(blocking, str), name\n");
+    out.push_str("        assert not inspect.isawaitable(blocking), name\n\n");
 
     out.push_str("def test_stub_cross_check() -> None:\n");
     out.push_str("    pytest.importorskip('solvapay._solvapay')\n");

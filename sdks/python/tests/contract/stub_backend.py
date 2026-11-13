@@ -131,7 +131,11 @@ class StubBackend:
                 return
 
         self._server = ThreadingHTTPServer((self.host, self.port), Handler)
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        # serve_forever polls for shutdown every poll_interval (0.5 s by default), and
+        # shutdown() waits for that poll: every test paid up to half a second to stop.
+        self._thread = threading.Thread(
+            target=self._server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+        )
         self._thread.start()
         return self
 
