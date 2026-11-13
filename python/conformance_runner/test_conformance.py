@@ -22,6 +22,7 @@ from typing import Any
 import httpx
 import pytest
 import respx
+from conformance_agent_mcp import AGENT_MCP_OPERATIONS  # suite agent-mcp
 from mcp.client.client import Client
 from mcp.types import CallToolResult, Implementation
 
@@ -418,6 +419,9 @@ OPERATIONS.update(
         "callPaidTool": lambda args, _clock: asyncio.run(_call_paid_tool(args)),
     }
 )
+
+# ---- suite agent-mcp: the MCP route agents call (conformance_agent_mcp.py) -----
+OPERATIONS.update(AGENT_MCP_OPERATIONS)
 
 
 # ---- scenarios ---------------------------------------------------------------

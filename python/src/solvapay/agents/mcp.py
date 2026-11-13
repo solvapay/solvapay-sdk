@@ -288,6 +288,17 @@ def _list_paid_tool(server: MCPServer, tool: PaidTool[Any], names: set[str]) -> 
 
 async def _serve(server: MCPServer, request: Request, body: bytes) -> Response:
     """Answers one MCP request (JSON, stateless) from ``server``, built for this request."""
+    if request.method != "POST":
+        # Stateless and JSON-only: no event stream to open (GET), no session to end
+        # (DELETE). The transport would otherwise hold a GET open forever.
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32000, "message": "Method not allowed."},
+            },
+            status_code=405,
+        )
     server.streamable_http_app(
         json_response=True,
         stateless_http=True,
