@@ -1,8 +1,9 @@
 package solvapay
 
 // Money and count formatting as the TypeScript SDK writes it with
-// Intl.NumberFormat('en-US'), and the credit-display helpers of
-// @solvapay/core (credit-display.ts). The currency prefixes and default
+// Intl.NumberFormat('en-US') and toLocaleString('en-US'), and the
+// credit-display helpers of @solvapay/core (credit-display.ts). Shared by the
+// paywall, narration and MCP code. The currency prefixes and default
 // fraction digits come from ICU through go/scripts/currencies.mjs.
 
 //go:generate node scripts/currencies.mjs
@@ -93,7 +94,8 @@ func groupThousands(whole string) string {
 	return b.String()
 }
 
-// formatCount is Intl.NumberFormat('en-US').format(Number(value)).
+// formatCount is Intl.NumberFormat('en-US').format(Number(value)), which is
+// also what Number(value).toLocaleString('en-US') writes.
 func formatCount(value any) string { return intlDecimal(jsNumber(value), 0, 3) }
 
 func isWellFormedCurrencyCode(code string) bool {
@@ -160,4 +162,32 @@ func formatCompactMoney(amountMinor, currency any) string {
 		}
 		at += i + 1
 	}
+}
+
+// FormatMinor writes an amount in minor units as the paywall copy does
+// (paywall-state.ts formatMinor): Intl.NumberFormat('en-US', { style:
+// 'currency' }) with exactly 0 fraction digits for a zero-decimal currency and
+// exactly 2 otherwise, and "<CODE> <amount>" for a code Intl rejects.
+func FormatMinor(amountMinor float64, currency string) string {
+	zero := IsZeroDecimalCurrency(currency)
+	major, digits := amountMinor/100, 2
+	if zero {
+		major, digits = amountMinor, 0
+	}
+	code := strings.ToUpper(currency)
+	if !isWellFormedCurrencyCode(code) {
+		if zero {
+			return code + " " + jsNumberString(jsRound(major))
+		}
+		return code + " " + jsToFixed(major, 2)
+	}
+	prefix, ok := intlCurrencyPrefix[code]
+	if !ok {
+		prefix = code + " "
+	}
+	amount := intlDecimal(major, digits, digits)
+	if strings.HasPrefix(amount, "-") {
+		return "-" + prefix + amount[1:]
+	}
+	return prefix + amount
 }

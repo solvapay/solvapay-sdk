@@ -456,7 +456,7 @@ func freeMeterName(freeLimit *FreeLimit) string {
 }
 
 func actionOf(limits map[string]any, usageType string) string {
-	if name := get(limits, "meterName"); truthy(name) {
+	if name := jsGet(limits, "meterName"); jsTruthy(name) {
 		return jsString(name)
 	}
 	return usageType
@@ -519,7 +519,7 @@ func (p *Paywall) Decide(ctx context.Context, params DecideParams) (Decision, er
 		// parallel callers than units shared one check): the limits we counted
 		// down from still say units remain. The gate says none do.
 		gateLimits := limits
-		if truthy(limits["withinLimits"]) {
+		if jsTruthy(limits["withinLimits"]) {
 			gateLimits = copyJSON(limits)
 			gateLimits["withinLimits"] = false
 			gateLimits["remaining"] = float64(0)
@@ -533,7 +533,7 @@ func (p *Paywall) Decide(ctx context.Context, params DecideParams) (Decision, er
 		}, nil
 	}
 	decision := Decision{Outcome: OutcomeAllow, CustomerRef: backendRef, RequestID: requestID, Limits: limits}
-	if truthy(get(limits, "overage")) {
+	if jsTruthy(jsGet(limits, "overage")) {
 		decision.Consequence = "overage"
 	}
 	return decision, nil

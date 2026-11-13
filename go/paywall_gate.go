@@ -16,11 +16,11 @@ func allPaidPlansArePayg(plans any) bool {
 	}
 	paid := 0
 	for _, p := range list {
-		if get(p, "requiresPayment") == false {
+		if jsGet(p, "requiresPayment") == false {
 			continue
 		}
 		paid++
-		if kind := get(p, "type"); kind != "usage-based" && kind != "hybrid" {
+		if kind := jsGet(p, "type"); kind != "usage-based" && kind != "hybrid" {
 			return false
 		}
 	}
@@ -29,48 +29,48 @@ func allPaidPlansArePayg(plans any) bool {
 
 func activePlan(limits map[string]any) any {
 	ref := activePlanRef(limits)
-	if isUndefined(ref) {
-		return undefined
+	if ref == jsUndefined {
+		return jsUndefined
 	}
-	plans, _ := coalesce(get(limits, "plans"), []any{}).([]any)
+	plans, _ := jsCoalesce(jsGet(limits, "plans"), []any{}).([]any)
 	for _, plan := range plans {
-		if jsStrictEqual(get(plan, "reference"), ref) {
+		if jsStrictEqual(jsGet(plan, "reference"), ref) {
 			return plan
 		}
 	}
-	return undefined
+	return jsUndefined
 }
 
 func includedUsage(limits map[string]any) map[string]any {
-	used, limit, remaining := get(limits, "used"), get(limits, "limit"), get(limits, "remaining")
-	if !isUndefined(used) && !isUndefined(limit) {
+	used, limit, remaining := jsGet(limits, "used"), jsGet(limits, "limit"), jsGet(limits, "remaining")
+	if used != jsUndefined && limit != jsUndefined {
 		out := jsObject{}
 		out.set("total", limit)
 		out.set("used", used)
 		out.set("remaining", remaining)
 		return out
 	}
-	total := get(activePlan(limits), "freeUnits")
-	if n, ok := asNumber(total); nullish(total) || (ok && n == 0) {
+	total := jsGet(activePlan(limits), "freeUnits")
+	if n, ok := jsNum(total); jsNullish(total) || (ok && n == 0) {
 		return nil
 	}
 	out := jsObject{}
 	out.set("total", total)
-	out.set("used", math.Max(0, number(total)-number(remaining)))
+	out.set("used", math.Max(0, jsNumber(total)-jsNumber(remaining)))
 	out.set("remaining", remaining)
 	return out
 }
 
 func gateLinks(limits map[string]any) map[string]any {
 	links := map[string]any{}
-	if checkoutURL := get(limits, "checkoutUrl"); truthy(checkoutURL) {
-		if get(limits, "paywallReason") == "topup_required" {
+	if checkoutURL := jsGet(limits, "checkoutUrl"); jsTruthy(checkoutURL) {
+		if jsGet(limits, "paywallReason") == "topup_required" {
 			links["topup"] = checkoutURL
 		} else {
 			links["checkout"] = checkoutURL
 		}
 	}
-	if confirmationURL := get(limits, "confirmationUrl"); truthy(confirmationURL) {
+	if confirmationURL := jsGet(limits, "confirmationUrl"); jsTruthy(confirmationURL) {
 		links["manage"] = confirmationURL
 	}
 	if len(links) == 0 {
@@ -82,18 +82,18 @@ func gateLinks(limits map[string]any) map[string]any {
 func recoveryFields(limits map[string]any, kind PaywallStateKind, fields jsObject) {
 	plan := activePlan(limits)
 	signals := readCreditSignals(limits)
-	balance := get(limits, "balance")
+	balance := jsGet(limits, "balance")
 
-	if ref := activePlanRef(limits); truthy(ref) {
+	if ref := activePlanRef(limits); jsTruthy(ref) {
 		fields["planRef"] = ref
 	}
-	fields.set("planName", get(limits, "planName"))
-	fields.set("plans", get(limits, "plans"))
-	fields.set("meterName", get(limits, "meterName"))
-	if unitPrice := get(plan, "perUnitChargeMinor"); !nullish(unitPrice) {
+	fields.set("planName", jsGet(limits, "planName"))
+	fields.set("plans", jsGet(limits, "plans"))
+	fields.set("meterName", jsGet(limits, "meterName"))
+	if unitPrice := jsGet(plan, "perUnitChargeMinor"); !jsNullish(unitPrice) {
 		fields["unitPriceMinor"] = unitPrice
-		fields.set("currency", get(plan, "currency"))
-	} else if currency := get(limits, "currency"); truthy(currency) {
+		fields.set("currency", jsGet(plan, "currency"))
+	} else if currency := jsGet(limits, "currency"); jsTruthy(currency) {
 		fields["currency"] = currency
 	}
 	if included := includedUsage(limits); included != nil {
@@ -105,10 +105,10 @@ func recoveryFields(limits map[string]any, kind PaywallStateKind, fields jsObjec
 	fields.set("creditsPerCall", signals.creditsPerCall)
 	fields.set("shortfallCredits", signals.shortfallCredits)
 	fields.set("remainingCalls", signals.remainingCalls)
-	fields.set("creditsPerMinorUnit", get(balance, "creditsPerMinorUnit"))
-	fields.set("displayExchangeRate", get(balance, "displayExchangeRate"))
-	fields.set("purchaseRef", get(limits, "purchaseRef"))
-	fields.set("autoRecharge", get(limits, "autoRecharge"))
+	fields.set("creditsPerMinorUnit", jsGet(balance, "creditsPerMinorUnit"))
+	fields.set("displayExchangeRate", jsGet(balance, "displayExchangeRate"))
+	fields.set("purchaseRef", jsGet(limits, "purchaseRef"))
+	fields.set("autoRecharge", jsGet(limits, "autoRecharge"))
 	if links := gateLinks(limits); links != nil {
 		fields["links"] = links
 	}
@@ -120,19 +120,19 @@ func recoveryFields(limits map[string]any, kind PaywallStateKind, fields jsObjec
 // pay-as-you-go, the gate is activation_required with the plans attached, so
 // clients show top-up copy; the message still names the top-up.
 func BuildPaywallGate(productRef string, limits map[string]any) map[string]any {
-	checkoutURL := get(limits, "checkoutUrl")
+	checkoutURL := jsGet(limits, "checkoutUrl")
 	kind := ClassifyPaywallState(limits)
-	activation := truthy(get(limits, "activationRequired")) ||
-		(kind == StateTopupRequired && allPaidPlansArePayg(get(limits, "plans")))
+	activation := jsTruthy(jsGet(limits, "activationRequired")) ||
+		(kind == StateTopupRequired && allPaidPlansArePayg(jsGet(limits, "plans")))
 
 	gate := jsObject{"product": productRef}
 	if activation {
 		gate["kind"] = "activation_required"
-		confirmationURL := get(limits, "confirmationUrl")
+		confirmationURL := jsGet(limits, "confirmationUrl")
 		switch {
-		case truthy(confirmationURL):
+		case jsTruthy(confirmationURL):
 			gate["checkoutUrl"] = confirmationURL
-		case truthy(checkoutURL):
+		case jsTruthy(checkoutURL):
 			gate["checkoutUrl"] = checkoutURL
 		default:
 			gate["checkoutUrl"] = ""
@@ -140,14 +140,14 @@ func BuildPaywallGate(productRef string, limits map[string]any) map[string]any {
 		gate.set("confirmationUrl", confirmationURL)
 	} else {
 		gate["kind"] = "payment_required"
-		if truthy(checkoutURL) {
+		if jsTruthy(checkoutURL) {
 			gate["checkoutUrl"] = checkoutURL
 		} else {
 			gate["checkoutUrl"] = ""
 		}
 	}
-	gate.set("balance", get(limits, "balance"))
-	gate.set("productDetails", get(limits, "product"))
+	gate.set("balance", jsGet(limits, "balance"))
+	gate.set("productDetails", jsGet(limits, "product"))
 	recoveryFields(limits, kind, gate)
 	gate["message"] = BuildGateMessage(kind, gate)
 	return gate

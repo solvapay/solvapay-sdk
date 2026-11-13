@@ -51,38 +51,38 @@ type creditSignals struct {
 
 func readCreditSignals(limits map[string]any) creditSignals {
 	if limits == nil {
-		return creditSignals{undefined, undefined, undefined, undefined, false}
+		return creditSignals{jsUndefined, jsUndefined, jsUndefined, jsUndefined, false}
 	}
-	balance := get(limits, "balance")
-	creditBalance := coalesce(get(balance, "creditBalance"), get(limits, "creditBalance"))
-	creditsPerCall := coalesce(get(balance, "creditsPerUnit"), get(limits, "creditsPerUnit"))
+	balance := jsGet(limits, "balance")
+	creditBalance := jsCoalesce(jsGet(balance, "creditBalance"), jsGet(limits, "creditBalance"))
+	creditsPerCall := jsCoalesce(jsGet(balance, "creditsPerUnit"), jsGet(limits, "creditsPerUnit"))
 	signals := creditSignals{
 		creditBalance:    creditBalance,
 		creditsPerCall:   creditsPerCall,
-		shortfallCredits: undefined,
-		remainingCalls:   undefined,
-		isCreditBased:    !isUndefined(creditBalance) || !isUndefined(creditsPerCall),
+		shortfallCredits: jsUndefined,
+		remainingCalls:   jsUndefined,
+		isCreditBased:    creditBalance != jsUndefined || creditsPerCall != jsUndefined,
 	}
-	if !isUndefined(creditBalance) && !isUndefined(creditsPerCall) {
-		signals.shortfallCredits = math.Max(0, number(creditsPerCall)-number(creditBalance))
+	if creditBalance != jsUndefined && creditsPerCall != jsUndefined {
+		signals.shortfallCredits = math.Max(0, jsNumber(creditsPerCall)-jsNumber(creditBalance))
 	}
 	switch {
-	case !isUndefined(get(balance, "remainingUnits")):
-		signals.remainingCalls = get(balance, "remainingUnits")
-	case !isUndefined(creditBalance) && !isUndefined(creditsPerCall) && number(creditsPerCall) > 0:
-		signals.remainingCalls = math.Floor(number(creditBalance) / number(creditsPerCall))
-	case number(get(limits, "remaining")) >= 0:
-		signals.remainingCalls = get(limits, "remaining")
+	case jsGet(balance, "remainingUnits") != jsUndefined:
+		signals.remainingCalls = jsGet(balance, "remainingUnits")
+	case creditBalance != jsUndefined && creditsPerCall != jsUndefined && jsNumber(creditsPerCall) > 0:
+		signals.remainingCalls = math.Floor(jsNumber(creditBalance) / jsNumber(creditsPerCall))
+	case jsNumber(jsGet(limits, "remaining")) >= 0:
+		signals.remainingCalls = jsGet(limits, "remaining")
 	}
 	return signals
 }
 
 func activePlanRef(limits map[string]any) any {
-	ref := coalesce(get(limits, "planRef"), get(limits, "plan"))
-	if s, ok := nonEmptyString(ref); ok {
+	ref := jsCoalesce(jsGet(limits, "planRef"), jsGet(limits, "plan"))
+	if s, ok := jsNonEmptyString(ref); ok {
 		return s
 	}
-	return undefined
+	return jsUndefined
 }
 
 // ClassifyPaywallState says which recovery the customer needs, with the same
@@ -91,8 +91,8 @@ func ClassifyPaywallState(limits map[string]any) PaywallStateKind {
 	if limits == nil {
 		return StateUpgradeRequired
 	}
-	reason := get(limits, "paywallReason")
-	if get(limits, "activationRequired") == true || reason == "activation_required" {
+	reason := jsGet(limits, "paywallReason")
+	if jsGet(limits, "activationRequired") == true || reason == "activation_required" {
 		return StateActivationRequired
 	}
 	if reason == "limit_reached" {
@@ -101,45 +101,45 @@ func ClassifyPaywallState(limits map[string]any) PaywallStateKind {
 	if reason == "topup_required" {
 		return StateTopupRequired
 	}
-	if get(limits, "needsTopUp") == true {
+	if jsGet(limits, "needsTopUp") == true {
 		return StateTopupRequired
 	}
 	signals := readCreditSignals(limits)
 	balance, cost := signals.creditBalance, signals.creditsPerCall
 	if signals.isCreditBased {
-		if !isUndefined(balance) && !isUndefined(cost) && number(balance) < number(cost) {
+		if balance != jsUndefined && cost != jsUndefined && jsNumber(balance) < jsNumber(cost) {
 			return StateTopupRequired
 		}
-		if n, ok := asNumber(balance); ok && n == 0 {
+		if n, ok := jsNum(balance); ok && n == 0 {
 			return StateTopupRequired
 		}
-		if n, ok := asNumber(get(limits, "remaining")); isUndefined(cost) && ok && n == 0 {
+		if n, ok := jsNum(jsGet(limits, "remaining")); cost == jsUndefined && ok && n == 0 {
 			return StateTopupRequired
 		}
 	}
-	if (truthy(get(limits, "purchaseRef")) || !isUndefined(activePlanRef(limits))) && number(get(limits, "remaining")) <= 0 {
+	if (jsTruthy(jsGet(limits, "purchaseRef")) || activePlanRef(limits) != jsUndefined) && jsNumber(jsGet(limits, "remaining")) <= 0 {
 		return StateLimitReached
 	}
 	if signals.isCreditBased {
 		return StateTopupRequired
 	}
-	if truthy(get(limits, "purchaseRef")) {
+	if jsTruthy(jsGet(limits, "purchaseRef")) {
 		return StateLimitReached
 	}
 	return StateUpgradeRequired
 }
 
-func formatCredits(value any) string { return toLocaleString(number(value)) }
+func formatCredits(value any) string { return formatCount(value) }
 
 func formatCreditsWithMoney(credits any, gate map[string]any) string {
 	amount := formatCredits(credits)
-	peg := get(gate, "creditsPerMinorUnit")
-	currency, hasCurrency := nonEmptyString(get(gate, "currency"))
-	rate := get(gate, "displayExchangeRate")
+	peg := jsGet(gate, "creditsPerMinorUnit")
+	currency, hasCurrency := jsNonEmptyString(jsGet(gate, "currency"))
+	rate := jsGet(gate, "displayExchangeRate")
 	// `rate != null` in the TypeScript: neither null nor undefined.
-	hasRate := !nullish(rate) && number(rate) > 0
-	if truthy(peg) && number(peg) > 0 && hasCurrency && hasRate {
-		minor, ok := CreditsToDisplayMinorUnits(number(credits), number(peg), number(rate), currency)
+	hasRate := !jsNullish(rate) && jsNumber(rate) > 0
+	if jsTruthy(peg) && jsNumber(peg) > 0 && hasCurrency && hasRate {
+		minor, ok := CreditsToDisplayMinorUnits(jsNumber(credits), jsNumber(peg), jsNumber(rate), currency)
 		if ok {
 			return fmt.Sprintf("%s credits (~%s)", amount, FormatMinor(minor, currency))
 		}
@@ -153,14 +153,14 @@ func isFreeMeter(name any) bool {
 }
 
 func meterLabel(gate map[string]any) string {
-	name := get(gate, "meterName")
-	if !truthy(name) {
+	name := jsGet(gate, "meterName")
+	if !jsTruthy(name) {
 		return "units"
 	}
 	return strings.NewReplacer("_", " ", "-", " ").Replace(jsString(name))
 }
 
-func namedCheckoutMarkdown(url, label string) string { return "[" + label + "](" + url + ")" }
+func paywallCheckoutMarkdown(url, label string) string { return "[" + label + "](" + url + ")" }
 
 // linkLabel escapes markdown link-label delimiters: plan names are merchant-authored.
 func linkLabel(name string) string {
@@ -168,17 +168,17 @@ func linkLabel(name string) string {
 }
 
 func planLadder(gate map[string]any) (string, bool) {
-	plans, _ := coalesce(get(gate, "plans"), []any{}).([]any)
-	planRef := get(gate, "planRef")
+	plans, _ := jsCoalesce(jsGet(gate, "plans"), []any{}).([]any)
+	planRef := jsGet(gate, "planRef")
 	var linkable []map[string]any
 	for _, p := range plans {
 		plan, _ := p.(map[string]any)
-		if _, ok := nonEmptyString(get(plan, "checkoutUrl")); ok && !jsStrictEqual(get(plan, "reference"), planRef) {
+		if _, ok := jsNonEmptyString(jsGet(plan, "checkoutUrl")); ok && !jsStrictEqual(jsGet(plan, "reference"), planRef) {
 			linkable = append(linkable, plan)
 		}
 	}
 	sort.SliceStable(linkable, func(i, j int) bool {
-		return number(get(linkable[i], "price")) < number(get(linkable[j], "price"))
+		return jsNumber(jsGet(linkable[i], "price")) < jsNumber(jsGet(linkable[j], "price"))
 	})
 	if len(linkable) > 4 {
 		linkable = linkable[:4]
@@ -188,7 +188,7 @@ func planLadder(gate map[string]any) (string, bool) {
 	}
 	links := make([]string, len(linkable))
 	for i, p := range linkable {
-		name := jsString(coalesce(get(p, "name"), get(p, "reference")))
+		name := jsString(jsCoalesce(jsGet(p, "name"), jsGet(p, "reference")))
 		links[i] = fmt.Sprintf("[%s](%s)", linkLabel(name), p["checkoutUrl"])
 	}
 	return fmt.Sprintf("%s (first link used closes the rest; links expire in %d minutes)",
@@ -214,33 +214,33 @@ func capital(text string) string {
 func recoverClause(url, verb, view, label string) string {
 	if url != "" {
 		return fmt.Sprintf(" %s to %s (expires in %d minutes), or %s.",
-			namedCheckoutMarkdown(url, label), verb, CheckoutSessionTTLMinutes, callViewer(view))
+			paywallCheckoutMarkdown(url, label), verb, CheckoutSessionTTLMinutes, callViewer(view))
 	}
 	return " " + capital(callViewer(view)) + "."
 }
 
 func hasActivePlan(gate map[string]any) bool {
-	_, hasPlan := nonEmptyString(get(gate, "planRef"))
-	return truthy(get(gate, "purchaseRef")) || hasPlan
+	_, hasPlan := jsNonEmptyString(jsGet(gate, "planRef"))
+	return jsTruthy(jsGet(gate, "purchaseRef")) || hasPlan
 }
 
 func autoRechargeDisabled(gate map[string]any) bool {
-	return get(get(gate, "autoRecharge"), "enabled") == false
+	return jsGet(jsGet(gate, "autoRecharge"), "enabled") == false
 }
 
 // BuildGateMessage is the gate message: it names one recovery tool and inlines
 // the checkout link.
 func BuildGateMessage(kind PaywallStateKind, gate map[string]any) string {
-	url, _ := nonEmptyString(get(gate, "checkoutUrl"))
+	url, _ := jsNonEmptyString(jsGet(gate, "checkoutUrl"))
 	ladder, hasLadder := planLadder(gate)
 
 	switch kind {
 	case StateLimitReached:
-		included := get(gate, "included")
-		if isFreeMeter(get(gate, "meterName")) {
-			total := get(included, "total")
+		included := jsGet(gate, "included")
+		if isFreeMeter(jsGet(gate, "meterName")) {
+			total := jsGet(included, "total")
 			usedLine := fmt.Sprintf("You've used all %s for this period.", meterLabel(gate))
-			if !isUndefined(total) {
+			if total != jsUndefined {
 				usedLine = fmt.Sprintf("You've used all %s %s for this period.", jsString(total), meterLabel(gate))
 			}
 			switchLine := recoverClause(url, "keep going", "checkout", "Open checkout")
@@ -250,25 +250,25 @@ func BuildGateMessage(kind PaywallStateKind, gate map[string]any) string {
 			return usedLine + switchLine
 		}
 		price := ""
-		unitPrice := get(gate, "unitPriceMinor")
-		if currency, ok := nonEmptyString(get(gate, "currency")); ok && !nullish(unitPrice) {
-			price = FormatMinor(number(unitPrice), currency)
+		unitPrice := jsGet(gate, "unitPriceMinor")
+		if currency, ok := jsNonEmptyString(jsGet(gate, "currency")); ok && !jsNullish(unitPrice) {
+			price = FormatMinor(jsNumber(unitPrice), currency)
 		}
 		usedLine := "You've reached the included usage for this period."
-		if truthy(included) {
+		if jsTruthy(included) {
 			usedLine = fmt.Sprintf("You've used %s of %s included %s this period.",
-				jsString(get(included, "used")), jsString(get(included, "total")), meterLabel(gate))
+				jsString(jsGet(included, "used")), jsString(jsGet(included, "total")), meterLabel(gate))
 		}
 		nextLine := ""
 		if price != "" {
 			nextLine = fmt.Sprintf(" The next call is %s.", price)
 		}
-		planName := jsString(coalesce(get(gate, "planName"), "This plan"))
-		creditBalance := get(gate, "creditBalance")
-		creditsPerCall := get(gate, "creditsPerCall")
+		planName := jsString(jsCoalesce(jsGet(gate, "planName"), "This plan"))
+		creditBalance := jsGet(gate, "creditBalance")
+		creditsPerCall := jsGet(gate, "creditsPerCall")
 		antiTrap := ""
-		if !isUndefined(creditBalance) && number(creditBalance) > 0 {
-			if n, ok := asNumber(creditsPerCall); isUndefined(creditsPerCall) || (ok && n == 0) {
+		if creditBalance != jsUndefined && jsNumber(creditBalance) > 0 {
+			if n, ok := jsNum(creditsPerCall); creditsPerCall == jsUndefined || (ok && n == 0) {
 				antiTrap = fmt.Sprintf(" Adding credits will not help, because %s does not spend them.", planName)
 			}
 		}
@@ -283,11 +283,11 @@ func BuildGateMessage(kind PaywallStateKind, gate map[string]any) string {
 			recoverClause(url, "activate", "checkout", "Open checkout"))
 
 	case StateTopupRequired:
-		balance := get(gate, "creditBalance")
-		cost := get(gate, "creditsPerCall")
-		shortfall := get(gate, "shortfallCredits")
+		balance := jsGet(gate, "creditBalance")
+		cost := jsGet(gate, "creditsPerCall")
+		shortfall := jsGet(gate, "shortfallCredits")
 		lead := "Included usage is exhausted."
-		if !isUndefined(balance) && !isUndefined(cost) && !isUndefined(shortfall) {
+		if balance != jsUndefined && cost != jsUndefined && shortfall != jsUndefined {
 			lead = fmt.Sprintf("Out of credits for this call. Balance %s; this call costs %s — %s short.",
 				formatCreditsWithMoney(balance, gate), formatCreditsWithMoney(cost, gate), formatCredits(shortfall))
 		}
@@ -322,13 +322,13 @@ func BuildGateMessage(kind PaywallStateKind, gate map[string]any) string {
 // is near a limit. limits may be nil.
 func BuildNudgeMessage(kind PaywallStateKind, limits map[string]any) string {
 	visit := ""
-	if url, ok := nonEmptyString(get(limits, "checkoutUrl")); ok {
-		visit = ", or " + namedCheckoutMarkdown(url, "Open checkout")
+	if url, ok := jsNonEmptyString(jsGet(limits, "checkoutUrl")); ok {
+		visit = ", or " + paywallCheckoutMarkdown(url, "Open checkout")
 	}
 	signals := readCreditSignals(limits)
 	remaining := signals.remainingCalls
 	outOfCalls := false
-	if n, ok := asNumber(remaining); ok && n == 0 {
+	if n, ok := jsNum(remaining); ok && n == 0 {
 		outOfCalls = true
 	}
 	// `limits && …` in the TypeScript: any object, even an empty one, is truthy.

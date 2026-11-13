@@ -1,4 +1,4 @@
-// Writes ../narrate_currencies_gen.go: what Intl.NumberFormat('en-US', { style:
+// Writes ../money_currencies_gen.go: what Intl.NumberFormat('en-US', { style:
 // 'currency' }) puts before an amount in each currency ("$", "CA$", "SEK "),
 // and the fraction digits ICU shows by default where that is not 2, so Go
 // formats money byte for byte as the TypeScript SDK does. Every currency ICU
@@ -50,7 +50,7 @@ const source = [
 ].join('\n')
 const text = execFileSync('gofmt', { input: source, encoding: 'utf-8' })
 
-const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'narrate_currencies_gen.go')
+const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'money_currencies_gen.go')
 if (process.argv.includes('--check')) {
   let current = ''
   try {
@@ -59,7 +59,7 @@ if (process.argv.includes('--check')) {
     // Missing counts as stale.
   }
   if (current !== text) {
-    console.error('go/narrate_currencies_gen.go is out of date. Run: node go/scripts/currencies.mjs')
+    console.error('go/money_currencies_gen.go is out of date. Run: node go/scripts/currencies.mjs')
     process.exit(1)
   }
   console.log('The currency table is up to date')

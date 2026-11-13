@@ -1,7 +1,7 @@
 package solvapay
 
-// JavaScript value semantics, for the narration and pricing code ported from
-// the TypeScript SDK. That code reads loosely typed JSON with JavaScript's
+// JavaScript value semantics, shared by the code ported from the TypeScript
+// SDK (paywall, narration, pricing, MCP). That code reads loosely typed JSON with JavaScript's
 // rules: a missing key (undefined) is not a key set to null, `??` falls
 // through both, 0 and "" are falsy, and numbers print as String(n) does.
 // Porting with these helpers keeps every branch identical; the conformance
@@ -305,4 +305,50 @@ func jsonValue(v any) (any, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// jsNonEmptyString is `typeof v === 'string' && v.length > 0`.
+func jsNonEmptyString(v any) (string, bool) {
+	s, ok := v.(string)
+	return s, ok && s != ""
+}
+
+// jsObject is an object literal as JSON.stringify writes it: undefined values drop out.
+type jsObject map[string]any
+
+func (o jsObject) set(key string, value any) {
+	if value != jsUndefined {
+		o[key] = value
+	}
+}
+
+// copyJSON is a shallow copy of a JSON object ({ ...m }).
+func copyJSON(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
+}
+
+// jsStrictEqual is === for JSON values; objects and arrays are never equal
+// here (JavaScript compares them by identity).
+func jsStrictEqual(a, b any) bool {
+	if x, ok := jsNum(a); ok {
+		y, ok := jsNum(b)
+		return ok && x == y
+	}
+	switch x := a.(type) {
+	case string:
+		y, ok := b.(string)
+		return ok && x == y
+	case bool:
+		y, ok := b.(bool)
+		return ok && x == y
+	case nil:
+		return b == nil
+	case jsUndefinedType:
+		return b == jsUndefined
+	}
+	return false
 }

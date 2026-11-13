@@ -10,7 +10,7 @@ package solvapay
 // value is missing is left out, never written as "Balance: —".
 //
 // The payload is loosely typed JSON, read with JavaScript's rules
-// (narrate_jsvalue.go): a typed struct would lose the difference between a
+// (jsvalue.go): a typed struct would lose the difference between a
 // missing key and null, and reject the malformed fields TypeScript skips.
 
 import (
@@ -178,26 +178,6 @@ func daysUntil(iso any, now time.Time) (int64, bool) {
 	millis := end.UnixMilli() - now.Truncate(time.Millisecond).UnixMilli()
 	days := int64(math.Ceil(float64(millis) / msPerDay))
 	return max(0, days), true
-}
-
-func jsStrictEqual(a, b any) bool {
-	if x, ok := jsNum(a); ok {
-		y, ok := jsNum(b)
-		return ok && x == y
-	}
-	switch x := a.(type) {
-	case string:
-		y, ok := b.(string)
-		return ok && x == y
-	case bool:
-		y, ok := b.(bool)
-		return ok && x == y
-	case nil:
-		return b == nil
-	case jsUndefinedType:
-		return b == jsUndefined
-	}
-	return false
 }
 
 func isOne(count any) bool { return jsStrictEqual(count, 1.0) }
