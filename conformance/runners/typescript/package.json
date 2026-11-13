@@ -15,7 +15,8 @@
     "@solvapay/core": "workspace:*",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
-    "@solvapay/server": "workspace:*"
+    "@solvapay/server": "workspace:*",
+    "jose": "^6.2.2"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

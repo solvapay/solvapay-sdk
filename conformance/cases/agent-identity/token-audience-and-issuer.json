@@ -1,0 +1,94 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-audience-and-issuer",
+  "description": "With the server's OAuth resource configured (written non-canonically, with upper case, the default port and a trailing slash), a token is accepted for the provider reference or the resource's canonical URL, alone or in an audience list. Another provider, the resource with a trailing slash, no audience, or an issuer that differs by a trailing slash are refused.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "resource": "https://MCP.Conformance.test:443/mcp/",
+      "tokens": {
+        "provider": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ._n9_Yx4eEb3KNc62hLz6oD8cMWPsI-Vff0JDYq3R0fnAWaq4vnKNb5Ts_vKnnpaw5cZLfPnh9KYiFyos7moNBg",
+        "audienceList": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjpbInBydl9haV9vdGhlciIsInBydl9haV9tZXJjaGFudCJdLCJzdWIiOiJhZ3RfYWlfYWxwaGEiLCJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.7LE-78yJ7ul8l_h8b7MvhBlldGJzsTkpcm8x1vIjZcf5eCXYjian4NhC9PNoQzN2EEkDaKvh4MPiAJnkQC2tuQ",
+        "canonicalResource": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoiaHR0cHM6Ly9tY3AuY29uZm9ybWFuY2UudGVzdC9tY3AiLCJzdWIiOiJhZ3RfYWlfYWxwaGEiLCJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.Tkx5JKrHGoLy-dtSCE2DRPaJhaQiw7dFzJsCGUdX0IVUAu_pVp1Us-a5sa1AV8ZZPLbsOuNNpIW10RXXW5XcHw",
+        "resourceWithSlash": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoiaHR0cHM6Ly9tY3AuY29uZm9ybWFuY2UudGVzdC9tY3AvIiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.IkChH4eYEybY0-4rpafuxASz5VyHpH2JYrjFV7C049ISNtYMENu3DFj7XSGuM4uR5pp5c4eCl6TIWcAEtUKzGQ",
+        "otherProvider": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX290aGVyIiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.-iM7YsbEEnIs2z1MS-iZzMqd9c8srbZvI3YfaYbSPLrzz4e_sVV-eV6_UDlACb506l5R3aW6ttBWz5qyLuWWGg",
+        "noAudience": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.0vUmjMTe5WdrI8VH9fRcB2fIoSJL52OR33mIxAHMRWG9Qohme7FbtOr6IAD4nGe6Ha11LiS2h2HlCukDltUmbA",
+        "issuerWithSlash": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50LyIsImF1ZCI6InBydl9haV9tZXJjaGFudCIsInN1YiI6ImFndF9haV9hbHBoYSIsInByaW5jaXBhbCI6InBwbF9haV9vd25lciIsInNjb3BlIjoidXNhZ2UiLCJlbnYiOiJzYW5kYm94IiwianRpIjoianRpX2FpXzEiLCJpYXQiOjE3OTQ1NzExNDAsImV4cCI6MTc5NDU3MTgwMH0.eMbU4fmE0sDouHqEJb_x61iSr5_zBzykJxWY_iooXmEZBv5t8wPEFlDSPXsOqsSQgj8o9mzgI_LkIAVmYjmzPQ"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "provider": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "audienceList": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "canonicalResource": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "resourceWithSlash": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "otherProvider": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "noAudience": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "issuerWithSlash": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      }
+    }
+  }
+}

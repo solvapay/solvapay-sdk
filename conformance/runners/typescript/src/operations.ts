@@ -17,6 +17,7 @@ import * as core from '@solvapay/core'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
 import { SERVER_OPERATIONS } from './server-ops'
+import { AGENT_IDENTITY_OPERATIONS } from './agent-identity'
 
 /**
  * Maps each language-neutral `fn` to the TypeScript SDK. An operation with
@@ -243,6 +244,9 @@ const CORE_OPERATIONS: Record<string, Implementation[]> = {
   validateBusinessDetails: [{ name: 'core', run: args => validateBusinessDetails(args) }],
 }
 Object.assign(OPERATIONS, CORE_OPERATIONS)
+
+// ---- @solvapay/agents identity, OAuth helpers, prompt facts (suite `agent-identity`)
+Object.assign(OPERATIONS, AGENT_IDENTITY_OPERATIONS)
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]

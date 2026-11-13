@@ -1,5 +1,6 @@
 import { buildPaywallGate, createSolvaPay, PaywallError, type FreeLimit } from '@solvapay/server'
 import { runAgentCallsScenario } from './agent-calls'
+import { agentIdentityStep } from './agent-identity'
 import type { ScenarioCase, ScenarioStep, StepExpect } from './cases'
 
 /**
@@ -158,10 +159,14 @@ async function runStep(
       )
       return { result: ref }
     }
-    default:
+    default: {
+      // ---- @solvapay/agents identity steps (suite `agent-identity`)
+      const agentIdentity = await agentIdentityStep(solvaPay, step.fn, args)
+      if (agentIdentity) return agentIdentity
       throw new Error(
         `No TypeScript mapping for scenario step "${step.fn}". Add it to conformance/runners/typescript/src/scenarios.ts.`,
       )
+    }
   }
 }
 
