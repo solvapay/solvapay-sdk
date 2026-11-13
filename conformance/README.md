@@ -274,6 +274,22 @@ The explicit adapter also shows where SDKs differ in shape: Python's `payable`
 takes the tool name from the function's name, TypeScript's from a `toolName`
 option. The runner maps both, and the usage event they record must still match.
 
+## Reading cases
+
+The files are pretty-printed JSON so they review and diff well. To read them
+with fewer tokens (minified is ~29% smaller), use the viewer:
+
+```bash
+node conformance/show.mjs --list paywall-gate                 # names and descriptions
+node conformance/show.mjs --keys agent-calls/wait-runs-out    # shape only
+node conformance/show.mjs paywall-gate/no-urls expect         # one part, minified
+```
+
+JSON stays the format on disk. YAML was measured and rejected: one of the 273
+cases (`"0123456789"`) reads as a string in Python's YAML 1.1 and as an integer
+in the YAML 1.2 parsers Go and TypeScript would use, and quoting every string to
+avoid that leaves a 5% saving.
+
 ## Running
 
 ```bash
