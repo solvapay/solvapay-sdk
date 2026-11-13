@@ -42,6 +42,8 @@ from solvapay.paywall import build_nudge_message, build_paywall_gate
 from solvapay.paywall.decide import FreeLimit, PaywallError
 from solvapay.webhooks import verify_webhook
 
+import _agent_identity  # isort: skip  # the agent-identity suite's mappings, beside this file
+
 CASES_DIR = Path(__file__).resolve().parents[2] / "conformance" / "cases"
 LOCK = CASES_DIR.parent / "cases.lock"
 PIN = Path(__file__).resolve().parents[1] / "conformance.lock"
@@ -185,6 +187,9 @@ def business_details(args: dict[str, Any], _clock: datetime | None) -> dict[str,
 
 OPERATIONS["planPricing"] = plan_pricing
 OPERATIONS["validateBusinessDetails"] = business_details
+
+# ---- solvapay.agents identity, OAuth helpers, prompt facts (suite `agent-identity`)
+OPERATIONS.update(_agent_identity.OPERATIONS)
 
 # ---- describeServer and getPrompt: the whole server, over MCP ----------------
 #
@@ -531,6 +536,11 @@ async def _scenario_step(
             name=args.get("name"),
         )
         return {"result": ref}
+    # ---- solvapay.agents identity steps (suite `agent-identity`); the patched clock
+    if fn in _agent_identity.STEPS:
+        return await _agent_identity.scenario_step(
+            solvapay, fn, args, lambda: decide_module.time.time()
+        )
     raise AssertionError(f'No Python mapping for scenario step "{fn}" in {__file__}')
 
 
