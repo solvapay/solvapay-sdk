@@ -66,12 +66,12 @@ func withoutUUIDs(value any, seen map[string]string) any {
 
 // ---- the parts of an answer a case compares -------------------------------------
 
-var schemaKeys = []string{"type", "description", "minimum", "maximum", "minLength", "maxLength"}
+var agentSchemaKeys = []string{"type", "description", "minimum", "maximum", "minLength", "maxLength"}
 
-func comparableSchema(schema any) map[string]any {
+func agentComparableSchema(schema any) map[string]any {
 	node, _ := schema.(map[string]any)
 	out := map[string]any{}
-	for _, key := range schemaKeys {
+	for _, key := range agentSchemaKeys {
 		if value, ok := node[key]; ok {
 			out[key] = value
 		}
@@ -79,7 +79,7 @@ func comparableSchema(schema any) map[string]any {
 	if properties, ok := node["properties"].(map[string]any); ok {
 		reduced := map[string]any{}
 		for name, value := range properties {
-			reduced[name] = comparableSchema(value)
+			reduced[name] = agentComparableSchema(value)
 		}
 		out["properties"] = reduced
 		required := []string{}
@@ -122,7 +122,7 @@ func comparableMessage(message map[string]any) map[string]any {
 		var reduced []any
 		for _, item := range tools {
 			tool := item.(map[string]any)
-			entry := map[string]any{"inputSchema": comparableSchema(tool["inputSchema"])}
+			entry := map[string]any{"inputSchema": agentComparableSchema(tool["inputSchema"])}
 			for _, key := range []string{"name", "title", "description", "annotations"} {
 				if value, ok := tool[key]; ok {
 					entry[key] = value
