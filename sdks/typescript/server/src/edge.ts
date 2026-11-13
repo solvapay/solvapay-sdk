@@ -31,6 +31,7 @@ installMcpAdapterNative({
 // Ambient registry for mcp-core (Deno resolves it to the edge graph too).
 publishWasmSyncApi()
 // Warm the module so sync surfaces can synchronously init on first use.
+// `edge-runtime.ts`, the entry edge runtimes resolve, awaits the same load.
 warmWasm()
 
 export { validateBusinessDetails }

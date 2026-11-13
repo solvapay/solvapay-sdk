@@ -37,6 +37,7 @@ interface Example {
   command: string
   /** `{port}` and `{backend}` are replaced with the listen port and the fake backend URL. */
   args: string[]
+  /** Extra environment. `{port}` is replaced with the listen port. */
   env?: Record<string, string>
   /** Commands run in `cwd` before the server starts, as the example's own scripts do. */
   prepare?: Array<{ command: string; args: string[] }>
@@ -137,6 +138,25 @@ const EXAMPLES: Example[] = [
     toolArgs: { symbol: 'AAPL' },
     offlineTool: true,
     // `days` is left out on purpose: the schema default must reach the handler.
+    expectText: 'AAPL 10-day verdict',
+    accountTool: true,
+  },
+  {
+    id: 'ts-supabase-edge',
+    label: 'TypeScript supabase-edge-mcp (deno run)',
+    cwd: ['typescript', 'supabase-edge-mcp'],
+    command: 'deno',
+    args: [
+      'run',
+      '--allow-all',
+      '--config=deno.workspace.json',
+      path.join('supabase', 'functions', 'mcp', 'index.ts'),
+    ],
+    env: { DENO_SERVE_ADDRESS: 'tcp:127.0.0.1:{port}', DENO_NO_UPDATE_CHECK: '1' },
+    mcpPath: '/mcp',
+    tool: 'predict_direction',
+    toolArgs: { symbol: 'AAPL' },
+    offlineTool: true,
     expectText: 'AAPL 10-day verdict',
     accountTool: true,
   },
@@ -617,7 +637,12 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
       MCP_HOST: '127.0.0.1',
       MCP_PORT: String(port),
       MCP_PUBLIC_BASE_URL: PUBLIC_BASE_URL,
-      ...example.env,
+      ...Object.fromEntries(
+        Object.entries(example.env ?? {}).map(([key, value]) => [
+          key,
+          value.replaceAll('{port}', String(port)),
+        ]),
+      ),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })

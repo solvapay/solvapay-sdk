@@ -8,17 +8,17 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "workerd": "./dist/edge.js",
-      "worker": "./dist/edge.js",
-      "edge-light": "./dist/edge.js",
-      "deno": "./dist/edge.js",
+      "workerd": "./dist/edge-runtime.js",
+      "worker": "./dist/edge-runtime.js",
+      "edge-light": "./dist/edge-runtime.js",
+      "deno": "./dist/edge-runtime.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./edge": {
       "types": "./dist/edge.d.ts",
-      "import": "./dist/edge.js",
-      "default": "./dist/edge.js"
+      "import": "./dist/edge-runtime.js",
+      "default": "./dist/edge-runtime.js"
     },
     "./fetch": {
       "types": "./dist/fetch/index.d.ts",
@@ -35,17 +35,17 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "workerd": "./dist/edge.js",
-        "worker": "./dist/edge.js",
-        "edge-light": "./dist/edge.js",
-        "deno": "./dist/edge.js",
+        "workerd": "./dist/edge-runtime.js",
+        "worker": "./dist/edge-runtime.js",
+        "edge-light": "./dist/edge-runtime.js",
+        "deno": "./dist/edge-runtime.js",
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
       },
       "./edge": {
         "types": "./dist/edge.d.ts",
-        "import": "./dist/edge.js",
-        "default": "./dist/edge.js"
+        "import": "./dist/edge-runtime.js",
+        "default": "./dist/edge-runtime.js"
       },
       "./fetch": {
         "types": "./dist/fetch/index.d.ts",

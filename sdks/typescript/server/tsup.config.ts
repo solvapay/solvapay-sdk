@@ -34,7 +34,9 @@ export default defineConfig([
     ],
   },
   {
-    entry: ['src/edge.ts'],
+    // `edge-runtime` re-exports `edge` behind an awaited WASM load; one build
+    // so both share the chunk that holds the binding state.
+    entry: ['src/edge.ts', 'src/edge-runtime.ts'],
     format: ['esm'],
     dts: true,
     tsconfig: 'tsconfig.build.json',
