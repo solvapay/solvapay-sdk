@@ -526,8 +526,10 @@ class AgentMcpRoute:
         server = self._server()
         self.tools(server, lambda tool: _list_paid_tool(server, tool, paid_names), None)
         tool_calls = _tool_calls(request.method, body)
-        if any(not self.lazy_auth or name in paid_names for _, name in tool_calls):
-            return auth_challenge(resource, "Sign in to pay for this tool", tool_calls[0][0])
+        needing = [id_ for id_, name in tool_calls if not self.lazy_auth or name in paid_names]
+        if needing:
+            # The call that needs sign-in, which in a batch may not be the first.
+            return auth_challenge(resource, "Sign in to pay for this tool", needing[0])
         if re.match(r"^Bearer\s", request.headers.get("authorization", ""), re.I):
             return None
         return await _serve(server, request, body)
