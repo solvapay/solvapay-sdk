@@ -3,6 +3,7 @@
  * Web-standards runtimes.
  */
 
+import { parseToolArguments } from '../internal/parseToolArguments'
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
 import { buildPayableHandler } from '@solvapay/mcp-core'
 import type { McpEnginePayable } from '@solvapay/mcp-core'
@@ -74,11 +75,14 @@ function bindEnginePayables(
       )
       const wrappedSchema = wrapInputSchema(opts.schema)
       payables.set(name, {
-        invoke: (args, customerRef) =>
-          protectedHandler(
-            args,
+        invoke: async (args, customerRef) => {
+          const parsed = await parseToolArguments(name, wrappedSchema, args)
+          if (!parsed.ok) return parsed.result
+          return protectedHandler(
+            parsed.args as Record<string, unknown>,
             customerRef ? { authInfo: { extra: { customer_ref: customerRef } } } : undefined,
-          ),
+          )
+        },
         ...(opts.title !== undefined ? { title: opts.title } : {}),
         ...(opts.description !== undefined ? { description: opts.description } : {}),
         ...(wrappedSchema !== undefined ? { inputSchema: z.toJSONSchema(wrappedSchema) } : {}),
@@ -98,11 +102,14 @@ function bindEnginePayables(
       )
       const wrappedSchema = wrapInputSchema(opts.schema)
       payables.set(name, {
-        invoke: (args, customerRef) =>
-          protectedHandler(
-            args,
+        invoke: async (args, customerRef) => {
+          const parsed = await parseToolArguments(name, wrappedSchema, args)
+          if (!parsed.ok) return parsed.result
+          return protectedHandler(
+            parsed.args as Record<string, unknown>,
             customerRef ? { authInfo: { extra: { customer_ref: customerRef } } } : undefined,
-          ),
+          )
+        },
         ...(opts.title !== undefined ? { title: opts.title } : {}),
         ...(opts.description !== undefined ? { description: opts.description } : {}),
         ...(wrappedSchema !== undefined ? { inputSchema: z.toJSONSchema(wrappedSchema) } : {}),

@@ -3,6 +3,7 @@
  * official SDK; JSON-RPC routing goes through `mcpDispatch`.
  */
 
+import { parseToolArguments } from './parseToolArguments'
 import { McpServer, ProtocolError } from '@modelcontextprotocol/server'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/server'
 import {
@@ -230,6 +231,7 @@ type RegisteredToolLike = {
   icons?: unknown
   _meta?: unknown
   outputSchemaJson?: Record<string, unknown>
+  inputSchema?: unknown
   handler?: (args: unknown, extra: unknown) => Promise<unknown>
   executor?: (args: unknown, extra: unknown) => Promise<unknown>
 }
@@ -451,10 +453,11 @@ export function installEngineHandlers(
       }
     }
     if (local !== undefined && local.enabled !== false) {
-      const args = params.arguments ?? {}
       const invoke = local.executor ?? local.handler
       if (invoke !== undefined) {
-        return (await invoke(args, extra)) as CallToolResult
+        const parsed = await parseToolArguments(name, local.inputSchema, params.arguments ?? {})
+        if (!parsed.ok) return parsed.result
+        return (await invoke(parsed.args, extra)) as CallToolResult
       }
     }
     const raw = await run('tools/call', request, extra)

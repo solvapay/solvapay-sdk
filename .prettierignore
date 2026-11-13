@@ -66,6 +66,8 @@ yarn.lock
 # Local virtualenvs (never format vendored site-packages)
 **/.venv/
 .venv/
+**/.venv-workers/
+**/python_modules/
 **/.ci-venv/
 .ci-venv/
 

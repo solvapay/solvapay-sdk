@@ -12,7 +12,7 @@
   "main": "build/worker/shim.mjs",
   "compatibility_date": "2026-04-26",
   "build": {
-    "command": "cargo install -q worker-build && worker-build --release"
+    "command": "cargo install -q worker-build@^0.8 && worker-build --release"
   },
   "vars": {
     "SOLVAPAY_PRODUCT_REF": "prd_your_product_ref",

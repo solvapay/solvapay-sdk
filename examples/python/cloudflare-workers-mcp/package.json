@@ -15,6 +15,6 @@
   },
   "devDependencies": {
     "@solvapay/example-deploy": "workspace:*",
-    "wrangler": "^4.47.0"
+    "wrangler": "^4.127.1"
   }
 }

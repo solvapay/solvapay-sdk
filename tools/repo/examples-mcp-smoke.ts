@@ -16,7 +16,7 @@
  *   pnpm test:examples:mcp --only go-weather,ruby-bitcoin
  *   pnpm test:examples:mcp --verbose       # print each server's log on failure and success
  */
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
@@ -35,8 +35,13 @@ interface Example {
   /** Directory the server is started from, as segments under the examples directory. */
   cwd: string[]
   command: string
+  /** `{port}` and `{backend}` are replaced with the listen port and the fake backend URL. */
   args: string[]
   env?: Record<string, string>
+  /** Commands run in `cwd` before the server starts, as the example's own scripts do. */
+  prepare?: Array<{ command: string; args: string[] }>
+  /** Boot allowance for an example that compiles on start. Default `BOOT_TIMEOUT_MS`. */
+  bootTimeoutMs?: number
   /** MCP endpoint path. */
   mcpPath: string
   /** A paid tool of the example, with arguments that are valid offline. */
@@ -48,6 +53,8 @@ interface Example {
    * call through, since the upstream may be out of reach.
    */
   offlineTool: boolean
+  /** Text the paid tool's answer must contain, when the answer is deterministic. */
+  expectText?: string
   /** `false` for the minimal examples that register no SolvaPay tools of their own. */
   accountTool: boolean
 }
@@ -55,6 +62,30 @@ interface Example {
 function say(line: string): void {
   process.stdout.write(`${line}\n`)
 }
+
+/** `wrangler dev` arguments: a local workerd on the suite's port, pointed at the fake backend. */
+function wranglerDev(...extra: string[]): string[] {
+  return [
+    'exec',
+    'wrangler',
+    'dev',
+    '--ip',
+    '127.0.0.1',
+    '--port',
+    '{port}',
+    '--var',
+    'SOLVAPAY_SECRET_KEY:sk_sandbox_smoke',
+    '--var',
+    `SOLVAPAY_PRODUCT_REF:${PRODUCT_REF}`,
+    '--var',
+    `MCP_PUBLIC_BASE_URL:${PUBLIC_BASE_URL}`,
+    '--var',
+    'SOLVAPAY_API_BASE_URL:{backend}',
+    ...extra,
+  ]
+}
+
+const WRANGLER_ENV = { WRANGLER_SEND_METRICS: 'false', CI: '1' }
 
 const EXAMPLES: Example[] = [
   {
@@ -95,6 +126,21 @@ const EXAMPLES: Example[] = [
     accountTool: false,
   },
   {
+    id: 'ts-workers',
+    label: 'TypeScript cloudflare-workers-mcp (wrangler dev)',
+    cwd: ['typescript', 'cloudflare-workers-mcp'],
+    command: 'pnpm',
+    args: wranglerDev(),
+    env: WRANGLER_ENV,
+    mcpPath: '/mcp',
+    tool: 'predict_direction',
+    toolArgs: { symbol: 'AAPL' },
+    offlineTool: true,
+    // `days` is left out on purpose: the schema default must reach the handler.
+    expectText: 'AAPL 10-day verdict',
+    accountTool: true,
+  },
+  {
     id: 'python-stock-research',
     label: 'Python stock-research-mcp',
     cwd: ['python', 'stock-research-mcp'],
@@ -114,6 +160,20 @@ const EXAMPLES: Example[] = [
       '--mode',
       'http',
     ],
+    mcpPath: '/mcp',
+    tool: 'top_ranked_assets',
+    toolArgs: {},
+    offlineTool: false,
+    accountTool: true,
+  },
+  {
+    id: 'python-workers',
+    label: 'Python cloudflare-workers-mcp (pywrangler dev)',
+    cwd: ['python', 'cloudflare-workers-mcp'],
+    prepare: [{ command: 'node', args: [path.join('scripts', 'stage-server-wasm.mjs')] }],
+    command: 'uv',
+    args: ['run', 'pywrangler', 'dev', ...wranglerDev().slice(3)],
+    env: WRANGLER_ENV,
     mcpPath: '/mcp',
     tool: 'top_ranked_assets',
     toolArgs: {},
@@ -165,6 +225,21 @@ const EXAMPLES: Example[] = [
     tool: 'inbox_open',
     toolArgs: {},
     offlineTool: true,
+    accountTool: true,
+  },
+  {
+    id: 'rust-workers',
+    label: 'Rust cloudflare-worker-mcp (wrangler dev)',
+    cwd: ['rust', 'cloudflare-worker-mcp'],
+    command: 'pnpm',
+    args: wranglerDev(),
+    env: WRANGLER_ENV,
+    // The first start installs worker-build and compiles the Worker in release mode.
+    bootTimeoutMs: 900_000,
+    mcpPath: '/mcp',
+    tool: 'inbox_open',
+    toolArgs: {},
+    offlineTool: false,
     accountTool: true,
   },
 ]
@@ -429,12 +504,16 @@ async function probe(example: Example, origin: string, calls: BackendCall[]): Pr
     gated ? 'limits checked' : `HTTP ${paid.status}, limits ${limitsBefore} to ${limitsAfter}`,
   )
   if (example.offlineTool) {
+    const text = firstText(paid.json.result)
+    const expected = example.expectText === undefined || text.includes(example.expectText)
     record(
       'paid tool returns its result',
-      gated && !paidError,
+      gated && !paidError && expected,
       paidError
-        ? (paid.json.error?.message ?? firstText(paid.json.result).slice(0, 120))
-        : firstText(paid.json.result).slice(0, 60),
+        ? (paid.json.error?.message ?? text.slice(0, 120))
+        : expected
+          ? text.slice(0, 60)
+          : `expected "${example.expectText}" in: ${text.slice(0, 80)}`,
     )
   }
 
@@ -462,8 +541,12 @@ async function freePort(): Promise<number> {
   return port
 }
 
-async function waitForServer(origin: string, child: ChildProcess): Promise<boolean> {
-  const deadline = Date.now() + BOOT_TIMEOUT_MS
+async function waitForServer(
+  origin: string,
+  child: ChildProcess,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     if (child.exitCode !== null) return false
     try {
@@ -505,8 +588,25 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
   const port = await freePort()
   const origin = `http://127.0.0.1:${port}`
   let log = ''
-  const child = spawn(example.command, example.args, {
-    cwd: path.join(EXAMPLES_DIR, ...example.cwd),
+  const args = example.args.map(arg =>
+    arg.replaceAll('{port}', String(port)).replaceAll('{backend}', backend.url),
+  )
+  const cwd = path.join(EXAMPLES_DIR, ...example.cwd)
+  for (const step of example.prepare ?? []) {
+    const prepared = spawnSync(step.command, step.args, { cwd, encoding: 'utf8' })
+    if (prepared.status !== 0) {
+      await backend.close()
+      return [
+        {
+          name: 'prepare',
+          ok: false,
+          detail: `${step.command} ${step.args.join(' ')}: ${(prepared.stderr || prepared.stdout).trim().split('\n').slice(-3).join(' | ')}`,
+        },
+      ]
+    }
+  }
+  const child = spawn(example.command, args, {
+    cwd,
     detached: true,
     env: {
       ...process.env,
@@ -524,7 +624,7 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
   child.stdout?.on('data', chunk => (log += String(chunk)))
   child.stderr?.on('data', chunk => (log += String(chunk)))
   try {
-    const up = await waitForServer(origin, child)
+    const up = await waitForServer(origin, child, example.bootTimeoutMs ?? BOOT_TIMEOUT_MS)
     if (!up) {
       say(`--- ${example.id} server log ---\n${log.trim().split('\n').slice(-40).join('\n')}`)
       return [{ name: 'server starts', ok: false, detail: 'exited or never listened; log above' }]

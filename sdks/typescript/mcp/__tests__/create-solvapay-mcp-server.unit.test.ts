@@ -304,6 +304,35 @@ describe('createSolvaPayMcpServer', () => {
     expect(result.messages[0]?.content.text).toBe('Search it.')
   })
 
+  it('parses a locally registered tool call with its input schema', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ server: mcp }) => {
+        mcp.registerTool(
+          'forecast',
+          {
+            description: 'Forecast.',
+            inputSchema: z.object({ symbol: z.string(), days: z.number().int().default(10) }),
+          },
+          async ({ symbol, days }) => ({
+            content: [{ type: 'text' as const, text: `${symbol}:${days}` }],
+          }),
+        )
+      },
+    })
+    const defaulted = (await invokeHandler(server, 'tools/call', {
+      name: 'forecast',
+      arguments: { symbol: 'AAPL' },
+    })) as { content: Array<{ text: string }>; isError?: boolean }
+    expect(defaulted.content[0]?.text).toBe('AAPL:10')
+
+    const invalid = (await invokeHandler(server, 'tools/call', {
+      name: 'forecast',
+      arguments: { days: 3 },
+    })) as { content: Array<{ text: string }>; isError?: boolean }
+    expect(invalid.isError).toBe(true)
+    expect(invalid.content[0]?.text).toContain('Invalid arguments for tool forecast')
+  })
+
   it('only registers prompts for enabled views', async () => {
     const { server } = buildTestServer({ views: ['checkout', 'account'] })
     const { prompts } = await listedPrompts(server)
