@@ -310,25 +310,46 @@ func (v *KeyVerifier) Verify(ctx context.Context, agentKey string) (*VerifiedAge
 			Environment:   verified.Environment,
 		}, v.environment)
 	} else {
-		status, fromAPI := apiStatus(err)
-		if !fromAPI || (status != 401 && status != 403) {
+		// Only a refusal of the key itself is the agent's. SolvaPay failing, or
+		// refusing the merchant (agent payments off, a secret key for the other
+		// environment), is returned for the merchant to fix.
+		reason, agents := AgentRefusal(err)
+		if !agents {
 			return nil, err
 		}
-		// SolvaPay refuses a key from the other environment with this code in its
-		// 403. TypeScript looks for it anywhere in the answer's text, so the
-		// message counts too.
 		var apiErr *solvapay.Error
 		errors.As(err, &apiErr)
-		reason := Invalid
-		if status == 403 && (apiErr.Code == "environment_mismatch" || strings.Contains(apiErr.Message, "environment_mismatch")) {
-			reason = EnvironmentMismatch
-		}
 		agent, err = nil, reject(reason, apiErr.Message)
 	}
 	v.mu.Lock()
 	v.answers[agentKey] = keyAnswer{agent: agent, err: err, until: v.now().Add(AgentKeyCacheTTL)}
 	v.mu.Unlock()
 	return agent, err
+}
+
+// AgentRefusal says whose a 401 or 403 from SolvaPay's agent endpoints is, as
+// in TypeScript. The agent's (true): the token or key is unknown, revoked or
+// another merchant's (401, or 403 with no code: Invalid), or from the other
+// environment (403 environment_mismatch: EnvironmentMismatch). Any other code,
+// such as feature_not_enabled (agent payments are off for this merchant) or
+// key_env_mismatch (the secret key is for the other environment), is the
+// merchant's: false.
+func AgentRefusal(err error) (RejectionReason, bool) {
+	var apiErr *solvapay.Error
+	if !errors.As(err, &apiErr) {
+		return "", false
+	}
+	switch {
+	case apiErr.Status == 401:
+		return Invalid, true
+	case apiErr.Status != 403:
+		return "", false
+	case apiErr.Code == "http_403": // SolvaPay sent no code
+		return Invalid, true
+	case apiErr.Code == "environment_mismatch":
+		return EnvironmentMismatch, true
+	}
+	return "", false
 }
 
 var compactJWS = regexp.MustCompile(`^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$`)

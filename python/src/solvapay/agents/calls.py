@@ -21,7 +21,7 @@ from typing import Any, Literal
 
 from ..client import AsyncApiClient
 from ..errors import SolvaPayError
-from .identity import VerifiedAgent
+from .identity import VerifiedAgent, agent_refusal
 
 logger = logging.getLogger("solvapay.agents")
 
@@ -266,7 +266,9 @@ class AgentCalls:
                     "call.authorize_failed %s",
                     {**_fields(call), "status": error.status, "error": error.message},
                 )
-                if error.status in (401, 403):
+                # A refusal of the merchant (agent payments off, a secret key for the
+                # other environment) is not the agent's: unavailable, logged above.
+                if agent_refusal(error):
                     return self._refuse(call, "agent_not_accepted", NOT_ACCEPTED)
                 return self._refuse(call, "unavailable", UNAVAILABLE)
 
