@@ -3,7 +3,7 @@
 Ported from ``@solvapay/mcp-core`` (``descriptors.ts``, ``csp.ts``,
 ``hideToolsByAudience.ts``) and ``@solvapay/mcp`` (``buildMcpServer.ts``).
 
-The widget is the TypeScript SDK's: ``widget/`` builds
+The widget is the TypeScript SDK's: ``mcp-app/`` builds
 ``@solvapay/react``'s MCP views into one ``mcp-app.html``, which this package
 ships (``scripts/sync_widget.py`` keeps the copy current). It holds nothing
 merchant-specific; the ``account`` tool's bootstrap payload carries the

@@ -3,4 +3,4 @@ packages:
   - 'packages/*'
   - 'examples/*'
   - 'conformance/runners/*'
-  - 'widget'
+  - 'mcp-app'

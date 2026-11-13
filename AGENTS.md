@@ -9,7 +9,7 @@ openapi/sdk-v1.json   the API spec, synced from the platform; CI checks for drif
 conformance/          cases, schema and cases.lock; owned by the TypeScript SDK
 packages/             the TypeScript SDK
 python/               the Python SDK, with its conformance runner and pin
-widget/               the MCP App widget, built once and copied into each package
+mcp-app/              the MCP App (checkout, account, top-up), built once and copied into each package
 examples/  docs/  scripts/
 ```
 

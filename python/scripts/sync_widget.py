@@ -1,13 +1,13 @@
 """Copies the SolvaPay MCP App widget into the Python package.
 
-Builds widget/ (one self-contained mcp-app.html, from
+Builds mcp-app/ (one self-contained mcp-app.html, from
 @solvapay/react's MCP views) and writes it to src/solvapay/mcp/mcp-app.html,
 which the wheel ships and create_solvapay_mcp_server serves as its UI resource.
 
 Run from python/ after `pnpm install` at the repo root:
     uv run python scripts/sync_widget.py
 Add --check to fail instead of writing when the committed copy is stale (CI).
-Add --no-build to use widget/dist as it is.
+Add --no-build to use mcp-app/dist as it is.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BUNDLE = ROOT.parent / "widget"
+BUNDLE = ROOT.parent / "mcp-app"
 BUILT = BUNDLE / "dist" / "mcp-app.html"
 OUT = ROOT / "src" / "solvapay" / "mcp" / "mcp-app.html"
 
@@ -27,7 +27,7 @@ def build() -> None:
     pnpm = shutil.which("pnpm")
     if pnpm is None:
         raise SystemExit("pnpm is not on PATH: the widget is built with the repo's Node toolchain")
-    subprocess.run([pnpm, "--filter", "@solvapay/widget", "build"], check=True)
+    subprocess.run([pnpm, "--filter", "@solvapay/mcp-app", "build"], check=True)
 
 
 def main() -> None:
@@ -35,12 +35,12 @@ def main() -> None:
     if "--no-build" not in sys.argv:
         build()
     if not BUILT.is_file():
-        raise SystemExit(f"{BUILT} does not exist: build widget/ first")
+        raise SystemExit(f"{BUILT} does not exist: build mcp-app/ first")
     html = BUILT.read_bytes()
     if check:
         if not OUT.is_file() or OUT.read_bytes() != html:
             raise SystemExit(
-                f"{OUT.relative_to(ROOT)} is out of date with widget/. "
+                f"{OUT.relative_to(ROOT)} is out of date with mcp-app/. "
                 "Run: uv run python scripts/sync_widget.py"
             )
         print("The widget is up to date")

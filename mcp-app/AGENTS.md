@@ -1,4 +1,4 @@
-# AGENTS.md — widget/
+# AGENTS.md — mcp-app/
 
 Builds the SolvaPay MCP App widget (checkout, account, top-up) from
 `@solvapay/react`'s MCP views into one self-contained `mcp-app.html`. It is built
