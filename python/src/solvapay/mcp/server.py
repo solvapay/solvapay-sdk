@@ -27,13 +27,14 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
-from mcp.server.auth.settings import AuthSettings
 from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import InputRequiredResult, ToolAnnotations
 from pydantic import AnyUrl
 from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
 
 from ..errors import SolvaPayError
 from ..paywall.decide import FreeLimit
@@ -48,7 +49,7 @@ from .app import (
     merge_csp,
     widget_html,
 )
-from .auth import SolvaPayTokenVerifier, oauth_bridge_routes
+from .auth import SignInMiddleware, SolvaPayTokenVerifier, not_found, oauth_bridge_routes
 from .bootstrap import ADVERTISED_VIEWS, ViewKind, build_bootstrap_payload, derive_default_view
 from .intent import _resolve_customer, register_intent_tools
 from .tools import (
@@ -83,6 +84,10 @@ class _AppServer(MCPServer[Any]):
         return await super().read_resource(uri, context)
 
 
+async def _not_found(_request: Request, _error: Exception) -> Response:
+    return not_found()
+
+
 class SolvaPayMcpServer:
     """An ``MCPServer`` (``.server``) plus helpers bound to its SolvaPay product."""
 
@@ -95,8 +100,10 @@ class SolvaPayMcpServer:
         mcp_path: str,
         public_base_url: str,
         resource_uri: str,
+        token_verifier: SolvaPayTokenVerifier,
     ) -> None:
         self.server = server
+        self.token_verifier = token_verifier
         self.solvapay = solvapay
         self.product_ref = product_ref
         self.mcp_path = mcp_path
@@ -174,13 +181,26 @@ class SolvaPayMcpServer:
     def http_app(self, **options: Any) -> Starlette:
         """The ASGI app: the MCP endpoint at ``mcp_path`` plus the sign-in routes.
 
+        The MCP endpoint answers only a customer whose bearer token SolvaPay
+        verifies (``SignInMiddleware``); any other request gets a 401 that points at
+        ``/.well-known/oauth-protected-resource``. A path nothing serves is a 404
+        ``not_found``.
+
         DNS-rebinding protection stays on, allowing this server's public host
         (from ``public_base_url``) and localhost. Without the public host, the
         MCP SDK answers every request through the public URL (a tunnel, a
         load balancer) with 421. Pass ``transport_security`` to set your own.
         """
         options.setdefault("transport_security", self.transport_security())
-        return self.server.streamable_http_app(streamable_http_path=self.mcp_path, **options)
+        app = self.server.streamable_http_app(streamable_http_path=self.mcp_path, **options)
+        app.add_exception_handler(404, _not_found)
+        app.add_middleware(
+            SignInMiddleware,
+            mcp_path=self.mcp_path,
+            public_base_url=self.public_base_url,
+            verifier=self.token_verifier,
+        )
+        return app
 
     def transport_security(self) -> TransportSecuritySettings:
         public = urlsplit(self.public_base_url)
@@ -246,6 +266,8 @@ def create_solvapay_mcp_server(
     enabled_views = ADVERTISED_VIEWS if views is None else views
     resolve = get_customer_ref or default_customer_ref
 
+    # Sign-in is SignInMiddleware's (see http_app), not the MCP SDK's: it answers
+    # unauthenticated requests and serves discovery as the TypeScript SDK does.
     server = _AppServer(
         name=name,
         version=version,
@@ -253,14 +275,6 @@ def create_solvapay_mcp_server(
         middleware=[HideToolsByAudience(hide_tools_by_audience, hide_tools_bypass)]
         if hide_tools_by_audience
         else None,
-        token_verifier=SolvaPayTokenVerifier(api_base_url=api_base_url, http_client=http_client),
-        auth=AuthSettings(
-            issuer_url=base,
-            resource_server_url=f"{base}{mcp_path}",
-            # SolvaPay checks the token on userinfo; its customer is then only
-            # usable with this merchant's key.
-            validate_token_resource=False,
-        ),
     )
     for route in oauth_bridge_routes(
         public_base_url=base,
@@ -325,4 +339,5 @@ def create_solvapay_mcp_server(
         mcp_path=mcp_path,
         public_base_url=base,
         resource_uri=uri,
+        token_verifier=SolvaPayTokenVerifier(api_base_url=api_base_url, http_client=http_client),
     )

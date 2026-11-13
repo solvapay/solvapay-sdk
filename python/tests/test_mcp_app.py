@@ -31,6 +31,8 @@ from solvapay.mcp.app import (
 
 API = "https://api.test"
 PUBLIC = "https://mcp.test"
+# A customer token as SolvaPay issues one: a JWT whose payload names the customer.
+TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSJ9.c2ln"
 UI = "ui://solvapay-mcp/mcp-app.html"
 TRANSPORT_TOOLS = {
     "create_hosted_session",
@@ -469,7 +471,7 @@ async def test_the_widget_over_http(user_agent: str, listed: bool) -> None:
         solvapay=solvapay, public_base_url=PUBLIC, hide_tools_by_audience=["ui"]
     ).http_app()
     headers = {
-        "authorization": "Bearer good",
+        "authorization": f"Bearer {TOKEN}",
         "accept": "application/json, text/event-stream",
         "user-agent": user_agent,
     }

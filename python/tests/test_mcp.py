@@ -18,6 +18,8 @@ from solvapay.mcp import (
 
 API = "https://api.test"
 PUBLIC = "https://mcp.test"
+# A customer token as SolvaPay issues one: a JWT whose payload names the customer.
+TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSJ9.c2ln"
 
 
 def server(**kw: Any) -> Any:
@@ -213,16 +215,31 @@ def client(mcp: Any) -> httpx.AsyncClient:
 
 async def test_the_mcp_endpoint_asks_for_sign_in() -> None:
     async with client(server()) as http:
-        response = await http.post("/mcp", json={})
+        response = await http.post("/mcp", json={"jsonrpc": "2.0", "id": 4, "method": "x"})
+        not_a_jwt = await http.post("/mcp", json={}, headers={"authorization": "Bearer good"})
     assert response.status_code == 401
-    assert "/.well-known/oauth-protected-resource/mcp" in response.headers["www-authenticate"]
+    assert response.headers["www-authenticate"] == (
+        f'Bearer resource_metadata="{PUBLIC}/.well-known/oauth-protected-resource"'
+    )
+    assert response.json()["id"] == 4
+    # A token that is not a JWT naming a customer never reaches SolvaPay.
+    assert not_a_jwt.status_code == 401
+
+
+@respx.mock
+async def test_a_token_solvapay_refuses_is_challenged() -> None:
+    respx.get(f"{API}/v1/customer/auth/userinfo").respond(401)
+    respx.route(host="mcp.test").pass_through()
+    async with client(server()) as http:
+        response = await http.post("/mcp", json={}, headers={"authorization": f"Bearer {TOKEN}"})
+    assert response.status_code == 401
 
 
 async def test_discovery_points_clients_at_this_server() -> None:
     async with client(server()) as http:
-        resource = (await http.get("/.well-known/oauth-protected-resource/mcp")).json()
+        resource = (await http.get("/.well-known/oauth-protected-resource")).json()
         auth = (await http.get("/.well-known/oauth-authorization-server")).json()
-    assert resource["resource"] == f"{PUBLIC}/mcp"
+    assert resource["resource"] == PUBLIC
     assert resource["authorization_servers"] == [PUBLIC]
     assert auth["token_endpoint"] == f"{PUBLIC}/oauth/token"
     assert auth["registration_endpoint"] == f"{PUBLIC}/oauth/register"
@@ -258,10 +275,18 @@ async def test_token_errors_are_oauth_shaped_and_bodies_pass_verbatim() -> None:
         response = await http.post(
             "/oauth/token",
             content=raw,
+            headers={"content-type": "application/x-www-form-urlencoded", "origin": "cursor://c"},
+        )
+        web = await http.post(
+            "/oauth/token",
+            content=raw,
             headers={"content-type": "application/x-www-form-urlencoded", "origin": "https://x"},
         )
     assert response.json() == {"error": "invalid_request", "error_description": "code expired"}
-    assert response.headers["access-control-allow-origin"] == "https://x"
+    # Only a native client's origin is mirrored, and never with credentials.
+    assert response.headers["access-control-allow-origin"] == "cursor://c"
+    assert "access-control-allow-credentials" not in response.headers
+    assert "access-control-allow-origin" not in web.headers
     assert upstream.calls.last.request.content.decode() == raw
 
 
@@ -286,7 +311,7 @@ async def test_a_signed_in_request_through_the_public_host_is_served() -> None:
     respx.route(host="evil.test").pass_through()
     app = server().http_app()
     headers = {
-        "authorization": "Bearer good",
+        "authorization": f"Bearer {TOKEN}",
         "accept": "application/json, text/event-stream",
     }
     async with app.router.lifespan_context(app):
