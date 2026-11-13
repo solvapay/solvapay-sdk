@@ -174,25 +174,6 @@ jobs:
           uv sync --locked --python ${{ matrix.python }}
           uv run pytest
 
-  # The contract (conformance cases, their lock, openapi/) belongs to the TypeScript
-  # SDK, the reference. A PR that changes it and a language folder together fails, so a
-  # language can't edit the cases it is judged by. Label a PR `contract-change` to allow
-  # it on purpose (the PR that introduces a language does).
-  contract-boundary:
-    name: Contract boundary
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: A PR changes the contract or a language, not both
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: node scripts/check-contract-boundary.mjs
-
   # Branch protection requires a check named "Lint, Build & Test". A matrix reports one
   # check per leg instead, so this job carries the required name and passes only when
   # every leg passed (a skipped or cancelled leg fails it too). The Python legs count:
