@@ -188,14 +188,19 @@ export class AgentApiError extends Error {
   }
 }
 
-/** The `code` of an error body, or undefined when there is none. */
+/**
+ * The `code` of an error body: SolvaPay's own, undefined when its JSON carries
+ * none, and `non_json_response` when the body is not JSON at all (a proxy's or
+ * gateway's page, not SolvaPay's answer), as the Python and Go SDKs name it.
+ */
 function errorCode(text: string): string | undefined {
+  let body: unknown
   try {
-    const body: unknown = JSON.parse(text)
-    return isRecord(body) && typeof body.code === 'string' && body.code ? body.code : undefined
+    body = JSON.parse(text)
   } catch {
-    return undefined
+    return 'non_json_response'
   }
+  return isRecord(body) && typeof body.code === 'string' && body.code ? body.code : undefined
 }
 
 /**
@@ -204,7 +209,8 @@ function errorCode(text: string): string | undefined {
  * from the other environment (403 `environment_mismatch`). The merchant's: any
  * other code, such as `feature_not_enabled` (agent payments are off for this
  * merchant) or `key_env_mismatch` (the secret key is for the other
- * environment). Those are the merchant's to fix, never the agent's.
+ * environment). Those are the merchant's to fix, never the agent's. So is a
+ * 403 whose body is not JSON (`non_json_response`): it is not SolvaPay's answer.
  */
 export function agentRefusal(error: unknown): 'invalid' | 'environment_mismatch' | undefined {
   if (!(error instanceof AgentApiError)) return undefined

@@ -167,13 +167,13 @@ func (a *paywallAPI) RoundTrip(request *http.Request) (*http.Response, error) {
 	if raw, ok := exchange["status"]; ok {
 		status = paywallInt(a.t, raw)
 	}
-	body, err := json.Marshal(exchange["body"])
+	contentType, body, err := apiAnswer(exchange)
 	if err != nil {
 		return nil, err
 	}
 	return &http.Response{
 		StatusCode: status,
-		Header:     http.Header{"Content-Type": {"application/json"}},
+		Header:     http.Header{"Content-Type": {contentType}},
 		Body:       io.NopCloser(bytes.NewReader(body)),
 		Request:    request,
 	}, nil

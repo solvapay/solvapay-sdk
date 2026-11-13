@@ -25,6 +25,7 @@ from typing import Any
 import httpx
 import pytest
 import respx
+from _api_answer import api_response
 
 import solvapay.agents.calls as calls_module
 from solvapay import SolvaPayError
@@ -125,11 +126,7 @@ async def run_agent_calls_scenario(
         for i, exchange in enumerate(pending):
             if exchange["method"] == request.method and exchange["path"] == path:
                 pending.pop(i)
-                return httpx.Response(
-                    exchange.get("status", 200),
-                    content=json.dumps(exchange["body"]).encode(),
-                    headers={"content-type": "application/json"},
-                )
+                return api_response(exchange)
         raise AssertionError(f"Unexpected API call: {request.method} {path}")
 
     async def run_step(fn: str, args: dict[str, Any]) -> Any:

@@ -2,7 +2,7 @@
   "$schema": "../../case.schema.json",
   "suite": "agent-identity",
   "case": "agent-key-environment-and-answers",
-  "description": "A verifier for a live merchant refuses a sandbox agent key as environment_mismatch after SolvaPay answers, with a sentence naming both. A 403 with no code (another merchant's key), and a 401 even with environment_mismatch in its body, are plain invalid. A 403 with any other code refuses the merchant, not the key (feature_not_enabled, key_env_mismatch), and throws for the merchant to fix. An answer that is not what the API documents (a missing principalRef, an unknown environment, not an object) throws.",
+  "description": "A verifier for a live merchant refuses a sandbox agent key as environment_mismatch after SolvaPay answers, with a sentence naming both. A 403 with no code (another merchant's key), and a 401 even with environment_mismatch in its body, are plain invalid. A 403 with any other code refuses the merchant, not the key (feature_not_enabled, key_env_mismatch), and throws for the merchant to fix; so does a 403 whose body is not JSON (a proxy's page, not SolvaPay's answer). An answer that is not what the API documents (a missing principalRef, an unknown environment, not an object) throws.",
   "setup": {
     "productRef": "prd_ai_identity"
   },
@@ -147,6 +147,38 @@
             "path": "/v1/sdk/agent/keys/verifications",
             "body": {
               "agentKey": "agk_ai_five_keyenv"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:01.000Z",
+      "args": {
+        "agentKey": "agk_ai_five_page",
+        "environment": "live"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 403,
+          "rawBody": "<html><body><h1>403 Forbidden</h1></body></html>"
+        }
+      ],
+      "expect": {
+        "result": {
+          "thrown": {
+            "status": 403
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_five_page"
             }
           }
         ]

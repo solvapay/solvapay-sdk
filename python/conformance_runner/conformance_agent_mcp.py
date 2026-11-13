@@ -23,6 +23,7 @@ import httpx
 import jwt
 import jwt.api_jwt
 import respx
+from _api_answer import api_response
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import BaseModel, Field, create_model
@@ -370,7 +371,7 @@ async def _agent_mcp_route(args: dict[str, Any], clock: _Clock) -> dict[str, Any
         for i, exchange in enumerate(pending):
             if exchange["method"] == request.method and exchange["path"] == request.url.path:
                 pending.pop(i)
-                return httpx.Response(exchange.get("status", 200), json=exchange["body"])
+                return api_response(exchange)
         raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
 
     responses: list[dict[str, Any]] = []

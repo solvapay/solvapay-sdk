@@ -22,6 +22,7 @@ from typing import Any
 import httpx
 import pytest
 import respx
+from _api_answer import api_response
 from conformance_agent_mcp import AGENT_MCP_OPERATIONS  # suite agent-mcp
 from conformance_merchant_sign_in import MERCHANT_SIGN_IN_OPERATIONS  # suite merchant-sign-in
 from mcp.client.client import Client
@@ -109,7 +110,7 @@ API_MESSAGE = "<api message>"
 
 def _api_message(exchange: dict[str, Any]) -> str:
     """The message ``SolvaPayError`` carries for this answer (``_http._error_from_response``)."""
-    body = exchange["body"]
+    body = exchange.get("body")
     message = body.get("message") if isinstance(body, dict) else None
     if isinstance(message, list):
         message = "; ".join(str(part) for part in message)
@@ -155,7 +156,7 @@ async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
     answers: dict[tuple[str, str], list[httpx.Response]] = {}
     for exchange in args.get("api", []):
         answers.setdefault((exchange["method"], exchange["path"]), []).append(
-            httpx.Response(exchange.get("status", 200), json=exchange["body"])
+            api_response(exchange)
         )
     with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
         for (method, path), responses in answers.items():
@@ -359,7 +360,7 @@ def _api(api: list[dict[str, Any]]) -> Iterator[None]:
         for i, exchange in enumerate(pending):
             if exchange["method"] == request.method and exchange["path"] == request.url.path:
                 pending.pop(i)
-                return httpx.Response(exchange.get("status", 200), json=exchange["body"])
+                return api_response(exchange)
         raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
 
     with respx.mock(assert_all_mocked=True, assert_all_called=False) as router:
@@ -619,7 +620,7 @@ async def run_scenario(
         for i, exchange in enumerate(pending):
             if exchange["method"] == request.method and exchange["path"] == request.url.path:
                 pending.pop(i)
-                return httpx.Response(exchange.get("status", 200), json=exchange["body"])
+                return api_response(exchange)
         raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
 
     outcomes = []

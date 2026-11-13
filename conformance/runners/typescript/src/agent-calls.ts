@@ -29,7 +29,9 @@ interface ApiExchange {
   method: string
   path: string
   status?: number
-  body: unknown
+  body?: unknown
+  /** An answer that is not JSON, sent as text/plain. */
+  rawBody?: string
 }
 
 interface LogLine {
@@ -71,6 +73,12 @@ export async function runAgentCallsScenario(data: ScenarioCase): Promise<StepExp
     const at = pending.findIndex(e => e.method === method && e.path === url.pathname)
     if (at < 0) throw new Error(`Unexpected API call: ${method} ${url.pathname}`)
     const [exchange] = pending.splice(at, 1)
+    if (exchange.rawBody !== undefined) {
+      return new Response(exchange.rawBody, {
+        status: exchange.status ?? 200,
+        headers: { 'content-type': 'text/plain' },
+      })
+    }
     return new Response(JSON.stringify(exchange.body), {
       status: exchange.status ?? 200,
       headers: { 'content-type': 'application/json' },
