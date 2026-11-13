@@ -181,18 +181,16 @@ def outcome_of(response: httpx.Response) -> dict[str, Any]:
 # ---- the route a case describes -----------------------------------------------
 
 
-class _StaticJwks:
-    """The case's public keys, by ``kid``; an unknown ``kid`` is an invalid token."""
+class _StaticJwks(jwt.PyJWKClient):
+    """The case's public keys, served as the JWKS endpoint would; the verifier picks the key
+    by the same rules as TypeScript (kid, alg, use, curve)."""
 
     def __init__(self, jwks: dict[str, Any]) -> None:
-        self._keys = jwt.PyJWKSet.from_dict(jwks)
+        super().__init__("https://jwks.conformance.test/jwks.json")
+        self._jwks_data = jwks
 
-    def get_signing_key_from_jwt(self, token: str) -> jwt.PyJWK:
-        kid = jwt.get_unverified_header(token).get("kid")
-        for key in self._keys.keys:
-            if key.key_id == kid:
-                return key
-        raise jwt.PyJWKClientError(f"No key with kid {kid}")
+    def fetch_data(self) -> Any:
+        return self._jwks_data
 
 
 class _Clock:
@@ -319,11 +317,12 @@ async def _agent_mcp_route(args: dict[str, Any], clock: _Clock) -> dict[str, Any
             provider_ref=args["providerRef"],
             resource=protected["resource"] if protected else None,
             environment=environment,
-            jwks=_StaticJwks(args["jwks"]),  # type: ignore[arg-type]
+            jwks=_StaticJwks(args["jwks"]),
+            clock=clock.seconds,
         ).verify,
         verify_key=None
         if route_args.get("agentKeys") is False
-        else AgentKeyVerifier(api, environment=environment).verify,
+        else AgentKeyVerifier(api, environment=environment, clock=clock.seconds).verify,
     )
     tools = [_paid_tool(tool) for tool in args.get("tools", [])]
 
