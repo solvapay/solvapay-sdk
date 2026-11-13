@@ -69,12 +69,12 @@
             "kind": "payment_required",
             "product": "prd_sequences",
             "checkoutUrl": "https://checkout.conformance.test/s/1",
-            "message": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/1) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+            "message": "You've reached the included usage for this period. [Open checkout](https://checkout.conformance.test/s/1) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
             "planRef": "Pro",
             "meterName": "requests",
-            "reason": "upgrade_required",
+            "reason": "limit_reached",
             "nextAction": "checkout",
-            "remainingCalls": 1,
+            "remainingCalls": 0,
             "links": {
               "checkout": "https://checkout.conformance.test/s/1"
             }
