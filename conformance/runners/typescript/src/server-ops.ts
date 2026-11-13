@@ -30,7 +30,8 @@ function serverFor(args: Json, additionalTools?: (ctx: AdditionalToolsContext) =
     productRef: str(args, 'productRef'),
     resourceUri: RESOURCE_URI,
     readHtml: async () => '',
-    publicBaseUrl: CONFORMANCE_PUBLIC_URL,
+    publicBaseUrl:
+      typeof args.publicBaseUrl === 'string' ? args.publicBaseUrl : CONFORMANCE_PUBLIC_URL,
     apiBaseUrl: CONFORMANCE_API,
     getCustomerRef: () => (typeof args.customerRef === 'string' ? args.customerRef : null),
     ...(Array.isArray(args.views) ? { views: args.views as never } : {}),

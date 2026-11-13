@@ -33,7 +33,7 @@
  * doesn't consume the key.
  */
 
-import { assertValidProductRef, isTaxIdType, TAX_ID_TYPES } from '@solvapay/core'
+import { assertValidProductRef, isTaxIdType, SolvaPayError, TAX_ID_TYPES } from '@solvapay/core'
 import { createMcpCheckoutSession } from './hosted-checkout'
 import {
   activatePlanCore,
@@ -292,8 +292,9 @@ export function buildSolvaPayDescriptors(
   const toolIcons = deriveIcons(branding)
 
   if (!/^https?:\/\//i.test(publicBaseUrl)) {
-    throw new Error(
+    throw new SolvaPayError(
       'buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`).',
+      { code: 'invalid_argument' },
     )
   }
 
