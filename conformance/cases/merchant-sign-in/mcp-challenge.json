@@ -1,0 +1,324 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "mcp-challenge",
+  "description": "The MCP endpoint without a usable bearer token: no Authorization header, another scheme, an empty bearer, a token that is not a JWT, a JWT whose payload is not JSON, and one with no customer claim (customerRef, customer_ref or sub, blank counting as none) each get 401 with a JSON-RPC -32001 error echoing the request's id (null when the body is not one JSON-RPC request), WWW-Authenticate pointing at the protected-resource document, and that header exposed to CORS. None of them reaches SolvaPay. Any method but POST and OPTIONS is a 405 that allows POST, OPTIONS.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_challenge",
+      "publicBaseUrl": "https://mcp-si.conformance.test/",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Basic Y2xpX3NpOnNlY3JldA=="
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": "req-si-1",
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Bearer    "
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Bearer not-a-jwt",
+            "origin": "https://attacker.example"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Bearer eyJhbGciOiJub25lIn0.bm90IGpzb24.c2ln"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0IiwiYXVkIjoiaHR0cHM6Ly9tY3Atc2kuY29uZm9ybWFuY2UudGVzdCIsImV4cCI6MTg5MzQ1NjAwMH0.c2ln"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {
+            "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjdXN0b21lclJlZiI6IiAgIiwic3ViIjoiIn0.c2ln"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {},
+          "rawBody": "not json"
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {},
+          "body": [
+            {
+              "jsonrpc": "2.0",
+              "id": 9,
+              "method": "tools/list"
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "headers": {},
+          "body": {
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/mcp",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/mcp",
+          "headers": {}
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "vary": "Origin",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": "req-si-1",
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 405,
+          "headers": {
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin",
+            "allow": "POST, OPTIONS"
+          },
+          "body": null
+        },
+        {
+          "status": 405,
+          "headers": {
+            "allow": "POST, OPTIONS"
+          },
+          "body": null
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

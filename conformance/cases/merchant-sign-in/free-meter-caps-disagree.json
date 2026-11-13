@@ -1,0 +1,37 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "free-meter-caps-disagree",
+  "description": "Two free tools on one meter must declare the same allowance: a second tool with a different cap is refused at registration.",
+  "input": {
+    "fn": "merchantTools",
+    "args": {
+      "productRef": "prd_si_meter",
+      "tools": [
+        {
+          "name": "first",
+          "kind": "free",
+          "freeLimit": {
+            "meter": "free-shared",
+            "cap": 3,
+            "scope": "lifetime"
+          }
+        },
+        {
+          "name": "second",
+          "kind": "free",
+          "freeLimit": {
+            "meter": "free-shared",
+            "cap": 5,
+            "scope": "lifetime"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "refused": true
+    }
+  }
+}

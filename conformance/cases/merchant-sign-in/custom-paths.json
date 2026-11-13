@@ -1,0 +1,130 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "custom-paths",
+  "description": "A merchant who moves the OAuth endpoints and the MCP endpoint: the metadata names the new endpoints, each one answers there (authorize redirects, an unauthenticated MCP call is challenged at the new path), and the default paths are 404s.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_paths",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "mcpPath": "/rpc",
+      "oauthPaths": {
+        "register": "/auth/clients",
+        "authorize": "/auth/authorize",
+        "token": "/auth/token",
+        "revoke": "/auth/revoke"
+      },
+      "requests": [
+        {
+          "path": "/.well-known/oauth-authorization-server"
+        },
+        {
+          "path": "/auth/authorize?client_id=cli_si_paths&response_type=code"
+        },
+        {
+          "path": "/oauth/authorize?client_id=cli_si_paths&response_type=code"
+        },
+        {
+          "method": "POST",
+          "path": "/rpc",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/auth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "access-control-request-method": "POST"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "issuer": "https://mcp-si.conformance.test",
+            "authorization_endpoint": "https://mcp-si.conformance.test/auth/authorize",
+            "token_endpoint": "https://mcp-si.conformance.test/auth/token",
+            "registration_endpoint": "https://mcp-si.conformance.test/auth/clients",
+            "revocation_endpoint": "https://mcp-si.conformance.test/auth/revoke",
+            "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+            "response_types_supported": ["code"],
+            "grant_types_supported": ["authorization_code", "refresh_token"],
+            "scopes_supported": ["openid", "profile", "email"],
+            "code_challenge_methods_supported": ["S256"]
+          }
+        },
+        {
+          "status": 302,
+          "headers": {
+            "location": "https://api.conformance.test/v1/customer/auth/authorize?client_id=cli_si_paths&response_type=code"
+          },
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "www-authenticate": "Bearer resource_metadata=\"https://mcp-si.conformance.test/.well-known/oauth-protected-resource\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+              "code": -32001,
+              "message": "Unauthorized"
+            }
+          }
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "authorization, content-type",
+            "access-control-max-age": "600",
+            "vary": "Origin"
+          },
+          "body": null
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

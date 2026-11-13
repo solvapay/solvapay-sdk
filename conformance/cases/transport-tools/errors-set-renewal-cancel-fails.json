@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-fails",
+  "description": "Any other cancel failure answers 500 with the error's message.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_4",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_4/cancel",
+          "status": 503,
+          "body": {
+            "statusCode": 503,
+            "message": "Service unavailable",
+            "error": "Service Unavailable"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 500,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-not-found",
+  "description": "Cancelling a purchase the API does not know answers 404 Purchase not found.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_missing",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_missing/cancel",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Purchase pur_ec_missing not found",
+            "error": "Not Found"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "Purchase not found",
+        "status": 404,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

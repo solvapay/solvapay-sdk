@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-create-hosted-session-portal-fails",
+  "description": "A portal session for a customer the API does not know answers 404, with the API's own error code in the body.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_hosted_session",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "kind": "portal"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer cus_EC01 not found",
+            "error": "Not Found",
+            "code": "CUSTOMER_NOT_FOUND"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 404,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}
