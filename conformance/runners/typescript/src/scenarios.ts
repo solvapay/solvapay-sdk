@@ -1,4 +1,5 @@
 import { buildPaywallGate, createSolvaPay, PaywallError, type FreeLimit } from '@solvapay/server'
+import { runAgentCallsScenario } from './agent-calls'
 import type { ScenarioCase, ScenarioStep, StepExpect } from './cases'
 
 /**
@@ -166,6 +167,8 @@ async function runStep(
 
 /** Runs every step and returns each step's outcome and API calls, in order. */
 export async function runScenario(data: ScenarioCase): Promise<StepExpect[]> {
+  // ---- agent-calls (see agent-calls.ts) ----
+  if (data.setup.agentCalls !== undefined) return runAgentCallsScenario(data)
   const ttl = data.setup.limitsCacheTtlMs
   const productRef = data.setup.productRef
   const realFetch = globalThis.fetch

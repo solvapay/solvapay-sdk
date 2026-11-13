@@ -1,0 +1,235 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "owner-approves-while-waiting",
+  "description": "The owner approves while the call waits: authorize repeats with the same request id, each asking SolvaPay to hold for what is left of the merchant's wait (at most 55 s), sleeping retryAfterSeconds in between; the call is then completed in the merchant's currency (EUR) and settled in USD credits.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 70
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_20",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "opus-tool:search",
+        "estimate": {
+          "amount": "0.04",
+          "currency": "EUR"
+        }
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC20",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC20",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 10
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC20",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC20",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 10
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_AC20",
+            "reservation": {
+              "held": {
+                "amount": "0.0436",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "allow",
+            "callRef": "call_AC20",
+            "item": "opus-tool:search",
+            "estimate": {
+              "amount": "0.04",
+              "currency": "EUR"
+            },
+            "reservation": {
+              "held": {
+                "amount": "0.0436",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          },
+          "log": [
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_20",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "opus-tool:search",
+                "estimate": "0.04 EUR",
+                "callRef": "call_AC20",
+                "approvalRef": "apr_AC20"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_20",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "opus-tool:search",
+                "estimate": "0.04 EUR",
+                "callRef": "call_AC20",
+                "approvalRef": "apr_AC20"
+              }
+            },
+            {
+              "event": "call.allowed",
+              "fields": {
+                "requestId": "req_ac_20",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "opus-tool:search",
+                "estimate": "0.04 EUR",
+                "callRef": "call_AC20"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_20",
+              "item": "opus-tool:search",
+              "estimate": {
+                "amount": "0.04",
+                "currency": "EUR"
+              },
+              "wait": 55
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_20",
+              "item": "opus-tool:search",
+              "estimate": {
+                "amount": "0.04",
+                "currency": "EUR"
+              },
+              "wait": 55
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_20",
+              "item": "opus-tool:search",
+              "estimate": {
+                "amount": "0.04",
+                "currency": "EUR"
+              },
+              "wait": 50
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "finishCall",
+      "args": {
+        "requestId": "req_ac_20",
+        "status": 200,
+        "cost": {
+          "amount": 0.0315,
+          "currency": "EUR"
+        }
+      },
+      "clock": "2026-11-13T12:00:30.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_AC20/complete",
+          "body": {
+            "callRef": "call_AC20",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.03433",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "callRef": "call_AC20",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.03433",
+              "currency": "USD"
+            },
+            "duplicate": false
+          },
+          "log": []
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls/call_AC20/complete",
+            "body": {
+              "status": 200,
+              "cost": {
+                "amount": "0.0315",
+                "currency": "EUR"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

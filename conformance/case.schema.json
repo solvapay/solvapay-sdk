@@ -115,6 +115,15 @@
             "limitsCacheTtlMs": {
               "type": "integer",
               "minimum": 0
+            },
+            "agentCalls": {
+              "type": "object",
+              "required": ["maxWaitSeconds"],
+              "additionalProperties": false,
+              "description": "agent-calls: the steps run against one agent-calls session, which waits up to maxWaitSeconds for the owner.",
+              "properties": {
+                "maxWaitSeconds": { "type": "integer", "minimum": 0 }
+              }
             }
           }
         },

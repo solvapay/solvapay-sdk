@@ -40,7 +40,12 @@ export interface ScenarioCase {
   suite: string
   case: string
   description: string
-  setup: { productRef: string; limitsCacheTtlMs?: number }
+  setup: {
+    productRef: string
+    limitsCacheTtlMs?: number
+    /** agent-calls: the steps run against one `createAgentCalls` session (agent-calls.ts). */
+    agentCalls?: { maxWaitSeconds: number }
+  }
   steps: ScenarioStep[]
 }
 
