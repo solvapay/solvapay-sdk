@@ -6,6 +6,12 @@
 #   ./start.sh agents go           the Go agents server
 #   ./start.sh --no-ngrok ...      no tunnels (they run elsewhere)
 #
+# Tunnels: when an ngrok agent is already running (the platform's, with its
+# API on 127.0.0.1:4040), the tunnels are added to it and removed on exit, so
+# a plan that allows one agent still works. Otherwise this script starts its
+# own agent from ngrok.yml. Run ./setup-ngrok.sh once to write ngrok.yml and
+# the URLs in .env.
+#
 # Ctrl+C stops everything it started; so does any one process exiting.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,16 +49,21 @@ done
 
 if [ "$NGROK" = 1 ]; then
   command -v ngrok >/dev/null || fail "ngrok is not installed: brew install ngrok"
-  [ -f ngrok.yml ] || fail "ngrok.yml is missing: cp ngrok.yml.example ngrok.yml, then set your domains"
+  [ -f ngrok.yml ] || fail "ngrok.yml is missing: run ./setup-ngrok.sh <suffix>"
   for server in "${SERVERS[@]}"; do
     var="$(url_var "$server")"; url="${!var}"; host="${url#https://}"
     grep -q "domain: ${host}\$" ngrok.yml || fail "$var ($host) is not a domain in ngrok.yml"
   done
 fi
 
+AGENT_API="http://127.0.0.1:4040/api/tunnels"
+ATTACHED=()
 PIDS=()
 cleanup() {
   trap - EXIT INT TERM
+  for name in ${ATTACHED[@]+"${ATTACHED[@]}"}; do
+    curl -s -o /dev/null -X DELETE "$AGENT_API/$name" || true
+  done
   [ ${#PIDS[@]} -gt 0 ] && kill "${PIDS[@]}" 2>/dev/null || true
   wait 2>/dev/null || true
 }
@@ -74,7 +85,24 @@ for server in "${SERVERS[@]}"; do
   esac
 done
 
-if [ "$NGROK" = 1 ]; then
+if [ "$NGROK" = 1 ] && curl -s -o /dev/null --max-time 2 "$AGENT_API"; then
+  echo "Adding the tunnels to the ngrok agent already running (127.0.0.1:4040)."
+  for server in "${SERVERS[@]}"; do
+    var="$(url_var "$server")"; url="${!var}"
+    case "$server" in
+      paywall-ts) port=3060 ;; paywall-py) port=3061 ;; paywall-go) port=3062 ;;
+      agents-ts) port=3070 ;; agents-py) port=3071 ;; agents-go) port=3072 ;;
+    esac
+    # A per-run name: the agent keeps a failed tunnel's name reserved.
+    name="parity-$server-$$"
+    answer="$(curl -s -X POST "$AGENT_API" -H 'content-type: application/json' \
+      -d "{\"name\":\"$name\",\"proto\":\"http\",\"addr\":\"$port\",\"domain\":\"${url#https://}\"}")"
+    case "$answer" in
+      *'"public_url"'*) ATTACHED+=("$name") ;;
+      *) fail "ngrok refused the tunnel for $server: $answer" ;;
+    esac
+  done
+elif [ "$NGROK" = 1 ]; then
   CONFIGS=()
   DEFAULT_CONFIG="$(ngrok config check 2>/dev/null | sed -n 's/.*configuration file at //p' | head -n1 || true)"
   [ -n "$DEFAULT_CONFIG" ] && [ -f "$DEFAULT_CONFIG" ] && CONFIGS+=(--config "$DEFAULT_CONFIG")
