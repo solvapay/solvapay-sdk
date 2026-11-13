@@ -1,0 +1,58 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-environment",
+  "description": "With the merchant's environment set to live, a live agent verifies, a sandbox agent is refused as environment_mismatch with a sentence naming both, and an unknown env is invalid before the environments are compared.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "environment": "live",
+      "tokens": {
+        "live": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6ImxpdmUiLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJweCI6dHJ1ZX0.-r5cRj3-nbxgpmARpc1-ONBN9BVWvtRdVQR1YGhG1Cx1ixw6Kwg5iPcF7YZmGKSBsUkkMVvyS8R1QP2okDuOtg",
+        "sandbox": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.gsetpH5m9SDbDEXYMEL4-A3GkAXhYOHTM1NGScx2hYu4ich6cIsvi9zfuEW3vkPExy8FhX7R-xq_s4pYFTmQeQ",
+        "unknownEnv": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InN0YWdpbmciLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.YGY2XEftNOYgFAVy38NOP6ERUHSRO3I9j4R3Fx_ck0MBraYmrVA3ysep4GgwbuCTC5bT9uGQxpofmyD4HD3Pww"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "live": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": true,
+          "environment": "live"
+        }
+      },
+      "sandbox": {
+        "ok": false,
+        "reason": "environment_mismatch",
+        "detail": "This agent spends in sandbox, and this secret key is for live"
+      },
+      "unknownEnv": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "env is not sandbox or live"
+      }
+    }
+  }
+}

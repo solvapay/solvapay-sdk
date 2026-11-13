@@ -1,0 +1,104 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "environment-mismatch-without-oauth",
+  "description": "Without OAuth, a sandbox agent at a live merchant gets the same 403 JSON-RPC error, with an invalid_token challenge naming environment_mismatch.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "environment": "live"
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 403,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"environment_mismatch\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted (environment_mismatch)."
+            }
+          }
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

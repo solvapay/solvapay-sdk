@@ -1,0 +1,99 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-time-claims",
+  "description": "exp, nbf and iat are read with 30 seconds of tolerance: a token that expired more than 30 seconds ago is expired (exactly 30 seconds too), one expired 29 seconds ago still verifies, an nbf more than 30 seconds ahead is invalid. The expiry is reported to the millisecond.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "tokens": {
+        "expired31sAgo": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxMTY5fQ.2N3OKLpERD6vO5KHw0FlabcU7Ee_mNvSnurF4xRzAieSz94__XNHCdqbeLFMlWGVwneSqD0u9r7u2BPDwSv-Ig",
+        "expired30sAgo": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxMTcwfQ.w61YhflQoAzW57tPIbNiqbV394iG3EmMvEwfXN9vbFliWZQHo3DKQQ_1DJNXLKMfOUe5if32_z8XWYKQxRkyTQ",
+        "expired29sAgo": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxMTcxfQ.km5myO5BiFYN-k_NmZVZ7jRhVwltUET2MPlScSTLHKoExuzz7nDrs1idG8VjC_wY_o1OCF9L0s7JDpEzlDv-lQ",
+        "nbf31sAhead": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJuYmYiOjE3OTQ1NzEyMzF9.d8hWA_5nP_42E53een2qBTBOQHfWt_eG9h96oJ3xoZi8b0na4GOkh3lmWdrem50MSp6tT5iWzgSb2zmYYkQoqg",
+        "nbf30sAhead": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJuYmYiOjE3OTQ1NzEyMzB9.9nM3PIfBYHvL6dLl7yD62zNmiVhwWla2N9KIOC3p-EsoAs0IF79XObg4TRmozWTBlLQWc9yp3nkAQ0wZYLXoKQ",
+        "fractionalExp": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLjV9.yjyCRT42qFI9R_EPkD-MbrbEDnKnZQRhh-4QL3ieptjbomNBQMNVEF6FE7NlT_YFV2EJ5CJQNtE-vLL7Uu-VHA",
+        "stringExp": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoiMTc5NDU3MTgwMCJ9.Y6jRcpQwLsAGTM9cYwmn5VKyovstj_It0ZoEOEJVMD_xtRlEDHfJ3E4wQ4ct9QvEwvQXL1pdSBcMAAzgafcOpQ",
+        "stringIat": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6IjE3OTQ1NzExNDAiLCJleHAiOjE3OTQ1NzE4MDB9.Fkbo_FW-hx0dsXmJNensEbwi0zIKIYc0QYRqYhVNheITo7-8foFkOGlskMfG9_tVW3uSgVCn1gpfnOH-L7Bxqw"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "expired31sAgo": {
+        "ok": false,
+        "reason": "expired",
+        "detail": "<not compared>"
+      },
+      "expired30sAgo": {
+        "ok": false,
+        "reason": "expired",
+        "detail": "<not compared>"
+      },
+      "expired29sAgo": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T11:59:31.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "nbf31sAhead": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "nbf30sAhead": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "fractionalExp": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.500Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "stringExp": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "stringIat": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      }
+    }
+  }
+}

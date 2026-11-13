@@ -1,0 +1,519 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "refusals-as-tool-results",
+  "description": "SolvaPay's refusals reach the agent as tool errors whose text is the sentence for its human and whose structuredContent.refusal names the reason, and the tool never runs: a policy deny, a top-up, an owner approval the route does not wait for (ask, with the waiting message), an agent SolvaPay no longer accepts (401 or 403 on authorize), and SolvaPay out of reach or answering an error (503, 400).",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 1"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 2"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 3"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 4"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 5"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 6"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Question 7"
+              }
+            }
+          }
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "refused",
+            "callRef": "call_am_ref1",
+            "reason": "deny",
+            "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "refused",
+            "callRef": "call_am_ref2",
+            "reason": "topup_required",
+            "message": "Your balance is $0.00. Top up to keep going."
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_am_ref3",
+            "message": "Approval apr_am_1 for more budget is waiting for your owner.",
+            "approval": {
+              "reference": "apr_am_1",
+              "expiresAt": "2026-11-12T12:15:00.000Z"
+            },
+            "retryAfterSeconds": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "status": 401,
+          "body": {
+            "message": "agent revoked"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "status": 403,
+          "body": {
+            "message": "not for this merchant"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "status": 503,
+          "body": {
+            "message": "down"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "status": 400,
+          "body": {
+            "message": "bad request"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "This call could cost about $0.31, over the per-call cap of $0.25."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "deny",
+                  "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 2,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Your balance is $0.00. Top up to keep going."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "topup_required",
+                  "message": "Your balance is $0.00. Top up to keep going."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 3,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Approval apr_am_1 for more budget is waiting for your owner."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "ask",
+                  "message": "Approval apr_am_1 for more budget is waiting for your owner."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 4,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "agent_not_accepted",
+                  "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 5,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "agent_not_accepted",
+                  "message": "SolvaPay did not accept this agent (revoked or not for this merchant)."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 6,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SolvaPay could not be reached to authorize this call. Try again shortly."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "unavailable",
+                  "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 7,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SolvaPay could not be reached to authorize this call. Try again shortly."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "unavailable",
+                  "message": "SolvaPay could not be reached to authorize this call. Try again shortly."
+                }
+              },
+              "isError": true
+            }
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:02ecd63e4f1632ff673d8ebfb0709c5e520a2a64a77644369eab86c5c833a796",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-2>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:6f6cb2379d5b20df39599b65ae7501a6f4c565e7913217e30b492f871872eabd",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-3>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:0382a3d975fd041572a308838480b07e9a789989dbfb34d12152f93c03644225",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-4>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:2b71f00b126e10636fbb133ecc57bd6df85ba5c08cd8534bc8cfe1467e903a06",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-5>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:2d44f48250d21cdf1e2a4074eedf8b42242fcad30ba22e16e5119144f3a5e4fc",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-6>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:9ff711033b1d2be4fcbf857adc1f79f4600b63b361c901441a02e0879c8f1747",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-7>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:a7c17b6fce6c342ddf46826e74f3bdfe2d79e9d6c67f5a4ad8fb6fc762027410",
+            "toolError": false,
+            "wait": 0
+          }
+        }
+      ]
+    }
+  }
+}
