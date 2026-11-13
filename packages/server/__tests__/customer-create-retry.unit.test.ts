@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { SolvaPayError } from '@solvapay/core'
 import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
 
@@ -33,5 +34,41 @@ describe('customer creation after a failed create', () => {
     expect(second.customerRef).toBe('cus_RETRY1')
     expect(checkLimits).toHaveBeenCalledTimes(1)
     expect(checkLimits.mock.calls[0][0]).toMatchObject({ customerRef: 'cus_RETRY1' })
+  })
+})
+
+/**
+ * A 409 the SDK cannot resolve to an existing customer fails with the code
+ * the Python SDK uses, `customer_conflict`, and the API's 409 status.
+ */
+describe('customer creation conflict that cannot be resolved', () => {
+  it('throws a SolvaPayError coded customer_conflict', async () => {
+    const client = {
+      getCustomer: vi.fn(async () => {
+        throw new SolvaPayError('Get customer failed (404): {"message":"Customer not found"}', {
+          status: 404,
+          code: 'http_404',
+        })
+      }),
+      createCustomer: vi.fn(async () => {
+        throw new SolvaPayError(
+          'Create customer failed (409): {"message":"Customer with identifier email x already exists"}',
+          { status: 409, code: 'http_409' },
+        )
+      }),
+      checkLimits: vi.fn(),
+      trackUsage: vi.fn(async () => undefined),
+    } as unknown as SolvaPayClient
+    const paywall = new SolvaPayPaywall(client, { debug: false })
+
+    const error = await paywall
+      .ensureCustomer('user_conflict_unit_1', 'user_conflict_unit_1')
+      .catch(e => e)
+
+    expect(error).toBeInstanceOf(SolvaPayError)
+    expect(error).toMatchObject({ code: 'customer_conflict', status: 409 })
+    expect(error.message).toMatch(
+      /^Failed to resolve existing customer for user_conflict_unit_1 after conflict: Create customer failed \(409\)/,
+    )
   })
 })
