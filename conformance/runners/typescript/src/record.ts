@@ -5,11 +5,22 @@
  *
  * When an operation has more than one implementation, they must agree, or
  * nothing is recorded for that case.
+ *
+ * Then rewrites `conformance/cases.lock`, the fingerprint of every case. This
+ * is the only thing that writes it.
  */
 import { writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { asJson, CASES_DIR, isScenario, loadCases, type Expect } from './cases'
+import {
+  asJson,
+  CASES_DIR,
+  currentLock,
+  isScenario,
+  LOCK_FILE,
+  loadCases,
+  type Expect,
+} from './cases'
 import { implementationsFor, outcomeOf } from './operations'
 import { runScenario } from './scenarios'
 
@@ -50,5 +61,8 @@ if (disagreements.length > 0) {
   )
   process.exit(1)
 }
+// Every case now has its expectation: fingerprint them all, including any edited by hand.
+writeFileSync(LOCK_FILE, currentLock())
+console.log(`wrote ${relative(process.cwd(), LOCK_FILE)}`)
 // The SDK keeps timers open (its shared lookup cache), so leave explicitly.
 process.exit(0)

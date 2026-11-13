@@ -1175,58 +1175,6 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
 
-  packages/mcp-app-bundle:
-    dependencies:
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^1.7.1
-        version: 1.7.1(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
-      '@solvapay/auth':
-        specifier: workspace:*
-        version: link:../auth
-      '@solvapay/core':
-        specifier: workspace:*
-        version: link:../core
-      '@solvapay/mcp-core':
-        specifier: workspace:*
-        version: link:../mcp-core
-      '@solvapay/react':
-        specifier: workspace:*
-        version: link:../react
-      '@solvapay/server':
-        specifier: workspace:*
-        version: link:../server
-      '@stripe/stripe-js':
-        specifier: ^9.0.0
-        version: 9.1.0
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-    devDependencies:
-      '@types/node':
-        specifier: ^25.5.2
-        version: 25.5.2
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
-      '@vitejs/plugin-react':
-        specifier: ^6.0.1
-        version: 6.0.1(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vite:
-        specifier: ^8.0.6
-        version: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3)
-      vite-plugin-singlefile:
-        specifier: ^2.3.2
-        version: 2.3.2(rollup@4.60.1)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
-
   packages/mcp-core:
     dependencies:
       '@solvapay/core':
@@ -1411,6 +1359,58 @@ importers:
       vitest:
         specifier: ^4.1.2
         version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+
+  widget:
+    dependencies:
+      '@modelcontextprotocol/ext-apps':
+        specifier: ^1.7.1
+        version: 1.7.1(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+      '@solvapay/auth':
+        specifier: workspace:*
+        version: link:../packages/auth
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@solvapay/mcp-core':
+        specifier: workspace:*
+        version: link:../packages/mcp-core
+      '@solvapay/react':
+        specifier: workspace:*
+        version: link:../packages/react
+      '@solvapay/server':
+        specifier: workspace:*
+        version: link:../packages/server
+      '@stripe/stripe-js':
+        specifier: ^9.0.0
+        version: 9.1.0
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^25.5.2
+        version: 25.5.2
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.1
+        version: 6.0.1(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^8.0.6
+        version: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3)
+      vite-plugin-singlefile:
+        specifier: ^2.3.2
+        version: 2.3.2(rollup@4.60.1)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.8.3))
 
 packages:
 

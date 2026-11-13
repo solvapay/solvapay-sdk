@@ -3,3 +3,4 @@ packages:
   - 'packages/*'
   - 'examples/*'
   - 'conformance/runners/*'
+  - 'widget'

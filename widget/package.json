@@ -1,9 +1,9 @@
 {
-  "name": "@solvapay/mcp-app-bundle",
+  "name": "@solvapay/widget",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Builds the SolvaPay MCP App widget (checkout, account, top-up) as one self-contained mcp-app.html. The Python SDK ships the built file in its wheel.",
+  "description": "Builds the SolvaPay MCP App widget (checkout, account, top-up) as one self-contained mcp-app.html, built once and copied into each language's package (the Python SDK ships it in its wheel).",
   "scripts": {
     "build": "vite build",
     "lint": "tsc --noEmit -p tsconfig.json"

@@ -1,5 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { asJson, isScenario, loadCases } from './cases'
+import { asJson, currentLock, isScenario, LOCK_FILE, loadCases } from './cases'
 import { implementationsFor, outcomeOf } from './operations'
 import { runScenario } from './scenarios'
 
@@ -7,6 +8,14 @@ const cases = loadCases()
 const suites = [...new Set(cases.map(({ data }) => data.suite))]
 const RECORD_HINT =
   'Run `pnpm --filter @solvapay/conformance-typescript record` and review the result.'
+
+it('cases.lock matches the cases', () => {
+  const committed = existsSync(LOCK_FILE) ? readFileSync(LOCK_FILE, 'utf-8') : ''
+  expect(
+    committed,
+    `conformance/cases.lock is stale: a case changed without the reference runner. ${RECORD_HINT}`,
+  ).toBe(currentLock())
+})
 
 for (const suite of suites) {
   describe(suite, () => {
