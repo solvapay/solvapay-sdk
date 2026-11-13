@@ -36,11 +36,11 @@ SERVERS="paywall-ts:3060 paywall-py:3061 paywall-go:3062 agents-ts:3070 agents-p
 if [ "$RESERVE" = 1 ]; then
   command -v ngrok >/dev/null || fail "ngrok is not installed: brew install ngrok"
   [ -n "${NGROK_API_KEY:-}" ] || fail "--reserve needs NGROK_API_KEY (dashboard → API → New API key)"
-  existing="$(ngrok api reserved-domains list --api-key "$NGROK_API_KEY" --limit 1000 \
-    | python3 -c 'import json,sys; print("\n".join(d["domain"] for d in json.load(sys.stdin)["reserved_domains"]))')"
   for entry in $SERVERS; do
     domain="${entry%%:*}.$SUFFIX"
-    if printf '%s\n' "$existing" | grep -qx "$domain"; then
+    found="$(ngrok api reserved-domains list --api-key "$NGROK_API_KEY" --filter "obj.domain == '$domain'" \
+      | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["reserved_domains"]))')"
+    if [ "$found" != 0 ]; then
       echo "✓ $domain (already reserved)"
     else
       ngrok api reserved-domains create --api-key "$NGROK_API_KEY" --domain "$domain" \
