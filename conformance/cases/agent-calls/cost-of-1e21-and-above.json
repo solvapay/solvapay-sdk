@@ -1,0 +1,155 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "cost-of-1e21-and-above",
+  "description": "A reported cost of 1e21 or more goes to SolvaPay as plain digits, never in exponent notation.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 0
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_70",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_AC70",
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "allow",
+            "callRef": "call_AC70",
+            "item": "claude-haiku-4-5",
+            "estimate": {
+              "amount": "0.005142",
+              "currency": "USD"
+            },
+            "reservation": {
+              "held": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-13T12:15:00.000Z"
+            }
+          },
+          "log": [
+            {
+              "event": "call.allowed",
+              "fields": {
+                "requestId": "req_ac_70",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC70"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_70",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "finishCall",
+      "args": {
+        "requestId": "req_ac_70",
+        "status": 200,
+        "cost": {
+          "amount": 1e21,
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:01.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_AC70/complete",
+          "body": {
+            "callRef": "call_AC70",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "callRef": "call_AC70",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "duplicate": false
+          },
+          "log": []
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls/call_AC70/complete",
+            "body": {
+              "status": 200,
+              "cost": {
+                "amount": "1000000000000000000000",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

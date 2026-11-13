@@ -1,0 +1,45 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-numeric-jti",
+  "description": "A token whose jti is a number is accepted, and its token id comes back as a string, the same in every language.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "tokens": {
+        "numericJti": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS1udW0ifQ.eyJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6MTIzNDUsImlzcyI6Imh0dHBzOi8vYXBpLmNvbmZvcm1hbmNlLnRlc3QvdjEvYWdlbnQiLCJhdWQiOiJwcnZfYWlfbWVyY2hhbnQiLCJzdWIiOiJhZ3RfYWlfbnVtanRpIiwiaWF0IjoxNzk0NTcwOTAwLCJleHAiOjE3OTQ1NzE4MDB9.tAYiUT4wBosR2uMVd-P2ENyzT4Tv_x1gBAeb_ApU9MHoC89MR6twgpvU__YKDvXOkBihILDSHvgBiLotlZnmqg"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Fr7F1A-wQalNxniqk_8BKBBh7M7QBdUMD6AXOUXNBKI",
+            "y": "AEYmkcEqq41K7pI5-pFnxBu-tiy_ndlFzxh1S1XdNUs",
+            "crv": "P-256",
+            "kid": "ai-key-num",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "numericJti": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_numjti",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "12345",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      }
+    }
+  }
+}

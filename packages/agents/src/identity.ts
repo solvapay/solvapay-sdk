@@ -105,7 +105,7 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
         {
           agentRef: sub,
           principalRef: principal,
-          tokenId: jti as string,
+          tokenId: String(jti),
           expiresAt: new Date((exp as number) * 1000),
           promptExcerpt: payload[AGENT_TOKEN_EXCERPT_CLAIM] === true,
           environment,

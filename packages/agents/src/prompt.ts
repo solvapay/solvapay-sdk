@@ -22,6 +22,17 @@ export function promptFacts(text: string, toolError = false): PromptFacts {
   return {
     promptHash: `sha256:${createHash('sha256').update(text).digest('hex')}`,
     toolError,
-    excerpt: text.slice(-PROMPT_EXCERPT_MAX),
+    excerpt: lastUnits(text, PROMPT_EXCERPT_MAX),
   }
+}
+
+/**
+ * The last `count` UTF-16 code units of `text`, as SolvaPay counts the limit,
+ * without the low half of a character the cut went through: a lone surrogate
+ * is not valid text to send.
+ */
+function lastUnits(text: string, count: number): string {
+  const end = text.slice(-count)
+  const first = end.charCodeAt(0)
+  return first >= 0xdc00 && first <= 0xdfff ? end.slice(1) : end
 }
