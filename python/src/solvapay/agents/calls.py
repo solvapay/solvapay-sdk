@@ -16,7 +16,7 @@ import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Any, Literal
 
 from ..client import AsyncApiClient
@@ -40,6 +40,19 @@ RefusalReason = Literal[
     "approval_client_closed",
     "unavailable",
 ]
+
+# Refusals money or the owner can settle: HTTP 402.
+_OWNER_OR_MONEY_REASONS = frozenset(
+    {
+        "customer_not_linked",
+        "topup_required",
+        "ask",
+        "approval_declined",
+        "approval_expired",
+        "approval_timed_out",
+        "approval_client_closed",
+    }
+)
 
 NOT_ACCEPTED = "SolvaPay did not accept this agent (revoked or not for this merchant)."
 UNAVAILABLE = "SolvaPay could not be reached to authorize this call. Try again shortly."
@@ -66,11 +79,14 @@ def prompt_facts(text: str, tool_error: bool = False) -> PromptFacts:
     The end is the last ``PROMPT_EXCERPT_MAX`` UTF-16 code units, as TypeScript's
     ``slice`` counts and SolvaPay measures them: an emoji counts twice."""
     units = text.encode("utf-16-le")
-    excerpt = (
-        text
-        if len(units) <= 2 * PROMPT_EXCERPT_MAX
-        else units[-2 * PROMPT_EXCERPT_MAX :].decode("utf-16-le", errors="surrogatepass")
-    )
+    if len(units) <= 2 * PROMPT_EXCERPT_MAX:
+        excerpt = text
+    else:
+        end = units[-2 * PROMPT_EXCERPT_MAX :]
+        # The cut went through a character outside the BMP: drop its lone low half.
+        if 0xDC00 <= int.from_bytes(end[:2], "little") <= 0xDFFF:
+            end = end[2:]
+        excerpt = end.decode("utf-16-le")
     return PromptFacts(
         prompt_hash=f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
         tool_error=tool_error,
@@ -84,7 +100,11 @@ def amount_string(amount: float | Decimal | str) -> str:
     A float is rounded from its exact binary value, as TypeScript's ``toFixed`` does:
     ``1.5e-8`` is just under the half, so it is ``0.00000001``."""
     exact = Decimal(amount) if isinstance(amount, float) else Decimal(str(amount))
-    fixed = exact.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+    # Enough precision for every integer digit plus the 8 places (the default 28
+    # fails from 1e20 up).
+    with localcontext() as context:
+        context.prec = max(28, exact.adjusted() + 10)
+        fixed = exact.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
     text = f"{fixed:f}".rstrip("0").rstrip(".")
     return text or "0"
 
@@ -275,4 +295,6 @@ def refusal_status(reason: RefusalReason) -> int:
         return 502
     if reason == "deny":
         return 422
-    return 402
+    if reason in _OWNER_OR_MONEY_REASONS:
+        return 402
+    raise SolvaPayError(f"Refusal reason {reason!r} has no status", code="unknown_refusal_reason")
