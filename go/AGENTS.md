@@ -10,7 +10,8 @@ the TypeScript SDK; the conformance cases in `../conformance` say how.
   Cases newer than the pin are skipped as "not adopted"; a release needs
   `go run ./cmd/pin --check` to pass.
 - **Generated, never by hand:** `api/api.gen.go` (`go generate ./api`, after
-  `pnpm spec:sync`) and `conformance.lock`.
+  `pnpm spec:sync`) and `conformance.lock`; `mcp_widget.html`, the MCP App
+  widget built from `../mcp-app` (`node scripts/sync_widget.mjs`, `--check` in CI).
 - **Errors** are `*solvapay.Error` with the same `Code` and `Status` as the other
   SDKs. Branch on codes, never on messages.
 - Check before committing: `gofmt -l .` (empty), `go vet ./...`, `go test ./...`.
