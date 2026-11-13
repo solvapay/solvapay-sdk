@@ -17,3 +17,9 @@ reference. See README.md for the case format.
   languages add theirs when they adopt the case.
 - Don't change a case and a language folder in the same PR: the "Contract
   boundary" check fails it.
+- **Read cases compactly.** The files are pretty JSON for review; reading them
+  that way costs ~40% more tokens than needed. Use `node conformance/show.mjs`:
+  `--list [suite]` for names and descriptions, `--keys <suite>/<case>` for a
+  case's shape, `<suite>/<case>` for the whole case minified, and
+  `<suite>/<case> <path>` for one part (`expect`, `steps.2.expect.apiCalls`).
+  Open the file itself only to edit it.
