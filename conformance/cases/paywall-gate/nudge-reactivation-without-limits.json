@@ -1,0 +1,16 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "nudge-reactivation-without-limits",
+  "description": "A reactivation nudge with no limits at all points at the account tool and has no link.",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": "reactivation_required",
+      "limits": null
+    }
+  },
+  "expect": {
+    "result": "Heads up — your plan is no longer active. Call the `account` tool with view: 'account' to reactivate it."
+  }
+}

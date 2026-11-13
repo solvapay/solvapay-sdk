@@ -6,7 +6,12 @@ import {
   type BootstrapPayload,
   type SolvaPayCallToolResult,
 } from '@solvapay/mcp-core'
-import { buildPaywallGate, createSolvaPay, verifyWebhook } from '@solvapay/server'
+import {
+  buildNudgeMessage,
+  buildPaywallGate,
+  createSolvaPay,
+  verifyWebhook,
+} from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
 
@@ -181,6 +186,19 @@ export const OPERATIONS: Record<string, Implementation[]> = {
     },
   ],
 }
+
+// ---- paywall nudge copy ----------------------------------------------------
+// `state` is the kind the classifier would have produced; `limits` may be null.
+OPERATIONS.buildNudgeMessage = [
+  {
+    name: 'server',
+    run: args =>
+      buildNudgeMessage(
+        { kind: str(args, 'state') } as Parameters<typeof buildNudgeMessage>[0],
+        args.limits as Parameters<typeof buildNudgeMessage>[1],
+      ),
+  },
+]
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]

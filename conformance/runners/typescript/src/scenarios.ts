@@ -1,4 +1,4 @@
-import { createSolvaPay, PaywallError, type FreeLimit } from '@solvapay/server'
+import { buildPaywallGate, createSolvaPay, PaywallError, type FreeLimit } from '@solvapay/server'
 import type { ScenarioCase, ScenarioStep, StepExpect } from './cases'
 
 /**
@@ -114,6 +114,13 @@ async function runStep(
           if (args.handler === 'fail') {
             throw Object.assign(new Error('the handler failed'), { code: 'handler_failed' })
           }
+          // The handler gates the call itself (as `ctx.gate()` does).
+          if (args.handler === 'gate') {
+            throw new PaywallError(
+              'Payment required',
+              buildPaywallGate(productRef, { withinLimits: false, remaining: 0 }),
+            )
+          }
           return { ok: true }
         })
       try {
@@ -139,6 +146,17 @@ async function runStep(
     case 'invalidateLimits':
       solvaPay.paywall.invalidateLimits(str(args, 'customerRef'), optional(args, 'productRef'))
       return { result: null }
+    // ---- customer resolution with details ----
+    case 'ensureCustomer': {
+      const email = optional(args, 'email')
+      const name = optional(args, 'name')
+      const ref = await solvaPay.ensureCustomer(
+        str(args, 'customerRef'),
+        optional(args, 'externalRef'),
+        email !== undefined || name !== undefined ? { email, name } : undefined,
+      )
+      return { result: ref }
+    }
     default:
       throw new Error(
         `No TypeScript mapping for scenario step "${step.fn}". Add it to conformance/runners/typescript/src/scenarios.ts.`,

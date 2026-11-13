@@ -78,7 +78,7 @@ them.
 | Suite                  | Operation                               | What it pins down                                                                                                                                                                                         |
 | ---------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `webhook-verification` | `verifyWebhook`                         | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                                                                                                 |
-| `paywall-gate`         | `buildPaywallGate`                      | Gate kind, recovery fields, links and the exact message a customer sees                                                                                                                                   |
+| `paywall-gate`         | `buildPaywallGate`, `buildNudgeMessage` | Gate kind, recovery fields, links and the exact message a customer sees; the nudge appended to a successful call near a limit                                                                             |
 | `narration`            | `narrateAccount`, `narrateActivatePlan` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status                                                                      |
 | `transport-tools`      | `callTool`                              | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses |
 | `paywall-sequences`    | scenarios (see below)                   | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records          |
@@ -143,8 +143,9 @@ runs. A scenario runs several steps against **one** SDK instance:
   customer lookup cache across instances in one process.
 
 Steps: `decide` (the paywall's verdict), `paidCall` (a function made paid with
-`payable`, whose handler succeeds or fails), `decideConcurrently` (`count` calls
-started together) and `invalidateLimits`.
+`payable`, whose handler succeeds, fails, or gates the call itself), `decideConcurrently`
+(`count` calls started together), `invalidateLimits` and `ensureCustomer` (with an
+optional `externalRef`, `email` and `name`).
 
 ## Names: why cases use camelCase
 
