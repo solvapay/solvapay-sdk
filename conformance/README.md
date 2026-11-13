@@ -59,6 +59,7 @@ it has not mapped is a failure.
 | `paywall-gate`         | `buildPaywallGate`                      | Gate kind, recovery fields, links and the exact message a customer sees                                                                                                                                   |
 | `narration`            | `narrateAccount`, `narrateActivatePlan` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status                                                                      |
 | `transport-tools`      | `callTool`                              | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses |
+| `paywall-sequences`    | scenarios (see below)                   | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records          |
 
 ### `callTool`
 
@@ -85,6 +86,65 @@ parsed, under `json`, since key order is not part of what the widget reads.
 Arguments must pass the tool's input schema: the Python server validates them
 before the tool runs, the TypeScript runner calls the handler directly.
 
+## Scenarios: several calls in a row
+
+Some behaviour only shows across calls: the paywall caches limits, counts units
+down, maps your user id to a customer once, and records usage after the handler
+runs. A scenario runs several steps against **one** SDK instance:
+
+```json
+{
+  "suite": "paywall-sequences",
+  "case": "cache-counts-down-then-rechecks",
+  "description": "Three units from one limits check: …",
+  "setup": { "productRef": "prd_sequences" },
+  "steps": [
+    { "fn": "decide", "clock": "2026-11-12T12:00:00.000Z", "args": { "customerRef": "cus_SEQ01" },
+      "api": [{ "method": "POST", "path": "/v1/sdk/limits", "body": { "withinLimits": true, "remaining": 3, … } }],
+      "expect": { "result": { "outcome": "allow", "customerRef": "cus_SEQ01" },
+                  "apiCalls": [{ "method": "POST", "path": "/v1/sdk/limits", "body": { … } }] } },
+    { "fn": "decide", "clock": "2026-11-12T12:00:01.000Z", "args": { "customerRef": "cus_SEQ01" },
+      "expect": { "result": { "outcome": "allow", "customerRef": "cus_SEQ01" }, "apiCalls": [] } }
+  ]
+}
+```
+
+- **The clock is fixed per step.** Cache ages, usage timestamps, request ids and
+  durations come out the same in every language. Only the 9 random characters of
+  a request id are replaced, with `<random>`.
+- **The API answers from the step's `api` list.** Each answer must be used during
+  its step; any other request fails the step.
+- **Every request is compared**, in order, with its query and body, as
+  `apiCalls`. A step's outcome is `result`, `error` (its code), or `gate` (the
+  paywall a paid call returned instead of running).
+- Customer ids must be unique across cases: the TypeScript SDK shares its
+  customer lookup cache across instances in one process.
+
+Steps: `decide` (the paywall's verdict), `paidCall` (a function made paid with
+`payable`, whose handler succeeds or fails), `decideConcurrently` (`count` calls
+started together) and `invalidateLimits`.
+
+## Names: why cases use camelCase
+
+Cases are written in the JSON the SDKs exchange with the API and with MCP hosts,
+which is camelCase. That is not TypeScript's style leaking in: results are wire
+payloads (a gate, a tool result, a usage event), and they must be identical in
+every language, so they are compared exactly as they travel.
+
+Arguments are translated by each runner, explicitly, one operation at a time
+(`productRef` becomes `product=`, `freeLimit` becomes a `FreeLimit`). The
+alternatives were considered and rejected:
+
+| Approach                                             | Why not                                                                                      |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| A neutral naming of its own, translated per language | A second vocabulary to maintain, and results would still have to be compared as wire JSON    |
+| Automatic camelCase to snake_case conversion         | Hides how each SDK names things; nested objects (`freeLimit`) become typed values, not dicts |
+| One case file per language                           | Copies drift, which is what the suite exists to stop                                         |
+
+The explicit adapter also shows where SDKs differ in shape: Python's `payable`
+takes the tool name from the function's name, TypeScript's from a `toolName`
+option. The runner maps both, and the usage event they record must still match.
+
 ## Running
 
 ```bash
@@ -109,9 +169,10 @@ change shows in review.
 ## Known divergences
 
 A deliberate difference between SDKs is listed here with its reason, never left
-as a failing or skipped case. None of these changes a conformance case's
-outcome; they are in code the cases do not reach (customer resolution, API
-errors, request bodies, a TypeScript bug).
+as a failing or skipped case. None of these changes a committed case's
+outcome; they are on paths no case exercises (a customer lookup that fails with a
+500, a conflict that can't be resolved, other API errors, a TypeScript bug). A
+case for one of those paths fails, which is how a new divergence gets noticed.
 
 | Python does                                                                                                                             | TypeScript does                                                                                                      | Why                                                                                                                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

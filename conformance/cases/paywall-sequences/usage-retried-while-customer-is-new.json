@@ -1,0 +1,151 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "usage-retried-while-customer-is-new",
+  "description": "A usage event that gets 404 Customer not found (a customer created moments ago) is retried twice, so it is recorded once the customer is visible.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_SEQ13",
+        "handler": "succeed",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ13",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ13",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-12T12:00:00.000Z"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ13",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-12T12:00:00.000Z"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ13",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-12T12:00:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:02.000Z",
+      "args": {
+        "customerRef": "cus_SEQ13"
+      },
+      "api": [],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ13"
+        },
+        "apiCalls": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "parallel-calls-share-one-check",
+  "description": "Three calls arrive together with two units left: they share one limits check, two are allowed and one is gated. The next call is gated from the cache without asking the API.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "decideConcurrently",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_SEQ14",
+        "count": 3
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 2,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": ["allow", "allow", "gate"],
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ14",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ14",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "paywall",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800000_<random>:paywall",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800000_<random>"
+              },
+              "timestamp": "2026-11-12T12:00:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.100Z",
+      "args": {
+        "customerRef": "cus_SEQ14"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "gate",
+          "customerRef": "cus_SEQ14",
+          "gate": {
+            "kind": "payment_required",
+            "product": "prd_sequences",
+            "checkoutUrl": "https://checkout.conformance.test/s/1",
+            "message": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/1) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+            "planRef": "Pro",
+            "meterName": "requests",
+            "reason": "upgrade_required",
+            "nextAction": "checkout",
+            "remainingCalls": 2,
+            "links": {
+              "checkout": "https://checkout.conformance.test/s/1"
+            }
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_SEQ14",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "paywall",
+              "productRef": "prd_sequences",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484800100_<random>:paywall",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484800100_<random>"
+              },
+              "timestamp": "2026-11-12T12:00:00.100Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.200Z",
+      "args": {
+        "customerRef": "cus_SEQ14"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 10,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ14"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ14",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

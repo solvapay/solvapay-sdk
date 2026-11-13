@@ -14,18 +14,21 @@ import asyncio
 import json
 import re
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 import respx
 from mcp.types import CallToolResult
 
+import solvapay.paywall.decide as decide_module
 from solvapay import SolvaPayError, create_solvapay
 from solvapay.mcp import create_solvapay_mcp_server, narrate_activate_plan, narrated_tool_result
 from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_paywall_gate
+from solvapay.paywall.decide import FreeLimit, PaywallError
 from solvapay.webhooks import verify_webhook
 
 CASES_DIR = Path(__file__).resolve().parents[2] / "conformance" / "cases"
@@ -100,6 +103,164 @@ OPERATIONS: dict[str, Operation] = {
 }
 
 
+# ---- scenarios ---------------------------------------------------------------
+#
+# A scenario runs several steps against ONE SolvaPay instance, so the state kept
+# between calls (the limits cache, the customer mapping) is part of the case.
+# The clock is fixed at each step's ``clock``; the API answers from the step's
+# ``api`` list; every request is recorded, in order, as ``apiCalls``.
+
+REQUEST_ID = re.compile(r"^(solvapay_\d+_)[a-z0-9]{9}(:.*)?$")
+
+
+def without_randomness(value: Any) -> Any:
+    """The random part of a request id is the only value a case can't fix."""
+    if isinstance(value, str):
+        match = REQUEST_ID.match(value)
+        return f"{match.group(1)}<random>{match.group(2) or ''}" if match else value
+    if isinstance(value, list):
+        return [without_randomness(v) for v in value]
+    if isinstance(value, dict):
+        return {k: without_randomness(v) for k, v in value.items()}
+    return value
+
+
+class _Clock:
+    """Stands in for the ``time`` module and ``datetime`` class the paywall reads."""
+
+    def __init__(self) -> None:
+        self.now = datetime.fromtimestamp(0, tz=timezone.utc)
+
+    def time(self) -> float:
+        return self.now.timestamp()
+
+    def monotonic(self) -> float:
+        return self.now.timestamp()
+
+    def datetime_class(self) -> type[datetime]:
+        clock = self
+
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:  # type: ignore[override]
+                return clock.now if tz is None else clock.now.astimezone(tz)
+
+        return FixedDatetime
+
+
+def _free_limit(args: dict[str, Any]) -> FreeLimit | None:
+    raw = args.get("freeLimit")
+    if raw is None:
+        return None
+    return FreeLimit(
+        cap=raw["cap"], scope=raw["scope"], meter=raw["meter"], window_days=raw.get("windowDays")
+    )
+
+
+async def _scenario_step(
+    solvapay: Any, product: str, fn: str, args: dict[str, Any]
+) -> dict[str, Any]:
+    if fn == "decide":
+        decision = await solvapay.paywall.decide(
+            customer_ref=args["customerRef"],
+            product=product,
+            meter=args.get("meter"),
+            free_limit=_free_limit(args),
+            tool_name=args.get("toolName"),
+        )
+        result: dict[str, Any] = {"outcome": decision.outcome, "customerRef": decision.customer_ref}
+        if decision.consequence is not None:
+            result["consequence"] = decision.consequence
+        if decision.gate is not None:
+            result["gate"] = decision.gate
+        return {"result": result}
+    if fn == "paidCall":
+        failing = args.get("handler") == "fail"
+
+        async def handler(*, customer_ref: str) -> dict[str, Any]:
+            if failing:
+                raise SolvaPayError("the handler failed", code="handler_failed")
+            return {"ok": True}
+
+        # Python records the handler's name as the tool name.
+        handler.__name__ = args["toolName"]
+        paid = solvapay.payable(
+            product=product, meter=args.get("meter"), free_limit=_free_limit(args)
+        )(handler)
+        try:
+            return {"result": await paid(customer_ref=args["customerRef"])}
+        except PaywallError as error:
+            return {"gate": error.gate}
+    if fn == "decideConcurrently":
+        # ``count`` calls for one customer start together, as parallel tool calls do.
+        decisions = await asyncio.gather(
+            *(
+                solvapay.paywall.decide(
+                    customer_ref=args["customerRef"], product=product, meter=args.get("meter")
+                )
+                for _ in range(args["count"])
+            )
+        )
+        return {"result": [decision.outcome for decision in decisions]}
+    if fn == "invalidateLimits":
+        solvapay.paywall.invalidate_limits(args["customerRef"], args.get("productRef"))
+        return {"result": None}
+    raise AssertionError(f'No Python mapping for scenario step "{fn}" in {__file__}')
+
+
+async def run_scenario(
+    data: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> list[dict[str, Any]]:
+    clock = _Clock()
+    monkeypatch.setattr(decide_module, "time", clock)
+    monkeypatch.setattr(decide_module, "datetime", clock.datetime_class())
+    setup = data["setup"]
+    ttl_ms = setup.get("limitsCacheTtlMs")
+    solvapay = create_solvapay(
+        api_key="sk_sandbox_conformance",
+        api_base_url=CONFORMANCE_API,
+        **({"limits_cache_ttl": ttl_ms / 1000} if ttl_ms is not None else {}),
+    )
+    pending: list[dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        call: dict[str, Any] = {"method": request.method, "path": request.url.path}
+        if request.url.params:
+            call["query"] = dict(request.url.params)
+        if request.content:
+            call["body"] = json.loads(request.content)
+        calls.append(call)
+        for i, exchange in enumerate(pending):
+            if exchange["method"] == request.method and exchange["path"] == request.url.path:
+                pending.pop(i)
+                return httpx.Response(exchange.get("status", 200), json=exchange["body"])
+        raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
+
+    outcomes = []
+    with respx.mock(assert_all_mocked=True) as router:
+        router.route(host=CONFORMANCE_API.removeprefix("https://")).mock(side_effect=answer)
+        for index, step in enumerate(data["steps"]):
+            clock.now = datetime.fromisoformat(step["clock"].replace("Z", "+00:00"))
+            pending[:] = list(step.get("api", []))
+            calls.clear()
+            try:
+                outcome = await _scenario_step(
+                    solvapay, setup["productRef"], step["fn"], step["args"]
+                )
+            except PaywallError:
+                raise
+            except SolvaPayError as error:
+                outcome = {"error": {"code": error.code}}
+            assert not pending, (
+                f"step {index + 1} ({step['fn']}): API exchanges not used: "
+                + ", ".join(f"{e['method']} {e['path']}" for e in pending)
+            )
+            outcomes.append(without_randomness({**outcome, "apiCalls": list(calls)}))
+    await solvapay.aclose()
+    return outcomes
+
+
 def load_cases() -> list[tuple[str, dict[str, Any]]]:
     cases = []
     for suite_dir in sorted(p for p in CASES_DIR.iterdir() if p.is_dir()):
@@ -115,7 +276,10 @@ def load_cases() -> list[tuple[str, dict[str, Any]]]:
                 problems.append("case does not match the file name")
             if not str(data.get("description", "")).strip():
                 problems.append("description is missing")
-            if "expect" not in data:
+            if "steps" in data:
+                if any("expect" not in step for step in data["steps"]):
+                    problems.append("a step has no expect: record it with the TypeScript runner")
+            elif "expect" not in data:
                 problems.append("expect is missing: record it with the TypeScript runner")
             if problems:
                 raise AssertionError(f"{where}: {'; '.join(problems)}")
@@ -145,7 +309,16 @@ CASES = load_cases()
 
 
 @pytest.mark.parametrize(("where", "data"), CASES, ids=[where for where, _ in CASES])
-def test_case(where: str, data: dict[str, Any]) -> None:
+def test_case(where: str, data: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    if "steps" in data:
+        outcomes = asyncio.run(run_scenario(data, monkeypatch))
+        for index, (step, actual_step) in enumerate(zip(data["steps"], outcomes, strict=True)):
+            assert canonical(actual_step) == canonical(step["expect"]), (
+                f"{where} step {index + 1} ({step['fn']}): {data['description']}\n"
+                f"expected: {canonical(step['expect'])}\n"
+                f"actual:   {canonical(actual_step)}"
+            )
+        return
     actual = outcome_of(data)
     expected = data["expect"]
     assert canonical(actual) == canonical(expected), (

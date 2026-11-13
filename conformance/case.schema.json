@@ -2,75 +2,214 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://solvapay.com/schemas/sdk-conformance-case.json",
   "title": "SDK conformance case",
-  "description": "One input and its expected outcome. Every SolvaPay SDK runs every case and must produce the same outcome.",
-  "type": "object",
-  "required": ["suite", "case", "description", "input", "expect"],
-  "additionalProperties": false,
-  "properties": {
-    "$schema": { "type": "string" },
-    "suite": {
-      "type": "string",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-      "description": "The folder the case lives in, under cases/."
-    },
-    "case": {
-      "type": "string",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-      "description": "The file name, without .json."
-    },
-    "description": {
-      "type": "string",
-      "minLength": 1,
-      "description": "What the case pins down, and why, for a person reading a failure."
-    },
-    "input": {
+  "description": "Either one call and its expected outcome, or a scenario: several steps against one SDK instance. Every SolvaPay SDK runs every case and must produce the same outcome.",
+  "oneOf": [
+    {
       "type": "object",
-      "required": ["fn", "args"],
+      "required": ["suite", "case", "description", "input", "expect"],
       "additionalProperties": false,
       "properties": {
-        "fn": {
-          "type": "string",
-          "description": "The operation, by its language-neutral name (camelCase). Each runner maps it to its own library's function."
+        "$schema": {
+          "type": "string"
         },
-        "args": {
+        "suite": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "The folder the case lives in, under cases/."
+        },
+        "case": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "The file name, without .json."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the case pins down, and why, for a person reading a failure."
+        },
+        "input": {
           "type": "object",
-          "description": "The operation's arguments, as one JSON object with camelCase keys."
+          "required": ["fn", "args"],
+          "additionalProperties": false,
+          "properties": {
+            "fn": {
+              "type": "string",
+              "description": "The operation, by its language-neutral name (camelCase). Each runner maps it to its own library's function."
+            },
+            "args": {
+              "type": "object",
+              "description": "The operation's arguments, as one JSON object with camelCase keys."
+            },
+            "clock": {
+              "type": "string",
+              "format": "date-time",
+              "description": "The time the operation runs at, for anything that reads the clock."
+            }
+          }
         },
-        "clock": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time the operation runs at, for anything that reads the clock."
+        "expect": {
+          "description": "Either the result, compared as JSON (a missing key and an undefined value are the same; null is not), or the error.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["result"],
+              "additionalProperties": false,
+              "properties": {
+                "result": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": ["error"],
+              "additionalProperties": false,
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": ["code"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "The error's stable code. Messages are not compared."
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
-    "expect": {
-      "description": "Either the result, compared as JSON (a missing key and an undefined value are the same; null is not), or the error.",
-      "oneOf": [
-        {
-          "type": "object",
-          "required": ["result"],
-          "additionalProperties": false,
-          "properties": { "result": {} }
+    {
+      "type": "object",
+      "required": ["suite", "case", "description", "setup", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "type": "string"
         },
-        {
+        "suite": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "The folder the case lives in, under cases/."
+        },
+        "case": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "The file name, without .json."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the case pins down, and why, for a person reading a failure."
+        },
+        "setup": {
           "type": "object",
-          "required": ["error"],
+          "required": ["productRef"],
           "additionalProperties": false,
+          "description": "The one SDK instance every step runs against.",
           "properties": {
-            "error": {
-              "type": "object",
-              "required": ["code"],
-              "additionalProperties": false,
-              "properties": {
-                "code": {
-                  "type": "string",
-                  "description": "The error's stable code. Messages are not compared."
+            "productRef": {
+              "type": "string"
+            },
+            "limitsCacheTtlMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["fn", "args", "clock"],
+            "additionalProperties": false,
+            "properties": {
+              "fn": {
+                "type": "string",
+                "description": "The step's operation, by its language-neutral name."
+              },
+              "args": {
+                "type": "object",
+                "description": "The operation's arguments, camelCase as on the wire."
+              },
+              "clock": {
+                "type": "string",
+                "format": "date-time",
+                "description": "The time the whole step runs at."
+              },
+              "api": {
+                "type": "array",
+                "description": "The API's answers during this step. Each must be used; any other request fails the step.",
+                "items": {
+                  "type": "object",
+                  "required": ["method", "path", "body"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "method": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "body": {}
+                  }
                 }
+              },
+              "expect": {
+                "description": "What the step must produce: its outcome (result, error code, or the gate a paid call returned), and every API request it made, in order.",
+                "type": "object",
+                "required": ["apiCalls"],
+                "properties": {
+                  "result": {},
+                  "error": {
+                    "type": "object",
+                    "required": ["code"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "description": "The error's stable code. Messages are not compared."
+                      }
+                    }
+                  },
+                  "gate": {
+                    "type": "object",
+                    "description": "The paywall gate a paid call returned instead of running."
+                  },
+                  "apiCalls": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["method", "path"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "method": {
+                          "type": "string"
+                        },
+                        "path": {
+                          "type": "string"
+                        },
+                        "query": {
+                          "type": "object"
+                        },
+                        "body": {}
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "minProperties": 2,
+                "maxProperties": 2
               }
             }
           }
         }
-      ]
+      }
     }
-  }
+  ]
 }
