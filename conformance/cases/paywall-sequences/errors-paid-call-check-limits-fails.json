@@ -1,0 +1,113 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "errors-paid-call-check-limits-fails",
+  "description": "A paid call whose limits check fails never runs the handler and records no usage: it fails with http_500. The next call runs and records success.",
+  "setup": {
+    "productRef": "prd_ec_1"
+  },
+  "steps": [
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_EC03",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "message": "Internal server error",
+            "error": "Internal Server Error"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "http_500"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC03",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "cus_EC03",
+        "toolName": "search"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/ec"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC03",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_EC03",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_ec_1",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794484801000_<random>:success",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794484801000_<random>",
+                "toolName": "search",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-12T12:00:01.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

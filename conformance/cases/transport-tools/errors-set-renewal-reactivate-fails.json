@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-reactivate-fails",
+  "description": "Any other reactivation failure answers 500 with the error's message.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_8",
+        "enabled": true
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_8/reactivate",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "message": "Internal server error",
+            "error": "Internal Server Error"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 500,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-create-hosted-session-checkout-fails",
+  "description": "The checkout session the API cannot create answers the API's status (502); the message is the API's and is not compared.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_hosted_session",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "kind": "checkout",
+        "planRef": "pln_ec_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "status": 502,
+          "body": {
+            "statusCode": 502,
+            "message": "Upstream checkout is down",
+            "error": "Bad Gateway"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 502,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

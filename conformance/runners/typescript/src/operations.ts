@@ -95,6 +95,38 @@ function toolOutcome(result: SolvaPayCallToolResult): Record<string, unknown> {
   }
 }
 
+// ---- API error messages in tool errors (cases `transport-tools/errors-*`) ----
+/**
+ * A tool error's text that carries an API error answer compares as
+ * `API_MESSAGE`: TypeScript writes `"<Operation> failed (<status>): <body>"`,
+ * Python the API's own message (see Known divergences). A text carries it
+ * when it contains the body of an exchange the case answered with a status of
+ * 400 or more. Everything else in the result, the status included, compares.
+ */
+const API_MESSAGE = '<api message>'
+
+function withoutApiMessages(
+  outcome: Record<string, unknown>,
+  api: ApiExchange[],
+): Record<string, unknown> {
+  if (outcome.isError !== true) return outcome
+  const bodies = api
+    .filter(exchange => (exchange.status ?? 200) >= 400)
+    .map(exchange => JSON.stringify(exchange.body))
+  const replace = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      return bodies.some(body => value.includes(body)) ? API_MESSAGE : value
+    }
+    if (Array.isArray(value)) return value.map(replace)
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, replace(v)]))
+    }
+    return value
+  }
+  return replace(outcome) as Record<string, unknown>
+}
+// ---- end API error messages ----
+
 /**
  * Calls one of the server's built-in tools with `fetch` answering from
  * `args.api`. Every exchange must be used, and nothing else may be called.
@@ -132,7 +164,7 @@ async function callTool(args: Record<string, unknown>): Promise<unknown> {
     if (pending.length > 0) {
       throw new Error(`API calls not made: ${pending.map(c => `${c.method} ${c.path}`).join(', ')}`)
     }
-    return toolOutcome(result)
+    return withoutApiMessages(toolOutcome(result), (args.api as ApiExchange[] | undefined) ?? [])
   } finally {
     globalThis.fetch = realFetch
   }

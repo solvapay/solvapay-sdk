@@ -1,0 +1,57 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-not-cancelled",
+  "description": "A cancel the API answers with a purchase that is neither cancelled nor has cancelledAt answers 500.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_5",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_5/cancel",
+          "body": {
+            "success": true,
+            "purchase": {
+              "reference": "pur_ec_5",
+              "status": "active",
+              "productRef": "prd_ec_1",
+              "productName": "Stock Research",
+              "planRef": "pln_ec_pro",
+              "customerRef": "cus_EC01",
+              "amount": 2900,
+              "currency": "USD",
+              "isRecurring": true,
+              "billingCycle": "monthly",
+              "startDate": "2026-11-01T00:00:00Z",
+              "endDate": "2026-12-01T00:00:00Z",
+              "createdAt": "2026-11-01T00:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Purchase cancellation failed: backend returned status 'active' without cancelledAt timestamp"
+        }
+      ],
+      "structuredContent": {
+        "error": "Purchase cancellation failed: backend returned status 'active' without cancelledAt timestamp",
+        "status": 500
+      },
+      "isError": true
+    }
+  }
+}

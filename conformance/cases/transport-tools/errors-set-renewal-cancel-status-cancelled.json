@@ -1,0 +1,81 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-status-cancelled",
+  "description": "A cancel the API answers with status cancelled and no cancelledAt is a cancelled purchase.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_2",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_2/cancel",
+          "body": {
+            "success": true,
+            "purchase": {
+              "reference": "pur_ec_2",
+              "status": "cancelled",
+              "productRef": "prd_ec_1",
+              "productName": "Stock Research",
+              "planRef": "pln_ec_pro",
+              "customerRef": "cus_EC01",
+              "amount": 2900,
+              "currency": "USD",
+              "isRecurring": true,
+              "billingCycle": "monthly",
+              "startDate": "2026-11-01T00:00:00Z",
+              "endDate": "2026-12-01T00:00:00Z",
+              "createdAt": "2026-11-01T00:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "reference": "pur_ec_2",
+            "status": "cancelled",
+            "productRef": "prd_ec_1",
+            "productName": "Stock Research",
+            "planRef": "pln_ec_pro",
+            "customerRef": "cus_EC01",
+            "amount": 2900,
+            "currency": "USD",
+            "isRecurring": true,
+            "billingCycle": "monthly",
+            "startDate": "2026-11-01T00:00:00Z",
+            "endDate": "2026-12-01T00:00:00Z",
+            "createdAt": "2026-11-01T00:00:00Z"
+          }
+        }
+      ],
+      "structuredContent": {
+        "reference": "pur_ec_2",
+        "status": "cancelled",
+        "productRef": "prd_ec_1",
+        "productName": "Stock Research",
+        "planRef": "pln_ec_pro",
+        "customerRef": "cus_EC01",
+        "amount": 2900,
+        "currency": "USD",
+        "isRecurring": true,
+        "billingCycle": "monthly",
+        "startDate": "2026-11-01T00:00:00Z",
+        "endDate": "2026-12-01T00:00:00Z",
+        "createdAt": "2026-11-01T00:00:00Z"
+      }
+    }
+  }
+}
