@@ -77,13 +77,13 @@ func (s *apiStub) RoundTrip(req *http.Request) (*http.Response, error) {
 				i, _ := n.Int64()
 				status = int(i)
 			}
-			body, err := json.Marshal(exchange["body"])
+			contentType, body, err := apiAnswer(exchange)
 			if err != nil {
 				s.t.Fatal(err)
 			}
 			return &http.Response{
 				StatusCode: status,
-				Header:     http.Header{"Content-Type": {"application/json"}},
+				Header:     http.Header{"Content-Type": {contentType}},
 				Body:       io.NopCloser(bytes.NewReader(body)),
 				Request:    req,
 			}, nil

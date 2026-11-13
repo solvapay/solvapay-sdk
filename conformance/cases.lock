@@ -2,7 +2,7 @@
   "comment": "Written by `record`. Do not edit.",
   "cases": {
     "agent-calls/allowed-then-completed-once.json": "sha256:aefda6b06571ac77771164278423f63effeb38be56e7439ce28b386c882b90df",
-    "agent-calls/authorize-api-errors.json": "sha256:5194f6634347fd73bf811160f6f8c8ccd51b74e71aa0682b38938395cd3949a6",
+    "agent-calls/authorize-api-errors.json": "sha256:e9f98201f91020e5123aeef6983357ec4bd0923a7106f49d7c861c12893937d5",
     "agent-calls/authorize-unreadable-answers.json": "sha256:6c20b8c6b5e1fa90822adbbe1cb5bfc317edc3031c63b03570272399ee557d37",
     "agent-calls/call-ref-is-encoded-in-the-path.json": "sha256:0f6f9fc56db43c2f63f16702830f048044ebfcc6c7945c1a1dd7591cd7b0a7ba",
     "agent-calls/client-goes-away-while-waiting.json": "sha256:9dee563aa06ad0ada05bec9f97c38b9ed9eb87c46cd7a1237293233b65f9ce7c",
@@ -15,7 +15,7 @@
     "agent-calls/refused-without-waiting.json": "sha256:149e3ab8a86e8137d1300a06d0620a0de2f28b6853370e5747faa7e2bb212c66",
     "agent-calls/wait-runs-out.json": "sha256:d4c7d2329946a7a351a11e8c88c7efca42620f210de7c97589d2348fb29665bb",
     "agent-identity/agent-key-cache.json": "sha256:2ebb0f885bf40434e19f92553dbcca7e373f71328f84bd98cd42f283f1787c10",
-    "agent-identity/agent-key-environment-and-answers.json": "sha256:02b2b76396286cc7922126765e5a50fbc1ee0a1e36ba02ac50616747932c8895",
+    "agent-identity/agent-key-environment-and-answers.json": "sha256:d660c0803caa5309852d63e72beb1495fa0257fd82ac73fe0cb8586100c319b3",
     "agent-identity/identify-credentials.json": "sha256:5fdd43be0ad54977299d4d7edebce75f6474b518e67fce0ab90784606c666d92",
     "agent-identity/oauth-protected-resource.json": "sha256:e60f5a734e64fcb36d76e71290b0a641fd5229da07f94e34d9c11742e9aeab15",
     "agent-identity/oauth-resource-at-origin.json": "sha256:52147906c7dcc09b6cf69f9443d489ae402d03cfc31df660d8bbca3fcb33b13d",

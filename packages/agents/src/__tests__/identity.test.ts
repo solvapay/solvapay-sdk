@@ -263,7 +263,7 @@ describe('agent keys', () => {
         'agk_sandbox_KEY',
       ),
     ).toMatchObject({ ok: false, reason: 'invalid' })
-    // A body that is not JSON carries no code.
+    // A 403 whose body is not JSON is a proxy's page, not SolvaPay refusing the key.
     const notJson = createAgentKeyVerifier({
       client: createSolvaPayAgentClient({
         apiBaseUrl: 'https://api.solvapay.test',
@@ -271,7 +271,10 @@ describe('agent keys', () => {
         fetchImpl: async () => new Response('Forbidden', { status: 403 }),
       }),
     })
-    expect(await notJson('agk_sandbox_KEY')).toMatchObject({ ok: false, reason: 'invalid' })
+    await expect(notJson('agk_sandbox_KEY')).rejects.toMatchObject({
+      status: 403,
+      code: 'non_json_response',
+    })
   })
 
   it("reads a secret key's environment from its prefix, and doesn't guess otherwise", () => {
