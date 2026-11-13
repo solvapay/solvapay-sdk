@@ -1,0 +1,40 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "purchase-gated-with-units-left",
+  "description": "A purchase the API gated with units still remaining is limit_reached; with no meter name the included usage is counted in units.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 2,
+        "used": 8,
+        "limit": 10,
+        "purchaseRef": "pur_pw_2",
+        "checkoutUrl": "https://checkout.conformance.test/s/9"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "https://checkout.conformance.test/s/9",
+      "message": "You've used 8 of 10 included units this period. [Open checkout](https://checkout.conformance.test/s/9) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "included": {
+        "total": 10,
+        "used": 8,
+        "remaining": 2
+      },
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 2,
+      "purchaseRef": "pur_pw_2",
+      "links": {
+        "checkout": "https://checkout.conformance.test/s/9"
+      }
+    }
+  }
+}

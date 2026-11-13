@@ -1,0 +1,42 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "set-renewal-reactivate-missing-reference",
+  "description": "A reactivation answered without a purchase reference is a 500.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL04",
+      "arguments": {
+        "purchaseRef": "pur_tl4",
+        "enabled": true
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_tl4/reactivate",
+          "body": {
+            "status": "active"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Reactivate purchase response missing required fields"
+        }
+      ],
+      "structuredContent": {
+        "error": "Reactivate purchase response missing required fields",
+        "status": 500
+      },
+      "isError": true
+    }
+  }
+}

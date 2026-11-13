@@ -1,0 +1,51 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "zero-credit-balance-without-cost",
+  "description": "A credit balance of exactly 0 with no per-call cost is a topup gate; with only a free plan on offer it stays payment_required and asks the customer to pick a plan.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 3,
+        "creditBalance": 0,
+        "plans": [
+          {
+            "reference": "pln_pw_free",
+            "name": "Free",
+            "price": 0,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": false,
+            "freeUnits": 3
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "",
+      "message": "Included usage is exhausted. Call the `account` tool with view: 'topup'. Or call the `account` tool with view: 'checkout' to pick a plan.",
+      "plans": [
+        {
+          "reference": "pln_pw_free",
+          "name": "Free",
+          "price": 0,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": false,
+          "freeUnits": 3
+        }
+      ],
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "remainingCalls": 3
+    }
+  }
+}

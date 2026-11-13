@@ -1,0 +1,88 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-out-of-credits-without-peg",
+  "description": "A pay-as-you-go plan that needs a top-up, with no balance peg to price a call in credits: the narration says the plan needs credits instead of the call's cost.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_nopeg",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_nopeg",
+          "name": "Stock Research"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_NR15",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR15",
+            "purchases": [
+              {
+                "reference": "pur_nr_payg2",
+                "status": "active",
+                "productRef": "prd_nr_nopeg",
+                "planRef": "pln_nr_payg",
+                "planSnapshot": {
+                  "reference": "pln_nr_payg",
+                  "name": "Pay as you go",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "unit",
+                      "amountMinor": 2,
+                      "currency": "USD",
+                      "meter": "requests"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "startDate": "2026-11-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": {
+            "credits": 40
+          },
+          "usage": null,
+          "limits": {
+            "withinLimits": false,
+            "remaining": 0,
+            "needsTopUp": true,
+            "planRef": "pln_nr_payg"
+          }
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Pay as you go. Balance 40 credits and Pay as you go needs credits. Call `account` with view: 'topup' to add credits, or with view: 'checkout' to switch to a plan that does not use credits.\nSigned in as: cus_NR15\n\nTo continue, call `account` with view: \"topup\" or `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

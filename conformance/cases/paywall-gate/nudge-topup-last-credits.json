@@ -1,0 +1,25 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "nudge-topup-last-credits",
+  "description": "A topup nudge with no calls left says the next call needs a top-up and links checkout.",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": "topup_required",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 0,
+        "checkoutUrl": "https://checkout.conformance.test/s/4",
+        "balance": {
+          "creditBalance": 5,
+          "creditsPerUnit": 10,
+          "remainingUnits": 0
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — 0 calls left — the next call needs a top-up. Call the `account` tool with view: 'topup' to add more, or [Open checkout](https://checkout.conformance.test/s/4)."
+  }
+}

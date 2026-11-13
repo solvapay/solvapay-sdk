@@ -1,0 +1,561 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-tool-topup-gate",
+  "description": "Signed in on a pay-as-you-go plan with no credits and no view: the snapshot drops the expired purchase, prices the EUR top-up, lands on topup, and suffixes the portal link (which has a query) for auto-recharge.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_nr_topup",
+      "customerRef": "cus_NR01",
+      "arguments": {
+        "mode": "text"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme Data",
+            "legalName": "Acme Data Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_topup",
+          "body": {
+            "reference": "prd_nr_topup",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_topup/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_nr_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": false,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 100,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "charge",
+                    "per": "flat",
+                    "amountMinor": 2900,
+                    "currency": "USD"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 5000,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_payg",
+                "name": "Pay as you go",
+                "type": "usage-based",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "charge",
+                    "per": "unit",
+                    "amountMinor": 2,
+                    "currency": "USD",
+                    "meter": "requests"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_nr"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_NR01",
+          "body": {
+            "reference": "cus_NR01",
+            "customerRef": "cus_NR01",
+            "email": " ada@example.com ",
+            "name": "  ",
+            "purchases": [
+              {
+                "customerRef": "cus_NR01",
+                "createdAt": "2026-11-05T00:00:00.000Z",
+                "isRecurring": false,
+                "reference": "pur_nr_topup",
+                "status": "active",
+                "productRef": "prd_nr_topup",
+                "origin": "credit_topup",
+                "planSnapshot": {
+                  "reference": "pln_nr_pro",
+                  "name": "Pro",
+                  "price": 2900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 2900,
+                      "currency": "USD"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 5000,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 1000,
+                "currency": "EUR",
+                "originalAmount": 920,
+                "startDate": "2026-11-05T00:00:00.000Z"
+              },
+              {
+                "customerRef": "cus_NR01",
+                "createdAt": "2026-11-01T00:00:00.000Z",
+                "reference": "pur_nr_payg",
+                "status": "active",
+                "productRef": "prd_nr_topup",
+                "planRef": "pln_nr_payg",
+                "planSnapshot": {
+                  "reference": "pln_nr_payg",
+                  "name": "Pay as you go",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "unit",
+                      "amountMinor": 2,
+                      "currency": "USD",
+                      "meter": "requests"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": false,
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00.000Z",
+                  "periodEnd": "2026-12-01T00:00:00.000Z"
+                }
+              },
+              {
+                "customerRef": "cus_NR01",
+                "createdAt": "2026-11-01T00:00:00.000Z",
+                "reference": "pur_nr_old",
+                "status": "expired",
+                "productRef": "prd_nr_topup",
+                "planRef": "pln_nr_payg",
+                "planSnapshot": {
+                  "reference": "pln_nr_payg",
+                  "name": "Pay as you go",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "unit",
+                      "amountMinor": 2,
+                      "currency": "USD",
+                      "meter": "requests"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-10-01T00:00:00.000Z",
+                "isRecurring": false,
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00.000Z",
+                  "periodEnd": "2026-12-01T00:00:00.000Z"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/payment-method",
+          "body": {
+            "kind": "card",
+            "brand": "visa",
+            "last4": "4242",
+            "expMonth": 12,
+            "expYear": 2030,
+            "reusable": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_NR01/balance",
+          "body": {
+            "customerRef": "cus_NR01",
+            "credits": 5,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.00",
+              "rateSource": "parity"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": false,
+            "remaining": 0,
+            "paywallReason": "topup_required",
+            "creditBalance": 5,
+            "creditsPerUnit": 200,
+            "planRef": "pln_nr_payg",
+            "meterName": "requests",
+            "purchaseRef": "pur_nr_payg",
+            "autoRecharge": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "sessionId": "ss_nr1",
+            "customerUrl": "https://solvapay.com/customer/manage?id=ss_nr1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_nr1",
+            "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_nr1"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Top up — Stock Research**\n\nBalance: 5 credits (~$0.00)\n\nTo continue, call `account` with view: \"account\".\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr1) (expires in 15 minutes)"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_nr1",
+          "name": "Open checkout"
+        }
+      ],
+      "structuredContent": {
+        "view": "topup",
+        "productRef": "prd_nr_topup",
+        "stripePublishableKey": "pk_test_nr",
+        "returnUrl": "https://mcp.conformance.test",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_topup",
+          "name": "Stock Research",
+          "status": "active",
+          "balance": 0,
+          "isManagedMcp": false,
+          "isMcpPay": false,
+          "totalTransactions": 0,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "updatedAt": "2026-01-01T00:00:00Z"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_free",
+            "name": "Free",
+            "type": "recurring",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": false,
+            "price": 0,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "reference": "pln_nr_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": true,
+            "price": 2900,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "reference": "pln_nr_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": true,
+            "price": 0,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 2,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ],
+        "customer": {
+          "ref": "cus_NR01",
+          "email": "ada@example.com",
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR01",
+            "email": " ada@example.com ",
+            "name": "  ",
+            "purchases": [
+              {
+                "customerRef": "cus_NR01",
+                "createdAt": "2026-11-05T00:00:00.000Z",
+                "isRecurring": false,
+                "reference": "pur_nr_topup",
+                "status": "active",
+                "productRef": "prd_nr_topup",
+                "origin": "credit_topup",
+                "planSnapshot": {
+                  "reference": "pln_nr_pro",
+                  "name": "Pro",
+                  "price": 2900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 2900,
+                      "currency": "USD"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 5000,
+                      "onExceed": "block"
+                    }
+                  ],
+                  "priceDisplay": "$29.00"
+                },
+                "amount": 1000,
+                "currency": "EUR",
+                "originalAmount": 920,
+                "startDate": "2026-11-05T00:00:00.000Z",
+                "priceDisplay": "€9.20",
+                "priceUsdDisplay": "$10.00"
+              },
+              {
+                "customerRef": "cus_NR01",
+                "createdAt": "2026-11-01T00:00:00.000Z",
+                "reference": "pur_nr_payg",
+                "status": "active",
+                "productRef": "prd_nr_topup",
+                "planRef": "pln_nr_payg",
+                "planSnapshot": {
+                  "reference": "pln_nr_payg",
+                  "name": "Pay as you go",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "unit",
+                      "amountMinor": 2,
+                      "currency": "USD",
+                      "meter": "requests"
+                    }
+                  ],
+                  "priceDisplay": "$0.00"
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": false,
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00.000Z",
+                  "periodEnd": "2026-12-01T00:00:00.000Z"
+                },
+                "priceDisplay": "$0.00"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "card",
+            "brand": "visa",
+            "last4": "4242",
+            "expMonth": 12,
+            "expYear": 2030,
+            "reusable": true
+          },
+          "balance": {
+            "customerRef": "cus_NR01",
+            "credits": 5,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.00",
+              "rateSource": "parity"
+            }
+          },
+          "usage": {
+            "meterRef": "requests",
+            "total": null,
+            "used": null,
+            "remaining": 0,
+            "percentUsed": null,
+            "periodStart": "2026-11-01T00:00:00.000Z",
+            "periodEnd": "2026-12-01T00:00:00.000Z",
+            "purchaseRef": "pur_nr_payg"
+          },
+          "limits": {
+            "withinLimits": false,
+            "remaining": 0,
+            "paywallReason": "topup_required",
+            "creditBalance": 5,
+            "creditsPerUnit": 200,
+            "planRef": "pln_nr_payg",
+            "meterName": "requests",
+            "purchaseRef": "pur_nr_payg",
+            "autoRecharge": {
+              "enabled": false
+            }
+          },
+          "canCall": false,
+          "remainingCalls": 0,
+          "creditsPerCall": 200,
+          "shortfallCredits": 195,
+          "isCreditBased": true,
+          "autoRecharge": {
+            "enabled": false
+          },
+          "nextAction": "topup"
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_nr1",
+        "portalUrl": "https://solvapay.com/customer/manage?id=ss_nr1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?id=ss_nr1&tab=credits&intent=autorecharge"
+      }
+    }
+  }
+}

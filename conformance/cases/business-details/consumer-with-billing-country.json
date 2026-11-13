@@ -1,0 +1,28 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "consumer-with-billing-country",
+  "description": "A consumer with a supported billing country keeps it, upper-cased, with their name and address; business-only fields are dropped.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerCountry": " ca ",
+      "customerName": "Bo",
+      "customerState": " ON ",
+      "customerPostalCode": "M5V 2T6",
+      "businessName": "Ignored Inc",
+      "country": "US",
+      "taxId": "12-3456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "isBusiness": false,
+      "customerCountry": "CA",
+      "customerName": "Bo",
+      "customerState": "ON",
+      "customerPostalCode": "M5V 2T6"
+    }
+  }
+}

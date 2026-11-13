@@ -1,0 +1,99 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "free-meter-used-up-with-plans",
+  "description": "The API says limit_reached on a free meter: the message counts the free calls used, names the meter in words and lists the paid plans cheapest first (escaping brackets in plan names), skipping plans without a checkout link.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "used": 3,
+        "limit": 3,
+        "paywallReason": "limit_reached",
+        "meterName": "free-requests",
+        "plans": [
+          {
+            "reference": "pln_pw_max",
+            "name": "Max",
+            "price": 4900,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": true,
+            "checkoutUrl": "https://checkout.conformance.test/s/max"
+          },
+          {
+            "reference": "pln_pw_pro",
+            "name": "Pro [annual]",
+            "price": 1900,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": true,
+            "checkoutUrl": "https://checkout.conformance.test/s/pro"
+          },
+          {
+            "reference": "pln_pw_free",
+            "name": "Free",
+            "price": 0,
+            "currency": "usd",
+            "type": "recurring",
+            "requiresPayment": false,
+            "freeUnits": 3
+          }
+        ],
+        "checkoutUrl": "https://checkout.conformance.test/s/1"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "https://checkout.conformance.test/s/1",
+      "message": "You've used all 3 free requests for this period. Pick a plan to keep going: [Pro \\[annual\\]](https://checkout.conformance.test/s/pro) · [Max](https://checkout.conformance.test/s/max) (first link used closes the rest; links expire in 15 minutes). Call the `account` tool with view: 'account' for usage and recovery.",
+      "plans": [
+        {
+          "reference": "pln_pw_max",
+          "name": "Max",
+          "price": 4900,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": true,
+          "checkoutUrl": "https://checkout.conformance.test/s/max"
+        },
+        {
+          "reference": "pln_pw_pro",
+          "name": "Pro [annual]",
+          "price": 1900,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": true,
+          "checkoutUrl": "https://checkout.conformance.test/s/pro"
+        },
+        {
+          "reference": "pln_pw_free",
+          "name": "Free",
+          "price": 0,
+          "currency": "usd",
+          "type": "recurring",
+          "requiresPayment": false,
+          "freeUnits": 3
+        }
+      ],
+      "meterName": "free-requests",
+      "included": {
+        "total": 3,
+        "used": 3,
+        "remaining": 0
+      },
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://checkout.conformance.test/s/1"
+      }
+    }
+  }
+}

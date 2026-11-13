@@ -75,18 +75,23 @@ them.
 
 ## Suites
 
-| Suite                  | Operation                               | What it pins down                                                                                                                                                                                         |
-| ---------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `webhook-verification` | `verifyWebhook`                         | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                                                                                                 |
-| `paywall-gate`         | `buildPaywallGate`                      | Gate kind, recovery fields, links and the exact message a customer sees                                                                                                                                   |
-| `narration`            | `narrateAccount`, `narrateActivatePlan` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status                                                                      |
-| `transport-tools`      | `callTool`                              | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses |
-| `paywall-sequences`    | scenarios (see below)                   | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records          |
+| Suite                  | Operation                                           | What it pins down                                                                                                                                                                                                                                                          |
+| ---------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webhook-verification` | `verifyWebhook`                                     | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                                                                                                                                                                  |
+| `paywall-gate`         | `buildPaywallGate`, `buildNudgeMessage`             | Gate kind, recovery fields, links and the exact message a customer sees; the nudge appended to a successful call near a limit                                                                                                                                              |
+| `narration`            | `narrateAccount`, `narrateActivatePlan`, `callTool` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status; `callTool` cases run `account` end to end (the snapshot it builds from the API, its default view)                                    |
+| `transport-tools`      | `callTool`                                          | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses                                                                  |
+| `pricing`              | `planPricing`                                       | What every `options[]` reader of `@solvapay/core` answers for one plan: charges, headline, cycle, tiers, meters, trial, allowance, pricing shape and credits per call                                                                                                      |
+| `business-details`     | `validateBusinessDetails`                           | The normalised business or consumer details `validateBusinessDetails` sends, or the first problem's message (`{ "invalid": … }`)                                                                                                                                           |
+| `tool-descriptors`     | `describeServer`, `getPrompts`, `readResource`      | What a host sees from the whole MCP server: every tool's description, annotations, `_meta` and input schema, the prompts and resources, the widget's CSP, `hideToolsByAudience` and its ChatGPT bypass, the slash commands' messages, the overview and bootstrap resources |
+| `paid-tools`           | `callPaidTool`                                      | A merchant's paid or free tool end to end: the `ResponseContext` its handler sees (`ctx.customer`, `fresh()`, `ctx.product`), and the result `ctx.respond` / `ctx.emit` / `ctx.gate` / a throw produce                                                                     |
+| `paywall-sequences`    | scenarios (see below)                               | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records                                                                           |
 
 ### `callTool`
 
 A `callTool` case calls one of the MCP server's built-in tools as the signed-in
-`customerRef` (`null` for none), with the API answering from `api`:
+`customerRef` (`null` for none), with the API answering from `api` (and, with
+`views`, a server that enables only those views):
 
 ```json
 "args": {
@@ -101,12 +106,45 @@ A `callTool` case calls one of the MCP server's built-in tools as the signed-in
 ```
 
 Each runner stubs its HTTP client at `https://api.conformance.test` and fails if
-the tool makes a call that is not listed, or leaves one unused. Request bodies
+the tool makes a call that is not listed, or leaves one unused. Exchanges on the
+same method and path answer in the order listed. An optional `views` list sets
+the views the server enables (default: all). Request bodies
 are not compared. The result is the tool result's `content`, `structuredContent`
 and `isError`; a text block holding JSON (what `toolResult` writes) is compared
 parsed, under `json`, since key order is not part of what the widget reads.
 Arguments must pass the tool's input schema: the Python server validates them
 before the tool runs, the TypeScript runner calls the handler directly.
+
+### `describeServer`, `getPrompts`, `readResource`, `callPaidTool`
+
+These reach the whole server over MCP, as a host does: the SDK's own server
+factory (`createSolvaPayMcpServer` / `create_solvapay_mcp_server`) on an
+in-memory transport, after an `initialize` that names the client
+(`clientName`, default `conformance`). `args` may set `views`, `csp`,
+`hideToolsByAudience` and `customerRef`; `api` scripts the API as for
+`callTool`, each exchange used once, in order, so one path may answer twice.
+
+- `describeServer` lists tools, prompts and resources, each sorted by name
+  (resources by URI). A tool keeps `name`, `title`, `description`,
+  `annotations`, `_meta` and its input schema reduced to what a host reads:
+  `type`, `const`, `enum`, `description`, numeric and length bounds, and
+  `properties` / `required` (sorted). An optional argument written as
+  `anyOf [X, null]` compares as `X`, and `$ref`s are resolved; titles and
+  defaults are not compared. `outputSchema` is not compared: Python declares
+  none yet.
+- `getPrompts` gets each of `calls` (`{ name, arguments }`) and returns the
+  messages.
+- `readResource` reads `uri`; a text that is entirely JSON compares parsed, as
+  `json`.
+- `callPaidTool` registers one merchant tool (`tool.kind`: `payable`, or
+  `free` with `tool.freeLimit`) for `customerRef` and calls it. Its handler is
+  scripted by `handler`, in this order: `emit` (blocks for `ctx.emit`),
+  `fresh` (call `ctx.customer.fresh()`), `gate` (call `ctx.gate`, with the
+  string as the reason, or none for `null`), `throw` (an error with that
+  message), then `respond` (`data`, `text`, `nudge`, `dataInText`; `echo`
+  adds `customer`, `freshCustomer` and `product` from the context to `data`).
+  The outcome compares as `callTool`'s, except that a text block is parsed
+  only when it is entirely JSON.
 
 ## Scenarios: several calls in a row
 
@@ -143,8 +181,9 @@ runs. A scenario runs several steps against **one** SDK instance:
   customer lookup cache across instances in one process.
 
 Steps: `decide` (the paywall's verdict), `paidCall` (a function made paid with
-`payable`, whose handler succeeds or fails), `decideConcurrently` (`count` calls
-started together) and `invalidateLimits`.
+`payable`, whose handler succeeds, fails, or gates the call itself), `decideConcurrently`
+(`count` calls started together), `invalidateLimits` and `ensureCustomer` (with an
+optional `externalRef`, `email` and `name`).
 
 ## Names: why cases use camelCase
 
