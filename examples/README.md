@@ -163,6 +163,12 @@ cp ../.env.platform-local.example .env   # or cp .env.example .env
 pnpm dev
 ```
 
+### MCP parity (`mcp-parity`)
+
+The same paid MCP server in TypeScript, Python and Go, each on its own SDK, behind
+one ngrok domain each. `start.sh` runs all three and their tunnels, and `probe.mjs`
+checks that they answer the pre-sign-in steps the same way. See its README.
+
 ### Supabase Edge MCP (`supabase-edge-mcp`)
 
 A full SolvaPay MCP server running on **Supabase Edge Functions**. Ships

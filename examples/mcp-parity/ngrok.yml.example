@@ -1,0 +1,21 @@
+# The three parity servers' tunnels. Copy to ngrok.yml and replace
+# your-subdomain with the domains you reserved in the ngrok dashboard. The
+# authtoken stays in ngrok's own config (ngrok config add-authtoken).
+#
+# If your ngrok plan allows one agent at a time and the platform's tunnels are
+# running, add these three tunnels to the platform's ngrok.yml instead and
+# run ./start.sh --no-ngrok.
+version: '3'
+tunnels:
+  mcp-ts:
+    proto: http
+    addr: 3040
+    domain: mcp-ts.your-subdomain.ngrok.app
+  mcp-py:
+    proto: http
+    addr: 3041
+    domain: mcp-py.your-subdomain.ngrok.app
+  mcp-go:
+    proto: http
+    addr: 3042
+    domain: mcp-go.your-subdomain.ngrok.app
