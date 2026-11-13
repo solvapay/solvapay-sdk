@@ -1,0 +1,563 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "oauth-before-sign-in",
+  "description": "With OAuth on and lazy sign-in (the default), a host that has not signed in can initialize, list every tool and run the free ones; a paid call, alone or in a batch, gets the 401 challenge carrying its JSON-RPC id. A bearer that is not an agent's is the merchant's unless it calls a paid tool. A body that is not JSON goes to the MCP server's parse error, and a GET (no tool call) to the MCP server. An agent token that does not verify gets the challenge too, saying the sign-in expired or was not accepted, with the request's id (null when there is none). A token a host got by OAuth (aud = the resource, cid) is served.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "protectedResource": {
+          "resource": "https://merchant-am.test/mcp"
+        }
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+              "protocolVersion": "2025-06-18",
+              "capabilities": {},
+              "clientInfo": {
+                "name": "agent-am",
+                "version": "1.0.0"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+              "name": "ping",
+              "arguments": {}
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": [
+            {
+              "jsonrpc": "2.0",
+              "id": 5,
+              "method": "tools/list"
+            },
+            {
+              "jsonrpc": "2.0",
+              "id": 7,
+              "method": "tools/call",
+              "params": {
+                "name": "answer",
+                "arguments": {
+                  "question": "Q"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer sk_merchant_am_0001",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+              "name": "ping",
+              "arguments": {}
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer sk_merchant_am_0001",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer sk_merchant_am_0001",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "rawBody": "{not json"
+        },
+        {
+          "method": "GET",
+          "path": "/mcp"
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMyIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDgxMjAwfQ.UYX3l58l9hjtiZsMYjZF3lnJK3jVSF0oyRT1lwx7rC2SXgJTwNGcb2F4joNohUxgAXQ3ZKAwPqRBc4Af_fFVlg",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fOCIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.8rIRkJeVodgeO_N8ooQKkvOpOSicUMB0TB2PRbWcP6-qBYMXQA-Og4Qvvcx2om37-RPbs9amZGPlTFQ_1IBNYw",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fOCIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.8rIRkJeVodgeO_N8ooQKkvOpOSicUMB0TB2PRbWcP6-qBYMXQA-Og4Qvvcx2om37-RPbs9amZGPlTFQ_1IBNYw",
+          "rawBody": "{not json"
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fOCIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.8rIRkJeVodgeO_N8ooQKkvOpOSicUMB0TB2PRbWcP6-qBYMXQA-Og4Qvvcx2om37-RPbs9amZGPlTFQ_1IBNYw",
+          "body": [
+            {
+              "jsonrpc": "2.0",
+              "id": 13,
+              "method": "tools/list"
+            }
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fOCIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.8rIRkJeVodgeO_N8ooQKkvOpOSicUMB0TB2PRbWcP6-qBYMXQA-Og4Qvvcx2om37-RPbs9amZGPlTFQ_1IBNYw",
+          "body": {
+            "jsonrpc": "2.0",
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiY2lkIjoiaHR0cHM6Ly9ob3N0LWFtLnRlc3QvY2xpZW50Lmpzb24iLCJpc3MiOiJodHRwczovL2FwaS5zb2x2YXBheS50ZXN0L3YxL2FnZW50IiwiYXVkIjoiaHR0cHM6Ly9tZXJjaGFudC1hbS50ZXN0L21jcCIsInN1YiI6ImFndF9hbV9yZXNlYXJjaCIsImp0aSI6Imp0aV9hbV80IiwiaWF0IjoxNzk0NDg0NzQwLCJleHAiOjE3OTQ0ODU2NDB9.-1cJ0yi9WfKoG7guuJVTS1QyVfhtCLdy3X53TfeVtuspM2X67UrV8qAks0vZ4D11qZa9sxUc9jy4doDqq5ZUng",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Signed in by OAuth"
+              }
+            }
+          }
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_oauth1",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_oauth1/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_oauth1",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.004",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "serverInfo": {
+                "name": "am-research",
+                "version": "0.1.0"
+              }
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 2,
+            "result": {
+              "tools": [
+                {
+                  "name": "answer",
+                  "title": "answer",
+                  "description": "Answers a research question from the merchant's index.",
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false
+                  },
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                      "depth": {
+                        "type": "integer",
+                        "description": "How many sources to read."
+                      },
+                      "question": {
+                        "type": "string",
+                        "description": "What to answer."
+                      }
+                    },
+                    "required": ["question"]
+                  }
+                },
+                {
+                  "name": "ping",
+                  "description": "Answers pong, free for anyone.",
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 3,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "pong"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        },
+        {
+          "merchant": true
+        },
+        {
+          "merchant": true
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        },
+        {
+          "status": 400,
+          "mcp": {
+            "id": null,
+            "error": {
+              "code": -32700
+            }
+          }
+        },
+        {
+          "status": 405,
+          "mcp": {
+            "id": null,
+            "error": {
+              "code": -32000
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The sign-in has expired: sign in again\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "error": {
+              "code": -32001,
+              "message": "The sign-in has expired: sign in again"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted: sign in again\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted: sign in again"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted: sign in again\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted: sign in again"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted: sign in again\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted: sign in again"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted: sign in again\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted: sign in again"
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 14,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "args": {
+                      "question": "Signed in by OAuth"
+                    },
+                    "callRef": "call_am_oauth1",
+                    "agentRef": "agt_am_research",
+                    "principalRef": "ppl_am_owner01"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiY2lkIjoiaHR0cHM6Ly9ob3N0LWFtLnRlc3QvY2xpZW50Lmpzb24iLCJpc3MiOiJodHRwczovL2FwaS5zb2x2YXBheS50ZXN0L3YxL2FnZW50IiwiYXVkIjoiaHR0cHM6Ly9tZXJjaGFudC1hbS50ZXN0L21jcCIsInN1YiI6ImFndF9hbV9yZXNlYXJjaCIsImp0aSI6Imp0aV9hbV80IiwiaWF0IjoxNzk0NDg0NzQwLCJleHAiOjE3OTQ0ODU2NDB9.-1cJ0yi9WfKoG7guuJVTS1QyVfhtCLdy3X53TfeVtuspM2X67UrV8qAks0vZ4D11qZa9sxUc9jy4doDqq5ZUng",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:efdbbe7bd56644eeacf6837506bef2a09c94041a50c36cef9aed5c3243f29097",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_oauth1/complete",
+          "body": {
+            "status": 200,
+            "cost": {
+              "amount": "0.004",
+              "currency": "USD"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

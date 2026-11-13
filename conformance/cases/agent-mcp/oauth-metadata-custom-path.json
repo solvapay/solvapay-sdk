@@ -1,0 +1,157 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "oauth-metadata-custom-path",
+  "description": "A resource with its own metadata path and authorization server: the document is served there (and under the MCP path), not at the default, and the sign-in challenge points hosts at it.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/v2/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "protectedResource": {
+          "resource": "https://merchant-am.test/v2/mcp",
+          "metadataPath": "/meta/am-resource.json",
+          "authorizationServer": "https://auth-am.solvapay.test/v1/agent"
+        }
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/meta/am-resource.json"
+        },
+        {
+          "method": "GET",
+          "path": "/v2/mcp/.well-known/oauth-protected-resource"
+        },
+        {
+          "method": "GET",
+          "path": "/.well-known/oauth-protected-resource/v2/mcp"
+        },
+        {
+          "method": "POST",
+          "path": "/v2/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=300"
+          },
+          "body": {
+            "resource": "https://merchant-am.test/v2/mcp",
+            "authorization_servers": ["https://auth-am.solvapay.test/v1/agent"],
+            "scopes_supported": ["usage"],
+            "bearer_methods_supported": ["header"],
+            "resource_name": "am-research"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=300"
+          },
+          "body": {
+            "resource": "https://merchant-am.test/v2/mcp",
+            "authorization_servers": ["https://auth-am.solvapay.test/v1/agent"],
+            "scopes_supported": ["usage"],
+            "bearer_methods_supported": ["header"],
+            "resource_name": "am-research"
+          }
+        },
+        {
+          "merchant": true
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/meta/am-resource.json\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

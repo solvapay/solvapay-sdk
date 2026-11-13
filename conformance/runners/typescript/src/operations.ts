@@ -18,6 +18,8 @@ import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
 import { SERVER_OPERATIONS } from './server-ops'
 import { AGENT_IDENTITY_OPERATIONS } from './agent-identity'
+// ---- suite agent-mcp (see agent-mcp-ops.ts) ----
+import { AGENT_MCP_OPERATIONS } from './agent-mcp-ops'
 
 /**
  * Maps each language-neutral `fn` to the TypeScript SDK. An operation with
@@ -247,6 +249,8 @@ Object.assign(OPERATIONS, CORE_OPERATIONS)
 
 // ---- @solvapay/agents identity, OAuth helpers, prompt facts (suite `agent-identity`)
 Object.assign(OPERATIONS, AGENT_IDENTITY_OPERATIONS)
+// ---- suite agent-mcp: the MCP route agents call (agent-mcp-ops.ts) ----------
+Object.assign(OPERATIONS, AGENT_MCP_OPERATIONS)
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]

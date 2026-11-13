@@ -88,6 +88,7 @@ them.
 | `paywall-sequences`    | scenarios (see below)                                                                             | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records                                                                                                                                                                                                                                                                                                |
 | `agent-calls`          | scenarios (`setup.agentCalls`; steps `beginCall`, `finishCall`, `releaseCall`)                    | One agent's paid call through `createAgentCalls`: the authorize body (request id, estimate, prompt hash, excerpt only when the owner opted in, the hold asked for), every refusal reason, waiting for the owner until approval, refusal, timeout or the caller leaving, API errors and unreadable answers (never let through), the complete body (cost as a decimal string, release as a 502), what finish returns, and every log line                                                          |
 | `agent-identity`       | `verifyAgentTokens`, `promptFacts`, `oauthResources`; scenario steps `verifyAgentKey`, `identify` | `@solvapay/agents`: every agent-token check and refusal (signature, JWKS key selection, time claims with 30 s tolerance, audience and OAuth resource, issuer, claims, environment), the agent-key exchange and its 30 s cache, how `identify` tells credentials apart, the canonical resource, RFC 9728 document and 401 challenge, and prompt facts. A refusal's `detail` is compared only when it is the SDK's own sentence; one from the JWT library or the API compares as `<not compared>` |
+| `agent-mcp`            | `agentMcpRoute`, `agentRefusalStatuses`                                                           | The agent MCP route: bearer routing, 401/403 and the OAuth challenge, the protected-resource document, the tool list, paid calls authorized, run and completed, refusals and approval waits as tool results, upstream failures; each refusal's HTTP status                                                                                                                                                                                                                                      |
 
 ### `callTool`
 
@@ -147,6 +148,43 @@ in-memory transport, after an `initialize` that names the client
   adds `customer`, `freshCustomer` and `product` from the context to `data`).
   The outcome compares as `callTool`'s, except that a text block is parsed
   only when it is entirely JSON.
+
+### `agentMcpRoute`, `agentRefusalStatuses`
+
+`agentMcpRoute` builds one agent MCP route (`createAgentMcpRoute` /
+`create_agent_mcp_route`) and sends it `requests` in order, as real HTTP
+requests: a fetch handler in TypeScript, the route's ASGI middleware in Python.
+`args` gives the agent `issuer`, the merchant's `providerRef`, the public `jwks`
+the tokens are checked against (tokens in the cases are pre-signed, relative to
+the case's `clock`), and:
+
+- `route`: `mcpPath`, `serverName`, optional `serverVersion`, `maxWaitSeconds`
+  (how long a call waits for its owner), `environment`, `protectedResource`
+  (`resource`, `authorizationServer`, `documentation`, `metadataPath`),
+  `lazyAuth`, and `agentKeys: false` for an agent layer without key
+  verification.
+- `tools`: paid tools, each with an `input` (`type`, `description`, `optional`
+  per argument), a fixed `item` and `estimate`, the argument that is its
+  `prompt`, and `run`: `{ "throw": … }` (the upstream was never reached) or the
+  `status`, `cost`, `interrupted` and `text` it reports (`echo` answers the
+  arguments, call reference and agent it was given). `freeTools` answer `text`.
+- `requests`: `method` (default POST), `path`, `authorization` and a JSON
+  `body` or a `rawBody`.
+- `api`: SolvaPay's answers, each used once, in order.
+
+The result lists, per request, `{ "merchant": true }` when the route left it to
+the merchant's handler, `{ "thrown": true }` when the route failed loudly, the
+route's own answer (`status`, the CORS, cache and `WWW-Authenticate` headers,
+`body`), or the MCP server's answer (`status`, and each JSON-RPC message reduced
+to what a host reads: a tool list as for `describeServer`, `serverInfo`, a tool
+result as for `callPaidTool`, and only the `code` of an error that is not the
+route's own -32001). TypeScript's MCP handler answers with an event stream and
+Python's with JSON; the runners read either. Then `apiCalls`: every SolvaPay
+request, with its body. Each paid call's request id is a random UUID, so it
+compares as `<uuid-N>`, numbered by first appearance.
+
+`agentRefusalStatuses` maps each of `reasons` to the HTTP status an agent API
+answers that refusal with (`refusalStatus` / `refusal_status`).
 
 ## Scenarios: several calls in a row
 
