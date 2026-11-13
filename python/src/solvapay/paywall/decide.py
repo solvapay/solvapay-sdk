@@ -217,6 +217,8 @@ class Paywall:
         aliases = {customer_ref}
         if customer_ref in self._customers:
             aliases.add(self._customers[customer_ref])
+        if not customer_ref.startswith("cus_"):
+            aliases.add(f"cus_{customer_ref}")
         for key in list(self._limits):
             ref, _, rest = key.partition(":")
             if ref in aliases and (product is None or rest.split(":", 1)[0] == product):

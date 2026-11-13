@@ -32,7 +32,13 @@ Json = dict[str, Any]
 def credit_signals(limits: Json | None) -> Json:
     """Coalesces the two credit-balance channels; nested ``balance`` wins."""
     if not limits:
-        return {"isCreditBased": False}
+        return {
+            "creditBalance": UNDEFINED,
+            "creditsPerCall": UNDEFINED,
+            "shortfallCredits": UNDEFINED,
+            "remainingCalls": UNDEFINED,
+            "isCreditBased": False,
+        }
     balance = get(limits, "balance")
     credit_balance = coalesce(get(balance, "creditBalance"), get(limits, "creditBalance"))
     credits_per_call = coalesce(get(balance, "creditsPerUnit"), get(limits, "creditsPerUnit"))
@@ -330,7 +336,8 @@ def build_nudge_message(kind: PaywallStateKind, limits: Json | None) -> str:
     visit = f", or {_named_checkout_markdown(url)}" if url else ""
     signals = credit_signals(limits)
     remaining = signals["remainingCalls"]
-    if kind == "topup_required" and limits and not signals["isCreditBased"]:
+    # `limits && …` in the TypeScript: any object, even an empty one, is truthy.
+    if kind == "topup_required" and limits is not None and not signals["isCreditBased"]:
         kind = "limit_reached"
 
     if kind == "topup_required":

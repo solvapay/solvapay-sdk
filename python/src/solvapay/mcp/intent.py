@@ -23,7 +23,7 @@ from typing import Annotated, Any, Literal
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.prompts import Prompt
 from mcp.types import CallToolResult, ResourceLink, TextContent, ToolAnnotations
-from pydantic import BeforeValidator, Field
+from pydantic import BeforeValidator, Field, WithJsonSchema
 
 from .._js import get
 from ..errors import SolvaPayError
@@ -266,7 +266,10 @@ def register_intent_tools(
                 result_meta = {"ui": {"resourceUri": resource_uri}, **result_meta}
             return narrated_tool_result(data["view"], data, mode, result_meta)
 
-        view_type: Any = Literal[tuple(advertised)]
+        # An enum even for one view: pydantic would publish a single Literal as `const`.
+        view_type: Any = Annotated[
+            Literal[tuple(advertised)], WithJsonSchema({"type": "string", "enum": advertised})
+        ]
         _annotate(
             account,
             [

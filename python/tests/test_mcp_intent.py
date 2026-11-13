@@ -189,7 +189,9 @@ async def test_tools_list_has_the_builtin_tools_next_to_paid_ones() -> None:
 async def test_views_limit_the_account_tool_and_its_prompts() -> None:
     mcp = server(views=["account"])
     tools = {tool.name: tool for tool in await mcp.server.list_tools()}
-    assert tools["account"].input_schema["properties"]["view"]["anyOf"][0]["const"] == "account"
+    # An enum even for one view, as TypeScript advertises it.
+    view = tools["account"].input_schema["properties"]["view"]["anyOf"][0]
+    assert view == {"type": "string", "enum": ["account"]}
     assert [p.name for p in await mcp.server.list_prompts()] == ["manage_account", "activate_plan"]
     assert "account" not in {tool.name for tool in await server(views=[]).server.list_tools()}
 
