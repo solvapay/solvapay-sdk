@@ -11,8 +11,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
-    "@solvapay/mcp": "workspace:*",
+    "@solvapay/agents": "workspace:*",
     "@solvapay/core": "workspace:*",
+    "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*"
   },
