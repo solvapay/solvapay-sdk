@@ -1,6 +1,18 @@
 {
   "comment": "Written by `record`. Do not edit.",
   "cases": {
+    "agent-calls/allowed-then-completed-once.json": "sha256:aefda6b06571ac77771164278423f63effeb38be56e7439ce28b386c882b90df",
+    "agent-calls/authorize-api-errors.json": "sha256:abd1f7beb47846b2ca541b2e585f8257633cbe2949c4515e81ed496b22ca462a",
+    "agent-calls/authorize-unreadable-answers.json": "sha256:6c20b8c6b5e1fa90822adbbe1cb5bfc317edc3031c63b03570272399ee557d37",
+    "agent-calls/call-ref-is-encoded-in-the-path.json": "sha256:0f6f9fc56db43c2f63f16702830f048044ebfcc6c7945c1a1dd7591cd7b0a7ba",
+    "agent-calls/client-goes-away-while-waiting.json": "sha256:9dee563aa06ad0ada05bec9f97c38b9ed9eb87c46cd7a1237293233b65f9ce7c",
+    "agent-calls/complete-outcomes.json": "sha256:fe12ddbc45e71869b7c07c41f84db00bd9fc767d1aef762d5b74aeb2a7917c71",
+    "agent-calls/cost-as-decimal-string.json": "sha256:79bc94a80fa0e84b57fe96998b66799d49ebebba5afb23e68c440ea37a584ce3",
+    "agent-calls/owner-answers-no-while-waiting.json": "sha256:d882c014d41b0c170e1bab01ce90eb365d77cd361286145e09561a2a369453f6",
+    "agent-calls/owner-approves-while-waiting.json": "sha256:b312cff50687cefd12ed83dda0a0af141d53b876ff511e4bf09c546454767f2c",
+    "agent-calls/prompt-excerpt-and-release.json": "sha256:9a7d0367f1d959c1897b328e17232710b854321ef5a3a2bbe4a5a9ea3710fa20",
+    "agent-calls/refused-without-waiting.json": "sha256:149e3ab8a86e8137d1300a06d0620a0de2f28b6853370e5747faa7e2bb212c66",
+    "agent-calls/wait-runs-out.json": "sha256:d4c7d2329946a7a351a11e8c88c7efca42620f210de7c97589d2348fb29665bb",
     "business-details/business-invalid-us-ein.json": "sha256:ab2d5f5c8279789bc792781d5ddfd9fd0df21ce61f5ef4e7fc4078422a30d3d1",
     "business-details/business-normalised.json": "sha256:30ad9fd64807d7c3e27f5824962c64e031557a2d451253e28d2748d3e6b7b168",
     "business-details/business-own-billing-country.json": "sha256:00a465860305f472e998443f46e642710c0570f7b7595c218a66334ddb54eaef",

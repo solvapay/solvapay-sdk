@@ -668,7 +668,13 @@ def test_case(where: str, data: dict[str, Any], monkeypatch: pytest.MonkeyPatch)
             "scripts/pin_conformance.py"
         )
     if "steps" in data:
-        outcomes = asyncio.run(run_scenario(data, monkeypatch))
+        # ---- agent-calls (see agent_calls_runner.py) ----
+        if "agentCalls" in data["setup"]:
+            from agent_calls_runner import run_agent_calls_scenario
+
+            outcomes = asyncio.run(run_agent_calls_scenario(data, monkeypatch))
+        else:
+            outcomes = asyncio.run(run_scenario(data, monkeypatch))
         for index, (step, actual_step) in enumerate(zip(data["steps"], outcomes, strict=True)):
             assert canonical(actual_step) == canonical(step["expect"]), (
                 f"{where} step {index + 1} ({step['fn']}): {data['description']}\n"
