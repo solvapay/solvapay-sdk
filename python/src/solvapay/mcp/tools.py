@@ -40,7 +40,15 @@ from mcp.types import CallToolResult, ToolAnnotations
 from ..errors import SolvaPayError
 from ..paywall.decide import FreeLimit, PaywallError
 from ..solvapay import SolvaPay
-from .response import ResponseContext, ResponseResult, error_result, gate_result, unwrap
+from .app import RESOURCE_URI_META_KEY
+from .response import (
+    ResponseContext,
+    ResponseResult,
+    error_result,
+    gate_result,
+    tool_error_result,
+    unwrap,
+)
 
 Json = dict[str, Any]
 Handler = Callable[..., Awaitable[ResponseResult]]
@@ -100,7 +108,8 @@ def _register(
     if not inspect.iscoroutinefunction(handler):
         raise SolvaPayError(f"The handler for {name} must be async", code="invalid_handler")
     resolved_product = solvapay.require_product(product)
-    hints = typing.get_type_hints(handler)
+    # include_extras keeps `Annotated[str, Field(description=…)]`, so hosts see the description.
+    hints = typing.get_type_hints(handler, include_extras=True)
     ctx_name = _context_param(handler, hints)
     resolve_customer = get_customer_ref or default_customer_ref
 
@@ -113,6 +122,11 @@ def _register(
         customer = resolve_customer(kwargs, context)
         customer_ref = await customer if inspect.isawaitable(customer) else customer
         if not customer_ref:
+            if free_limit is not None:
+                # registerFreeTool's answer, before the paywall runs.
+                return tool_error_result(
+                    "Unauthorized", 401, "customer_ref missing from MCP auth context"
+                )
             return error_result(
                 f"{name} needs a signed-in customer: connect to this server with OAuth first."
             )
@@ -172,12 +186,27 @@ def _register(
         name=name,
         title=title,
         description=description,
-        annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True)
-        if annotations is None
-        else annotations,
-        meta=meta,
+        # Read-only and open-world unless the merchant says otherwise.
+        annotations=ToolAnnotations.model_validate(
+            {
+                "readOnlyHint": True,
+                "openWorldHint": True,
+                **(annotations.model_dump(by_alias=True, exclude_none=True) if annotations else {}),
+            }
+        ),
+        meta=_with_resource_uri_key(meta),
         structured_output=False,
     )
+
+
+def _with_resource_uri_key(meta: Json | None) -> Json | None:
+    """``registerAppTool``: a tool that names a UI resource also carries the flat
+    ``ui/resourceUri`` key hosts older than the 2026-01-26 MCP Apps spec read."""
+    ui = (meta or {}).get("ui")
+    resource_uri = ui.get("resourceUri") if isinstance(ui, dict) else None
+    if meta is None or not isinstance(resource_uri, str) or RESOURCE_URI_META_KEY in meta:
+        return meta
+    return {**meta, RESOURCE_URI_META_KEY: resource_uri}
 
 
 def _with_hint(description: str | None, hint: str) -> str:

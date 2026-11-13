@@ -156,6 +156,19 @@ def gate_result(gate: Json) -> CallToolResult:
     )
 
 
+def tool_error_result(error: str, status: int, details: str | None = None) -> CallToolResult:
+    """``toolErrorResult``: the recovery text first, the ``{error, status, details}`` envelope
+    as structured content."""
+    envelope: Json = {"error": error, "status": status}
+    if details is not None:
+        envelope["details"] = details
+    return CallToolResult(
+        content=[TextContent(type="text", text=details if details is not None else error)],
+        structured_content=envelope,
+        is_error=True,
+    )
+
+
 def error_result(message: str) -> CallToolResult:
     return CallToolResult(
         content=[

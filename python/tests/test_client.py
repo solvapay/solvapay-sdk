@@ -106,6 +106,16 @@ async def test_api_error_without_code_is_coded_by_status() -> None:
 
 
 @respx.mock
+async def test_api_error_code_that_is_not_a_string_is_coded_by_status() -> None:
+    # As TypeScript: only a non-empty string is the API's own code.
+    respx.get(f"{BASE}/v1/sdk/merchant").respond(409, json={"code": 42, "message": "x"})
+    async with client() as api:
+        with pytest.raises(SolvaPayError) as caught:
+            await api.get_merchant()
+    assert caught.value.code == "http_409"
+
+
+@respx.mock
 async def test_non_json_error() -> None:
     respx.get(f"{BASE}/v1/sdk/merchant").respond(502, text="<html>bad gateway</html>")
     async with client(max_retries=0) as api:

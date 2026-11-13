@@ -38,6 +38,7 @@ from .bootstrap import (
 )
 from .narrate import ACTIVATE_PLAN_TOOL_NAME, NARRATORS, VIEWER_TOOL_NAME, narrate_activate_plan
 from .narrate import ui_placeholder as _ui_placeholder
+from .response import tool_error_result
 from .tools import default_customer_ref
 
 Json = dict[str, Any]
@@ -128,19 +129,6 @@ _CONTEXT_PARAM = "solvapay_mcp_context"
 
 def _json(data: Any) -> str:
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
-
-
-def tool_error_result(error: str, status: int, details: str | None = None) -> CallToolResult:
-    """``toolErrorResult``: the recovery text first, the ``{error, status, details}`` envelope
-    as structured content."""
-    envelope: Json = {"error": error, "status": status}
-    if details is not None:
-        envelope["details"] = details
-    return CallToolResult(
-        content=[TextContent(type="text", text=details if details is not None else error)],
-        structured_content=envelope,
-        is_error=True,
-    )
 
 
 def parse_mode(raw: Any) -> Mode:
