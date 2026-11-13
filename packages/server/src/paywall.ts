@@ -447,15 +447,23 @@ export class SolvaPayPaywall {
 
       // Delegate gate construction to `buildPaywallGate` so adapter
       // paths and `payable.gate()` produce byte-identical wire shapes.
-      const gate = buildPaywallGate(
-        product,
-        lastLimitsCheck ?? {
-          withinLimits: false,
-          remaining: 0,
-          plan: '',
-          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
-        },
-      )
+      //
+      // When the SDK gates on its own count (the last cached unit is used,
+      // or more parallel callers than units share one check), the limits
+      // response it counted down from still says `withinLimits: true` with
+      // units remaining. The gate describes the verdict instead: no units
+      // left.
+      const gateLimits: LimitResponseWithPlan = lastLimitsCheck
+        ? lastLimitsCheck.withinLimits
+          ? { ...lastLimitsCheck, withinLimits: false, remaining: 0 }
+          : lastLimitsCheck
+        : {
+            withinLimits: false,
+            remaining: 0,
+            plan: '',
+            ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
+          }
+      const gate = buildPaywallGate(product, gateLimits)
 
       return {
         outcome: 'gate',
