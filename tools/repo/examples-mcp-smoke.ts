@@ -17,10 +17,11 @@
  *   pnpm test:examples:mcp --verbose       # print each server's log on failure and success
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { existsSync, readdirSync } from 'node:fs'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
-import { EXAMPLES_DIR, sdkDir } from '../shared/paths.js'
+import { EXAMPLES_DIR, sdkDir, tsPackageDir } from '../shared/paths.js'
 
 const PUBLIC_BASE_URL = 'https://mcp-smoke.example'
 const PRODUCT_REF = 'prd_smoke'
@@ -93,6 +94,8 @@ const EXAMPLES: Example[] = [
     id: 'ts-checkout-app',
     label: 'TypeScript mcp-checkout-app',
     cwd: ['typescript', 'mcp-checkout-app'],
+    // Builds the widget HTML the server reads on start.
+    prepare: [{ command: 'pnpm', args: ['build'] }],
     command: 'pnpm',
     args: ['exec', 'tsx', 'src/index.ts'],
     env: { NODE_OPTIONS: '--conditions=development' },
@@ -106,6 +109,8 @@ const EXAMPLES: Example[] = [
     id: 'ts-time-app',
     label: 'TypeScript mcp-time-app',
     cwd: ['typescript', 'mcp-time-app'],
+    // Builds the widget HTML the server reads on start.
+    prepare: [{ command: 'pnpm', args: ['build'] }],
     command: 'pnpm',
     args: ['exec', 'tsx', 'src/index.ts'],
     mcpPath: '/mcp',
@@ -130,6 +135,8 @@ const EXAMPLES: Example[] = [
     id: 'ts-workers',
     label: 'TypeScript cloudflare-workers-mcp (wrangler dev)',
     cwd: ['typescript', 'cloudflare-workers-mcp'],
+    // Builds the widget HTML the server reads on start.
+    prepare: [{ command: 'pnpm', args: ['build'] }],
     command: 'pnpm',
     args: wranglerDev(),
     env: WRANGLER_ENV,
@@ -145,6 +152,8 @@ const EXAMPLES: Example[] = [
     id: 'ts-supabase-edge',
     label: 'TypeScript supabase-edge-mcp (deno run)',
     cwd: ['typescript', 'supabase-edge-mcp'],
+    // Builds the widget HTML the server reads on start.
+    prepare: [{ command: 'pnpm', args: ['build'] }],
     command: 'deno',
     args: [
       'run',
@@ -676,7 +685,30 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
   }
 }
 
+/**
+ * The examples load the SDKs from this checkout, so the SDK builds must exist.
+ * Returns what is missing, in words a person can act on.
+ */
+function missingBuilds(): string[] {
+  const missing: string[] = []
+  for (const id of ['core', 'server', 'mcp-core', 'mcp', 'react'] as const) {
+    if (!existsSync(path.join(tsPackageDir(id), 'dist'))) missing.push(`@solvapay/${id} build`)
+  }
+  const nativeDir = sdkDir('node-native')
+  if (!existsSync(nativeDir) || !readdirSync(nativeDir).some(name => name.endsWith('.node'))) {
+    missing.push('Node native binding')
+  }
+  return missing
+}
+
 async function main(argv: string[]): Promise<number> {
+  const missing = missingBuilds()
+  if (missing.length > 0) {
+    console.error(
+      `Not built yet: ${missing.join(', ')}.\nRun \`pnpm build:all --native\` first, then rerun.`,
+    )
+    return 2
+  }
   const verbose = argv.includes('--verbose')
   const onlyIndex = argv.indexOf('--only')
   const only = onlyIndex >= 0 ? (argv[onlyIndex + 1] ?? '').split(',').filter(Boolean) : []

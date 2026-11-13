@@ -9,8 +9,12 @@
  * top-level await here closes that gap. It lives in its own module because
  * `./fetch` bundles `./edge` into a CommonJS build, which cannot hold one.
  */
-import { warmWasmReady } from './wasm'
+import { loadWasmBinding } from './wasm'
 
-await warmWasmReady()
+// A failed load is left for the first call to report, as `./edge` does.
+await loadWasmBinding().then(
+  () => undefined,
+  () => undefined,
+)
 
 export * from './edge'
