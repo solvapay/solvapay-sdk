@@ -98,6 +98,7 @@ async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
     mcp = create_solvapay_mcp_server(
         solvapay=create_solvapay(
             api_key="sk_sandbox_conformance",
+            max_retries=0,  # TypeScript never retries; see Known divergences
             api_base_url=CONFORMANCE_API,
             product_ref=args["productRef"],
         ),
@@ -232,6 +233,7 @@ def _server_for(args: dict[str, Any]) -> Any:
     return create_solvapay_mcp_server(
         solvapay=create_solvapay(
             api_key="sk_sandbox_conformance",
+            max_retries=0,  # TypeScript never retries; see Known divergences
             api_base_url=CONFORMANCE_API,
             product_ref=args["productRef"],
         ),
@@ -542,6 +544,7 @@ async def run_scenario(
     ttl_ms = setup.get("limitsCacheTtlMs")
     solvapay = create_solvapay(
         api_key="sk_sandbox_conformance",
+        max_retries=0,  # TypeScript never retries; see Known divergences
         api_base_url=CONFORMANCE_API,
         **({"limits_cache_ttl": ttl_ms / 1000} if ttl_ms is not None else {}),
     )
