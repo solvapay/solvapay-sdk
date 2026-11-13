@@ -27,7 +27,7 @@ import solvapay.paywall.decide as decide_module
 from solvapay import SolvaPayError, create_solvapay
 from solvapay.mcp import create_solvapay_mcp_server, narrate_activate_plan, narrated_tool_result
 from solvapay.mcp.intent import parse_mode
-from solvapay.paywall import build_paywall_gate
+from solvapay.paywall import build_nudge_message, build_paywall_gate
 from solvapay.paywall.decide import FreeLimit, PaywallError
 from solvapay.webhooks import verify_webhook
 
@@ -104,6 +104,11 @@ OPERATIONS: dict[str, Operation] = {
     "narrateActivatePlan": lambda args, _clock: narrate_activate_plan(args["result"]),
 }
 
+# ---- paywall nudge copy: ``state`` is the kind the classifier would produce.
+OPERATIONS["buildNudgeMessage"] = lambda args, _clock: build_nudge_message(
+    args["state"], args["limits"]
+)
+
 
 # ---- scenarios ---------------------------------------------------------------
 #
@@ -163,7 +168,7 @@ async def _scenario_step(
     solvapay: Any, product: str, fn: str, args: dict[str, Any]
 ) -> dict[str, Any]:
     if fn == "decide":
-        decision = await solvapay.paywall.decide(
+        decision = await solvapay.gate(
             customer_ref=args["customerRef"],
             product=product,
             meter=args.get("meter"),
@@ -177,11 +182,16 @@ async def _scenario_step(
             result["gate"] = decision.gate
         return {"result": result}
     if fn == "paidCall":
-        failing = args.get("handler") == "fail"
+        mode = args.get("handler")
 
         async def handler(*, customer_ref: str) -> dict[str, Any]:
-            if failing:
+            if mode == "fail":
                 raise SolvaPayError("the handler failed", code="handler_failed")
+            # The handler gates the call itself.
+            if mode == "gate":
+                raise PaywallError(
+                    build_paywall_gate(product, {"withinLimits": False, "remaining": 0})
+                )
             return {"ok": True}
 
         # Python records the handler's name as the tool name.
@@ -207,6 +217,15 @@ async def _scenario_step(
     if fn == "invalidateLimits":
         solvapay.paywall.invalidate_limits(args["customerRef"], args.get("productRef"))
         return {"result": None}
+    # ---- customer resolution with details
+    if fn == "ensureCustomer":
+        ref = await solvapay.paywall.ensure_customer(
+            args["customerRef"],
+            args.get("externalRef"),
+            email=args.get("email"),
+            name=args.get("name"),
+        )
+        return {"result": ref}
     raise AssertionError(f'No Python mapping for scenario step "{fn}" in {__file__}')
 
 
