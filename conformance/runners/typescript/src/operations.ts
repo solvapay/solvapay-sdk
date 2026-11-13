@@ -5,6 +5,7 @@ import {
   parseMode,
   type BootstrapPayload,
   type SolvaPayCallToolResult,
+  type SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
 import {
   buildNudgeMessage,
@@ -12,6 +13,7 @@ import {
   createSolvaPay,
   verifyWebhook,
 } from '@solvapay/server'
+import * as core from '@solvapay/core'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
 
@@ -116,6 +118,8 @@ async function callTool(args: Record<string, unknown>): Promise<unknown> {
       readHtml: async () => '',
       publicBaseUrl: CONFORMANCE_PUBLIC_URL,
       getCustomerRef: () => customerRef,
+      // The views the server enables (default: all of them).
+      ...(args.views !== undefined ? { views: args.views as SolvaPayMcpViewKind[] } : {}),
     })
     const name = str(args, 'tool')
     const tool = tools.find(candidate => candidate.name === name)
@@ -199,6 +203,44 @@ OPERATIONS.buildNudgeMessage = [
       ),
   },
 ]
+
+// ---- @solvapay/core helpers (suites `pricing`, `business-details`) ----------
+
+type Priced = Parameters<typeof core.charges>[0]
+
+/** Every pricing reader's answer for one plan, so a case pins them together. */
+function planPricing(args: Record<string, unknown>): unknown {
+  const plan = (args.plan ?? null) as Priced
+  const meter = typeof args.meter === 'string' ? args.meter : undefined
+  const balance = (args.balance ?? null) as Parameters<typeof core.creditsPerUnitFromBalance>[1]
+  return {
+    charges: core.charges(plan),
+    headlineCharges: core.headlineCharges(plan),
+    perUnitCharge: core.perUnitCharge(plan, meter),
+    billingCycle: core.billingCycle(plan),
+    tierBands: core.tierBands(plan, meter),
+    tierMeters: core.tierMeters(plan),
+    usageRate: core.usageRate(plan, meter),
+    trialDays: core.trialDays(plan),
+    includedUnits: core.includedUnits(plan, meter),
+    meterName: core.meterName(plan),
+    countsUsage: core.countsUsage(plan),
+    planPricingShape: core.planPricingShape(plan as Parameters<typeof core.planPricingShape>[0]),
+    creditsPerUnitFromBalance: core.creditsPerUnitFromBalance(plan, balance, meter),
+  }
+}
+
+/** The details to send, or the first problem's message, as Python reports it. */
+function validateBusinessDetails(args: Record<string, unknown>): unknown {
+  const result = core.validateBusinessDetails(args as unknown as core.BusinessDetailsInput)
+  return result.success ? result.data : { invalid: result.error.issues[0]?.message }
+}
+
+const CORE_OPERATIONS: Record<string, Implementation[]> = {
+  planPricing: [{ name: 'core', run: args => planPricing(args) }],
+  validateBusinessDetails: [{ name: 'core', run: args => validateBusinessDetails(args) }],
+}
+Object.assign(OPERATIONS, CORE_OPERATIONS)
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]

@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@solvapay/core": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*"
   },

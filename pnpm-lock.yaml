@@ -98,6 +98,9 @@ importers:
 
   conformance/runners/typescript:
     dependencies:
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
       '@solvapay/mcp-core':
         specifier: workspace:*
         version: link:../../../packages/mcp-core

@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "customer-name-too-long",
+  "description": "A customer name over 100 characters is refused with the schema's message.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "expect": {
+    "result": {
+      "invalid": "Too big: expected string to have <=100 characters"
+    }
+  }
+}

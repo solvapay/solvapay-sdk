@@ -1,0 +1,273 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "pricing",
+  "case": "stack-second-meter",
+  "description": "The same plan read for its second meter, tokens: its volume band and its limit, and credits per call pegged to a balance in the charge's currency at its exchange rate (7 / 1.1 × 100, rounded).",
+  "input": {
+    "fn": "planPricing",
+    "args": {
+      "plan": {
+        "reference": "pln_nr_stack",
+        "name": "Stack",
+        "requiresPayment": true,
+        "price": 9900,
+        "currency": "eur",
+        "options": [
+          {
+            "kind": "discount",
+            "percent": 10
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "day"
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "year",
+            "count": 2
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "trial",
+            "days": 0
+          },
+          {
+            "kind": "trial",
+            "days": 14
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 4900,
+            "currency": "EUR",
+            "oneTime": true
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 9900,
+            "currency": "eur"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 10900,
+            "currency": "EUR"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 11900,
+            "currency": "USD"
+          },
+          {
+            "kind": "charge",
+            "per": "month",
+            "amountMinor": 5,
+            "currency": "EUR"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": "3",
+            "currency": "EUR",
+            "meter": "requests"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 0,
+            "currency": "EUR",
+            "meter": "requests"
+          },
+          {
+            "kind": "tier",
+            "from": 1000,
+            "to": null,
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 2,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 1000,
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 0,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": "lots",
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 1,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "stepped",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 1,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "volume",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 7,
+              "currency": "EUR",
+              "meter": "tokens"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "volume"
+          },
+          {
+            "kind": "limit",
+            "meter": "requests",
+            "cap": "many"
+          },
+          {
+            "kind": "limit",
+            "meter": "tokens",
+            "cap": 50000,
+            "onExceed": "draw_credits"
+          },
+          {
+            "kind": "limit",
+            "meter": "requests",
+            "cap": 1000,
+            "onExceed": "block"
+          },
+          null,
+          "x"
+        ]
+      },
+      "meter": "tokens",
+      "balance": {
+        "displayCurrency": "eur",
+        "displayExchangeRate": 1.1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [
+        {
+          "per": "flat",
+          "amountMinor": 4900,
+          "currency": "EUR",
+          "oneTime": true
+        },
+        {
+          "per": "flat",
+          "amountMinor": 9900,
+          "currency": "eur"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 10900,
+          "currency": "EUR"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 11900,
+          "currency": "USD"
+        },
+        {
+          "per": "unit",
+          "amountMinor": 0,
+          "currency": "EUR",
+          "meter": "requests"
+        }
+      ],
+      "headlineCharges": [
+        {
+          "per": "flat",
+          "amountMinor": 9900,
+          "currency": "eur"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 11900,
+          "currency": "USD"
+        }
+      ],
+      "perUnitCharge": null,
+      "billingCycle": {
+        "interval": "year",
+        "count": 2
+      },
+      "tierBands": [
+        {
+          "from": 0,
+          "to": null,
+          "mode": "volume",
+          "charge": {
+            "per": "unit",
+            "amountMinor": 7,
+            "currency": "EUR",
+            "meter": "tokens"
+          }
+        }
+      ],
+      "tierMeters": ["requests", "tokens"],
+      "usageRate": {
+        "per": "unit",
+        "amountMinor": 7,
+        "currency": "EUR",
+        "meter": "tokens",
+        "tiered": false
+      },
+      "trialDays": 14,
+      "includedUnits": 50000,
+      "meterName": "requests",
+      "countsUsage": true,
+      "planPricingShape": {
+        "shape": "hybrid",
+        "headlineMinor": 9900,
+        "currency": "EUR",
+        "cycle": {
+          "interval": "year",
+          "count": 2
+        },
+        "rate": {
+          "per": "unit",
+          "amountMinor": 2,
+          "currency": "EUR",
+          "meter": "requests",
+          "tiered": false
+        }
+      },
+      "creditsPerUnitFromBalance": 636
+    }
+  }
+}

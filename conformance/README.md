@@ -75,13 +75,15 @@ them.
 
 ## Suites
 
-| Suite                  | Operation                               | What it pins down                                                                                                                                                                                         |
-| ---------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `webhook-verification` | `verifyWebhook`                         | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                                                                                                 |
-| `paywall-gate`         | `buildPaywallGate`, `buildNudgeMessage` | Gate kind, recovery fields, links and the exact message a customer sees; the nudge appended to a successful call near a limit                                                                             |
-| `narration`            | `narrateAccount`, `narrateActivatePlan` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status                                                                      |
-| `transport-tools`      | `callTool`                              | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses |
-| `paywall-sequences`    | scenarios (see below)                   | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records          |
+| Suite                  | Operation                                           | What it pins down                                                                                                                                                                                                                       |
+| ---------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webhook-verification` | `verifyWebhook`                                     | Header parsing, the ±300 s window, HMAC over the exact bytes, error codes                                                                                                                                                               |
+| `paywall-gate`         | `buildPaywallGate`, `buildNudgeMessage`             | Gate kind, recovery fields, links and the exact message a customer sees; the nudge appended to a successful call near a limit                                                                                                           |
+| `narration`            | `narrateAccount`, `narrateActivatePlan`, `callTool` | The text and links the built-in `account` tool answers with, per view, mode and account state, and `activate_plan`'s text per status; `callTool` cases run `account` end to end (the snapshot it builds from the API, its default view) |
+| `transport-tools`      | `callTool`                                          | What the widget's tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`, `get_history`, `activate_plan`) answer, given the API's responses                               |
+| `pricing`              | `planPricing`                                       | What every `options[]` reader of `@solvapay/core` answers for one plan: charges, headline, cycle, tiers, meters, trial, allowance, pricing shape and credits per call                                                                   |
+| `business-details`     | `validateBusinessDetails`                           | The normalised business or consumer details `validateBusinessDetails` sends, or the first problem's message (`{ "invalid": … }`)                                                                                                        |
+| `paywall-sequences`    | scenarios (see below)                               | The limits cache (count-down, TTL boundary, unlimited, invalidation), parallel calls sharing one check, customer lookup and creation, free allowances, and every usage event a paid call records                                        |
 
 ### `callTool`
 
@@ -101,7 +103,9 @@ A `callTool` case calls one of the MCP server's built-in tools as the signed-in
 ```
 
 Each runner stubs its HTTP client at `https://api.conformance.test` and fails if
-the tool makes a call that is not listed, or leaves one unused. Request bodies
+the tool makes a call that is not listed, or leaves one unused. Exchanges on the
+same method and path answer in the order listed. An optional `views` list sets
+the views the server enables (default: all). Request bodies
 are not compared. The result is the tool result's `content`, `structuredContent`
 and `isError`; a text block holding JSON (what `toolResult` writes) is compared
 parsed, under `json`, since key order is not part of what the widget reads.

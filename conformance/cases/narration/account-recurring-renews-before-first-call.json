@@ -1,0 +1,92 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-recurring-renews-before-first-call",
+  "description": "A recurring plan with an allowance and no usage read yet says when it renews (from the purchase's end date).",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_renew",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_renew",
+          "name": "Stock Research"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_NR11",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR11",
+            "purchases": [
+              {
+                "reference": "pur_nr_pro",
+                "status": "active",
+                "productRef": "prd_nr_renew",
+                "planRef": "pln_nr_pro",
+                "planSnapshot": {
+                  "reference": "pln_nr_pro",
+                  "name": "Pro",
+                  "price": 2900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 2900,
+                      "currency": "USD"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 5000,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 2900,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "endDate": "2026-12-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": null,
+          "limits": null
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Pro, $29 a month. Renews Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR11\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

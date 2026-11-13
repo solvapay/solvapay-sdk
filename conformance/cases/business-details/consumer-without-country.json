@@ -1,0 +1,21 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "consumer-without-country",
+  "description": "A consumer without a billing country keeps only their name; the address is dropped with no country to anchor it.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerName": "  Cy ",
+      "customerState": "NY",
+      "customerPostalCode": "10001"
+    }
+  },
+  "expect": {
+    "result": {
+      "isBusiness": false,
+      "customerName": "Cy"
+    }
+  }
+}

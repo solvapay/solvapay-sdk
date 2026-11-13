@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "pricing",
+  "case": "no-plan",
+  "description": "No plan at all: every reader answers empty, and the pricing shape is a zero-priced one-time USD plan.",
+  "input": {
+    "fn": "planPricing",
+    "args": {
+      "plan": null
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [],
+      "headlineCharges": [],
+      "perUnitCharge": null,
+      "billingCycle": null,
+      "tierBands": [],
+      "tierMeters": [],
+      "usageRate": null,
+      "trialDays": null,
+      "includedUnits": null,
+      "meterName": null,
+      "countsUsage": false,
+      "planPricingShape": {
+        "shape": "oneTime",
+        "headlineMinor": 0,
+        "currency": "USD",
+        "cycle": null,
+        "rate": null
+      },
+      "creditsPerUnitFromBalance": null
+    }
+  }
+}
