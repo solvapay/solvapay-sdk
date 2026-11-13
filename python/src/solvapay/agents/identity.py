@@ -224,12 +224,34 @@ class AgentKeyVerifier:
                 self.environment,
             )
         except SolvaPayError as error:
-            if error.status not in (401, 403):
+            # Only a refusal of the key itself is the agent's. SolvaPay failing, or
+            # refusing the merchant (agent payments off, a secret key for the other
+            # environment), is raised for the merchant to fix.
+            reason = agent_refusal(error)
+            if reason is None:
                 raise
-            mismatch = error.status == 403 and error.code == "environment_mismatch"
-            result = AgentRejected("environment_mismatch" if mismatch else "invalid", error.message)
+            result = AgentRejected(reason, error.message)
         self._answers[agent_key] = (self._clock() + AGENT_KEY_CACHE_SECONDS, result)
         return result
+
+
+def agent_refusal(error: SolvaPayError) -> Literal["invalid", "environment_mismatch"] | None:
+    """Whose a 401 or 403 from SolvaPay's agent endpoints is, as in TypeScript.
+
+    The agent's: the token or key is unknown, revoked or another merchant's (401,
+    or 403 with no code), or from the other environment (403
+    ``environment_mismatch``). Any other code, such as ``feature_not_enabled``
+    (agent payments are off for this merchant) or ``key_env_mismatch`` (the
+    secret key is for the other environment), is the merchant's: ``None``."""
+    if error.status == 401:
+        return "invalid"
+    if error.status != 403:
+        return None
+    if error.code == "http_403":  # SolvaPay sent no code
+        return "invalid"
+    if error.code == "environment_mismatch":
+        return "environment_mismatch"
+    return None
 
 
 _JWT = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")

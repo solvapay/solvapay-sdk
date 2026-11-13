@@ -2,7 +2,7 @@
   "$schema": "../../case.schema.json",
   "suite": "agent-identity",
   "case": "agent-key-environment-and-answers",
-  "description": "A verifier for a live merchant refuses a sandbox agent key as environment_mismatch after SolvaPay answers, with a sentence naming both. A 403 for another reason, and a 401 whose body mentions environment_mismatch, are plain invalid. An answer that is not what the API documents (a missing principalRef, an unknown environment, not an object) throws.",
+  "description": "A verifier for a live merchant refuses a sandbox agent key as environment_mismatch after SolvaPay answers, with a sentence naming both. A 403 with no code (another merchant's key), and a 401 even with environment_mismatch in its body, are plain invalid. A 403 with any other code refuses the merchant, not the key (feature_not_enabled, key_env_mismatch), and throws for the merchant to fix. An answer that is not what the API documents (a missing principalRef, an unknown environment, not an object) throws.",
   "setup": {
     "productRef": "prd_ai_identity"
   },
@@ -57,8 +57,8 @@
           "status": 403,
           "body": {
             "statusCode": 403,
-            "code": "forbidden",
-            "message": "Agent key belongs to another merchant"
+            "message": "This agent key was issued for another merchant",
+            "error": "Forbidden"
           }
         }
       ],
@@ -74,6 +74,79 @@
             "path": "/v1/sdk/agent/keys/verifications",
             "body": {
               "agentKey": "agk_ai_five"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:01.000Z",
+      "args": {
+        "agentKey": "agk_ai_five_feature",
+        "environment": "live"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "code": "feature_not_enabled",
+            "message": "Feature \"agent_payments\" is not enabled for this provider",
+            "feature": "agent_payments"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "thrown": {
+            "status": 403
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_five_feature"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "verifyAgentKey",
+      "clock": "2026-11-13T12:00:01.000Z",
+      "args": {
+        "agentKey": "agk_ai_five_keyenv",
+        "environment": "live"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "code": "key_env_mismatch",
+            "message": "This secret key is for sandbox, and this account is in live"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "thrown": {
+            "status": 403
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/keys/verifications",
+            "body": {
+              "agentKey": "agk_ai_five_keyenv"
             }
           }
         ]
@@ -197,7 +270,9 @@
         {
           "method": "POST",
           "path": "/v1/sdk/agent/keys/verifications",
-          "body": ["agt_ai_ten"]
+          "body": [
+            "agt_ai_ten"
+          ]
         }
       ],
       "expect": {

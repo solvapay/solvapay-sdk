@@ -10,6 +10,7 @@
 import {
   AUTHORIZE_WAIT_MAX_SECONDS,
   AgentApiError,
+  agentRefusal,
   type AuthorizeResponse,
   type CompleteResponse,
   type MoneyAmount,
@@ -185,9 +186,12 @@ export function createAgentCalls(deps: {
             status,
             error: errorMessage(error),
           })
-          // SolvaPay verifies the token again: a revoked agent, or one for another merchant.
-          if (status === 401 || status === 403)
-            return refuse(call, 'agent_not_accepted', NOT_ACCEPTED)
+          // SolvaPay verifies the token again: a revoked agent, or one for another
+          // merchant or the other environment. A refusal of the merchant (agent
+          // payments off, a secret key for the other environment) is not the
+          // agent's: it is unavailable here, and logged above with SolvaPay's
+          // sentence for the merchant to fix.
+          if (agentRefusal(error)) return refuse(call, 'agent_not_accepted', NOT_ACCEPTED)
           return refuse(call, 'unavailable', UNAVAILABLE)
         }
 

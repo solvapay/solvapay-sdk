@@ -185,8 +185,11 @@ func (c *Calls) Begin(ctx context.Context, call AgentCall) (*Allowed, *Refused) 
 			fields["status"] = nullable(status, fromAPI)
 			fields["error"] = err.Error()
 			c.log(slog.LevelError, "call.authorize_failed", fields)
-			// SolvaPay verifies the token again: a revoked agent, or one for another merchant.
-			if status == 401 || status == 403 {
+			// SolvaPay verifies the token again: a revoked agent, or one for another
+			// merchant or the other environment. A refusal of the merchant (agent
+			// payments off, a secret key for the other environment) is not the
+			// agent's: unavailable, logged above.
+			if _, agents := AgentRefusal(err); agents {
 				return nil, c.refuse(call, ReasonAgentNotAccepted, notAccepted, nil)
 			}
 			return nil, c.refuse(call, ReasonUnavailable, unavailable, nil)

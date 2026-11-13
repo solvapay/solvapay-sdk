@@ -142,6 +142,20 @@ describe('createAgentCalls', () => {
     expect(await calls.begin(call())).toMatchObject({ reason: 'unavailable' })
   })
 
+  it('refuses as unavailable, not as the agent, when SolvaPay refuses the merchant', async () => {
+    const { agentApi, calls } = setup()
+    agentApi.failAuthorize = 403
+    agentApi.failAuthorizeCode = 'environment_mismatch'
+    expect(await calls.begin(call())).toMatchObject({ reason: 'agent_not_accepted' })
+    agentApi.failAuthorizeCode = undefined
+    expect(await calls.begin(call())).toMatchObject({ reason: 'agent_not_accepted' })
+    // Agent payments off, or a secret key for the other environment: the merchant's to fix.
+    for (const code of ['feature_not_enabled', 'key_env_mismatch']) {
+      agentApi.failAuthorizeCode = code
+      expect(await calls.begin(call())).toMatchObject({ reason: 'unavailable' })
+    }
+  })
+
   it('completes a call that never reached the upstream as a failure, so nothing is charged', async () => {
     const { agentApi, calls } = setup()
     const begun = (await calls.begin(call())) as Allowed

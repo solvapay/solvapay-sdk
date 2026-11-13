@@ -77,6 +77,11 @@ const checks = [
     kinds: ['agents'],
     path: '/mcp',
     status: 401,
+    // Every server answering 500 is the merchant's setup, not the SDKs: the
+    // servers' logs say which (agent payments off, a secret key for the other
+    // environment).
+    allFail:
+      'every server answered 500: SolvaPay refused this merchant (is agent payments on for it?). See the agents servers’ logs.',
     init: {
       method: 'POST',
       headers: { ...mcpHeaders, authorization: 'Bearer agk_sandbox_mcpparityprobe' },
@@ -156,7 +161,11 @@ for (const kind of kinds) {
     if (!ok) failed = true
     const statuses = answers.map(a => `${a.server} ${a.status ?? a.error}`).join(', ')
     console.log(`  ${ok ? '✓' : '✗'} ${check.name}: ${statuses}${same ? '' : ' (answers differ)'}`)
-    if (!same) for (const a of answers) console.log(`      ${JSON.stringify(a)}`)
+    if (check.allFail && answers.every(a => a.status === 500)) {
+      console.log(`      ${check.allFail}`)
+    } else if (!same) {
+      for (const a of answers) console.log(`      ${JSON.stringify(a)}`)
+    }
   }
 }
 process.exit(failed ? 1 : 0)
