@@ -31,6 +31,8 @@ from ..pricing import (
     included_units,
     meter_name,
     plan_pricing_shape,
+    tier_bands,
+    tier_meters,
     trial_days,
     usage_rate,
 )
@@ -102,8 +104,19 @@ def days_until(iso: str, now: datetime) -> int | None:
 def meter_unit(meter: Any, count: Any) -> str:
     if truthy(meter) and meter != "requests":
         text = str(meter)
-        return text[:-1] if count == 1 and text.endswith("s") else text
+        return _singular(text) if count == 1 else text
     return "call" if count == 1 else "calls"
+
+
+def _singular(word: str) -> str:
+    """One unit of a plural meter name: ``searches`` → ``search``, ``queries`` → ``query``."""
+    if re.search(r"[^aeiou]ies$", word, re.IGNORECASE):
+        return f"{word[:-3]}y"
+    if re.search(r"(ch|sh|ss|x|z)es$", word, re.IGNORECASE):
+        return word[:-2]
+    if re.search(r"[^s]s$", word, re.IGNORECASE):
+        return word[:-1]
+    return word
 
 
 def _positive(value: Any) -> bool:
@@ -307,6 +320,13 @@ def _is_paid_plan(plan: Any) -> bool:
         return False
     if any(charge["amountMinor"] > 0 for charge in charges(plan)):
         return True
+    # A plan priced only in tier bands has no flat or per-unit charge.
+    if any(
+        tier["charge"]["amountMinor"] > 0
+        for meter in tier_meters(plan)
+        for tier in tier_bands(plan, meter)
+    ):
+        return True
     return number(coalesce(get(plan, "price"), 0)) > 0
 
 
@@ -404,6 +424,15 @@ def _account_state(purchase: Json | None, limits: Any, plan: Any, now: datetime)
     return "C" if purchase is not None else "A"
 
 
+def _cadence_phrase(plan: Any) -> str | None:
+    """How often a plan bills, for a sentence with no price: ``every year``, ``every 3 months``."""
+    cycle = billing_cycle(plan)
+    if not cycle:
+        return None
+    count = cycle.get("count", 1)
+    return f"every {cycle['interval']}" if count == 1 else f"every {count} {cycle['interval']}s"
+
+
 def _interval_phrase(plan: Any) -> str | None:
     cycle = billing_cycle(plan)
     if not cycle:
@@ -484,7 +513,11 @@ def _catalog_fragment(plan: Json, customer: Any) -> str:
         if price:
             core = f"{name} is {price}{cycle_bit}{allowance}"
         else:
-            core = f"{name} is {cycle}" if cycle else str(name)
+            core = (
+                f"{name} is billed {_cadence_phrase(plan) or cycle}{allowance}"
+                if cycle
+                else str(name)
+            )
 
     if truthy(trial):
         core += f" · {num_str(trial)}-day trial"
