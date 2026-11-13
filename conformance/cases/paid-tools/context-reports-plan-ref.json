@@ -1,0 +1,121 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "context-reports-plan-ref",
+  "description": "ctx.customer.plan carries the active plan the limits check reports as planRef, on the first snapshot and on a fresh() one.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_planref",
+      "customerRef": "cus_TLPLAN01",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "fresh": true,
+        "respond": {
+          "data": {
+            "ok": true
+          },
+          "echo": true
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 12,
+            "meterName": "requests",
+            "planRef": "pln_TLPRO",
+            "planName": "Pro"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 11,
+            "meterName": "requests",
+            "planRef": "pln_TLPRO",
+            "planName": "Pro"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "ok": true,
+            "customer": {
+              "ref": "cus_TLPLAN01",
+              "isCreditBased": false,
+              "remaining": 12,
+              "withinLimits": true,
+              "overage": false,
+              "plan": {
+                "reference": "pln_TLPRO"
+              }
+            },
+            "freshCustomer": {
+              "ref": "cus_TLPLAN01",
+              "isCreditBased": false,
+              "remaining": 11,
+              "withinLimits": true,
+              "overage": false,
+              "plan": {
+                "reference": "pln_TLPRO"
+              }
+            },
+            "product": {
+              "reference": "prd_tl_planref",
+              "name": "prd_tl_planref"
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "ok": true,
+        "customer": {
+          "ref": "cus_TLPLAN01",
+          "isCreditBased": false,
+          "remaining": 12,
+          "withinLimits": true,
+          "overage": false,
+          "plan": {
+            "reference": "pln_TLPRO"
+          }
+        },
+        "freshCustomer": {
+          "ref": "cus_TLPLAN01",
+          "isCreditBased": false,
+          "remaining": 11,
+          "withinLimits": true,
+          "overage": false,
+          "plan": {
+            "reference": "pln_TLPRO"
+          }
+        },
+        "product": {
+          "reference": "prd_tl_planref",
+          "name": "prd_tl_planref"
+        }
+      }
+    }
+  }
+}

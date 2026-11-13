@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "tool-descriptors",
+  "case": "public-base-url-must-be-http",
+  "description": "A server whose publicBaseUrl is not http(s) (Stripe's confirmPayment rejects ui://) fails at start-up with invalid_argument.",
+  "input": {
+    "fn": "describeServer",
+    "args": {
+      "productRef": "prd_tl_badurl",
+      "publicBaseUrl": "ui://solvapay/not-http"
+    }
+  },
+  "expect": {
+    "error": {
+      "code": "invalid_argument"
+    }
+  }
+}

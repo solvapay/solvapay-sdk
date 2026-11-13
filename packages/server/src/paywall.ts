@@ -739,6 +739,11 @@ export class SolvaPayPaywall {
 
         return ref
       } catch (error: unknown) {
+        // The create did not produce a customer: don't leave the user marked
+        // as attempted, or the next call skips creation and sends the app's
+        // own user id to the API as if it were a customer ref. Paths below
+        // that do resolve a customer store the mapping themselves.
+        this.customerCreationAttempts.delete(customerRef)
         const errorMessage = error instanceof Error ? error.message : String(error)
         if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
           // Try to lookup by externalRef first if available
