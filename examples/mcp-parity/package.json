@@ -1,0 +1,29 @@
+{
+  "name": "@example/mcp-parity",
+  "private": true,
+  "type": "module",
+  "description": "The same paid MCP servers in TypeScript, Python and Go: the legacy paywall, and agent payments in front of it.",
+  "scripts": {
+    "paywall": "cross-env NODE_OPTIONS=--conditions=development tsx src/paywall.ts",
+    "agents": "cross-env NODE_OPTIONS=--conditions=development tsx src/agents.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@solvapay/agents": "workspace:*",
+    "@solvapay/mcp": "workspace:*",
+    "@solvapay/server": "workspace:*",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jose": "^6.2.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.2",
+    "cross-env": "^10.1.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
