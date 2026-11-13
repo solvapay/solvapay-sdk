@@ -2,13 +2,15 @@ module github.com/solvapay/solvapay-sdk/examples/mcp-parity/go
 
 go 1.26.0
 
-require github.com/solvapay/solvapay-sdk/go v0.0.0
+require (
+	github.com/modelcontextprotocol/go-sdk v1.8.0
+	github.com/solvapay/solvapay-sdk/go v0.0.0
+)
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/modelcontextprotocol/go-sdk v1.8.0 // indirect
 	github.com/oapi-codegen/runtime v1.9.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect

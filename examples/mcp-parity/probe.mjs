@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// Asks each running parity server the same questions a new MCP client asks
-// before sign-in, and prints where their answers differ.
+// Asks the running parity servers the questions a new MCP client asks before
+// sign-in, and prints where servers of the same kind answer differently. The
+// agents servers are also sent an agent key SolvaPay never issued.
 //
-//   node probe.mjs            # the public URLs from .env (through ngrok)
-//   node probe.mjs --local    # http://127.0.0.1:<port>
+//   node probe.mjs                  # all six, at their public URLs (ngrok)
+//   node probe.mjs --local          # http://127.0.0.1:<port>
+//   node probe.mjs --local paywall  # one kind
 //
-// Exits 1 when a server is down, answers with an unexpected status, or the
-// servers disagree.
+// Exits 1 when a server is down, answers with an unexpected status, or
+// servers of the same kind disagree.
 import { readFileSync } from 'node:fs'
 
 const env = Object.fromEntries(
@@ -21,11 +23,18 @@ const env = Object.fromEntries(
     ),
 )
 const local = process.argv.includes('--local')
-const servers = ['TS', 'PY', 'GO'].map(key => ({
-  name: { TS: 'typescript', PY: 'python', GO: 'go' }[key],
-  base: local ? `http://127.0.0.1:${env[`${key}_PORT`]}` : env[`${key}_PUBLIC_BASE_URL`],
-}))
+const PORTS = {
+  paywall: { ts: 3060, py: 3061, go: 3062 },
+  agents: { ts: 3070, py: 3071, go: 3072 },
+}
+const LANGUAGES = { ts: 'typescript', py: 'python', go: 'go' }
+const named = ['paywall', 'agents'].filter(kind => process.argv.includes(kind))
+const kinds = named.length > 0 ? named : ['paywall', 'agents']
 
+const mcpHeaders = {
+  'content-type': 'application/json',
+  accept: 'application/json, text/event-stream',
+}
 const checks = [
   {
     name: 'protected resource metadata',
@@ -43,10 +52,7 @@ const checks = [
     status: 401,
     init: {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        accept: 'application/json, text/event-stream',
-      },
+      headers: mcpHeaders,
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
     },
   },
@@ -66,63 +72,91 @@ const checks = [
       }),
     },
   },
+  {
+    name: 'agent key SolvaPay never issued',
+    kinds: ['agents'],
+    path: '/mcp',
+    status: 401,
+    init: {
+      method: 'POST',
+      headers: { ...mcpHeaders, authorization: 'Bearer agk_sandbox_mcpparityprobe' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: 'get_quote', arguments: { symbol: 'ACME' } },
+      }),
+    },
+  },
 ]
 
-// Answers with each server's own URL replaced, and per-call values blanked,
-// so equal behaviour compares equal.
-function normalise(value, base) {
+// Answers with each server's own URL and name replaced, and per-call values
+// blanked, so equal behaviour compares equal.
+function normalise(value, server) {
   if (typeof value === 'string') {
     return value
-      .split(base)
+      .split(server.base)
       .join('<base>')
+      .split(server.serverName)
+      .join('<name>')
       .replace(/^[a-z]+_[A-Za-z0-9]{6,}$/, '<id>')
   }
-  if (Array.isArray(value)) return value.map(v => normalise(v, base))
+  if (Array.isArray(value)) return value.map(v => normalise(v, server))
   if (value && typeof value === 'object') {
     const out = {}
     for (const key of Object.keys(value).sort()) {
       out[key] = /(_at|_issued_at|^client_id$|^client_secret)/.test(key)
         ? '<varies>'
-        : normalise(value[key], base)
+        : normalise(value[key], server)
     }
     return out
   }
   return value
 }
 
-let failed = false
-for (const check of checks) {
-  const answers = []
-  for (const server of servers) {
-    let line
+async function ask(server, check) {
+  try {
+    const response = await fetch(server.base + check.path, check.init)
+    const text = await response.text()
+    let body
     try {
-      const response = await fetch(server.base + check.path, check.init)
-      const text = await response.text()
-      let body
-      try {
-        body = JSON.parse(text)
-      } catch {
-        body = text.slice(0, 200)
-      }
-      const auth = response.headers.get('www-authenticate')
-      line = {
-        status: response.status,
-        body: normalise(body, server.base),
-        ...(auth ? { auth: normalise(auth, server.base) } : {}),
-      }
-      if (response.status !== check.status) failed = true
-    } catch (error) {
-      line = { error: String(error.cause?.code ?? error.message) }
-      failed = true
+      body = JSON.parse(text)
+    } catch {
+      body = text.slice(0, 200)
     }
-    answers.push({ server: server.name, ...line })
+    const auth = response.headers.get('www-authenticate')
+    return {
+      status: response.status,
+      body: normalise(body, server),
+      ...(auth ? { auth: normalise(auth, server) } : {}),
+    }
+  } catch (error) {
+    return { error: String(error.cause?.code ?? error.message) }
   }
-  const same = new Set(answers.map(({ server, ...rest }) => JSON.stringify(rest))).size === 1
-  if (!same) failed = true
-  const statuses = answers.map(a => `${a.server} ${a.status ?? a.error}`).join(', ')
-  console.log(
-    `${same && answers.every(a => a.status === check.status) ? '✓' : '✗'} ${check.name}: ${statuses}${same ? '' : ' (answers differ)'}`,
-  )
-  if (!same) for (const a of answers) console.log(`    ${JSON.stringify(a)}`)
+}
+
+let failed = false
+for (const kind of kinds) {
+  console.log(kind)
+  const servers = Object.entries(PORTS[kind]).map(([lang, port]) => {
+    const key = `${kind.toUpperCase()}_${lang.toUpperCase()}_URL`
+    if (!local && !env[key]) throw new Error(`${key} is not set in .env`)
+    return {
+      name: LANGUAGES[lang],
+      serverName: `${kind}-${LANGUAGES[lang]}`,
+      base: local ? `http://127.0.0.1:${port}` : env[key],
+    }
+  })
+  for (const check of checks.filter(c => !c.kinds || c.kinds.includes(kind))) {
+    const answers = []
+    for (const server of servers)
+      answers.push({ server: server.name, ...(await ask(server, check)) })
+    const same = new Set(answers.map(({ server, ...rest }) => JSON.stringify(rest))).size === 1
+    const ok = same && answers.every(a => a.status === check.status)
+    if (!ok) failed = true
+    const statuses = answers.map(a => `${a.server} ${a.status ?? a.error}`).join(', ')
+    console.log(`  ${ok ? '✓' : '✗'} ${check.name}: ${statuses}${same ? '' : ' (answers differ)'}`)
+    if (!same) for (const a of answers) console.log(`      ${JSON.stringify(a)}`)
+  }
 }
 process.exit(failed ? 1 : 0)

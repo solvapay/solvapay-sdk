@@ -165,9 +165,10 @@ pnpm dev
 
 ### MCP parity (`mcp-parity`)
 
-The same paid MCP server in TypeScript, Python and Go, each on its own SDK, behind
-one ngrok domain each. `start.sh` runs all three and their tunnels, and `probe.mjs`
-checks that they answer the pre-sign-in steps the same way. See its README.
+Paid MCP servers written once per SDK (TypeScript, Python, Go), in two kinds: the
+legacy paywall, and agent payments in front of it on the same `/mcp`. `start.sh`
+runs them behind ngrok, and `probe.mjs` checks that servers of a kind answer the
+same way. See its README.
 
 ### Supabase Edge MCP (`supabase-edge-mcp`)
 

@@ -1,39 +1,51 @@
 #!/usr/bin/env bash
-# Starts the TypeScript, Python and Go parity servers and their ngrok tunnels.
+# Starts the parity servers and their ngrok tunnels.
 #
-#   ./start.sh              servers + tunnels
-#   ./start.sh --no-ngrok   servers only (tunnels run elsewhere)
-#   ./start.sh ts go        only these servers (ts, py, go)
+#   ./start.sh                     all six servers, and tunnels
+#   ./start.sh paywall             the three paywall servers
+#   ./start.sh agents go           the Go agents server
+#   ./start.sh --no-ngrok ...      no tunnels (they run elsewhere)
 #
-# Ctrl+C stops everything it started.
+# Ctrl+C stops everything it started; so does any one process exiting.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
 NGROK=1
-SERVERS=()
+KINDS=""
+LANGS=""
 for arg in "$@"; do
   case "$arg" in
     --no-ngrok) NGROK=0 ;;
-    ts|py|go) SERVERS+=("$arg") ;;
-    *) echo "Unknown argument: $arg (expected --no-ngrok, ts, py or go)" >&2; exit 1 ;;
+    paywall|agents) KINDS="$KINDS $arg" ;;
+    ts|py|go) LANGS="$LANGS $arg" ;;
+    *) echo "Unknown argument: $arg (expected --no-ngrok, paywall, agents, ts, py or go)" >&2; exit 1 ;;
   esac
 done
-[ ${#SERVERS[@]} -eq 0 ] && SERVERS=(ts py go)
+[ -n "$KINDS" ] || KINDS="paywall agents"
+[ -n "$LANGS" ] || LANGS="ts py go"
+SERVERS=()
+for kind in $KINDS; do for lang in $LANGS; do SERVERS+=("$kind-$lang"); done; done
 
 fail() { echo "❌ $*" >&2; exit 1; }
 
 [ -f .env ] || fail ".env is missing: cp .env.example .env, then fill it in"
-grep -v '^[[:space:]]*#' .env | grep -q 'your-subdomain\|sk_sandbox_\.\.\.\|prd_\.\.\.' \
-  && fail ".env still has placeholders"
 set -a; source .env; set +a
+
+# The variable that holds a server's public URL: paywall-ts -> PAYWALL_TS_URL.
+url_var() { echo "$1" | tr 'a-z-' 'A-Z_' | sed 's/$/_URL/'; }
+
+for server in "${SERVERS[@]}"; do
+  var="$(url_var "$server")"; url="${!var:-}"
+  [ -n "$url" ] || fail "$var is not set in .env"
+  case "$url" in *your-subdomain*) fail "$var still has the placeholder" ;; esac
+done
 
 if [ "$NGROK" = 1 ]; then
   command -v ngrok >/dev/null || fail "ngrok is not installed: brew install ngrok"
   [ -f ngrok.yml ] || fail "ngrok.yml is missing: cp ngrok.yml.example ngrok.yml, then set your domains"
-  grep -v '^[[:space:]]*#' ngrok.yml | grep -q 'your-subdomain' && fail "ngrok.yml still has placeholders"
-  for pair in "TS_PUBLIC_BASE_URL:mcp-ts" "PY_PUBLIC_BASE_URL:mcp-py" "GO_PUBLIC_BASE_URL:mcp-go"; do
-    var="${pair%%:*}"; url="${!var}"; host="${url#https://}"
+  for server in "${SERVERS[@]}"; do
+    var="$(url_var "$server")"; url="${!var}"; host="${url#https://}"
     grep -q "domain: ${host}\$" ngrok.yml || fail "$var ($host) is not a domain in ngrok.yml"
   done
 fi
@@ -54,10 +66,11 @@ run() {
 }
 
 for server in "${SERVERS[@]}"; do
+  kind="${server%-*}"
   case "$server" in
-    ts) run ts env NODE_OPTIONS=--conditions=development pnpm exec tsx src/index.ts ;;
-    py) run py bash -c 'cd python && exec uv run --quiet python main.py' ;;
-    go) run go bash -c 'cd go && exec go run .' ;;
+    *-ts) run "$server" env NODE_OPTIONS=--conditions=development pnpm exec tsx "src/$kind.ts" ;;
+    *-py) run "$server" bash -c "cd python && exec uv run --quiet python $kind.py" ;;
+    *-go) run "$server" bash -c "cd go && exec go run ./$kind" ;;
   esac
 done
 
@@ -66,18 +79,12 @@ if [ "$NGROK" = 1 ]; then
   DEFAULT_CONFIG="$(ngrok config check 2>/dev/null | sed -n 's/.*configuration file at //p' | head -n1 || true)"
   [ -n "$DEFAULT_CONFIG" ] && [ -f "$DEFAULT_CONFIG" ] && CONFIGS+=(--config "$DEFAULT_CONFIG")
   CONFIGS+=(--config "$HERE/ngrok.yml")
-  tunnels=()
-  for server in "${SERVERS[@]}"; do tunnels+=("mcp-$server"); done
-  run ngrok ngrok start "${CONFIGS[@]}" --log stdout --log-level warn "${tunnels[@]}"
+  run ngrok ngrok start "${CONFIGS[@]}" --log stdout --log-level warn "${SERVERS[@]}"
 fi
 
 echo "MCP endpoints:"
 for server in "${SERVERS[@]}"; do
-  case "$server" in
-    ts) echo "  TypeScript  $TS_PUBLIC_BASE_URL/mcp  (local http://127.0.0.1:$TS_PORT)" ;;
-    py) echo "  Python      $PY_PUBLIC_BASE_URL/mcp  (local http://127.0.0.1:$PY_PORT)" ;;
-    go) echo "  Go          $GO_PUBLIC_BASE_URL/mcp  (local http://127.0.0.1:$GO_PORT)" ;;
-  esac
+  var="$(url_var "$server")"; printf '  %-11s %s/mcp\n' "$server" "${!var}"
 done
 echo "Ctrl+C stops them all."
 
