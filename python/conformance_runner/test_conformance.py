@@ -24,7 +24,8 @@ import respx
 from mcp.types import CallToolResult
 
 import solvapay.paywall.decide as decide_module
-from solvapay import SolvaPayError, create_solvapay
+from solvapay import SolvaPayError, create_solvapay, pricing
+from solvapay.business_details import validate_business_details
 from solvapay.mcp import create_solvapay_mcp_server, narrate_activate_plan, narrated_tool_result
 from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_nudge_message, build_paywall_gate
@@ -79,16 +80,23 @@ async def _call_tool(args: dict[str, Any]) -> dict[str, Any]:
         ),
         public_base_url=CONFORMANCE_PUBLIC_URL,
         get_customer_ref=lambda _args, _context: customer,
+        **({"views": args["views"]} if "views" in args else {}),
     )
-    # Every exchange must be used, and nothing else may be called.
+    # Every exchange must be used, and nothing else may be called. Exchanges on the
+    # same method and path answer in the order listed, once each.
+    answers: dict[tuple[str, str], list[httpx.Response]] = {}
+    for exchange in args.get("api", []):
+        answers.setdefault((exchange["method"], exchange["path"]), []).append(
+            httpx.Response(exchange.get("status", 200), json=exchange["body"])
+        )
     with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
-        for exchange in args.get("api", []):
+        for (method, path), responses in answers.items():
             router.route(
-                method=exchange["method"],
+                method=method,
                 scheme="https",
                 host=CONFORMANCE_API.removeprefix("https://"),
-                path=exchange["path"],
-            ).respond(exchange.get("status", 200), json=exchange["body"])
+                path=path,
+            ).mock(side_effect=responses)
         result = await mcp.server.call_tool(args["tool"], args.get("arguments", {}))
     assert isinstance(result, CallToolResult)
     return tool_outcome(result)
@@ -109,6 +117,50 @@ OPERATIONS["buildNudgeMessage"] = lambda args, _clock: build_nudge_message(
     args["state"], args["limits"]
 )
 
+
+# ---- solvapay.pricing and solvapay.business_details (suites `pricing`, `business-details`)
+
+
+def plan_pricing(args: dict[str, Any], _clock: datetime | None) -> dict[str, Any]:
+    """Every pricing reader's answer for one plan."""
+    plan, balance, meter = args.get("plan"), args.get("balance"), args.get("meter")
+    return {
+        "charges": pricing.charges(plan),
+        "headlineCharges": pricing.headline_charges(plan),
+        "perUnitCharge": pricing.per_unit_charge(plan, meter),
+        "billingCycle": pricing.billing_cycle(plan),
+        "tierBands": pricing.tier_bands(plan, meter),
+        "tierMeters": pricing.tier_meters(plan),
+        "usageRate": pricing.usage_rate(plan, meter),
+        "trialDays": pricing.trial_days(plan),
+        "includedUnits": pricing.included_units(plan, meter),
+        "meterName": pricing.meter_name(plan),
+        "countsUsage": pricing.counts_usage(plan),
+        "planPricingShape": pricing.plan_pricing_shape(plan),
+        "creditsPerUnitFromBalance": pricing.credits_per_unit_from_balance(plan, balance, meter),
+    }
+
+
+def business_details(args: dict[str, Any], _clock: datetime | None) -> dict[str, Any]:
+    """The details to send, or the first problem's message."""
+    try:
+        return validate_business_details(
+            is_business=args["isBusiness"],
+            business_name=args.get("businessName"),
+            country=args.get("country"),
+            customer_country=args.get("customerCountry"),
+            customer_name=args.get("customerName"),
+            customer_state=args.get("customerState"),
+            customer_postal_code=args.get("customerPostalCode"),
+            tax_id=args.get("taxId"),
+        )
+    except SolvaPayError as error:
+        assert error.code == "invalid_business_details"
+        return {"invalid": error.message}
+
+
+OPERATIONS["planPricing"] = plan_pricing
+OPERATIONS["validateBusinessDetails"] = business_details
 
 # ---- scenarios ---------------------------------------------------------------
 #
