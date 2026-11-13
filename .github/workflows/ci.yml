@@ -182,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ['1.24', '1.25']
+        go: ['1.26', '1.27']
     defaults:
       run:
         working-directory: go
@@ -196,13 +196,13 @@ jobs:
           cache-dependency-path: go/go.sum
 
       - name: Generated models match the committed spec
-        if: matrix.go == '1.25'
+        if: matrix.go == '1.27'
         run: |
           go generate ./api
           git diff --exit-code -- api/api.gen.go
 
       - name: Format and vet
-        if: matrix.go == '1.25'
+        if: matrix.go == '1.27'
         run: |
           test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
           go vet ./...
