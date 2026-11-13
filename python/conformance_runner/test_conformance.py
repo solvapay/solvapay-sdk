@@ -22,6 +22,7 @@ from typing import Any
 import httpx
 import pytest
 import respx
+from conformance_agent_mcp import AGENT_MCP_OPERATIONS  # suite agent-mcp
 from mcp.client.client import Client
 from mcp.types import CallToolResult, Implementation
 
@@ -41,6 +42,8 @@ from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_nudge_message, build_paywall_gate
 from solvapay.paywall.decide import FreeLimit, PaywallError
 from solvapay.webhooks import verify_webhook
+
+import _agent_identity  # isort: skip  # the agent-identity suite's mappings, beside this file
 
 CASES_DIR = Path(__file__).resolve().parents[2] / "conformance" / "cases"
 LOCK = CASES_DIR.parent / "cases.lock"
@@ -185,6 +188,9 @@ def business_details(args: dict[str, Any], _clock: datetime | None) -> dict[str,
 
 OPERATIONS["planPricing"] = plan_pricing
 OPERATIONS["validateBusinessDetails"] = business_details
+
+# ---- solvapay.agents identity, OAuth helpers, prompt facts (suite `agent-identity`)
+OPERATIONS.update(_agent_identity.OPERATIONS)
 
 # ---- describeServer and getPrompt: the whole server, over MCP ----------------
 #
@@ -414,6 +420,9 @@ OPERATIONS.update(
     }
 )
 
+# ---- suite agent-mcp: the MCP route agents call (conformance_agent_mcp.py) -----
+OPERATIONS.update(AGENT_MCP_OPERATIONS)
+
 
 # ---- scenarios ---------------------------------------------------------------
 #
@@ -531,6 +540,11 @@ async def _scenario_step(
             name=args.get("name"),
         )
         return {"result": ref}
+    # ---- solvapay.agents identity steps (suite `agent-identity`); the patched clock
+    if fn in _agent_identity.STEPS:
+        return await _agent_identity.scenario_step(
+            solvapay, fn, args, lambda: decide_module.time.time()
+        )
     raise AssertionError(f'No Python mapping for scenario step "{fn}" in {__file__}')
 
 
@@ -668,7 +682,13 @@ def test_case(where: str, data: dict[str, Any], monkeypatch: pytest.MonkeyPatch)
             "scripts/pin_conformance.py"
         )
     if "steps" in data:
-        outcomes = asyncio.run(run_scenario(data, monkeypatch))
+        # ---- agent-calls (see agent_calls_runner.py) ----
+        if "agentCalls" in data["setup"]:
+            from agent_calls_runner import run_agent_calls_scenario
+
+            outcomes = asyncio.run(run_agent_calls_scenario(data, monkeypatch))
+        else:
+            outcomes = asyncio.run(run_scenario(data, monkeypatch))
         for index, (step, actual_step) in enumerate(zip(data["steps"], outcomes, strict=True)):
             assert canonical(actual_step) == canonical(step["expect"]), (
                 f"{where} step {index + 1} ({step['fn']}): {data['description']}\n"

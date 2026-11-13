@@ -52,7 +52,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Annotated, Any, Generic, TypeVar
-from urllib.parse import urljoin, urlsplit
 
 import anyio
 import jwt
@@ -74,7 +73,13 @@ from .identity import (
     VerifiedAgent,
     is_agent_key,
 )
-from .oauth import canonical_resource, challenge_header, protected_resource_metadata
+from .oauth import (
+    canonical_resource,
+    challenge_header,
+    protected_resource_metadata,
+    protected_resource_metadata_path,
+    protected_resource_metadata_url,
+)
 
 logger = logging.getLogger("solvapay.agents")
 
@@ -283,6 +288,17 @@ def _list_paid_tool(server: MCPServer, tool: PaidTool[Any], names: set[str]) -> 
 
 async def _serve(server: MCPServer, request: Request, body: bytes) -> Response:
     """Answers one MCP request (JSON, stateless) from ``server``, built for this request."""
+    if request.method != "POST":
+        # Stateless and JSON-only: no event stream to open (GET), no session to end
+        # (DELETE). The transport would otherwise hold a GET open forever.
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32000, "message": "Method not allowed."},
+            },
+            status_code=405,
+        )
     server.streamable_http_app(
         json_response=True,
         stateless_http=True,
@@ -368,15 +384,12 @@ def _agent_bearer(request: Request, issuer: str) -> str | None:
 
 
 def _metadata_path(resource: ProtectedResource) -> str:
-    if resource.metadata_path:
-        return resource.metadata_path
-    path = urlsplit(canonical_resource(resource.resource)).path
-    return f"/.well-known/oauth-protected-resource{path}"
+    return protected_resource_metadata_path(resource.resource, resource.metadata_path)
 
 
 def auth_challenge(resource: ProtectedResource, description: str, json_rpc_id: Any) -> Response:
     """A 401 JSON-RPC error with the challenge: the host signs the owner in and retries."""
-    metadata_url = urljoin(resource.resource, _metadata_path(resource))
+    metadata_url = protected_resource_metadata_url(resource.resource, resource.metadata_path)
     return JSONResponse(
         {"jsonrpc": "2.0", "id": json_rpc_id, "error": {"code": -32001, "message": description}},
         status_code=401,

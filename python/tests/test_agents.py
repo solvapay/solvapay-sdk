@@ -36,9 +36,15 @@ ISSUER = "https://api.test/v1/agent"
 KEY = ec.generate_private_key(ec.SECP256R1())
 
 
-class FakeJwks:
-    def get_signing_key_from_jwt(self, _token: str) -> Any:
-        return type("Key", (), {"key": KEY.public_key()})()
+class FakeJwks(jwt.PyJWKClient):
+    """The JWKS endpoint, answering with KEY's public half (no kid, as the test tokens)."""
+
+    def __init__(self) -> None:
+        super().__init__("https://api.solvapay.test/v1/agent/jwks.json")
+
+    def fetch_data(self) -> Any:
+        jwk = jwt.algorithms.ECAlgorithm.to_jwk(KEY.public_key(), as_dict=True)
+        return {"keys": [jwk]}
 
 
 def token(**overrides: Any) -> str:
@@ -60,7 +66,7 @@ def token(**overrides: Any) -> str:
 
 
 def verifier(**kw: Any) -> AgentTokenVerifier:
-    return AgentTokenVerifier(issuer=ISSUER, provider_ref="prv_1", jwks=FakeJwks(), **kw)  # type: ignore[arg-type]
+    return AgentTokenVerifier(issuer=ISSUER, provider_ref="prv_1", jwks=FakeJwks(), **kw)
 
 
 def api() -> AsyncApiClient:

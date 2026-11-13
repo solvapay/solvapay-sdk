@@ -61,17 +61,30 @@ class PromptFacts:
 
 
 def prompt_facts(text: str, tool_error: bool = False) -> PromptFacts:
-    """A hash of the prompt (repeats show loops), and its end, sent only if the owner opted in."""
+    """A hash of the prompt (repeats show loops), and its end, sent only if the owner opted in.
+
+    The end is the last ``PROMPT_EXCERPT_MAX`` UTF-16 code units, as TypeScript's
+    ``slice`` counts and SolvaPay measures them: an emoji counts twice."""
+    units = text.encode("utf-16-le")
+    excerpt = (
+        text
+        if len(units) <= 2 * PROMPT_EXCERPT_MAX
+        else units[-2 * PROMPT_EXCERPT_MAX :].decode("utf-16-le", errors="surrogatepass")
+    )
     return PromptFacts(
         prompt_hash=f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
         tool_error=tool_error,
-        excerpt=text[-PROMPT_EXCERPT_MAX:],
+        excerpt=excerpt,
     )
 
 
 def amount_string(amount: float | Decimal | str) -> str:
-    """An amount as a decimal string with up to 8 places, trailing zeros trimmed."""
-    fixed = Decimal(str(amount)).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+    """An amount as a decimal string with up to 8 places, trailing zeros trimmed.
+
+    A float is rounded from its exact binary value, as TypeScript's ``toFixed`` does:
+    ``1.5e-8`` is just under the half, so it is ``0.00000001``."""
+    exact = Decimal(amount) if isinstance(amount, float) else Decimal(str(amount))
+    fixed = exact.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
     text = f"{fixed:f}".rstrip("0").rstrip(".")
     return text or "0"
 
@@ -144,7 +157,12 @@ class Allowed:
             )
         self._completed = True
         try:
-            return await self._api.complete_agent_call(call_ref=self.call_ref, body=body)
+            answer = await self._api.complete_agent_call(call_ref=self.call_ref, body=body)
+            # The call's books are settled on it: every field must be there.
+            _require_text(answer.call_ref, "callRef")
+            _require_text(answer.amount.amount, "amount.amount")
+            _require_text(answer.amount.currency, "amount.currency")
+            return answer
         except SolvaPayError as error:
             logger.error(
                 "call.complete_failed %s",
@@ -152,6 +170,24 @@ class Allowed:
                  "error": error.message},
             )  # fmt: skip
             return None
+
+
+def _require_text(value: str | None, label: str) -> None:
+    """A field TypeScript requires as a non-empty string; the generated model allows less."""
+    if not value:
+        raise SolvaPayError(f"{label} must be a non-empty string", code="invalid_response")
+
+
+def _check_authorize(answer: Any) -> None:
+    """Checked field by field, as TypeScript does: a paid call goes ahead on it."""
+    _require_text(answer.call_ref, "callRef")
+    if answer.status == "allowed":
+        _require_text(answer.reservation.expires_at, "reservation.expiresAt")
+        return
+    _require_text(answer.message, "message")
+    if answer.status == "waiting":
+        _require_text(answer.approval.reference, "approval.reference")
+        _require_text(answer.approval.expires_at, "approval.expiresAt")
 
 
 def _fields(call: AgentCall) -> dict[str, Any]:
@@ -204,6 +240,7 @@ class AgentCalls:
                     body["promptExcerpt"] = call.prompt.excerpt
             try:
                 answer = (await self.api.authorize_agent_call(body=body)).root
+                _check_authorize(answer)
             except SolvaPayError as error:
                 logger.error(
                     "call.authorize_failed %s",
