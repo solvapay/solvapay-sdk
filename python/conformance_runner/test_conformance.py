@@ -11,9 +11,10 @@ Results are compared as canonical JSON text, not as Python objects: in Python
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -21,12 +22,21 @@ from typing import Any
 import httpx
 import pytest
 import respx
-from mcp.types import CallToolResult
+from mcp.client.client import Client
+from mcp.types import CallToolResult, Implementation
 
 import solvapay.paywall.decide as decide_module
 from solvapay import SolvaPayError, create_solvapay, pricing
 from solvapay.business_details import validate_business_details
-from solvapay.mcp import create_solvapay_mcp_server, narrate_activate_plan, narrated_tool_result
+from solvapay.mcp import (
+    CustomerSnapshot,
+    Nudge,
+    ResponseContext,
+    ResponseResult,
+    create_solvapay_mcp_server,
+    narrate_activate_plan,
+    narrated_tool_result,
+)
 from solvapay.mcp.intent import parse_mode
 from solvapay.paywall import build_nudge_message, build_paywall_gate
 from solvapay.paywall.decide import FreeLimit, PaywallError
@@ -52,16 +62,29 @@ CONFORMANCE_API = "https://api.conformance.test"
 CONFORMANCE_PUBLIC_URL = "https://mcp.conformance.test"
 
 
-def tool_outcome(result: CallToolResult) -> dict[str, Any]:
+def _parsed_json(text: str) -> Any:
+    """A text block's JSON, or None when the text is not entirely JSON (``callPaidTool``:
+    a narration may follow the data in the same block)."""
+    if not re.match(r"[\[{]", text):
+        return None
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
+def tool_outcome(result: CallToolResult, *, whole_json_only: bool = False) -> dict[str, Any]:
     """The result as the cases compare it: a text block holding JSON compares parsed, as
     ``json``, since key order is not part of what the widget reads."""
     dumped = result.model_dump(by_alias=True, exclude_none=True, mode="json")
-    content = [
-        {"type": "text", "json": json.loads(block["text"])}
-        if block.get("type") == "text" and re.match(r"[\[{]", block.get("text", ""))
-        else block
-        for block in dumped["content"]
-    ]
+    content = []
+    for block in dumped["content"]:
+        text = block.get("text", "")
+        if block.get("type") == "text" and re.match(r"[\[{]", text):
+            parsed = _parsed_json(text) if whole_json_only else json.loads(text)
+            if parsed is not None:
+                block = {"type": "text", "json": parsed}
+        content.append(block)
     outcome: dict[str, Any] = {"content": content}
     if "structuredContent" in dumped:
         outcome["structuredContent"] = dumped["structuredContent"]
@@ -161,6 +184,234 @@ def business_details(args: dict[str, Any], _clock: datetime | None) -> dict[str,
 
 OPERATIONS["planPricing"] = plan_pricing
 OPERATIONS["validateBusinessDetails"] = business_details
+
+# ---- describeServer and getPrompt: the whole server, over MCP ----------------
+#
+# The server is reached the way a host reaches it: an in-memory MCP client that
+# initializes as ``clientName``. Input schemas compare in the reduced form the
+# README describes, so pydantic's titles, defaults and ``anyOf [X, null]`` for an
+# optional argument don't count; everything a host reads does.
+
+RESOURCE_URI = "ui://conformance/mcp-app.html"
+SCHEMA_KEYS = (
+    "type",
+    "const",
+    "enum",
+    "description",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+)
+
+
+def comparable_schema(schema: dict[str, Any], defs: dict[str, Any] | None = None) -> dict[str, Any]:
+    defs = schema.get("$defs", defs or {})
+    ref = schema.get("$ref")
+    if isinstance(ref, str):
+        rest = {k: v for k, v in schema.items() if k != "$ref"}
+        schema = {**defs[ref.removeprefix("#/$defs/")], **rest}
+    branches = [b for b in schema.get("anyOf", []) if b != {"type": "null"}]
+    if "anyOf" in schema and len(branches) == 1:
+        outer = {k: v for k, v in schema.items() if k != "anyOf"}
+        return comparable_schema({**branches[0], **outer}, defs)
+    out: dict[str, Any] = {key: schema[key] for key in SCHEMA_KEYS if key in schema}
+    if isinstance(schema.get("properties"), dict):
+        out["properties"] = {
+            name: comparable_schema(value, defs)
+            for name, value in sorted(schema["properties"].items())
+        }
+        out["required"] = sorted(schema.get("required", []))
+    return out
+
+
+def _server_for(args: dict[str, Any]) -> Any:
+    customer = args.get("customerRef")
+    return create_solvapay_mcp_server(
+        solvapay=create_solvapay(
+            api_key="sk_sandbox_conformance",
+            api_base_url=CONFORMANCE_API,
+            product_ref=args["productRef"],
+        ),
+        public_base_url=CONFORMANCE_PUBLIC_URL,
+        resource_uri=RESOURCE_URI,
+        get_customer_ref=lambda _args, _context: customer,
+        views=args.get("views"),
+        csp=args.get("csp"),
+        hide_tools_by_audience=args.get("hideToolsByAudience"),
+    )
+
+
+def _dump(model: Any) -> Any:
+    return model.model_dump(by_alias=True, exclude_none=True, mode="json")
+
+
+async def _describe_server(args: dict[str, Any]) -> dict[str, Any]:
+    client_info = Implementation(name=args.get("clientName", "conformance"), version="1.0.0")
+    async with Client(_server_for(args).server, client_info=client_info) as client:
+        tools = [_dump(tool) for tool in (await client.list_tools()).tools]
+        prompts = [_dump(prompt) for prompt in (await client.list_prompts()).prompts]
+        resources = [_dump(resource) for resource in (await client.list_resources()).resources]
+    keys = ("uri", "name", "title", "description", "mimeType", "_meta")
+    return {
+        "tools": sorted(
+            (
+                {
+                    **{key: tool[key] for key in ("name", "title", "description") if key in tool},
+                    "annotations": tool.get("annotations"),
+                    "_meta": tool.get("_meta"),
+                    "inputSchema": comparable_schema(tool["inputSchema"]),
+                }
+                for tool in tools
+            ),
+            key=lambda tool: tool["name"],
+        ),
+        "prompts": sorted(
+            (
+                {
+                    **{k: prompt[k] for k in ("name", "title", "description") if k in prompt},
+                    "arguments": sorted(
+                        (
+                            {"name": a["name"], "required": a.get("required") is True}
+                            for a in prompt.get("arguments", [])
+                        ),
+                        key=lambda a: a["name"],
+                    ),
+                }
+                for prompt in prompts
+            ),
+            key=lambda prompt: prompt["name"],
+        ),
+        "resources": sorted(
+            ({key: r[key] for key in keys if key in r} for r in resources),
+            key=lambda r: r["uri"],
+        ),
+    }
+
+
+async def _get_prompts(args: dict[str, Any]) -> list[dict[str, Any]]:
+    results = []
+    async with Client(_server_for(args).server) as client:
+        for call in args["calls"]:
+            result = await client.get_prompt(call["name"], call.get("arguments", {}))
+            results.append({"messages": _dump(result)["messages"]})
+    return results
+
+
+@contextlib.contextmanager
+def _api(api: list[dict[str, Any]]) -> Iterator[None]:
+    """The API answers from ``api``, each exchange once and in order (one path may answer
+    twice); every exchange must be used, and nothing else may be called."""
+    pending = list(api)
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        for i, exchange in enumerate(pending):
+            if exchange["method"] == request.method and exchange["path"] == request.url.path:
+                pending.pop(i)
+                return httpx.Response(exchange.get("status", 200), json=exchange["body"])
+        raise AssertionError(f"Unexpected API call: {request.method} {request.url.path}")
+
+    with respx.mock(assert_all_mocked=True, assert_all_called=False) as router:
+        router.route(host=CONFORMANCE_API.removeprefix("https://")).mock(side_effect=answer)
+        yield
+    assert not pending, "API calls not made: " + ", ".join(
+        f"{e['method']} {e['path']}" for e in pending
+    )
+
+
+def _snapshot(customer: CustomerSnapshot) -> dict[str, Any]:
+    # TypeScript's ``balance`` is ``number | undefined``: None is the undefined.
+    return {
+        "ref": customer.ref,
+        **({"balance": customer.balance} if customer.balance is not None else {}),
+        "isCreditBased": customer.is_credit_based,
+        "remaining": customer.remaining,
+        "withinLimits": customer.within_limits,
+        "overage": customer.overage,
+        "plan": customer.plan,
+    }
+
+
+def _scripted_handler(script: dict[str, Any]) -> Any:
+    """The merchant handler a ``callPaidTool`` case scripts (see the README)."""
+
+    async def handler(ctx: ResponseContext) -> ResponseResult:
+        for block in script.get("emit", []):
+            await ctx.emit(block)
+        fresh = await ctx.customer.fresh() if script.get("fresh") is True else None
+        if "gate" in script:
+            ctx.gate(script["gate"])
+        if isinstance(script.get("throw"), str):
+            raise RuntimeError(script["throw"])
+        respond = script.get("respond", {})
+        data = respond.get("data")
+        if respond.get("echo") is True:
+            data = {
+                **(data or {}),
+                "customer": _snapshot(ctx.customer),
+                **({"freshCustomer": _snapshot(fresh)} if fresh is not None else {}),
+                "product": ctx.product,
+            }
+        nudge = respond.get("nudge")
+        return ctx.respond(
+            data,
+            text=respond.get("text"),
+            nudge=Nudge(kind=nudge["kind"], message=nudge.get("message", ""))
+            if nudge is not None
+            else None,
+            data_in_text=respond.get("dataInText", True),
+        )
+
+    return handler
+
+
+async def _call_paid_tool(args: dict[str, Any]) -> dict[str, Any]:
+    tool = args["tool"]
+    mcp = _server_for(args)
+    handler = _scripted_handler(args.get("handler", {}))
+    customer = args["customerRef"]
+
+    def get_customer_ref(_args: Any, _context: Any) -> str:
+        return customer
+
+    if tool.get("kind") == "free":
+        limit = _free_limit(tool)
+        assert limit is not None, "a free tool needs freeLimit"
+        mcp.register_free(
+            tool["name"], handler=handler, limit=limit, get_customer_ref=get_customer_ref
+        )
+    else:
+        mcp.register_payable(tool["name"], handler=handler, get_customer_ref=get_customer_ref)
+    with _api(args.get("api", [])):
+        async with Client(mcp.server) as client:
+            result = await client.call_tool(tool["name"], {})
+    return tool_outcome(result, whole_json_only=True)
+
+
+async def _read_resource(args: dict[str, Any]) -> dict[str, Any]:
+    with _api(args.get("api", [])):
+        async with Client(_server_for(args).server) as client:
+            result = await client.read_resource(args["uri"])
+    contents = []
+    for content in _dump(result)["contents"]:
+        parsed = _parsed_json(content.get("text", "")) if "text" in content else None
+        if parsed is not None:
+            content = {**{k: v for k, v in content.items() if k != "text"}, "json": parsed}
+        contents.append(content)
+    return {"contents": contents}
+
+
+OPERATIONS.update(
+    {
+        "readResource": lambda args, _clock: asyncio.run(_read_resource(args)),
+        "describeServer": lambda args, _clock: asyncio.run(_describe_server(args)),
+        "getPrompts": lambda args, _clock: asyncio.run(_get_prompts(args)),
+        "callPaidTool": lambda args, _clock: asyncio.run(_call_paid_tool(args)),
+    }
+)
+
 
 # ---- scenarios ---------------------------------------------------------------
 #

@@ -25,7 +25,7 @@ from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, WithJsonSchema
 
 from ..business_details import TAX_ID_TYPES, validate_business_details
 from ..errors import SolvaPayError
@@ -72,17 +72,28 @@ sees the change."""
 TaxIdType = Literal[TAX_ID_TYPES]  # type: ignore[valid-type]
 
 
-class AutoRechargeArg(BaseModel):
-    """``autoRecharge`` on a top-up: save the card as the auto-recharge funding source."""
+MAX_SAFE_INTEGER = 9007199254740991
+"""zod's ``int()`` bound, which TypeScript's input schemas advertise as ``maximum``."""
 
+# A positive amount in major units. ``int | float`` keeps a whole number whole on the
+# wire; the schema says ``number``, as zod's ``z.number().positive()`` does.
+PositiveMajor = Annotated[
+    int | float, Field(gt=0), WithJsonSchema({"type": "number", "exclusiveMinimum": 0})
+]
+
+
+# ``autoRecharge`` on a top-up: save the card as the auto-recharge funding source.
+# (A comment, not a docstring: pydantic would publish a docstring as the schema's
+# description, and TypeScript's has none.)
+class AutoRechargeArg(BaseModel):
     # zod drops keys it does not know, so this does too.
     model_config = ConfigDict(extra="ignore")
 
     enabled: bool
     triggerType: Literal["balance"]
-    thresholdAmountMajor: Annotated[int | float, Field(gt=0)] | None = None
-    topupAmountMajor: Annotated[int | float, Field(gt=0)] | None = None
-    maxMonthlySpendMajor: Annotated[int | float, Field(gt=0)] | None = None
+    thresholdAmountMajor: PositiveMajor | None = None
+    topupAmountMajor: PositiveMajor | None = None
+    maxMonthlySpendMajor: PositiveMajor | None = None
     currency: Annotated[str, Field(min_length=3, max_length=3)]
 
 
@@ -322,7 +333,7 @@ def register_transport_tools(
             _optional("planRef", str),
             _optional("productRef", str),
             _optional("currency", str),
-            _optional("amount", Annotated[int, Field(gt=0)]),
+            _optional("amount", Annotated[int, Field(gt=0, le=MAX_SAFE_INTEGER)]),
             _optional("description", str),
             _optional("autoRecharge", AutoRechargeArg),
         ],
