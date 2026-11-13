@@ -16,6 +16,7 @@ import {
 import * as core from '@solvapay/core'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { ConformanceCase } from './cases'
+import { SERVER_OPERATIONS } from './server-ops'
 
 /**
  * Maps each language-neutral `fn` to the TypeScript SDK. An operation with
@@ -189,6 +190,7 @@ export const OPERATIONS: Record<string, Implementation[]> = {
       run: args => narrateActivatePlan(args.result as Parameters<typeof narrateActivatePlan>[0]),
     },
   ],
+  ...SERVER_OPERATIONS,
 }
 
 // ---- paywall nudge copy ----------------------------------------------------

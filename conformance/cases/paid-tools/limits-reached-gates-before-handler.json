@@ -1,0 +1,67 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "limits-reached-gates-before-handler",
+  "description": "A customer out of calls gets the paywall from the limits check; the handler never runs.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid8",
+      "customerRef": "cus_TLPAID08",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "respond": {
+          "data": {
+            "unused": true
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": false,
+            "remaining": 0,
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/tl8"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/tl8) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'."
+        }
+      ],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_tl_paid8",
+        "checkoutUrl": "https://checkout.conformance.test/s/tl8",
+        "message": "You don't have an active plan for this tool. [Open checkout](https://checkout.conformance.test/s/tl8) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+        "meterName": "requests",
+        "reason": "upgrade_required",
+        "nextAction": "checkout",
+        "remainingCalls": 0,
+        "links": {
+          "checkout": "https://checkout.conformance.test/s/tl8"
+        }
+      }
+    }
+  }
+}

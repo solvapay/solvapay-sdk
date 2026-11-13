@@ -1,0 +1,125 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "tool-descriptors",
+  "case": "slash-commands",
+  "description": "Each slash command answers with one user message naming the tool to call, with and without its optional argument.",
+  "input": {
+    "fn": "getPrompts",
+    "args": {
+      "productRef": "prd_tl_catalog",
+      "calls": [
+        {
+          "name": "upgrade"
+        },
+        {
+          "name": "upgrade",
+          "arguments": {
+            "planRef": "pln_tl_pro"
+          }
+        },
+        {
+          "name": "manage_account"
+        },
+        {
+          "name": "topup"
+        },
+        {
+          "name": "topup",
+          "arguments": {
+            "amount": "$25"
+          }
+        },
+        {
+          "name": "activate_plan"
+        },
+        {
+          "name": "activate_plan",
+          "arguments": {
+            "planRef": "pln_tl_free"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"checkout\" to show upgrade options."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"checkout\", then activate plan pln_tl_pro."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"account\" to show my SolvaPay account."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"topup\" to add SolvaPay credits."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"topup\" and top up my credits by $25."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `account` tool with view: \"checkout\" to list plans I can activate."
+            }
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "role": "user",
+            "content": {
+              "type": "text",
+              "text": "Call the `activate_plan` tool with planRef pln_tl_free."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "unknown-view-falls-back-to-json",
+  "description": "A view with no narrator answers with the payload as JSON text.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "receipt",
+      "payload": {
+        "view": "receipt",
+        "productRef": "prd_tl_x",
+        "note": "no narrator"
+      },
+      "mode": "text"
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"view\":\"receipt\",\"productRef\":\"prd_tl_x\",\"note\":\"no narrator\"}"
+        }
+      ]
+    }
+  }
+}

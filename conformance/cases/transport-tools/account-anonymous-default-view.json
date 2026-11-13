@@ -1,0 +1,170 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "account-anonymous-default-view",
+  "description": "account without a view and without a signed-in customer reads the merchant, product, plans and Stripe key, picks checkout (no plan), and narrates the plans; no customer read and no checkout session.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_tl_acct",
+      "customerRef": null,
+      "arguments": {},
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_tl"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme",
+            "legalName": "Acme Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_acct",
+          "body": {
+            "reference": "prd_tl_acct",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_acct/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_tl_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "cap": 100
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": false,
+                "price": 0
+              },
+              {
+                "reference": "pln_tl_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Upgrade — Stock Research**\n\nPlans available:\nFree · no payment required · planRef: pln_tl_free\nPro · recurring · $29.00/month · planRef: pln_tl_pro\n\nTo continue, call `account` with view: \"account\"."
+        }
+      ],
+      "structuredContent": {
+        "view": "checkout",
+        "productRef": "prd_tl_acct",
+        "stripePublishableKey": "pk_test_tl",
+        "returnUrl": "https://mcp.conformance.test",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Ltd"
+        },
+        "product": {
+          "reference": "prd_tl_acct",
+          "name": "Stock Research",
+          "status": "active",
+          "balance": 0,
+          "isManagedMcp": false,
+          "isMcpPay": false,
+          "totalTransactions": 0,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "updatedAt": "2026-01-01T00:00:00Z"
+        },
+        "plans": [
+          {
+            "reference": "pln_tl_free",
+            "name": "Free",
+            "type": "recurring",
+            "status": "active",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "cap": 100
+              }
+            ],
+            "isActive": true,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "requiresPayment": false,
+            "price": 0
+          },
+          {
+            "reference": "pln_tl_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "status": "active",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              }
+            ],
+            "isActive": true,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "requiresPayment": true,
+            "price": 2900,
+            "currency": "USD"
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    }
+  }
+}

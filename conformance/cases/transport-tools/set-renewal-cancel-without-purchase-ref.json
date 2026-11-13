@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "set-renewal-cancel-without-purchase-ref",
+  "description": "set_renewal enabled: false with an empty purchaseRef is refused with 400 before any API call.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL01",
+      "arguments": {
+        "purchaseRef": "",
+        "enabled": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Missing required parameter: purchaseRef is required"
+        }
+      ],
+      "structuredContent": {
+        "error": "Missing required parameter: purchaseRef is required",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}
