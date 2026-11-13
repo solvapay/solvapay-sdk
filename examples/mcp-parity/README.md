@@ -27,27 +27,29 @@ Each server uses the SDK source in this repo, not a published release:
 
 ## Set up once
 
-1. In the ngrok dashboard, reserve one domain per server. The templates use
-   `paywall-ts`, `paywall-py`, `paywall-go`, `agents-ts`, `agents-py` and
-   `agents-go` under your subdomain.
-2. Install the toolchains: Node with pnpm, [uv](https://docs.astral.sh/uv/),
+1. Install the toolchains: Node with pnpm, [uv](https://docs.astral.sh/uv/),
    and Go 1.26 or later. Then install the dependencies:
    ```bash
    pnpm install                       # repo root
    (cd examples/mcp-parity/python && uv sync)
    ```
-3. In `examples/mcp-parity`:
+2. Point the servers at ngrok, from `examples/mcp-parity`. The script writes
+   `ngrok.yml` and the six `*_URL` lines in `.env` (creating `.env` from the
+   template if needed), for the domains `paywall-ts.<suffix>` … `agents-go.<suffix>`:
    ```bash
-   cp .env.example .env               # merchant, agent settings, public URLs
-   cp ngrok.yml.example ngrok.yml     # your domains
+   ./setup-ngrok.sh tommy-local.ngrok.app             # domains already reserved
+   NGROK_API_KEY=… ./setup-ngrok.sh tommy-local.ngrok.app --reserve
    ```
-
-   - Use a sandbox merchant whose product has an active plan. For the agents
-     servers, the merchant also needs agent payments turned on, and you need
-     its provider reference.
-   - Each `*_URL` must be exactly the `https://` domain in `ngrok.yml`. It is
-     the OAuth issuer clients see, so sign-in fails if they differ.
-     `start.sh` checks this.
+   Names nested under an ngrok domain must be reserved before a tunnel can use
+   them. `--reserve` does it with an ngrok API key (dashboard → API → New API
+   key). The key is passed to ngrok and is not stored anywhere. Domains that are
+   already reserved are skipped.
+3. Fill in the rest of `.env`.
+   - Use a sandbox merchant whose product has an active plan.
+   - For the agents servers, the merchant also needs agent payments turned on,
+     and `.env` needs its provider reference.
+   - Each `*_URL` is the OAuth issuer clients see, so it must match its ngrok
+     domain exactly. `start.sh` checks this.
 
 ## Run
 
@@ -55,16 +57,17 @@ Each server uses the SDK source in this repo, not a published release:
 ./start.sh                     # all six servers and their tunnels
 ./start.sh paywall             # the three paywall servers
 ./start.sh agents go           # one server
-./start.sh --no-ngrok ...      # no tunnels (they run elsewhere)
+./start.sh --no-ngrok ...      # no tunnels
 ```
 
 Each output line is prefixed with the server's name. Ctrl+C stops everything.
 If one process exits, the script stops the rest.
 
-**One ngrok agent at a time?** If your plan allows one agent and the
-platform's tunnels are running, the script's ngrok fails to start. Add the
-tunnels from `ngrok.yml.example` to the platform's `ngrok.yml` instead,
-restart the platform's tunnels, and use `./start.sh --no-ngrok`.
+**Tunnels.** If an ngrok agent is already running, such as the platform's
+with its API on `127.0.0.1:4040`, `start.sh` adds the tunnels to it and removes
+them when it stops. That works on plans that allow one agent at a time.
+Otherwise it starts its own agent from `ngrok.yml`. If ngrok refuses a domain
+(for example, one that isn't reserved), the script stops with ngrok's error.
 
 ## Test
 
