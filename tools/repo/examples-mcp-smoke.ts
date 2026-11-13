@@ -20,6 +20,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 import { EXAMPLES_DIR, sdkDir, tsPackageDir } from '../shared/paths.js'
 
@@ -63,6 +64,20 @@ interface Example {
 
 function say(line: string): void {
   process.stdout.write(`${line}\n`)
+}
+
+/**
+ * `PATH` for the example servers: toolchains that live outside a default shell
+ * `PATH` come first. Homebrew's Ruby is keg-only, and rustup's shims sit in
+ * the home directory, so a plain terminal finds neither.
+ */
+function toolchainPath(): string {
+  const extra = [
+    path.join(os.homedir(), '.cargo', 'bin'),
+    path.join('/opt', 'homebrew', 'opt', 'ruby', 'bin'),
+    path.join('/usr', 'local', 'opt', 'ruby', 'bin'),
+  ].filter(dir => existsSync(dir))
+  return [...extra, process.env.PATH ?? ''].join(path.delimiter)
 }
 
 /** `wrangler dev` arguments: a local workerd on the suite's port, pointed at the fake backend. */
@@ -154,8 +169,12 @@ const EXAMPLES: Example[] = [
     cwd: ['typescript', 'supabase-edge-mcp'],
     // Builds the widget HTML the server reads on start.
     prepare: [{ command: 'pnpm', args: ['build'] }],
-    command: 'deno',
+    // Deno comes from the example's own devDependency, pinned to a release
+    // that runs the WASM core; no global install is involved.
+    command: 'pnpm',
     args: [
+      'exec',
+      'deno',
       'run',
       '--allow-all',
       '--config=deno.workspace.json',
@@ -622,7 +641,11 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
   )
   const cwd = path.join(EXAMPLES_DIR, ...example.cwd)
   for (const step of example.prepare ?? []) {
-    const prepared = spawnSync(step.command, step.args, { cwd, encoding: 'utf8' })
+    const prepared = spawnSync(step.command, step.args, {
+      cwd,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: toolchainPath() },
+    })
     if (prepared.status !== 0) {
       await backend.close()
       return [
@@ -639,6 +662,7 @@ async function runExample(example: Example, verbose: boolean): Promise<Check[]> 
     detached: true,
     env: {
       ...process.env,
+      PATH: toolchainPath(),
       SOLVAPAY_SECRET_KEY: 'sk_sandbox_smoke',
       SOLVAPAY_PRODUCT: PRODUCT_REF,
       SOLVAPAY_PRODUCT_REF: PRODUCT_REF,

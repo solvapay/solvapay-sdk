@@ -20,6 +20,7 @@ linkWorkspacePackages: true
 # pnpm 11 replaced onlyBuiltDependencies with this allow-list.
 allowBuilds:
   '@google/genai': true
+  deno: true
   esbuild: true
   protobufjs: true
   sharp: true
