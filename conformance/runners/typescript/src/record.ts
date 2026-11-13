@@ -9,13 +9,23 @@
 import { writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { asJson, CASES_DIR, loadCases, type Expect } from './cases'
+import { asJson, CASES_DIR, isScenario, loadCases, type Expect } from './cases'
 import { implementationsFor, outcomeOf } from './operations'
+import { runScenario } from './scenarios'
 
 let recorded = 0
 const disagreements: string[] = []
 
 for (const { file, data } of loadCases()) {
+  if (isScenario(data)) {
+    if (data.steps.every(step => step.expect !== undefined)) continue
+    const outcomes = await runScenario(data)
+    const steps = data.steps.map((step, i) => ({ ...step, expect: outcomes[i] }))
+    writeFileSync(file, `${JSON.stringify({ ...data, steps }, null, 2)}\n`)
+    console.log(`recorded ${relative(CASES_DIR, file)}`)
+    recorded++
+    continue
+  }
   if (data.expect !== undefined) continue
 
   const outcomes: Expect[] = []
@@ -40,3 +50,5 @@ if (disagreements.length > 0) {
   )
   process.exit(1)
 }
+// The SDK keeps timers open (its shared lookup cache), so leave explicitly.
+process.exit(0)

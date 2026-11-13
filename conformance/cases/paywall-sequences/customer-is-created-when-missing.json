@@ -1,0 +1,98 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "customer-is-created-when-missing",
+  "description": "A user with no customer yet is looked up, not found, and created with their user id as externalRef; the new customer's limits are checked.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "user_seq_10"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_SEQ10",
+            "email": "x@auto-created.local",
+            "name": "user_seq_10"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ10"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_seq_10"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_seq_10-1794484800000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_seq_10"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ10",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.100Z",
+      "args": {
+        "customerRef": "user_seq_10"
+      },
+      "api": [],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ10"
+        },
+        "apiCalls": []
+      }
+    }
+  ]
+}

@@ -19,10 +19,37 @@ export interface ConformanceCase {
   expect?: Expect
 }
 
+/** What one scenario step must produce: its outcome, and the API calls it made, in order. */
+export type StepExpect = (
+  | { result: unknown }
+  | { error: { code: string } }
+  | { gate: Record<string, unknown> }
+) & { apiCalls: unknown[] }
+
+export interface ScenarioStep {
+  fn: string
+  args: Record<string, unknown>
+  clock: string
+  api?: { method: string; path: string; status?: number; body: unknown }[]
+  expect?: StepExpect
+}
+
+/** Several steps against one SDK instance, so state kept between calls is tested. */
+export interface ScenarioCase {
+  suite: string
+  case: string
+  description: string
+  setup: { productRef: string; limitsCacheTtlMs?: number }
+  steps: ScenarioStep[]
+}
+
 export interface LoadedCase {
   file: string
-  data: ConformanceCase
+  data: ConformanceCase | ScenarioCase
 }
+
+export const isScenario = (data: ConformanceCase | ScenarioCase): data is ScenarioCase =>
+  'steps' in data
 
 const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
@@ -41,8 +68,9 @@ export function loadCases(): LoadedCase[] {
       if (!entry.endsWith('.json')) {
         throw new Error(`${relative(CASES_DIR, file)}: only .json files belong in a suite`)
       }
-      const data = JSON.parse(readFileSync(file, 'utf-8')) as ConformanceCase
-      checkCase(file, suite.name, basename(entry, '.json'), data)
+      const data = JSON.parse(readFileSync(file, 'utf-8')) as ConformanceCase | ScenarioCase
+      if (isScenario(data)) checkScenario(file, suite.name, basename(entry, '.json'), data)
+      else checkCase(file, suite.name, basename(entry, '.json'), data)
       cases.push({ file, data })
     }
   }
@@ -73,6 +101,40 @@ function checkCase(file: string, suite: string, name: string, data: ConformanceC
       typeof (data.expect as { error: { code?: unknown } }).error?.code === 'string'
     if (!isResult && !isError) {
       problems.push('expect must be { "result": … } or { "error": { "code": "…" } }')
+    }
+  }
+  if (problems.length > 0) throw new Error(`${where}: ${problems.join('; ')}`)
+}
+
+function checkScenario(file: string, suite: string, name: string, data: ScenarioCase): void {
+  const where = relative(CASES_DIR, file)
+  const problems: string[] = []
+  if (data.suite !== suite) problems.push(`suite is "${data.suite}", the folder is "${suite}"`)
+  if (data.case !== name) problems.push(`case is "${data.case}", the file is "${name}"`)
+  if (!NAME.test(name)) problems.push('the file name must be lowercase words joined by dashes')
+  if (!data.description?.trim()) problems.push('description is missing')
+  if ('input' in data || 'expect' in data) {
+    problems.push('a scenario has steps, not input/expect')
+  }
+  if (typeof data.setup?.productRef !== 'string') problems.push('setup.productRef is missing')
+  if (!Array.isArray(data.steps) || data.steps.length < 2) {
+    problems.push('a scenario needs at least two steps')
+  } else {
+    data.steps.forEach((step, i) => {
+      if (typeof step.fn !== 'string') problems.push(`steps[${i}].fn is missing`)
+      if (typeof step.args !== 'object' || step.args === null) {
+        problems.push(`steps[${i}].args must be an object`)
+      }
+      if (typeof step.clock !== 'string' || Number.isNaN(Date.parse(step.clock))) {
+        problems.push(`steps[${i}].clock must be a date-time`)
+      }
+      if (step.expect !== undefined && !Array.isArray(step.expect.apiCalls)) {
+        problems.push(`steps[${i}].expect.apiCalls must be a list`)
+      }
+    })
+    const recorded = data.steps.filter(step => step.expect !== undefined).length
+    if (recorded !== 0 && recorded !== data.steps.length) {
+      problems.push('either every step has expect, or none does')
     }
   }
   if (problems.length > 0) throw new Error(`${where}: ${problems.join('; ')}`)
