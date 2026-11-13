@@ -133,14 +133,19 @@ async def test_client_sync_matrix(name: str) -> None:
     pytest.importorskip('solvapay._solvapay')
     from solvapay._solvapay import SolvaPayClient
 
-    client = SolvaPayClient('sk_parity', 'http://127.0.0.1:1')
-    result = getattr(client, name)('{}')
-    assert inspect.isawaitable(result), name
-    if hasattr(result, 'cancel'):
-        result.cancel()
-    blocking = getattr(client, f'{name}_blocking')('{}')
-    assert isinstance(blocking, str), name
-    assert not inspect.isawaitable(blocking), name
+    from contract.stub_backend import StubBackend
+
+    # A 400 answers at once and is not retried. A closed port was retried twice,
+    # 500 ms apart, so each blocking call waited a second before failing.
+    with StubBackend(response_status=400, response_body={'message': 'parity'}) as stub:
+        client = SolvaPayClient('sk_parity', stub.base_url)
+        result = getattr(client, name)('{}')
+        assert inspect.isawaitable(result), name
+        if hasattr(result, 'cancel'):
+            result.cancel()
+        blocking = getattr(client, f'{name}_blocking')('{}')
+        assert isinstance(blocking, str), name
+        assert not inspect.isawaitable(blocking), name
 
 def test_stub_cross_check() -> None:
     pytest.importorskip('solvapay._solvapay')

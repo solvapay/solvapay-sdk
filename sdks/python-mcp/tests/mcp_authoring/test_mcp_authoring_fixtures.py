@@ -358,7 +358,10 @@ class _StubServer:
 
         self._httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self._httpd.server_address[1]}"
-        self._thread = Thread(target=self._httpd.serve_forever, daemon=True)
+        # A short poll interval, so close() doesn't wait up to 0.5 s in shutdown().
+        self._thread = Thread(
+            target=self._httpd.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+        )
         self._thread.start()
 
     def close(self) -> None:
