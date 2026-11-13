@@ -1,0 +1,28 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "free-meter-name-invalid",
+  "description": "A free meter whose name is not `free-` followed by lowercase letters, digits and dashes is refused at registration.",
+  "input": {
+    "fn": "merchantTools",
+    "args": {
+      "productRef": "prd_si_metername",
+      "tools": [
+        {
+          "name": "peek",
+          "kind": "free",
+          "freeLimit": {
+            "meter": "credits",
+            "cap": 3,
+            "scope": "lifetime"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "refused": true
+    }
+  }
+}

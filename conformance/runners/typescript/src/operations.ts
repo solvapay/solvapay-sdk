@@ -20,6 +20,8 @@ import { SERVER_OPERATIONS } from './server-ops'
 import { AGENT_IDENTITY_OPERATIONS } from './agent-identity'
 // ---- suite agent-mcp (see agent-mcp-ops.ts) ----
 import { AGENT_MCP_OPERATIONS } from './agent-mcp-ops'
+// suite merchant-sign-in (merchant-sign-in.ts)
+import { MERCHANT_SIGN_IN_OPERATIONS } from './merchant-sign-in'
 
 /**
  * Maps each language-neutral `fn` to the TypeScript SDK. An operation with
@@ -283,6 +285,8 @@ Object.assign(OPERATIONS, CORE_OPERATIONS)
 Object.assign(OPERATIONS, AGENT_IDENTITY_OPERATIONS)
 // ---- suite agent-mcp: the MCP route agents call (agent-mcp-ops.ts) ----------
 Object.assign(OPERATIONS, AGENT_MCP_OPERATIONS)
+// ---- suite merchant-sign-in: merchant MCP sign-in and tools (merchant-sign-in.ts)
+Object.assign(OPERATIONS, MERCHANT_SIGN_IN_OPERATIONS)
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]
