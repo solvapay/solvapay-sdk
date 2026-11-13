@@ -28,6 +28,8 @@ export type {
   ToolPlanMappingInput,
   CreditDebitSkipReason,
   CreditDebitResult,
+  CostDebitResult,
+  UsageCost,
   TrackUsageRequest,
   TrackUsageResponse,
   TrackUsageBulkRequest,
