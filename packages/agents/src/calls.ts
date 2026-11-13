@@ -224,6 +224,9 @@ function callFields(call: AgentCall): Record<string, unknown> {
 
 /** An amount as a decimal string with up to 8 places, trailing zeros trimmed. */
 export function amountString(amount: number): string {
+  // `toFixed` switches to exponent notation from 1e21; such a number has no
+  // fractional part, so its integer digits are the whole amount.
+  if (Math.abs(amount) >= 1e21) return BigInt(amount).toString()
   const fixed = amount.toFixed(8).replace(/0+$/, '').replace(/\.$/, '')
   return fixed === '' ? '0' : fixed
 }

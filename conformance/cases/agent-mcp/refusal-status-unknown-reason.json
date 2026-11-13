@@ -1,0 +1,17 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "refusal-status-unknown-reason",
+  "description": "A refusal reason the SDK doesn't know has no HTTP status: it fails with unknown_refusal_reason instead of guessing one.",
+  "input": {
+    "fn": "agentRefusalStatuses",
+    "args": {
+      "reasons": ["bogus_reason"]
+    }
+  },
+  "expect": {
+    "error": {
+      "code": "unknown_refusal_reason"
+    }
+  }
+}

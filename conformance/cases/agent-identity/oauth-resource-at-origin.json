@@ -1,0 +1,79 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "oauth-resource-at-origin",
+  "description": "A resource at the origin (no path) has the RFC 9728 metadata path /.well-known/oauth-protected-resource, with no trailing slash, and its challenge points there.",
+  "input": {
+    "fn": "oauthResources",
+    "args": {
+      "resources": {
+        "origin": {
+          "resource": "https://mcp.conformance.test",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "Sign in to let your agent pay"
+        },
+        "originWithSlash": {
+          "resource": "https://mcp.conformance.test/",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "Sign in to let your agent pay"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "origin": {
+        "canonical": "https://mcp.conformance.test",
+        "metadata": {
+          "resource": "https://mcp.conformance.test",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to let your agent pay\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to let your agent pay"
+            }
+          }
+        }
+      },
+      "originWithSlash": {
+        "canonical": "https://mcp.conformance.test",
+        "metadata": {
+          "resource": "https://mcp.conformance.test",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to let your agent pay\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to let your agent pay"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -43,6 +43,7 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
+    "@solvapay/core": "workspace:*",
     "@solvapay/server": "workspace:*",
     "jose": "^6.2.2",
     "solvapay": "workspace:*"
