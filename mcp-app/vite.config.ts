@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import react from '@vitejs/plugin-react'
 
-const packagesDir = fileURLToPath(new URL('..', import.meta.url))
+const packagesDir = fileURLToPath(new URL('../packages/', import.meta.url))
 
 // Zod's v4 core probes `new Function('return true')` to detect eval support.
 // That is a CSP violation in every MCP iframe (none allows `unsafe-eval`), so

@@ -55,6 +55,7 @@ jobs:
           uv sync --locked --all-extras
           uv run python scripts/check_version.py
           uv run python scripts/generate_client.py --check
+          uv run python scripts/pin_conformance.py --check
           uv run pytest
 
       - name: Decide the version and the index

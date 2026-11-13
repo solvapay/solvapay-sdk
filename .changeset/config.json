@@ -15,7 +15,7 @@
     "@solvapay/conformance-typescript",
     "@solvapay/demo-services",
     "@solvapay/examples-shared",
-    "@solvapay/mcp-app-bundle",
+    "@solvapay/mcp-app",
     "@solvapay/test-utils",
     "checkout-demo",
     "hosted-checkout-demo",

@@ -16,13 +16,35 @@ same.
 conformance/
   case.schema.json           # the format of a case
   cases/<suite>/<case>.json  # one input and its expected outcome
+  cases.lock                 # one fingerprint per case; only `record` writes it
   runners/typescript/        # runs every case against @solvapay/server
-python/conformance_runner/   # runs every case against the Python package
+python/conformance_runner/   # runs the adopted cases against the Python package
+python/conformance.lock      # the pin: the cases Python has adopted
 ```
 
 Each language has a thin runner that reads `cases/`, maps each case's `fn` to
-its own library, and compares the outcome. A runner never skips a case: an `fn`
-it has not mapped is a failure.
+its own library, and compares the outcome. An adopted case whose `fn` has no
+mapping is a failure, never a skip.
+
+## Ownership, the lock and the pins
+
+The cases belong to the TypeScript SDK. Languages adopt them; they never edit
+them.
+
+- **`cases.lock`** fingerprints every case (canonical JSON, so formatting doesn't
+  count). Only `record` writes it, and the TypeScript tests fail when it is stale,
+  so no case changes without going through the reference.
+- **Each language pins the lock it passes** (`python/conformance.lock`). Its runner
+  runs the cases whose fingerprint matches the pin; a newer or changed case is
+  skipped as "not adopted" and named in the test output. Adopting means making it
+  pass and running `scripts/pin_conformance.py`.
+- **A language publishes only when its pin matches `cases.lock`.** The Python
+  publish workflow runs `pin_conformance.py --check`, so a release passes every case
+  of the commit it is built from.
+- **A PR changes the contract or a language, not both.** The "Contract boundary"
+  check fails a PR that touches `conformance/cases`, `cases.lock`, the schema or
+  `openapi/` together with `python/` (later `go/`, `ruby/`). Label it
+  `contract-change` when both must land together.
 
 ## A case
 
@@ -161,7 +183,9 @@ TypeScript does:
 pnpm --filter @solvapay/conformance-typescript record
 ```
 
-`record` only fills in a missing `expect`; it never changes an existing one.
+`record` only fills in a missing `expect`; it never changes an existing one. It
+then rewrites `cases.lock`. Commit both; each language adopts the case in its own
+PR.
 Read the recorded result before committing it: once committed, it is what every
 SDK must produce. To change an expectation on purpose, edit it by hand, so the
 change shows in review.

@@ -32,6 +32,8 @@ from solvapay.paywall.decide import FreeLimit, PaywallError
 from solvapay.webhooks import verify_webhook
 
 CASES_DIR = Path(__file__).resolve().parents[2] / "conformance" / "cases"
+LOCK = CASES_DIR.parent / "cases.lock"
+PIN = Path(__file__).resolve().parents[1] / "conformance.lock"
 NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 Operation = Callable[[dict[str, Any], "datetime | None"], Any]
@@ -308,8 +310,38 @@ def outcome_of(data: dict[str, Any]) -> dict[str, Any]:
 CASES = load_cases()
 
 
+def _fingerprints(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        raise AssertionError(f"{path} does not exist")
+    cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    assert isinstance(cases, dict)
+    return cases
+
+
+# A case runs when its fingerprint in conformance/cases.lock matches this
+# package's pin. A newer or changed case is not adopted yet: it is reported, and
+# publishing fails until scripts/pin_conformance.py adopts it.
+LOCKED = _fingerprints(LOCK)
+PINNED = _fingerprints(PIN)
+
+
+def test_every_case_is_locked() -> None:
+    on_disk = {where for where, _ in CASES}
+    missing = sorted(on_disk - LOCKED.keys())
+    assert not missing, (
+        "conformance/cases.lock has no fingerprint for: "
+        + ", ".join(missing)
+        + ". Run the TypeScript runner's record."
+    )
+
+
 @pytest.mark.parametrize(("where", "data"), CASES, ids=[where for where, _ in CASES])
 def test_case(where: str, data: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    if PINNED.get(where) != LOCKED.get(where):
+        pytest.skip(
+            "not adopted: newer than python/conformance.lock. Make it pass, then run "
+            "scripts/pin_conformance.py"
+        )
     if "steps" in data:
         outcomes = asyncio.run(run_scenario(data, monkeypatch))
         for index, (step, actual_step) in enumerate(zip(data["steps"], outcomes, strict=True)):

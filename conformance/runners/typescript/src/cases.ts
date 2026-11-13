@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** `conformance/cases`, the language-neutral cases every SDK runs. */
@@ -146,4 +147,36 @@ function checkScenario(file: string, suite: string, name: string, data: Scenario
  */
 export function asJson(value: unknown): unknown {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+}
+
+/**
+ * `conformance/cases.lock`: one fingerprint per case. Only `record` writes it,
+ * and the TypeScript tests fail when it is stale, so a case can't change
+ * without going through the reference SDK. Each language pins the lock it
+ * passes (`python/conformance.lock`) and adopts newer cases by updating its pin.
+ */
+export const LOCK_FILE = join(CASES_DIR, '..', 'cases.lock')
+
+/** JSON with sorted keys and no spacing, so formatting a case doesn't change its fingerprint. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+/** The lock for the cases as they are on disk, as the text `record` writes. */
+export function currentLock(): string {
+  const cases: Record<string, string> = {}
+  for (const { file } of loadCases()) {
+    const data = JSON.parse(readFileSync(file, 'utf-8')) as unknown
+    const digest = createHash('sha256').update(canonical(data)).digest('hex')
+    cases[relative(CASES_DIR, file).split(sep).join('/')] = `sha256:${digest}`
+  }
+  const sorted = Object.fromEntries(Object.entries(cases).sort(([a], [b]) => (a < b ? -1 : 1)))
+  return `${JSON.stringify({ comment: 'Written by `record`. Do not edit.', cases: sorted }, null, 2)}\n`
 }
