@@ -318,12 +318,20 @@ class Paywall:
                 tool_name=tool_name,
                 usage=_Usage(meter_name=free_limit.meter if free_limit else None),
             )
+            # Gating on our own count (the last cached unit is used, or more
+            # parallel callers than units shared one check): the limits we
+            # counted down from still say units remain. The gate says none do.
+            gate_limits = (
+                {**limits, "withinLimits": False, "remaining": 0}
+                if limits.get("withinLimits")
+                else limits
+            )
             return PaywallDecision(
                 outcome="gate",
                 customer_ref=backend_ref,
                 request_id=request_id,
                 limits=limits,
-                gate=build_paywall_gate(product, limits),
+                gate=build_paywall_gate(product, gate_limits),
             )
 
         return PaywallDecision(
