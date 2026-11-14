@@ -1,0 +1,85 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "attach-business-details",
+  "description": "attach-business-details sends the business details for the payment and returns the tax breakdown.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/attach-business-details",
+      "user": {
+        "id": "user_bd1",
+        "email": "user_bd1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "paymentIntentId": "pi_conform1",
+        "isBusiness": true,
+        "businessName": "Acme AB",
+        "country": "SE",
+        "taxId": "SE556677889901",
+        "taxIdType": "eu_vat"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_bd1@example.com",
+            "externalRef": "user_bd1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_conform1/business-details",
+          "body": {
+            "taxBreakdown": {
+              "subtotal": 1000,
+              "tax": 0,
+              "total": 1000,
+              "currency": "USD",
+              "reverseCharge": true
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "taxBreakdown": {
+          "subtotal": 1000,
+          "tax": 0,
+          "total": 1000,
+          "currency": "USD",
+          "reverseCharge": true
+        }
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_bd1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_conform1/business-details",
+          "body": {
+            "isBusiness": true,
+            "businessName": "Acme AB",
+            "country": "SE",
+            "taxId": "SE556677889901",
+            "taxIdType": "eu_vat",
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

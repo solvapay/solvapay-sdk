@@ -1,0 +1,108 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "process-topup-payment-succeeded",
+  "description": "process-topup-payment reports success once the customer's balance has gone up.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/process-topup-payment",
+      "user": {
+        "id": "user_tp3",
+        "email": "user_tp3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "paymentIntentId": "pi_topup1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_tp3@example.com",
+            "externalRef": "user_tp3"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance",
+          "body": {
+            "customerRef": "cus_conform1",
+            "credits": 0,
+            "displayCurrency": "USD",
+            "creditsPerMinorUnit": 100,
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "formatted": "$0.00",
+              "exchangeRate": 1,
+              "rateSource": "parity"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_topup1/process",
+          "body": {
+            "status": "succeeded"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance",
+          "body": {
+            "customerRef": "cus_conform1",
+            "credits": 100000,
+            "displayCurrency": "USD",
+            "creditsPerMinorUnit": 100,
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 10,
+              "currency": "USD",
+              "formatted": "$10.00",
+              "exchangeRate": 1,
+              "rateSource": "parity"
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "status": "succeeded",
+        "creditsAdded": 100000
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_tp3"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_topup1/process",
+          "body": {
+            "customerRef": "cus_conform1"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1/balance"
+        }
+      ]
+    }
+  }
+}

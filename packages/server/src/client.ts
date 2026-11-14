@@ -276,7 +276,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         url = `${base}/v1/sdk/customers?email=${encodeURIComponent(params.email)}`
         isByEmail = true
       } else if (params.customerRef) {
-        url = `${base}/v1/sdk/customers/${params.customerRef}`
+        url = `${base}/v1/sdk/customers/${encodeURIComponent(params.customerRef)}`
       } else {
         throw new SolvaPayError('One of customerRef, externalRef, or email must be provided')
       }
@@ -751,7 +751,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
     async reactivatePurchase(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/reactivate`
+      const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}/reactivate`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -784,7 +784,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // GET: /v1/sdk/customers/:customerRef/balance
     async getCustomerBalance(params) {
-      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance`
+      const url = `${base}/v1/sdk/customers/${encodeURIComponent(params.customerRef)}/balance`
 
       const res = await fetch(url, {
         method: 'GET',

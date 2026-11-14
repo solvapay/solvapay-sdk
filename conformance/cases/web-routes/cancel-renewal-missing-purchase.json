@@ -1,0 +1,30 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "cancel-renewal-missing-purchase",
+  "description": "cancel-renewal without purchaseRef answers 400.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/cancel-renewal",
+      "user": {
+        "id": "user_cr2",
+        "email": "user_cr2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {},
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 400,
+      "body": {
+        "error": "Missing required parameter: purchaseRef is required"
+      },
+      "apiCalls": []
+    }
+  }
+}

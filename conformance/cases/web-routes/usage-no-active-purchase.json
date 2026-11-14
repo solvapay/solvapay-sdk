@@ -1,0 +1,65 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "usage-no-active-purchase",
+  "description": "usage with no active purchase answers an empty snapshot.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/usage",
+      "user": {
+        "id": "user_us1",
+        "email": "user_us1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_us1@example.com",
+            "externalRef": "user_us1"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_us1@example.com",
+            "externalRef": "user_us1",
+            "purchases": []
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "meterRef": null,
+        "total": null,
+        "used": null,
+        "remaining": null,
+        "percentUsed": null
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_us1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1"
+        }
+      ]
+    }
+  }
+}

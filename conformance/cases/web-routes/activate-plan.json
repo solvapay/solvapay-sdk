@@ -1,0 +1,68 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "activate-plan",
+  "description": "activate-plan activates a plan for the user's customer.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/activate-plan",
+      "user": {
+        "id": "user_ap1",
+        "email": "user_ap1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "productRef": "prd_conform1",
+        "planRef": "pln_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_ap1@example.com",
+            "externalRef": "user_ap1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/activate",
+          "body": {
+            "status": "activated",
+            "purchaseRef": "pur_free1"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "status": "activated",
+        "purchaseRef": "pur_free1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_ap1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/activate",
+          "body": {
+            "customerRef": "cus_conform1",
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

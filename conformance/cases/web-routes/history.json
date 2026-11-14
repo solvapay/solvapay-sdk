@@ -1,0 +1,79 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "history",
+  "description": "history returns the user's charges and credit activity for the product.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/history",
+      "user": {
+        "id": "user_hi1",
+        "email": "user_hi1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "query": {
+        "productRef": "prd_conform1",
+        "limit": "5"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_hi1@example.com",
+            "externalRef": "user_hi1"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases",
+          "body": {
+            "purchases": []
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/credits/activity",
+          "body": {
+            "entries": [],
+            "hasMore": false
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "charges": [],
+        "creditActivity": {
+          "entries": [],
+          "hasMore": false
+        }
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_hi1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases",
+          "query": "customerRef=cus_conform1&productRef=prd_conform1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/credits/activity",
+          "query": "customerRef=cus_conform1&limit=5"
+        }
+      ]
+    }
+  }
+}

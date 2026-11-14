@@ -1,0 +1,69 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "create-checkout-session",
+  "description": "create-checkout-session returns SolvaPay's hosted checkout, with the request's origin as the return URL.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/create-checkout-session",
+      "user": {
+        "id": "user_cs1",
+        "email": "user_cs1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "productRef": "prd_conform1",
+        "planRef": "pln_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_cs1@example.com",
+            "externalRef": "user_cs1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_conform1",
+            "checkoutUrl": "https://checkout.conformance.test/cs_conform1"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "sessionId": "cs_conform1",
+        "checkoutUrl": "https://checkout.conformance.test/cs_conform1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cs1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "customerRef": "cus_conform1",
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1",
+            "returnUrl": "https://app.conformance.test"
+          }
+        }
+      ]
+    }
+  }
+}

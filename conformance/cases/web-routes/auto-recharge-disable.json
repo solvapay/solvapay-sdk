@@ -1,0 +1,58 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "auto-recharge-disable",
+  "description": "DELETE auto-recharge turns it off for the user's customer.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "DELETE",
+      "path": "/api/auto-recharge",
+      "user": {
+        "id": "user_ar3",
+        "email": "user_ar3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_ar3@example.com",
+            "externalRef": "user_ar3"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "success": true
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "success": true
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_ar3"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/sdk/auto-recharge",
+          "query": "customerRef=cus_conform1"
+        }
+      ]
+    }
+  }
+}

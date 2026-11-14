@@ -1,0 +1,30 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "auto-recharge-wrong-method",
+  "description": "auto-recharge serves GET, PUT and DELETE; POST answers 405 listing all three.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/auto-recharge",
+      "user": {
+        "id": "user_r3",
+        "email": "user_r3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 405,
+      "body": {
+        "error": "Method not allowed"
+      },
+      "allow": "GET, PUT, DELETE",
+      "apiCalls": []
+    }
+  }
+}

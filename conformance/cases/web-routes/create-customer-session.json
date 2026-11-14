@@ -1,0 +1,63 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "create-customer-session",
+  "description": "create-customer-session returns SolvaPay's hosted account page.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/create-customer-session",
+      "user": {
+        "id": "user_cs2",
+        "email": "user_cs2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {},
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_cs2@example.com",
+            "externalRef": "user_cs2"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "sessionId": "ss_conform1",
+            "customerUrl": "https://account.conformance.test/ss_conform1"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "sessionId": "ss_conform1",
+        "customerUrl": "https://account.conformance.test/ss_conform1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cs2"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

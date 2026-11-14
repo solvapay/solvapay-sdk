@@ -1,0 +1,30 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "create-payment-intent-missing-plan",
+  "description": "create-payment-intent without planRef or productRef answers 400 and calls nothing.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/create-payment-intent",
+      "user": {
+        "id": "user_pi2",
+        "email": "user_pi2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {},
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 400,
+      "body": {
+        "error": "Missing required parameters: planRef and productRef are required"
+      },
+      "apiCalls": []
+    }
+  }
+}

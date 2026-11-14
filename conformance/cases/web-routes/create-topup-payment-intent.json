@@ -1,0 +1,77 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "create-topup-payment-intent",
+  "description": "create-topup-payment-intent creates a credit top-up payment.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/create-topup-payment-intent",
+      "user": {
+        "id": "user_tp1",
+        "email": "user_tp1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "amount": 1000,
+        "currency": "USD"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_tp1@example.com",
+            "externalRef": "user_tp1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "processorPaymentId": "pi_topup1",
+            "amount": 1000,
+            "currency": "USD",
+            "status": "requires_payment_method",
+            "clientSecret": "pi_topup1_secret",
+            "publishableKey": "pk_test_conform",
+            "accountId": "acct_conform"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "processorPaymentId": "pi_topup1",
+        "clientSecret": "pi_topup1_secret",
+        "publishableKey": "pk_test_conform",
+        "accountId": "acct_conform",
+        "customerRef": "cus_conform1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_tp1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "customerRef": "cus_conform1",
+            "purpose": "credit_topup",
+            "amount": 1000,
+            "currency": "USD"
+          }
+        }
+      ]
+    }
+  }
+}
