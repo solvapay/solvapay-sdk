@@ -37,14 +37,22 @@ const payable = solvaPay.payable({
 
 app.post(
   '/tasks',
-  payable.http(async req => {
-    return {
-      success: true,
-      task: {
-        title: req.body.title,
-      },
-    }
-  }),
+  payable.http(
+    async req => {
+      return {
+        success: true,
+        task: {
+          title: req.body.title,
+        },
+      }
+    },
+    {
+      // Who is calling, from your own auth. This quick start trusts a header so
+      // you can try it with curl; return the user from your session, API key or
+      // verified token instead.
+      getCustomerRef: req => req.header('x-user-id') ?? '',
+    },
+  ),
 )
 ```
 
@@ -53,9 +61,11 @@ Test it:
 ```bash
 curl -X POST http://localhost:3000/tasks \
   -H "Content-Type: application/json" \
-  -H "x-customer-ref: user_123" \
+  -H "x-user-id: user_123" \
   -d '{"title":"My first task"}'
 ```
+
+Without `getCustomerRef`, `payable.http` takes the customer only from a verified bearer token (`SOLVAPAY_JWT_SECRET`, `SOLVAPAY_JWKS_URL` or Supabase), or from an `x-customer-ref` header behind a gateway you trust (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`). An `x-customer-ref` sent without that opt-in gets a 401, and a request with neither is anonymous.
 
 ## 3) Continue by framework
 

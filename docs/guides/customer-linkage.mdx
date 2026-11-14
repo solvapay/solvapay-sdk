@@ -95,11 +95,16 @@ Once you have `customerRef`, pass it into paywall helpers:
 ```typescript
 const payable = solvaPay.payable({ product: 'prd_myapi' })
 
-// Express: set x-customer-ref after ensureCustomer in your auth middleware
-app.post('/tasks', payable.http(createTask))
+// Express: your auth middleware calls ensureCustomer and stores the result
+app.post(
+  '/tasks',
+  payable.http(createTask, {
+    getCustomerRef: req => req.res.locals.customerRef,
+  }),
+)
 ```
 
-For Next.js, prefer `createAuth0AuthMiddleware` (or your own adapter) so route handlers receive `x-user-id` / `externalRef` automatically. For Express and other frameworks, resolve `externalRef` in middleware, call `ensureCustomer`, then set `x-customer-ref` for `payable.http()`.
+For Next.js, prefer `createAuth0AuthMiddleware` (or your own adapter) so route handlers receive `x-user-id` / `externalRef` automatically. For Express and other frameworks, resolve `externalRef` in middleware, call `ensureCustomer`, and return the result from `getCustomerRef`. Don't set `x-customer-ref` on the request yourself: `payable.http()` trusts that header only behind a gateway (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`) and answers 401 otherwise.
 
 ## What not to do
 

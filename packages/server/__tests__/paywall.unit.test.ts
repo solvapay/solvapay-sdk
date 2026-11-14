@@ -1,4 +1,6 @@
 import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
+import { SignJWT } from 'jose'
+import { SolvaPayError } from '@solvapay/core'
 import { createSolvaPay, PaywallError } from '../src'
 import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
@@ -309,13 +311,22 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
-      await expect(
-        protectedHandler({ auth: { customer_ref: 'test_user' } }),
-      ).resolves.toEqual({ success: true })
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).resolves.toEqual({
+        success: true,
+      })
     })
   })
 
   describe('HTTP Adapter - Express/Fastify Style', () => {
+    // These tests name the customer with x-customer-ref, which is trusted only
+    // behind a gateway; identity itself is tested under Customer Authentication.
+    beforeEach(() => {
+      vi.stubEnv('SOLVAPAY_AUTH_TRUST_GATEWAY', 'true')
+    })
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
     it('should wrap handlers for Express/Fastify and extract params from req/query/body', async () => {
       const handler = vi.fn().mockResolvedValue({ message: 'success' })
       const payable = solvaPay.payable({ product: 'http-test' })
@@ -367,6 +378,15 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   })
 
   describe('Next.js Adapter - App Router Support', () => {
+    // These tests name the customer with x-customer-ref, which is trusted only
+    // behind a gateway; identity itself is tested under Customer Authentication.
+    beforeEach(() => {
+      vi.stubEnv('SOLVAPAY_AUTH_TRUST_GATEWAY', 'true')
+    })
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
     it('should wrap Next.js route handlers and parse Request objects', async () => {
       const handler = vi.fn().mockResolvedValue({ message: 'next success' })
       const payable = solvaPay.payable({ product: 'next-test' })
@@ -414,7 +434,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           id: '123',
-          auth: { customer_ref: 'cus_demo_user' },
+          auth: { customer_ref: 'anonymous' },
         }),
         expect.anything(),
       )
@@ -578,82 +598,154 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
   })
 
   describe('Customer Authentication - JWT & Headers', () => {
-    it('should extract customer reference from JWT Bearer token', async () => {
-      // Mock the jose import for Next.js handler
-      const mockJwtVerify = vi.fn().mockResolvedValue({
-        payload: { sub: 'jwt_user_123' },
-      })
+    const SECRET = 'payable-identity-test-secret-0123456789'
+    const sign = (claims: Record<string, unknown>, secret = SECRET) =>
+      new SignJWT(claims)
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(secret))
 
-      // Mock dynamic import
-      vi.doMock('jose', () => ({
-        jwtVerify: mockJwtVerify,
-      }))
+    beforeEach(() => {
+      for (const name of [
+        'SOLVAPAY_JWT_SECRET',
+        'SUPABASE_JWT_SECRET',
+        'SOLVAPAY_JWKS_URL',
+        'SUPABASE_URL',
+        'SOLVAPAY_AUTH_TRUST_GATEWAY',
+        'SOLVAPAY_AUTH_STRICT',
+        'OAUTH_JWKS_SECRET',
+      ]) {
+        vi.stubEnv(name, '')
+      }
+    })
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
 
+    it('a verified token names a user, found by externalRef', async () => {
+      vi.stubEnv('SOLVAPAY_JWT_SECRET', SECRET)
+      const getCustomer = vi.spyOn(mockApiClient, 'getCustomer')
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ product: 'jwt-test' })
-      const nextHandler = payable.next(handler)
+      const nextHandler = solvaPay.payable({ product: 'jwt-test' }).next(handler)
 
-      const mockRequest = new Request('http://localhost:3000/api/test', {
-        headers: {
-          authorization: 'Bearer valid.jwt.token',
-        },
-      })
-
-      // Set environment variables for JWT verification
-      process.env.OAUTH_JWKS_SECRET = 'test-secret'
-      process.env.OAUTH_ISSUER = 'http://localhost:3000'
-      process.env.OAUTH_CLIENT_ID = 'test-client'
-
-      const response = await nextHandler(mockRequest)
+      const response = await nextHandler(
+        new Request('http://localhost:3000/api/test', {
+          headers: { authorization: `Bearer ${await sign({ sub: 'jwt_user_123' })}` },
+        }),
+      )
 
       expect(response.status).toBe(200)
+      expect(getCustomer).toHaveBeenCalledWith({ externalRef: 'jwt_user_123' })
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          auth: { customer_ref: 'cus_jwt_user_123' },
-        }),
+        expect.objectContaining({ auth: { customer_ref: 'cus_jwt_user_123' } }),
         expect.anything(),
       )
     })
 
-    it('should fallback to x-customer-ref header when JWT is invalid', async () => {
+    it("refuses a token signed with the old 'test-jwt-secret' default (401)", async () => {
+      vi.stubEnv('OAUTH_ISSUER', 'http://localhost:3000')
+      const token = await new SignJWT({ sub: 'cus_victim' })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuer('http://localhost:3000')
+        .setAudience('test-client-id')
+        .sign(new TextEncoder().encode('test-jwt-secret'))
+      const handler = vi.fn()
+      const reply = { status: vi.fn().mockReturnThis(), json: vi.fn() }
+
+      await solvaPay.payable({ product: 'jwt-test' }).http(handler)(
+        { headers: { authorization: `Bearer ${token}` } },
+        reply,
+      )
+
+      expect(reply.status).toHaveBeenCalledWith(401)
+      expect(handler).not.toHaveBeenCalled()
+    })
+
+    it('a user id that starts with cus_ is looked up by externalRef, never used as that customer', async () => {
+      vi.stubEnv('SOLVAPAY_JWT_SECRET', SECRET)
+      vi.spyOn(mockApiClient, 'getCustomer').mockRejectedValue(
+        new SolvaPayError('Get customer failed (404): not found', { status: 404 }),
+      )
+      const createCustomer = vi.spyOn(mockApiClient, 'createCustomer')
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ product: 'fallback-test' })
-      const nextHandler = payable.next(handler)
 
-      const mockRequest = new Request('http://localhost:3000/api/test', {
-        headers: {
-          authorization: 'Bearer invalid.token',
-          'x-customer-ref': 'fallback_user',
-        },
-      })
-
-      const response = await nextHandler(mockRequest)
+      const response = await solvaPay.payable({ product: 'jwt-test' }).next(handler)(
+        new Request('http://localhost:3000/api/test', {
+          headers: {
+            authorization: `Bearer ${await sign({ sub: 'cus_victim', email: 'me@example.com' })}`,
+          },
+        }),
+      )
 
       expect(response.status).toBe(200)
+      expect(createCustomer).toHaveBeenCalledWith(
+        expect.objectContaining({ externalRef: 'cus_victim', email: 'me@example.com' }),
+      )
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          auth: { customer_ref: 'cus_jwt_user_123' },
-        }),
+        expect.objectContaining({ auth: { customer_ref: 'customer_me_example_com' } }),
         expect.anything(),
       )
     })
 
-    it('should default to "demo_user" when no authentication is provided', async () => {
+    it('refuses x-customer-ref without the gateway opt-in (401), before calling SolvaPay', async () => {
+      const getCustomer = vi.spyOn(mockApiClient, 'getCustomer')
+      const handler = vi.fn()
+
+      const response = await solvaPay.payable({ product: 'hdr-test' }).next(handler)(
+        new Request('http://localhost:3000/api/test', {
+          headers: { 'x-customer-ref': 'cus_victim' },
+        }),
+      )
+
+      expect(response.status).toBe(401)
+      expect(await response.json()).toMatchObject({
+        error: expect.stringContaining('SOLVAPAY_AUTH_TRUST_GATEWAY'),
+      })
+      expect(handler).not.toHaveBeenCalled()
+      expect(getCustomer).not.toHaveBeenCalled()
+    })
+
+    it('refuses a bearer token when nothing can verify it (401)', async () => {
+      const handler = vi.fn()
+
+      const response = await solvaPay.payable({ product: 'jwt-test' }).next(handler)(
+        new Request('http://localhost:3000/api/test', {
+          headers: { authorization: `Bearer ${await sign({ sub: 'someone' })}` },
+        }),
+      )
+
+      expect(response.status).toBe(401)
+      expect(handler).not.toHaveBeenCalled()
+    })
+
+    it('uses x-customer-ref behind a trusted gateway', async () => {
+      vi.stubEnv('SOLVAPAY_AUTH_TRUST_GATEWAY', 'true')
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({ product: 'default-test' })
-      const nextHandler = payable.next(handler)
 
-      const mockRequest = new Request('http://localhost:3000/api/test')
-
-      const response = await nextHandler(mockRequest)
+      const response = await solvaPay.payable({ product: 'hdr-test' }).next(handler)(
+        new Request('http://localhost:3000/api/test', {
+          headers: { 'x-customer-ref': 'gateway_user' },
+        }),
+      )
 
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          auth: { customer_ref: 'cus_demo_user' },
-        }),
+        expect.objectContaining({ auth: { customer_ref: 'cus_gateway_user' } }),
         expect.anything(),
       )
+    })
+
+    it('a request with no identity is anonymous, never a default customer', async () => {
+      const createCustomer = vi.spyOn(mockApiClient, 'createCustomer')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+
+      await solvaPay.payable({ product: 'default-test' }).next(handler)(
+        new Request('http://localhost:3000/api/test'),
+      )
+
+      expect(createCustomer).not.toHaveBeenCalled()
+      for (const [args] of handler.mock.calls) {
+        expect(args.auth.customer_ref).not.toBe('cus_demo_user')
+      }
     })
   })
 
@@ -776,11 +868,12 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
     it('accepts a per-request product via gate({ metadata })', async () => {
       const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
       const payable = solvaPay.payable({})
-      const req = new Request('http://localhost/api/test', {
-        headers: { 'x-customer-ref': 'gate_user' },
-      })
+      const req = new Request('http://localhost/api/test')
 
-      const result = await payable.gate(req, { metadata: { product: 'prd_override' } })
+      const result = await payable.gate(req, {
+        metadata: { product: 'prd_override' },
+        getCustomerRef: () => 'gate_user',
+      })
 
       expect(result.kind).toBe('allow')
       expect(checkLimitsSpy).toHaveBeenCalledWith(

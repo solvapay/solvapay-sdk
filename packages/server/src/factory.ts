@@ -37,6 +37,7 @@ import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './ad
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
 import { requireProductRef, resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
+import { identifyRequest, identityLabel, type RequestIdentity } from './request-identity'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
 import {
@@ -160,10 +161,10 @@ export type PayableGateResult = PayablePaywallResult | PayableAllowResult
  */
 export interface PayableGateOptions {
   /**
-   * Resolve the customer ref from the incoming request. Overrides the
-   * default header-based lookup (`x-customer-ref` → `'anonymous'`).
-   * Useful for JWT-based auth, signed cookies, or app-specific header
-   * conventions.
+   * Resolve the customer ref from the incoming request. Without it, the
+   * customer comes from a verified bearer token, or from `x-customer-ref`
+   * only with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`; otherwise the request is
+   * anonymous. Use it for your own sessions, signed cookies or API keys.
    */
   getCustomerRef?: (req: Request) => string | Promise<string>
   /**
@@ -419,6 +420,20 @@ export interface SolvaPay {
     customerRef: string,
     externalRef?: string,
     options?: { email?: string; name?: string },
+  ): Promise<string>
+
+  /**
+   * The SolvaPay customer for one of your users, found by `externalRef`
+   * (the user id), else created with it. Unlike `ensureCustomer`, the id is
+   * never taken as a customer ref, even when it starts with `cus_`.
+   *
+   * @param userId - Your user's id, from your own verified auth
+   * @param details - Email and name for a customer created now
+   * @returns Customer reference (`cus_…`)
+   */
+  ensureCustomerForUser(
+    userId: string,
+    details?: { email?: string; name?: string },
   ): Promise<string>
 
   /**
@@ -907,6 +922,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return paywall.ensureCustomer(customerRef, externalRef, options)
     },
 
+    ensureCustomerForUser(userId: string, details?: { email?: string; name?: string }) {
+      return paywall.ensureCustomerForUser(userId, details)
+    },
+
     createPaymentIntent(params) {
       if (!apiClient.createPaymentIntent) {
         throw new SolvaPayError('createPaymentIntent is not available on this API client')
@@ -1105,7 +1124,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
         },
 
         async gate(req: Request, gateOptions: PayableGateOptions = {}): Promise<PayableGateResult> {
-          const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
+          const identity = await identifyGateRequest(req, gateOptions)
+          const inputCustomerRef =
+            identity.kind === 'user'
+              ? await paywall.ensureCustomerForUser(identity.userId, {
+                  email: identity.email,
+                  name: identity.name,
+                })
+              : identityLabel(identity)
           const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
 
           const decideMetadata = gateOptions.metadata ?? metadata
@@ -1204,22 +1230,21 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 }
 
 /**
- * Resolve the customer ref for a `payable.gate(req)` call.
- * Precedence: `options.getCustomerRef(req)` → `x-customer-ref` header
- * → `'anonymous'`. Trims whitespace and treats empty strings as
- * absent so a stray empty header doesn't masquerade as a real ref.
+ * Who a `payable.gate(req)` call is for. `options.getCustomerRef(req)` wins
+ * (trimmed; empty means anonymous); otherwise `identifyRequest`: a verified
+ * bearer token, `x-customer-ref` behind a trusted gateway, or anonymous.
+ * Throws a 401 `SolvaPayError` for an unverifiable token or an untrusted
+ * `x-customer-ref`.
  */
-async function resolveCustomerRefFromRequest(
+async function identifyGateRequest(
   req: Request,
   options: PayableGateOptions,
-): Promise<string> {
+): Promise<RequestIdentity> {
   if (options.getCustomerRef) {
-    const resolved = await options.getCustomerRef(req)
-    if (typeof resolved === 'string' && resolved.trim().length > 0) {
-      return resolved.trim()
-    }
+    const resolved = (await options.getCustomerRef(req))?.trim()
+    return resolved && resolved !== 'anonymous'
+      ? { kind: 'customer', customerRef: resolved }
+      : { kind: 'anonymous' }
   }
-  const header = req.headers.get('x-customer-ref')
-  if (header && header.trim().length > 0) return header.trim()
-  return 'anonymous'
+  return identifyRequest(name => req.headers.get(name))
 }

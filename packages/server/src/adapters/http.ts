@@ -9,6 +9,12 @@ import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { HttpAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
+import {
+  identifyRequest,
+  identityLabel,
+  isUnauthorized,
+  type RequestIdentity,
+} from '../request-identity'
 
 /**
  * HTTP context (Express or Fastify)
@@ -35,30 +41,24 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
     }
   }
 
-  async getCustomerRef([req, _reply]: HttpContext): Promise<string> {
+  /**
+   * `getCustomerRef` when given; otherwise a verified bearer token (a user),
+   * `x-customer-ref` behind a trusted gateway, or anonymous. See
+   * `identifyRequest`.
+   */
+  async getIdentity([req, _reply]: HttpContext): Promise<RequestIdentity> {
     if (this.options.getCustomerRef) {
-      const ref = await this.options.getCustomerRef(req)
-      return AdapterUtils.ensureCustomerRef(ref)
+      const ref = AdapterUtils.ensureCustomerRef(await this.options.getCustomerRef(req))
+      return ref === 'anonymous' ? { kind: 'anonymous' } : { kind: 'customer', customerRef: ref }
     }
+    return identifyRequest(name => {
+      const value = req.headers?.[name]
+      return Array.isArray(value) ? value[0] : value
+    })
+  }
 
-    // Try x-customer-ref header first
-    const headerRef = req.headers?.['x-customer-ref']
-    if (headerRef) {
-      return AdapterUtils.ensureCustomerRef(headerRef)
-    }
-
-    // Try JWT token if available
-    const authHeader = req.headers?.['authorization']
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const jwtSub = await AdapterUtils.extractFromJWT(token)
-      if (jwtSub) {
-        return AdapterUtils.ensureCustomerRef(jwtSub)
-      }
-    }
-
-    // Fallback to anonymous
-    return 'anonymous'
+  async getCustomerRef(context: HttpContext): Promise<string> {
+    return identityLabel(await this.getIdentity(context))
   }
 
   formatResponse(result: unknown, [_req, reply]: HttpContext): unknown {
@@ -107,13 +107,13 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
 
     // Express: has reply.status method
     if (reply && reply.status && typeof reply.json === 'function') {
-      reply.status(500).json(errorResponse)
+      reply.status(isUnauthorized(error) ? 401 : 500).json(errorResponse)
       return
     }
 
     // Fastify: use reply.code
     if (reply && reply.code) {
-      reply.code(500)
+      reply.code(isUnauthorized(error) ? 401 : 500)
     }
     return errorResponse
   }

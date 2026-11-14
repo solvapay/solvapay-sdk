@@ -85,14 +85,18 @@ const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
 })
 ```
 
-For HTTP adapters, pass customer identity in headers or auth context.
+For HTTP adapters, say who the customer is with `getCustomerRef`, from your own verified auth. The handler gets the resolved customer in `args.auth.customer_ref`.
 
 ```typescript
-app.post('/tasks', payable.http(async req => {
-  const customerRef = req.headers['x-customer-ref']
-  return { ok: true, customerRef }
-}))
+app.post(
+  '/tasks',
+  payable.http(async args => ({ ok: true, customerRef: args.auth.customer_ref }), {
+    getCustomerRef: req => req.user.id, // set by your auth middleware
+  }),
+)
 ```
+
+Without `getCustomerRef`, the customer comes from a verified bearer token, or from `x-customer-ref` only behind a trusted gateway (`SOLVAPAY_AUTH_TRUST_GATEWAY=true`). A browser or API client can set any header, so the SDK never trusts one on its own.
 
 ### Create-or-link semantics
 

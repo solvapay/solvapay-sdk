@@ -45,7 +45,7 @@ const linkSolvaPayCustomer = async (req: Request, res: Response, next: NextFunct
       name: req.header('x-provider-user-name') ?? undefined,
     })
 
-    req.headers['x-customer-ref'] = customerRef
+    res.locals.customerRef = customerRef
     next()
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to link customer'
@@ -63,9 +63,7 @@ app.get('/', (_req, res) => {
       simulateProviderLogin: 'x-provider-user-id (required)',
       optionalProfile: ['x-provider-user-email', 'x-provider-user-name'],
     },
-    example: [
-      `curl -H "x-provider-user-id: auth0|demo-user" http://localhost:${port}/tasks`,
-    ],
+    example: [`curl -H "x-provider-user-id: auth0|demo-user" http://localhost:${port}/tasks`],
   })
 })
 
@@ -79,10 +77,15 @@ app.get('/health', (_req, res) => {
 
 app.use('/tasks', linkSolvaPayCustomer)
 
-app.post('/tasks', payable.http(createTask))
-app.get('/tasks/:id', payable.http(getTask))
-app.get('/tasks', payable.http(listTasks))
-app.delete('/tasks/:id', payable.http(deleteTask))
+// The customer linkSolvaPayCustomer resolved from your own login.
+const linkedCustomer = {
+  getCustomerRef: (req: Request) => String(req.res?.locals.customerRef ?? ''),
+}
+
+app.post('/tasks', payable.http(createTask, linkedCustomer))
+app.get('/tasks/:id', payable.http(getTask, linkedCustomer))
+app.get('/tasks', payable.http(listTasks, linkedCustomer))
+app.delete('/tasks/:id', payable.http(deleteTask, linkedCustomer))
 
 function startServer(listenPort: number) {
   app

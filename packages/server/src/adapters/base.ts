@@ -5,7 +5,9 @@
  * Each adapter handles extraction, transformation, and formatting for its specific context.
  */
 
+import { SolvaPayError } from '@solvapay/core'
 import { PaywallError } from '../paywall'
+import { identityLabel, type RequestIdentity } from '../request-identity'
 import type { SolvaPayPaywall } from '../paywall'
 import type { PaywallArgs, PaywallMetadata, PaywallStructuredContent } from '../types'
 
@@ -41,6 +43,13 @@ export interface Adapter<TContext = any, TResult = any> {
   getCustomerRef(context: TContext, extra?: unknown): Promise<string> | string
 
   /**
+   * Who the request is for, when the adapter can tell a verified user (looked
+   * up by `externalRef`) from a named customer. Used instead of
+   * `getCustomerRef` when present.
+   */
+  getIdentity?(context: TContext, extra?: unknown): Promise<RequestIdentity>
+
+  /**
    * Format the business logic result for the framework
    */
   formatResponse(result: unknown, context: TContext): TResult
@@ -67,9 +76,10 @@ export interface Adapter<TContext = any, TResult = any> {
  * reimplement the interface directly.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export abstract class AbstractAdapter<TContext = any, TResult = any>
-  implements Adapter<TContext, TResult>
-{
+export abstract class AbstractAdapter<TContext = any, TResult = any> implements Adapter<
+  TContext,
+  TResult
+> {
   abstract extractArgs(
     context: TContext,
   ): Promise<Record<string, unknown>> | Record<string, unknown>
@@ -108,7 +118,13 @@ export class AdapterUtils {
   }
 
   /**
-   * Extract customer ref from JWT token
+   * The subject of a JWT signed with `options.secret` (else `OAUTH_JWKS_SECRET`),
+   * or null when the token doesn't verify.
+   *
+   * @deprecated The built-in adapters verify tokens with `verifyBearerToken`
+   * from `@solvapay/auth`. This one checks issuer and audience only when they
+   * are given (`options`, else `OAUTH_ISSUER` / `OAUTH_CLIENT_ID`).
+   * @throws {SolvaPayError} When no secret is configured: there is no default.
    */
   static async extractFromJWT(
     token: string,
@@ -118,20 +134,23 @@ export class AdapterUtils {
       audience?: string
     },
   ): Promise<string | null> {
-    try {
-      const { jwtVerify } = await import('jose')
-      const jwtSecret = new TextEncoder().encode(
-        options?.secret || process.env.OAUTH_JWKS_SECRET || 'test-jwt-secret',
+    const secret = options?.secret || process.env.OAUTH_JWKS_SECRET
+    if (!secret) {
+      throw new SolvaPayError(
+        'extractFromJWT needs a secret: pass options.secret or set OAUTH_JWKS_SECRET',
       )
-
-      const { payload } = await jwtVerify(token, jwtSecret, {
-        issuer: options?.issuer || process.env.OAUTH_ISSUER || 'http://localhost:3000',
-        audience: options?.audience || process.env.OAUTH_CLIENT_ID || 'test-client-id',
+    }
+    const issuer = options?.issuer || process.env.OAUTH_ISSUER
+    const audience = options?.audience || process.env.OAUTH_CLIENT_ID
+    const { jwtVerify } = await import('jose')
+    try {
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+        ...(issuer ? { issuer } : {}),
+        ...(audience ? { audience } : {}),
       })
-
-      return (payload.sub as string) || null
+      return typeof payload.sub === 'string' && payload.sub ? payload.sub : null
     } catch {
-      // JWT verification failed, return null
+      // The token didn't verify: it names no one.
       return null
     }
   }
@@ -162,15 +181,28 @@ export async function createAdapterHandler<TContext, TResult>(
 
   return async (context: TContext, extra?: unknown): Promise<TResult> => {
     let args: Record<string, unknown>
-    let customerRef: string
     try {
       args = await adapter.extractArgs(context)
-      customerRef = await adapter.getCustomerRef(context, extra)
+      const identity: RequestIdentity = adapter.getIdentity
+        ? await adapter.getIdentity(context, extra)
+        : { kind: 'customer', customerRef: await adapter.getCustomerRef(context, extra) }
+      // Users and named customers are cached apart: a user id that looks
+      // like a customer ref must never reach that customer.
+      const cacheKey =
+        identity.kind === 'user' ? `user:${identity.userId}` : `ref:${identityLabel(identity)}`
 
-      let backendRef = backendRefCache.get(customerRef)
+      let backendRef = backendRefCache.get(cacheKey)
       if (!backendRef) {
-        backendRef = await paywall.ensureCustomer(customerRef, customerRef)
-        backendRefCache.set(customerRef, backendRef)
+        backendRef =
+          identity.kind === 'user'
+            ? await paywall.ensureCustomerForUser(identity.userId, {
+                email: identity.email,
+                name: identity.name,
+              })
+            : identity.kind === 'anonymous'
+              ? 'anonymous'
+              : await paywall.ensureCustomer(identity.customerRef, identity.customerRef)
+        backendRefCache.set(cacheKey, backendRef)
       }
 
       args.auth = { customer_ref: backendRef }

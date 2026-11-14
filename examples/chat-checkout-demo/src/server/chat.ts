@@ -93,7 +93,10 @@ export async function handleChat(
   // cold cache we overlap the two SolvaPay calls instead of paying
   // them serially.
   const [gate, systemInstruction] = await Promise.all([
-    payable.gate(req, { ctx }),
+    payable.gate(req, {
+      ctx,
+      getCustomerRef: r => r.headers.get('x-customer-ref') ?? '',
+    }),
     getSystemInstruction(deps.solvaPay, body.productRef),
   ])
 
