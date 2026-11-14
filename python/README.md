@@ -18,11 +18,13 @@ export SOLVAPAY_PRODUCT_REF=prd_...         # the product paid calls bill agains
 export SOLVAPAY_API_BASE_URL=...            # optional; defaults to https://api.solvapay.com
 ```
 
-Run `npx solvapay init` to sign in and write these to `.env`.
+Copy the secret key and product reference from SolvaPay Console (Developers → API keys, and the product's page). `npx solvapay init` writes them to `.env` too, but it is a Node.js tool and installs npm packages in a folder without `package.json`.
 
 ## Make a function paid
 
 ```python
+import asyncio
+
 from solvapay import PaywallError, create_solvapay
 
 solvapay = create_solvapay()
@@ -33,11 +35,20 @@ async def summarise(text: str, *, customer_ref: str) -> str:
     return text[:100]
 
 
-try:
-    summary = await summarise("...", customer_ref="user_123")
-except PaywallError as error:
-    print(error.gate["message"])  # what the customer should see, with a checkout link
+async def main() -> None:
+    try:
+        summary = await summarise("...", customer_ref="user_123")
+        print(summary)
+    except PaywallError as error:
+        print(error.gate["message"])  # what the customer should see, with a checkout link
+
+
+asyncio.run(main())
 ```
+
+`SOLVAPAY_PRODUCT_REF` must be set before this module is imported: `@solvapay.payable()`
+reads it when it decorates the function, so a missing product fails at import, not on the
+first call.
 
 `customer_ref` is your own user id: SolvaPay creates the customer on first use.
 Each call is checked against the customer's plan, and billed when it succeeds.
@@ -148,6 +159,8 @@ origin, or add Starlette's `CORSMiddleware`.
 ## Verify webhooks
 
 ```python
+import os
+
 from solvapay import SolvaPayError, verify_webhook
 
 try:
@@ -165,11 +178,19 @@ except SolvaPayError as error:
 Every SolvaPay API operation, generated from the API spec:
 
 ```python
+import asyncio
+
 from solvapay import AsyncApiClient
 
-async with AsyncApiClient(api_key="sk_sandbox_...") as api:
-    customer = await api.get_customer(reference="cus_123")
-    balance = await api.get_customer_balance(reference="cus_123")
+
+async def main() -> None:
+    async with AsyncApiClient(api_key="sk_sandbox_...") as api:
+        customer = await api.get_customer(reference="cus_123")
+        balance = await api.get_customer_balance(reference="cus_123")
+        print(customer.email, balance)
+
+
+asyncio.run(main())
 ```
 
 `ApiClient` is the blocking twin. Errors are `SolvaPayError` with a stable `code`
