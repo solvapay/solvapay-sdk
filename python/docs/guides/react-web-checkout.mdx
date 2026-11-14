@@ -1,0 +1,148 @@
+---
+title: "React web checkout"
+description: "Serve the routes the @solvapay/react components call from a Python backend with solvapay.web.routes, so checkout, top-ups and account pages work in your web app."
+---
+
+The `@solvapay/react` components (checkout, top-up, plans, balance, renewals,
+auto-recharge, history) call a set of routes on your backend: `/api/check-purchase`,
+`/api/create-payment-intent`, `/api/list-plans` and so on. `solvapay.web.routes()`
+serves all of them from Python, with the same answers as the TypeScript SDK: a shared
+conformance suite checks both on every change.
+
+Your React app doesn't change. Only the backend behind `/api` is Python.
+
+## Prerequisites
+
+- A SolvaPay product with at least one plan, and a sandbox secret key in
+  `SOLVAPAY_SECRET_KEY`. See [Installation](/sdks/python/setup/installation).
+- A web app that signs its users in. The routes act for the user your app has
+  verified; they never sign anyone in themselves.
+- The React components set up in your frontend. See the
+  [React guide](/sdks/typescript/guides/react).
+
+```bash
+pip install "solvapay[web]"
+```
+
+## Serve the routes
+
+Mount `routes()` where your frontend expects them, `/api` by default. `get_user` is
+required: it verifies the request with your app's own auth and answers who the user
+is, or `None`.
+
+```python
+import os
+
+import jwt  # PyJWT, if your app signs its own session tokens
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.routing import Mount
+
+from solvapay import create_solvapay
+from solvapay.web import User, routes
+
+SESSION_SECRET = os.environ["APP_SESSION_SECRET"]  # your app's own signing key
+
+
+def get_user(request: Request) -> User | None:
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    try:
+        claims = jwt.decode(token, SESSION_SECRET, algorithms=["HS256"])
+    except jwt.InvalidTokenError:
+        return None
+    return User(id=claims["sub"], email=claims.get("email"), name=claims.get("name"))
+
+
+solvapay = create_solvapay()  # SOLVAPAY_SECRET_KEY, SOLVAPAY_API_BASE_URL
+app = Starlette(routes=[Mount("/api", app=routes(solvapay, get_user=get_user, base_path=""))])
+```
+
+This example verifies an HS256 token your app issued. Use whatever your app already
+trusts: a session cookie, your identity provider's tokens, or a framework
+dependency. `get_user` may be `async`.
+
+In FastAPI, mount the same app:
+
+```python
+app.mount("/api", routes(solvapay, get_user=get_user, base_path=""))
+```
+
+`base_path` is where the routes sit below the mount point. Mounted at `/api`, it's
+`""`; served at the root, keep the default `/api`.
+
+## Point the React components at it
+
+`SolvaPayProvider` sends your app's token on every call through an auth adapter.
+The token is the one `get_user` verifies:
+
+```tsx
+import { SolvaPayProvider } from '@solvapay/react'
+
+const adapter = {
+  getToken: async () => session.token, // your app's own token
+  getUserId: async () => session.userId,
+}
+
+export function Billing({ children }: { children: React.ReactNode }) {
+  return <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
+}
+```
+
+Serve `/api` from the same origin as the page (a reverse proxy, or your dev
+server's proxy). The routes add no CORS headers; for a cross-origin frontend, add
+Starlette's `CORSMiddleware`.
+
+## Who the customer is
+
+- **Only `get_user` decides.** Your user's `id` becomes the SolvaPay customer's
+  `externalRef`. The customer is created on first use, with the email and name you
+  return.
+- **No user, no access.** `None` gets a 401 before SolvaPay is called. There's no
+  anonymous or default customer.
+- **Nothing the browser sends is identity.** An `x-user-id` header is ignored. A
+  cached `x-solvapay-customer-ref` is used only when that customer belongs to the
+  verified user.
+- **Purchases are checked.** Cancelling or reactivating a renewal works only on the
+  caller's own purchase (403 otherwise), and auto-recharge is always saved for the
+  caller's own customer.
+
+`merchant`, `get-product` and `list-plans` answer without a user, as in TypeScript.
+
+## Routes
+
+| Path under `/api` | Method | What it does |
+| --- | --- | --- |
+| `check-purchase` | GET | The user's customer and active purchases |
+| `list-plans`, `get-product`, `merchant` | GET | Plans, the product, the merchant's details |
+| `create-payment-intent`, `process-payment` | POST | Pay for a plan |
+| `create-topup-payment-intent`, `process-topup-payment` | POST | Buy credits |
+| `attach-business-details` | POST | Business details and tax for a payment |
+| `customer-balance`, `payment-method` | GET | Credit balance, saved card |
+| `cancel-renewal`, `reactivate-renewal` | POST | Turn renewal off and on |
+| `activate-plan` | POST | Start a free or usage plan |
+| `create-checkout-session`, `create-customer-session` | POST | Hosted checkout and account pages |
+| `auto-recharge` | GET, PUT, DELETE | Read, save and turn off auto-recharge |
+| `usage`, `limits`, `history` | GET | Usage, limits, charges and credit activity |
+| `sync-customer`, `track-usage` | POST | Find or create the customer, record usage |
+
+Another path answers 404, and a known path with the wrong method answers 405 with
+`Allow`.
+
+## Where Python differs
+
+On paths no shared case covers, Python fails where TypeScript carries on:
+
+- A failed customer read in `check-purchase` is an error, not an empty purchase list.
+- A failed balance read during a top-up fails the request.
+- A body that isn't a JSON object gets 400 `Invalid JSON body`.
+
+The full list is in the conformance suite's
+[Known divergences](https://github.com/solvapay/solvapay-sdk/blob/main/conformance/README.md#known-divergences).
+
+## Example
+
+[`examples/react-web-checkout`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/react-web-checkout)
+runs one React app against a Python and a Go backend. Checkout, top-up, renewals,
+auto-recharge and history were tested on both in sandbox.
