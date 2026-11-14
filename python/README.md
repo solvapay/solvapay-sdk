@@ -113,7 +113,7 @@ try:
         secret=os.environ["SOLVAPAY_WEBHOOK_SECRET"],
     )
 except SolvaPayError as error:
-    ...  # error.code: webhook_signature_invalid, webhook_timestamp_out_of_tolerance, ...
+    ...  # error.code: webhook_secret_missing, webhook_signature_invalid, webhook_timestamp_out_of_tolerance, ...
 ```
 
 ## The API
