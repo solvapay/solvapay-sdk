@@ -1,0 +1,167 @@
+---
+title: "React web checkout"
+description: "Serve the routes the @solvapay/react components call from a Go backend with NewWebHandler, so checkout, top-ups and account pages work in your web app."
+---
+
+The `@solvapay/react` components (checkout, top-up, plans, balance, renewals,
+auto-recharge, history) call a set of routes on your backend: `/api/check-purchase`,
+`/api/create-payment-intent`, `/api/list-plans` and so on. `NewWebHandler` serves
+all of them from Go, with the same answers as the TypeScript SDK: a shared
+conformance suite checks both on every change.
+
+Your React app doesn't change. Only the backend behind `/api` is Go.
+
+## Prerequisites
+
+- A SolvaPay product with at least one plan, and a sandbox secret key in
+  `SOLVAPAY_SECRET_KEY`. See [Installation](/sdks/go/setup/installation).
+- A web app that signs its users in. The routes act for the user your app has
+  verified; they never sign anyone in themselves.
+- The React components set up in your frontend. See the
+  [React guide](/sdks/typescript/guides/react).
+
+## Serve the routes
+
+`NewWebHandler` returns an `http.Handler`. `GetUser` is required: it verifies the
+request with your app's own auth and answers who the user is. Answer `nil, nil`
+when there's no valid session (the route answers 401), and an error when the check
+itself failed (500).
+
+```go main.go
+package main
+
+import (
+	"log"
+	"net/http"
+	"sync"
+
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+)
+
+// appUser and sessions stand in for your app's own users and session store.
+type appUser struct{ ID, Email, Name string }
+
+var sessions sync.Map // session id -> *appUser, filled when people sign in
+
+func sessionUser(r *http.Request) (*appUser, error) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		return nil, nil // no session cookie: not signed in
+	}
+	user, ok := sessions.Load(cookie.Value)
+	if !ok {
+		return nil, nil
+	}
+	return user.(*appUser), nil
+}
+
+func main() {
+	client, err := solvapay.NewClient(solvapay.Config{}) // SOLVAPAY_SECRET_KEY
+	if err != nil {
+		log.Fatal(err)
+	}
+	routes, err := solvapay.NewWebHandler(solvapay.WebOptions{
+		Client: client,
+		GetUser: func(r *http.Request) (*solvapay.WebUser, error) {
+			user, err := sessionUser(r)
+			if err != nil || user == nil {
+				return nil, err
+			}
+			return &solvapay.WebUser{ID: user.ID, Email: user.Email, Name: user.Name}, nil
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/api/", routes) // BasePath defaults to /api, React's default
+	log.Fatal(http.ListenAndServe(":8080", mux))
+}
+```
+
+`NewWebHandler` returns an error when `Client` or `GetUser` is nil, so a server
+can't start without an identity check.
+
+Options on `WebOptions`:
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `BasePath` | `/api` | Where the routes live |
+| `ReturnURL` | The request's origin | Where hosted checkout sends the customer back |
+| `CORSOrigins` | Any origin | Which browser origins may call the routes |
+
+## Point the React components at it
+
+`SolvaPayProvider` sends your app's credentials on every call. With a session
+cookie on the same origin, the browser sends it by itself. With a bearer token,
+pass it through an auth adapter:
+
+```tsx
+import { SolvaPayProvider } from '@solvapay/react'
+
+const adapter = {
+  getToken: async () => session.token, // your app's own token
+  getUserId: async () => session.userId,
+}
+
+export function Billing({ children }: { children: React.ReactNode }) {
+  return <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
+}
+```
+
+## Who the customer is
+
+- **Only `GetUser` decides.** `WebUser.ID` becomes the SolvaPay customer's
+  `externalRef`. The customer is created on first use, with the email and name you
+  return.
+- **No user, no access.** A nil user gets a 401 before SolvaPay is called. There's
+  no anonymous or default customer.
+- **Nothing the browser sends is identity.** An `x-user-id` header is ignored. A
+  cached `x-solvapay-customer-ref` is used only when that customer belongs to the
+  verified user.
+- **Purchases are checked.** Cancelling or reactivating a renewal works only on the
+  caller's own purchase (403 otherwise), and auto-recharge is always saved for the
+  caller's own customer.
+
+`merchant`, `get-product` and `list-plans` answer without a user, as in TypeScript.
+
+## Routes
+
+| Path under `/api` | Method | What it does |
+| --- | --- | --- |
+| `check-purchase` | GET | The user's customer and active purchases |
+| `list-plans`, `get-product`, `merchant` | GET | Plans, the product, the merchant's details |
+| `create-payment-intent`, `process-payment` | POST | Pay for a plan |
+| `create-topup-payment-intent`, `process-topup-payment` | POST | Buy credits |
+| `attach-business-details` | POST | Business details and tax for a payment |
+| `customer-balance`, `payment-method` | GET | Credit balance, saved card |
+| `cancel-renewal`, `reactivate-renewal` | POST | Turn renewal off and on |
+| `activate-plan` | POST | Start a free or usage plan |
+| `create-checkout-session`, `create-customer-session` | POST | Hosted checkout and account pages |
+| `auto-recharge` | GET, PUT, DELETE | Read, save and turn off auto-recharge |
+| `usage`, `limits`, `history` | GET | Usage, limits, charges and credit activity |
+| `sync-customer`, `track-usage` | POST | Find or create the customer, record usage |
+
+Another path answers 404, and a known path with the wrong method answers 405 with
+`Allow`. Webhooks aren't among them: mount a receiver with
+[`VerifyWebhook`](/sdks/go/guides/webhooks).
+
+## Where Go differs
+
+On paths no shared case covers, Go is stricter than TypeScript:
+
+- A failed customer read in `check-purchase`, or a failed balance read during a
+  top-up, fails the request.
+- A body that isn't a JSON object gets 400 `Invalid JSON body`. A required string
+  field that isn't a non-empty string, or a top-up `amount` that isn't above 0,
+  gets the same 400 as a missing one.
+
+The full list is in the conformance suite's
+[Known divergences](https://github.com/solvapay/solvapay-sdk/blob/main/conformance/README.md#known-divergences).
+
+## Example
+
+[`examples/react-web-checkout`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/react-web-checkout)
+runs one React app against a Go and a Python backend. Checkout, top-up, renewals,
+auto-recharge and history were tested on both in sandbox.

@@ -1,0 +1,202 @@
+---
+title: "Paid MCP server"
+description: "Build an MCP server in Python whose customers sign in with SolvaPay and pay for tools, with the built-in account tools and the checkout widget."
+---
+
+`create_solvapay_mcp_server` builds an MCP server on the official MCP Python SDK. Customers sign in with SolvaPay over OAuth. Each paid tool call is checked against the customer's plan before your handler runs. A call that isn't allowed returns the paywall: a message that names the next step, with a checkout link.
+
+## Prerequisites
+
+- `pip install 'solvapay[mcp]' uvicorn`
+- `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/python/setup/installation).
+- A public HTTPS URL for the server. In development, use a tunnel such as [ngrok](https://ngrok.com).
+
+## Create the server
+
+Save this as `server.py`:
+
+```python
+import os
+
+from solvapay import create_solvapay
+from solvapay.mcp import ResponseContext, create_solvapay_mcp_server
+from solvapay.mcp.response import ResponseResult
+
+mcp = create_solvapay_mcp_server(
+    solvapay=create_solvapay(),
+    public_base_url=os.environ["PUBLIC_BASE_URL"],  # where MCP clients reach this server
+    name="research",
+)
+
+
+async def quote(symbol: str, ctx: ResponseContext) -> ResponseResult:
+    """Latest price for a symbol."""
+    return ctx.respond({"symbol": symbol, "price": 101.5})
+
+
+mcp.register_payable("quote", handler=quote, description="Latest price for a symbol.")
+
+app = mcp.http_app()  # the MCP endpoint is /mcp
+```
+
+A handler is an async function. Its parameters, except the `ResponseContext`, become the tool's input schema. Use `Annotated[str, Field(description=...)]` to describe a parameter to the model. The handler must return `ctx.respond(...)`.
+
+`register_payable` adds a hint to the description that tells the model the tool is paid and that `account` shows the cost. Pass `product="prd_..."` to bill a tool against another product.
+
+## Run it locally
+
+<Steps>
+  <Step title="Start a tunnel">
+    ```bash
+    ngrok http 3030
+    ```
+
+    Copy the HTTPS forwarding URL, such as `https://research-dev.ngrok.app`.
+  </Step>
+  <Step title="Start the server">
+    ```bash
+    export PUBLIC_BASE_URL=https://research-dev.ngrok.app
+    uvicorn server:app --host 0.0.0.0 --port 3030
+    ```
+  </Step>
+  <Step title="Connect a client">
+    Add `https://research-dev.ngrok.app/mcp` to an MCP client (Claude, ChatGPT, Cursor, MCP Inspector) as a remote server. The client opens SolvaPay's sign-in, then can call the tools.
+  </Step>
+</Steps>
+
+### Why `public_base_url` must match the client's URL
+
+`public_base_url` is the URL clients use to reach the server. The server uses it in three places:
+
+- **OAuth.** It's the issuer and resource in the server's discovery documents, and the `WWW-Authenticate` challenge points at it. If it doesn't match the URL the client connected to, sign-in fails.
+- **Host check.** The MCP SDK's DNS-rebinding protection allows only this host and localhost. A request through any other host gets a `421`.
+- **3-D Secure.** Stripe sends the customer back to this URL after a 3-D Secure check.
+
+When the tunnel URL changes, update `PUBLIC_BASE_URL` and restart.
+
+## How customer sign-in works
+
+The server acts as the OAuth authorization server the client sees, and forwards each step to SolvaPay:
+
+1. An unauthenticated request to `/mcp` gets a `401` pointing at `/.well-known/oauth-protected-resource`.
+2. The client reads `/.well-known/oauth-authorization-server`, registers at `/oauth/register` (for your product), and sends the customer to `/oauth/authorize`, which redirects to SolvaPay's sign-in.
+3. The client exchanges the code at `/oauth/token`.
+4. On each request, the server checks the bearer token with SolvaPay and caches a valid token for 60 seconds. Your tools see the customer SolvaPay verified, never a value read from an unchecked token.
+
+A tool call with no signed-in customer is refused. There's no anonymous fallback, and a tool argument is never trusted as the customer. To take the customer from your own auth, pass `get_customer_ref=` to `create_solvapay_mcp_server` or to `register_payable`. It receives the tool arguments and the MCP `Context`, and returns the customer reference.
+
+## Shape the answer with `ResponseContext`
+
+```python
+from solvapay.mcp import Nudge, ResponseContext
+from solvapay.mcp.response import ResponseResult
+
+
+async def realtime_quote(symbol: str, ctx: ResponseContext) -> ResponseResult:
+    if symbol.endswith(".X"):
+        ctx.gate("Real-time quotes for this exchange need the Pro plan.")
+
+    await ctx.emit({"type": "text", "text": f"Fetching {symbol}..."})
+    price = 101.5
+
+    nudge = None
+    if ctx.customer.is_credit_based and (ctx.customer.balance or 0) < 500:
+        nudge = Nudge(kind="low-balance")
+
+    return ctx.respond(
+        {"symbol": symbol, "price": price},
+        text=f"{symbol} trades at {price}.",
+        nudge=nudge,
+    )
+
+
+mcp.register_payable("realtime_quote", handler=realtime_quote)
+```
+
+| Member | What it does |
+| --- | --- |
+| `ctx.respond(data, text=None, nudge=None, data_in_text=True)` | Builds the result. `data` becomes `structuredContent` when it's a dict. `text` replaces the JSON as the first text block. |
+| `ctx.gate(reason)` | Stops the call and returns a paywall with your reason. Nothing is billed. |
+| `await ctx.emit(block)` | Adds a content block (text, image or resource) ahead of the answer. |
+| `ctx.customer` | The customer as the limits check saw them: `ref`, `balance`, `is_credit_based`, `remaining`, `within_limits`, `overage`, `plan`. Up to 10 seconds old; `await ctx.customer.fresh()` asks again. |
+| `Nudge(kind, message="")` | A soft prompt after the answer: `low-balance`, `cycle-ending` or `approaching-limit`. An empty message uses the default copy. |
+
+If the handler raises, the tool returns an error result with the exception's message and the call is recorded as failed.
+
+## Add a free tool with a cap
+
+`register_free` registers a tool that is free up to a per-customer cap you set in code. When the cap is reached, the tool returns the same paywall as a paid tool.
+
+```python
+from solvapay import FreeLimit
+from solvapay.mcp import ResponseContext
+from solvapay.mcp.response import ResponseResult
+
+
+async def search(query: str, ctx: ResponseContext) -> ResponseResult:
+    return ctx.respond({"query": query, "results": []})
+
+
+mcp.register_free(
+    "search",
+    handler=search,
+    limit=FreeLimit(cap=20, scope="rolling_window", window_days=30),
+    description="Search the research archive.",
+)
+```
+
+- `scope` is `rolling_window` (needs `window_days`) or `lifetime`.
+- `meter` defaults to `free-requests` and must match `free-[a-z0-9-]+`. Tools that name the same meter share one free allowance, and must declare the same `FreeLimit`, or registration raises `invalid_free_limit`.
+- Free tools need a signed-in customer too.
+
+See the TypeScript [free allowance guide](/sdks/typescript/guides/free-allowance) for how the allowance is counted.
+
+## Built-in tools and prompts
+
+Every server comes with SolvaPay's built-in tools, free to call:
+
+| Tool | What it does |
+| --- | --- |
+| `account` | Shows the customer's plan, balance and usage, with a checkout, top-up or account link. Takes `view` (`checkout`, `account` or `topup`) and `mode` (`auto`, `text` or `ui`). |
+| `activate_plan` | Activates a plan by `planRef`. A free plan activates at once; a paid plan returns checkout. |
+
+It also registers the `/upgrade`, `/manage_account`, `/topup` and `/activate_plan` prompts and the `docs://solvapay/overview.md` resource. Paywall messages name `account` as the way to pay.
+
+## The checkout widget
+
+On hosts that support MCP Apps (ChatGPT, Claude), `account` opens SolvaPay's checkout and account widget in the chat. It's the same widget the TypeScript SDK serves, and it ships in the package. Text-only hosts get the same answer as text with links, and `mode: "text"` asks for text on any host.
+
+The widget pays, tops up and manages renewals through six tools only it calls: `create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details` and `get_history`. They're marked for the app (`_meta.ui.visibility: ["app"]`), so MCP Apps hosts keep them from the model.
+
+Options on `create_solvapay_mcp_server`:
+
+```python
+import os
+
+from solvapay import create_solvapay
+from solvapay.mcp import create_solvapay_mcp_server
+
+mcp = create_solvapay_mcp_server(
+    solvapay=create_solvapay(),
+    public_base_url=os.environ["PUBLIC_BASE_URL"],
+    name="research",
+    views=["checkout", "account"],  # no top-up view; [] leaves `account` out
+    csp={"resourceDomains": ["https://cdn.example.com"]},
+    hide_tools_by_audience=["ui"],
+)
+```
+
+| Option | What it does |
+| --- | --- |
+| `views` | The views `account` offers. Default: `checkout`, `account` and `topup`. The prompts follow the views. `[]` leaves `account` out. |
+| `csp` | Domains added to the widget's Content Security Policy, under `resourceDomains`, `connectDomains` or `frameDomains`. Stripe and the SolvaPay API are always allowed. Any other key raises `invalid_argument`. |
+| `hide_tools_by_audience` | `["ui"]` leaves the six widget tools out of `tools/list` for hosts that list them to the model anyway. They stay callable. ChatGPT still gets the full list, since its widget can only call listed tools; `hide_tools_bypass` replaces that check. |
+| `resource_uri` | Where the widget is served. Default: `ui://<name>/mcp-app.html`. |
+
+Other options: `instructions`, `version`, `mcp_path` (default `/mcp`), `oauth_paths` and `http_client`.
+
+## Next steps
+
+- [Examples](/sdks/python/guides/examples): a complete paid MCP server.
+- [Agent payments](/sdks/python/guides/agents): let SolvaPay agents pay per call.
+- The TypeScript equivalent is the [MCP server guide](/sdks/typescript/guides/mcp).

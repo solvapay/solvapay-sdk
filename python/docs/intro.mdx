@@ -1,0 +1,42 @@
+---
+title: "Python SDK"
+description: "Charge for Python functions, MCP tools and agent calls with SolvaPay, and verify SolvaPay webhooks."
+---
+
+The Python SDK (`solvapay` on PyPI) connects your Python service to SolvaPay. It needs Python 3.10 or later, is fully typed, and is async-first.
+
+## What it does
+
+- **Paid functions.** `@solvapay.payable()` checks each call against the customer's plan, runs your function when the call is allowed, and records the usage. When the call isn't allowed, it raises `PaywallError` with a message and a checkout link.
+- **Paid MCP tools.** `create_solvapay_mcp_server` builds an MCP server where customers sign in with SolvaPay. It adds the built-in `account` and `activate_plan` tools and the checkout widget that ChatGPT and Claude open in the chat.
+- **Webhooks.** `verify_webhook` checks the `sv-signature` header and returns the parsed event.
+- **API client.** `AsyncApiClient` and `ApiClient` cover every SolvaPay SDK API operation, generated from the same spec as the TypeScript SDK.
+- **Agent payments (preview).** `solvapay.agents` lets SolvaPay agents pay for each tool call.
+
+```python
+from solvapay import create_solvapay
+
+solvapay = create_solvapay()  # reads SOLVAPAY_SECRET_KEY and SOLVAPAY_PRODUCT_REF
+
+
+@solvapay.payable()
+async def summarise(text: str, *, customer_ref: str) -> str:
+    return text[:100]
+```
+
+## Pages
+
+| Page | What it answers |
+| --- | --- |
+| [Installation](/sdks/python/setup/installation) | How to install the package and its extras, and which environment variables it reads |
+| [Quick start](/sdks/python/setup/quick-start) | How to make a function paid and serve it from a web route |
+| [Paid MCP server](/sdks/python/guides/mcp) | How to charge for MCP tools, with SolvaPay sign-in and the checkout widget |
+| [API client](/sdks/python/guides/api-client) | How to call the SolvaPay API directly and handle its errors |
+| [Webhooks](/sdks/python/guides/webhooks) | How to verify and handle SolvaPay webhooks |
+| [React web checkout](/sdks/python/guides/react-web-checkout) | How to serve the routes the `@solvapay/react` components call, so web checkout works with a Python backend |
+| [Agent payments](/sdks/python/guides/agents) | How to let SolvaPay agents pay per tool call (preview) |
+| [Examples](/sdks/python/guides/examples) | How to run the stock research example |
+
+## Same behaviour as the TypeScript SDK
+
+The paywall, its messages, the `account` and `activate_plan` answers, the widget's tools and webhook verification behave the same as in the [TypeScript SDK](/sdks/typescript/intro). A shared conformance suite checks this on every change.

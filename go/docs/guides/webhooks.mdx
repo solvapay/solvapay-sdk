@@ -1,0 +1,93 @@
+---
+title: "Webhooks"
+description: "Receive SolvaPay webhook events in Go and verify their signatures."
+---
+
+SolvaPay sends a signed JSON event to your endpoint when something happens, such as a purchase being created or a payment succeeding. `VerifyWebhook` checks the signature and parses the event. For the event catalogue and payload shapes, see [Webhooks](/webhooks).
+
+## Prerequisites
+
+1. In SolvaPay Console, go to **Settings** > **Webhooks** and add your endpoint URL.
+2. Copy the signing secret (`whsec_…`) into `SOLVAPAY_WEBHOOK_SECRET`.
+
+## Receive events
+
+```go main.go
+package main
+
+import (
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+)
+
+func main() {
+	secret := os.Getenv("SOLVAPAY_WEBHOOK_SECRET") // whsec_...
+	if secret == "" {
+		log.Fatal("SOLVAPAY_WEBHOOK_SECRET is not set")
+	}
+
+	http.HandleFunc("POST /webhooks/solvapay", func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body) // the raw bytes, before any JSON decoding
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		event, err := solvapay.VerifyWebhook(body, r.Header.Get("SV-Signature"), secret, time.Time{})
+		if err != nil {
+			log.Printf("rejected webhook: %s", solvapay.ErrorCode(err))
+			http.Error(w, "invalid signature", http.StatusUnauthorized)
+			return
+		}
+
+		fields, _ := event.(map[string]any)
+		switch fields["type"] {
+		case "purchase.created":
+			// grant access
+		case "purchase.cancelled":
+			// revoke access
+		case "payment.succeeded":
+			// fulfil the order
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+`VerifyWebhook(body, signature, secret, now)` takes:
+
+- `body`: the request body exactly as received. Read it with `io.ReadAll` before anything decodes it. If the body is decoded and encoded again, the signature check fails.
+- `signature`: the `SV-Signature` header, `t=<unix seconds>,v1=<hex HMAC>`.
+- `secret`: the whole signing secret, including `whsec_`.
+- `now`: the time to check the timestamp against. The zero `time.Time` means the current time.
+
+It returns the event as decoded JSON (`map[string]any`, with numbers as `json.Number`). Return a `2xx` once you have handled it.
+
+## Errors
+
+A failed check returns a `*solvapay.Error` with one of these codes:
+
+| Code | Meaning |
+| --- | --- |
+| `webhook_secret_missing` | `secret` is empty: checked first, so every delivery fails until it's set |
+| `webhook_signature_missing` | No `SV-Signature` header |
+| `webhook_signature_malformed` | The header has no `t=` or `v1=` part |
+| `webhook_timestamp_out_of_tolerance` | The timestamp is more than 300 seconds from `now` |
+| `webhook_signature_invalid` | The signature does not match the body and secret |
+| `webhook_payload_invalid` | The body is not valid JSON |
+
+The codes are constants too: `solvapay.WebhookSecretMissing`, `WebhookSignatureMissing`, `WebhookSignatureMalformed`, `WebhookTimestampOutOfRange`, `WebhookSignatureInvalid` and `WebhookPayloadInvalid`.
+
+<Warning>
+`VerifyWebhook` does not check that `secret` is set. With an empty secret, anyone can sign an event that verifies. Check the secret at startup, as the example does.
+</Warning>
+
+## Next steps
+
+- [Webhooks](/webhooks): every event type and its payload.
+- The TypeScript equivalent of this page: [Webhook handling](/sdks/typescript/guides/webhooks).

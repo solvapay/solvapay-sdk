@@ -1,0 +1,106 @@
+---
+title: "Quick start"
+description: "Make a Python function paid with @solvapay.payable() and serve it from a Starlette route."
+---
+
+This guide makes an async function paid and serves it from a web route. Each call is checked against the customer's plan. An allowed call runs and is recorded as usage. A call that isn't allowed raises `PaywallError`, and the route answers `402` with a checkout link.
+
+## Prerequisites
+
+- The Python SDK installed, with `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/python/setup/installation).
+- Starlette and uvicorn: `pip install starlette uvicorn`. FastAPI works the same way.
+
+## Make a function paid
+
+<Steps>
+  <Step title="Write the app">
+    Save this as `app.py`:
+
+    ```python
+    from solvapay import PaywallError, create_solvapay
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    solvapay = create_solvapay()  # reads SOLVAPAY_SECRET_KEY and SOLVAPAY_PRODUCT_REF
+
+
+    @solvapay.payable()
+    async def summarise(text: str, *, customer_ref: str) -> str:
+        return text[:100]
+
+
+    async def summarise_route(request: Request) -> JSONResponse:
+        body = await request.json()
+        user_id = request.headers["x-user-id"]  # replace with your signed-in user's id
+        try:
+            summary = await summarise(body["text"], customer_ref=user_id)
+        except PaywallError as error:
+            return JSONResponse(
+                {"message": error.gate["message"], "checkoutUrl": error.gate["checkoutUrl"]},
+                status_code=402,
+            )
+        return JSONResponse({"summary": summary})
+
+
+    app = Starlette(routes=[Route("/summarise", summarise_route, methods=["POST"])])
+    ```
+  </Step>
+  <Step title="Run it">
+    ```bash
+    uvicorn app:app --port 8000
+    ```
+  </Step>
+  <Step title="Call it">
+    ```bash
+    curl -X POST http://localhost:8000/summarise \
+      -H 'content-type: application/json' \
+      -H 'x-user-id: user_123' \
+      -d '{"text": "Quarterly revenue grew 12% on subscription sales."}'
+    ```
+
+    While the customer is within their plan, you get the summary. Once they aren't, you get a `402`:
+
+    ```json
+    {
+      "message": "You don't have an active plan for this tool. [Open checkout](https://...) to pick a plan (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "checkoutUrl": "https://..."
+    }
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  The `x-user-id` header keeps the example short. In your app, take the customer from your own session or token, never from a value the caller can set.
+</Warning>
+
+## How `payable()` works
+
+- `customer_ref` is your own user id. It must be passed as a keyword argument. SolvaPay creates the customer on first use and links it to that id. A call without `customer_ref` raises `SolvaPayError` with code `identity_required`.
+- `payable()` wraps async functions only.
+- The product comes from `SOLVAPAY_PRODUCT_REF`, or `@solvapay.payable(product="prd_...")`. It's resolved when the decorator runs, so set the variable before you import the module.
+- Use `meter="..."` to bill a meter other than the default `requests`, and `customer_ref_arg="user_id"` when your function names the customer argument differently.
+- If the function raises, the call is recorded as failed and the exception reaches you unchanged.
+
+## Show the paywall
+
+`PaywallError.gate` is a dict with the API's camelCase keys. The fields you'll use most:
+
+| Key | What it holds |
+| --- | --- |
+| `kind` | `payment_required` or `activation_required` (also `PaywallError.code`) |
+| `message` | A sentence for the customer, with the checkout link in Markdown |
+| `checkoutUrl` | The checkout link. Can be empty, so check it before you redirect |
+| `reason` | Why the call was gated, such as `upgrade_required`, `topup_required` or `limit_reached` |
+| `plans` | The plans the customer can pick from, when the API returned them |
+
+<Note>
+  The message is written for MCP clients and names the `account` tool. In a web app, show your own copy and link to `checkoutUrl`.
+</Note>
+
+## Next steps
+
+- [Paid MCP server](/sdks/python/guides/mcp): charge for MCP tools.
+- [Webhooks](/sdks/python/guides/webhooks): react to purchases.
+- The TypeScript equivalent is the [quick start](/sdks/typescript/setup/quick-start).

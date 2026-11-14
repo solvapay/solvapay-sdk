@@ -1,0 +1,95 @@
+---
+title: "Examples"
+description: "Run the Go stock research MCP server, a paid MCP server built with the SolvaPay Go SDK."
+---
+
+## Stock research MCP server
+
+[`examples/go-stock-research-mcp`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/go-stock-research-mcp) is a paid MCP server with six research tools. It is a port of the [Python stock research example](/sdks/python/guides/examples): same tools, same recorded market data, same environment, so you can compare the two servers call for call. It is educational market research, not financial advice.
+
+It shows:
+
+- `NewMCPServer` with customer sign-in through SolvaPay over OAuth.
+- Six tools registered with `RegisterPayable`. Each call is checked against the customer's plan, and billed as one unit when it succeeds.
+- SolvaPay's `account` and `activate_plan` tools, the checkout widget and its prompts, added by `NewMCPServer`.
+- Tests that run the tools against a fake SolvaPay API and recorded data, with no keys or network.
+
+| Tool | Upstream calls | Returns |
+| --- | --- | --- |
+| `top_ranked_assets` | 1 | Five rows by `selection_score`, plus regime, timestamp and disclaimer |
+| `company_brief` | 1 | 10-K extract, earnings and key filings for a ticker |
+| `research_top_assets` | 6 | The ranked rows, each with a company brief |
+| `verify_catalyst_claims` | 6 | Each catalyst against four quarters of EPS beats |
+| `detect_stale_rankings` | 6 | Symbols with SEC filings newer than the ranking |
+| `compare_symbols` | 1 + N | Side-by-side briefs for any tickers |
+
+## Run it
+
+### Prerequisites
+
+- Go 1.26 or later
+- A sandbox secret key and a product with an active plan. See [Installation](/sdks/go/setup/installation#set-your-keys).
+- [ngrok](https://ngrok.com) or another tunnel
+
+<Steps>
+  <Step title="Configure">
+    From `examples/go-stock-research-mcp`, copy the template and fill it in:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    ```bash .env
+    SOLVAPAY_SECRET_KEY=sk_sandbox_...
+    SOLVAPAY_PRODUCT_REF=prd_...
+    SOLVAPAY_API_BASE_URL=https://api.solvapay.com
+    PUBLIC_BASE_URL=https://<your-tunnel>.ngrok.app
+    MCP_PORT=3031
+    # MARKET_DATA=fixtures
+    ```
+
+    `MARKET_DATA=fixtures` serves the recorded market data instead of calling the live APIs.
+  </Step>
+  <Step title="Start a tunnel">
+    ```bash
+    ngrok http 3031
+    ```
+
+    Put the tunnel's URL in `PUBLIC_BASE_URL`. It must be the URL clients use, because it is the OAuth issuer they see. See [Set PublicBaseURL](/sdks/go/guides/mcp#set-publicbaseurl-to-the-url-clients-use).
+  </Step>
+  <Step title="Start the server">
+    ```bash
+    go run .
+    ```
+
+    The MCP endpoint is `http://localhost:3031/mcp`.
+  </Step>
+  <Step title="Connect a client">
+    Add `https://<your-tunnel>.ngrok.app/mcp` to an MCP client as a remote server. The client opens SolvaPay's sign-in, then can call the tools.
+  </Step>
+</Steps>
+
+Run the tests with `go test ./...`.
+
+## Use a published version of the SDK
+
+The example's `go.mod` replaces the SDK with the repository's own `go/` module, so it always builds against the code next to it:
+
+```text go.mod
+replace github.com/solvapay/solvapay-sdk/go => ../../go
+```
+
+To build it against a published release instead, for example after copying the example out of the repository, drop the `replace` and the placeholder `v0.0.0` requirement, then get a version:
+
+```bash
+go mod edit -dropreplace github.com/solvapay/solvapay-sdk/go -droprequire github.com/solvapay/solvapay-sdk/go
+go get github.com/solvapay/solvapay-sdk/go@latest
+go mod tidy
+```
+
+Drop the requirement too: `v0.0.0` was never published, so `go get` fails while `go.mod` still names it.
+
+## More examples
+
+- [TypeScript SDK examples](/sdks/typescript/guides/examples)
+- [Python SDK examples](/sdks/python/guides/examples)

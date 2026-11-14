@@ -1,0 +1,71 @@
+---
+title: "Examples"
+description: "Run the Python stock research example: a paid MCP server built with the Python SDK."
+---
+
+## Stock research MCP server
+
+[`examples/python-stock-research-mcp`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/python-stock-research-mcp) is a paid MCP server with six research tools. They join a public stock ranking feed with SEC company data. The output is educational market research, not financial advice.
+
+It shows:
+
+- `create_solvapay_mcp_server` with SolvaPay sign-in, served by uvicorn
+- Six tools registered with `register_payable`, each billed as one unit whatever its upstream fan-out
+- The built-in `account` and `activate_plan` tools and prompts, and the checkout widget in ChatGPT and Claude
+- Closing the HTTP clients in the Starlette lifespan
+- Tests that run against recorded market data and a mocked SolvaPay API, with no keys or network
+
+| Tool | Upstream calls | Returns |
+| --- | --- | --- |
+| `top_ranked_assets` | 1 | Five ranked rows, with the market regime, timestamp and disclaimer |
+| `company_brief` | 1 | A 10-K extract, earnings and key filings for one ticker |
+| `research_top_assets` | 6 | The ranked rows, each with a company brief |
+| `verify_catalyst_claims` | 6 | Each catalyst checked against four quarters of earnings beats |
+| `detect_stale_rankings` | 6 | Symbols with SEC filings newer than the ranking |
+| `compare_symbols` | 1 + N | Side-by-side briefs for any tickers |
+
+## Run it
+
+<Steps>
+  <Step title="Install">
+    The example uses [uv](https://docs.astral.sh/uv/).
+
+    ```bash
+    git clone https://github.com/solvapay/solvapay-sdk.git
+    cd solvapay-sdk/examples/python-stock-research-mcp
+    uv sync
+    cp .env.example .env
+    ```
+  </Step>
+  <Step title="Fill in .env">
+    ```bash
+    SOLVAPAY_SECRET_KEY=sk_sandbox_...
+    SOLVAPAY_PRODUCT_REF=prd_...
+    PUBLIC_BASE_URL=https://<your-tunnel>.ngrok.app
+    MARKET_DATA=fixtures   # optional: recorded data, no live market calls
+    ```
+
+    `PUBLIC_BASE_URL` must be the URL MCP clients use. See [Paid MCP server](/sdks/python/guides/mcp) for why.
+  </Step>
+  <Step title="Start a tunnel and the server">
+    ```bash
+    ngrok http 3030
+    uv run python main.py   # MCP endpoint: http://localhost:3030/mcp
+    ```
+
+    Set `MCP_PORT` to use another port.
+  </Step>
+  <Step title="Connect a client">
+    Add `https://<your-tunnel>.ngrok.app/mcp` to an MCP client as a remote server. The client opens SolvaPay's sign-in, then can call the tools.
+  </Step>
+</Steps>
+
+## Run the tests
+
+```bash
+uv run pytest
+```
+
+## TypeScript examples
+
+For MCP servers, web checkout and webhooks in TypeScript, see the [TypeScript examples](/sdks/typescript/guides/examples).

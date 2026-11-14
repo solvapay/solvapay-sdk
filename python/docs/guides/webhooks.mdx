@@ -1,0 +1,71 @@
+---
+title: "Webhooks"
+description: "Verify SolvaPay webhooks in Python with verify_webhook and handle the events."
+---
+
+`verify_webhook` checks a delivery's `sv-signature` header and returns the parsed event. For the event catalog, payloads and how to set up an endpoint, see the [Webhooks documentation](/webhooks).
+
+## Prerequisites
+
+- A webhook endpoint in SolvaPay Console, and its signing secret (`whsec_...`) in `SOLVAPAY_WEBHOOK_SECRET`.
+
+## Add a receiver route
+
+```python
+import os
+
+from solvapay import SolvaPayError, verify_webhook
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+from starlette.routing import Route
+
+WEBHOOK_SECRET = os.environ["SOLVAPAY_WEBHOOK_SECRET"]
+
+
+async def solvapay_webhook(request: Request) -> Response:
+    try:
+        event = verify_webhook(
+            body=await request.body(),  # the raw bytes, before any JSON parsing
+            signature=request.headers.get("sv-signature"),
+            secret=WEBHOOK_SECRET,
+        )
+    except SolvaPayError as error:
+        return JSONResponse({"error": error.code}, status_code=401)
+
+    if event["type"] == "purchase.created":
+        ...  # grant access
+    elif event["type"] == "purchase.cancelled":
+        ...  # revoke access
+    return Response(status_code=200)
+
+
+app = Starlette(routes=[Route("/webhooks/solvapay", solvapay_webhook, methods=["POST"])])
+```
+
+Pass the body exactly as received, as `bytes` or `str`. The signature covers the raw bytes, so a body you parsed and serialized again fails the check. In FastAPI, read it with `await request.body()` too.
+
+The event is a plain dict parsed from the JSON body.
+
+## How the signature is checked
+
+The `sv-signature` header looks like `t=1767225600,v1=5f3c...`. `verify_webhook` computes an HMAC-SHA256 over `"{t}.{raw body}"` with your signing secret and compares it to `v1` in constant time. A timestamp more than 300 seconds from now, in either direction, is rejected. Pass `now=` (a `datetime`) to check against another time, for example in tests.
+
+## Error codes
+
+`verify_webhook` raises `SolvaPayError` with one of these codes, also in `WEBHOOK_ERROR_CODES`:
+
+| Code | Cause |
+| --- | --- |
+| `webhook_secret_missing` | `secret` is empty: checked first, so every delivery fails until it's set |
+| `webhook_signature_missing` | No `sv-signature` header |
+| `webhook_signature_malformed` | The header has no `t=` or `v1=` part, or the timestamp isn't a number |
+| `webhook_timestamp_out_of_tolerance` | The timestamp is more than 300 seconds from now |
+| `webhook_signature_invalid` | The signature doesn't match: wrong secret, or a changed body |
+| `webhook_payload_invalid` | The signature matches, but the body isn't valid JSON |
+
+Answer a failed check with a `4xx`, so the delivery shows as failed in SolvaPay Console.
+
+## Next steps
+
+- The TypeScript equivalent is [webhook handling](/sdks/typescript/guides/webhooks).
