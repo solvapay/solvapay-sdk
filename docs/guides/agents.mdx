@@ -1,0 +1,486 @@
+---
+title: "Agent payments"
+sidebarTitle: "Agent payments (preview)"
+description: "Let SolvaPay agents pay for your MCP tools and API endpoints with @solvapay/agents: verify the agent, authorize each paid call before it runs, and complete it at its cost."
+---
+
+<Warning>
+  Agent payments are in preview, and SolvaPay has to turn them on for your merchant account. Until then, SolvaPay refuses your server's requests with `feature_not_enabled`: paid calls are refused as `unavailable`, and agent key checks throw. The API may change between preview releases.
+</Warning>
+
+## How agent payments work
+
+An agent connected to SolvaPay can pay for your tools and endpoints on its owner's behalf. The owner sets a spend policy, a budget and a balance in SolvaPay. Your server never sees a card or a balance.
+
+Every paid call goes through two requests to SolvaPay:
+
+1. **Authorize**, before the call runs. You send what the call may cost (the estimate). SolvaPay checks the owner's spend policy, budget and balance, and holds the estimate. If the policy says the owner must approve, SolvaPay holds the request while the owner decides. The answer is allowed or refused.
+2. **Complete**, after the call ran. You send the status your upstream answered with and the cost it reported. SolvaPay settles the call at that cost. An error status charges nothing.
+
+`@solvapay/agents` is a thin client for this. The spend policy, approvals, balance and settlement all run in SolvaPay. The package verifies who is calling, drives the two requests and turns a refusal into something the agent can read.
+
+This page covers SolvaPay agents. To charge your own customers for MCP tools against a plan, see the [MCP Server guide](/sdks/typescript/guides/mcp). The same package exists for [Python](/sdks/python/guides/agents) and [Go](/sdks/go/guides/agents).
+
+## Install
+
+```bash
+npm install @solvapay/agents@preview @modelcontextprotocol/server zod jose
+```
+
+`@modelcontextprotocol/server` (version 2) is an optional peer dependency. You need it only for the MCP route. The package has four entry points:
+
+| Import | What it gives you |
+| --- | --- |
+| `@solvapay/agents` | The SolvaPay client, the agent token and agent key verifiers, `createAgentCalls`, and the OAuth helpers |
+| `@solvapay/agents/mcp` | `createAgentMcpRoute`, an MCP endpoint with paid tools |
+| `@solvapay/agents/http` | `createAgentHttpGate`, for paid endpoints in an HTTP API |
+| `@solvapay/agents/testing` | In-memory stand-ins for SolvaPay, for your tests |
+
+The package is ESM only. It imports `node:crypto`, so on Cloudflare Workers turn on the `nodejs_compat` flag.
+
+You need:
+
+- Your secret key (`sk_sandbox_…` or `sk_live_…`).
+- Your provider reference (`prov_…`). SolvaPay issues each agent token for one provider.
+- Agent payments turned on for your account (see the warning above).
+
+## Create a paid MCP server
+
+`createAgentMcpRoute` returns a fetch-style route: `(request: Request) => Promise<Response | null>`. It answers requests on your MCP path that carry a SolvaPay agent token or agent key, and returns `null` for everything else so your own handler can answer.
+
+```typescript server.ts
+import { createRemoteJWKSet } from 'jose'
+import { z } from 'zod'
+import {
+  createAgentCalls,
+  createAgentKeyVerifier,
+  createAgentLayer,
+  createAgentTokenVerifier,
+  createSolvaPayAgentClient,
+  secretKeyEnvironment,
+  type Logger,
+} from '@solvapay/agents'
+import { createAgentMcpRoute } from '@solvapay/agents/mcp'
+
+const secretKey = process.env.SOLVAPAY_SECRET_KEY!
+const providerRef = process.env.SOLVAPAY_PROVIDER_REF!
+const issuer = 'https://api.solvapay.com/v1/agent'
+
+const log: Logger = {
+  info: (event, fields) => console.log(JSON.stringify({ event, ...fields })),
+  error: (event, fields) => console.error(JSON.stringify({ event, ...fields })),
+}
+const client = createSolvaPayAgentClient({ apiBaseUrl: 'https://api.solvapay.com', secretKey })
+const environment = secretKeyEnvironment(secretKey)
+
+const agents = createAgentMcpRoute({
+  issuer,
+  agentLayer: createAgentLayer({
+    verifyAgentToken: createAgentTokenVerifier({
+      issuer,
+      providerRef,
+      environment,
+      keys: createRemoteJWKSet(new URL(`${issuer}/jwks.json`)),
+    }),
+    verifyAgentKey: createAgentKeyVerifier({ client, environment }),
+  }),
+  calls: createAgentCalls({ client, maxWaitSeconds: 50, log }),
+  log,
+  mcpPath: '/mcp',
+  serverName: 'quotes',
+  tools: (_server, paid) =>
+    paid<{ symbol: string }>({
+      name: 'get_quote',
+      description: 'The latest price for a ticker symbol. Up to 0.01 USD per call.',
+      inputSchema: { symbol: z.string().min(1).max(8) },
+      item: () => 'get_quote',
+      estimate: () => ({ amount: '0.01', currency: 'USD' }),
+      prompt: ({ symbol }) => symbol,
+      run: async ({ symbol }) => {
+        const quote = { symbol: symbol.toUpperCase(), price: 182.5 }
+        return {
+          status: 200,
+          cost: { amount: 0.005, currency: 'USD' },
+          result: { content: [{ type: 'text', text: JSON.stringify(quote) }] },
+        }
+      },
+    }),
+})
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    return (await agents(request)) ?? new Response('Not found', { status: 404 })
+  },
+}
+```
+
+The `export default { fetch }` shape runs on Cloudflare Workers, Bun and Deno. On Node, pass the route to any adapter that turns a Node request into a `Request`.
+
+What each piece does:
+
+- `createSolvaPayAgentClient` calls SolvaPay's agent endpoints with your secret key. Each request times out after 10 seconds, plus the approval wait for authorize.
+- `createAgentTokenVerifier` and `createAgentKeyVerifier` decide who is calling. See [How the agent is verified](#how-the-agent-is-verified).
+- `createAgentCalls` runs authorize and complete. `maxWaitSeconds` is how long a call may wait for the owner's approval.
+- `log` receives one event per step (`call.allowed`, `call.refused`, `call.completed`, `call.authorize_failed` and others). There is no default logger.
+
+### Add agent payments to an existing server
+
+Put the route in front of your current handler. Agents get the route, everyone else gets your server:
+
+```typescript
+async fetch(request: Request) {
+  return (await agents(request)) ?? existingHandler(request)
+}
+```
+
+A request goes to the route only when it is on `mcpPath` and its bearer token is an agent key (`agk_…`) or a JWT whose issuer is `issuer`. The issuer is read without verification at this point, only to route the request.
+
+## Paid and free tools
+
+The `tools` callback gets the MCP server, a `paid` function and the verified caller. Register paid tools with `paid`:
+
+| Field | Required | What it does |
+| --- | --- | --- |
+| `name`, `description` | Yes | As for any MCP tool. `title` defaults to `name`. |
+| `inputSchema` | Yes | A raw zod shape, such as `{ symbol: z.string() }`. The MCP server validates arguments against it. |
+| `item(args)` | Yes | Your label for what the call buys, at most 200 characters: a tool name, a model ID. |
+| `estimate(args)` | Yes | What the call may cost, as `{ amount, currency }`. `amount` is a decimal string with up to 8 places. SolvaPay holds this amount. |
+| `run(args, call)` | Yes | Calls your upstream and returns how it went. `call` has `callRef`, `requestId` and `agent`. |
+| `prompt(args)` | No | The text whose fingerprint shows SolvaPay a loop of repeated calls. See [Prompt facts](#prompt-facts). |
+| `annotations` | No | Defaults to `{ readOnlyHint: false, destructiveHint: false }`. |
+| `unreachableMessage` | No | What the agent reads when `run` throws. |
+
+`run` returns:
+
+| Field | What it is |
+| --- | --- |
+| `status` | The status your upstream answered with. 400 or above charges nothing. |
+| `cost` | What the call cost, as `{ amount: number, currency: string }`, or `null` when your upstream reported nothing. |
+| `interrupted` | Optional. Set it when the answer broke before it finished, with the reason. |
+| `result` | The MCP tool result the agent gets back. |
+
+If `run` throws, the package treats the upstream as never reached. It releases the call, so nothing is charged, and the agent gets a tool error with `unreachableMessage`. The default says the service could not be reached and nothing was charged.
+
+Free tools have two places:
+
+- `freeTools(server)` registers tools anyone may call, signed in or not.
+- Tools you register with `server.registerTool` inside `tools` are free too. Use this when a tool needs the caller: the third argument is the verified agent request, or `undefined` before a host has signed in.
+
+```typescript
+const agents = createAgentMcpRoute({
+  issuer,
+  agentLayer,
+  calls,
+  log,
+  mcpPath: '/mcp',
+  serverName: 'quotes',
+  freeTools: server => {
+    server.registerTool(
+      'list_symbols',
+      { description: 'The ticker symbols this server prices.', inputSchema: z.object({}) },
+      async () => ({ content: [{ type: 'text', text: 'AAPL, MSFT, NVDA' }] }),
+    )
+  },
+  tools: (server, paid, call) => {
+    if (call) {
+      server.registerTool(
+        'whoami',
+        { description: 'The agent this server sees.', inputSchema: z.object({}) },
+        async () => ({ content: [{ type: 'text', text: call.agent.agentRef }] }),
+      )
+    }
+    paid<{ symbol: string }>({
+      name: 'get_quote',
+      description: 'The latest price for a ticker symbol. Up to 0.01 USD per call.',
+      inputSchema: { symbol: z.string().min(1).max(8) },
+      item: () => 'get_quote',
+      estimate: () => ({ amount: '0.01', currency: 'USD' }),
+      run: async ({ symbol }) => {
+        const response = await fetchQuote(symbol) // throws if the upstream can't be reached
+        const body = await response.text()
+        return {
+          status: response.status,
+          cost: response.ok ? { amount: 0.005, currency: 'USD' } : null,
+          result: { isError: !response.ok, content: [{ type: 'text', text: body }] },
+        }
+      },
+      unreachableMessage: 'The quote service is down. Nothing was charged.',
+    })
+  },
+})
+```
+
+`server.registerTool` in `@modelcontextprotocol/server` version 2 takes a schema such as `z.object({})`. Paid tools take the raw shape.
+
+## How the agent is verified
+
+An agent presents one of two credentials as its bearer token.
+
+**Agent token.** A short-lived JWT that SolvaPay's agent issuer signs with ES256. `createAgentTokenVerifier` checks it locally against the issuer's public keys (`<issuer>/jwks.json`). It accepts a token only when:
+
+- The issuer is `issuer` and the audience is your `providerRef` (or your `resource`, see [Sign-in for MCP hosts](#sign-in-for-mcp-hosts)).
+- It has `sub`, `exp`, `iat` and `jti`, with 30 seconds of clock tolerance.
+- `sub` is an agent reference (`agt_…`), `principal` is an account reference (`ppl_…`), `scope` is `usage`, and `env` is `sandbox` or `live`.
+
+**Agent key.** A long-lived key that starts with `agk_`. `createAgentKeyVerifier` asks SolvaPay whose it is and reuses each answer for 30 seconds, so a revoked key stops working within 30 seconds. Pass `verifyAgentKey` to the MCP route: without it, an agent key on the MCP path throws.
+
+SolvaPay verifies the credential again on every authorize, so a token revoked after your check is still refused.
+
+A verified agent (`VerifiedAgent`) has:
+
+| Field | What it is |
+| --- | --- |
+| `agentRef` | The agent, `agt_…`. |
+| `principalRef` | The owner's account at your business, `ppl_…`. It is pairwise: another merchant sees a different reference for the same account. |
+| `environment` | `sandbox` or `live`. |
+| `promptExcerpt` | Whether the owner lets SolvaPay read the end of the prompt. |
+| `tokenId`, `expiresAt` | The token's `jti` and expiry. Absent for an agent key. |
+| `clientId` | The OAuth client a host got the token as. Only on tokens from OAuth sign-in. |
+
+When a credential does not verify, the MCP route answers with a JSON-RPC error (code `-32001`) and a `WWW-Authenticate: Bearer error="invalid_token"` header:
+
+- 401 for an expired, forged or revoked credential, or one for another merchant.
+- 403 for an agent from the other environment (`environment_mismatch`).
+
+## Refusals and what the agent sees
+
+When SolvaPay refuses a paid call, `run` never executes. The agent gets a tool error whose text is a sentence for its owner, and whose `structuredContent.refusal.reason` says which refusal it was, so the agent can act without parsing the text:
+
+```json
+{
+  "isError": true,
+  "content": [{ "type": "text", "text": "This call could cost about $0.31, over the per-call cap of $0.25." }],
+  "structuredContent": {
+    "refusal": {
+      "reason": "deny",
+      "message": "This call could cost about $0.31, over the per-call cap of $0.25."
+    }
+  }
+}
+```
+
+| Reason | When | HTTP status |
+| --- | --- | --- |
+| `customer_not_linked` | The owner's account isn't linked to your business yet. | 402 |
+| `topup_required` | The owner's balance doesn't cover the estimate. | 402 |
+| `ask` | The spend policy needs the owner's approval and the call didn't wait for it, for example because `maxWaitSeconds` is 0. | 402 |
+| `approval_declined` | The owner declined. | 402 |
+| `approval_expired` | The approval expired in SolvaPay. | 402 |
+| `approval_timed_out` | The owner hadn't answered within `maxWaitSeconds`. | 402 |
+| `approval_client_closed` | The caller went away while the owner was deciding. | 402 |
+| `deny` | The spend policy refuses the call. | 422 |
+| `agent_not_accepted` | SolvaPay didn't accept the agent: revoked, for another merchant or for the other environment. | 401 |
+| `unavailable` | SolvaPay couldn't be reached or answered with an error. The call is never let through. | 502 |
+
+The HTTP status applies to the HTTP gate (`refusalStatus` in `@solvapay/agents/http`). The MCP route always answers a refusal as a tool result.
+
+`unavailable` also covers SolvaPay refusing your server rather than the agent, for example `feature_not_enabled` (agent payments are off for your account) or `key_env_mismatch`. The `call.authorize_failed` log event carries SolvaPay's message, so check your logs when every call is `unavailable`.
+
+### Waiting for the owner's approval
+
+When the spend policy asks the owner, SolvaPay answers authorize with "waiting". `createAgentCalls` keeps asking, holding each request for at most 55 seconds, until the owner answers or `maxWaitSeconds` runs out. Keep `maxWaitSeconds` below your MCP client's tool-call timeout. The TypeScript MCP SDK's default is 60 seconds. Set it to 0 to refuse with `ask` at once.
+
+## Complete a call at its cost
+
+The MCP route completes each paid call for you with what `run` returned. In the HTTP gate you call `allowed.finish` yourself. Either way, SolvaPay settles the call by what you send:
+
+| You send | SolvaPay does |
+| --- | --- |
+| `status` below 400 and a `cost` | Settles at the reported cost (`source: 'reported'`). |
+| `status` below 400 and `cost: null` | Settles provisionally (`source: 'provisional'`). A usage report can correct it later. |
+| `status` 400 or above | Charges nothing (`settled: false`, `source: 'none'`). |
+
+`cost.amount` is a number in your currency. The package sends it as a decimal string with up to 8 places. SolvaPay counts credits in USD and refuses a currency it can't price (`currency_not_supported`).
+
+Each call completes once. A second `finish` or `release` throws. If SolvaPay can't be told, `finish` returns `null`, the package logs `call.complete_failed`, and the reservation lapses at the estimate.
+
+## Paid endpoints in an HTTP API
+
+`createAgentHttpGate` does the same for one HTTP request. It returns one of four results, and you write the response:
+
+```typescript
+import { promptFacts } from '@solvapay/agents'
+import { createAgentHttpGate, refusalResponse } from '@solvapay/agents/http'
+
+const gate = createAgentHttpGate({ agentLayer, calls, log })
+
+export async function handleQuote(request: Request): Promise<Response> {
+  const presentedKey = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? ''
+  const symbol = new URL(request.url).searchParams.get('symbol') ?? ''
+
+  const gated = await gate({
+    presentedKey,
+    requestId: crypto.randomUUID(),
+    item: 'quote',
+    estimate: { amount: '0.01', currency: 'USD' },
+    prompt: promptFacts(symbol),
+    signal: request.signal,
+  })
+
+  switch (gated.kind) {
+    case 'not_agent':
+      return ownAuth(request)
+    case 'rejected':
+      return Response.json(
+        { error: { type: gated.reason, message: gated.detail } },
+        { status: gated.status, ...(gated.challenge ? { headers: gated.challenge } : {}) },
+      )
+    case 'refused':
+      return refusalResponse(gated.refused, gated.challenge)
+    case 'allowed': {
+      let upstream: Response
+      try {
+        upstream = await fetchQuote(symbol)
+      } catch (error) {
+        await gated.allowed.release('upstream_unreachable')
+        throw error
+      }
+      const body = await upstream.text()
+      await gated.allowed.finish({
+        status: upstream.status,
+        cost: upstream.ok ? { amount: 0.005, currency: 'USD' } : null,
+      })
+      return new Response(body, { status: upstream.status })
+    }
+  }
+}
+```
+
+- `not_agent`: the key isn't an agent token or agent key. Your own auth decides.
+- `rejected`: the credential didn't verify. `status` is 401, or 403 for the other environment.
+- `refused`: SolvaPay refused the call. `refusalResponse` answers with `{ "error": { "type": "<reason>", "message": "…" } }` and the status from the [refusal table](#refusals-and-what-the-agent-sees).
+- `allowed`: forward the call, then `finish` it with the upstream's status and cost, or `release` it if the upstream was never reached.
+
+`requestId` is your ID for the call. SolvaPay keys the call on it, so a retry with the same `requestId` continues the same call. `allowed.callRef` is SolvaPay's reference for the call: tag your upstream usage with it if you send [usage reports](#report-usage).
+
+## Prompt facts
+
+SolvaPay uses facts about each call's input to spot an agent stuck in a loop. `promptFacts(text)` returns a SHA-256 hash of the text, whether it carries a failed tool result, and its last 1,500 characters. The hash is always sent. The excerpt goes to SolvaPay only when the agent's token says the owner allowed it (`promptExcerpt`).
+
+Pick the text that repeats when the agent loops: a tool's input, or the last user turn for a model proxy. On the MCP route, return it from the paid tool's `prompt`. On the HTTP gate, pass `promptFacts(text)` as `prompt`, or `null` for none.
+
+## Sign-in for MCP hosts
+
+Hosts such as Claude and ChatGPT can sign their user in with SolvaPay over OAuth and get an agent token for your server. Set `protectedResource` on the route to turn this on, and pass the same URL as `resource` to the token verifier so it accepts tokens issued for it:
+
+```typescript
+const resource = 'https://quotes.example.com/mcp'
+
+const agents = createAgentMcpRoute({
+  issuer,
+  agentLayer: createAgentLayer({
+    verifyAgentToken: createAgentTokenVerifier({
+      issuer,
+      providerRef,
+      environment,
+      resource, // tokens a host got by OAuth name this URL as their audience
+      keys: createRemoteJWKSet(new URL(`${issuer}/jwks.json`)),
+    }),
+    verifyAgentKey: createAgentKeyVerifier({ client, environment }),
+  }),
+  calls,
+  log,
+  mcpPath: '/mcp',
+  serverName: 'quotes',
+  protectedResource: { resource },
+  tools: (_server, paid) => paid(getQuote),
+})
+```
+
+With `protectedResource` set, the route:
+
+- Serves the RFC 9728 metadata document at `/.well-known/oauth-protected-resource/mcp` and `/mcp/.well-known/oauth-protected-resource`, naming `issuer` as the authorization server.
+- Lets a host list every tool and run free tools before sign-in.
+- Answers a paid tool call that has no agent token with a 401 challenge that sends the host to SolvaPay. A request with your own bearer token is still passed to your handler, unless it calls a paid tool.
+- Answers an expired or rejected token with the same challenge, so the host signs in again.
+
+Set `lazyAuth: false` to challenge every tool call without an agent token, free tools and your own bearer tokens included. `initialize` and `tools/list` still answer.
+
+For an HTTP API, serve the metadata with `protectedResourceHandler` and pass the same resource to the gate. 401 results then carry the challenge headers:
+
+```typescript
+const apiResource = { resource: 'https://api.quotes.example.com/v1', authorizationServer: issuer }
+const metadata = protectedResourceHandler(apiResource) // (request) => Response | null
+const gate = createAgentHttpGate({ agentLayer, calls, log, protectedResource: apiResource })
+```
+
+## Report usage
+
+If your upstream keeps its own usage records, send them to SolvaPay to reconcile against what it settled. Report one customer and time window at a time, with each call's cost by the `callRef` SolvaPay returned:
+
+```typescript
+const report = await client.reportUsage({
+  reportId: 'usage-2026-11-13',
+  customerRef: 'cus_3F8K2M1Q',
+  source: 'quotes:/v1/usage',
+  window: { from: '2026-11-13T00:00:00Z', to: '2026-11-14T00:00:00Z' },
+  currency: 'USD',
+  calls: [{ callRef: 'call_9QW2XK7D', cost: '0.005' }],
+  untagged: [],
+})
+
+for (const call of report.results) {
+  if (call.result === 'adjusted') console.log(call.callRef, call.reason, call.creditDelta)
+}
+if (report.untagged.flagged) console.warn('Untagged usage after the spend policy:', report.untagged.total)
+```
+
+- `reportId` is your ID for the report. Sending it again returns the first report's results with `duplicate: true`.
+- `window` is `[from, to)` in ISO 8601. `calls` must be complete for the window.
+- `untagged` lists usage you couldn't match to a `callRef`, as `{ at, cost }`.
+- Costs are decimal strings with up to 8 places, all in `currency`.
+
+Each result is `matched`, `adjusted`, `pending`, `already_reconciled` or `ignored` (a `callRef` SolvaPay doesn't know). An adjusted call has a `reason` (`provisional`, `expired`, `no_debit` or `cost_differs`) and the deltas SolvaPay booked. `untagged.flagged` is `true` when some untagged usage came after the owner's spend policy.
+
+## Sandbox and production
+
+Agents spend in one environment, and so does your secret key:
+
+- A sandbox key (`sk_sandbox_…`) serves sandbox agents.
+- A production key (`sk_live_…`) serves live agents.
+
+`secretKeyEnvironment(secretKey)` reads the environment from the key's prefix, or returns `undefined` when the prefix doesn't say. Pass it as `environment` to both verifiers. An agent from the other environment is then refused with `environment_mismatch` (403) before your server calls SolvaPay. Without `environment`, SolvaPay refuses that agent at authorize as `agent_not_accepted`.
+
+Test with a sandbox key and a sandbox agent first. Switch to the production key when you go live. Your code doesn't change.
+
+## Test without SolvaPay
+
+`@solvapay/agents/testing` has stand-ins for SolvaPay's side: `agentKeys` and `signAgentToken` make agent tokens signed with a local key, and `FakeAgentApi` answers authorize, complete, agent key verification and usage reports in memory.
+
+```typescript
+import { createLocalJWKSet } from 'jose'
+import { createAgentCalls, createAgentLayer, createAgentTokenVerifier } from '@solvapay/agents'
+import { createAgentMcpRoute } from '@solvapay/agents/mcp'
+import { agentKeys, FakeAgentApi, ISSUER, PROVIDER, signAgentToken } from '@solvapay/agents/testing'
+
+const { privateKey, publicJwk } = await agentKeys()
+const api = new FakeAgentApi()
+api.outcome = 'refused' // every authorize is refused with api.refusal
+const log = { info: () => {}, error: () => {} }
+
+const route = createAgentMcpRoute({
+  issuer: ISSUER,
+  agentLayer: createAgentLayer({
+    verifyAgentToken: createAgentTokenVerifier({
+      issuer: ISSUER,
+      providerRef: PROVIDER,
+      keys: createLocalJWKSet({ keys: [publicJwk] }),
+    }),
+  }),
+  calls: createAgentCalls({ client: api, maxWaitSeconds: 0, log }),
+  log,
+  mcpPath: '/mcp',
+  serverName: 'quotes-test',
+  tools: (_server, paid) => paid(getQuote),
+})
+
+const token = await signAgentToken(privateKey) // a sandbox agent token for PROVIDER
+```
+
+Send MCP requests to `route` with `Authorization: Bearer <token>`, then check `api.authorizes` and `api.completes`. Set `api.waitingAnswers` to have authorize answer "waiting" that many times, or `api.failAuthorize` to a status to make it fail.
+
+## Related
+
+- [MCP Server guide](/sdks/typescript/guides/mcp): paid MCP tools for your own customers, against a plan.
+- [Agent payments in Python](/sdks/python/guides/agents)
+- [Agent payments in Go](/sdks/go/guides/agents)

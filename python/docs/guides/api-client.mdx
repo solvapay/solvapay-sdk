@@ -1,0 +1,121 @@
+---
+title: "API client"
+description: "Call the SolvaPay API from Python with AsyncApiClient or ApiClient, and handle SolvaPayError."
+---
+
+`AsyncApiClient` covers every SolvaPay SDK API operation. Its methods are generated from the same API spec as the TypeScript SDK's types. `ApiClient` is its blocking twin, with the same methods.
+
+## Make a call
+
+```python
+import asyncio
+import os
+
+from solvapay import AsyncApiClient
+
+
+async def main() -> None:
+    async with AsyncApiClient(api_key=os.environ["SOLVAPAY_SECRET_KEY"]) as api:
+        customer = await api.get_customer_by_query(external_ref="user_123")
+        balance = await api.get_customer_balance(reference=customer.reference)
+        purchases = await api.get_purchases_for_customer(customer_ref=customer.reference)
+
+        print(customer.email, balance.credits)
+        for purchase in purchases.purchases or []:
+            print(purchase.reference, purchase.status, purchase.plan_ref)
+
+
+asyncio.run(main())
+```
+
+- Methods take keyword arguments only. Path and query parameters are snake_case (`external_ref`, `customer_ref`).
+- A request body is a dict with the API's camelCase keys, or the matching pydantic model, such as `models.CreateCustomerRequest` (`from solvapay import models`).
+- Responses are pydantic models with snake_case attributes.
+- Use the client as a context manager, or call `aclose()` (`close()` on `ApiClient`).
+
+If you already use `create_solvapay()`, its client is `solvapay.api`.
+
+## Common operations
+
+| Task | Method |
+| --- | --- |
+| Find a customer by your user id or email | `get_customer_by_query(external_ref=..., email=...)` |
+| Get a customer | `get_customer(reference=...)` |
+| Create a customer | `create_customer(body={...})` |
+| Get a credit balance | `get_customer_balance(reference=...)` |
+| Grant credits | `grant_credits(reference=..., body={...}, idempotency_key=...)` |
+| List a customer's purchases | `get_purchases_for_customer(customer_ref=...)` |
+| Cancel or reactivate a purchase | `cancel_purchase(purchase_ref=..., body={...})`, `reactivate_purchase(purchase_ref=...)` |
+| Record a usage event | `record_meter_event(body={...})` |
+| Check a customer's limits | `check_limits(body={...})` |
+| Create a checkout session | `create_checkout_session(body={...})` |
+
+For every operation and its fields, see the [API reference](/api-reference/authentication).
+
+### Create a customer
+
+```python
+import os
+
+from solvapay import ApiClient
+
+with ApiClient(api_key=os.environ["SOLVAPAY_SECRET_KEY"]) as api:
+    customer = api.create_customer(body={"email": "ada@example.com", "externalRef": "user_123"})
+    print(customer.reference)
+```
+
+### Record a usage event
+
+```python
+import os
+
+from solvapay import ApiClient
+
+with ApiClient(api_key=os.environ["SOLVAPAY_SECRET_KEY"]) as api:
+    api.record_meter_event(
+        body={
+            "customerRef": "cus_3c4d5e6f7g8h",
+            "meterName": "requests",
+            "productRef": os.environ["SOLVAPAY_PRODUCT_REF"],
+            "value": 1,
+        }
+    )
+```
+
+`@solvapay.payable()` and paid MCP tools record usage for you. Record it yourself only for usage that happens outside them. See [usage events](/sdks/typescript/guides/usage-events) for how meters bill.
+
+## Handle errors
+
+Every error is a `SolvaPayError`. Branch on `code` and `status`, never on the message, which may change.
+
+```python
+import os
+
+from solvapay import ApiClient, SolvaPayError, models
+
+
+def find_customer(api: ApiClient, user_id: str) -> models.CustomerResponse | None:
+    try:
+        return api.get_customer_by_query(external_ref=user_id)
+    except SolvaPayError as error:
+        if error.status == 404:
+            return None
+        raise
+
+
+with ApiClient(api_key=os.environ["SOLVAPAY_SECRET_KEY"]) as api:
+    customer = find_customer(api, "user_missing")
+```
+
+| Attribute | What it holds |
+| --- | --- |
+| `code` | A stable identifier: the API's own code when it sends one, else `http_<status>`. SDK errors use codes such as `network_error`, `invalid_response`, `non_json_response`, `missing_secret` and `invalid_argument`. |
+| `status` | The HTTP status, when the error came from the API. `None` otherwise. |
+| `body` | The API's error body, when there is one. |
+
+The client retries reads, and writes with an idempotency key, on `429`, `502`, `503`, `504` and network errors (`max_retries=2` by default). Other writes are sent once.
+
+## Next steps
+
+- [Webhooks](/sdks/python/guides/webhooks): verify the events SolvaPay sends you.
+- The TypeScript equivalent is [purchase management](/sdks/typescript/guides/purchase-management).

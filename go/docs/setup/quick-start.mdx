@@ -1,0 +1,141 @@
+---
+title: "Quick start"
+description: "Make a Go function paid and serve it from a net/http handler."
+---
+
+## Prerequisites
+
+- The Go SDK installed and `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/go/setup/installation).
+- A product with at least one plan in SolvaPay Console. Use sandbox while you build.
+
+## 1) Make a function paid
+
+`Payable` wraps a function so that each call is decided by the paywall first:
+
+- If the customer's plan allows the call, your function runs, and the call is recorded as usage when it returns.
+- If it doesn't, your function does not run, and the call returns a `*PaywallError`. Its `Gate` says what the customer has to do and where to pay.
+
+This server sells a report at `POST /reports`:
+
+```go main.go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log"
+	"net/http"
+
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+)
+
+type reportArgs struct {
+	Topic string `json:"topic"`
+}
+
+type report struct {
+	Topic   string `json:"topic"`
+	Summary string `json:"summary"`
+}
+
+func main() {
+	// SOLVAPAY_SECRET_KEY and SOLVAPAY_API_BASE_URL come from the environment.
+	client, err := solvapay.NewClient(solvapay.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	// The product comes from SOLVAPAY_PRODUCT_REF.
+	paywall, err := solvapay.NewPaywall(client, solvapay.PaywallOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	writeReport, err := solvapay.Payable(paywall, solvapay.PayableOptions{ToolName: "write_report"},
+		func(ctx context.Context, call solvapay.PaidCall[reportArgs]) (report, error) {
+			return report{Topic: call.Args.Topic, Summary: "..."}, nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("POST /reports", func(w http.ResponseWriter, r *http.Request) {
+		var args reportArgs
+		if err := json.NewDecoder(r.Body).Decode(&args); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// Your own user id. The paywall finds or creates the SolvaPay customer for it.
+		userID := r.Header.Get("X-User-ID")
+
+		result, err := writeReport(r.Context(), solvapay.PaidCall[reportArgs]{CustomerRef: userID, Args: args})
+		var gated *solvapay.PaywallError
+		switch {
+		case errors.As(err, &gated):
+			// gated.Gate["message"] says what to do; gated.Gate["checkoutUrl"] is where to pay.
+			writeJSON(w, http.StatusPaymentRequired, gated.Gate)
+		case err != nil:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		default:
+			writeJSON(w, http.StatusOK, result)
+		}
+	})
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(body)
+}
+```
+
+`PaidCall.CustomerRef` says who is calling. Pass your own user id: the paywall finds the SolvaPay customer with that `externalRef`, or creates one on first use. You can also pass a SolvaPay customer reference (`cus_…`) directly. An empty `CustomerRef` fails with the code `identity_required`.
+
+## 2) Run it
+
+```bash
+go run .
+curl -X POST localhost:8080/reports -H 'X-User-ID: user_42' -d '{"topic":"chips"}'
+```
+
+A customer without a plan gets `402 Payment Required` and the gate:
+
+```json
+{
+  "kind": "payment_required",
+  "reason": "upgrade_required",
+  "checkoutUrl": "https://...",
+  "message": "You don't have an active plan for this tool. [Open checkout](https://...) to pick a plan (expires in 15 minutes), ...",
+  "product": "prd_..."
+}
+```
+
+Show `message` to the customer, or send them to `checkoutUrl`. Once they have a plan, the same request returns the report.
+
+<Note>
+The gate's `message` is the same text the TypeScript and MCP paywalls use, so it also mentions the `account` MCP tool. On a plain HTTP API, show `checkoutUrl` instead if that line doesn't fit.
+</Note>
+
+## 3) Handle the other errors
+
+An error your function returns comes back unchanged, and the call is recorded as failed. Every error from the SDK itself is a `*solvapay.Error` (a `*PaywallError` unwraps to one, with the gate's kind as its code). Branch on `Code` or `Status`, never on `Message`. See [API client](/sdks/go/guides/api-client#handle-errors).
+
+## Options
+
+`PayableOptions` says what a paid function is for:
+
+| Field | Meaning |
+| --- | --- |
+| `Product` | The product reference. Empty uses the paywall's product (`SOLVAPAY_PRODUCT_REF`). |
+| `Meter` | The meter a call counts against. Empty uses `requests`. |
+| `FreeLimit` | A free allowance: `Cap` calls per `Scope` (`"rolling_window"` with `WindowDays`, or `"lifetime"`) before a plan is required. |
+| `ToolName` | Recorded with every usage event. |
+
+`Payable` checks the product and the free allowance when you call it, so a misconfigured paid function fails at startup, not on its first call.
+
+## Next steps
+
+- [MCP server](/sdks/go/guides/mcp): sell the same function as an MCP tool, with sign-in and checkout built in.
+- [Webhooks](/sdks/go/guides/webhooks): react to purchases and payments.
+- The TypeScript equivalent of this page: [Quick start](/sdks/typescript/setup/quick-start).

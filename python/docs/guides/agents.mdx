@@ -1,0 +1,129 @@
+---
+title: "Agent payments"
+sidebarTitle: "Agent payments (preview)"
+description: "Let SolvaPay agents pay for each MCP tool call, with solvapay.agents and create_agent_mcp_route."
+---
+
+<Warning>
+  Agent payments are in preview. SolvaPay has to turn them on for your merchant account before agents can pay you. Until then, every paid call is refused. The API in `solvapay.agents` may change between minor releases.
+</Warning>
+
+With agent payments, an AI agent pays for each tool call from a budget its owner set up with SolvaPay. SolvaPay decides each call: it finds the customer, checks the owner's spend policy, holds the estimate against the budget and balance, and asks the owner to approve when the policy says so. Your server authorizes each paid call before it runs and completes it at the cost your upstream reports.
+
+## Prerequisites
+
+- `pip install 'solvapay[agents,mcp]' uvicorn`
+- Agent payments turned on for your merchant account
+- These environment variables:
+
+| Variable | What it is |
+| --- | --- |
+| `SOLVAPAY_SECRET_KEY` | Your secret key |
+| `SOLVAPAY_PROVIDER_REF` | Your merchant (provider) reference, `prov_...`. Agent tokens are issued for it. |
+| `SOLVAPAY_AGENT_ISSUER` | The agent token issuer: your API base URL plus `/v1/agent`, such as `https://api.solvapay.com/v1/agent` |
+
+## Serve a paid tool to agents
+
+```python
+import os
+
+import uvicorn
+from mcp.types import CallToolResult, TextContent
+from pydantic import BaseModel, Field
+from solvapay import AsyncApiClient
+from solvapay.agents import AgentCalls, AgentKeyVerifier, AgentLayer, AgentTokenVerifier, Money
+from solvapay.agents.mcp import PaidCall, PaidTool, PaidToolRun, create_agent_mcp_route
+from starlette.applications import Starlette
+
+ISSUER = os.environ["SOLVAPAY_AGENT_ISSUER"]  # https://api.solvapay.com/v1/agent
+
+# An authorize can wait up to 55 seconds for the owner's approval.
+api = AsyncApiClient(api_key=os.environ["SOLVAPAY_SECRET_KEY"], timeout=70)
+
+
+class Question(BaseModel):
+    question: str = Field(description="What to answer.")
+
+
+async def answer(args: Question, call: PaidCall) -> PaidToolRun:
+    text, cost = f"You asked: {args.question}", "0.004"  # call your upstream here
+    return PaidToolRun(
+        status=200,
+        cost=(cost, "USD"),
+        result=CallToolResult(content=[TextContent(type="text", text=text)]),
+    )
+
+
+route = create_agent_mcp_route(
+    issuer=ISSUER,
+    agent_layer=AgentLayer(
+        verify_token=AgentTokenVerifier(
+            issuer=ISSUER, provider_ref=os.environ["SOLVAPAY_PROVIDER_REF"]
+        ).verify,
+        verify_key=AgentKeyVerifier(api).verify,
+    ),
+    calls=AgentCalls(api, max_wait_seconds=50),
+    mcp_path="/mcp",
+    server_name="research",
+    tools=lambda _server, paid, _call: paid(
+        PaidTool(
+            name="answer",
+            description="Answers a question. Up to 0.01 USD per call.",
+            input=Question,
+            item=lambda _args: "answer-v1",
+            estimate=lambda _args: Money("0.01", "USD"),
+            prompt=lambda args: args.question,
+            run=answer,
+        )
+    ),
+)
+
+merchant_app = Starlette()  # your own app: every request that isn't an agent's
+app = route.middleware(merchant_app)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=3030)
+```
+
+`route.middleware(app)` answers requests on `/mcp` that carry an agent token or agent key (`agk_...`), and passes every other request to your app. To keep serving signed-in customers on the same `/mcp`, pass your [paid MCP server](/sdks/python/guides/mcp)'s `http_app()` as the app. You can also call `await route(request)` from your own handler: it returns a response for an agent's request, or `None`.
+
+## What happens on a paid call
+
+1. **Identify.** `AgentLayer` tells an agent's credential from your own. `AgentTokenVerifier` checks agent tokens (ES256 JWTs) against SolvaPay's keys at `<issuer>/jwks.json`. `AgentKeyVerifier` asks SolvaPay whose an agent key is and reuses the answer for 30 seconds.
+2. **Authorize.** `AgentCalls` sends the call's `item` and `estimate` to SolvaPay. When the owner must approve, it waits up to `max_wait_seconds` (0 refuses at once). Keep it under your MCP client's timeout, and the API client's `timeout` above it.
+3. **Run.** Your `run` calls the upstream and returns a `PaidToolRun` with the upstream's `status`, the reported `cost` as `(amount, currency)`, and the `result` for the agent.
+4. **Complete.** SolvaPay settles the call at the reported cost. A `status` of 400 or above charges nothing. If `run` raises, the hold is released and nothing is charged.
+
+`PaidTool` fields:
+
+| Field | What it is |
+| --- | --- |
+| `input` | The arguments, as a pydantic model. MCP validates calls against it. |
+| `item` | Your label for what the call buys, such as a model id or tool name |
+| `estimate` | What the call may cost, as `Money(amount, currency)`. The amount is a decimal string. |
+| `run` | Calls the upstream and returns `PaidToolRun` |
+| `prompt` | Optional. The text whose hash shows repeated calls (loops). Its end is sent only if the owner opted in. |
+| `unreachable_message` | Optional. What the agent reads when `run` raises |
+
+## Refusals
+
+A refused call is a tool error (`isError: true`). Its text is a sentence for the agent's owner, and `structuredContent.refusal.reason` says which refusal it was, so an agent can act on it without parsing text:
+
+| Reason | Meaning |
+| --- | --- |
+| `topup_required`, `customer_not_linked` | The owner needs to add money or link an account |
+| `ask`, `approval_declined`, `approval_expired`, `approval_timed_out`, `approval_client_closed` | The call needed the owner's approval and didn't get it |
+| `deny` | The owner's spend policy doesn't allow the call |
+| `agent_not_accepted` | SolvaPay didn't accept the agent (revoked, or not for this merchant) |
+| `unavailable` | SolvaPay couldn't be reached. Nothing was charged. |
+
+`refusal_status(reason)` gives the matching HTTP status if you serve agents outside MCP: 402, 422, 401 or 502.
+
+## Sign-in for hosts such as Claude and ChatGPT
+
+By default, agents bring their own token or agent key. To let hosts sign in with SolvaPay's agent OAuth, pass `protected_resource=ProtectedResource(resource="https://research.example.com/mcp")` to `create_agent_mcp_route`, and the same URL as `resource=` to `AgentTokenVerifier`. The route then serves the protected-resource document and challenges a paid call that has no token. `free_tools=` registers tools anyone can call, signed in or not.
+
+## Next steps
+
+- [Paid MCP server](/sdks/python/guides/mcp): serve signed-in customers.
+- [API client](/sdks/python/guides/api-client): `AsyncApiClient` options.

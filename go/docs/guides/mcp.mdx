@@ -1,0 +1,220 @@
+---
+title: "MCP server"
+description: "Sell MCP tools from Go: paid and free tools, SolvaPay sign-in and the checkout widget."
+---
+
+`NewMCPServer` builds an MCP server on the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). Customers sign in with SolvaPay over OAuth, every paid tool call is checked against the customer's plan, and SolvaPay's own tools let the customer pick a plan, pay and manage their account without leaving the chat.
+
+## Prerequisites
+
+- The Go SDK installed and `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/go/setup/installation).
+- A public HTTPS URL for your server. In development, use a tunnel such as ngrok (see [Run it locally](#run-it-locally)).
+
+## Create a server with a paid tool
+
+```go main.go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+)
+
+func main() {
+	client, err := solvapay.NewClient(solvapay.Config{}) // SOLVAPAY_SECRET_KEY
+	if err != nil {
+		log.Fatal(err)
+	}
+	server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
+		Client:        client, // the product comes from SOLVAPAY_PRODUCT_REF
+		PublicBaseURL: os.Getenv("PUBLIC_BASE_URL"),
+		Name:          "research",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = server.RegisterPayable("get_quote", solvapay.PaidTool{
+		Title:       "Get quote",
+		Description: "Latest price for a ticker symbol.",
+		InputSchema: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{"symbol": map[string]any{"type": "string"}},
+			"required":   []any{"symbol"},
+		},
+		Handler: func(ctx context.Context, args json.RawMessage, rc *solvapay.ResponseContext) (*solvapay.ToolResponse, error) {
+			var in struct {
+				Symbol string `json:"symbol"`
+			}
+			if err := json.Unmarshal(args, &in); err != nil {
+				return nil, err
+			}
+			return rc.Respond(map[string]any{"symbol": in.Symbol, "price": 101.5}, solvapay.RespondOptions{}), nil
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(http.ListenAndServe(":3031", server.Handler())) // MCP endpoint: /mcp
+}
+```
+
+`Handler()` serves the MCP endpoint at `/mcp` and the sign-in routes. Each call to `get_quote` goes through the paywall first: a customer with a plan gets the answer and the call is recorded as usage; a customer without one gets the paywall with a checkout link.
+
+`MCPServerOptions` needs a `Client`, a `PublicBaseURL` and a product (`ProductRef` or `SOLVAPAY_PRODUCT_REF`). `NewMCPServer` fails otherwise.
+
+## Paid tools
+
+`RegisterPayable(name, tool)` adds a paid tool. A `PaidTool` has:
+
+| Field | Meaning |
+| --- | --- |
+| `Handler` | Answers one allowed call. Required. |
+| `Description`, `Title` | Shown to the model and the customer. The SDK appends a line telling the model to call `account` for balance and cost per call. |
+| `InputSchema` | The arguments' JSON Schema, with `type: object`: a `map[string]any`, a `json.RawMessage` or a `*jsonschema.Schema`. Calls are checked against it before your handler runs. `nil` means no arguments. |
+| `Annotations` | Behaviour hints. Paid tools default to read-only and open-world; set a hint with `solvapay.Hint(false)` to override it. |
+| `Meta` | Extra `_meta` for the tool. |
+| `Product` | Charge this tool to another product. Empty uses the server's product. |
+| `GetCustomerRef` | Decide who the customer is yourself. Empty uses the customer who signed in. |
+
+A handler gets the call's arguments as `json.RawMessage` and a `*ResponseContext`. Any error other than a gate is returned to the model as a tool error with its message, and the call is recorded as failed.
+
+## Free tools
+
+`RegisterFree(name, limit, tool)` adds a tool with a free allowance. The customer gets `limit.Cap` calls per window, then needs a plan. The SDK adds the allowance to the tool's description.
+
+```go
+err := server.RegisterFree("search", solvapay.FreeLimit{
+	Cap:        20,
+	Scope:      "rolling_window", // or "lifetime"
+	WindowDays: 30,
+}, solvapay.PaidTool{
+	Description: "Search the catalogue.",
+	Handler: func(ctx context.Context, args json.RawMessage, rc *solvapay.ResponseContext) (*solvapay.ToolResponse, error) {
+		return rc.Respond(map[string]any{"results": []string{"AAPL", "MSFT"}}, solvapay.RespondOptions{}), nil
+	},
+})
+```
+
+`FreeLimit.Meter` names the free meter (`free-` followed by lowercase letters, digits or dashes); empty means `free-requests`. Tools that name the same meter share one allowance, and must declare the same limit. Free tools also need a signed-in customer. See [Free allowance](/sdks/typescript/guides/free-allowance) for how the allowance is counted.
+
+## Answer with the response context
+
+`ResponseContext` is the handler's view of the call:
+
+- `rc.Customer` is the customer as the limits check saw them: `Ref`, `Balance`, `Remaining`, `WithinLimits`, `Overage`, `IsCreditBased` and `Plan`. It may be as old as the paywall's limits cache (10 seconds by default); `rc.Customer.Fresh(ctx)` asks the API again.
+- `rc.Product.Reference` is the product the call is charged to.
+- `rc.Respond(data, options)` is the answer. `data` is sent as JSON text and, when it is an object, as structured content.
+- `rc.Gate(reason)` stops the call and shows a paywall instead. Return the error it gives. Nothing is recorded as usage.
+- `rc.Emit(block)` queues a content block (text, image or resource) ahead of the answer.
+
+```go
+func deepReport(ctx context.Context, args json.RawMessage, rc *solvapay.ResponseContext) (*solvapay.ToolResponse, error) {
+	var in struct {
+		Pages int `json:"pages"`
+	}
+	if err := json.Unmarshal(args, &in); err != nil {
+		return nil, err
+	}
+	if in.Pages > 50 {
+		return nil, rc.Gate("Reports over 50 pages need the Pro plan.")
+	}
+	rc.Emit(&mcp.TextContent{Text: "Building a " + rc.Product.Reference + " report for " + rc.Customer.Ref})
+	report := map[string]any{"pages": in.Pages}
+
+	options := solvapay.RespondOptions{}
+	if rc.Customer.Remaining != nil && *rc.Customer.Remaining < 10 {
+		options.Nudge = &solvapay.Nudge{Kind: solvapay.NudgeApproachingLimit}
+	}
+	return rc.Respond(report, options), nil
+}
+```
+
+`RespondOptions.Nudge` appends a soft prompt to a successful answer: `NudgeLowBalance`, `NudgeCycleEnding` or `NudgeApproachingLimit`. An empty `Message` uses the paywall's default text. `Text` replaces the JSON text of the data, and `OmitDataText` leaves the data out of the content when `Text` or `Nudge` is set.
+
+## Built-in tools, prompts and the checkout widget
+
+`NewMCPServer` adds these next to your tools:
+
+- **`account`**: shows the customer's plan, balance and payment method, opens checkout to pick a plan, or tops up credits.
+- **`activate_plan`**: starts a plan for the customer.
+- **Widget tools**: six tools only the checkout widget calls (`create_payment_intent`, `process_payment`, `create_hosted_session`, `attach_business_details`, `get_history`, `set_renewal`). They are marked app-only in `_meta.ui.visibility`, so MCP Apps hosts keep them out of the model's tool list.
+- **Prompts**: `/upgrade`, `/manage_account`, `/topup` and `/activate_plan`.
+- **Resources**: `docs://solvapay/overview.md` (a start-here document for the model), `solvapay://bootstrap.json`, and the checkout widget at `ui://<Name>/mcp-app.html`.
+
+The widget is an [MCP App](/sdks/typescript/guides/mcp-app): hosts that render MCP Apps show checkout, the account and top-ups inside the chat. Card payments use Stripe Elements. Hosts that don't render it get the same answers as text with links.
+
+These options change what is added:
+
+```go
+server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
+	Client:        client,
+	ProductRef:    "prd_YOUR_PRODUCT",
+	PublicBaseURL: os.Getenv("PUBLIC_BASE_URL"),
+	Name:          "research",
+	Instructions:  "Paid research tools.",
+	// Offer checkout and account, but not top-ups.
+	Views: []string{solvapay.ViewCheckout, solvapay.ViewAccount},
+	// Let the widget load images from your CDN.
+	CSP: map[string][]string{"resourceDomains": {"https://cdn.example.com"}},
+	// Hide the widget-only tools from hosts that ignore _meta.ui.visibility.
+	HideToolsByAudience: []string{"ui"},
+})
+```
+
+| Option | Meaning |
+| --- | --- |
+| `Views` | The views `account` offers: `ViewCheckout`, `ViewAccount`, `ViewTopup`. `nil` offers all three. An empty, non-nil slice leaves `account` out. Prompts follow the views. |
+| `CSP` | Domains added to the widget's Content Security Policy, under `resourceDomains`, `connectDomains` or `frameDomains`. Stripe and the SolvaPay API are always included. |
+| `HideToolsByAudience` | Leaves tools whose `_meta.audience` is listed out of `tools/list`. They stay callable. The widget tools have audience `ui`. ChatGPT still gets the full list, because its widget can only call listed tools (`HideToolsBypass` changes who does). |
+| `Name`, `Version`, `Instructions` | The server's identity and instructions. `Name` defaults to `solvapay-mcp` and sets the widget's URI. |
+| `MCPPath`, `OAuthPaths` | Where the MCP endpoint and the OAuth endpoints are served. |
+
+To add your own tools, prompts or resources without SolvaPay's paywall, use the underlying server: `server.Server()` returns the `*mcp.Server`.
+
+## How customer sign-in works
+
+MCP clients sign the customer in with OAuth. Your server is the authorization server the client sees, and forwards each step to SolvaPay:
+
+| Route | What it does |
+| --- | --- |
+| `/.well-known/oauth-protected-resource` | Says this server is protected and where to sign in. |
+| `/.well-known/oauth-authorization-server` | Lists the OAuth endpoints below. |
+| `/oauth/register` | Registers the client for your product. |
+| `/oauth/authorize` | Redirects to SolvaPay's sign-in. |
+| `/oauth/token`, `/oauth/revoke` | Forwarded to SolvaPay. |
+| `/mcp` | The MCP endpoint. Requires a bearer token. |
+
+`/mcp` answers only requests whose bearer token SolvaPay verifies. The SDK asks SolvaPay who the token belongs to, and caches accepted tokens for 60 seconds. Every other request gets a `401` whose `WWW-Authenticate` header points the client at the protected-resource document, which starts sign-in. A tool sees the customer SolvaPay named for the token.
+
+## Set PublicBaseURL to the URL clients use
+
+`PublicBaseURL` is the OAuth issuer and resource clients see, and where Stripe sends the customer back after 3-D Secure. It must be exactly the URL clients connect to, without `/mcp`. If it differs (for example `http://localhost:3031` while clients use an ngrok URL), the issuer clients see doesn't match the server they connected to, and sign-in fails.
+
+## Run it locally
+
+1. Start a tunnel to your port:
+
+   ```bash
+   ngrok http 3031
+   ```
+
+2. Start the server with the tunnel's URL:
+
+   ```bash
+   PUBLIC_BASE_URL=https://<your-tunnel>.ngrok.app go run .
+   ```
+
+3. Add `https://<your-tunnel>.ngrok.app/mcp` to an MCP client as a remote server. The client opens SolvaPay's sign-in, then can call your tools.
+
+## Next steps
+
+- [Examples](/sdks/go/guides/examples): a complete paid MCP server with six tools.
+- [Agent payments](/sdks/go/guides/agents): let agents pay for the same tools (preview).
+- The TypeScript equivalent of this page: [MCP Server](/sdks/typescript/guides/mcp).

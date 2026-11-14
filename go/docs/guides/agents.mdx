@@ -1,0 +1,177 @@
+---
+title: "Agent payments"
+sidebarTitle: "Agent payments (preview)"
+description: "Let AI agents pay for your Go MCP tools with SolvaPay agent tokens and agent keys."
+---
+
+<Warning>
+Agent payments are in preview. SolvaPay has to turn them on for your merchant account before agents can pay you. Until then, SolvaPay refuses every paid call: a call with an agent token is refused with the reason `unavailable`, and a request with an agent key fails with a `500` that the route logs.
+</Warning>
+
+The `agents` package (`github.com/solvapay/solvapay-sdk/go/agents`) lets an AI agent pay for your MCP tools on its owner's behalf. The agent presents a SolvaPay credential instead of a customer sign-in, and SolvaPay decides each call against the owner's spend policy, budget and balance, asking the owner to approve it when the policy says so.
+
+## How a paid call works
+
+1. **Identify.** The agent presents a SolvaPay agent token (a JWT from SolvaPay's agent issuer) or an agent key (`agk_…`). The SDK verifies a token against SolvaPay's published keys, and asks SolvaPay about a key, reusing the answer for 30 seconds.
+2. **Authorize.** Before your tool runs, the SDK asks SolvaPay whether the call may go ahead, with your estimate of its cost. SolvaPay holds that amount, refuses the call, or waits for the owner's approval.
+3. **Run.** Your tool calls its upstream and reports what the call cost.
+4. **Complete.** The SDK settles the call at the reported cost. An upstream answer of `400` or above charges nothing. If your tool returns an error, the upstream was never reached: the call is released and nothing is charged.
+
+## Add agent payments to an MCP server
+
+`NewMCPRoute` answers agents on your MCP path. `Middleware` puts it in front of your own handler: requests that carry an agent credential go to the route, and everything else reaches your handler unchanged, for example the `Handler()` of a [`NewMCPServer`](/sdks/go/guides/mcp).
+
+```go main.go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+	"github.com/solvapay/solvapay-sdk/go/agents"
+)
+
+const issuer = "https://api.solvapay.com/v1/agent"
+
+type quoteArgs struct {
+	Symbol string `json:"symbol" jsonschema:"A ticker symbol"`
+}
+
+func main() {
+	secretKey := os.Getenv("SOLVAPAY_SECRET_KEY")
+	publicBaseURL := os.Getenv("PUBLIC_BASE_URL")
+	environment := agents.SecretKeyEnvironment(secretKey)
+
+	client, err := agents.NewClient(solvapay.Config{APIKey: secretKey})
+	if err != nil {
+		log.Fatal(err)
+	}
+	tokens, err := agents.NewTokenVerifier(agents.TokenVerifierOptions{
+		Issuer:      issuer,
+		ProviderRef: os.Getenv("SOLVAPAY_PROVIDER_REF"),
+		Resource:    publicBaseURL + "/mcp",
+		Environment: environment,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	keys, err := agents.NewKeyVerifier(agents.KeyVerifierOptions{Client: client, Environment: environment})
+	if err != nil {
+		log.Fatal(err)
+	}
+	calls, err := agents.NewCalls(agents.CallsOptions{Client: client, MaxWaitSeconds: 50})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	route, err := agents.NewMCPRoute(agents.MCPRouteOptions{
+		Issuer:            issuer,
+		Layer:             &agents.AgentLayer{Tokens: tokens, Keys: keys},
+		Calls:             calls,
+		MCPPath:           "/mcp",
+		ServerName:        "research",
+		ProtectedResource: &agents.ProtectedResource{Resource: publicBaseURL + "/mcp"},
+		Tools: func(_ *mcp.Server, paid *agents.PaidTools, _ *agents.AgentRequest) {
+			agents.AddPaidTool(paid, agents.PaidTool[quoteArgs]{
+				Name:        "get_quote",
+				Description: "Latest price for a ticker symbol. Up to 0.01 USD per call.",
+				Item:        func(quoteArgs) string { return "get_quote" },
+				Estimate: func(quoteArgs) agents.Money {
+					return agents.Money{Amount: "0.01", Currency: "USD"}
+				},
+				Run: func(ctx context.Context, args quoteArgs, call agents.PaidCall) (agents.PaidToolRun, error) {
+					text, err := json.Marshal(map[string]any{"symbol": args.Symbol, "price": 101.5})
+					if err != nil {
+						return agents.PaidToolRun{}, err
+					}
+					return agents.PaidToolRun{
+						Status: 200,
+						Cost:   &agents.Cost{Amount: 0.005, Currency: "USD"},
+						Result: &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(text)}}},
+					}, nil
+				},
+			})
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Agents go to the route; everyone else reaches your own handler.
+	customers := http.NotFoundHandler() // for example, your solvapay.NewMCPServer's Handler()
+	log.Fatal(http.ListenAndServe(":3031", route.Middleware(customers)))
+}
+```
+
+`issuer` is SolvaPay's agent token issuer. Only bearer tokens from this issuer, and agent keys, go to the agent route, and the SDK fetches its public keys from `<issuer>/jwks.json`.
+
+Set these in your environment:
+
+| Variable | Meaning |
+| --- | --- |
+| `SOLVAPAY_SECRET_KEY` | Your secret key. Its prefix sets the environment: sandbox agents can only pay sandbox merchants, and live agents live ones. |
+| `SOLVAPAY_PROVIDER_REF` | Your merchant account's provider reference. Agent tokens issued for any other merchant are refused. |
+| `PUBLIC_BASE_URL` | Where agents reach this server, as for [`PublicBaseURL`](/sdks/go/guides/mcp#set-publicbaseurl-to-the-url-clients-use). |
+
+## Paid tools
+
+`AddPaidTool(paid, tool)` registers a paid tool inside `Tools`. `PaidTool[Args]` decodes the arguments into `Args` and, when `InputSchema` is nil, infers the schema from it.
+
+| Field | Meaning |
+| --- | --- |
+| `Name`, `Title`, `Description` | Shown to the agent. Say what a call may cost in the description. |
+| `Item` | Your label for what the call buys, such as a model id or tool name. |
+| `Estimate` | What the call may cost, as `Money{Amount, Currency}`: a decimal string with up to 8 places and an ISO 4217 currency. SolvaPay holds this amount. |
+| `Prompt` | Optional. Text whose fingerprint lets SolvaPay spot an agent stuck in a loop. Its end is sent only when the owner opted in. |
+| `Run` | Calls the upstream and returns `PaidToolRun`: the upstream's `Status`, its reported `Cost`, and the `Result` the agent gets. |
+| `Annotations` | Hints. They default to neither read-only nor destructive. |
+
+`FreeTools` registers tools anyone may call, signed in or not, on the `*mcp.Server` it is given.
+
+## Sign-in for hosts
+
+Hosts such as Claude and ChatGPT get an agent token by OAuth. Set `ProtectedResource` to turn this on:
+
+- The route serves the resource's metadata at `/.well-known/oauth-protected-resource/mcp`, naming SolvaPay's agent issuer as the authorization server.
+- A paid call without a token gets a `401` with the challenge that sends the host to sign in.
+- Set `TokenVerifierOptions.Resource` to the same URL, so tokens issued for it are accepted.
+
+By default a host may list tools and run free ones before sign-in. `SignInFirst: true` challenges every tool call without a token.
+
+## Refusals
+
+A refused call is a tool error (`isError`). Its text is the sentence for the agent's owner, and `structuredContent.refusal.reason` says which refusal it was, so the agent can act without parsing the text:
+
+| Reason | Meaning |
+| --- | --- |
+| `customer_not_linked` | The owner has not linked an account with you yet |
+| `topup_required` | The owner's balance is too low |
+| `ask` | The owner's policy asks for approval, and this call did not wait for it (`MaxWaitSeconds` is `0`) |
+| `approval_declined`, `approval_expired` | The owner declined the call, or the approval request expired |
+| `approval_timed_out` | The owner had not answered within `MaxWaitSeconds` |
+| `approval_client_closed` | The agent went away while the owner was deciding |
+| `deny` | The owner's policy does not allow the call |
+| `agent_not_accepted` | SolvaPay did not accept the agent's credential |
+| `unavailable` | SolvaPay could not be reached or answered with an error, including when agent payments are off for your account. The call never goes ahead. |
+
+`CallsOptions.MaxWaitSeconds` is how long a call may wait for the owner's approval; `0` refuses at once. Each authorize request holds for at most 55 seconds, so a longer wait is a series of requests.
+
+## HTTP APIs and your own flow
+
+The MCP route is built from smaller parts you can use directly:
+
+- `Gate.Check` decides one call to an HTTP API: not an agent (your own auth decides), rejected, refused or allowed. `RefusalStatus` and `WriteRefusal` turn a refusal into an HTTP answer.
+- `Calls.Begin` authorizes a call and returns either `*Allowed` or `*Refused`. Call `Allowed.Finish` with the upstream's result, or `Allowed.Release` when the upstream was never reached.
+- `Client.ReportUsage` sends your upstream's usage for reconciliation.
+
+See the [package reference](https://pkg.go.dev/github.com/solvapay/solvapay-sdk/go/agents) for each type.
+
+## Next steps
+
+- [MCP server](/sdks/go/guides/mcp): the customer-facing server the route sits in front of.
+- The TypeScript equivalent of this page: [Agent payments](/sdks/typescript/guides/agents).

@@ -1,0 +1,77 @@
+---
+title: "Installation"
+description: "Install the Python SDK, choose its extras, and set the environment variables it reads."
+---
+
+## Prerequisites
+
+- Python 3.10 or later
+- A SolvaPay account with a product and at least one plan
+
+## Install the package
+
+```bash
+pip install solvapay
+```
+
+The base package gives you paid functions, the API client and webhook verification. Add an extra for the other features:
+
+| Install | Adds |
+| --- | --- |
+| `pip install 'solvapay[mcp]'` | Paid MCP servers, on the official MCP Python SDK (`mcp`) and Starlette |
+| `pip install 'solvapay[agents,mcp]'` | Agent payments (preview). `agents` adds JWT verification; the agent MCP route also needs `mcp` |
+
+## Set environment variables
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `SOLVAPAY_SECRET_KEY` | Yes | Your secret key. Use a sandbox key (`sk_sandbox_...`) while you build |
+| `SOLVAPAY_PRODUCT_REF` | For paid calls | The product paid calls bill against (`prd_...`) |
+| `SOLVAPAY_API_BASE_URL` | No | Defaults to `https://api.solvapay.com` |
+
+To get the values:
+
+1. In SolvaPay Console, go to **Developers** > **API Keys** and copy a sandbox secret key into `SOLVAPAY_SECRET_KEY`.
+2. Open your product and copy its reference into `SOLVAPAY_PRODUCT_REF`.
+
+```bash
+export SOLVAPAY_SECRET_KEY=sk_sandbox_...
+export SOLVAPAY_PRODUCT_REF=prd_...
+```
+
+`create_solvapay()` reads these variables. It raises `SolvaPayError` with code `missing_secret` when there is no secret key. A paid function or MCP tool raises `missing_product` when it's registered without a product.
+
+## Configure in code
+
+Pass the same settings as arguments to override the environment:
+
+```python
+import os
+
+from solvapay import create_solvapay
+
+solvapay = create_solvapay(
+    api_key=os.environ["SOLVAPAY_SECRET_KEY"],
+    product_ref="prd_3c4d5e6f",
+    api_base_url="https://api.solvapay.com",
+    timeout=30.0,
+    max_retries=2,
+)
+```
+
+`max_retries` applies only to requests that are safe to send twice: reads, and writes with an idempotency key. It retries on `429`, `502`, `503`, `504` and network errors.
+
+## Versions
+
+The Python SDK has its own version line, starting at 0.1.0. Its numbers don't follow the TypeScript packages. What the two share is the API spec and the conformance suite, so a Python release behaves the same as the TypeScript release that passes the same suite version.
+
+Until 1.0.0, a minor release (0.x to 0.y) may change the API. Pin a minor version in production:
+
+```bash
+pip install 'solvapay>=0.1,<0.2'
+```
+
+## Next steps
+
+- [Quick start](/sdks/python/setup/quick-start): make a function paid.
+- [Paid MCP server](/sdks/python/guides/mcp): charge for MCP tools.

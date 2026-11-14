@@ -1,0 +1,63 @@
+---
+title: "Installation"
+description: "Install the SolvaPay Go SDK and set your keys."
+---
+
+## Prerequisites
+
+- Go 1.26 or later
+- A SolvaPay account with a product and at least one plan
+
+## Install the module
+
+```bash
+go get github.com/solvapay/solvapay-sdk/go@latest
+```
+
+Import it as `solvapay`:
+
+```go
+import solvapay "github.com/solvapay/solvapay-sdk/go"
+```
+
+Agent payments live in a subpackage, `github.com/solvapay/solvapay-sdk/go/agents`. See [Agent payments](/sdks/go/guides/agents).
+
+## Set your keys
+
+1. In SolvaPay Console, go to **Developers** > **API Keys** and copy a sandbox secret key (`sk_sandbox_…`).
+2. Copy the reference (`prd_…`) of the product you want to charge for.
+3. Set them in your environment:
+
+```bash
+export SOLVAPAY_SECRET_KEY=sk_sandbox_...
+export SOLVAPAY_PRODUCT_REF=prd_...
+```
+
+| Variable | Required | Read by |
+| --- | --- | --- |
+| `SOLVAPAY_SECRET_KEY` | Yes | `NewClient`, when `Config.APIKey` is empty. A missing key fails with the code `missing_secret`. |
+| `SOLVAPAY_PRODUCT_REF` | Yes, unless you pass a product in code | `NewPaywall` and `NewMCPServer`, when no `ProductRef` is set. With no product, `Payable` and `NewMCPServer` fail with the code `missing_product`. |
+| `SOLVAPAY_API_BASE_URL` | No | `NewClient`, when `Config.APIBaseURL` is empty. Defaults to `https://api.solvapay.com`. |
+
+Keep the secret key on your server. Never ship it to a browser or a client app.
+
+## Versions
+
+- The Go SDK has its own version line, starting at v0.1.0. Its numbers don't follow the TypeScript packages.
+- Releases are tagged `go/vX.Y.Z` in the [solvapay-sdk](https://github.com/solvapay/solvapay-sdk) repository. `go get …@latest` picks the newest release.
+- Until v1.0.0, a minor release (v0.x to v0.y) may change the API.
+- Each release behaves like the TypeScript SDK: a shared conformance suite checks the paywall, its messages, the MCP tools and webhook verification on every change.
+
+To try the next release before it ships, ask for a preview by its version (previews are tagged `go/vX.Y.Z-dev.N`), or take the `dev` branch as a pseudo-version:
+
+```bash
+go get github.com/solvapay/solvapay-sdk/go@dev
+```
+
+The API reference for every version is on [pkg.go.dev](https://pkg.go.dev/github.com/solvapay/solvapay-sdk/go).
+
+## Next steps
+
+- [Quick start](/sdks/go/setup/quick-start): make your first paid function.
+- [MCP server](/sdks/go/guides/mcp): sell MCP tools.
+- The TypeScript equivalent of this page: [Installation](/sdks/typescript/setup/installation).
