@@ -38,20 +38,27 @@ describe('edge entry point parity', () => {
 describe('fetch subpath surface', () => {
   const EXPECTED_HANDLERS = [
     'activatePlan',
+    'attachBusinessDetails',
     'cancelRenewal',
+    'checkLimits',
     'checkPurchase',
     'createCheckoutSession',
     'createCustomerSession',
     'createPaymentIntent',
     'createTopupPaymentIntent',
     'customerBalance',
+    'disableAutoRecharge',
+    'getAutoRecharge',
     'getHistory',
     'getMerchant',
     'getPaymentMethod',
     'getProduct',
+    'getUsage',
     'listPlans',
     'processPayment',
+    'processTopupPayment',
     'reactivateRenewal',
+    'saveAutoRecharge',
     'syncCustomer',
     'trackUsage',
   ] as const
@@ -64,5 +71,19 @@ describe('fetch subpath surface', () => {
   it('exports the solvapayWebhook factory + configureCors helper', () => {
     expect(typeof fetchEntry.solvapayWebhook).toBe('function')
     expect(typeof fetchEntry.configureCors).toBe('function')
+  })
+
+  it('exports solvapayRoutes, serving every route React calls by default', () => {
+    expect(typeof fetchEntry.solvapayRoutes).toBe('function')
+    expect(Object.keys(fetchEntry.SOLVAPAY_ROUTES).sort()).toEqual(
+      [
+        'activate-plan', 'attach-business-details', 'auto-recharge', 'cancel-renewal',
+        'check-purchase', 'create-checkout-session', 'create-customer-session',
+        'create-payment-intent', 'create-topup-payment-intent', 'customer-balance',
+        'get-product', 'history', 'limits', 'list-plans', 'merchant', 'payment-method',
+        'process-payment', 'process-topup-payment', 'reactivate-renewal', 'sync-customer',
+        'track-usage', 'usage',
+      ].sort(),
+    )
   })
 })

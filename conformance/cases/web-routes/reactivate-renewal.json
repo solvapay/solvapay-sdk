@@ -1,0 +1,104 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "reactivate-renewal",
+  "description": "reactivate-renewal turns renewal back on and returns the purchase.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/reactivate-renewal",
+      "user": {
+        "id": "user_rr1",
+        "email": "user_rr1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "purchaseRef": "pur_active"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_rr1@example.com",
+            "externalRef": "user_rr1"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active",
+          "body": {
+            "reference": "pur_active",
+            "customerRef": "cus_conform1",
+            "status": "active",
+            "startDate": "2026-10-14T12:00:00Z",
+            "amount": 2000,
+            "currency": "USD",
+            "isRecurring": true,
+            "createdAt": "2026-10-14T12:00:00Z",
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1",
+            "productName": "Conformance product"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_active/reactivate",
+          "body": {
+            "success": true,
+            "purchase": {
+              "reference": "pur_active",
+              "customerRef": "cus_conform1",
+              "status": "active",
+              "startDate": "2026-10-14T12:00:00Z",
+              "amount": 2000,
+              "currency": "USD",
+              "isRecurring": true,
+              "createdAt": "2026-10-14T12:00:00Z",
+              "productRef": "prd_conform1",
+              "planRef": "pln_conform1",
+              "autoRenew": true
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "reference": "pur_active",
+        "customerRef": "cus_conform1",
+        "status": "active",
+        "startDate": "2026-10-14T12:00:00Z",
+        "amount": 2000,
+        "currency": "USD",
+        "isRecurring": true,
+        "createdAt": "2026-10-14T12:00:00Z",
+        "productRef": "prd_conform1",
+        "planRef": "pln_conform1",
+        "autoRenew": true
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_rr1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_active/reactivate"
+        }
+      ]
+    }
+  }
+}

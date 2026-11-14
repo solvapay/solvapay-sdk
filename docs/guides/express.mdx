@@ -124,88 +124,46 @@ app.post('/api/tasks', payable.http(createTask))
 
 ## Authentication Integration
 
-SolvaPay needs to identify customers. You can pass customer references in several ways:
+SolvaPay needs to know which customer is calling. A browser or API client can send any header, so `payable.http()` never takes the customer from a header on its own. Pick one of these.
 
-### Option 1: Custom Header (Recommended)
+### Option 1: `getCustomerRef` from your own auth (recommended)
 
-Extract customer reference from a custom header:
+Return the user your auth middleware already verified. SolvaPay finds or creates the customer for that id:
 
 ```typescript
-import { getUserIdFromRequest } from '@solvapay/auth'
-
-// Custom middleware to extract customer reference
-function extractCustomerRef(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) {
-  // Extract from header, JWT token, session, etc.
-  const customerRef = req.headers['x-customer-ref'] as string
-
-  if (!customerRef) {
-    return res.status(401).json({ error: 'Missing customer reference' })
-  }
-
-  // Attach to request for SolvaPay to use
-  req.customerRef = customerRef
+function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = verifySession(req) // your own session, API key or token check
+  if (!user) return res.status(401).json({ error: 'Not signed in' })
+  res.locals.userId = user.id
   next()
 }
 
-app.use(extractCustomerRef)
+app.use('/api', authMiddleware)
 
-// SolvaPay will automatically use req.customerRef
-app.post('/api/tasks', payable.http(createTask))
-```
-
-### Option 2: JWT Token
-
-Extract customer ID from a JWT token:
-
-```typescript
-import jwt from 'jsonwebtoken'
-import { getUserIdFromRequest } from '@solvapay/auth'
-
-function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const token = req.headers.authorization?.replace('Bearer ', '')
-
-  if (!token) {
-    return res.status(401).json({ error: 'Missing token' })
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
-    req.customerRef = decoded.userId
-    next()
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' })
-  }
-}
-
-app.use(authMiddleware)
-app.post('/api/tasks', payable.http(createTask))
-```
-
-### Option 3: Custom Customer Reference Extraction
-
-Use the `getCustomerRef` option for more complex scenarios:
-
-```typescript
-import jwt from 'jsonwebtoken'
-
-// Extract customer reference from JWT token
 app.post(
   '/api/tasks',
   payable.http(createTask, {
-    getCustomerRef: (req: express.Request) => {
-      const token = req.headers.authorization?.replace('Bearer ', '')
-      if (!token) return null
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
-      return decoded.userId
-    },
+    getCustomerRef: (req: express.Request) => req.res!.locals.userId,
   }),
 )
 ```
+
+`getCustomerRef` may return your user id or a SolvaPay customer ref (`cus_…`) you stored. An empty string means anonymous.
+
+### Option 2: Verified bearer tokens
+
+Without `getCustomerRef`, `payable.http()` reads `Authorization: Bearer <token>` and trusts it only when it can verify it:
+
+- **HS256**: `SOLVAPAY_JWT_SECRET` (or `SUPABASE_JWT_SECRET`)
+- **ES256 / RS256**: `SOLVAPAY_JWKS_URL` (derived from `SUPABASE_URL` on Supabase)
+
+The token's `sub` is your user id. It is always looked up by `externalRef`, never taken as a customer ref, even when it starts with `cus_`. A token nothing can verify gets a 401.
+
+### Option 3: Behind a gateway you trust
+
+If a gateway sets `x-customer-ref` on every request and nothing reaches your server without passing it, set `SOLVAPAY_AUTH_TRUST_GATEWAY=true`. Without that, a request carrying `x-customer-ref` gets a 401, so a client can't name another customer.
+
+A request with none of these is anonymous.
 
 ## Error Handling
 
@@ -288,8 +246,8 @@ app.post(
   '/api/tasks',
   payable.http(createTask, {
     getCustomerRef: (req: express.Request) => {
-      // Custom logic to extract customer reference
-      return req.headers['x-customer-ref'] as string
+      // Your user, from your own verified auth
+      return req.res!.locals.userId
     },
   }),
 )
@@ -345,7 +303,7 @@ app.post('/api/chat', async (req, res) => {
 
 The `allow` result carries:
 
-- `customerRef` — the resolved customer (defaults to the `x-customer-ref` header)
+- `customerRef` — the resolved customer (from `getCustomerRef`, else a verified bearer token)
 - `trackSuccess(opts?)` / `trackFail(error, opts?)` — fire-and-forget usage reporting; call
   exactly one of them after the stream finishes
 - `decision` — the underlying paywall decision, if you need plan details
@@ -398,19 +356,20 @@ const payable = solvaPay.payable({
   product: 'prd_myapi',
 })
 
-// Authentication middleware
+// Authentication middleware: replace verifySession with your own auth
 function authMiddleware(req: Request, res: Response, next: express.NextFunction) {
-  const customerRef = req.headers['x-customer-ref'] as string
-
-  if (!customerRef) {
-    return res.status(401).json({ error: 'Missing x-customer-ref header' })
+  const user = verifySession(req)
+  if (!user) {
+    return res.status(401).json({ error: 'Not signed in' })
   }
-
-  req.customerRef = customerRef
+  res.locals.userId = user.id
   next()
 }
 
-app.use(authMiddleware)
+app.use('/api', authMiddleware)
+
+// Who the customer is, for every paid route
+const identity = { getCustomerRef: (req: Request) => req.res!.locals.userId as string }
 
 // Business logic functions
 async function createTask(req: Request) {
@@ -453,9 +412,9 @@ async function listTasks(req: Request) {
 }
 
 // Protected routes
-app.post('/api/tasks', payable.http(createTask))
-app.get('/api/tasks/:id', payable.http(getTask))
-app.get('/api/tasks', payable.http(listTasks))
+app.post('/api/tasks', payable.http(createTask, identity))
+app.get('/api/tasks/:id', payable.http(getTask, identity))
+app.get('/api/tasks', payable.http(listTasks, identity))
 
 // Health check (unprotected)
 app.get('/health', (req: Request, res: Response) => {
@@ -493,10 +452,10 @@ app.listen(port, () => {
 # Start the server
 npm start
 
-# Test with customer reference
+# Test as a signed-in user (whatever verifySession checks)
 curl -X POST http://localhost:3000/api/tasks \
   -H "Content-Type: application/json" \
-  -H "x-customer-ref: user_123" \
+  -H "Authorization: Bearer <your session token>" \
   -d '{"title": "My Task", "description": "Task description"}'
 ```
 

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "unknown-path",
+  "description": "A path the routes don't serve answers 404 and calls nothing.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/not-a-route",
+      "user": {
+        "id": "user_r1",
+        "email": "user_r1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 404,
+      "body": {
+        "error": "Not found"
+      },
+      "apiCalls": []
+    }
+  }
+}

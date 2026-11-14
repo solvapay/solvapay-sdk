@@ -6,7 +6,7 @@
  */
 
 import type { AuthenticatedUser, ErrorResult } from './types'
-import { SOLVAPAY_USER_ID_HEADER } from '@solvapay/auth'
+import { SOLVAPAY_USER_ID_HEADER, verifyBearerToken } from '@solvapay/auth'
 import { handleRouteError } from './error'
 
 /**
@@ -26,90 +26,11 @@ type JwtPayload = {
  * Base64url decode a string into a UTF-8 string.
  * Runtime-agnostic: works in Node, Deno, Bun, and Edge runtimes.
  */
-function base64UrlDecode(input: string): string {
-  const padded = input.replace(/-/g, '+').replace(/_/g, '/')
-  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
-  const base64 = padded + padding
-
-  // Prefer globalThis.atob (available in all modern runtimes including Node 18+).
-  if (typeof atob === 'function') {
-    const binary = atob(base64)
-    let result = ''
-    for (let i = 0; i < binary.length; i++) {
-      result += String.fromCharCode(binary.charCodeAt(i))
-    }
-    // Decode as UTF-8.
-    try {
-      return decodeURIComponent(escape(result))
-    } catch {
-      return result
-    }
-  }
-
-  // Last-resort Buffer fallback (Node only).
-  const BufferCtor = (globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } })
-    .Buffer
-  if (BufferCtor) {
-    return BufferCtor.from(base64, 'base64').toString('utf-8')
-  }
-
-  throw new Error('No base64 decoder available in this runtime')
-}
-
-/**
- * Unverified JWT payload decode. Returns null if the token is malformed.
- *
- * This does NOT verify the signature. It's safe to use when the platform
- * gateway (e.g. Supabase Edge's verify_jwt=true) has already validated the
- * token before our handler runs. Set SOLVAPAY_AUTH_STRICT=true + provide a
- * JWT secret to require cryptographic verification inside the function.
- */
-function decodeJwtUnverified(token: string): JwtPayload | null {
-  const parts = token.split('.')
-  if (parts.length !== 3) return null
-  try {
-    const json = base64UrlDecode(parts[1])
-    const payload = JSON.parse(json) as unknown
-    if (typeof payload !== 'object' || payload === null) return null
-    return payload as JwtPayload
-  } catch {
-    return null
-  }
-}
-
 function extractBearerToken(request: Request): string | null {
   const authHeader = request.headers.get('authorization')
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) return null
   const token = authHeader.slice(7).trim()
   return token.length > 0 ? token : null
-}
-
-function readEnv(name: string): string | undefined {
-  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
-  return proc?.env?.[name]
-}
-
-function isStrictMode(): boolean {
-  return readEnv('SOLVAPAY_AUTH_STRICT') === 'true'
-}
-
-function getConfiguredSecret(): string | undefined {
-  return readEnv('SOLVAPAY_JWT_SECRET') || readEnv('SUPABASE_JWT_SECRET')
-}
-
-/**
- * Verify a Bearer JWT using HS256 against the configured secret.
- * Returns the payload on success, or null on any failure.
- */
-async function verifyHs256(token: string, secret: string): Promise<JwtPayload | null> {
-  try {
-    const { jwtVerify } = await import('jose')
-    const key = new TextEncoder().encode(secret)
-    const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] })
-    return payload as JwtPayload
-  } catch {
-    return null
-  }
 }
 
 function pickName(payload: JwtPayload): string | null {
@@ -138,14 +59,16 @@ function unauthorized(details: string): ErrorResult {
  *
  * Resolution order:
  * 1. `SOLVAPAY_USER_ID_HEADER` header — set by Next.js-style middleware (unchanged).
- * 2. `Authorization: Bearer <jwt>` — verified via HS256 when a secret is
- *    configured (`SOLVAPAY_JWT_SECRET` or `SUPABASE_JWT_SECRET`), or
- *    unverified-decoded when no secret is configured. The unverified path
- *    covers platforms that verify JWTs at the gateway (e.g. Supabase Edge
- *    with `verify_jwt = true`, which is the default) and asymmetric signing
- *    keys (ES256/RS256) that the SDK does not have keys for.
- * 3. Set `SOLVAPAY_AUTH_STRICT=true` to require cryptographic verification
- *    inside the handler (the unverified-decode fallback is then disabled).
+ * 2. `Authorization: Bearer <jwt>`, verified by `verifyBearerToken` from
+ *    `@solvapay/auth`: HS256 with `SOLVAPAY_JWT_SECRET` / `SUPABASE_JWT_SECRET`,
+ *    ES256/RS256 against `SOLVAPAY_JWKS_URL` (or Supabase's JWKS from
+ *    `SUPABASE_URL`), or, only with `SOLVAPAY_AUTH_TRUST_GATEWAY=true`, a
+ *    gateway that verified it already (Supabase Edge with `verify_jwt = true`).
+ *    A token none of these verifies is refused with 401: there is no
+ *    unverified default.
+ *
+ * Email and name come only from a verified token; with the header alone they
+ * are null.
  *
  * @param request - Standard Web API Request object
  * @param options - Configuration options
@@ -191,13 +114,9 @@ export async function getAuthenticatedUserCore(
       if (includeEmail || includeName) {
         const token = extractBearerToken(request)
         if (token) {
-          const secret = getConfiguredSecret()
-          const payload = secret
-            ? await verifyHs256(token, secret)
-            : isStrictMode()
-              ? null
-              : decodeJwtUnverified(token)
-          if (payload) {
+          const verified = await verifyBearerToken(token)
+          if (verified.ok) {
+            const payload = verified.payload as JwtPayload
             if (includeEmail) email = pickEmail(payload)
             if (includeName) name = pickName(payload)
           }
@@ -212,24 +131,11 @@ export async function getAuthenticatedUserCore(
       return unauthorized('User ID not found. Ensure middleware is configured.')
     }
 
-    const secret = getConfiguredSecret()
-    let payload: JwtPayload | null = null
-
-    if (secret) {
-      payload = await verifyHs256(token, secret)
-      if (!payload) {
-        return unauthorized('Invalid or expired authentication token')
-      }
-    } else if (isStrictMode()) {
-      return unauthorized(
-        'Strict auth mode is enabled but no JWT secret is configured. Set SOLVAPAY_JWT_SECRET or SUPABASE_JWT_SECRET.',
-      )
-    } else {
-      payload = decodeJwtUnverified(token)
-      if (!payload) {
-        return unauthorized('Malformed authentication token')
-      }
+    const verified = await verifyBearerToken(token)
+    if (!verified.ok) {
+      return unauthorized(verified.reason)
     }
+    const payload = verified.payload as JwtPayload
 
     const userId = typeof payload.sub === 'string' ? payload.sub : null
     if (!userId) {

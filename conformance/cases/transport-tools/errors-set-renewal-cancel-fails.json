@@ -15,6 +15,15 @@
       },
       "api": [
         {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_ec_4",
+          "body": {
+            "reference": "pur_ec_4",
+            "customerRef": "cus_EC01",
+            "status": "active"
+          }
+        },
+        {
           "method": "POST",
           "path": "/v1/sdk/purchases/pur_ec_4/cancel",
           "status": 503,

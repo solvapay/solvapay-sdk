@@ -22,20 +22,27 @@
 
 export {
   activatePlan,
+  attachBusinessDetails,
   cancelRenewal,
+  checkLimits,
   checkPurchase,
   createCheckoutSession,
   createCustomerSession,
   createPaymentIntent,
   createTopupPaymentIntent,
   customerBalance,
+  disableAutoRecharge,
+  getAutoRecharge,
   getHistory,
   getMerchant,
   getPaymentMethod,
   getProduct,
+  getUsage,
   listPlans,
   processPayment,
+  processTopupPayment,
   reactivateRenewal,
+  saveAutoRecharge,
   solvapayWebhook,
   syncCustomer,
   trackUsage,
@@ -43,3 +50,5 @@ export {
 export type { SolvapayWebhookOptions } from './handlers'
 
 export { configureCors } from './cors'
+export { SOLVAPAY_ROUTES, solvapayRoutes } from './routes'
+export type { SolvapayRoutesOptions } from './routes'

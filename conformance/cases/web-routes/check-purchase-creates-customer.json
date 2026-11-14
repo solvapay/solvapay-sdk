@@ -1,0 +1,83 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "check-purchase-creates-customer",
+  "description": "A user with no SolvaPay customer yet gets one, created with their id, email and name.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/check-purchase",
+      "user": {
+        "id": "user_cp2",
+        "email": "user_cp2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "message": "Customer not found",
+            "code": "customer_not_found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_new1",
+            "name": "Ada Lovelace",
+            "email": null,
+            "externalRef": null
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_new1",
+          "body": {
+            "reference": "cus_new1",
+            "name": "Ada Lovelace",
+            "email": "user_cp2@example.com",
+            "externalRef": "user_cp2",
+            "purchases": []
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_new1",
+        "email": "user_cp2@example.com",
+        "name": "Ada Lovelace",
+        "purchases": []
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cp2"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "email": "user_cp2@example.com",
+            "metadata": {},
+            "name": "Ada Lovelace",
+            "externalRef": "user_cp2"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_new1"
+        }
+      ]
+    }
+  }
+}

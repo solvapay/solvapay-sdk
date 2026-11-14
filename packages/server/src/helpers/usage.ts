@@ -5,6 +5,7 @@ import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
+import { resolveCallerCustomer } from './caller'
 import { checkPurchaseCore } from './purchase'
 
 /**
@@ -84,9 +85,7 @@ export function deriveUsageSnapshot(input: {
   // backend did not measure a finite cap, leave `total` unknown rather
   // than fabricating one from the purchase-derived `used` (always 0).
   const total =
-    typeof input.limits.limit === 'number' && input.limits.limit > 0
-      ? input.limits.limit
-      : null
+    typeof input.limits.limit === 'number' && input.limits.limit > 0 ? input.limits.limit : null
   const used =
     typeof input.limits.used === 'number'
       ? input.limits.used
@@ -189,10 +188,7 @@ export async function trackUsageCore(
     const { userId, email, name } = userResult
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    })
+    const customerRef = await resolveCallerCustomer(request, solvaPay, { userId, email, name })
 
     const result = await solvaPay.trackUsage({
       customerRef,

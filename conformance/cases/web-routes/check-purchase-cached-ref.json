@@ -1,0 +1,96 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "check-purchase-cached-ref",
+  "description": "A customer ref the client cached is used only when that customer belongs to the verified user.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/check-purchase",
+      "user": {
+        "id": "user_cp3",
+        "email": "user_cp3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "headers": {
+        "x-solvapay-customer-ref": "cus_someone_else"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_someone_else",
+          "body": {
+            "reference": "cus_someone_else",
+            "name": "Ada Lovelace",
+            "email": "other-user@example.com",
+            "externalRef": "other-user",
+            "purchases": [
+              {
+                "reference": "pur_x",
+                "customerRef": "cus_someone_else",
+                "status": "active",
+                "startDate": "2026-10-14T12:00:00Z",
+                "amount": 2000,
+                "currency": "USD",
+                "isRecurring": true,
+                "createdAt": "2026-10-14T12:00:00Z",
+                "productRef": "prd_conform1",
+                "planRef": "pln_conform1",
+                "productName": "Conformance product"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_cp3@example.com",
+            "externalRef": "user_cp3"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_cp3@example.com",
+            "externalRef": "user_cp3",
+            "purchases": []
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_conform1",
+        "email": "user_cp3@example.com",
+        "name": "Ada Lovelace",
+        "purchases": []
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_someone_else"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cp3"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1"
+        }
+      ]
+    }
+  }
+}

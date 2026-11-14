@@ -8,6 +8,12 @@ import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { NextAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
+import {
+  identifyRequest,
+  identityLabel,
+  isUnauthorized,
+  type RequestIdentity,
+} from '../request-identity'
 
 /**
  * Next.js context (Web Request + optional route context)
@@ -61,36 +67,25 @@ export class NextAdapter implements Adapter<NextContext, Response> {
     }
   }
 
-  async getCustomerRef([request]: NextContext): Promise<string> {
+  /**
+   * `getCustomerRef` when given; otherwise a verified bearer token, the
+   * `x-user-id` your middleware sets after verifying the session (a user),
+   * `x-customer-ref` behind a trusted gateway, or anonymous. There is no
+   * default customer. See `identifyRequest`.
+   */
+  async getIdentity([request]: NextContext): Promise<RequestIdentity> {
     if (this.options.getCustomerRef) {
-      const ref = await this.options.getCustomerRef(request)
-      return AdapterUtils.ensureCustomerRef(ref)
+      const ref = AdapterUtils.ensureCustomerRef(await this.options.getCustomerRef(request))
+      return ref === 'anonymous' ? { kind: 'anonymous' } : { kind: 'customer', customerRef: ref }
     }
+    const hasBearer = /^bearer\s+/i.test(request.headers.get('authorization')?.trim() ?? '')
+    const userId = request.headers.get('x-user-id')?.trim()
+    if (userId && !hasBearer) return { kind: 'user', userId }
+    return identifyRequest(name => request.headers.get(name))
+  }
 
-    // Try to get from JWT token first
-    const authHeader = request.headers.get('authorization')
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const jwtSub = await AdapterUtils.extractFromJWT(token)
-      if (jwtSub) {
-        return AdapterUtils.ensureCustomerRef(jwtSub)
-      }
-    }
-
-    // Try x-user-id header (set by middleware, e.g., Supabase auth)
-    const userId = request.headers.get('x-user-id')
-    if (userId) {
-      return AdapterUtils.ensureCustomerRef(userId)
-    }
-
-    // Fallback to x-customer-ref header
-    const headerRef = request.headers.get('x-customer-ref')
-    if (headerRef) {
-      return AdapterUtils.ensureCustomerRef(headerRef)
-    }
-
-    // Default to demo_user for Next.js (common in examples)
-    return 'demo_user'
+  async getCustomerRef(context: NextContext): Promise<string> {
+    return identityLabel(await this.getIdentity(context))
   }
 
   formatResponse(result: unknown, _context: NextContext): Response {
@@ -127,7 +122,7 @@ export class NextAdapter implements Adapter<NextContext, Response> {
         error: error instanceof Error ? error.message : 'Internal server error',
       }),
       {
-        status: 500,
+        status: isUnauthorized(error) ? 401 : 500,
         headers: { 'Content-Type': 'application/json' },
       },
     )

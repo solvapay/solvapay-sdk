@@ -1,0 +1,29 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "client-user-id-ignored",
+  "description": "An x-user-id header sent by the client is not identity: with no verified token the route answers 401.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/customer-balance",
+      "user": null,
+      "headers": {
+        "x-user-id": "victim-user"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 401,
+      "body": {
+        "error": "Unauthorized",
+        "details": "User ID not found. Ensure middleware is configured."
+      },
+      "apiCalls": []
+    }
+  }
+}
