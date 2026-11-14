@@ -1,0 +1,32 @@
+---
+title: "Go SDK"
+description: "Charge for Go functions, MCP tools and agent calls with the SolvaPay Go SDK."
+---
+
+The **Go SDK** (`github.com/solvapay/solvapay-sdk/go`) lets your Go server charge for what it does. It needs Go 1.26 or later.
+
+## What you can build
+
+- **Paid functions.** Wrap any function with `Payable`. Each call is checked against the customer's plan first. A call that may go ahead runs and is recorded as usage. A call that may not returns a `*PaywallError` with the checkout link.
+- **Paid MCP tools.** `NewMCPServer` builds a server on the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). Customers sign in with SolvaPay over OAuth, and you register tools with `RegisterPayable` or `RegisterFree`. The server also adds SolvaPay's `account` and `activate_plan` tools and the checkout widget.
+- **Webhooks.** `VerifyWebhook` checks the `SV-Signature` header and parses the event.
+- **API client.** `NewClient` gives you the SolvaPay SDK API: customers, balances, purchases, limits and usage.
+- **Agent payments (preview).** The `agents` package lets AI agents pay for your tools with a SolvaPay agent token or agent key.
+
+## Same behaviour as the TypeScript SDK
+
+The paywall, its messages, the MCP tools' answers and webhook verification are checked against the [TypeScript SDK](/sdks/typescript/intro) on every change by a shared conformance suite. The API client is generated from the same API spec.
+
+## Next steps
+
+| Page | What it covers |
+| --- | --- |
+| [Installation](/sdks/go/setup/installation) | Install the module, set your keys, pick a version |
+| [Quick start](/sdks/go/setup/quick-start) | Make a function paid and serve it over HTTP |
+| [MCP server](/sdks/go/guides/mcp) | Paid MCP tools, sign-in and the checkout widget |
+| [API client](/sdks/go/guides/api-client) | Call the SolvaPay API and handle its errors |
+| [Webhooks](/sdks/go/guides/webhooks) | Receive and verify webhook events |
+| [Agent payments](/sdks/go/guides/agents) | Let agents pay for your MCP tools (preview) |
+| [Examples](/sdks/go/guides/examples) | Run the Go stock research MCP server |
+
+The full API reference is on [pkg.go.dev](https://pkg.go.dev/github.com/solvapay/solvapay-sdk/go).

@@ -1,0 +1,138 @@
+---
+title: "API client"
+description: "Call the SolvaPay API from Go with NewClient, and handle its errors."
+---
+
+`NewClient` gives you the SolvaPay SDK API. The paywall and the MCP server use it too, so you usually create one client and pass it to both.
+
+## Create a client
+
+```go
+client, err := solvapay.NewClient(solvapay.Config{})
+```
+
+Empty `Config` fields fall back to the environment:
+
+| Field | Default |
+| --- | --- |
+| `APIKey` | `SOLVAPAY_SECRET_KEY`. Neither set fails with the code `missing_secret`. |
+| `APIBaseURL` | `SOLVAPAY_API_BASE_URL`, then `https://api.solvapay.com` |
+| `Timeout` | 30 seconds per request |
+| `MaxRetries` | 2. Reads, and writes sent with an `Idempotency-Key`, are retried on `429`, `502`, `503`, `504` and network errors, honouring `Retry-After`. |
+| `HTTPClient` | A client with `Timeout`. Pass your own to add tracing or a proxy. |
+
+## Common operations
+
+Most methods take and return the API's JSON as `map[string]any`, with the API's camelCase keys. Customer methods return a typed `api.CustomerResponse`.
+
+```go main.go
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+
+	solvapay "github.com/solvapay/solvapay-sdk/go"
+)
+
+func main() {
+	ctx := context.Background()
+	client, err := solvapay.NewClient(solvapay.Config{}) // SOLVAPAY_SECRET_KEY, SOLVAPAY_API_BASE_URL
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Find the customer for your own user id, or create one.
+	customer, err := client.GetCustomerByExternalRef(ctx, "user_42")
+	var apiErr *solvapay.Error
+	if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
+		customer, err = client.CreateCustomer(ctx, map[string]any{
+			"email":       "ada@example.com",
+			"externalRef": "user_42",
+		})
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("customer:", customer.Reference)
+
+	balance, err := client.GetCustomerBalance(ctx, customer.Reference)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("balance:", balance)
+
+	purchases, err := client.ListPurchases(ctx, customer.Reference, "prd_YOUR_PRODUCT")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("purchases:", purchases)
+
+	limits, err := client.CheckLimits(ctx, map[string]any{
+		"customerRef": customer.Reference,
+		"productRef":  "prd_YOUR_PRODUCT",
+		"meterName":   "requests",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("within limits:", limits["withinLimits"], "remaining:", limits["remaining"])
+}
+```
+
+| Method | API call |
+| --- | --- |
+| `GetCustomer`, `GetCustomerByExternalRef`, `CreateCustomer` | Read or create customers |
+| `GetCustomerBalance` | A customer's credit balance |
+| `ListPurchases`, `CancelPurchase`, `ReactivatePurchase` | A customer's purchases of a product |
+| `CheckLimits` | Whether a customer may use a product's meter now |
+| `RecordUsage` | Record one usage event |
+| `ListPlans`, `GetProduct`, `GetMerchant` | Your catalogue and account |
+| `CreateCheckoutSession`, `CreateCustomerSession` | Hosted checkout and the customer portal |
+| `Request` | Any other SDK API path, as raw JSON |
+
+The API reference tab lists each endpoint's fields; see [Authentication and base URL](/api-reference/authentication) to start. For paid calls, use the paywall (`Payable` or `NewMCPServer`) rather than `CheckLimits` and `RecordUsage`: it caches limits, creates customers on first use and records each outcome once.
+
+## Handle errors
+
+Every error the SDK returns is a `*solvapay.Error`:
+
+| Field | Meaning |
+| --- | --- |
+| `Code` | A stable identifier. Branch on it. |
+| `Status` | The HTTP status, when the error came from the API. |
+| `Message` | Text for people. It may change, so never branch on it. |
+| `Body` | The API's answer, when there was one. |
+
+```go
+_, err = client.GetCustomer(context.Background(), "cus_MISSING")
+var apiErr *solvapay.Error
+if errors.As(err, &apiErr) {
+	fmt.Println(apiErr.Status, apiErr.Code, apiErr.Message)
+}
+if solvapay.ErrorCode(err) == "network_error" {
+	// SolvaPay could not be reached, even after retries.
+}
+```
+
+`solvapay.ErrorCode(err)` is the `Code` of an error that is or wraps a `*solvapay.Error`, and `""` for anything else.
+
+An API error carries the API's own `code` when it sends one, and `http_<status>` otherwise. Codes the SDK sets itself include:
+
+| Code | Meaning |
+| --- | --- |
+| `missing_secret` | No secret key |
+| `missing_product` | No product reference |
+| `network_error` | The API could not be reached or its answer could not be read |
+| `non_json_response` | The API answered with something other than JSON |
+| `invalid_response` | The API's answer is missing a field the SDK needs |
+| `identity_required` | A paid call without a customer |
+| `invalid_argument` | A bad argument, such as an empty path reference |
+
+## Next steps
+
+- [Webhooks](/sdks/go/guides/webhooks): get told when purchases and payments change instead of polling.
+- The TypeScript equivalent: [Purchase management](/sdks/typescript/guides/purchase-management).
