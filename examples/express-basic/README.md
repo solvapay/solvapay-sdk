@@ -59,7 +59,7 @@ pnpm dev
 
 ### Protected Endpoints (Paywall)
 
-All require `x-customer-ref` header for user identification:
+All require an `x-customer-ref` header. This demo's `getCustomerRef` reads it, so anyone can name any user; a real app returns the user from its own auth:
 
 - `POST /tasks` - Create a new task
 - `GET /tasks` - List all tasks
@@ -236,7 +236,7 @@ async function createTask(args: {
   title: string
   description?: string
   auth?: {
-    customer_ref?: string // Extracted from x-customer-ref header
+    customer_ref?: string // The customer getCustomerRef named
   }
 }): Promise<{ success: boolean; task: Task }> {
   // Your business logic here

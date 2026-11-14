@@ -177,8 +177,8 @@ export async function handleApiRequest(
 
   // The streaming chat path owns its own Response (NDJSON ReadableStream
   // body + 402 paywall short-circuit) — bypass the JSON dispatcher.
-  // `payable.gate()` reads `x-customer-ref` directly, so no header
-  // rewrite is required. `ctx` is forwarded so the SDK's bound
+  // `handleChat` passes `payable.gate()` a `getCustomerRef` that reads
+  // the demo's `x-customer-ref`, so no header rewrite is required. `ctx` is forwarded so the SDK's bound
   // `trackSuccess` / `trackFail` can keep usage tracking alive past
   // the response close on Workers via `ctx.waitUntil`. The Vite dev
   // plugin (Node) calls without `ctx`; the Node event loop keeps the
