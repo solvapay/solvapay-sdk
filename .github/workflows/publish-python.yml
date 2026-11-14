@@ -9,7 +9,7 @@ name: Publish Python
 #                    merges. Skipped when it is already on PyPI (nothing new
 #                    to release) or still 0.0.0 (never released).
 #   push to dev   -> a preview of the next release, as <next>.dev<run number>
-#                    (python/scripts/preview_version.py). PEP 440 orders it
+#                    (scripts/next-version.mjs). PEP 440 orders it
 #                    before that release and after every earlier one, and pip
 #                    only picks it with `pip install --pre solvapay`.
 #
@@ -70,7 +70,7 @@ jobs:
           if [ "$GITHUB_REF_NAME" = "main" ]; then
             version=$(uv run python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           else
-            version=$(uv run python scripts/preview_version.py "$GITHUB_RUN_NUMBER")
+            version="$(node ../scripts/next-version.mjs python).dev${GITHUB_RUN_NUMBER}"
           fi
           if [ "$version" = "0.0.0" ]; then
             echo "solvapay has not been released yet (0.0.0): nothing to publish until the version packages PR merges."
