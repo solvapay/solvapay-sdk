@@ -18,10 +18,10 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_pm1",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_pm1@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_pm1"
           }
         },
         {

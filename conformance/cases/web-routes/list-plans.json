@@ -20,16 +20,36 @@
         {
           "method": "GET",
           "path": "/v1/sdk/products/prd_conform1/plans",
-          "body": [
-            {
-              "reference": "pln_conform1",
-              "name": "Pro",
-              "type": "recurring",
-              "price": 2000,
-              "currency": "USD",
-              "status": "active"
-            }
-          ]
+          "body": {
+            "plans": [
+              {
+                "type": "recurring",
+                "reference": "pln_conform1",
+                "name": "Pro",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "charge",
+                    "per": "flat",
+                    "amountMinor": 2000,
+                    "currency": "USD"
+                  }
+                ],
+                "isActive": true,
+                "status": "active",
+                "price": 2000,
+                "currency": "USD",
+                "createdAt": "2026-10-14T12:00:00Z",
+                "updatedAt": "2026-10-14T12:00:00Z"
+              }
+            ],
+            "total": 1,
+            "limit": 50,
+            "offset": 0
+          }
         }
       ]
     },
@@ -41,12 +61,27 @@
       "body": {
         "plans": [
           {
+            "type": "recurring",
             "reference": "pln_conform1",
             "name": "Pro",
-            "type": "recurring",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2000,
+                "currency": "USD"
+              }
+            ],
+            "isActive": true,
+            "status": "active",
             "price": 2000,
             "currency": "USD",
-            "status": "active"
+            "createdAt": "2026-10-14T12:00:00Z",
+            "updatedAt": "2026-10-14T12:00:00Z"
           }
         ],
         "productRef": "prd_conform1"

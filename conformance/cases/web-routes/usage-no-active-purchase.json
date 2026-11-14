@@ -18,20 +18,20 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_us1",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_us1@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_us1"
           }
         },
         {
           "method": "GET",
           "path": "/v1/sdk/customers/cus_conform1",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_us1",
-            "email": "user_us1@example.com",
+            "reference": "cus_conform1",
             "name": "Ada Lovelace",
+            "email": "user_us1@example.com",
+            "externalRef": "user_us1",
             "purchases": []
           }
         }

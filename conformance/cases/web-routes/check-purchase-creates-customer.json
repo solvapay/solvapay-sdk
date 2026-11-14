@@ -28,17 +28,19 @@
           "path": "/v1/sdk/customers",
           "body": {
             "reference": "cus_new1",
-            "customerRef": "cus_new1"
+            "name": "Ada Lovelace",
+            "email": null,
+            "externalRef": null
           }
         },
         {
           "method": "GET",
           "path": "/v1/sdk/customers/cus_new1",
           "body": {
-            "customerRef": "cus_new1",
-            "externalRef": "user_cp2",
-            "email": "user_cp2@example.com",
+            "reference": "cus_new1",
             "name": "Ada Lovelace",
+            "email": "user_cp2@example.com",
+            "externalRef": "user_cp2",
             "purchases": []
           }
         }

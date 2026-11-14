@@ -21,10 +21,10 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_tp2",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_tp2@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_tp2"
           }
         },
         {
@@ -32,7 +32,17 @@
           "path": "/v1/sdk/customers/cus_conform1/balance",
           "body": {
             "customerRef": "cus_conform1",
-            "credits": 0
+            "credits": 0,
+            "displayCurrency": "USD",
+            "creditsPerMinorUnit": 100,
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "formatted": "$0.00",
+              "exchangeRate": 1,
+              "rateSource": "parity"
+            }
           }
         },
         {

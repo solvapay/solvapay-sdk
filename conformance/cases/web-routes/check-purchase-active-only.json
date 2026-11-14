@@ -18,33 +18,45 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_cp1",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_cp1@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_cp1"
           }
         },
         {
           "method": "GET",
           "path": "/v1/sdk/customers/cus_conform1",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_cp1",
-            "email": "user_cp1@example.com",
+            "reference": "cus_conform1",
             "name": "Ada Lovelace",
+            "email": "user_cp1@example.com",
+            "externalRef": "user_cp1",
             "purchases": [
               {
                 "reference": "pur_active",
+                "customerRef": "cus_conform1",
+                "status": "active",
+                "startDate": "2026-10-14T12:00:00Z",
+                "amount": 2000,
+                "currency": "USD",
+                "isRecurring": true,
+                "createdAt": "2026-10-14T12:00:00Z",
                 "productRef": "prd_conform1",
                 "planRef": "pln_conform1",
-                "status": "active",
                 "productName": "Conformance product"
               },
               {
                 "reference": "pur_old",
+                "customerRef": "cus_conform1",
+                "status": "cancelled",
+                "startDate": "2026-10-14T12:00:00Z",
+                "amount": 2000,
+                "currency": "USD",
+                "isRecurring": true,
+                "createdAt": "2026-10-14T12:00:00Z",
                 "productRef": "prd_conform1",
                 "planRef": "pln_conform1",
-                "status": "cancelled",
                 "productName": "Conformance product"
               }
             ]
@@ -64,9 +76,15 @@
         "purchases": [
           {
             "reference": "pur_active",
+            "customerRef": "cus_conform1",
+            "status": "active",
+            "startDate": "2026-10-14T12:00:00Z",
+            "amount": 2000,
+            "currency": "USD",
+            "isRecurring": true,
+            "createdAt": "2026-10-14T12:00:00Z",
             "productRef": "prd_conform1",
             "planRef": "pln_conform1",
-            "status": "active",
             "productName": "Conformance product"
           }
         ]

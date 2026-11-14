@@ -21,10 +21,10 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_rr1",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_rr1@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_rr1"
           }
         },
         {
@@ -33,7 +33,15 @@
           "body": {
             "reference": "pur_active",
             "customerRef": "cus_conform1",
-            "status": "active"
+            "status": "active",
+            "startDate": "2026-10-14T12:00:00Z",
+            "amount": 2000,
+            "currency": "USD",
+            "isRecurring": true,
+            "createdAt": "2026-10-14T12:00:00Z",
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1",
+            "productName": "Conformance product"
           }
         },
         {

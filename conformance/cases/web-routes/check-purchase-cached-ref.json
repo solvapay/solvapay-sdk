@@ -21,16 +21,23 @@
           "method": "GET",
           "path": "/v1/sdk/customers/cus_someone_else",
           "body": {
-            "customerRef": "cus_someone_else",
-            "externalRef": "other-user",
-            "email": "other-user@example.com",
+            "reference": "cus_someone_else",
             "name": "Ada Lovelace",
+            "email": "other-user@example.com",
+            "externalRef": "other-user",
             "purchases": [
               {
                 "reference": "pur_x",
+                "customerRef": "cus_someone_else",
+                "status": "active",
+                "startDate": "2026-10-14T12:00:00Z",
+                "amount": 2000,
+                "currency": "USD",
+                "isRecurring": true,
+                "createdAt": "2026-10-14T12:00:00Z",
                 "productRef": "prd_conform1",
                 "planRef": "pln_conform1",
-                "status": "active"
+                "productName": "Conformance product"
               }
             ]
           }
@@ -39,20 +46,20 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_cp3",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_cp3@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_cp3"
           }
         },
         {
           "method": "GET",
           "path": "/v1/sdk/customers/cus_conform1",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_cp3",
-            "email": "user_cp3@example.com",
+            "reference": "cus_conform1",
             "name": "Ada Lovelace",
+            "email": "user_cp3@example.com",
+            "externalRef": "user_cp3",
             "purchases": []
           }
         }

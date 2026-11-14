@@ -15,29 +15,43 @@
       },
       "body": {
         "enabled": true,
-        "thresholdAmount": 500,
-        "topupAmount": 2000,
-        "currency": "USD"
+        "triggerType": "balance",
+        "currency": "USD",
+        "thresholdAmountMajor": 5,
+        "topupAmountMajor": 20
       },
       "api": [
         {
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_ar2",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_ar2@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_ar2"
           }
         },
         {
           "method": "PUT",
           "path": "/v1/sdk/auto-recharge",
           "body": {
-            "enabled": true,
-            "thresholdAmount": 500,
-            "topupAmount": 2000,
-            "currency": "USD"
+            "config": {
+              "enabled": true,
+              "trigger": {
+                "type": "balance",
+                "thresholdAmountMinor": 500
+              },
+              "topup": {
+                "mode": "fixed",
+                "amountMinor": 2000,
+                "currency": "USD"
+              },
+              "fundingSourceType": "card",
+              "status": "active",
+              "failureCount": 0,
+              "monthlySpendMinor": 0,
+              "updatedAt": "2026-10-14T12:00:00Z"
+            }
           }
         }
       ]
@@ -48,10 +62,23 @@
     "result": {
       "status": 200,
       "body": {
-        "enabled": true,
-        "thresholdAmount": 500,
-        "topupAmount": 2000,
-        "currency": "USD"
+        "config": {
+          "enabled": true,
+          "trigger": {
+            "type": "balance",
+            "thresholdAmountMinor": 500
+          },
+          "topup": {
+            "mode": "fixed",
+            "amountMinor": 2000,
+            "currency": "USD"
+          },
+          "fundingSourceType": "card",
+          "status": "active",
+          "failureCount": 0,
+          "monthlySpendMinor": 0,
+          "updatedAt": "2026-10-14T12:00:00Z"
+        }
       },
       "apiCalls": [
         {
@@ -63,11 +90,12 @@
           "method": "PUT",
           "path": "/v1/sdk/auto-recharge",
           "body": {
-            "customerRef": "cus_conform1",
             "enabled": true,
-            "thresholdAmount": 500,
-            "topupAmount": 2000,
-            "currency": "USD"
+            "triggerType": "balance",
+            "currency": "USD",
+            "thresholdAmountMajor": 5,
+            "topupAmountMajor": 20,
+            "customerRef": "cus_conform1"
           }
         }
       ]

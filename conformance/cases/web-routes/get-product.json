@@ -23,7 +23,13 @@
           "body": {
             "reference": "prd_conform1",
             "name": "Conformance product",
-            "status": "active"
+            "balance": 0,
+            "totalTransactions": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "status": "active",
+            "createdAt": "2026-10-14T12:00:00Z",
+            "updatedAt": "2026-10-14T12:00:00Z"
           }
         }
       ]
@@ -36,7 +42,13 @@
       "body": {
         "reference": "prd_conform1",
         "name": "Conformance product",
-        "status": "active"
+        "balance": 0,
+        "totalTransactions": 0,
+        "isManagedMcp": false,
+        "isMcpPay": false,
+        "status": "active",
+        "createdAt": "2026-10-14T12:00:00Z",
+        "updatedAt": "2026-10-14T12:00:00Z"
       },
       "apiCalls": [
         {

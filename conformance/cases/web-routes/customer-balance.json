@@ -18,10 +18,10 @@
           "method": "GET",
           "path": "/v1/sdk/customers",
           "body": {
-            "customerRef": "cus_conform1",
-            "externalRef": "user_cb1",
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
             "email": "user_cb1@example.com",
-            "name": "Ada Lovelace"
+            "externalRef": "user_cb1"
           }
         },
         {
@@ -32,7 +32,14 @@
             "credits": 250000,
             "displayCurrency": "USD",
             "creditsPerMinorUnit": 100,
-            "displayExchangeRate": 1
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 25,
+              "currency": "USD",
+              "formatted": "$25.00",
+              "exchangeRate": 1,
+              "rateSource": "parity"
+            }
           }
         }
       ]
@@ -47,7 +54,14 @@
         "credits": 250000,
         "displayCurrency": "USD",
         "creditsPerMinorUnit": 100,
-        "displayExchangeRate": 1
+        "displayExchangeRate": 1,
+        "display": {
+          "amountMajor": 25,
+          "currency": "USD",
+          "formatted": "$25.00",
+          "exchangeRate": 1,
+          "rateSource": "parity"
+        }
       },
       "apiCalls": [
         {
