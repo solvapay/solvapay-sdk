@@ -93,6 +93,7 @@ them.
 | `agent-identity`       | `verifyAgentTokens`, `promptFacts`, `oauthResources`; scenario steps `verifyAgentKey`, `identify` | `@solvapay/agents`: every agent-token check and refusal (signature, JWKS key selection, time claims with 30 s tolerance, audience and OAuth resource, issuer, claims, environment), the agent-key exchange and its 30 s cache, how `identify` tells credentials apart, the canonical resource, RFC 9728 document and 401 challenge, and prompt facts. A refusal's `detail` is compared only when it is the SDK's own sentence; one from the JWT library or the API compares as `<not compared>`                                                                                        |
 | `agent-mcp`            | `agentMcpRoute`, `agentRefusalStatuses`                                                           | The agent MCP route: bearer routing, 401/403 and the OAuth challenge, the protected-resource document, the tool list, paid calls authorized, run and completed, refusals and approval waits as tool results, upstream failures; each refusal's HTTP status                                                                                                                                                                                                                                                                                                                             |
 | `merchant-sign-in`     | `merchantMcpHttp`, `merchantTools`                                                                | How a merchant's MCP server signs customers in, over HTTP: the protected-resource and authorization-server documents, CORS (native client origins only, never credentials) and preflights, dynamic client registration, the authorize redirect, the token and revoke proxies with their exact forwarded bodies and RFC 6749 error mapping, 404s and 405s, and the MCP endpoint's 401 challenge for every token it refuses without asking SolvaPay; and the merchant's own paid and free tools as a host lists them, registration refusals, and a free tool's answer without a customer |
+| `web-routes`           | `webRoute`                                                                                        | The HTTP routes the `@solvapay/react` components call on the merchant's backend (`/api/check-purchase`, `/api/create-payment-intent`, …), as `@solvapay/server/fetch`'s `solvapayRoutes()` serves them: status, JSON body and every request each route makes to SolvaPay; 401 without a verified user, 403 for another customer's purchase, 404 and 405 with `Allow` for paths and methods it doesn't serve                                                                                                                                                                            |
 
 ### `callTool`
 
@@ -124,6 +125,20 @@ In a tool error, a text that carries an API error answer (TypeScript's
 `<api message>`; the status and the SDK's own sentences still compare.
 Arguments must pass the tool's input schema: the Python server validates them
 before the tool runs, the TypeScript runner calls the handler directly.
+
+### `webRoute`
+
+A `webRoute` case sends one request to the routes React calls, by `method`,
+`path` (under `/api`), optional `query`, `headers` and JSON `body`, as `user`:
+the person the merchant's own auth has verified (`id`, `email`, `name`), or
+`null` for no credentials. TypeScript sends `user` as an HS256 bearer token the
+route verifies; another SDK hands the same user to its identity hook. A header
+such as `x-user-id` in `headers` comes from the client and is never identity.
+
+`api` scripts SolvaPay as for `callTool`. The result is the route's `status`,
+its JSON `body`, `allow` when it answers 405, and `apiCalls`: each request it
+made to SolvaPay, in order, with its query and parsed JSON body. Each case uses
+its own user id, because the SDKs remember a user's customer for a while.
 
 ### `describeServer`, `getPrompts`, `readResource`, `callPaidTool`
 

@@ -36,21 +36,28 @@
 import type { WebhookEvent } from '../types/webhook'
 import {
   activatePlanCore,
+  attachBusinessDetailsCore,
   cancelPurchaseCore,
+  checkLimitsCore,
   checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
+  disableAutoRechargeCore,
+  getAutoRechargeCore,
   getCustomerBalanceCore,
   getHistoryCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
+  getUsageCore,
   isErrorResult,
   listPlansCore,
   processPaymentIntentCore,
+  processTopupPaymentIntentCore,
   reactivatePurchaseCore,
+  saveAutoRechargeCore,
   syncCustomerCore,
   trackUsageCore,
 } from '../helpers'
@@ -328,6 +335,107 @@ export async function getHistory(req: Request): Promise<Response> {
     productRef,
     ...(limit !== undefined ? { limit } : {}),
   })
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function processTopupPayment(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const body = await parseJsonBody(req)
+  const result = await processTopupPaymentIntentCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function attachBusinessDetails(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const body = await parseJsonBody(req)
+  const result = await attachBusinessDetailsCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const result = await getAutoRechargeCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function saveAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const body = await parseJsonBody(req)
+  const result = await saveAutoRechargeCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function disableAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const result = await disableAutoRechargeCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getUsage(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const result = await getUsageCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function checkLimits(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
+
+  const result = await checkLimitsCore(req)
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)

@@ -1,0 +1,104 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "cancel-renewal",
+  "description": "cancel-renewal cancels the purchase's renewal and returns the purchase.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/cancel-renewal",
+      "user": {
+        "id": "user_cr1",
+        "email": "user_cr1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "purchaseRef": "pur_active",
+        "reason": "Too expensive"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cr1",
+            "email": "user_cr1@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active",
+          "body": {
+            "reference": "pur_active",
+            "customerRef": "cus_conform1",
+            "status": "active"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_active/cancel",
+          "body": {
+            "success": true,
+            "purchase": {
+              "reference": "pur_active",
+              "customerRef": "cus_conform1",
+              "status": "active",
+              "startDate": "2026-10-14T12:00:00Z",
+              "amount": 2000,
+              "currency": "USD",
+              "isRecurring": true,
+              "createdAt": "2026-10-14T12:00:00Z",
+              "productRef": "prd_conform1",
+              "planRef": "pln_conform1",
+              "cancelledAt": "2026-11-14T12:00:00Z",
+              "cancellationReason": "Too expensive",
+              "autoRenew": false
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "reference": "pur_active",
+        "customerRef": "cus_conform1",
+        "status": "active",
+        "startDate": "2026-10-14T12:00:00Z",
+        "amount": 2000,
+        "currency": "USD",
+        "isRecurring": true,
+        "createdAt": "2026-10-14T12:00:00Z",
+        "productRef": "prd_conform1",
+        "planRef": "pln_conform1",
+        "cancelledAt": "2026-11-14T12:00:00Z",
+        "cancellationReason": "Too expensive",
+        "autoRenew": false
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cr1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_active/cancel",
+          "body": {
+            "reason": "Too expensive"
+          }
+        }
+      ]
+    }
+  }
+}

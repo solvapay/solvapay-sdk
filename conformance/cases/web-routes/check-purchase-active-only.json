@@ -1,0 +1,87 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "check-purchase-active-only",
+  "description": "check-purchase looks the customer up by the user's id and returns only active purchases.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/check-purchase",
+      "user": {
+        "id": "user_cp1",
+        "email": "user_cp1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cp1",
+            "email": "user_cp1@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cp1",
+            "email": "user_cp1@example.com",
+            "name": "Ada Lovelace",
+            "purchases": [
+              {
+                "reference": "pur_active",
+                "productRef": "prd_conform1",
+                "planRef": "pln_conform1",
+                "status": "active",
+                "productName": "Conformance product"
+              },
+              {
+                "reference": "pur_old",
+                "productRef": "prd_conform1",
+                "planRef": "pln_conform1",
+                "status": "cancelled",
+                "productName": "Conformance product"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_conform1",
+        "email": "user_cp1@example.com",
+        "name": "Ada Lovelace",
+        "purchases": [
+          {
+            "reference": "pur_active",
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1",
+            "status": "active",
+            "productName": "Conformance product"
+          }
+        ]
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cp1"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1"
+        }
+      ]
+    }
+  }
+}

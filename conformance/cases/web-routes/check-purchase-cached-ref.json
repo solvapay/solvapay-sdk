@@ -1,0 +1,89 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "check-purchase-cached-ref",
+  "description": "A customer ref the client cached is used only when that customer belongs to the verified user.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/check-purchase",
+      "user": {
+        "id": "user_cp3",
+        "email": "user_cp3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "headers": {
+        "x-solvapay-customer-ref": "cus_someone_else"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_someone_else",
+          "body": {
+            "customerRef": "cus_someone_else",
+            "externalRef": "other-user",
+            "email": "other-user@example.com",
+            "name": "Ada Lovelace",
+            "purchases": [
+              {
+                "reference": "pur_x",
+                "productRef": "prd_conform1",
+                "planRef": "pln_conform1",
+                "status": "active"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cp3",
+            "email": "user_cp3@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cp3",
+            "email": "user_cp3@example.com",
+            "name": "Ada Lovelace",
+            "purchases": []
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "customerRef": "cus_conform1",
+        "email": "user_cp3@example.com",
+        "name": "Ada Lovelace",
+        "purchases": []
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_someone_else"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cp3"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_conform1"
+        }
+      ]
+    }
+  }
+}

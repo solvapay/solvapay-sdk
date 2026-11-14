@@ -1,0 +1,64 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "cancel-renewal-other-customer",
+  "description": "cancel-renewal refuses another customer's purchase with 403 and never cancels it.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/cancel-renewal",
+      "user": {
+        "id": "user_cr3",
+        "email": "user_cr3@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "purchaseRef": "pur_active",
+        "reason": "Too expensive"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_cr3",
+            "email": "user_cr3@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active",
+          "body": {
+            "reference": "pur_active",
+            "customerRef": "cus_someone_else",
+            "status": "active"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 403,
+      "body": {
+        "error": "Forbidden",
+        "details": "This purchase belongs to another customer"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_cr3"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_active"
+        }
+      ]
+    }
+  }
+}

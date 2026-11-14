@@ -1,0 +1,76 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "auto-recharge-save",
+  "description": "PUT auto-recharge saves the settings for the user's customer.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "PUT",
+      "path": "/api/auto-recharge",
+      "user": {
+        "id": "user_ar2",
+        "email": "user_ar2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "enabled": true,
+        "thresholdAmount": 500,
+        "topupAmount": 2000,
+        "currency": "USD"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_ar2",
+            "email": "user_ar2@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "enabled": true,
+            "thresholdAmount": 500,
+            "topupAmount": 2000,
+            "currency": "USD"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "enabled": true,
+        "thresholdAmount": 500,
+        "topupAmount": 2000,
+        "currency": "USD"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_ar2"
+        },
+        {
+          "method": "PUT",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "customerRef": "cus_conform1",
+            "enabled": true,
+            "thresholdAmount": 500,
+            "topupAmount": 2000,
+            "currency": "USD"
+          }
+        }
+      ]
+    }
+  }
+}

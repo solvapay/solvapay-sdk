@@ -1,0 +1,29 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "limits-missing-product",
+  "description": "limits without productRef answers 400.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/limits",
+      "user": {
+        "id": "user_li2",
+        "email": "user_li2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 400,
+      "body": {
+        "error": "Missing required parameter: productRef"
+      },
+      "apiCalls": []
+    }
+  }
+}

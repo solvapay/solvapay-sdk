@@ -1,0 +1,48 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "merchant",
+  "description": "merchant returns the merchant's public details.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/merchant",
+      "user": {
+        "id": "user_m1",
+        "email": "user_m1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Conformance Merchant",
+            "legalName": "Conformance AB",
+            "supportEmail": "support@conformance.test",
+            "country": "SE"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "displayName": "Conformance Merchant",
+        "legalName": "Conformance AB",
+        "supportEmail": "support@conformance.test",
+        "country": "SE"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant"
+        }
+      ]
+    }
+  }
+}

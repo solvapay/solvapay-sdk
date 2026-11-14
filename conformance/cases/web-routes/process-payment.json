@@ -1,0 +1,81 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "process-payment",
+  "description": "process-payment processes the intent for the user's customer.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/process-payment",
+      "user": {
+        "id": "user_pp1",
+        "email": "user_pp1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "paymentIntentId": "pi_conform1",
+        "productRef": "prd_conform1",
+        "planRef": "pln_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "customerRef": "cus_conform1",
+            "externalRef": "user_pp1",
+            "email": "user_pp1@example.com",
+            "name": "Ada Lovelace"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_conform1/process",
+          "body": {
+            "type": "recurring",
+            "status": "succeeded",
+            "purchase": {
+              "reference": "pur_new",
+              "status": "active",
+              "productRef": "prd_conform1",
+              "planRef": "pln_conform1"
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "type": "recurring",
+        "status": "succeeded",
+        "purchase": {
+          "reference": "pur_new",
+          "status": "active",
+          "productRef": "prd_conform1",
+          "planRef": "pln_conform1"
+        }
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_pp1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_conform1/process",
+          "body": {
+            "productRef": "prd_conform1",
+            "customerRef": "cus_conform1",
+            "planRef": "pln_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

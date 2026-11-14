@@ -451,6 +451,31 @@ describe('attachBusinessDetailsCore', () => {
     mockCreateSolvaPay.mockReturnValue({
       attachBusinessDetails: mockAttachBusinessDetails,
     } as never)
+    vi.mocked(syncCustomerCore).mockResolvedValue('cus_verified')
+  })
+
+  it('refuses a caller with no verified user, before calling SolvaPay', async () => {
+    vi.mocked(syncCustomerCore).mockResolvedValue({ error: 'Unauthorized', status: 401 } as never)
+    const result = await attachBusinessDetailsCore(fakeRequest(), {
+      paymentIntentId: 'pi_test_123',
+      isBusiness: false,
+    })
+    expect(result).toMatchObject({ status: 401 })
+    expect(mockAttachBusinessDetails).not.toHaveBeenCalled()
+  })
+
+  it("attaches to the verified user's customer, never a customerRef from the body", async () => {
+    mockAttachBusinessDetails.mockResolvedValue({ taxBreakdown: {} })
+    await attachBusinessDetailsCore(
+      fakeRequest(),
+      { paymentIntentId: 'pi_test_123', isBusiness: false, customerRef: 'cus_someone_else' },
+      { solvaPay: { attachBusinessDetails: mockAttachBusinessDetails } as never },
+    )
+    expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
+      paymentIntentId: 'pi_test_123',
+      customerRef: 'cus_verified',
+      isBusiness: false,
+    })
   })
 
   it('rejects requests missing paymentIntentId with status 400', async () => {
@@ -497,6 +522,7 @@ describe('attachBusinessDetailsCore', () => {
 
     expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
+      customerRef: 'cus_verified',
       isBusiness: false,
     })
     expect(result).toEqual({
@@ -537,6 +563,7 @@ describe('attachBusinessDetailsCore', () => {
 
     expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
+      customerRef: 'cus_verified',
       isBusiness: false,
       customerCountry: 'US',
       customerState: 'CA',
@@ -570,6 +597,7 @@ describe('attachBusinessDetailsCore', () => {
 
     expect(mockAttachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
+      customerRef: 'cus_verified',
       isBusiness: true,
       businessName: 'Acme AB',
       country: 'SE',

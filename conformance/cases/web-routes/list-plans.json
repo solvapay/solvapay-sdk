@@ -1,0 +1,62 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "list-plans",
+  "description": "list-plans returns the product's plans and the product ref.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/list-plans",
+      "user": {
+        "id": "user_lp1",
+        "email": "user_lp1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "query": {
+        "productRef": "prd_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_conform1/plans",
+          "body": [
+            {
+              "reference": "pln_conform1",
+              "name": "Pro",
+              "type": "recurring",
+              "price": 2000,
+              "currency": "USD",
+              "status": "active"
+            }
+          ]
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "plans": [
+          {
+            "reference": "pln_conform1",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2000,
+            "currency": "USD",
+            "status": "active"
+          }
+        ],
+        "productRef": "prd_conform1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_conform1/plans"
+        }
+      ]
+    }
+  }
+}
