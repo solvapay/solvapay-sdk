@@ -500,3 +500,37 @@ describe('solvapayWebhook', () => {
     expect(await res.json()).toMatchObject({ error: 'Webhook secret not configured' })
   })
 })
+
+describe('client-supplied identity', () => {
+  // No middleware runs in front of these handlers, so an x-user-id header can
+  // only come from the client. It must never reach the *Core helpers.
+  const cases: Array<[string, (req: Request) => Promise<Response>, ReturnType<typeof vi.fn>]> = [
+    ['checkPurchase', checkPurchase, vi.mocked(checkPurchaseCore)],
+    ['createPaymentIntent', createPaymentIntent, vi.mocked(createPaymentIntentCore)],
+    ['cancelRenewal', cancelRenewal, vi.mocked(cancelPurchaseCore)],
+    ['customerBalance', customerBalance, vi.mocked(getCustomerBalanceCore)],
+  ]
+
+  for (const [name, handler, core] of cases) {
+    it(`${name} drops a client's x-user-id and keeps the body and other headers`, async () => {
+      core.mockResolvedValue({ ok: true } as never)
+      const req = new Request('http://localhost/api/x', {
+        method: 'POST',
+        headers: {
+          'x-user-id': 'victim-user',
+          authorization: 'Bearer token-1',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ planRef: 'pln_1' }),
+      })
+
+      await handler(req)
+
+      const seen = core.mock.calls.at(-1)?.[0] as Request
+      expect(seen.headers.get('x-user-id')).toBeNull()
+      expect(seen.headers.get('authorization')).toBe('Bearer token-1')
+      const body = core.mock.calls.at(-1)?.[1]
+      if (body !== undefined) expect(body).toEqual({ planRef: 'pln_1' })
+    })
+  }
+})

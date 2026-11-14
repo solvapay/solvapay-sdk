@@ -9,6 +9,8 @@
  * and can be used with Next.js NextRequest (which extends Request)
  */
 
+import { verifyBearerToken } from './verify-token'
+
 /**
  * JWT payload shape we care about (Supabase/JWT conventions).
  */
@@ -22,46 +24,6 @@ type JwtPayload = {
   }
 }
 
-function base64UrlDecode(input: string): string {
-  const padded = input.replace(/-/g, '+').replace(/_/g, '/')
-  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
-  const base64 = padded + padding
-
-  if (typeof atob === 'function') {
-    const binary = atob(base64)
-    let result = ''
-    for (let i = 0; i < binary.length; i++) {
-      result += String.fromCharCode(binary.charCodeAt(i))
-    }
-    try {
-      return decodeURIComponent(escape(result))
-    } catch {
-      return result
-    }
-  }
-
-  const BufferCtor = (globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } })
-    .Buffer
-  if (BufferCtor) {
-    return BufferCtor.from(base64, 'base64').toString('utf-8')
-  }
-
-  throw new Error('No base64 decoder available in this runtime')
-}
-
-function decodeJwtUnverified(token: string): JwtPayload | null {
-  const parts = token.split('.')
-  if (parts.length !== 3) return null
-  try {
-    const json = base64UrlDecode(parts[1])
-    const payload = JSON.parse(json) as unknown
-    if (typeof payload !== 'object' || payload === null) return null
-    return payload as JwtPayload
-  } catch {
-    return null
-  }
-}
-
 function extractBearerToken(request: Request): string | null {
   const authHeader = request.headers.get('authorization')
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) return null
@@ -69,32 +31,9 @@ function extractBearerToken(request: Request): string | null {
   return token.length > 0 ? token : null
 }
 
-function readEnv(name: string): string | undefined {
-  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
-  return proc?.env?.[name]
-}
-
-function isStrictMode(): boolean {
-  return readEnv('SOLVAPAY_AUTH_STRICT') === 'true'
-}
-
 async function resolveJwtPayload(token: string, jwtSecret?: string): Promise<JwtPayload | null> {
-  const secret = jwtSecret || readEnv('SOLVAPAY_JWT_SECRET') || readEnv('SUPABASE_JWT_SECRET')
-
-  if (secret) {
-    try {
-      const { jwtVerify } = await import('jose')
-      const key = new TextEncoder().encode(secret)
-      const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] })
-      return payload as JwtPayload
-    } catch {
-      return null
-    }
-  }
-
-  if (isStrictMode()) return null
-
-  return decodeJwtUnverified(token)
+  const verified = await verifyBearerToken(token, { jwtSecret })
+  return verified.ok ? (verified.payload as JwtPayload) : null
 }
 
 /**
@@ -142,13 +81,12 @@ export function getUserIdFromRequest(
 /**
  * Extract user email from a Bearer JWT in the Authorization header.
  *
- * When `SOLVAPAY_JWT_SECRET` or `SUPABASE_JWT_SECRET` is set (or the
- * equivalent `options.jwtSecret`), the token is verified via HS256.
- * Otherwise, the payload is decoded without verification — safe when the
- * platform gateway has already validated the token (e.g. Supabase Edge
- * Functions with `verify_jwt = true`, which is the default). Opt into
- * strict mode with `SOLVAPAY_AUTH_STRICT=true` to disable the
- * unverified-decode fallback.
+ * The token is verified first, as `verifyBearerToken` does: HS256 with
+ * `options.jwtSecret` / `SOLVAPAY_JWT_SECRET` / `SUPABASE_JWT_SECRET`,
+ * ES256/RS256 against `SOLVAPAY_JWKS_URL` (or Supabase's JWKS from
+ * `SUPABASE_URL`), or a gateway you trust with
+ * `SOLVAPAY_AUTH_TRUST_GATEWAY=true`. A token none of these verifies gives
+ * `null`.
  *
  * @param request - Request object (works with NextRequest from next/server)
  * @param options - Configuration options

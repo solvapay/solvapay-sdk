@@ -54,9 +54,22 @@ import {
   syncCustomerCore,
   trackUsageCore,
 } from '../helpers'
+import { SOLVAPAY_USER_ID_HEADER } from '@solvapay/auth'
 import { verifyWebhook } from '../edge'
 import { handleCors } from './cors'
 import { errorResponse, jsonResponseWithCors } from './utils'
+
+/**
+ * These handlers run with no middleware in front of them, so a user id header
+ * on the request can only have come from the client. Drop it, so identity
+ * comes from a verified bearer token alone (see `getAuthenticatedUserCore`).
+ */
+function withoutClientUserId(req: Request): Request {
+  if (!req.headers.has(SOLVAPAY_USER_ID_HEADER)) return req
+  const headers = new Headers(req.headers)
+  headers.delete(SOLVAPAY_USER_ID_HEADER)
+  return new Request(req, { headers })
+}
 
 async function parseJsonBody(req: Request): Promise<Record<string, unknown>> {
   try {
@@ -69,6 +82,7 @@ async function parseJsonBody(req: Request): Promise<Record<string, unknown>> {
 export async function checkPurchase(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await checkPurchaseCore(req)
 
@@ -82,6 +96,7 @@ export async function checkPurchase(req: Request): Promise<Response> {
 export async function trackUsage(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await trackUsageCore(req, body as never, {})
@@ -96,6 +111,7 @@ export async function trackUsage(req: Request): Promise<Response> {
 export async function createPaymentIntent(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await createPaymentIntentCore(req, body as never)
@@ -110,6 +126,7 @@ export async function createPaymentIntent(req: Request): Promise<Response> {
 export async function processPayment(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await processPaymentIntentCore(req, body as never)
@@ -124,6 +141,7 @@ export async function processPayment(req: Request): Promise<Response> {
 export async function createTopupPaymentIntent(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await createTopupPaymentIntentCore(req, body as never)
@@ -138,6 +156,7 @@ export async function createTopupPaymentIntent(req: Request): Promise<Response> 
 export async function customerBalance(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await getCustomerBalanceCore(req)
 
@@ -151,6 +170,7 @@ export async function customerBalance(req: Request): Promise<Response> {
 export async function cancelRenewal(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await cancelPurchaseCore(req, body as never)
@@ -165,6 +185,7 @@ export async function cancelRenewal(req: Request): Promise<Response> {
 export async function reactivateRenewal(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await reactivatePurchaseCore(req, body as never)
@@ -179,6 +200,7 @@ export async function reactivateRenewal(req: Request): Promise<Response> {
 export async function activatePlan(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await activatePlanCore(req, body as never)
@@ -193,6 +215,7 @@ export async function activatePlan(req: Request): Promise<Response> {
 export async function getPaymentMethod(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await getPaymentMethodCore(req)
 
@@ -206,6 +229,7 @@ export async function getPaymentMethod(req: Request): Promise<Response> {
 export async function listPlans(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await listPlansCore(req)
 
@@ -219,6 +243,7 @@ export async function listPlans(req: Request): Promise<Response> {
 export async function syncCustomer(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await syncCustomerCore(req)
 
@@ -232,6 +257,7 @@ export async function syncCustomer(req: Request): Promise<Response> {
 export async function createCheckoutSession(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const body = await parseJsonBody(req)
   const result = await createCheckoutSessionCore(req, body as never)
@@ -246,6 +272,7 @@ export async function createCheckoutSession(req: Request): Promise<Response> {
 export async function createCustomerSession(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await createCustomerSessionCore(req)
 
@@ -259,6 +286,7 @@ export async function createCustomerSession(req: Request): Promise<Response> {
 export async function getMerchant(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await getMerchantCore(req)
 
@@ -272,6 +300,7 @@ export async function getMerchant(req: Request): Promise<Response> {
 export async function getProduct(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const result = await getProductCore(req)
 
@@ -285,6 +314,7 @@ export async function getProduct(req: Request): Promise<Response> {
 export async function getHistory(req: Request): Promise<Response> {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
+  req = withoutClientUserId(req)
 
   const url = new URL(req.url)
   const productRef = url.searchParams.get('productRef') ?? ''
