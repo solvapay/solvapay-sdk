@@ -18,6 +18,7 @@ import type { WebhookEvent } from './types/webhook'
 export const WEBHOOK_TOLERANCE_SECONDS = 300
 
 export const WEBHOOK_ERROR_CODES = {
+  secret: 'webhook_secret_missing',
   missing: 'webhook_signature_missing',
   malformed: 'webhook_signature_malformed',
   timestamp: 'webhook_timestamp_out_of_tolerance',
@@ -47,6 +48,21 @@ export interface ParsedSignature {
 
 const fail = (code: WebhookErrorCode, message: string): never => {
   throw new SolvaPayError(message, { code })
+}
+
+/**
+ * Refuses an empty signing secret before anything else. HMAC accepts a
+ * zero-length key, so an unset `SOLVAPAY_WEBHOOK_SECRET` would otherwise
+ * verify any event a sender signs with an empty key. This is a
+ * misconfiguration, so it fails every delivery, whatever its headers.
+ */
+export function requireWebhookSecret(secret: string): void {
+  if (!secret) {
+    fail(
+      WEBHOOK_ERROR_CODES.secret,
+      'Webhook secret is empty: set the endpoint signing secret (whsec_…)',
+    )
+  }
 }
 
 /**
