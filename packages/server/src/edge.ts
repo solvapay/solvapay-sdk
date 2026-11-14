@@ -9,6 +9,7 @@ import type { WebhookEvent } from './types/webhook'
 import {
   finishWebhookVerification,
   parseWebhookSignature,
+  requireWebhookSecret,
   type VerifyWebhookOptions,
 } from './webhook-signature'
 
@@ -160,7 +161,7 @@ export type {
  * @param params.secret - Webhook signing secret (`whsec_…`)
  * @param params.now - Time to check the timestamp against; defaults to now
  * @returns Parsed and typed {@link WebhookEvent} object
- * @throws {SolvaPayError} If the signature is missing, malformed, outside the 5-minute
+ * @throws {SolvaPayError} If the secret is empty, the signature is missing, malformed, outside the 5-minute
  *   window, or invalid, or the body is not JSON. `error.code` is one of
  *   {@link WEBHOOK_ERROR_CODES}.
  *
@@ -180,6 +181,7 @@ export async function verifyWebhook({
   secret,
   now,
 }: VerifyWebhookOptions): Promise<WebhookEvent> {
+  requireWebhookSecret(secret)
   const parsed = parseWebhookSignature({ body, signature, now })
   const enc = new TextEncoder()
   const key = await crypto.subtle.importKey(
