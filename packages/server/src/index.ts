@@ -205,6 +205,7 @@ export { withRetry } from './utils'
 // Export route helpers (generic, framework-agnostic)
 export {
   getAuthenticatedUserCore,
+  withCustomerRef,
   syncCustomerCore,
   getCustomerBalanceCore,
   createPaymentIntentCore,

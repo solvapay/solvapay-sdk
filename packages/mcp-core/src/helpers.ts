@@ -83,8 +83,7 @@ export function enrichPurchase(purchase: Record<string, unknown>): Record<string
     typeof purchase.originalAmount === 'number' ? purchase.originalAmount : undefined
   const currency = typeof purchase.currency === 'string' ? purchase.currency : undefined
 
-  const priceDisplay =
-    formatMinorUnits(originalAmount, currency) ?? formatMinorUnits(amount, 'USD')
+  const priceDisplay = formatMinorUnits(originalAmount, currency) ?? formatMinorUnits(amount, 'USD')
 
   const priceUsdDisplay =
     currency && currency.toUpperCase() !== 'USD' ? formatMinorUnits(amount, 'USD') : null
@@ -172,7 +171,8 @@ export interface BuildSolvaPayRequestOptions {
  *
  * The `x-user-id` header is what `getAuthenticatedUserCore` reads as the
  * authoritative user identity, so forwarding the `customer_ref` from the
- * MCP OAuth bridge keeps the entire flow headless.
+ * MCP OAuth bridge keeps the entire flow headless. The request is also marked
+ * with that customer, so the helpers act for it as named.
  */
 export function buildSolvaPayRequest(
   extra: McpToolExtra | undefined,
@@ -202,7 +202,18 @@ export function buildSolvaPayRequest(
     headers.set('content-type', 'application/json')
     init.body = JSON.stringify(body)
   }
-  return new Request(url, init)
+  const request = new Request(url, init)
+  if (customerRef) {
+    // The customer comes from MCP OAuth (or your getCustomerRef), not from
+    // the request: mark it so the *Core helpers act for it as named, the way
+    // `withCustomerRef` from @solvapay/server does. Without the mark, they
+    // treat x-user-id as a user id and look it up by externalRef.
+    Object.defineProperty(request, Symbol.for('solvapay.customerRef'), {
+      value: customerRef,
+      enumerable: false,
+    })
+  }
+  return request
 }
 
 /**
@@ -290,7 +301,7 @@ export function narratedToolResult(
     text,
   }
 
-  const resourceLinkBlocks = ((links ?? []).map((l) => ({
+  const resourceLinkBlocks = (links ?? []).map(l => ({
     type: 'resource_link',
     uri: l.uri,
     name: l.name,
@@ -298,7 +309,7 @@ export function narratedToolResult(
     // `SolvaPayCallToolResult`, but the official SDK accepts it — we
     // cast at the boundary to keep the local type narrow while still
     // shipping the enrichment.
-  })) as unknown as SolvaPayCallToolResult['content'])
+  })) as unknown as SolvaPayCallToolResult['content']
 
   const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
     type: 'text',

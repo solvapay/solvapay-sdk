@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPay } from '../factory'
 import { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
+import { withCustomerRef } from './caller'
 
 /**
  * `cancelPurchaseCore` / `reactivatePurchaseCore` with the SDK's own API
@@ -8,8 +9,9 @@ import { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
  * that user's customer: both act on a purchase by reference, so without the
  * check any caller could change another customer's renewal.
  *
- * The requests carry `x-user-id: cus_owner`, as the MCP server's widget tools
- * do (a `cus_` id resolves to that customer without an API call).
+ * The requests carry `x-user-id: cus_owner` and are marked with
+ * `withCustomerRef`, as the MCP server's widget tools build them (a marked
+ * `cus_` ref resolves to that customer without an API call).
  */
 describe('renewal helpers with the built-in API client', () => {
   const json = (body: unknown, status = 200) =>
@@ -25,8 +27,13 @@ describe('renewal helpers with the built-in API client', () => {
 
   const solvaPay = () =>
     createSolvaPay({ apiKey: 'sk_test_renewal', apiBaseUrl: 'https://api.renewal.test' })
-  const asOwner = () => new Request('https://app.test', { headers: { 'x-user-id': 'cus_owner' } })
-  const owned = (ref = 'pur_1') => json({ reference: ref, customerRef: 'cus_owner', status: 'active' })
+  const asOwner = () =>
+    withCustomerRef(
+      new Request('https://app.test', { headers: { 'x-user-id': 'cus_owner' } }),
+      'cus_owner',
+    )
+  const owned = (ref = 'pur_1') =>
+    json({ reference: ref, customerRef: 'cus_owner', status: 'active' })
 
   it('cancels a purchase that belongs to the caller', async () => {
     vi.useFakeTimers()
@@ -40,7 +47,11 @@ describe('renewal helpers with the built-in API client', () => {
         }),
       )
 
-    const pending = cancelPurchaseCore(asOwner(), { purchaseRef: 'pur_1' }, { solvaPay: solvaPay() })
+    const pending = cancelPurchaseCore(
+      asOwner(),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: solvaPay() },
+    )
     await vi.runAllTimersAsync()
 
     expect(await pending).toEqual({
@@ -48,15 +59,23 @@ describe('renewal helpers with the built-in API client', () => {
       status: 'active',
       cancelledAt: '2026-11-12T00:00:00Z',
     })
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://api.renewal.test/v1/sdk/purchases/pur_1')
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      'https://api.renewal.test/v1/sdk/purchases/pur_1',
+    )
   })
 
   it("refuses another customer's purchase with 403, without cancelling it", async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({ reference: 'pur_1', customerRef: 'cus_victim', status: 'active' }))
+      .mockResolvedValueOnce(
+        json({ reference: 'pur_1', customerRef: 'cus_victim', status: 'active' }),
+      )
 
-    const result = await cancelPurchaseCore(asOwner(), { purchaseRef: 'pur_1' }, { solvaPay: solvaPay() })
+    const result = await cancelPurchaseCore(
+      asOwner(),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: solvaPay() },
+    )
 
     expect(result).toMatchObject({ error: 'Forbidden', status: 403 })
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -92,7 +111,11 @@ describe('renewal helpers with the built-in API client', () => {
       .mockResolvedValueOnce(owned())
       .mockResolvedValueOnce(json({ message: 'nope' }, 400))
 
-    const result = await cancelPurchaseCore(asOwner(), { purchaseRef: 'pur_1' }, { solvaPay: solvaPay() })
+    const result = await cancelPurchaseCore(
+      asOwner(),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: solvaPay() },
+    )
 
     expect(result).toMatchObject({
       error: 'Purchase cannot be cancelled or does not belong to provider',
@@ -103,11 +126,37 @@ describe('renewal helpers with the built-in API client', () => {
   it("refuses to reactivate another customer's purchase with 403", async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(json({ reference: 'pur_1', customerRef: 'cus_victim', status: 'active' }))
+      .mockResolvedValueOnce(
+        json({ reference: 'pur_1', customerRef: 'cus_victim', status: 'active' }),
+      )
 
-    const result = await reactivatePurchaseCore(asOwner(), { purchaseRef: 'pur_1' }, { solvaPay: solvaPay() })
+    const result = await reactivatePurchaseCore(
+      asOwner(),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: solvaPay() },
+    )
 
     expect(result).toMatchObject({ error: 'Forbidden', status: 403 })
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('looks an unmarked user id that starts with cus_ up by externalRef, never as that customer', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(json({ customerRef: 'cus_mine', externalRef: 'cus_victim' }))
+      .mockResolvedValueOnce(
+        json({ reference: 'pur_1', customerRef: 'cus_victim', status: 'active' }),
+      )
+
+    const result = await cancelPurchaseCore(
+      new Request('https://app.test', { headers: { 'x-user-id': 'cus_victim' } }),
+      { purchaseRef: 'pur_1' },
+      { solvaPay: solvaPay() },
+    )
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      'https://api.renewal.test/v1/sdk/customers?externalRef=cus_victim',
+    )
+    expect(result).toMatchObject({ error: 'Forbidden', status: 403 })
   })
 })

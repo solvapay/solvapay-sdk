@@ -102,8 +102,7 @@ export async function cancelPurchaseCore(
       }
     }
 
-    const isCancelled =
-      cancelledPurchase.status === 'cancelled' || cancelledPurchase.cancelledAt
+    const isCancelled = cancelledPurchase.status === 'cancelled' || cancelledPurchase.cancelledAt
 
     if (!isCancelled) {
       return {
