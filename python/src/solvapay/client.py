@@ -13,6 +13,7 @@ adds construction and lifecycle.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from types import TracebackType
 from typing import Any
 
@@ -55,6 +56,26 @@ class AsyncApiClient(AsyncSolvaPayApi):
     @property
     def api_base_url(self) -> str:
         return self._transport.api_base_url
+
+    async def request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        query: Mapping[str, Any] | None = None,
+        headers: Mapping[str, Any] | None = None,
+        body: Any = None,
+    ) -> Any:
+        """One API request, answering the JSON the API sent, not read into a model.
+
+        For code that passes the API's answer on unchanged (``solvapay.web``'s
+        routes answer React with it). ``path`` is the API path with its
+        parameters already encoded (``_http.path_segment``). Failures raise
+        ``SolvaPayError`` as every generated method does.
+        """
+        return await self._transport.request(
+            method, path, query=query or {}, headers=headers or {}, body=body
+        )
 
     async def aclose(self) -> None:
         await self._transport.aclose()
