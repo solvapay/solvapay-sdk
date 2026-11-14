@@ -1,0 +1,61 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "get-product",
+  "description": "get-product returns the product named in the query.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/get-product",
+      "user": {
+        "id": "user_gp1",
+        "email": "user_gp1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "query": {
+        "productRef": "prd_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_conform1",
+          "body": {
+            "reference": "prd_conform1",
+            "name": "Conformance product",
+            "balance": 0,
+            "totalTransactions": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "status": "active",
+            "createdAt": "2026-10-14T12:00:00Z",
+            "updatedAt": "2026-10-14T12:00:00Z"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "reference": "prd_conform1",
+        "name": "Conformance product",
+        "balance": 0,
+        "totalTransactions": 0,
+        "isManagedMcp": false,
+        "isMcpPay": false,
+        "status": "active",
+        "createdAt": "2026-10-14T12:00:00Z",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_conform1"
+        }
+      ]
+    }
+  }
+}

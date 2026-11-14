@@ -1,0 +1,105 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "auto-recharge-save-ignores-body-customer",
+  "description": "PUT auto-recharge saves for the verified user's customer even when the body names another customer.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "PUT",
+      "path": "/api/auto-recharge",
+      "user": {
+        "id": "user_ar4",
+        "email": "user_ar4@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "enabled": true,
+        "triggerType": "balance",
+        "currency": "USD",
+        "thresholdAmountMajor": 5,
+        "topupAmountMajor": 20,
+        "customerRef": "cus_someone_else"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_ar4@example.com",
+            "externalRef": "user_ar4"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "config": {
+              "enabled": true,
+              "trigger": {
+                "type": "balance",
+                "thresholdAmountMinor": 500
+              },
+              "topup": {
+                "mode": "fixed",
+                "amountMinor": 2000,
+                "currency": "USD"
+              },
+              "fundingSourceType": "card",
+              "status": "active",
+              "failureCount": 0,
+              "monthlySpendMinor": 0,
+              "updatedAt": "2026-10-14T12:00:00Z"
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "config": {
+          "enabled": true,
+          "trigger": {
+            "type": "balance",
+            "thresholdAmountMinor": 500
+          },
+          "topup": {
+            "mode": "fixed",
+            "amountMinor": 2000,
+            "currency": "USD"
+          },
+          "fundingSourceType": "card",
+          "status": "active",
+          "failureCount": 0,
+          "monthlySpendMinor": 0,
+          "updatedAt": "2026-10-14T12:00:00Z"
+        }
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_ar4"
+        },
+        {
+          "method": "PUT",
+          "path": "/v1/sdk/auto-recharge",
+          "body": {
+            "enabled": true,
+            "triggerType": "balance",
+            "currency": "USD",
+            "thresholdAmountMajor": 5,
+            "topupAmountMajor": 20,
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  }
+}

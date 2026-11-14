@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
 import { createSolvaPay } from '../src'
 import type { SolvaPayClient } from '../src/types'
 
@@ -50,6 +50,12 @@ describe('payable.gate()', () => {
   beforeEach(() => {
     client = new GateMockClient()
     solvaPay = createSolvaPay({ apiClient: client as any })
+    // Most tests name the customer with x-customer-ref, which is trusted only
+    // behind a gateway; 'customer ref resolution' covers the rules.
+    vi.stubEnv('SOLVAPAY_AUTH_TRUST_GATEWAY', 'true')
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   describe('paywall outcome', () => {
@@ -233,7 +239,18 @@ describe('payable.gate()', () => {
       expect(result.customerRef).toBe('cus_async_user')
     })
 
-    it('falls back to x-customer-ref header when no option provided', async () => {
+    it('refuses x-customer-ref without the gateway opt-in, before calling SolvaPay', async () => {
+      vi.stubEnv('SOLVAPAY_AUTH_TRUST_GATEWAY', '')
+      const getCustomer = vi.spyOn(client, 'getCustomer')
+      const payable = solvaPay.payable({ productRef: 'prd_chat' })
+      const req = new Request('http://localhost/api/chat', {
+        headers: { 'x-customer-ref': 'cus_victim' },
+      })
+      await expect(payable.gate(req)).rejects.toMatchObject({ status: 401, code: 'unauthorized' })
+      expect(getCustomer).not.toHaveBeenCalled()
+    })
+
+    it('uses x-customer-ref behind a trusted gateway when no option provided', async () => {
       const payable = solvaPay.payable({ productRef: 'prd_chat' })
       const req = new Request('http://localhost/api/chat', {
         headers: { 'x-customer-ref': 'hdr_user' },

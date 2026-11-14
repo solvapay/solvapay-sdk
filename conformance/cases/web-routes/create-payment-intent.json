@@ -1,0 +1,76 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "create-payment-intent",
+  "description": "create-payment-intent creates a plan payment for the user's customer and returns the API's answer with the customer ref.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "POST",
+      "path": "/api/create-payment-intent",
+      "user": {
+        "id": "user_pi1",
+        "email": "user_pi1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "body": {
+        "planRef": "pln_conform1",
+        "productRef": "prd_conform1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_pi1@example.com",
+            "externalRef": "user_pi1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "processorPaymentId": "pi_conform1",
+            "amount": 2000,
+            "currency": "USD",
+            "status": "requires_payment_method",
+            "clientSecret": "pi_conform1_secret",
+            "publishableKey": "pk_test_conform",
+            "accountId": "acct_conform"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "processorPaymentId": "pi_conform1",
+        "clientSecret": "pi_conform1_secret",
+        "publishableKey": "pk_test_conform",
+        "accountId": "acct_conform",
+        "customerRef": "cus_conform1"
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_pi1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "productRef": "prd_conform1",
+            "planRef": "pln_conform1",
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  }
+}
