@@ -69,6 +69,11 @@ In FastAPI, mount the same app:
 app.mount("/api", routes(solvapay, get_user=get_user, base_path=""))
 ```
 
+The routes are a mounted Starlette app, so FastAPI dependencies don't run for
+them: `get_user` gets the plain Starlette `Request`. If your app checks users with
+a dependency such as `Depends(current_user)`, call the function behind it from
+`get_user` instead.
+
 `base_path` is where the routes sit below the mount point. Mounted at `/api`, it's
 `""`; served at the root, keep the default `/api`.
 
