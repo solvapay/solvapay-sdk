@@ -18,6 +18,7 @@ const WebhookToleranceSeconds = 300
 
 // Codes VerifyWebhook fails with.
 const (
+	WebhookSecretMissing       = "webhook_secret_missing"
 	WebhookSignatureMissing    = "webhook_signature_missing"
 	WebhookSignatureMalformed  = "webhook_signature_malformed"
 	WebhookTimestampOutOfRange = "webhook_timestamp_out_of_tolerance"
@@ -32,8 +33,14 @@ var digitsOnly = regexp.MustCompile(`^[0-9]+$`)
 // SolvaPay signs "{t}.{raw body}" with HMAC-SHA256, keyed by the whole signing
 // secret (whsec_…), and sends it in the SV-Signature header as
 // "t={unix seconds},v1={lowercase hex}". now is the time to check the
-// timestamp against; the zero time means the current time.
+// timestamp against; the zero time means the current time. An empty secret
+// fails every delivery with WebhookSecretMissing.
 func VerifyWebhook(body []byte, signature, secret string, now time.Time) (any, error) {
+	if secret == "" {
+		// HMAC accepts an empty key, so an unset secret would verify any event
+		// signed with one. A misconfiguration: fail before reading the request.
+		return nil, newError(WebhookSecretMissing, "Webhook secret is empty: set the endpoint signing secret (whsec_…)")
+	}
 	if signature == "" {
 		return nil, newError(WebhookSignatureMissing, "Missing webhook signature")
 	}
