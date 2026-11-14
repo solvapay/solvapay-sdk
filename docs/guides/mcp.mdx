@@ -193,6 +193,10 @@ Deno.serve(
 )
 ```
 
+### How bearer tokens are checked
+
+`createSolvaPayMcpFetch` and `createMcpOAuthBridge` verify every bearer token with SolvaPay (`/v1/customer/auth/userinfo`) before serving a request on the MCP path. The customer a tool sees is the one SolvaPay names, never one read from the token's own payload. A token SolvaPay refuses gets the 401 sign-in challenge; if SolvaPay can't be reached, the request gets a 503. Valid answers are reused for 60 seconds. To check tokens in your own server, use `createSolvaPayTokenVerifier` and `verifyAuthInfoFromBearer` from `@solvapay/mcp-core`.
+
 ### Advanced: custom customer-ref extraction
 
 If your server validates tokens itself, override `getCustomerRef` on a tool and decode claims with the bearer helpers from `@solvapay/mcp-core`. The validated token is available on `extra.authInfo.token`. These helpers only **decode** claims (`customerRef`, `customer_ref`, `sub`) — they do not verify signatures, so call them after token validation (for example against `/v1/customer/auth/userinfo`). Fail closed; never substitute a fallback identity such as `anonymous`.
