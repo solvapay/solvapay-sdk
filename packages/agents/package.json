@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/core": "2.0.0",
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@modelcontextprotocol/server": "2.0.0",
     "@types/node": "^25.5.2",
     "tsup": "^8.5.1",
