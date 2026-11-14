@@ -1,7 +1,9 @@
-// Gives the Python package (python/) the version @solvapay/server has, so a
-// release ships both at one version. Runs after `changeset version` in
-// `pnpm changeset:version`. Updates pyproject.toml and the uv.lock files that
-// record the package (CI installs with --locked, so they must agree).
+// Copies the Python package's version from python/package.json, which a
+// changeset bumps like any other package (it is private, so never published to
+// npm), into python/pyproject.toml. Python has its own version line, separate
+// from the TypeScript packages. Runs after `changeset version` in
+// `pnpm changeset:version`. Also updates the uv.lock files that record the
+// package (CI installs with --locked, so they must agree).
 //
 // Plain Node, no uv needed: the release job has no Python.
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -10,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const version = JSON.parse(
-  readFileSync(join(root, 'packages/server/package.json'), 'utf-8'),
+  readFileSync(join(root, 'python/package.json'), 'utf-8'),
 ).version
 
 function replaceOnce(file, pattern, replacement) {

@@ -138,3 +138,18 @@ the widget's tools answer and webhook verification are checked against the
 TypeScript SDK on every change by a shared conformance suite
 ([`conformance/`](../conformance)). The API client is generated from the same
 spec as the TypeScript types ([`openapi/`](../openapi)).
+
+## Versions
+
+`solvapay` has its own version line, starting at 0.1.0. Its numbers don't
+follow the TypeScript packages: Python 0.3.0 and `@solvapay/server` 2.12.0 can
+behave the same. What the two share is the conformance suite (the version this
+package passes is pinned in [`conformance.lock`](conformance.lock)) and the API
+spec.
+
+Until 1.0.0, a minor release (0.x → 0.y) may change the API. Previews of the
+next release are published from the `dev` branch as `<next>.devN`:
+
+```bash
+pip install --pre solvapay
+```

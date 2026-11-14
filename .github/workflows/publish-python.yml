@@ -1,18 +1,26 @@
 name: Publish Python
 
-# Publishes the `solvapay` Python package (python/).
+# Publishes the `solvapay` Python package (python/) to PyPI.
 #
-#   push to main  -> PyPI, at the version in python/pyproject.toml, which
-#                    `pnpm changeset:version` keeps equal to @solvapay/server's.
-#                    Skipped when that version is already on PyPI, so a push
-#                    that releases nothing new does nothing.
-#   push to dev   -> TestPyPI, as <version>.dev<run number>, a preview to
-#                    `pip install --index-url https://test.pypi.org/simple/ solvapay`.
+#   push to main  -> the release, at the version in python/pyproject.toml.
+#                    That version comes from python/package.json, which a
+#                    changeset bumps and `pnpm changeset:version` copies over,
+#                    so it changes when the "chore: version packages" PR
+#                    merges. Skipped when it is already on PyPI (nothing new
+#                    to release) or still 0.0.0 (never released).
+#   push to dev   -> a preview of the next release, as <next>.dev<run number>
+#                    (python/scripts/preview_version.py). PEP 440 orders it
+#                    before that release and after every earlier one, and pip
+#                    only picks it with `pip install --pre solvapay`.
+#
+# Python has its own version line, separate from the TypeScript packages; what
+# it shares with them is the API spec and the conformance suite
+# (python/conformance.lock).
 #
 # Uploads use PyPI trusted publishing (OIDC): no token is stored. One-time
 # setup, by a PyPI owner of `solvapay`: add this repository and workflow
-# (publish-python.yml) as a trusted publisher, with environment `pypi` on
-# pypi.org and `testpypi` on test.pypi.org.
+# (publish-python.yml) as a trusted publisher on pypi.org, with environment
+# `pypi`.
 
 on:
   push:
@@ -21,7 +29,6 @@ on:
       - 'python/**'
       - 'openapi/**'
       - 'conformance/**'
-      - 'packages/server/package.json'
       - '.github/workflows/publish-python.yml'
   workflow_dispatch:
 
@@ -39,7 +46,6 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       publish: ${{ steps.version.outputs.publish }}
-      index: ${{ steps.version.outputs.index }}
     defaults:
       run:
         working-directory: python
@@ -58,23 +64,24 @@ jobs:
           uv run python scripts/pin_conformance.py --check
           uv run pytest
 
-      - name: Decide the version and the index
+      - name: Decide the version
         id: version
         run: |
-          base=$(uv run python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           if [ "$GITHUB_REF_NAME" = "main" ]; then
-            version="$base"; index="pypi"; json="https://pypi.org/pypi/solvapay/$version/json"
+            version=$(uv run python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           else
-            version="${base}.dev${GITHUB_RUN_NUMBER}"; index="testpypi"; json="https://test.pypi.org/pypi/solvapay/$version/json"
+            version=$(uv run python scripts/preview_version.py "$GITHUB_RUN_NUMBER")
           fi
-          if curl -sf -o /dev/null "$json"; then
-            echo "solvapay $version is already on $index: nothing to publish."
+          if [ "$version" = "0.0.0" ]; then
+            echo "solvapay has not been released yet (0.0.0): nothing to publish until the version packages PR merges."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif curl -sf -o /dev/null "https://pypi.org/pypi/solvapay/$version/json"; then
+            echo "solvapay $version is already on PyPI: nothing to publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "index=$index" >> "$GITHUB_OUTPUT"
 
       - name: Build
         if: steps.version.outputs.publish == 'true'
@@ -101,11 +108,11 @@ jobs:
           path: python/dist/
 
   publish:
-    name: Publish to ${{ needs.build.outputs.index }}
+    name: Publish to PyPI
     needs: build
     if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    environment: ${{ needs.build.outputs.index }}
+    environment: pypi
     permissions:
       id-token: write
     steps:
@@ -115,5 +122,3 @@ jobs:
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: ${{ needs.build.outputs.index == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}

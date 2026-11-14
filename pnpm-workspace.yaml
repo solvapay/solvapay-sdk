@@ -4,3 +4,6 @@ packages:
   - 'examples/*'
   - 'conformance/runners/*'
   - 'mcp-app'
+  # Python's version source only (python/package.json, private): lets a
+  # changeset bump the solvapay Python package.
+  - 'python'

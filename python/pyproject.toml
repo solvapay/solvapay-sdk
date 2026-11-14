@@ -4,8 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "solvapay"
-# Follows @solvapay/server: a spec change ships both together. CI checks they match.
-version = "2.11.0"
+# Set from python/package.json by `pnpm changeset:version`; CI checks they match.
+# Python has its own version line, separate from the TypeScript packages.
+version = "0.0.0"
 description = "SolvaPay for Python: paywalls, usage billing, webhooks and paid MCP tools."
 readme = "README.md"
 license = "MIT"
