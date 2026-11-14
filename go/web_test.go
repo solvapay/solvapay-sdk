@@ -122,11 +122,27 @@ func TestWebPreflightAndBadBody(t *testing.T) {
 }
 
 func TestWebSaveAutoRechargeKeepsTheUsersCustomer(t *testing.T) {
-	api := &webTestAPI{answer: `{"enabled":true}`}
-	user := func(*http.Request) (*WebUser, error) { return &WebUser{ID: "cus_mine"}, nil }
+	// One answer for both calls: the externalRef lookup finds cus_mine, then the save.
+	api := &webTestAPI{answer: `{"enabled":true,"reference":"cus_mine","customerRef":"cus_mine"}`}
+	user := func(*http.Request) (*WebUser, error) { return &WebUser{ID: "user_mine"}, nil }
 	handler := webTestHandler(t, api, WebOptions{GetUser: user})
 	got := serveWeb(handler, "PUT", "https://app.test/api/auto-recharge", `{"enabled":true,"customerRef":"cus_someone_else"}`, nil)
-	if got.Code != 200 || len(api.bodies) != 1 || !strings.Contains(api.bodies[0], `"customerRef":"cus_mine"`) {
+	if got.Code != 200 || len(api.bodies) != 2 || !strings.Contains(api.bodies[1], `"customerRef":"cus_mine"`) {
 		t.Fatalf("status %d, sent %v", got.Code, api.bodies)
+	}
+}
+
+func TestWebUserIDLikeACustomerRefIsLookedUpByExternalRef(t *testing.T) {
+	api := &webTestAPI{answer: `{"reference":"cus_mine","customerRef":"cus_mine","credits":0}`}
+	user := func(*http.Request) (*WebUser, error) { return &WebUser{ID: "cus_victim"}, nil }
+	handler := webTestHandler(t, api, WebOptions{GetUser: user})
+	got := serveWeb(handler, "GET", "https://app.test/api/customer-balance", "", nil)
+	if got.Code != 200 || len(api.calls) == 0 || api.calls[0] != "GET /v1/sdk/customers" {
+		t.Fatalf("the user id must be looked up by externalRef first: %d %v %s", got.Code, api.calls, got.Body)
+	}
+	for _, call := range api.calls {
+		if strings.Contains(call, "cus_victim") {
+			t.Fatalf("the user id was used as a customer ref: %v", api.calls)
+		}
 	}
 }

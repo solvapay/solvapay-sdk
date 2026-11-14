@@ -317,10 +317,11 @@ func (h *webHandler) user(call *webRequest) (*WebUser, *webFailure) {
 	return user, nil
 }
 
-// ensure finds or creates the user's customer (externalRef = user id), as
-// ensureCustomer(userId, userId, {email, name}) does.
+// ensure finds or creates the user's customer by externalRef (the user id).
+// A user id that starts with cus_ is still a user id: unlike TypeScript's
+// ensureCustomer, it is never used as that customer.
 func (h *webHandler) ensure(ctx context.Context, user *WebUser) (string, error) {
-	ref, err := h.paywall.EnsureCustomer(ctx, user.ID, EnsureCustomerOptions{ExternalRef: user.ID, Email: user.Email, Name: user.Name})
+	ref, err := h.paywall.ensureUserCustomer(ctx, user.ID, EnsureCustomerOptions{Email: user.Email, Name: user.Name})
 	var apiErr *Error
 	if err != nil && errors.As(err, &apiErr) && apiErr.answer != nil {
 		op := "Get customer"
