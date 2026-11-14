@@ -15,3 +15,8 @@ conformance cases in `../conformance` say how.
   and `conformance.lock`.
 - Check before committing: `uv run pytest`, `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy`.
+- **Versions:** `python/package.json` (private, never on npm) is the version
+  source. Bump it with a changeset naming `@solvapay/python`;
+  `pnpm changeset:version` copies the version into `pyproject.toml` and the
+  `uv.lock` files. Never edit the version in `pyproject.toml` by hand. It does
+  not follow `@solvapay/server`.

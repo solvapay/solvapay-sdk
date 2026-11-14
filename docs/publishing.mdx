@@ -10,6 +10,7 @@ The SolvaPay SDK uses an automated publishing workflow that:
 - Publishes the SDK packages on a shared version line: `@solvapay/core`, `@solvapay/react`, `@solvapay/react-supabase`, `@solvapay/server`, `@solvapay/auth`, `@solvapay/next`, and `solvapay`
 - Also publishes two CLI packages on **independent semver lines** (no fixed versioning): `@solvapay/init` (the shared lib consumed by `solvapay init` and `create-solvapay`) and `create-solvapay` (the `npm create solvapay` scaffolder)
 - Uses **fixed versioning** for the SDK packages - they share the same version number
+- Publishes the `solvapay` **Python** package to PyPI on its own semver line (`.github/workflows/publish-python.yml`), not tied to the TypeScript versions: a changeset naming `@solvapay/python` bumps it, and pushes to `dev` publish `<next>.devN` pre-releases
 - Auto-increments the **patch** version on every push to `main` branch
 - Generates changelogs using conventional commits
 - Publishes to npm automatically via GitHub Actions

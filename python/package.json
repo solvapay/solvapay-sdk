@@ -1,0 +1,6 @@
+{
+  "name": "@solvapay/python",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Holds the version of the solvapay Python package so changesets can bump it. Never published to npm: scripts/sync-python-version.mjs copies the version into python/pyproject.toml and the uv.lock files."
+}
