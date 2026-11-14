@@ -705,6 +705,23 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // GET: /v1/sdk/purchases/{purchaseRef}
+    async getPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}`
+
+      const res = await fetch(url, { method: 'GET', headers })
+
+      if (!res.ok) {
+        const { detail, status, code } = await readApiError(res)
+        if (status === 404) {
+          throw new SolvaPayError(`Purchase not found: ${detail}`, { status, code })
+        }
+        throw new SolvaPayError(`Get purchase failed (${status}): ${detail}`, { status, code })
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/purchases/{purchaseRef}/cancel
     async cancelPurchase(params) {
       const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}/cancel`

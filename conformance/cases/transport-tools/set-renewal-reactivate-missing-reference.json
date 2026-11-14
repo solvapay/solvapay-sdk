@@ -15,6 +15,15 @@
       },
       "api": [
         {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_tl4",
+          "body": {
+            "reference": "pur_tl4",
+            "customerRef": "cus_TL04",
+            "status": "active"
+          }
+        },
+        {
           "method": "POST",
           "path": "/v1/sdk/purchases/pur_tl4/reactivate",
           "body": {
