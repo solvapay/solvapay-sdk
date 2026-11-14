@@ -125,3 +125,8 @@ func (c *Client) GetCreditActivity(ctx context.Context, customerRef string, limi
 	}
 	return c.object(ctx, http.MethodGet, "/v1/sdk/credits/activity", query, nil, nil)
 }
+
+// GetPurchase reads one purchase (GET /v1/sdk/purchases/{purchaseRef}).
+func (c *Client) GetPurchase(ctx context.Context, purchaseRef string) (map[string]any, error) {
+	return c.withSegment(ctx, http.MethodGet, "/v1/sdk/purchases/", purchaseRef, "", nil)
+}
