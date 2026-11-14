@@ -64,8 +64,13 @@ type Paywall struct {
 	mu              sync.Mutex
 	customers       map[string]string
 	customerLookups map[string]*flight[string]
-	limits          map[string]*limitsEntry
-	limitsFetches   map[string]*limitsFetch
+	// userCustomers and userLookups serve ensureUserCustomer, apart from
+	// EnsureCustomer's, so a user id that looks like a customer ref can't
+	// reach that customer through a shared cache.
+	userCustomers map[string]string
+	userLookups   map[string]*flight[string]
+	limits        map[string]*limitsEntry
+	limitsFetches map[string]*limitsFetch
 }
 
 // NewPaywall builds the paywall for client.
@@ -84,6 +89,8 @@ func NewPaywall(client *Client, options PaywallOptions) (*Paywall, error) {
 		logger:          options.Logger,
 		customers:       map[string]string{},
 		customerLookups: map[string]*flight[string]{},
+		userCustomers:   map[string]string{},
+		userLookups:     map[string]*flight[string]{},
 		limits:          map[string]*limitsEntry{},
 		limitsFetches:   map[string]*limitsFetch{},
 	}
@@ -262,23 +269,42 @@ func (p *Paywall) EnsureCustomer(ctx context.Context, customerRef string, option
 	if key == "" {
 		key = customerRef
 	}
+	return p.ensureShared(ctx, p.customers, p.customerLookups, customerRef, key, func(ctx context.Context) (string, error) {
+		return p.resolveCustomer(ctx, customerRef, options)
+	})
+}
+
+// ensureUserCustomer is the customer for one of the merchant's users, found by
+// externalRef (the user id), else created with it. Unlike EnsureCustomer, the
+// id is never taken as a customer ref, even when it starts with cus_ or is
+// "anonymous": it comes from the merchant's auth and only ever names a user.
+func (p *Paywall) ensureUserCustomer(ctx context.Context, userID string, options EnsureCustomerOptions) (string, error) {
+	options.ExternalRef = userID
+	return p.ensureShared(ctx, p.userCustomers, p.userLookups, userID, userID, func(ctx context.Context) (string, error) {
+		return p.resolveCustomer(ctx, userID, options)
+	})
+}
+
+// ensureShared caches a resolved customer under cacheKey and shares one
+// in-flight resolve per lookupKey across concurrent callers.
+func (p *Paywall) ensureShared(ctx context.Context, cache map[string]string, lookups map[string]*flight[string], cacheKey, lookupKey string, resolve func(context.Context) (string, error)) (string, error) {
 	p.mu.Lock()
-	if ref, ok := p.customers[customerRef]; ok {
+	if ref, ok := cache[cacheKey]; ok {
 		p.mu.Unlock()
 		return ref, nil
 	}
-	pending, joined := p.customerLookups[key]
+	pending, joined := lookups[lookupKey]
 	if !joined {
 		pending = &flight[string]{done: make(chan struct{})}
-		p.customerLookups[key] = pending
+		lookups[lookupKey] = pending
 	}
 	p.mu.Unlock()
 
 	if !joined {
 		// The lookup is shared, so one caller leaving must not cancel it for the rest.
-		pending.value, pending.err = p.resolveCustomer(context.WithoutCancel(ctx), customerRef, options)
+		pending.value, pending.err = resolve(context.WithoutCancel(ctx))
 		p.mu.Lock()
-		delete(p.customerLookups, key)
+		delete(lookups, lookupKey)
 		p.mu.Unlock()
 		close(pending.done)
 	}
@@ -291,7 +317,7 @@ func (p *Paywall) EnsureCustomer(ctx context.Context, customerRef string, option
 		return "", pending.err
 	}
 	p.mu.Lock()
-	p.customers[customerRef] = pending.value
+	cache[cacheKey] = pending.value
 	p.mu.Unlock()
 	return pending.value, nil
 }
