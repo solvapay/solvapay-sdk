@@ -85,7 +85,12 @@ vi.mock('@stripe/react-stripe-js', () => ({
     retrieveSetupIntent: stripeMocks.retrieveSetupIntent,
   }),
   useElements: () => ({ submit: stripeMocks.submit }),
-  PaymentElement: () => <div data-testid="payment-element" />,
+  PaymentElement: (props: { options?: { fields?: { billingDetails?: { address?: string } } } }) => (
+    <div
+      data-testid="payment-element"
+      data-address={props.options?.fields?.billingDetails?.address}
+    />
+  ),
 }))
 
 vi.mock('@stripe/stripe-js', () => ({
@@ -335,6 +340,45 @@ describe('AutoRecharge primitive', () => {
     })
     expect(screen.getByTestId('stripe-elements')).toBeInTheDocument()
     expect(screen.getByTestId('payment-element')).toBeInTheDocument()
+  })
+
+  it('lets Stripe collect the billing address on the card setup form', async () => {
+    autoRechargeMocks.save.mockResolvedValue({
+      config,
+      setupClientSecret: 'seti_secret',
+      publishableKey: 'pk_test',
+    })
+    renderAutoRecharge()
+    enableAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    // With address 'never' and no SolvaPay country field, confirmSetup throws.
+    expect(screen.getByTestId('payment-element').getAttribute('data-address')).toBe('auto')
+  })
+
+  it('shows an error, not a stuck "Authorizing…", when confirmSetup throws', async () => {
+    autoRechargeMocks.save.mockResolvedValue({
+      config,
+      setupClientSecret: 'seti_secret',
+      publishableKey: 'pk_test',
+    })
+    stripeMocks.submit.mockResolvedValue({})
+    stripeMocks.confirmSetup.mockRejectedValue(new Error('IntegrationError: missing country'))
+    renderAutoRecharge()
+    enableAutoRecharge()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    })
+    const form = document.querySelector('[data-solvapay-auto-recharge-setup]') as HTMLFormElement
+    await act(async () => {
+      fireEvent.submit(form)
+    })
+    expect(screen.getByRole('alert').textContent).toContain('missing country')
+    const submit = document.querySelector(
+      '[data-solvapay-auto-recharge-setup-submit]',
+    ) as HTMLButtonElement
+    expect(submit.disabled).toBe(false)
   })
 
   it('with deferCardSetup, save persists to backend and exposes pending config', async () => {

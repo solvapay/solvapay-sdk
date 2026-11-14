@@ -4,6 +4,7 @@ import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
+import { resolveCallerCustomer } from './caller'
 
 export interface PurchaseCheckResult {
   customerRef: string
@@ -41,9 +42,7 @@ export async function checkPurchaseCore(
 
         if (customer && customer.customerRef) {
           if (customer.externalRef && customer.externalRef === userId) {
-            const filteredPurchases = (customer.purchases || []).filter(
-              p => p.status === 'active',
-            )
+            const filteredPurchases = (customer.purchases || []).filter(p => p.status === 'active')
 
             return {
               customerRef: customer.customerRef,
@@ -59,10 +58,7 @@ export async function checkPurchaseCore(
     }
 
     try {
-      const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-        email: email || undefined,
-        name: name || undefined,
-      })
+      const customerRef = await resolveCallerCustomer(request, solvaPay, { userId, email, name })
 
       const customer = await solvaPay.getCustomer({ customerRef })
 
