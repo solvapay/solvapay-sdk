@@ -405,6 +405,11 @@ export interface SolvaPayClient {
     },
   ): Promise<components['schemas']['SdkPaymentIntentResponse']>
 
+  // GET: /v1/sdk/purchases/{purchaseRef}
+  getPurchase?(params: {
+    purchaseRef: string
+  }): Promise<components['schemas']['SdkPurchaseResponse']>
+
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel
   cancelPurchase?(
     params: components['schemas']['CancelPurchaseRequest'] & {

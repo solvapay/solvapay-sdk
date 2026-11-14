@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "set-renewal-cancel-other-customer",
+  "description": "set_renewal refuses to cancel a purchase that belongs to another customer, with 403, and never asks SolvaPay to cancel it.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_1",
+        "enabled": false,
+        "reason": "Too expensive"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_ec_1",
+          "body": {
+            "reference": "pur_ec_1",
+            "customerRef": "cus_someone_else",
+            "status": "active"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "This purchase belongs to another customer"
+        }
+      ],
+      "structuredContent": {
+        "error": "Forbidden",
+        "status": 403,
+        "details": "This purchase belongs to another customer"
+      },
+      "isError": true
+    }
+  }
+}
