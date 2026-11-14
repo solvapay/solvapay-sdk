@@ -74,13 +74,14 @@ A failed check returns a `*solvapay.Error` with one of these codes:
 
 | Code | Meaning |
 | --- | --- |
+| `webhook_secret_missing` | `secret` is empty: checked first, so every delivery fails until it's set |
 | `webhook_signature_missing` | No `SV-Signature` header |
 | `webhook_signature_malformed` | The header has no `t=` or `v1=` part |
 | `webhook_timestamp_out_of_tolerance` | The timestamp is more than 300 seconds from `now` |
 | `webhook_signature_invalid` | The signature does not match the body and secret |
 | `webhook_payload_invalid` | The body is not valid JSON |
 
-The codes are constants too: `solvapay.WebhookSignatureMissing`, `WebhookSignatureMalformed`, `WebhookTimestampOutOfRange`, `WebhookSignatureInvalid` and `WebhookPayloadInvalid`.
+The codes are constants too: `solvapay.WebhookSecretMissing`, `WebhookSignatureMissing`, `WebhookSignatureMalformed`, `WebhookTimestampOutOfRange`, `WebhookSignatureInvalid` and `WebhookPayloadInvalid`.
 
 <Warning>
 `VerifyWebhook` does not check that `secret` is set. With an empty secret, anyone can sign an event that verifies. Check the secret at startup, as the example does.

@@ -57,6 +57,7 @@ The `sv-signature` header looks like `t=1767225600,v1=5f3c...`. `verify_webhook`
 
 | Code | Cause |
 | --- | --- |
+| `webhook_secret_missing` | `secret` is empty: checked first, so every delivery fails until it's set |
 | `webhook_signature_missing` | No `sv-signature` header |
 | `webhook_signature_malformed` | The header has no `t=` or `v1=` part, or the timestamp isn't a number |
 | `webhook_timestamp_out_of_tolerance` | The timestamp is more than 300 seconds from now |
