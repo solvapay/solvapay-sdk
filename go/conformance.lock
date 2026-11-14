@@ -250,6 +250,7 @@
     "transport-tools/set-renewal-reactivate-without-purchase-ref.json": "sha256:e595dca2c7ac330d706780bd6f28327b28f3f039b036230d12ba575950a06135",
     "transport-tools/set-renewal-reactivate.json": "sha256:0ef7692f23f71d11c286bf873fcb5b5a85aff16a9a27e440d37de8c70f3fcd25",
     "transport-tools/transport-tool-without-customer.json": "sha256:11b008c6fb3b0d6f1cbce6a8fb7091850db3ce8b72e35f5ce859442ffd2aefad",
+    "webhook-verification/empty-secret.json": "sha256:b51241f667d174c0e4058e9281fa1d989de5c13ddcf20565370353dd10e96920",
     "webhook-verification/empty-v1.json": "sha256:e1bdd8176eb595fb2ba4c466a56f816d17331c38a5da570e5ba9582c1ccaa638",
     "webhook-verification/extra-parts-and-spaces.json": "sha256:5378e08509b13f4ee59673b843fe55df56de7a5d6556081e2681337e1271b244",
     "webhook-verification/first-v1-is-used.json": "sha256:57ade475d40afe4d54a7070c79930353e136986fbb99abc7ba0323524a79b952",
