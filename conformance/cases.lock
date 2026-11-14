@@ -290,6 +290,7 @@
     "web-routes/unknown-path.json": "sha256:24bc150e718484fa58ebbf2466b4ebf1618aada9de5c541cfce501cd8db7d625",
     "web-routes/usage-no-active-purchase.json": "sha256:67a99f5bb04a7a72f577b54469436eca35f0861e21148eee5b4387fc7b7becd5",
     "web-routes/wrong-method.json": "sha256:2dc676dfbc0b8db621aff9bedc2069cb4c37aea8ded20cc1e87cbb8cc1574655",
+    "webhook-verification/empty-secret.json": "sha256:b51241f667d174c0e4058e9281fa1d989de5c13ddcf20565370353dd10e96920",
     "webhook-verification/empty-v1.json": "sha256:e1bdd8176eb595fb2ba4c466a56f816d17331c38a5da570e5ba9582c1ccaa638",
     "webhook-verification/extra-parts-and-spaces.json": "sha256:5378e08509b13f4ee59673b843fe55df56de7a5d6556081e2681337e1271b244",
     "webhook-verification/first-v1-is-used.json": "sha256:57ade475d40afe4d54a7070c79930353e136986fbb99abc7ba0323524a79b952",
