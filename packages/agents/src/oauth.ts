@@ -34,7 +34,8 @@ export function canonicalResource(resource: string): string {
 /** The RFC 9728 path-suffixed form, which hosts try first: `/.well-known/oauth-protected-resource/mcp`. */
 export function protectedResourceMetadataPath(resource: ProtectedResource): string {
   if (resource.metadataPath) return resource.metadataPath
-  return `/.well-known/oauth-protected-resource${new URL(canonicalResource(resource.resource)).pathname}`
+  const { pathname } = new URL(canonicalResource(resource.resource))
+  return `/.well-known/oauth-protected-resource${pathname === '/' ? '' : pathname}`
 }
 
 /** The absolute URL a challenge points hosts at. */

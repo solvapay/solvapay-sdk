@@ -1,0 +1,34 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "attach-business-details-without-payment-intent-id",
+  "description": "attach_business_details with an empty paymentIntentId is refused with 400 before validation or any API call.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL07",
+      "arguments": {
+        "paymentIntentId": "",
+        "isBusiness": true,
+        "taxId": "bad"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "paymentIntentId is required"
+        }
+      ],
+      "structuredContent": {
+        "error": "paymentIntentId is required",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

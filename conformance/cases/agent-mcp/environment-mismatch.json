@@ -1,0 +1,244 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "environment-mismatch",
+  "description": "A merchant whose key is for live: an agent token or agent key that spends in sandbox gets a 403, as SolvaPay answers, also when SolvaPay itself refuses the key for the other environment, and also with OAuth on (signing in again would not fix it). A live agent is served.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "environment": "live",
+        "protectedResource": {
+          "resource": "https://merchant-am.test/mcp"
+        }
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52IjoibGl2ZSIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fNiIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.0lG-WA09DsCPVAcWwX1vN55FnhW-thkeRzxVjWJOL-vVOrYWt8z5DvImi8B8WPW0Yk5D4JlKYreH1KubsiePAA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer agk_am_sandbox_0001",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer agk_am_sandbox_0002",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+          }
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "body": {
+            "agentRef": "agt_am_keyed",
+            "principalRef": "ppl_am_owner02",
+            "promptExcerpt": false,
+            "environment": "sandbox"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "code": "environment_mismatch",
+            "message": "environment_mismatch: this agent key is for sandbox"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 403,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"environment_mismatch\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted (environment_mismatch)."
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "tools": [
+                {
+                  "name": "answer",
+                  "title": "answer",
+                  "description": "Answers a research question from the merchant's index.",
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false
+                  },
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                      "depth": {
+                        "type": "integer",
+                        "description": "How many sources to read."
+                      },
+                      "question": {
+                        "type": "string",
+                        "description": "What to answer."
+                      }
+                    },
+                    "required": ["question"]
+                  }
+                },
+                {
+                  "name": "ping",
+                  "description": "Answers pong, free for anyone.",
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 403,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"environment_mismatch\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted (environment_mismatch)."
+            }
+          }
+        },
+        {
+          "status": 403,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"environment_mismatch\""
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted (environment_mismatch)."
+            }
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "body": {
+            "agentKey": "agk_am_sandbox_0001"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/keys/verifications",
+          "body": {
+            "agentKey": "agk_am_sandbox_0002"
+          }
+        }
+      ]
+    }
+  }
+}

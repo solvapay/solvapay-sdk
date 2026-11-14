@@ -1,0 +1,48 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "checkout-no-plans",
+  "description": "A product without plans says none are configured, and still links checkout.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "checkout",
+      "mode": "auto",
+      "payload": {
+        "view": "checkout",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [],
+        "customer": null,
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+        "portalUrl": "https://solvapay.com/customer/manage?session=sess_1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge"
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Upgrade — Stock Research**\n\nNo paid plans are configured on this product yet.\n\nTo continue, call `account` with view: \"account\".\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_1",
+          "name": "Open checkout"
+        }
+      ]
+    }
+  }
+}

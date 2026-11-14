@@ -7,7 +7,7 @@
  */
 
 import { SolvaPayError } from '@solvapay/core'
-import type { SolvaPayClient } from './types'
+import type { PurchaseInfo, SolvaPayClient } from './types'
 
 const API_ERROR_BODY_MAX = 240
 
@@ -27,7 +27,29 @@ function isNonJsonResponseBody(body: string, contentType: string | null): boolea
   return false
 }
 
-async function throwApiError(operation: string, res: Response): Promise<never> {
+/**
+ * The stable code of an API failure, as every SolvaPay SDK reports it: the
+ * API's own `code` when its JSON body carries a non-empty one, `http_<status>`
+ * when it does not, and `non_json_response` when the body is not JSON.
+ */
+function apiErrorCode(body: string, status: number): string {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(body)
+  } catch {
+    return 'non_json_response'
+  }
+  const code =
+    parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as { code?: unknown }).code
+      : undefined
+  return typeof code === 'string' && code ? code : `http_${status}`
+}
+
+/** What a failed response says: its detail for the message, its status and its code. */
+async function readApiError(
+  res: Response,
+): Promise<{ detail: string; status: number; code: string }> {
   const body = await res.text()
   const contentType = res.headers.get('content-type')
   const nonJson = isNonJsonResponseBody(body, contentType)
@@ -36,10 +58,57 @@ async function throwApiError(operation: string, res: Response): Promise<never> {
     ? `non-JSON response (${contentType ?? 'unknown content-type'}) — the API may not have been reached. Body: ${snippet}`
     : snippet
   apiDebugLog(`❌ API Error: ${res.status} - ${detail}`)
-  throw new SolvaPayError(`${operation} failed (${res.status}): ${detail}`, {
-    status: res.status,
-    code: nonJson ? 'non_json_response' : undefined,
-  })
+  return { detail, status: res.status, code: apiErrorCode(body, res.status) }
+}
+
+async function throwApiError(operation: string, res: Response): Promise<never> {
+  const { detail, status, code } = await readApiError(res)
+  throw new SolvaPayError(`${operation} failed (${status}): ${detail}`, { status, code })
+}
+
+/**
+ * The purchase in a cancel or reactivate answer (`{ purchase, success }`, or the
+ * purchase itself). Fails loudly on a body that is not a JSON object.
+ */
+async function readPurchaseResponse(res: Response, endpoint: string): Promise<PurchaseInfo> {
+  const responseText = await res.text()
+
+  let responseData
+  try {
+    responseData = JSON.parse(responseText)
+  } catch (parseError) {
+    apiDebugLog(`❌ Failed to parse response as JSON: ${parseError}`)
+    throw new SolvaPayError(
+      `Invalid JSON response from ${endpoint} endpoint: ${responseText.substring(0, 200)}`,
+      { status: res.status, code: 'non_json_response' },
+    )
+  }
+
+  if (!responseData || typeof responseData !== 'object') {
+    apiDebugLog(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
+    throw new SolvaPayError(`Invalid response structure from ${endpoint} endpoint`, {
+      code: 'invalid_response',
+    })
+  }
+
+  // Backend returns nested structure: { purchase: {...}, message: "..." }
+  let result
+  if (responseData.purchase && typeof responseData.purchase === 'object') {
+    result = responseData.purchase
+  } else if (responseData.reference) {
+    result = responseData
+  } else {
+    result = responseData.purchase || responseData
+  }
+
+  if (!result || typeof result !== 'object') {
+    apiDebugLog(`❌ Invalid purchase data in response. Full response:`, responseData)
+    throw new SolvaPayError(`Invalid purchase data in ${endpoint} response`, {
+      code: 'invalid_response',
+    })
+  }
+
+  return result
 }
 
 /**
@@ -94,7 +163,7 @@ export type ServerClientOptions = {
  */
 export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient {
   const base = opts.apiBaseUrl ?? 'https://api.solvapay.com'
-  if (!opts.apiKey) throw new SolvaPayError('Missing apiKey')
+  if (!opts.apiKey) throw new SolvaPayError('Missing apiKey', { code: 'missing_secret' })
 
   const headers = {
     'Content-Type': 'application/json',
@@ -630,47 +699,37 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       })
 
       if (!res.ok) {
-        await throwApiError('Cancel purchase', res)
+        await throwApiError('Attach business details', res)
       }
 
-      // Get response text first to debug any parsing issues
-      const responseText = await res.text()
+      return await res.json()
+    },
 
-      let responseData
-      try {
-        responseData = JSON.parse(responseText)
-      } catch (parseError) {
-        apiDebugLog(`❌ Failed to parse response as JSON: ${parseError}`)
-        throw new SolvaPayError(
-          `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
-        )
+    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
+    async cancelPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}/cancel`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(params.reason ? { reason: params.reason } : {}),
+      })
+
+      if (!res.ok) {
+        const { detail, status, code } = await readApiError(res)
+        if (status === 404) {
+          throw new SolvaPayError(`Purchase not found: ${detail}`, { status, code })
+        }
+        if (status === 400) {
+          throw new SolvaPayError(
+            `Purchase cannot be cancelled or does not belong to provider: ${detail}`,
+            { status, code },
+          )
+        }
+        throw new SolvaPayError(`Cancel purchase failed (${status}): ${detail}`, { status, code })
       }
 
-      // Validate response structure
-      if (!responseData || typeof responseData !== 'object') {
-        apiDebugLog(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
-      }
-
-      // Backend returns nested structure: { purchase: {...}, message: "..." }
-      // Extract the purchase object from the response
-      let result
-      if (responseData.purchase && typeof responseData.purchase === 'object') {
-        result = responseData.purchase
-      } else if (responseData.reference) {
-        result = responseData
-      } else {
-        // Try to extract anyway or use the whole response
-        result = responseData.purchase || responseData
-      }
-
-      // Check if response has expected fields
-      if (!result || typeof result !== 'object') {
-        apiDebugLog(`❌ Invalid purchase data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
-      }
-
-      return result
+      return readPurchaseResponse(res, 'cancel purchase')
     },
 
     // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
@@ -686,38 +745,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         await throwApiError('Reactivate purchase', res)
       }
 
-      const responseText = await res.text()
-
-      let responseData
-      try {
-        responseData = JSON.parse(responseText)
-      } catch (parseError) {
-        apiDebugLog(`❌ Failed to parse response as JSON: ${parseError}`)
-        throw new SolvaPayError(
-          `Invalid JSON response from reactivate purchase endpoint: ${responseText.substring(0, 200)}`,
-        )
-      }
-
-      if (!responseData || typeof responseData !== 'object') {
-        apiDebugLog(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from reactivate purchase endpoint`)
-      }
-
-      let result
-      if (responseData.purchase && typeof responseData.purchase === 'object') {
-        result = responseData.purchase
-      } else if (responseData.reference) {
-        result = responseData
-      } else {
-        result = responseData.purchase || responseData
-      }
-
-      if (!result || typeof result !== 'object') {
-        apiDebugLog(`❌ Invalid purchase data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid purchase data in reactivate purchase response`)
-      }
-
-      return result
+      return readPurchaseResponse(res, 'reactivate purchase')
     },
 
     // POST: /v1/sdk/user-info

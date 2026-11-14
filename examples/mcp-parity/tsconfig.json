@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "composite": false,
+    "skipLibCheck": true,
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@solvapay/agents": ["../../packages/agents/src/index.ts"],
+      "@solvapay/agents/mcp": ["../../packages/agents/src/mcp.ts"],
+      "@solvapay/auth": ["../../packages/auth/src/index.ts"],
+      "@solvapay/core": ["../../packages/core/src/index.ts"],
+      "@solvapay/mcp": ["../../packages/mcp/src/index.ts"],
+      "@solvapay/mcp/express": ["../../packages/mcp/src/express/index.ts"],
+      "@solvapay/mcp/fetch": ["../../packages/mcp/src/fetch/index.ts"],
+      "@solvapay/mcp-core": ["../../packages/mcp-core/src/index.ts"],
+      "@solvapay/server": ["../../packages/server/src/index.ts"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  }
+}

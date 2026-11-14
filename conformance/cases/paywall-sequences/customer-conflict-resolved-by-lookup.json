@@ -1,0 +1,115 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "customer-conflict-resolved-by-lookup",
+  "description": "A create that conflicts (409) is resolved by looking the customer up by externalRef again.",
+  "setup": {
+    "productRef": "prd_sequences"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "user_seq_11"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "status": 409,
+          "body": {
+            "statusCode": 409,
+            "message": "Customer already exists"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_SEQ11",
+            "email": "user_seq_11@example.com",
+            "name": "Ada",
+            "externalRef": "user_seq_11"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/1"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ11"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_seq_11"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_seq_11-1794484800000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_seq_11"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_seq_11"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_SEQ11",
+              "productRef": "prd_sequences",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.100Z",
+      "args": {
+        "customerRef": "user_seq_11"
+      },
+      "api": [],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_SEQ11"
+        },
+        "apiCalls": []
+      }
+    }
+  ]
+}

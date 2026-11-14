@@ -1,0 +1,82 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "topup-with-subscription-offered",
+  "description": "Out of credits when a recurring paid plan is also offered stays payment_required: upgrading is a real choice.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "pln_payg",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "plans": [
+          {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "price": 1000,
+            "currency": "USD",
+            "requiresPayment": true
+          },
+          {
+            "reference": "pln_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2000,
+            "currency": "USD",
+            "requiresPayment": true
+          }
+        ],
+        "balance": {
+          "creditBalance": 0,
+          "remainingUnits": 0,
+          "creditsPerUnit": 1
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.example.com/checkout) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
+      "balance": {
+        "creditBalance": 0,
+        "remainingUnits": 0,
+        "creditsPerUnit": 1
+      },
+      "planRef": "pln_payg",
+      "plans": [
+        {
+          "reference": "pln_payg",
+          "name": "Pay as you go",
+          "type": "usage-based",
+          "price": 1000,
+          "currency": "USD",
+          "requiresPayment": true
+        },
+        {
+          "reference": "pln_pro",
+          "name": "Pro",
+          "type": "recurring",
+          "price": 2000,
+          "currency": "USD",
+          "requiresPayment": true
+        }
+      ],
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 1,
+      "shortfallCredits": 1,
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

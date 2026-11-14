@@ -180,10 +180,45 @@ export class AgentApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The `code` in SolvaPay's error body, when it sent one. */
+    readonly code?: string,
   ) {
     super(message)
     this.name = 'AgentApiError'
   }
+}
+
+/**
+ * The `code` of an error body: SolvaPay's own, undefined when its JSON carries
+ * none, and `non_json_response` when the body is not JSON at all (a proxy's or
+ * gateway's page, not SolvaPay's answer), as the Python and Go SDKs name it.
+ */
+function errorCode(text: string): string | undefined {
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch {
+    return 'non_json_response'
+  }
+  return isRecord(body) && typeof body.code === 'string' && body.code ? body.code : undefined
+}
+
+/**
+ * Whose a 401 or 403 from SolvaPay's agent endpoints is. The agent's: the token
+ * or key is unknown, revoked or another merchant's (401, or 403 with no code), or
+ * from the other environment (403 `environment_mismatch`). The merchant's: any
+ * other code, such as `feature_not_enabled` (agent payments are off for this
+ * merchant) or `key_env_mismatch` (the secret key is for the other
+ * environment). Those are the merchant's to fix, never the agent's. So is a
+ * 403 whose body is not JSON (`non_json_response`): it is not SolvaPay's answer.
+ */
+export function agentRefusal(error: unknown): 'invalid' | 'environment_mismatch' | undefined {
+  if (!(error instanceof AgentApiError)) return undefined
+  if (error.status === 401) return 'invalid'
+  if (error.status !== 403) return undefined
+  if (error.code === undefined) return 'invalid'
+  if (error.code === 'environment_mismatch') return 'environment_mismatch'
+  return undefined
 }
 
 const TIMEOUT_MS = 10_000
@@ -208,7 +243,11 @@ export function createSolvaPayAgentClient(options: {
     })
     const text = await response.text()
     if (!response.ok) {
-      throw new AgentApiError(`POST ${path} failed (${response.status}): ${text}`, response.status)
+      throw new AgentApiError(
+        `POST ${path} failed (${response.status}): ${text}`,
+        response.status,
+        errorCode(text),
+      )
     }
     return JSON.parse(text) as T
   }

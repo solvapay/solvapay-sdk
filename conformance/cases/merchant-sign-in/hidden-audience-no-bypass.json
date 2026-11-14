@@ -1,0 +1,51 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "hidden-audience-no-bypass",
+  "description": "Hiding an audience with ChatGPT's bypass turned off: a merchant tool whose `_meta.audience` is hidden is left out of tools/list even for ChatGPT's client; the other merchant tools stay.",
+  "input": {
+    "fn": "merchantTools",
+    "args": {
+      "productRef": "prd_si_hidden",
+      "clientName": "openai-mcp",
+      "hideToolsByAudience": {
+        "audiences": ["ui"],
+        "bypass": false
+      },
+      "tools": [
+        {
+          "name": "visible",
+          "kind": "payable",
+          "description": "Shown to the model."
+        },
+        {
+          "name": "widget_only",
+          "kind": "payable",
+          "description": "Called by the widget.",
+          "meta": {
+            "audience": "ui"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "visible",
+          "description": "Shown to the model. Paid tool — call `account` for current balance and cost per call.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": true
+          },
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          }
+        }
+      ]
+    }
+  }
+}

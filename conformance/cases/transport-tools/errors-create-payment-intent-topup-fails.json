@@ -1,0 +1,48 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-create-payment-intent-topup-fails",
+  "description": "A top-up the API refuses (403, wrong key environment) answers 403.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purpose": "topup",
+        "amount": 1000,
+        "currency": "USD"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "status": 403,
+          "body": {
+            "statusCode": 403,
+            "message": "This key is for sandbox",
+            "error": "Forbidden",
+            "code": "KEY_ENV_MISMATCH"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 403,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

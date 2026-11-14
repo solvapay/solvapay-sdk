@@ -1,0 +1,58 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "set-renewal-reactivate-still-cancelled",
+  "description": "A reactivation the API answers with cancelledAt still set is an error.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purchaseRef": "pur_1",
+        "enabled": true
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_1/reactivate",
+          "body": {
+            "success": true,
+            "purchase": {
+              "reference": "pur_1",
+              "status": "active",
+              "productRef": "prd_conform1",
+              "productName": "Stock Research",
+              "planRef": "pln_pro",
+              "customerRef": "cus_conform1",
+              "amount": 2900,
+              "currency": "USD",
+              "isRecurring": true,
+              "billingCycle": "monthly",
+              "startDate": "2026-11-01T00:00:00Z",
+              "endDate": "2026-12-01T00:00:00Z",
+              "createdAt": "2026-11-01T00:00:00Z",
+              "cancelledAt": "2026-11-10T00:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Purchase reactivation failed: cancelledAt is still set"
+        }
+      ],
+      "structuredContent": {
+        "error": "Purchase reactivation failed: cancelledAt is still set",
+        "status": 500
+      },
+      "isError": true
+    }
+  }
+}

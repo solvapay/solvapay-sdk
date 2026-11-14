@@ -1,0 +1,101 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "handler-gates-itself",
+  "description": "A handler that gates the call itself (a PaywallError from inside) returns that gate, and no fail event is recorded for it; the next call records success as usual.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-13T09:50:00.000Z",
+      "args": {
+        "customerRef": "cus_PW09",
+        "handler": "gate",
+        "toolName": "export"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 3,
+            "plan": "pln_pw_pro",
+            "meterName": "exports"
+          }
+        }
+      ],
+      "expect": {
+        "gate": {
+          "kind": "payment_required",
+          "product": "prd_pw_seq",
+          "checkoutUrl": "",
+          "message": "You don't have an active plan for this tool. Call the `account` tool with view: 'checkout'.",
+          "reason": "upgrade_required",
+          "nextAction": "checkout",
+          "remainingCalls": 0
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW09",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-13T09:50:01.000Z",
+      "args": {
+        "customerRef": "cus_PW09",
+        "handler": "succeed",
+        "toolName": "export"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_pw_4",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "ok": true
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW09",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "success",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794563401000_<random>:success",
+              "metadata": {
+                "action": "exports",
+                "requestId": "solvapay_1794563401000_<random>",
+                "toolName": "export",
+                "usageClass": "included"
+              },
+              "timestamp": "2026-11-13T09:50:01.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,337 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "oauth-protected-resource",
+  "description": "A server as an OAuth protected resource: its canonical URL (scheme and host lower-cased, default port dropped, trailing slashes removed, query kept), the RFC 9728 document naming SolvaPay's issuer and the one scope, the path-suffixed metadata path (or the one configured), and the 401 challenge: a JSON-RPC error with code -32001 and a WWW-Authenticate header carrying error, the quoted description, the absolute metadata URL and the scope.",
+  "input": {
+    "fn": "oauthResources",
+    "args": {
+      "resources": {
+        "plain": {
+          "resource": "https://mcp.conformance.test/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "Sign in to let your agent pay"
+        },
+        "nonCanonical": {
+          "resource": "HTTPS://MCP.Conformance.test:443/Tools/MCP//",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "serverName": "Conformance tools",
+          "documentation": "https://docs.conformance.test/agents",
+          "description": "The agent token was not accepted (expired).",
+          "jsonRpcId": 7
+        },
+        "portAndQuery": {
+          "resource": "http://localhost:8787/v1/mcp/?tenant=ai",
+          "authorizationServer": "http://localhost:3001/v1/agent",
+          "description": "Say \"yes\" \\ or no",
+          "jsonRpcId": "req-ai-1"
+        },
+        "httpsOn80": {
+          "resource": "https://mcp.conformance.test:80/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x",
+          "jsonRpcId": 0
+        },
+        "customMetadataPath": {
+          "resource": "https://mcp.conformance.test/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "metadataPath": "/oauth/metadata.json",
+          "description": "Sign in",
+          "serverName": "",
+          "documentation": ""
+        },
+        "dotSegments": {
+          "resource": "https://mcp.conformance.test/a/../mcp/./v2",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "ipv6": {
+          "resource": "http://[::1]:8080/mcp",
+          "authorizationServer": "http://[::1]:3001/v1/agent",
+          "description": "x"
+        },
+        "spaceInPath": {
+          "resource": "https://mcp.conformance.test/my tools",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "trailingDot": {
+          "resource": "https://mcp.conformance.test/mcp/v2/.",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "trailingDotDot": {
+          "resource": "https://mcp.conformance.test/mcp/v2/..",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "plain": {
+        "canonical": "https://mcp.conformance.test/mcp",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/mcp",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to let your agent pay\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to let your agent pay"
+            }
+          }
+        }
+      },
+      "nonCanonical": {
+        "canonical": "https://mcp.conformance.test/Tools/MCP",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/Tools/MCP",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"],
+          "resource_name": "Conformance tools",
+          "resource_documentation": "https://docs.conformance.test/agents"
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/Tools/MCP",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"The agent token was not accepted (expired).\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/Tools/MCP\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "error": {
+              "code": -32001,
+              "message": "The agent token was not accepted (expired)."
+            }
+          }
+        }
+      },
+      "portAndQuery": {
+        "canonical": "http://localhost:8787/v1/mcp?tenant=ai",
+        "metadata": {
+          "resource": "http://localhost:8787/v1/mcp?tenant=ai",
+          "authorization_servers": ["http://localhost:3001/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/v1/mcp",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Say \\\"yes\\\" \\\\ or no\", resource_metadata=\"http://localhost:8787/.well-known/oauth-protected-resource/v1/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": "req-ai-1",
+            "error": {
+              "code": -32001,
+              "message": "Say \"yes\" \\ or no"
+            }
+          }
+        }
+      },
+      "httpsOn80": {
+        "canonical": "https://mcp.conformance.test:80/mcp",
+        "metadata": {
+          "resource": "https://mcp.conformance.test:80/mcp",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"https://mcp.conformance.test:80/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 0,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      },
+      "customMetadataPath": {
+        "canonical": "https://mcp.conformance.test/mcp",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/mcp",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/oauth/metadata.json",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in\", resource_metadata=\"https://mcp.conformance.test/oauth/metadata.json\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "Sign in"
+            }
+          }
+        }
+      },
+      "dotSegments": {
+        "canonical": "https://mcp.conformance.test/mcp/v2",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/mcp/v2",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp/v2",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/mcp/v2\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      },
+      "ipv6": {
+        "canonical": "http://[::1]:8080/mcp",
+        "metadata": {
+          "resource": "http://[::1]:8080/mcp",
+          "authorization_servers": ["http://[::1]:3001/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"http://[::1]:8080/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      },
+      "spaceInPath": {
+        "canonical": "https://mcp.conformance.test/my%20tools",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/my%20tools",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/my%20tools",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/my%20tools\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      },
+      "trailingDot": {
+        "canonical": "https://mcp.conformance.test/mcp/v2",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/mcp/v2",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp/v2",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/mcp/v2\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      },
+      "trailingDotDot": {
+        "canonical": "https://mcp.conformance.test/mcp",
+        "metadata": {
+          "resource": "https://mcp.conformance.test/mcp",
+          "authorization_servers": ["https://api.conformance.test/v1/agent"],
+          "scopes_supported": ["usage"],
+          "bearer_methods_supported": ["header"]
+        },
+        "metadataPath": "/.well-known/oauth-protected-resource/mcp",
+        "challenge": {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"x\", resource_metadata=\"https://mcp.conformance.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate",
+            "content-type": "application/json"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32001,
+              "message": "x"
+            }
+          }
+        }
+      }
+    }
+  }
+}

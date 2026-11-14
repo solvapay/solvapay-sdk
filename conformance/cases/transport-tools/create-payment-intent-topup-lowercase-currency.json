@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-topup-lowercase-currency",
+  "description": "A top-up currency must be an uppercase ISO 4217 code; the API is not called.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "topup",
+        "amount": 1000,
+        "currency": "usd"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Invalid currency \"usd\": must be an uppercase ISO 4217 code (e.g. \"USD\", \"EUR\")"
+        }
+      ],
+      "structuredContent": {
+        "error": "Invalid currency \"usd\": must be an uppercase ISO 4217 code (e.g. \"USD\", \"EUR\")",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "attach-business-details-invalid-tax-id",
+  "description": "A tax ID that does not fit the country's format is refused before the API is called.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "paymentIntentId": "pi_1",
+        "isBusiness": true,
+        "country": "DE",
+        "taxId": "DE123"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Enter a valid tax ID for DE"
+        }
+      ],
+      "structuredContent": {
+        "error": "Enter a valid tax ID for DE",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

@@ -212,6 +212,7 @@ describe('agent keys', () => {
           throw new AgentApiError(
             'POST /v1/sdk/agent/keys/verifications failed (403): {"code":"environment_mismatch"}',
             403,
+            'environment_mismatch',
           )
         },
       },
@@ -219,6 +220,60 @@ describe('agent keys', () => {
     expect(await server(TEST_AGENT_KEY)).toMatchObject({
       ok: false,
       reason: 'environment_mismatch',
+    })
+  })
+
+  it('throws when SolvaPay refuses the merchant rather than the key, and reads the code, not the sentence', async () => {
+    const answering = (status: number, body: unknown) =>
+      createAgentKeyVerifier({
+        client: createSolvaPayAgentClient({
+          apiBaseUrl: 'https://api.solvapay.test',
+          secretKey: 'sk_sandbox_TEST',
+          fetchImpl: async () => Response.json(body, { status }),
+        }),
+      })
+    // Agent payments are off for this merchant: the merchant's to fix, never the agent's.
+    await expect(
+      answering(403, {
+        statusCode: 403,
+        code: 'feature_not_enabled',
+        feature: 'agent_payments',
+        message: 'Feature "agent_payments" is not enabled for this provider',
+      })('agk_sandbox_KEY'),
+    ).rejects.toThrow('feature_not_enabled')
+    // The secret key is for the other environment.
+    await expect(
+      answering(403, {
+        statusCode: 403,
+        code: 'key_env_mismatch',
+        message: 'sandbox key, live account',
+      })('agk_sandbox_KEY'),
+    ).rejects.toThrow('key_env_mismatch')
+    // Another merchant's key: SolvaPay sends no code.
+    expect(
+      await answering(403, {
+        statusCode: 403,
+        message: 'This agent key was issued for another merchant',
+        error: 'Forbidden',
+      })('agk_sandbox_KEY'),
+    ).toMatchObject({ ok: false, reason: 'invalid' })
+    // A sentence that mentions environment_mismatch is not the code.
+    expect(
+      await answering(403, { statusCode: 403, message: 'not an environment_mismatch' })(
+        'agk_sandbox_KEY',
+      ),
+    ).toMatchObject({ ok: false, reason: 'invalid' })
+    // A 403 whose body is not JSON is a proxy's page, not SolvaPay refusing the key.
+    const notJson = createAgentKeyVerifier({
+      client: createSolvaPayAgentClient({
+        apiBaseUrl: 'https://api.solvapay.test',
+        secretKey: 'sk_sandbox_TEST',
+        fetchImpl: async () => new Response('Forbidden', { status: 403 }),
+      }),
+    })
+    await expect(notJson('agk_sandbox_KEY')).rejects.toMatchObject({
+      status: 403,
+      code: 'non_json_response',
     })
   })
 

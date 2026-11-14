@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-reactivate-refused",
+  "description": "A reactivation the API refuses (the purchase is not pending cancellation) answers 400.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_7",
+        "enabled": true
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_7/reactivate",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Purchase is not pending cancellation",
+            "error": "Bad Request"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "Purchase cannot be reactivated",
+        "status": 400,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-meter-names-in-the-singular",
+  "description": "One unit of a plural meter name reads in the singular: searches → search, boxes → box, queries → query, tokens → token; a name not ending in a plural s stays as it is.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "auto",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_searches",
+            "name": "By searches",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 5,
+                "currency": "USD",
+                "meter": "searches"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_boxes",
+            "name": "By boxes",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 5,
+                "currency": "USD",
+                "meter": "boxes"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_queries",
+            "name": "By queries",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 5,
+                "currency": "USD",
+                "meter": "queries"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_tokens",
+            "name": "By tokens",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 5,
+                "currency": "USD",
+                "meter": "tokens"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_access",
+            "name": "By access",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 5,
+                "currency": "USD",
+                "meter": "access"
+              }
+            ]
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Welcome to Stock Research**\n\nStock Research has no plan yet. By searches is $0.05 per search · planRef: pln_nr_searches, By boxes is $0.05 per box · planRef: pln_nr_boxes, By queries is $0.05 per query · planRef: pln_nr_queries, By tokens is $0.05 per token · planRef: pln_nr_tokens, By access is $0.05 per access · planRef: pln_nr_access. Reply with a plan name to activate it.\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

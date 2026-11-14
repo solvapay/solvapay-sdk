@@ -1,0 +1,191 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "activation-gate-for-new-user",
+  "description": "A new user is looked up by externalRef (404), created, and then gated: activation_required carries the confirmation URL as checkout and manage link, the plans and the product, and a paywall usage event names the tool. The next call reuses the customer and checks limits afresh, since a gate is never cached.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:00:00.000Z",
+      "args": {
+        "customerRef": "user_pw_01",
+        "toolName": "translate"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_PW01",
+            "email": "user_pw_01-1794560400000@auto-created.local",
+            "name": "user_pw_01"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": false,
+            "remaining": 0,
+            "activationRequired": true,
+            "confirmationUrl": "https://checkout.conformance.test/confirm/1",
+            "meterName": "requests",
+            "plans": [
+              {
+                "reference": "pln_pw_payg",
+                "name": "Pay as you go",
+                "price": 0,
+                "currency": "usd",
+                "type": "usage-based",
+                "requiresPayment": true
+              }
+            ],
+            "product": {
+              "reference": "prd_pw_seq",
+              "name": "Translator"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_pw_1",
+            "success": true
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "gate",
+          "customerRef": "cus_PW01",
+          "gate": {
+            "kind": "activation_required",
+            "product": "prd_pw_seq",
+            "message": "Your plan needs activation. [Open checkout](https://checkout.conformance.test/confirm/1) to activate (expires in 15 minutes), or call the `account` tool with view: 'checkout'. Or call `activate_plan` with a `planRef`.",
+            "checkoutUrl": "https://checkout.conformance.test/confirm/1",
+            "confirmationUrl": "https://checkout.conformance.test/confirm/1",
+            "productDetails": {
+              "reference": "prd_pw_seq",
+              "name": "Translator"
+            },
+            "plans": [
+              {
+                "reference": "pln_pw_payg",
+                "name": "Pay as you go",
+                "price": 0,
+                "currency": "usd",
+                "type": "usage-based",
+                "requiresPayment": true
+              }
+            ],
+            "meterName": "requests",
+            "reason": "activation_required",
+            "nextAction": "activate",
+            "remainingCalls": 0,
+            "links": {
+              "manage": "https://checkout.conformance.test/confirm/1"
+            }
+          }
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_pw_01"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_pw_01-1794560400000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_pw_01"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW01",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/usages",
+            "body": {
+              "customerRef": "cus_PW01",
+              "actionType": "api_call",
+              "units": 1,
+              "outcome": "paywall",
+              "productRef": "prd_pw_seq",
+              "duration": 0,
+              "idempotencyKey": "solvapay_1794560400000_<random>:paywall",
+              "metadata": {
+                "action": "requests",
+                "requestId": "solvapay_1794560400000_<random>",
+                "toolName": "translate"
+              },
+              "timestamp": "2026-11-13T09:00:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:00:01.000Z",
+      "args": {
+        "customerRef": "user_pw_01",
+        "toolName": "translate"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 4,
+            "planRef": "pln_pw_payg",
+            "meterName": "requests"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW01"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW01",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

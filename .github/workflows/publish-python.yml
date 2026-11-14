@@ -1,0 +1,119 @@
+name: Publish Python
+
+# Publishes the `solvapay` Python package (python/).
+#
+#   push to main  -> PyPI, at the version in python/pyproject.toml, which
+#                    `pnpm changeset:version` keeps equal to @solvapay/server's.
+#                    Skipped when that version is already on PyPI, so a push
+#                    that releases nothing new does nothing.
+#   push to dev   -> TestPyPI, as <version>.dev<run number>, a preview to
+#                    `pip install --index-url https://test.pypi.org/simple/ solvapay`.
+#
+# Uploads use PyPI trusted publishing (OIDC): no token is stored. One-time
+# setup, by a PyPI owner of `solvapay`: add this repository and workflow
+# (publish-python.yml) as a trusted publisher, with environment `pypi` on
+# pypi.org and `testpypi` on test.pypi.org.
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'python/**'
+      - 'openapi/**'
+      - 'conformance/**'
+      - 'packages/server/package.json'
+      - '.github/workflows/publish-python.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-python-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+      index: ${{ steps.version.outputs.index }}
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+
+      - name: Test
+        run: |
+          uv sync --locked --all-extras
+          uv run python scripts/check_version.py
+          uv run python scripts/generate_client.py --check
+          uv run python scripts/pin_conformance.py --check
+          uv run pytest
+
+      - name: Decide the version and the index
+        id: version
+        run: |
+          base=$(uv run python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            version="$base"; index="pypi"; json="https://pypi.org/pypi/solvapay/$version/json"
+          else
+            version="${base}.dev${GITHUB_RUN_NUMBER}"; index="testpypi"; json="https://test.pypi.org/pypi/solvapay/$version/json"
+          fi
+          if curl -sf -o /dev/null "$json"; then
+            echo "solvapay $version is already on $index: nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "index=$index" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i -E "s/^version = \"[^\"]+\"$/version = \"$VERSION\"/" pyproject.toml
+          uv build
+          ls -l dist
+
+      - name: Check the wheel installs and imports
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          uv venv /tmp/wheel-check --python 3.10
+          uv pip install --python /tmp/wheel-check dist/*.whl
+          /tmp/wheel-check/bin/python -c "import solvapay; print(solvapay.verify_webhook)"
+          uv pip install --python /tmp/wheel-check "$(ls dist/*.whl)[mcp,agents]"
+          /tmp/wheel-check/bin/python -c "import solvapay.mcp"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.version.outputs.publish == 'true'
+        with:
+          name: dist
+          path: python/dist/
+
+  publish:
+    name: Publish to ${{ needs.build.outputs.index }}
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.build.outputs.index }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ needs.build.outputs.index == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}

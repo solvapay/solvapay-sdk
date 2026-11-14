@@ -431,9 +431,9 @@ export class SolvaPayPaywall {
       // (Cloudflare Workers, Vercel Edge, Supabase Edge). Without
       // this, the `POST /v1/sdk/usages` fetch gets dropped before it
       // reaches the backend and `sumForMeter` always returns 0 — the
-      // paywall never decrements free-quota and never gates. Errors
-      // are swallowed because tracking failures must never escalate
-      // into tool-call failures.
+      // paywall never decrements free-quota and never gates.
+      // `trackUsage` never rejects: it logs a failed event itself, so a
+      // tracking failure never escalates into a tool-call failure.
       await this.trackUsage(
         backendCustomerRef,
         product,
@@ -443,19 +443,27 @@ export class SolvaPayPaywall {
         latencyMs,
         metadata.toolName,
         metadata.freeLimit ? { meterName: metadata.freeLimit.meter } : undefined,
-      ).catch(() => undefined)
+      )
 
       // Delegate gate construction to `buildPaywallGate` so adapter
       // paths and `payable.gate()` produce byte-identical wire shapes.
-      const gate = buildPaywallGate(
-        product,
-        lastLimitsCheck ?? {
-          withinLimits: false,
-          remaining: 0,
-          plan: '',
-          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
-        },
-      )
+      //
+      // When the SDK gates on its own count (the last cached unit is used,
+      // or more parallel callers than units share one check), the limits
+      // response it counted down from still says `withinLimits: true` with
+      // units remaining. The gate describes the verdict instead: no units
+      // left.
+      const gateLimits: LimitResponseWithPlan = lastLimitsCheck
+        ? lastLimitsCheck.withinLimits
+          ? { ...lastLimitsCheck, withinLimits: false, remaining: 0 }
+          : lastLimitsCheck
+        : {
+            withinLimits: false,
+            remaining: 0,
+            plan: '',
+            ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
+          }
+      const gate = buildPaywallGate(product, gateLimits)
 
       return {
         outcome: 'gate',
@@ -534,7 +542,7 @@ export class SolvaPayPaywall {
         latencyMs,
         metadata.toolName,
         trackUsageExtra(metadata, 'success', decision.consequence),
-      ).catch(() => undefined)
+      )
       return result
     } catch (error) {
       if (error instanceof Error) {
@@ -554,7 +562,7 @@ export class SolvaPayPaywall {
           latencyMs,
           metadata.toolName,
           trackUsageExtra(metadata, 'fail'),
-        ).catch(() => undefined)
+        )
       }
       throw error
     }
@@ -640,12 +648,6 @@ export class SolvaPayPaywall {
     // This is especially important when multiple routes call ensureCustomer concurrently
     const cacheKey = externalRef || customerRef
 
-    // Check if we have a cached result in per-instance cache first (fast path)
-    if (this.customerRefMapping.has(customerRef)) {
-      const cached = this.customerRefMapping.get(customerRef)!
-      return cached
-    }
-
     // Use shared deduplicator (handles both concurrent requests and cache)
     const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(cacheKey, async () => {
       // If externalRef is provided, try to lookup existing customer first
@@ -670,7 +672,7 @@ export class SolvaPayPaywall {
         } catch (error) {
           // 404 means customer doesn't exist yet - this is expected, continue to creation
           const errorMessage = error instanceof Error ? error.message : String(error)
-          if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
+          if (!(error instanceof SolvaPayError && error.status === 404)) {
             // Unexpected error - log but continue to fallback behavior
             this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
           }
@@ -731,6 +733,11 @@ export class SolvaPayPaywall {
 
         return ref
       } catch (error: unknown) {
+        // The create did not produce a customer: don't leave the user marked
+        // as attempted, or the next call skips creation and sends the app's
+        // own user id to the API as if it were a customer ref. Paths below
+        // that do resolve a customer store the mapping themselves.
+        this.customerCreationAttempts.delete(customerRef)
         const errorMessage = error instanceof Error ? error.message : String(error)
         if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
           // Try to lookup by externalRef first if available
@@ -825,9 +832,10 @@ export class SolvaPayPaywall {
           // Returning the original app user ID here causes downstream 404s in payment APIs.
           const unresolvedMessage =
             errorMessage || 'Customer already exists but could not be resolved'
-          throw new Error(
+          throw new SolvaPayError(
             `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
               'Ensure the existing customer is linked to this externalRef.',
+            { status: 409, code: 'customer_conflict' },
           )
         }
 

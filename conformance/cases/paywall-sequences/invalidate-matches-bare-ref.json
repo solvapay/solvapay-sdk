@@ -1,0 +1,224 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "invalidate-matches-bare-ref",
+  "description": "invalidateLimits with a bare ref also drops limits cached under the same ref with the cus_ prefix, and your own user id drops the limits of the customer it maps to; invalidating another product leaves them cached.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:40:00.000Z",
+      "args": {
+        "customerRef": "cus_PW06"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "pln_pw_pro"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW06"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW06",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "invalidateLimits",
+      "clock": "2026-11-13T09:40:01.000Z",
+      "args": {
+        "customerRef": "cus_PW06",
+        "productRef": "prd_pw_other"
+      },
+      "api": [],
+      "expect": {
+        "result": null,
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:40:02.000Z",
+      "args": {
+        "customerRef": "cus_PW06"
+      },
+      "api": [],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW06"
+        },
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "invalidateLimits",
+      "clock": "2026-11-13T09:40:03.000Z",
+      "args": {
+        "customerRef": "PW06"
+      },
+      "api": [],
+      "expect": {
+        "result": null,
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:40:04.000Z",
+      "args": {
+        "customerRef": "cus_PW06"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "pln_pw_pro"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW06"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW06",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:40:05.000Z",
+      "args": {
+        "customerRef": "user_pw_08"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_PW08",
+            "email": "user_pw_08@example.com",
+            "name": "Margaret",
+            "externalRef": "user_pw_08"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "pln_pw_pro"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW08"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_pw_08"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW08",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "invalidateLimits",
+      "clock": "2026-11-13T09:40:06.000Z",
+      "args": {
+        "customerRef": "user_pw_08"
+      },
+      "api": [],
+      "expect": {
+        "result": null,
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:40:07.000Z",
+      "args": {
+        "customerRef": "user_pw_08"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "pln_pw_pro"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW08"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW08",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

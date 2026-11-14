@@ -1,0 +1,19 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-payment-required",
+  "description": "A paid plan returns its checkout link with the 15-minute expiry and points at the checkout view.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "payment_required",
+        "planName": "Pro",
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1"
+      }
+    }
+  },
+  "expect": {
+    "result": "Pro requires payment. [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes), or Call `account` with view: 'checkout' to pay."
+  }
+}

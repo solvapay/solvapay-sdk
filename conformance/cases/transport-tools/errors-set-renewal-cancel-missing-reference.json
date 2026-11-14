@@ -1,0 +1,42 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-missing-reference",
+  "description": "A cancel the API answers without a purchase reference answers 500.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_6",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_6/cancel",
+          "body": {
+            "status": "cancelled"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Cancel purchase response missing required fields"
+        }
+      ],
+      "structuredContent": {
+        "error": "Cancel purchase response missing required fields",
+        "status": 500
+      },
+      "isError": true
+    }
+  }
+}

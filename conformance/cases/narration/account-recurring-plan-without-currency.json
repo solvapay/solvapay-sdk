@@ -1,0 +1,70 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-recurring-plan-without-currency",
+  "description": "A recurring plan with a price but no currency can't show the amount; it says how often it bills instead of reading 'is a year'.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "auto",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_patron",
+            "name": "Patron",
+            "type": "recurring",
+            "price": 1000,
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "year"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_quarterly",
+            "name": "Quarterly",
+            "type": "recurring",
+            "price": 3000,
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month",
+                "count": 3
+              }
+            ]
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Welcome to Stock Research**\n\nStock Research has no plan yet. Patron is billed every year · planRef: pln_nr_patron, Quarterly is billed every 3 months · planRef: pln_nr_quarterly. Reply with a plan name to activate it.\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

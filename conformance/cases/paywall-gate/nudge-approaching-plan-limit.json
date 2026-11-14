@@ -1,0 +1,21 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "nudge-approaching-plan-limit",
+  "description": "An upgrade nudge with calls left says the plan's limit is near and links checkout.",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": "upgrade_required",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 3,
+        "plan": "pln_pw_pro",
+        "checkoutUrl": "https://checkout.conformance.test/s/6"
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom, or [Open checkout](https://checkout.conformance.test/s/6)."
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "malformed-currency-price",
+  "description": "A plan's per-unit price in a malformed currency code falls back to '<CODE> <amount>'. Credits on a plan that spends none are called out as no help.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "used": 10,
+        "limit": 10,
+        "planRef": "pln_pw_metered",
+        "planName": "Metered",
+        "creditBalance": 40,
+        "creditsPerUnit": 0,
+        "meterName": "api_calls",
+        "plans": [
+          {
+            "reference": "pln_pw_metered",
+            "name": "Metered",
+            "price": 0,
+            "currency": "euro",
+            "type": "usage-based",
+            "requiresPayment": true,
+            "perUnitChargeMinor": 250
+          }
+        ],
+        "checkoutUrl": "https://checkout.conformance.test/s/3"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "https://checkout.conformance.test/s/3",
+      "message": "You've used 10 of 10 included api calls this period. The next call is EURO 2.50. Adding credits will not help, because Metered does not spend them. [Open checkout](https://checkout.conformance.test/s/3) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "planRef": "pln_pw_metered",
+      "planName": "Metered",
+      "plans": [
+        {
+          "reference": "pln_pw_metered",
+          "name": "Metered",
+          "price": 0,
+          "currency": "euro",
+          "type": "usage-based",
+          "requiresPayment": true,
+          "perUnitChargeMinor": 250
+        }
+      ],
+      "meterName": "api_calls",
+      "unitPriceMinor": 250,
+      "currency": "euro",
+      "included": {
+        "total": 10,
+        "used": 10,
+        "remaining": 0
+      },
+      "creditBalance": 40,
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "creditsPerCall": 0,
+      "shortfallCredits": 0,
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://checkout.conformance.test/s/3"
+      }
+    }
+  }
+}

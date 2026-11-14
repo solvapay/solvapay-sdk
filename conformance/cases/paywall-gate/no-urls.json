@@ -1,0 +1,29 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "no-urls",
+  "description": "With no URL at all, checkoutUrl is an empty string and the message has no link.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "free"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "",
+      "message": "You've reached the included usage for this period. Call the `account` tool with view: 'checkout'.",
+      "planRef": "free",
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-hosted-session-portal",
+  "description": "kind portal answers the customer session as the API returns it.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_hosted_session",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "kind": "portal"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "sessionId": "ss_1",
+            "customerUrl": "https://solvapay.com/customer/manage?id=ss_1"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "sessionId": "ss_1",
+            "customerUrl": "https://solvapay.com/customer/manage?id=ss_1"
+          }
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "ss_1",
+        "customerUrl": "https://solvapay.com/customer/manage?id=ss_1"
+      }
+    }
+  }
+}

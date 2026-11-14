@@ -1,0 +1,53 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "handler-throws",
+  "description": "A handler that throws answers with an error result carrying the error's message, and the usage is recorded as failed.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid7",
+      "customerRef": "cus_TLPAID07",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "throw": "upstream quote service timed out"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "meterName": "requests"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "success": false,
+            "error": "upstream quote service timed out"
+          }
+        }
+      ],
+      "isError": true
+    }
+  }
+}

@@ -1,22 +1,12 @@
 import { writeFileSync, unlinkSync, readFileSync } from 'fs'
 import { execSync } from 'child_process'
 
-// The backend was split from a single monolith into independent NestJS services,
-// each of which now serves only its own slice of the API at its own
-// `/v1/openapi.json`. There is no longer one aggregated document at
-// `localhost:3001` (that port is the identity service, which owns no `/v1/sdk/*`
-// routes), so we pull every service that owns SDK operations and merge them.
-// Only these five expose external `/v1/sdk/*` operations today. Override with
-// BACKEND_OPENAPI_URLS (comma/space separated) or BACKEND_OPENAPI_URL for a
-// single aggregated source (e.g. a gateway or the committed docs spec served
-// over http), mirroring docs/scripts/sync-backend-openapi.ts.
-const DEFAULT_LOCAL_SOURCES = [
-  'http://localhost:3002/v1/openapi.json', // provider-service
-  'http://localhost:3003/v1/openapi.json', // payment-service
-  'http://localhost:3004/v1/openapi.json', // billing-service
-  'http://localhost:3005/v1/openapi.json', // commerce-service
-  'http://localhost:3008/v1/openapi.json', // webhook-service
-]
+// The committed SDK spec (openapi/sdk-v1.json at the repo root) is the source:
+// the platform writes it (`npm run openapi:sdk`) and `pnpm spec:sync` copies it
+// here. Builds never depend on a running backend. BACKEND_OPENAPI_URL(S) still
+// lets you generate from live services to preview an API change before the
+// platform commits it.
+const COMMITTED_SPEC = '../../openapi/sdk-v1.json'
 
 const OUTPUT_FILE = './src/types/generated.ts'
 const TEMP_SPEC_FILE = './temp-filtered-openapi.json'
@@ -49,16 +39,21 @@ const resolveSources = (): string[] => {
     return [single]
   }
 
-  return DEFAULT_LOCAL_SOURCES
+  return [COMMITTED_SPEC]
 }
 
 const isRecord = (value: unknown): value is Record<string, any> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-async function fetchOpenApi(url: string): Promise<OpenAPISpec> {
-  const response = await fetch(url)
+async function fetchOpenApi(source: string): Promise<OpenAPISpec> {
+  if (!/^https?:\/\//.test(source)) {
+    return JSON.parse(readFileSync(source, 'utf-8')) as OpenAPISpec
+  }
+  const response = await fetch(source)
   if (!response.ok) {
-    throw new Error(`Failed to fetch OpenAPI spec from ${url}: ${response.status} ${response.statusText}`)
+    throw new Error(
+      `Failed to fetch OpenAPI spec from ${source}: ${response.status} ${response.statusText}`,
+    )
   }
   return (await response.json()) as OpenAPISpec
 }
@@ -136,7 +131,9 @@ function mergeSource(
     schemas[name] = schema
   }
 
-  const docSecurity = isRecord(doc.components?.securitySchemes) ? doc.components!.securitySchemes! : {}
+  const docSecurity = isRecord(doc.components?.securitySchemes)
+    ? doc.components!.securitySchemes!
+    : {}
   for (const [name, scheme] of Object.entries(docSecurity)) {
     if (!(name in securitySchemes)) securitySchemes[name] = scheme
   }
@@ -224,33 +221,15 @@ function stripDiscriminators(value: unknown): number {
   return stripped
 }
 
-function addMissingSchemaPlaceholders(spec: OpenAPISpec): number {
+function findUnresolvedRefs(spec: OpenAPISpec): string[] {
   const refs = new Set<string>()
   collectSchemaRefs(spec, refs)
-
-  spec.components ??= {}
-  spec.components.schemas ??= {}
-
-  let addedCount = 0
-  for (const schemaName of refs) {
-    if (spec.components.schemas[schemaName]) {
-      continue
-    }
-
-    spec.components.schemas[schemaName] = {
-      type: 'object',
-      additionalProperties: true,
-      description: `Auto-generated fallback schema for unresolved reference: ${schemaName}`,
-    }
-    addedCount += 1
-  }
-
-  return addedCount
+  return [...refs].filter(name => !spec.components?.schemas?.[name])
 }
 
 async function main(): Promise<void> {
   const sources = resolveSources()
-  console.log(`Fetching OpenAPI spec from ${sources.length} source(s):`)
+  console.log(`Reading OpenAPI spec from ${sources.length} source(s):`)
   for (const url of sources) console.log(`  - ${url}`)
 
   try {
@@ -267,9 +246,7 @@ async function main(): Promise<void> {
       mergeSource(doc, url, mergedPaths, mergedSchemas, mergedSecuritySchemes, conflicts)
     }
 
-    console.log(
-      `Merged to ${Object.keys(mergedPaths).length} SDK paths (matching ${PATH_PREFIX}*)`,
-    )
+    console.log(`Merged to ${Object.keys(mergedPaths).length} SDK paths (matching ${PATH_PREFIX}*)`)
     if (conflicts.length > 0) {
       console.warn(`Merge conflicts (${conflicts.length}):`)
       for (const conflict of conflicts) console.warn(`  ! ${conflict}`)
@@ -277,7 +254,9 @@ async function main(): Promise<void> {
 
     if (Object.keys(mergedPaths).length === 0) {
       console.error(`ERROR: No paths found matching prefix "${PATH_PREFIX}"`)
-      console.error('Is the backend running and serving /v1/sdk/* routes on the configured sources?')
+      console.error(
+        'Is the backend running and serving /v1/sdk/* routes on the configured sources?',
+      )
       process.exit(1)
     }
 
@@ -295,11 +274,9 @@ async function main(): Promise<void> {
     const prunedSchemas = pruneUnreferencedSchemas(filteredSpec)
     console.log(`Pruned ${prunedSchemas} unreachable schemas`)
 
-    const missingSchemasAdded = addMissingSchemaPlaceholders(filteredSpec)
-    if (missingSchemasAdded > 0) {
-      console.warn(
-        `Added ${missingSchemasAdded} placeholder component schema(s) for unresolved $ref values`,
-      )
+    const unresolved = findUnresolvedRefs(filteredSpec)
+    if (unresolved.length > 0) {
+      throw new Error(`The spec refers to schemas it does not define: ${unresolved.join(', ')}`)
     }
 
     const discriminatorsStripped = stripDiscriminators(filteredSpec)

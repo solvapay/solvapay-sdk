@@ -1,0 +1,30 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "free-meter-used-up-without-links",
+  "description": "A free meter used up with no plan links, no included total and no checkout link: the message says the free calls are used and points at the account tool's checkout view.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "paywallReason": "limit_reached",
+        "meterName": "free-tool_calls"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "",
+      "message": "You've used all free tool calls for this period. Call the `account` tool with view: 'checkout'.",
+      "meterName": "free-tool_calls",
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0
+    }
+  }
+}

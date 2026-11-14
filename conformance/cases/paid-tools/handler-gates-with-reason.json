@@ -1,0 +1,52 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "handler-gates-with-reason",
+  "description": "ctx.gate(reason) uses the reason as the paywall's message.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid6",
+      "customerRef": "cus_TLPAID06",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "gate": "Premium symbols need the Pro plan.",
+        "respond": {
+          "data": {
+            "unused": true
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "meterName": "requests"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Premium symbols need the Pro plan."
+        }
+      ],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_tl_paid6",
+        "checkoutUrl": "",
+        "message": "Premium symbols need the Pro plan."
+      }
+    }
+  }
+}

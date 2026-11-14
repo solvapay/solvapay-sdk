@@ -4,6 +4,7 @@
 // forwards an allowed call, then completes it with the cost the upstream
 // reported (`allowed.finish`), or releases it when the upstream was never
 // reached (`allowed.release`). Framework-neutral: Request in, plain results out.
+import { SolvaPayError } from '@solvapay/core'
 import type { MoneyAmount } from './client'
 import type { AgentCalls, Allowed, Logger, RefusalReason, Refused } from './calls'
 import type { AgentLayer, AgentRejectionReason, VerifiedAgent } from './identity'
@@ -130,7 +131,9 @@ export function refusalStatus(reason: RefusalReason): RefusalStatus {
       return 402
     default: {
       const unknown: never = reason
-      throw new Error(`Refusal reason ${JSON.stringify(unknown)} has no status`)
+      throw new SolvaPayError(`Refusal reason ${JSON.stringify(unknown)} has no status`, {
+        code: 'unknown_refusal_reason',
+      })
     }
   }
 }

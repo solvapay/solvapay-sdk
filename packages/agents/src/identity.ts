@@ -7,7 +7,7 @@ import { errors, jwtVerify, type JWTVerifyGetKey } from 'jose'
 import {
   AGENT_ENVIRONMENTS,
   AGENT_KEY_PREFIX,
-  AgentApiError,
+  agentRefusal,
   type AgentEnvironment,
   type SolvaPayAgentClient,
 } from './client'
@@ -105,7 +105,7 @@ export function createAgentTokenVerifier(options: AgentTokenVerifierOptions) {
         {
           agentRef: sub,
           principalRef: principal,
-          tokenId: jti as string,
+          tokenId: String(jti),
           expiresAt: new Date((exp as number) * 1000),
           promptExcerpt: payload[AGENT_TOKEN_EXCERPT_CLAIM] === true,
           environment,
@@ -197,15 +197,12 @@ export function createAgentKeyVerifier(deps: {
         deps.environment,
       )
     } catch (error) {
-      if (!(error instanceof AgentApiError) || (error.status !== 401 && error.status !== 403)) {
-        throw error
-      }
-      // SolvaPay refuses a key from the other environment with this code in its 403.
-      const reason =
-        error.status === 403 && error.message.includes('environment_mismatch')
-          ? 'environment_mismatch'
-          : 'invalid'
-      result = { ok: false, reason, detail: error.message }
+      // Only a refusal of the key itself is the agent's. SolvaPay failing, or
+      // refusing the merchant (agent payments off, a secret key for the other
+      // environment), is thrown for the merchant to fix.
+      const reason = agentRefusal(error)
+      if (!reason) throw error
+      result = { ok: false, reason, detail: (error as Error).message }
     }
     answers.set(agentKey, { result, until: now() + AGENT_KEY_CACHE_MS })
     return result

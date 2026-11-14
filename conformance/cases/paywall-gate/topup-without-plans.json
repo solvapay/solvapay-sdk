@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "topup-without-plans",
+  "description": "Out of credits with no plans attached stays payment_required: without plans the gate cannot promise credits.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "pln_payg",
+        "checkoutUrl": "https://pay.example.com/checkout",
+        "balance": {
+          "creditBalance": 0,
+          "remainingUnits": 0,
+          "creditsPerUnit": 1
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "Out of credits for this call. Balance 0 credits; this call costs 1 credits — 1 short. [Add credits](https://pay.example.com/checkout) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'.",
+      "balance": {
+        "creditBalance": 0,
+        "remainingUnits": 0,
+        "creditsPerUnit": 1
+      },
+      "planRef": "pln_payg",
+      "creditBalance": 0,
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "creditsPerCall": 1,
+      "shortfallCredits": 1,
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

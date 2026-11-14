@@ -6,8 +6,12 @@
  */
 
 import crypto from 'node:crypto'
-import { SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import {
+  finishWebhookVerification,
+  parseWebhookSignature,
+  type VerifyWebhookOptions,
+} from './webhook-signature'
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
@@ -37,15 +41,18 @@ export type {
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
- * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected to
- * prevent replay attacks.
+ * (including the `whsec_` prefix). Signatures more than 5 minutes from now (either way) are
+ * rejected, to prevent replay attacks.
  *
  * @param params - Webhook verification parameters
  * @param params.body - Raw request body as string (must be exactly as received)
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret from SolvaPay dashboard (`whsec_…`)
+ * @param params.now - Time to check the timestamp against; defaults to now
  * @returns Parsed and typed {@link WebhookEvent} object
- * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
+ * @throws {SolvaPayError} If the signature is missing, malformed, outside the 5-minute
+ *   window, or invalid, or the body is not JSON. `error.code` is one of
+ *   {@link WEBHOOK_ERROR_CODES}.
  *
  * @example
  * ```typescript
@@ -78,51 +85,18 @@ export function verifyWebhook({
   body,
   signature,
   secret,
-}: {
-  body: string
-  signature: string
-  secret: string
-}): WebhookEvent {
-  const toleranceSec = 300
-  if (!signature) throw new SolvaPayError('Missing webhook signature')
-
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  const timestamp = parseInt(tPart.slice(2), 10)
-  const receivedHmac = v1Part.slice(3)
-  if (Number.isNaN(timestamp) || !receivedHmac) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  if (toleranceSec > 0) {
-    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
-    if (age > toleranceSec) {
-      throw new SolvaPayError('Webhook signature timestamp too old')
-    }
-  }
-
+  now,
+}: VerifyWebhookOptions): WebhookEvent {
+  const parsed = parseWebhookSignature({ body, signature, now })
   const expectedHmac = crypto
     .createHmac('sha256', secret)
-    .update(`${timestamp}.${body}`)
+    .update(parsed.signedPayload)
     .digest('hex')
-
-  if (receivedHmac.length !== expectedHmac.length) {
-    throw new SolvaPayError('Invalid webhook signature')
-  }
-  const ok = crypto.timingSafeEqual(Buffer.from(expectedHmac), Buffer.from(receivedHmac))
-  if (!ok) throw new SolvaPayError('Invalid webhook signature')
-
-  try {
-    return JSON.parse(body) as WebhookEvent
-  } catch {
-    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
-  }
+  return finishWebhookVerification(expectedHmac, parsed, body)
 }
+
+export { WEBHOOK_ERROR_CODES, WEBHOOK_TOLERANCE_SECONDS } from './webhook-signature'
+export type { VerifyWebhookOptions, WebhookErrorCode } from './webhook-signature'
 
 // Export PaywallError for error handling
 export { PaywallError, paywallErrorToClientPayload } from './paywall'

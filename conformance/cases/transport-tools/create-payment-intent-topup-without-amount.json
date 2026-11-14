@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-topup-without-amount",
+  "description": "A top-up needs an amount and a currency.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "topup",
+        "currency": "USD"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Pass purpose: \"topup\" with amount (integer cents) and currency."
+        }
+      ],
+      "structuredContent": {
+        "error": "create_payment_intent topup requires amount and currency",
+        "status": 400,
+        "details": "Pass purpose: \"topup\" with amount (integer cents) and currency."
+      },
+      "isError": true
+    }
+  }
+}

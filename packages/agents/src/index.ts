@@ -28,6 +28,7 @@ export {
   AGENT_ENVIRONMENTS,
   AGENT_KEY_PREFIX,
   AgentApiError,
+  agentRefusal,
   AUTHORIZE_WAIT_MAX_SECONDS,
   createSolvaPayAgentClient,
   parseAuthorizeResponse,

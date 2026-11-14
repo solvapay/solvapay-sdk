@@ -10,13 +10,13 @@
 
 import {
   assertValidProductRef,
-  buildAuthInfoFromBearer,
+  createSolvaPayTokenVerifier,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
   logDcrFailureDiagnostic,
   logMcpConfigOnce,
-  McpBearerAuthError,
   resolveOAuthPaths,
+  verifyAuthInfoFromBearer,
   withoutTrailingSlash,
   type BuildAuthInfoFromBearerOptions,
   type OAuthBridgePaths,
@@ -486,7 +486,9 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
   const tokenMiddleware = createOAuthTokenHandler({ apiBaseUrl, path: paths.token })
   const revokeMiddleware = createOAuthRevokeHandler({ apiBaseUrl, path: paths.revoke })
 
-  const mcpAuthMiddleware: Middleware = (req, res, next) => {
+  const verifyToken = createSolvaPayTokenVerifier({ apiBaseUrl })
+
+  const mcpAuthMiddleware: Middleware = async (req, res, next) => {
     if (req.path !== mcpPath) {
       next()
       return
@@ -515,15 +517,27 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
       return
     }
 
+    let auth: Awaited<ReturnType<typeof verifyAuthInfoFromBearer>>
     try {
-      const auth = buildAuthInfoFromBearer(authHeader, authInfo)
-      if (!auth) {
-        throw new McpBearerAuthError('Missing bearer token')
-      }
-
+      // SolvaPay verifies the token and names the customer; the token's own
+      // payload is never trusted for identity.
+      auth = await verifyAuthInfoFromBearer(authHeader, verifyToken, authInfo)
+    } catch (error) {
+      applyCorsHeaders(req, res)
+      res.status(503).json({
+        jsonrpc: '2.0',
+        id,
+        error: {
+          code: -32603,
+          message: `Could not verify the bearer token: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      })
+      return
+    }
+    if (auth) {
       req.auth = auth
       next()
-    } catch {
+    } else {
       applyCorsHeaders(req, res)
       res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate')
       setMcpChallengeHeader(res, publicBaseUrl, protectedResourcePath)

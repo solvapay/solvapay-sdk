@@ -46,7 +46,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "release": "turbo run release",
     "changeset": "changeset",
-    "changeset:version": "changeset version && pnpm install --lockfile-only",
+    "changeset:version": "changeset version && pnpm install --lockfile-only && node scripts/sync-python-version.mjs",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status",
     "changeset:snapshot": "changeset version --snapshot preview && changeset publish --tag preview --no-git-tag",
@@ -58,6 +58,7 @@
     "docs:validate-links": "tsx scripts/validate-doc-links.ts",
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx scripts/check-dependency-health.ts",
+    "spec:sync": "tsx scripts/sync-spec.ts",
     "loc": "tsx scripts/count-loc.ts",
     "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",
     "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel"

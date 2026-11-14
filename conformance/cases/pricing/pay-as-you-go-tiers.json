@@ -1,0 +1,103 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "pricing",
+  "case": "pay-as-you-go-tiers",
+  "description": "A pay-as-you-go plan priced only in volume bands, with no limit: usage pricing, the meter named by its bands, a single charging band (not a floor), and credits per call from a balance in the same currency.",
+  "input": {
+    "fn": "planPricing",
+    "args": {
+      "plan": {
+        "currency": "usd",
+        "options": [
+          {
+            "kind": "tier",
+            "from": 100,
+            "to": null,
+            "mode": "volume",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 0,
+              "currency": "USD",
+              "meter": "pages"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 100,
+            "mode": "volume",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 3,
+              "currency": "USD",
+              "meter": "pages"
+            }
+          }
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [],
+      "headlineCharges": [],
+      "perUnitCharge": null,
+      "billingCycle": null,
+      "tierBands": [
+        {
+          "from": 0,
+          "to": 100,
+          "mode": "volume",
+          "charge": {
+            "per": "unit",
+            "amountMinor": 3,
+            "currency": "USD",
+            "meter": "pages"
+          }
+        },
+        {
+          "from": 100,
+          "to": null,
+          "mode": "volume",
+          "charge": {
+            "per": "unit",
+            "amountMinor": 0,
+            "currency": "USD",
+            "meter": "pages"
+          }
+        }
+      ],
+      "tierMeters": ["pages"],
+      "usageRate": {
+        "per": "unit",
+        "amountMinor": 3,
+        "currency": "USD",
+        "meter": "pages",
+        "tiered": false
+      },
+      "trialDays": null,
+      "includedUnits": null,
+      "meterName": "pages",
+      "countsUsage": true,
+      "planPricingShape": {
+        "shape": "usage",
+        "headlineMinor": 0,
+        "currency": "USD",
+        "cycle": null,
+        "rate": {
+          "per": "unit",
+          "amountMinor": 3,
+          "currency": "USD",
+          "meter": "pages",
+          "tiered": false
+        }
+      },
+      "creditsPerUnitFromBalance": 300
+    }
+  }
+}

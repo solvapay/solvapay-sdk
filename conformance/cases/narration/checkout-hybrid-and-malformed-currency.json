@@ -1,0 +1,79 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "checkout-hybrid-and-malformed-currency",
+  "description": "The plan list labels a subscription that also bills usage as 'subscription + usage', and prints a price whose currency code is malformed as the code and the amount.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "checkout",
+      "mode": "text",
+      "payload": {
+        "view": "checkout",
+        "productRef": "prd_nr_hybrid",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_hybrid",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_hyb",
+            "name": "Builder",
+            "type": "recurring",
+            "price": 1900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 1900,
+                "currency": "USD"
+              },
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 1,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ]
+          },
+          {
+            "reference": "pln_nr_odd",
+            "name": "Odd",
+            "type": "one-time",
+            "price": 500,
+            "currency": "EURO",
+            "requiresPayment": true
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Upgrade — Stock Research**\n\nPlans available:\nBuilder · subscription + usage · $19.00/month · planRef: pln_nr_hyb\nOdd · one-time · EURO 5.00 · planRef: pln_nr_odd\n\nTo continue, call `account` with view: \"account\"."
+        }
+      ]
+    }
+  }
+}

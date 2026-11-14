@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-set-renewal-cancel-refused",
+  "description": "A cancel the API refuses with 400 answers 400: the purchase cannot be cancelled or is not the provider's.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "purchaseRef": "pur_ec_3",
+        "enabled": false
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/purchases/pur_ec_3/cancel",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Purchase is already cancelled",
+            "error": "Bad Request"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "Purchase cannot be cancelled or does not belong to provider",
+        "status": 400,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}
