@@ -25,6 +25,7 @@ import respx
 from _api_answer import api_response
 from conformance_agent_mcp import AGENT_MCP_OPERATIONS  # suite agent-mcp
 from conformance_merchant_sign_in import MERCHANT_SIGN_IN_OPERATIONS  # suite merchant-sign-in
+from conformance_web_routes import WEB_ROUTE_OPERATIONS  # suite web-routes
 from mcp.client.client import Client
 from mcp.types import CallToolResult, Implementation
 
@@ -467,6 +468,9 @@ OPERATIONS.update(AGENT_MCP_OPERATIONS)
 
 # ---- suite merchant-sign-in: merchant MCP sign-in and tools (conformance_merchant_sign_in.py)
 OPERATIONS.update(MERCHANT_SIGN_IN_OPERATIONS)
+
+# ---- suite web-routes: the routes @solvapay/react calls (conformance_web_routes.py)
+OPERATIONS.update(WEB_ROUTE_OPERATIONS)
 
 
 # ---- scenarios ---------------------------------------------------------------

@@ -60,7 +60,9 @@ export async function saveAutoRechargeCore(
       return { error: 'saveAutoRecharge is not implemented on this API client', status: 500 }
     }
 
-    return solvaPay.apiClient.saveAutoRecharge({ customerRef, ...input })
+    // The verified user's customer last: a customerRef in the client's input
+    // must never pick whose auto-recharge is saved.
+    return solvaPay.apiClient.saveAutoRecharge({ ...input, customerRef })
   } catch (error) {
     return handleRouteError(error, 'Save auto-recharge', 'Failed to save auto-recharge')
   }
