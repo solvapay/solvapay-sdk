@@ -18,6 +18,11 @@ export const TopupForm: React.FC<TopupFormProps> = props => {
   const buttonClass = ['solvapay-topup-form-submit', buttonClassName].filter(Boolean).join(' ')
   return (
     <Primitive.Root {...rootProps} className={rootClass}>
+      {/* Submitting needs the buyer's country (and US state and ZIP), which
+          the Payment Element doesn't collect: see paymentElementDefaults. */}
+      <Primitive.BusinessDetails.Root>
+        <Primitive.BusinessDetails.Fields />
+      </Primitive.BusinessDetails.Root>
       <Primitive.PaymentElement />
       <Primitive.Error className="solvapay-topup-form-error" />
       <Primitive.Loading className="solvapay-topup-form-loading" />
