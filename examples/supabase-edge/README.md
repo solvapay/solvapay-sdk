@@ -46,6 +46,25 @@ supabase secrets set SOLVAPAY_SECRET_KEY=sk_sandbox_...
 supabase secrets set SOLVAPAY_WEBHOOK_SECRET=whsec_...
 ```
 
+### How the functions know the user
+
+Every handler takes the customer from the `Authorization: Bearer` token your
+frontend sends, and uses it only after it has been verified. Pick one:
+
+- **Asymmetric signing keys (new Supabase projects):** nothing to set.
+  Edge Functions get `SUPABASE_URL`, and the handlers check ES256/RS256 tokens
+  against your project's JWKS.
+- **Legacy JWT secret (HS256):** `supabase secrets set SOLVAPAY_JWT_SECRET=...`
+  with your project's legacy JWT secret. (Supabase reserves the `SUPABASE_`
+  prefix for its own secrets.)
+- **Trust the gateway:** with `verify_jwt = true` (the Supabase default),
+  Supabase checks the token before the function runs. To rely on that instead,
+  `supabase secrets set SOLVAPAY_AUTH_TRUST_GATEWAY=true`. Only do this if
+  every function keeps `verify_jwt = true`.
+
+With none of these, the handlers answer `401` and name the three options. An
+`x-user-id` header from the client is ignored.
+
 ### 2. Import map
 
 The `supabase/functions/deno.json` maps npm packages for Deno. The
