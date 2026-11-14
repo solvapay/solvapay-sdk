@@ -36,7 +36,7 @@ Replace the demo headers with your real auth middleware:
 1. Validate your session / JWT from your IdP.
 2. Read stable `externalRef` from the token (`sub` or your internal user id).
 3. `await solvaPay.ensureCustomer(externalRef, externalRef, { email, name })`.
-4. Set `x-customer-ref` (or pass `customerRef` into `payable` / `trackUsage`).
+4. Return that `customerRef` from `payable.http(..., { getCustomerRef })` (the example keeps it in `res.locals`). Don't set `x-customer-ref` yourself: without `SOLVAPAY_AUTH_TRUST_GATEWAY=true` it gets a 401.
 
 ## Docs
 

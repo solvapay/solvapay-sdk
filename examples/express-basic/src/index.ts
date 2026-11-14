@@ -25,6 +25,14 @@ const solvaPay = createSolvaPay({
 // Create payable handler with explicit HTTP adapter
 const payable = solvaPay.payable({ product: 'prd_NO8WYSX5' })
 
+// Demo only: the caller names themselves with x-customer-ref, so anyone can
+// act as anyone. In your app, return the customer from your own verified auth
+// (session, API key or JWT). Without getCustomerRef, payable.http accepts only a
+// verified bearer token, or x-customer-ref behind SOLVAPAY_AUTH_TRUST_GATEWAY=true.
+const demoIdentity = {
+  getCustomerRef: (req: express.Request) => req.header('x-customer-ref') ?? '',
+}
+
 app.use(express.json())
 
 // ============================================================================
@@ -72,16 +80,16 @@ app.get('/health', (req, res) => {
 // ============================================================================
 
 // Create a new task (protected)
-app.post('/tasks', payable.http(createTask))
+app.post('/tasks', payable.http(createTask, demoIdentity))
 
 // Get a task by ID (protected)
-app.get('/tasks/:id', payable.http(getTask))
+app.get('/tasks/:id', payable.http(getTask, demoIdentity))
 
 // List all tasks (protected)
-app.get('/tasks', payable.http(listTasks))
+app.get('/tasks', payable.http(listTasks, demoIdentity))
 
 // Delete a task (protected)
-app.delete('/tasks/:id', payable.http(deleteTask))
+app.delete('/tasks/:id', payable.http(deleteTask, demoIdentity))
 
 // ============================================================================
 // Start Server

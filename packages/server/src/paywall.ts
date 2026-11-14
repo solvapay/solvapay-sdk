@@ -232,6 +232,8 @@ function trackUsageExtra(
 export class SolvaPayPaywall {
   private customerCreationAttempts = new Set<string>()
   private customerRefMapping = new Map<string, string>()
+  /** userId → customer ref, for `ensureCustomerForUser` only. */
+  private userCustomerRefs = new Map<string, string>()
   private debug: boolean
   private limitsCache = new Map<string, LimitsCacheEntry>()
   private limitsCacheTTL: number
@@ -855,6 +857,68 @@ export class SolvaPayPaywall {
     return backendRef
   }
 
+  /**
+   * The SolvaPay customer for one of the merchant's users, found by
+   * `externalRef` (the user id), else created with it.
+   *
+   * Unlike `ensureCustomer`, the user id is never taken as a customer ref,
+   * even when it starts with `cus_` or is `'anonymous'`: it comes from the
+   * merchant's auth and only ever names a user. Results are cached apart from
+   * `ensureCustomer`'s, so a user whose id looks like a customer ref can't
+   * reach that customer through the cache.
+   */
+  async ensureCustomerForUser(
+    userId: string,
+    details?: { email?: string; name?: string },
+  ): Promise<string> {
+    if (!userId) throw new SolvaPayError('ensureCustomerForUser needs a user id')
+    const cached = this.userCustomerRefs.get(userId)
+    if (cached) return cached
+
+    const ref = await sharedCustomerLookupDeduplicator.deduplicate(`user:${userId}`, async () => {
+      const found = await this.findCustomerByExternalRef(userId)
+      if (found) return found
+      if (!this.apiClient.createCustomer) {
+        throw new SolvaPayError(
+          `Cannot create a customer for user ${userId}: the API client has no createCustomer`,
+        )
+      }
+      try {
+        const created = (await this.apiClient.createCustomer({
+          email: details?.email || `${userId}-${Date.now()}@auto-created.local`,
+          ...(details?.name ? { name: details.name } : {}),
+          externalRef: userId,
+          metadata: {},
+        })) as unknown as Record<string, string>
+        const createdRef = created.customerRef || created.reference
+        if (!createdRef) {
+          throw new SolvaPayError(`Creating a customer for user ${userId} returned no reference`)
+        }
+        return createdRef
+      } catch (error) {
+        // Another request created this user's customer first.
+        if (error instanceof SolvaPayError && error.status === 409) {
+          const raced = await this.findCustomerByExternalRef(userId)
+          if (raced) return raced
+        }
+        throw error
+      }
+    })
+    this.userCustomerRefs.set(userId, ref)
+    return ref
+  }
+
+  /** The customer whose externalRef is `externalRef`, or null when there is none (404). */
+  private async findCustomerByExternalRef(externalRef: string): Promise<string | null> {
+    try {
+      const customer = await this.apiClient.getCustomer({ externalRef })
+      return customer?.customerRef ?? null
+    } catch (error) {
+      if (error instanceof SolvaPayError && error.status === 404) return null
+      throw error
+    }
+  }
+
   async trackUsage(
     customerRef: string,
     productRef: string,
@@ -941,86 +1005,6 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     }
   }
 
-  function createHttpHandler(
-    methodOrMetadata: ((...args: unknown[]) => unknown) | PaywallMetadata,
-    handlerOrOptions?:
-      | ((args: PaywallArgs) => Promise<unknown>)
-      | {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          extractArgs?: (req: any) => Record<string, unknown>
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          transformResponse?: (result: unknown, reply: any) => unknown
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          getCustomerRef?: (req: any) => string
-        },
-  ) {
-    if (typeof methodOrMetadata === 'function') {
-      const method = methodOrMetadata
-      const metadata = (method as unknown as Record<string, unknown>)
-        ._paywallMetadata as PaywallMetadata
-      const options = handlerOrOptions as Record<string, unknown>
-
-      if (!metadata) {
-        throw new Error('Method must be decorated with @Paywall')
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return async (req: any, reply: any) => {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const extractArgs =
-            (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
-          const getCustomerRef =
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (options?.getCustomerRef as (req: any) => string) ||
-            ((req: Record<string, unknown>) =>
-              (req.auth as Record<string, string>)?.customer_ref || 'anonymous')
-
-          const args = extractArgs(req)
-          const protectedMethod = await paywall.protect(
-            method as unknown as (args: PaywallArgs) => Promise<unknown>,
-            metadata,
-            getCustomerRef,
-          )
-          const result = await protectedMethod(args)
-
-          const transformResponse =
-            (options?.transformResponse as (result: unknown, reply: unknown) => unknown) ||
-            ((result: unknown) => result)
-          return transformResponse(result, reply)
-        } catch (error) {
-          return handleHttpError(error, reply)
-        }
-      }
-    }
-
-    const metadata = methodOrMetadata
-    const handler = handlerOrOptions as (args: PaywallArgs) => Promise<unknown>
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return async (req: any, reply: any) => {
-      try {
-        const args = defaultExtractArgs(req)
-        const getCustomerRef = (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous'
-
-        const protectedHandler = await paywall.protect(handler, metadata, getCustomerRef)
-        const result = await protectedHandler(args)
-
-        // Handle Express response (has res.status) vs Fastify (has reply.code)
-        if (reply && reply.status && typeof reply.json === 'function') {
-          // Express: call res.json() and don't return a value
-          reply.json(result)
-          return
-        }
-
-        // Fastify: return the result for auto-serialization
-        return result
-      } catch (error) {
-        return handleHttpError(error, reply)
-      }
-    }
-  }
-
   /**
    * MCP handler that auto-converts `PaywallError` to a `PaywallToolResult`
    * so integrators don't need to `try/catch` around the returned handler.
@@ -1078,197 +1062,13 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     return wrapWithPaywallCatch(paywall.protect(handler!, metadata, getCustomerRef))
   }
 
-  function createNextHandler(
-    metadata: PaywallMetadata,
-    handler: (args: PaywallArgs) => Promise<unknown>,
-    options?: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      extractArgs?: (
-        request: Request,
-        context?: any,
-      ) => Promise<Record<string, unknown>> | Record<string, unknown>
-      getCustomerRef?: (request: Request) => Promise<string> | string
-      transformResponse?: (result: unknown) => unknown
-    },
-  ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return async (request: Request, context?: any) => {
-      try {
-        const extractArgs = options?.extractArgs || defaultExtractNextArgs
-        const getCustomerRef = options?.getCustomerRef || defaultGetCustomerRef
-        const transformResponse = options?.transformResponse || ((result: unknown) => result)
-
-        const args = await extractArgs(request, context)
-        const customerRef = await getCustomerRef(request)
-
-        args.auth = { customer_ref: customerRef }
-
-        const protectedHandler = await paywall.protect(
-          handler,
-          metadata,
-          (args: PaywallArgs) => args.auth?.customer_ref || 'anonymous',
-        )
-        const result = await protectedHandler(args)
-
-        const transformedResult = transformResponse(result)
-        return new Response(JSON.stringify(transformedResult), {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      } catch (error) {
-        return handleNextError(error)
-      }
-    }
-  }
-
   return {
     protect, // Function wrapper
     Paywall, // Class decorator
-    createHttpHandler,
     createMCPHandler,
-    createNextHandler, // Next.js API routes
     ensureCustomer: (customerRef: string) => paywall.ensureCustomer(customerRef), // Customer creation helper
     paywall, // Low-level access
   }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function defaultExtractArgs(req: any): PaywallArgs {
-  return {
-    ...((req.body as object) || {}),
-    ...((req.params as object) || {}),
-    ...((req.query as object) || {}),
-    auth: { customer_ref: req.headers?.['x-customer-ref'] || req.auth?.customer_ref },
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function handleHttpError(error: unknown, reply: any) {
-  if (error instanceof PaywallError) {
-    const errorResponse = paywallErrorToClientPayload(error)
-
-    // Express (has reply.status)
-    if (reply && reply.status && typeof reply.json === 'function') {
-      reply.status(402).json(errorResponse)
-      return
-    }
-
-    // Fastify (has reply.code)
-    if (reply && reply.code) {
-      reply.code(402)
-    }
-    return errorResponse
-  }
-
-  const errorResponse = {
-    success: false,
-    error: error instanceof Error ? error.message : 'Internal server error',
-  }
-
-  // Express (has reply.status)
-  if (reply && reply.status && typeof reply.json === 'function') {
-    reply.status(500).json(errorResponse)
-    return
-  }
-
-  // Fastify (has reply.code)
-  if (reply && reply.code) {
-    reply.code(500)
-  }
-  return errorResponse
-}
-
-// Next.js helper functions
-async function defaultExtractNextArgs(
-  request: Request,
-  context?: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const url = new URL(request.url)
-  const query = Object.fromEntries(url.searchParams.entries())
-
-  // Parse request body if present
-  let body = {}
-  try {
-    if (
-      request.method !== 'GET' &&
-      request.headers.get('content-type')?.includes('application/json')
-    ) {
-      body = await request.json()
-    }
-  } catch {
-    // If parsing fails, continue with empty body
-  }
-
-  let routeParams: Record<string, unknown> = {}
-  if (context?.params) {
-    const params = context.params
-    if (typeof params === 'object' && params !== null && 'then' in params) {
-      routeParams = (await (params as Promise<Record<string, unknown>>)) || {}
-    } else {
-      routeParams = (params as Record<string, unknown>) || {}
-    }
-  }
-
-  return {
-    ...(body as Record<string, unknown>),
-    ...query,
-    ...routeParams,
-  }
-}
-
-async function defaultGetCustomerRef(request: Request): Promise<string> {
-  // Try to get from JWT token first
-  const authHeader = request.headers.get('authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      // Dynamic import to avoid requiring jose if not used
-      const { jwtVerify } = await import('jose')
-      const token = authHeader.substring(7)
-      const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
-      const { payload } = await jwtVerify(token, jwtSecret, {
-        issuer: process.env.OAUTH_ISSUER!,
-        audience: process.env.OAUTH_CLIENT_ID || 'test-client-id',
-      })
-
-      if (payload.sub) {
-        return ensureCustomerRef(payload.sub as string)
-      }
-    } catch {
-      // Fall through to use header fallback
-    }
-  }
-
-  // Fallback to x-customer-ref header or default
-  const customerRef = request.headers.get('x-customer-ref') || 'demo_user'
-  return ensureCustomerRef(customerRef)
-}
-
-export function ensureCustomerRef(customerRef: string): string {
-  // Ensure customer ref is properly formatted
-  // Return customer ref as-is (preserve UUIDs with hyphens, etc.)
-  if (!customerRef || customerRef === 'anonymous') {
-    return 'anonymous'
-  }
-  return customerRef
-}
-
-function handleNextError(error: unknown): Response {
-  if (error instanceof PaywallError) {
-    return new Response(JSON.stringify(paywallErrorToClientPayload(error)), {
-      status: 402,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : 'Internal server error',
-    }),
-    {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    },
-  )
 }
 
 // All exports are already defined above where each item is declared

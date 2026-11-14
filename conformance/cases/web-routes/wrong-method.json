@@ -1,0 +1,30 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "wrong-method",
+  "description": "A known path with a method it doesn't serve answers 405, with Allow naming the methods it does.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "DELETE",
+      "path": "/api/check-purchase",
+      "user": {
+        "id": "user_r2",
+        "email": "user_r2@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": []
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 405,
+      "body": {
+        "error": "Method not allowed"
+      },
+      "allow": "GET",
+      "apiCalls": []
+    }
+  }
+}

@@ -42,11 +42,13 @@ function fakeRequest() {
 describe('trackUsageCore', () => {
   const mockTrackUsage = vi.fn()
   const mockEnsureCustomer = vi.fn()
+  const mockEnsureCustomerForUser = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
 
     mockEnsureCustomer.mockResolvedValue('cus_ABC')
+    mockEnsureCustomerForUser.mockResolvedValue('cus_ABC')
     mockTrackUsage.mockResolvedValue({
       success: true,
       reference: 'usage_123',
@@ -55,6 +57,7 @@ describe('trackUsageCore', () => {
 
     mockCreateSolvaPay.mockReturnValue({
       ensureCustomer: mockEnsureCustomer,
+      ensureCustomerForUser: mockEnsureCustomerForUser,
       trackUsage: mockTrackUsage,
     } as never)
   })
@@ -91,7 +94,7 @@ describe('trackUsageCore', () => {
       idempotencyKey: 'usage_key_123',
     })
 
-    expect(mockEnsureCustomer).toHaveBeenCalledWith('user_123', 'user_123', {
+    expect(mockEnsureCustomerForUser).toHaveBeenCalledWith('user_123', {
       email: 'test@example.com',
       name: 'Test',
     })
@@ -145,7 +148,7 @@ describe('trackUsageCore', () => {
     })
   })
 
-  it('passes undefined email/name to ensureCustomer when not available', async () => {
+  it('passes undefined email/name to ensureCustomerForUser when not available', async () => {
     mockGetAuth.mockResolvedValue({
       userId: 'user_456',
       email: null,
@@ -154,7 +157,7 @@ describe('trackUsageCore', () => {
 
     await trackUsageCore(fakeRequest(), { units: 2 })
 
-    expect(mockEnsureCustomer).toHaveBeenCalledWith('user_456', 'user_456', {
+    expect(mockEnsureCustomerForUser).toHaveBeenCalledWith('user_456', {
       email: undefined,
       name: undefined,
     })
@@ -169,6 +172,7 @@ describe('trackUsageCore', () => {
 
     const customSolvaPay = {
       ensureCustomer: mockEnsureCustomer,
+      ensureCustomerForUser: mockEnsureCustomerForUser,
       trackUsage: mockTrackUsage,
     } as never
 
