@@ -110,6 +110,7 @@ export { withRetry } from './utils'
 // These work in edge runtimes as they use standard Web API Request
 export {
   getAuthenticatedUserCore,
+  withCustomerRef,
   syncCustomerCore,
   getCustomerBalanceCore,
   createPaymentIntentCore,

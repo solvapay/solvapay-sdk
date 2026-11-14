@@ -1,0 +1,74 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "web-routes",
+  "case": "limits",
+  "description": "limits checks the user's limits for the product and meter in the query.",
+  "input": {
+    "fn": "webRoute",
+    "args": {
+      "method": "GET",
+      "path": "/api/limits",
+      "user": {
+        "id": "user_li1",
+        "email": "user_li1@example.com",
+        "name": "Ada Lovelace"
+      },
+      "query": {
+        "productRef": "prd_conform1",
+        "meterName": "requests"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_conform1",
+            "name": "Ada Lovelace",
+            "email": "user_li1@example.com",
+            "externalRef": "user_li1"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 7,
+            "meterName": "requests",
+            "used": 3,
+            "limit": 10
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-14T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "status": 200,
+      "body": {
+        "withinLimits": true,
+        "remaining": 7,
+        "meterName": "requests",
+        "used": 3,
+        "limit": 10
+      },
+      "apiCalls": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "query": "externalRef=user_li1"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "customerRef": "cus_conform1",
+            "productRef": "prd_conform1",
+            "meterName": "requests"
+          }
+        }
+      ]
+    }
+  }
+}

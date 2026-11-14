@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  BALANCE_RECONCILE_DELAYS_MS,
-  pollBalanceUntilIncreased,
-} from './balance-poll'
+import { BALANCE_RECONCILE_DELAYS_MS, pollBalanceUntilIncreased } from './balance-poll'
 
 describe('pollBalanceUntilIncreased', () => {
   beforeEach(() => {
@@ -43,8 +40,6 @@ describe('pollBalanceUntilIncreased', () => {
 
   it('exports a longer default delay schedule for async auto-recharge reconciliation', () => {
     expect(BALANCE_RECONCILE_DELAYS_MS.length).toBeGreaterThan(4)
-    expect(BALANCE_RECONCILE_DELAYS_MS.reduce((sum, delay) => sum + delay, 0)).toBeGreaterThan(
-      7500,
-    )
+    expect(BALANCE_RECONCILE_DELAYS_MS.reduce((sum, delay) => sum + delay, 0)).toBeGreaterThan(7500)
   })
 })

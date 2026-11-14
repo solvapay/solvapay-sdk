@@ -135,14 +135,12 @@ describe('checkPurchaseCore', () => {
     })
 
     // First call (fast path) throws, second call (normal path) succeeds
-    mockGetCustomer
-      .mockRejectedValueOnce(new Error('Not found'))
-      .mockResolvedValueOnce({
-        customerRef: 'cus_ABC',
-        email: 'user@example.com',
-        name: 'Test User',
-        purchases: [{ reference: 'pur_1', status: 'active', productRef: 'prd_1' }],
-      })
+    mockGetCustomer.mockRejectedValueOnce(new Error('Not found')).mockResolvedValueOnce({
+      customerRef: 'cus_ABC',
+      email: 'user@example.com',
+      name: 'Test User',
+      purchases: [{ reference: 'pur_1', status: 'active', productRef: 'prd_1' }],
+    })
 
     const request = fakeRequest({ 'x-solvapay-customer-ref': 'cus_STALE' })
     const result = await checkPurchaseCore(request)

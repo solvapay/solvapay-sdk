@@ -5,6 +5,7 @@ SolvaPay for Python: paywalls, usage billing, webhooks and paid MCP tools.
 ```bash
 pip install solvapay            # API client, paywall, webhooks
 pip install 'solvapay[mcp]'     # paid tools for the official MCP Python SDK
+pip install 'solvapay[web]'     # the routes @solvapay/react calls
 ```
 
 Python 3.10+. Typed (`py.typed`), async-first, with blocking twins for the API client.
@@ -101,6 +102,49 @@ agents pay for per call: each paid tool call is authorized with SolvaPay before
 it runs and completed at the cost the upstream reports. Install
 `solvapay[agents,mcp]`.
 
+## React web checkout
+
+`solvapay.web.routes()` serves every route the `@solvapay/react` components
+call (`/api/check-purchase`, `/api/create-payment-intent`, `/api/list-plans`,
+…), answering as `@solvapay/server/fetch`'s `solvapayRoutes()` does, so the
+React components work with a Python backend. Install `solvapay[web]`.
+
+```python
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.routing import Mount
+
+from solvapay import create_solvapay
+from solvapay.web import User, routes
+
+
+async def get_user(request: Request) -> User | None:
+    # Verify the request with your app's own auth: its session cookie or bearer
+    # token, checked the way the rest of your app checks it.
+    session = await my_app_session(request)  # your code
+    if session is None:
+        return None
+    return User(id=session.user_id, email=session.email, name=session.name)
+
+
+solvapay = create_solvapay()
+app = Starlette(routes=[Mount("/api", app=routes(solvapay, get_user=get_user, base_path=""))])
+```
+
+In FastAPI, `app.mount("/api", routes(solvapay, get_user=get_user, base_path=""))`.
+
+`get_user` is required and is the only source of identity: your user id becomes
+the SolvaPay customer's `externalRef`, and the customer is created with the
+email and name on first use. Answer `None` for a request without a signed-in
+user; the routes refuse it with 401 before calling SolvaPay. Nothing the browser
+sends is identity: an `x-user-id` header is ignored. `merchant`, `get-product`
+and `list-plans` answer without a user, as in TypeScript.
+
+`base_path` (default `/api`) is where the routes are below the mount point.
+Another path answers 404, and a known path with the wrong method 405 with
+`Allow`. The routes don't add CORS headers: serve them from your app's own
+origin, or add Starlette's `CORSMiddleware`.
+
 ## Verify webhooks
 
 ```python
@@ -134,8 +178,8 @@ and the HTTP `status`; branch on those, not on the message.
 ## Same behaviour as the TypeScript SDK
 
 The paywall, its messages, the `account` and `activate_plan` narration, what
-the widget's tools answer and webhook verification are checked against the
-TypeScript SDK on every change by a shared conformance suite
+the widget's tools and the React web routes answer, and webhook verification are
+checked against the TypeScript SDK on every change by a shared conformance suite
 ([`conformance/`](../conformance)). The API client is generated from the same
 spec as the TypeScript types ([`openapi/`](../openapi)).
 

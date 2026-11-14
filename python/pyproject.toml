@@ -34,6 +34,8 @@ mcp = [
     "starlette>=0.40",
 ]
 agents = ["pyjwt[crypto]>=2.9,<3"]
+# solvapay.web: the routes @solvapay/react calls, as an ASGI app.
+web = ["starlette>=0.40"]
 
 [project.urls]
 Homepage = "https://solvapay.com"

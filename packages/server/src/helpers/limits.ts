@@ -14,6 +14,7 @@ import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
+import { resolveCallerCustomer } from './caller'
 
 /**
  * Get the authenticated customer's runtime limits for a (product, meter) pair.
@@ -59,10 +60,7 @@ export async function checkLimitsCore(
 
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    })
+    const customerRef = await resolveCallerCustomer(request, solvaPay, { userId, email, name })
 
     const result = await solvaPay.checkLimits({
       customerRef,
