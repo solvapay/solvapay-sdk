@@ -92,6 +92,22 @@ describe('verifyWebhook', () => {
     ).toThrowError(SolvaPayError)
   })
 
+  it('refuses an empty secret, even for an event signed with an empty key (node)', () => {
+    const signature = createSignature(purchaseCreatedBody, '')
+
+    expect(() => verifyWebhookNode({ body: purchaseCreatedBody, signature, secret: '' })).toThrow(
+      expect.objectContaining({ code: 'webhook_secret_missing' }),
+    )
+  })
+
+  it('refuses an empty secret, even for an event signed with an empty key (edge)', async () => {
+    const signature = createSignature(purchaseCreatedBody, '')
+
+    await expect(
+      verifyWebhookEdge({ body: purchaseCreatedBody, signature, secret: '' }),
+    ).rejects.toMatchObject({ code: 'webhook_secret_missing' })
+  })
+
   it('verifies valid signatures in edge runtime', async () => {
     const signature = createSignature(purchaseCreatedBody, secret)
 

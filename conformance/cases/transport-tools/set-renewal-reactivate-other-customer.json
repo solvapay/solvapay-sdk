@@ -1,0 +1,45 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "set-renewal-reactivate-other-customer",
+  "description": "set_renewal refuses to reactivate a purchase that belongs to another customer, with 403, and never asks SolvaPay to reactivate it.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "set_renewal",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purchaseRef": "pur_1",
+        "enabled": true
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_1",
+          "body": {
+            "reference": "pur_1",
+            "customerRef": "cus_someone_else",
+            "status": "active"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "This purchase belongs to another customer"
+        }
+      ],
+      "structuredContent": {
+        "error": "Forbidden",
+        "status": 403,
+        "details": "This purchase belongs to another customer"
+      },
+      "isError": true
+    }
+  }
+}

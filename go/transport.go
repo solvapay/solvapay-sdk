@@ -163,8 +163,23 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 			}
 			continue
 		}
+		if response.StatusCode >= 400 {
+			apiErr := errorFromResponse(response.StatusCode, data)
+			apiErr.answer = &apiAnswer{method: method, path: path, contentType: response.Header.Get("Content-Type"), body: data}
+			return nil, apiErr
+		}
 		return result(response.StatusCode, data)
 	}
+}
+
+// apiAnswer is the failed exchange an *Error came from, kept so the web routes
+// can describe a failure as TypeScript's client does
+// ("<Operation> failed (<status>): <body>").
+type apiAnswer struct {
+	method      string
+	path        string
+	contentType string
+	body        []byte
 }
 
 func retryAfter(response *http.Response, attempt int) time.Duration {

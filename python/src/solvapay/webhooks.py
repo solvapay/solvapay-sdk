@@ -30,6 +30,7 @@ from .errors import SolvaPayError
 WEBHOOK_TOLERANCE_SECONDS: Final = 300
 
 WEBHOOK_ERROR_CODES: Final = {
+    "secret": "webhook_secret_missing",
     "missing": "webhook_signature_missing",
     "malformed": "webhook_signature_malformed",
     "timestamp": "webhook_timestamp_out_of_tolerance",
@@ -57,6 +58,13 @@ def verify_webhook(
     (default: the current time); a timestamp more than 300 seconds away,
     either way, is rejected.
     """
+    if not secret:
+        # HMAC accepts an empty key, so an unset secret would verify any event
+        # signed with one. A misconfiguration: fail every delivery.
+        raise SolvaPayError(
+            "Webhook secret is empty: set the endpoint signing secret (whsec_…)",
+            code=WEBHOOK_ERROR_CODES["secret"],
+        )
     raw = body if isinstance(body, bytes) else body.encode("utf-8")
     if not signature:
         raise SolvaPayError("Missing webhook signature", code=WEBHOOK_ERROR_CODES["missing"])

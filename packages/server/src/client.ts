@@ -276,7 +276,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
         url = `${base}/v1/sdk/customers?email=${encodeURIComponent(params.email)}`
         isByEmail = true
       } else if (params.customerRef) {
-        url = `${base}/v1/sdk/customers/${params.customerRef}`
+        url = `${base}/v1/sdk/customers/${encodeURIComponent(params.customerRef)}`
       } else {
         throw new SolvaPayError('One of customerRef, externalRef, or email must be provided')
       }
@@ -705,6 +705,23 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
       return await res.json()
     },
 
+    // GET: /v1/sdk/purchases/{purchaseRef}
+    async getPurchase(params) {
+      const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}`
+
+      const res = await fetch(url, { method: 'GET', headers })
+
+      if (!res.ok) {
+        const { detail, status, code } = await readApiError(res)
+        if (status === 404) {
+          throw new SolvaPayError(`Purchase not found: ${detail}`, { status, code })
+        }
+        throw new SolvaPayError(`Get purchase failed (${status}): ${detail}`, { status, code })
+      }
+
+      return await res.json()
+    },
+
     // POST: /v1/sdk/purchases/{purchaseRef}/cancel
     async cancelPurchase(params) {
       const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}/cancel`
@@ -734,7 +751,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
     async reactivatePurchase(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/reactivate`
+      const url = `${base}/v1/sdk/purchases/${encodeURIComponent(params.purchaseRef)}/reactivate`
 
       const res = await fetch(url, {
         method: 'POST',
@@ -767,7 +784,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // GET: /v1/sdk/customers/:customerRef/balance
     async getCustomerBalance(params) {
-      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance`
+      const url = `${base}/v1/sdk/customers/${encodeURIComponent(params.customerRef)}/balance`
 
       const res = await fetch(url, {
         method: 'GET',

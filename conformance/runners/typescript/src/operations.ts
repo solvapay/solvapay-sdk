@@ -22,6 +22,7 @@ import { AGENT_IDENTITY_OPERATIONS } from './agent-identity'
 import { AGENT_MCP_OPERATIONS } from './agent-mcp-ops'
 // suite merchant-sign-in (merchant-sign-in.ts)
 import { MERCHANT_SIGN_IN_OPERATIONS } from './merchant-sign-in'
+import { WEB_ROUTE_OPERATIONS } from './web-routes'
 
 /**
  * Maps each language-neutral `fn` to the TypeScript SDK. An operation with
@@ -287,6 +288,8 @@ Object.assign(OPERATIONS, AGENT_IDENTITY_OPERATIONS)
 Object.assign(OPERATIONS, AGENT_MCP_OPERATIONS)
 // ---- suite merchant-sign-in: merchant MCP sign-in and tools (merchant-sign-in.ts)
 Object.assign(OPERATIONS, MERCHANT_SIGN_IN_OPERATIONS)
+// ---- suite web-routes: the routes @solvapay/react calls (web-routes.ts) -------
+Object.assign(OPERATIONS, WEB_ROUTE_OPERATIONS)
 
 export function implementationsFor(data: ConformanceCase): Implementation[] {
   const implementations = OPERATIONS[data.input.fn]
