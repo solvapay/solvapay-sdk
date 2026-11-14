@@ -166,6 +166,8 @@ export interface VerifiedAgentKey {
   promptExcerpt: boolean
   /** Where the agent spends. */
   environment: AgentEnvironment
+  /** `mpp` for a buyer that paid with MPP and has no owner. */
+  payer?: 'mpp'
 }
 
 export interface SolvaPayAgentClient {
@@ -277,6 +279,9 @@ export function parseVerifiedAgentKey(value: unknown): VerifiedAgentKey {
     principalRef: requireString(value.principalRef, 'principalRef'),
     promptExcerpt: requireBoolean(value.promptExcerpt, 'promptExcerpt'),
     environment: requireOneOf(AGENT_ENVIRONMENTS, value.environment, 'environment'),
+    ...(value.payer === undefined
+      ? {}
+      : { payer: requireOneOf(['mpp'] as const, value.payer, 'payer') }),
   }
 }
 
