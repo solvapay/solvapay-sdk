@@ -15,3 +15,8 @@ the TypeScript SDK; the conformance cases in `../conformance` say how.
 - **Errors** are `*solvapay.Error` with the same `Code` and `Status` as the other
   SDKs. Branch on codes, never on messages.
 - Check before committing: `gofmt -l .` (empty), `go vet ./...`, `go test ./...`.
+- **Versions:** `go/package.json` (private, never on npm) is the version source.
+  Bump it with a changeset naming `@solvapay/go`. `.github/workflows/publish-go.yml`
+  tags releases `go/vX.Y.Z` from `main` and previews `go/vX.Y.Z-dev.N` from
+  `dev`. Tags are permanent (the Go proxy keeps them): never move or delete one.
+  It does not follow `@solvapay/server`.

@@ -1,0 +1,6 @@
+{
+  "name": "@solvapay/go",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Holds the version of the SolvaPay Go module (github.com/solvapay/solvapay-sdk/go) so changesets can bump it. Never published to npm: .github/workflows/publish-go.yml tags each release as go/v<version>."
+}

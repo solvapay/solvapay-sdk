@@ -1,0 +1,112 @@
+name: Publish Go
+
+# Publishes the Go SDK (go/), module github.com/solvapay/solvapay-sdk/go.
+#
+# Go has no registry to upload to: a version is a git tag. The module lives in
+# go/, so its tags are go/v<version>. Once a tag is pushed, the Go module proxy
+# serves it, and pkg.go.dev lists it after the step below asks the proxy for it.
+# A tag is permanent: the proxy and the checksum database keep a version
+# forever, so never move or delete one.
+#
+#   push to main  -> the release, tag go/v<version>, with <version> from
+#                    go/package.json. A changeset bumps it and
+#                    `pnpm changeset:version` writes it, so it changes when the
+#                    "chore: version packages" PR merges. Skipped when the tag
+#                    exists (nothing new to release) or the version is still
+#                    0.0.0 (never released).
+#   push to dev   -> a preview of the next release, tag
+#                    go/v<next>-dev.<run number> (scripts/next-version.mjs).
+#                    Semver orders it before <next> and after every earlier
+#                    release. `go get github.com/solvapay/solvapay-sdk/go@latest`
+#                    takes a release over any preview once one exists; ask for
+#                    a preview by its version.
+#
+# Go has its own version line, separate from the TypeScript packages; what it
+# shares with them is the API spec and the conformance suite (go/conformance.lock).
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'go/**'
+      - 'openapi/**'
+      - 'conformance/**'
+      - '.github/workflows/publish-go.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-go-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Test and tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go/go.sum
+
+      - name: Test
+        run: |
+          go generate ./api
+          git diff --exit-code -- api/api.gen.go
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go run ./cmd/pin --check
+          go test ./...
+
+      - name: Decide the version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            version=$(node -p "require('./package.json').version")
+          else
+            version="$(node ../scripts/next-version.mjs go)-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          tag="go/v$version"
+          if [ "$version" = "0.0.0" ]; then
+            echo "The Go module has not been released yet (0.0.0): nothing to tag until the version packages PR merges."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "$tag already exists: nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Tag
+        if: steps.version.outputs.publish == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+
+      # Fetching the version through the public proxy caches it there and gets
+      # it listed on pkg.go.dev. It also proves the tag resolves as a module.
+      - name: Fetch through the Go module proxy
+        if: steps.version.outputs.publish == 'true'
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: v${{ steps.version.outputs.version }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod \
+              go list -m -json "github.com/solvapay/solvapay-sdk/go@$VERSION"; then
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "proxy.golang.org did not serve github.com/solvapay/solvapay-sdk/go@$VERSION"
+          exit 1
