@@ -29,6 +29,10 @@ const uiOnlyPrefix = "UI-only; agents should prefer `" + viewerToolName + "` / `
 // sees the change.
 var renewalSettle = 500 * time.Millisecond
 
+// purchaseOfAnotherCustomer is why a renewal change is refused for a purchase
+// the caller does not own.
+const purchaseOfAnotherCustomer = "This purchase belongs to another customer"
+
 // maxSafeInteger is zod's int() bound, which the input schemas advertise as maximum.
 const maxSafeInteger = 9007199254740991
 
@@ -314,7 +318,7 @@ func (s *MCPServer) registerTransportTools() error {
 			"enabled":     map[string]any{"type": "boolean", "description": "true to reactivate auto-renewal; false to cancel renewal."},
 			"reason":      stringProperty(),
 		}, []string{"purchaseRef", "enabled"},
-		func(ctx context.Context, _ string, args map[string]any) (*mcp.CallToolResult, error) {
+		func(ctx context.Context, customerRef string, args map[string]any) (*mcp.CallToolResult, error) {
 			enabled, ok := args["enabled"].(bool)
 			if !ok {
 				return toolErrorResult("set_renewal requires enabled", 400, "Pass enabled: true to reactivate auto-renewal or enabled: false to cancel."), nil
@@ -322,6 +326,21 @@ func (s *MCPServer) registerTransportTools() error {
 			purchaseRef := textArg(args, "purchaseRef")
 			if purchaseRef == "" {
 				return toolErrorResult("Missing required parameter: purchaseRef is required", 400), nil
+			}
+			// Only the signed-in customer's own purchase (requireOwnPurchase).
+			owned, err := s.client.GetPurchase(ctx, purchaseRef)
+			if err != nil {
+				var apiErr *Error
+				if !errors.As(err, &apiErr) {
+					return nil, err
+				}
+				if apiErr.Status == 404 {
+					return toolErrorResult("Purchase not found", 404, apiErr.Message), nil
+				}
+				return toolErrorResult(apiErr.Message, 500, apiErr.Message), nil
+			}
+			if jsGet(owned, "customerRef") != customerRef {
+				return toolErrorResult("Forbidden", 403, purchaseOfAnotherCustomer), nil
 			}
 			if enabled {
 				response, err := s.client.ReactivatePurchase(ctx, purchaseRef)

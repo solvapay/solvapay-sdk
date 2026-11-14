@@ -16,6 +16,8 @@ type Error struct {
 	Message string
 	Status  int
 	Body    any
+
+	answer *apiAnswer // the API's failed answer, when the error is one
 }
 
 func (e *Error) Error() string {
