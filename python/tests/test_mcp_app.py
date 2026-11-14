@@ -210,6 +210,7 @@ def no_settle(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @respx.mock
 async def test_set_renewal_cancels(no_settle: None) -> None:
+    respx.get(f"{API}/v1/sdk/purchases/pur_1").respond(200, json=PURCHASE)  # the caller's own
     route = respx.post(f"{API}/v1/sdk/purchases/pur_1/cancel").respond(
         200,
         json={
@@ -236,6 +237,7 @@ async def test_set_renewal_cancels(no_settle: None) -> None:
     ],
 )
 async def test_set_renewal_maps_a_refused_cancel(no_settle: None, status: int, error: str) -> None:
+    respx.get(f"{API}/v1/sdk/purchases/pur_1").respond(200, json=PURCHASE)  # the caller's own
     respx.post(f"{API}/v1/sdk/purchases/pur_1/cancel").respond(
         status, json={"message": "Already cancelled"}
     )
@@ -250,6 +252,7 @@ async def test_set_renewal_maps_a_refused_cancel(no_settle: None, status: int, e
 
 @respx.mock
 async def test_set_renewal_refuses_a_cancel_the_api_did_not_make(no_settle: None) -> None:
+    respx.get(f"{API}/v1/sdk/purchases/pur_1").respond(200, json=PURCHASE)  # the caller's own
     respx.post(f"{API}/v1/sdk/purchases/pur_1/cancel").respond(
         200, json={"success": True, "purchase": PURCHASE}
     )

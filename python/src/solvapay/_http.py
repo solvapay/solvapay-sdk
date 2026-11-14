@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+import weakref
 from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, TypeVar
@@ -194,10 +195,36 @@ class AsyncTransport(_Transport):
 
     def __init__(self, *, client: httpx.AsyncClient | None = None, **options: Any) -> None:
         super().__init__(**options)
-        self._client = client or httpx.AsyncClient(timeout=self.timeout)
+        # A client passed in is used as given, on whatever loop its owner runs it.
+        self._given = client
+        # Clients this transport made, one per event loop. An httpx.AsyncClient's
+        # connections belong to the loop that opened them, so a client reused on
+        # another loop fails ("Event loop is closed"). That happens whenever one
+        # SolvaPay instance serves several loops: a test client that starts a loop
+        # per request, or asyncio.run() called more than once.
+        self._owned: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, httpx.AsyncClient] = (
+            weakref.WeakKeyDictionary()
+        )
+
+    def _client_for_loop(self) -> httpx.AsyncClient:
+        if self._given is not None:
+            return self._given
+        loop = asyncio.get_running_loop()
+        client = self._owned.get(loop)
+        if client is None:
+            client = httpx.AsyncClient(timeout=self.timeout)
+            self._owned[loop] = client
+        return client
 
     async def aclose(self) -> None:
-        await self._client.aclose()
+        if self._given is not None:
+            await self._given.aclose()
+            return
+        # Only this loop's client can be closed from here; the others' loops are
+        # closed or belong to other threads, and their clients go with them.
+        client = self._owned.pop(asyncio.get_running_loop(), None)
+        if client is not None:
+            await client.aclose()
 
     async def request(
         self,
@@ -212,7 +239,7 @@ class AsyncTransport(_Transport):
         retries = self.max_retries if self._retryable(request) else 0
         for attempt in range(retries + 1):
             try:
-                response = await self._client.request(**request)
+                response = await self._client_for_loop().request(**request)
             except httpx.TransportError as error:
                 if attempt < retries:
                     await asyncio.sleep(_retry_after(None, attempt))

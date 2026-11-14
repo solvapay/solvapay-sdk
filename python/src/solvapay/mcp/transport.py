@@ -27,6 +27,7 @@ from mcp.server.mcpserver import Context, MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field, WithJsonSchema
 
+from .._http import path_segment
 from ..business_details import TAX_ID_TYPES, validate_business_details
 from ..errors import SolvaPayError
 from ..solvapay import SolvaPay
@@ -434,7 +435,29 @@ def register_transport_tools(
             return tool_error_result(refused, 400, error.message)
         return tool_error_result(error.message, 500, error.message)
 
-    async def set_renewal(_customer_ref: str, args: Mapping[str, Any]) -> CallToolResult:
+    async def require_own_purchase(customer_ref: str, purchase_ref: str) -> CallToolResult | None:
+        """The purchase must be the signed-in customer's (TypeScript's ``requireOwnPurchase``):
+        renewal acts on a purchase by reference, so without this any customer could cancel
+        or reactivate another's. Read as the API sends it: only its ``customerRef`` counts."""
+        try:
+            purchase = await api.request_json(
+                "GET", f"/v1/sdk/purchases/{path_segment(purchase_ref)}"
+            )
+        except SolvaPayError as error:
+            if error.status == 404:
+                return tool_error_result("Purchase not found", 404, error.message)
+            return tool_error_result(error.message, 500, error.message)
+        if not isinstance(purchase, dict):
+            raise SolvaPayError(
+                f"GET /v1/sdk/purchases/{purchase_ref} answered with something that is not "
+                f"a purchase: {purchase!r}",
+                code="invalid_response",
+            )
+        if purchase.get("customerRef") != customer_ref:
+            return tool_error_result("Forbidden", 403, "This purchase belongs to another customer")
+        return None
+
+    async def set_renewal(customer_ref: str, args: Mapping[str, Any]) -> CallToolResult:
         enabled = args.get("enabled")
         if enabled is not True and enabled is not False:
             return tool_error_result(
@@ -445,6 +468,9 @@ def register_transport_tools(
         purchase_ref = _text(args.get("purchaseRef"))
         if not purchase_ref:
             return tool_error_result("Missing required parameter: purchaseRef is required", 400)
+        refused = await require_own_purchase(customer_ref, purchase_ref)
+        if refused is not None:
+            return refused
 
         if enabled:
             try:

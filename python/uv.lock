@@ -1833,6 +1833,10 @@ mcp = [
     { name = "starlette", version = "1.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "starlette", version = "1.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
+web = [
+    { name = "starlette", version = "1.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "starlette", version = "1.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1851,8 +1855,9 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7,<3" },
     { name = "pyjwt", extras = ["crypto"], marker = "extra == 'agents'", specifier = ">=2.9,<3" },
     { name = "starlette", marker = "extra == 'mcp'", specifier = ">=0.40" },
+    { name = "starlette", marker = "extra == 'web'", specifier = ">=0.40" },
 ]
-provides-extras = ["mcp", "agents"]
+provides-extras = ["mcp", "agents", "web"]
 
 [package.metadata.requires-dev]
 dev = [
