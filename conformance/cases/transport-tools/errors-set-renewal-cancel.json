@@ -16,6 +16,15 @@
       },
       "api": [
         {
+          "method": "GET",
+          "path": "/v1/sdk/purchases/pur_ec_1",
+          "body": {
+            "reference": "pur_ec_1",
+            "customerRef": "cus_EC01",
+            "status": "active"
+          }
+        },
+        {
           "method": "POST",
           "path": "/v1/sdk/purchases/pur_ec_1/cancel",
           "body": {

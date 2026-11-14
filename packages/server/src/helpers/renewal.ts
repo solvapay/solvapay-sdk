@@ -9,7 +9,8 @@ import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { SolvaPayError } from '@solvapay/core'
-import { handleRouteError } from './error'
+import { syncCustomerCore } from './customer'
+import { handleRouteError, isErrorResult } from './error'
 
 /**
  * Cancel purchase - core implementation
@@ -19,6 +20,34 @@ import { handleRouteError } from './error'
  * @param options - Configuration options
  * @returns Cancelled purchase response or error result
  */
+/**
+ * The purchase must belong to the verified caller's customer. Cancelling or
+ * reactivating acts on a purchase by reference, so without this any signed-in
+ * customer (or, on an unauthenticated route, anyone) could change another
+ * customer's renewal.
+ */
+async function requireOwnPurchase(
+  request: Request,
+  purchaseRef: string,
+  solvaPay: SolvaPay,
+): Promise<ErrorResult | null> {
+  const customerRef = await syncCustomerCore(request, { solvaPay })
+  if (isErrorResult(customerRef)) return customerRef
+
+  if (!solvaPay.apiClient.getPurchase) {
+    return { error: 'Get purchase method not available on SDK client', status: 500 }
+  }
+  const purchase = await solvaPay.apiClient.getPurchase({ purchaseRef })
+  if (purchase.customerRef !== customerRef) {
+    return {
+      error: 'Forbidden',
+      status: 403,
+      details: 'This purchase belongs to another customer',
+    }
+  }
+  return null
+}
+
 export async function cancelPurchaseCore(
   request: Request,
   body: {
@@ -38,6 +67,9 @@ export async function cancelPurchaseCore(
     }
 
     const solvaPay = options.solvaPay || createSolvaPay()
+
+    const refused = await requireOwnPurchase(request, body.purchaseRef, solvaPay)
+    if (refused) return refused
 
     if (!solvaPay.apiClient.cancelPurchase) {
       return {
@@ -146,6 +178,9 @@ export async function reactivatePurchaseCore(
     }
 
     const solvaPay = options.solvaPay || createSolvaPay()
+
+    const refused = await requireOwnPurchase(request, body.purchaseRef, solvaPay)
+    if (refused) return refused
 
     if (!solvaPay.apiClient.reactivatePurchase) {
       return {
