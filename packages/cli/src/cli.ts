@@ -1,5 +1,7 @@
+import { parseInitArgs, parseVerifyArgs } from './args'
 import { runDoctorCommand } from './commands/doctor'
 import { runInitCommand } from './commands/init'
+import { runVerifyCommand } from './commands/verify'
 import { main as runAgentCommand } from './agent/index'
 import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
@@ -9,44 +11,41 @@ Usage:
   solvapay <command> [flags]
 
 Commands:
-  init     Authenticate, configure .env, and install SolvaPay SDK packages
+  init     Authenticate, configure .env, and install the SolvaPay SDK
+           (TypeScript, Python or Go, detected from the project files)
   doctor   Verify secret key, API URL, product ref, product readiness, and that
-           the project's @solvapay/* packages match npm
+           the project's SolvaPay SDK is the newest release (npm, PyPI or Go)
+  verify   Check a running SolvaPay MCP server in any language:
+           verify <server url> [--credentials-file <path>]
   launch   Start Claude Code or Hermes on a merchant, paying with an agent key
            its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
   connect  For an agent connecting itself: connect <merchant> --client <claude|hermes>,
            run again until it says connected (the first run asks the owner)
 
 Flags for init:
-  -y, --yes         Auto-create package.json and skip browser confirmation prompt
-  --product <ref>   Verify and persist SOLVAPAY_PRODUCT_REF without product picker
-  --dev             Target the SolvaPay dev backend (api-dev.solvapay.com).
-                    Internal testing only — production secret keys are rejected
-                    by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
+  -y, --yes             Skip prompts (the browser confirmation and the project
+                        language question). Never creates a package.json unless
+                        --language ts is passed.
+  --language <lang>     ts, python or go. Needed when the folder has files for
+                        two languages, or none, and no one is at a terminal.
+                        Detected from go.mod, uv.lock, poetry.lock,
+                        pyproject.toml, requirements.txt or package.json.
+  --features <list>     What you use SolvaPay for: mcp, agents, web (comma
+                        separated). Python extras, or extra npm packages.
+  --preview             Install the newest preview of the SDK instead of the
+                        newest stable release.
+  --product <ref>       Verify and persist SOLVAPAY_PRODUCT_REF without product picker
+  --dev                 Target the SolvaPay dev backend (api-dev.solvapay.com).
+                        Internal testing only — production secret keys are rejected
+                        by api-dev. Persisted to .env as SOLVAPAY_API_BASE_URL.
 
 Flags for doctor:
-  --dev             Target the SolvaPay dev backend (api-dev.solvapay.com)
-`
+  --dev                 Target the SolvaPay dev backend (api-dev.solvapay.com)
 
-function parseInitArgs(argv: string[]): { yes: boolean; dev: boolean; productRef?: string } {
-  let yes = false
-  let dev = false
-  let productRef: string | undefined
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '--yes' || arg === '-y') {
-      yes = true
-    } else if (arg === '--dev') {
-      dev = true
-    } else if (arg === '--product') {
-      productRef = argv[++i]
-      if (!productRef || productRef.startsWith('-')) {
-        throw new Error('--product requires a product reference')
-      }
-    }
-  }
-  return { yes, dev, productRef }
-}
+Flags for verify:
+  --credentials-file <path>  JSON file with an "accessToken" for the server, to
+                             also check the paywall gate and the account tool
+`
 
 function parseDoctorArgs(argv: string[]): { dev: boolean } {
   let dev = false
@@ -82,6 +81,12 @@ const main = async () => {
   if (command === 'doctor') {
     printVersionBanner()
     await runDoctorCommand(parseDoctorArgs(process.argv.slice(3)))
+    return
+  }
+
+  // No banner: the output is one JSON document.
+  if (command === 'verify') {
+    await runVerifyCommand(parseVerifyArgs(process.argv.slice(3)))
     return
   }
 

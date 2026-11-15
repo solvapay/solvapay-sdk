@@ -13,8 +13,15 @@ SolvaPay CLI — authenticate, configure env, and bootstrap SDK integration in a
 # Auth + env in an existing project
 npx solvapay init
 
-# Skip browser confirmation prompt
+# Skip prompts (fails instead of guessing when the language is unclear)
 npx solvapay init --yes
+
+# A Python or Go project: detected from pyproject.toml / uv.lock / poetry.lock /
+# requirements.txt or go.mod, or named with --language
+npx solvapay init --language python --features mcp
+
+# Check a running MCP server, in any language
+npx solvapay verify https://my-server.example.com/mcp
 
 # Target the SolvaPay dev backend (internal testing only)
 npx solvapay init --dev
@@ -62,7 +69,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp
 # equivalent: npx create-solvapay@latest my-mcp-app -- --type mcp
 ```
 
-See [`create-solvapay` on npm](https://www.npmjs.com/package/create-solvapay) for OpenAPI and from-scratch variants. Use `npx solvapay init` only to add SolvaPay to a repo that already exists.
+For a Python or Go server: `npm create solvapay@latest my-mcp-app -- --type mcp --language python` (or `go`). See [`create-solvapay` on npm](https://www.npmjs.com/package/create-solvapay) for OpenAPI and from-scratch variants. Use `npx solvapay init` only to add SolvaPay to a repo that already exists.
 
 ## Packages
 
@@ -115,19 +122,41 @@ It runs `claude mcp add-json` at user scope with a `headersHelper` that reads th
 
 ## Flags
 
-| Flag | Description |
-| --- | --- |
-| `-y`, `--yes` | Auto-create `package.json` and skip the browser confirmation prompt. |
-| `--dev` | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev. |
+| Flag                          | Description                                                                                                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-y`, `--yes`                 | Skip the browser confirmation prompt and the language question. In a folder with no project files, or files for two languages, init fails and asks for `--language`. It never creates a `package.json` unless `--language ts` is passed. |
+| `--language <ts\|python\|go>` | The project's language. Needed when the folder has files for two languages, or none, and no one is at a terminal.                                                                                                                        |
+| `--features <mcp,agents,web>` | What you use SolvaPay for. Python: the `solvapay[...]` extras. TypeScript: adds `@solvapay/mcp`, `@solvapay/agents` or `@solvapay/react`. Go: nothing (one module).                                                                      |
+| `--preview`                   | Install the newest SDK preview (npm `preview` tag, newest PyPI or Go proxy pre-release) instead of the newest stable release. Without it, init fails when the language has no stable release yet.                                        |
+| `--dev`                       | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev.                                                           |
 
 ## What `solvapay init` does
 
-- Checks for `package.json` (and can create one if missing)
+- Detects the project's language before touching anything:
+
+  | Found                                                 | Language   | Installs with                                                                                     |
+  | ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+  | `go.mod`                                              | Go         | `go get github.com/solvapay/solvapay-sdk/go@<version>`                                            |
+  | `uv.lock`                                             | Python     | `uv add 'solvapay[<features>]==<version>'`                                                        |
+  | `poetry.lock`, or `[tool.poetry]` in `pyproject.toml` | Python     | `poetry add 'solvapay[<features>]==<version>'`                                                    |
+  | any other `pyproject.toml`, or `requirements.txt`     | Python     | nothing: prints the `python -m pip install` command, because init doesn't choose your interpreter |
+  | `package.json`                                        | TypeScript | npm, pnpm or yarn (by lockfile): `@solvapay/server`, `@solvapay/core`, `@solvapay/auth`           |
+
+  Python and Go pins are exact: the newest stable release, or with `--preview` the newest preview.
+
 - Shows auth URL and asks you to press Enter before opening browser authentication
 - Writes `SOLVAPAY_SECRET_KEY` to `.env` (with overwrite confirmation)
 - Ensures `.env` is ignored in `.gitignore`
-- Installs `@solvapay/server` and `@solvapay/core`
-- Verifies the key and prints a setup summary
+- Installs the SDK as above
+- Verifies the key and prints a setup summary. The Python and Go SDKs read environment variables, not `.env`: load it at startup (python-dotenv, or a small loader in Go) or export the variables.
+
+## `solvapay doctor`
+
+Checks the secret key, the API URL, the product and its plans, and that the SDK is the newest release in every language the project uses: `@solvapay/*` in `node_modules` against npm, `solvapay` in `uv.lock`, `poetry.lock` or an exact `requirements.txt` pin against PyPI, and `github.com/solvapay/solvapay-sdk/go` in `go.mod` against the Go module proxy. A preview is compared with the newest preview. It prints the exact upgrade command, and fails when no SolvaPay SDK is found at all.
+
+## `solvapay verify <server url>`
+
+Read-only checks against a running SolvaPay MCP server, whatever language it is written in: the OAuth discovery documents, `tools/list` (the `account` and `activate_plan` tools, no UI-only tools, or a well-formed `WWW-Authenticate` challenge), and with `--credentials-file <path>` (a JSON file with an `accessToken`) the paywall gate and the `account` tool. Prints a JSON pass/fail/skipped map and exits 1 on any failure.
 
 ## Product configuration
 
