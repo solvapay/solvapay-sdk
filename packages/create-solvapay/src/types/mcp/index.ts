@@ -16,7 +16,7 @@ import { isAbsoluteHttpUrl, runFromOpenapi } from './from-openapi'
 import { runFromScratch } from './from-scratch'
 import { DEFAULT_SNAKE_TOOL_NAME, runLanguageFromScratch } from './from-scratch-language'
 
-const DEFAULT_TOOL_NAME = 'helloTool'
+const DEFAULT_TOOL_NAME = 'hello_tool'
 
 export const mcpProjectType: ProjectType = {
   id: 'mcp',
@@ -168,7 +168,7 @@ async function resolveToolName(value: string | undefined, nonInteractive: boolea
   if (nonInteractive || !stdin.isTTY) {
     return DEFAULT_TOOL_NAME
   }
-  const answer = (await ask(`Placeholder tool name (camelCase, default ${DEFAULT_TOOL_NAME}): `)).trim()
+  const answer = (await ask(`Placeholder tool name (snake_case, default ${DEFAULT_TOOL_NAME}): `)).trim()
   if (!answer) return DEFAULT_TOOL_NAME
   const validated = validateToolName(answer)
   if (!validated.ok) throw new Error(validated.reason)

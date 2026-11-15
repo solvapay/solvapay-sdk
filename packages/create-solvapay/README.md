@@ -94,7 +94,7 @@ npm run deploy       # Cloudflare Workers deploy
 | --- | --- |
 | `--openapi <url\|path>` | OpenAPI / Swagger spec — implies from-openapi mode |
 | `--no-openapi` | From-scratch mode with a placeholder paid tool |
-| `--tool-name <camel>` | Placeholder tool name in from-scratch mode (default: `helloTool`) |
+| `--tool-name <name>` | Placeholder tool name in from-scratch mode, snake_case (default: `hello_tool`); camelCase is also accepted |
 
 Run `npm create solvapay@latest my-app -- --type mcp --help` for MCP-specific help.
 

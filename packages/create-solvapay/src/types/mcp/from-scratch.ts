@@ -1,7 +1,7 @@
 /**
  * `from-scratch` mode — copy the mode-agnostic `_base/` tree, layer the
  * `from-scratch/` overlay (placeholder paid tool), substitute the user's
- * camelCase tool name into both filename and source, and write a
+ * tool name (snake_case, or camelCase) into both filename and source, and write a
  * minimal `.env` ready for `solvapay init` to populate.
  */
 

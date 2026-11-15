@@ -270,13 +270,18 @@ export function validateSnakeToolName(
   return { ok: true, name: trimmed }
 }
 
+/**
+ * A TypeScript tool name: snake_case (the MCP convention, and the default),
+ * or camelCase for scripts written before snake_case was accepted. The value
+ * is used as-is for the file name and the registered MCP tool name.
+ */
 export function validateToolName(name: string): { ok: true; name: string } | { ok: false; reason: string } {
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, reason: 'tool name is empty' }
-  if (!CAMEL_RE.test(trimmed)) {
+  if (!SNAKE_RE.test(trimmed) && !CAMEL_RE.test(trimmed)) {
     return {
       ok: false,
-      reason: `"${name}" must be camelCase (start lowercase, letters and digits only — no hyphens, spaces, or punctuation)`,
+      reason: `"${name}" must be snake_case like get_item (or camelCase): start with a lowercase letter; letters, digits and underscores only — no hyphens, spaces or punctuation`,
     }
   }
   return { ok: true, name: trimmed }
@@ -328,9 +333,9 @@ MCP flags:
   --openapi <url|path>   Spec URL or local path. Implies from-openapi sub-mode.
                          TypeScript only.
   --no-openapi           Skip OpenAPI; scaffold from-scratch.
-  --tool-name <name>     Placeholder paid tool name in from-scratch mode: camelCase
-                         for TypeScript (default helloTool), snake_case for Python
-                         and Go (default hello_tool).
+  --tool-name <name>     Placeholder paid tool name in from-scratch mode, snake_case
+                         (default hello_tool). Used as-is for the MCP tool name and
+                         the file name. TypeScript also accepts camelCase.
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only. Seeds .env with
                          SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com

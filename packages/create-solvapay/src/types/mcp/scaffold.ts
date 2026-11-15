@@ -58,13 +58,17 @@ export function deriveServerName(projectName: string): string {
 }
 
 /**
- * Capitalize the first character — used to derive `TOOL_NAME_PASCAL`
- * from the user's camelCase input (e.g. `fetchPet` → `FetchPet`) so
- * scaffolded `register<ToolName>` identifiers compile cleanly.
+ * PascalCase for `TOOL_NAME_PASCAL`, the scaffolded `register<ToolName>`
+ * function: split on underscores and capitalize each part, so snake_case
+ * and camelCase both give a clean identifier
+ * (`generate_haiku` and `generateHaiku` → `GenerateHaiku`).
  */
 export function pascalize(name: string): string {
-  if (!name) return name
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return name
+    .split('_')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('')
 }
 
 const TEXT_EXTENSIONS = new Set([
