@@ -96,11 +96,11 @@ For a Python or Go server: `npm create solvapay@latest my-mcp-app -- --type mcp 
 | [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) | Supabase Edge | One-liner `@solvapay/server/fetch` handlers |
 | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge) | Node MCP | OAuth bridge + `payable.mcp()` |
 
-## Paying as an agent: `launch` and `connect` (preview)
+## Paying as an agent: `launch` and `connect`
 
 The other side of SolvaPay: a person (or their agent) paying a merchant that takes agent payments.
 
-Agent payments are a preview. SolvaPay turns them on per merchant, and a merchant that hasn't got them yet is refused with a plain message. Live agent payments aren't open yet: everything runs in sandbox with test money, and nothing real is charged.
+Live agent payments aren't open yet: payments run in sandbox with test money, and nothing real is charged. A merchant that doesn't take agent payments yet is refused with a plain message.
 
 ```bash
 # Start Claude Code on Opper, paying with an agent key. The first time, it shows a

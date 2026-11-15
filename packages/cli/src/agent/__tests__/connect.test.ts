@@ -93,16 +93,16 @@ describe('connect', () => {
     expect(opens).toBe(1)
   })
 
-  it('tells the owner it is a sandbox preview where nothing real is charged', async () => {
+  it('tells the owner it runs in sandbox and nothing real is charged', async () => {
     await run(['connect', PROV, '--client', 'hermes', '--api', API])
     const text = lines.join('\n')
     expect(text).toContain('an account is made if they have none')
-    expect(text).toContain('sandbox with test money, and nothing real is charged while live payments are closed')
+    expect(text).toContain('sandbox with test money for now: nothing real is charged while live payments are closed')
   })
 
   it.each([
-    ['agent_payments_not_enabled', 'Opper does not take agent payments yet.', "This merchant hasn't turned on SolvaPay agent payments yet."],
-    ['feature_not_enabled', 'Feature agent_payments is not enabled', "This merchant hasn't turned on SolvaPay agent payments yet."],
+    ['agent_payments_not_enabled', 'Opper does not take agent payments yet.', "This merchant doesn't take SolvaPay agent payments yet."],
+    ['feature_not_enabled', 'Feature agent_payments is not enabled', "This merchant doesn't take SolvaPay agent payments yet."],
     ['agent_live_disabled', 'Live agent payments are switched off', "Live agent payments aren't open yet. Use sandbox"],
   ])('says %s plainly instead of the raw 403', async (code, message, plain) => {
     vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {

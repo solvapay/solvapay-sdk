@@ -18,11 +18,10 @@ Commands:
            the project's SolvaPay SDK is the newest release (npm, PyPI or Go)
   verify   Check a running SolvaPay MCP server in any language:
            verify <server url> [--credentials-file <path>]
-  launch   (preview) Start Claude Code or Hermes on a merchant, paying with an
-           agent key its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
-  connect  (preview) For an agent connecting itself: connect <merchant> --client <claude|hermes>,
-           run again until it says connected (the first run asks the owner).
-           Agent payments run in sandbox with test money for now.
+  launch   Start Claude Code or Hermes on a merchant, paying with an agent key
+           its owner approved: launch <claude|hermes> <merchant> [-- <agent args>]
+  connect  For an agent connecting itself: connect <merchant> --client <claude|hermes>,
+           run again until it says connected (the first run asks the owner)
 
 Flags for init:
   -y, --yes             Skip prompts (the browser confirmation and the project

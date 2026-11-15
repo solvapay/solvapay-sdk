@@ -73,9 +73,8 @@ async function api(base, path, init) {
   return body
 }
 
-/** Refusals agent payments give while they are a preview, said plainly instead of as a raw HTTP failure. */
-const NOT_ENABLED =
-  "This merchant hasn't turned on SolvaPay agent payments yet. Agent payments are a preview that SolvaPay turns on per merchant."
+/** Refusals for a merchant without agent payments, or for live while it isn't open, said plainly instead of as a raw HTTP failure. */
+const NOT_ENABLED = "This merchant doesn't take SolvaPay agent payments yet."
 export const PLAIN_ERRORS = {
   agent_payments_not_enabled: NOT_ENABLED,
   feature_not_enabled: NOT_ENABLED,
@@ -221,7 +220,7 @@ async function ask(providerRef, merchant, flags, env, out, npx) {
       `  ${opened.verificationUrl}`,
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
-      `Agent payments are a preview: they run in sandbox with test money, and nothing real is charged while live payments are closed.`,
+      `Agent payments run in sandbox with test money for now: nothing real is charged while live payments are closed.`,
       `When they have approved, run the same command again:`,
       `  ${againCommand(npx, merchant, flags)}`,
     ].join('\n'),
@@ -437,7 +436,7 @@ function runCaptured(command, args, env) {
 }
 
 const USAGE = [
-  'Usage (preview: agent payments run in sandbox with test money for now):',
+  'Usage:',
   '  solvapay launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
   '  solvapay connect <merchant launch name or providerRef> --client <claude|hermes> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--add-mcp] [--timeout <seconds>] [--new]',
   '      Run it again until it says connected: the first run asks the owner, a later one waits for their answer.',

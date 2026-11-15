@@ -242,7 +242,7 @@ describe('the spend on exit', () => {
   })
 })
 
-describe('preview refusals', () => {
+describe('plain refusals', () => {
   it("says plainly that live agent payments aren't open yet when the key is refused for it", async () => {
     await saveKey(env, { providerRef: PROV, agentKey: 'agk_SECRET', agentRef: 'agt_A', merchantName: 'Opper', api: API })
     vi.stubGlobal('fetch', async () =>
