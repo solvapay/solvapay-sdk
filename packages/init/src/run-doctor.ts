@@ -13,10 +13,22 @@ import { detectPackageManager } from './project'
 import {
   fetchDistTags,
   findOutdatedSolvapayPackages,
+  installedGoSdk,
+  installedPythonSdk,
+  languageUpgradeCommand,
   solvapayDependencies,
   upgradeCommand,
   type FetchDistTags,
+  type InstalledSdk,
 } from './sdk-versions'
+import {
+  compareSdkVersions,
+  fetchSdkVersions,
+  isSdkPreview,
+  newestAny,
+  newestStable,
+  type SdkLanguage,
+} from './sdk-registry'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
@@ -31,6 +43,8 @@ export type RunDoctorInDirectoryOptions = {
   options?: DoctorCommandOptions
   /** npm dist-tag lookup, injectable for tests. */
   distTags?: FetchDistTags
+  /** Published Python / Go SDK versions, injectable for tests. */
+  sdkVersions?: (language: SdkLanguage) => Promise<string[]>
 }
 
 export type DoctorCheckResult = {
@@ -79,12 +93,13 @@ const printCheck = (check: DoctorCheckResult): void => {
  * can gate CI / pre-deploy.
  */
 /** Whether the project's `@solvapay/*` packages match npm (`latest`, or `preview` for a preview build). */
-const checkSdkVersions = async (cwd: string, distTags: FetchDistTags): Promise<DoctorCheckResult> => {
+const checkNpmVersions = async (
+  cwd: string,
+  names: string[],
+  distTags: FetchDistTags,
+): Promise<DoctorCheckResult> => {
   const name = '@solvapay/* versions'
   try {
-    const names = await solvapayDependencies(cwd)
-    if (names === null) return { name, ok: true, detail: `no package.json in ${cwd}, nothing to check` }
-    if (names.length === 0) return { name, ok: true, detail: 'no @solvapay/* dependencies' }
     const outdated = await findOutdatedSolvapayPackages(cwd, names, distTags)
     if (outdated.length === 0) return { name, ok: true, detail: `${names.length} package(s) match npm` }
     const behind = outdated.map(o => `${o.name} ${o.installed} (npm ${o.tag} ${o.wanted})`).join(', ')
@@ -95,10 +110,101 @@ const checkSdkVersions = async (cwd: string, distTags: FetchDistTags): Promise<D
   }
 }
 
+const SDK_CHECK_NAMES: Record<SdkLanguage, string> = {
+  python: 'solvapay (Python) version',
+  go: 'solvapay-sdk/go version',
+}
+const REGISTRY_NAMES: Record<SdkLanguage, string> = { python: 'PyPI', go: 'the Go proxy' }
+
+/**
+ * Whether the installed Python or Go SDK is the newest release: the newest
+ * stable for a stable install, the newest version of any kind for a preview.
+ */
+const checkLanguageVersion = async (
+  sdk: InstalledSdk,
+  sdkVersions: (language: SdkLanguage) => Promise<string[]>,
+): Promise<DoctorCheckResult> => {
+  const name = SDK_CHECK_NAMES[sdk.language]
+  try {
+    const published = await sdkVersions(sdk.language)
+    const preview = isSdkPreview(sdk.language, sdk.version)
+    const wanted = preview
+      ? newestAny(sdk.language, published)
+      : newestStable(sdk.language, published)
+    if (!wanted) {
+      throw new Error(`${REGISTRY_NAMES[sdk.language]} lists no ${preview ? '' : 'stable '}release`)
+    }
+    const behind = preview
+      ? sdk.version !== wanted
+      : compareSdkVersions(sdk.language, sdk.version, wanted) < 0
+    const label = preview ? 'newest preview' : 'newest release'
+    if (!behind) {
+      return { name, ok: true, detail: `${sdk.version} (${sdk.source}) is the ${label}` }
+    }
+    return {
+      name,
+      ok: false,
+      detail: `${sdk.version} (${sdk.source}) is behind the ${label} ${wanted}. Upgrade with: ${languageUpgradeCommand(sdk, wanted)}`,
+    }
+  } catch (error) {
+    return { name, ok: false, detail: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+/**
+ * One version check per language the project uses SolvaPay in. A project
+ * with no SolvaPay SDK in any language fails: doctor has nothing to vouch for.
+ */
+const checkSdkVersions = async (
+  cwd: string,
+  distTags: FetchDistTags,
+  sdkVersions: (language: SdkLanguage) => Promise<string[]>,
+): Promise<DoctorCheckResult[]> => {
+  const results: DoctorCheckResult[] = []
+  const npmNames = await solvapayDependencies(cwd).catch((error: unknown) => {
+    results.push({
+      name: '@solvapay/* versions',
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  })
+  if (npmNames && npmNames.length > 0) results.push(await checkNpmVersions(cwd, npmNames, distTags))
+
+  for (const [language, read] of [
+    ['python', installedPythonSdk],
+    ['go', installedGoSdk],
+  ] as const) {
+    try {
+      const sdk = await read(cwd)
+      if (sdk) results.push(await checkLanguageVersion(sdk, sdkVersions))
+    } catch (error) {
+      results.push({
+        name: SDK_CHECK_NAMES[language],
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (results.length === 0) {
+    results.push({
+      name: 'SolvaPay SDK',
+      ok: false,
+      detail:
+        `no SolvaPay SDK found in ${cwd} (no @solvapay/* in package.json, no solvapay in ` +
+        'uv.lock, poetry.lock or requirements.txt, no github.com/solvapay/solvapay-sdk/go in go.mod). ' +
+        'Run `npx solvapay init` here, or run doctor from the project folder.',
+    })
+  }
+  return results
+}
+
 export const runDoctorInDirectory = async ({
   cwd,
   options = {},
   distTags = fetchDistTags,
+  sdkVersions = fetchSdkVersions,
 }: RunDoctorInDirectoryOptions): Promise<DoctorReport> => {
   const checks: DoctorCheckResult[] = []
   const apiBaseUrl = await resolveApiBaseUrl(cwd, options)
@@ -212,7 +318,7 @@ export const runDoctorInDirectory = async ({
     }
   }
 
-  checks.push(await checkSdkVersions(cwd, distTags))
+  checks.push(...(await checkSdkVersions(cwd, distTags, sdkVersions)))
 
   const debugRaw = process.env.SOLVAPAY_DEBUG
   checks.push({

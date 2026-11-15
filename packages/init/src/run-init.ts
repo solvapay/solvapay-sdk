@@ -15,14 +15,27 @@ import {
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
-import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
+import {
+  formatCommand,
+  getInstallCommand,
+  getSolvaPayBasePackages,
+  goInstallCommands,
+  installSolvaPaySdk,
+  pythonInstallCommands,
+  pythonRequirement,
+  runSdkCommand,
+  type SdkCommand,
+  type SdkFeature,
+} from './install'
+import { detectProject, LANGUAGE_LABELS, type DetectedProject, type Language } from './language'
 import {
   askKeepConfiguredProduct,
   formatConfiguredProductLabel,
   pickProductInteractive,
 } from './product-picker'
 import { listProducts } from './products'
-import { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
+import { waitForEnter } from './project'
+import { fetchSdkVersions, GO_MODULE, pickSdkVersion, type SdkLanguage } from './sdk-registry'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
@@ -47,12 +60,37 @@ const printBanner = (): void => {
   process.stdout.write(`${chalk.cyanBright(ASCII_BANNER)}\n\n`)
 }
 
-const printSetupComplete = (): void => {
-  process.stdout.write(`
+const PYTHON_DOCS = 'https://docs.solvapay.com/sdks/python/setup/quick-start'
+const GO_DOCS = 'https://docs.solvapay.com/sdks/go/setup/quick-start'
+
+const printSetupComplete = (project: DetectedProject, printed: SdkCommand[]): void => {
+  if (project.language === 'ts') {
+    process.stdout.write(`
 You're all set. SolvaPay credentials were saved to .env.
 
 Continue with the next step in your setup when you're ready.
 `)
+    return
+  }
+  const lines = ['', 'SolvaPay credentials were saved to .env.', '']
+  if (printed.length > 0) {
+    lines.push('Install the SDK into your environment (init does not choose an interpreter):')
+    for (const command of printed) lines.push(`   ${formatCommand(command)}`)
+    lines.push('')
+  }
+  lines.push(
+    `The ${LANGUAGE_LABELS[project.language]} SDK reads environment variables, not .env. Load .env at startup`,
+    project.language === 'python'
+      ? '(python-dotenv: `load_dotenv()`), or export the variables before you run the app.'
+      : '(read it in main), or export the variables before you run the app.',
+    '',
+    'Next steps:',
+    `   Docs: ${project.language === 'python' ? PYTHON_DOCS : GO_DOCS}`,
+    '   Check a running MCP server: npx solvapay verify <server url>',
+    '   Check this project:         npx solvapay doctor',
+    '',
+  )
+  process.stdout.write(lines.join('\n'))
 }
 
 const createInstallProgressReporter = (): ((message: string) => void) => {
@@ -96,6 +134,18 @@ export type InitCommandOptions = {
    * any further user action.
    */
   dev?: boolean
+  /**
+   * `--language ts|python|go`: the project's language. Needed when the folder
+   * has markers for two languages, or none, and no one can answer a prompt.
+   */
+  language?: Language
+  /**
+   * `--preview`: install the newest preview of the SDK (npm `preview` tag,
+   * newest PyPI / Go proxy pre-release) instead of the newest stable release.
+   */
+  preview?: boolean
+  /** `--features mcp,agents,web`: Python extras, or extra TypeScript packages. */
+  features?: SdkFeature[]
 }
 
 export type RunInitInDirectoryOptions = {
@@ -110,6 +160,10 @@ export type RunInitInDirectoryOptions = {
    * the SolvaPay base packages installed for them.
    */
   skipSdkInstall?: boolean
+  /** Published Python / Go SDK versions; injectable for tests. */
+  sdkVersions?: (language: SdkLanguage) => Promise<string[]>
+  /** Whether a person can answer prompts; defaults to a TTY on both ends without --yes. */
+  interactive?: boolean
 }
 
 const configureProductRef = async (
@@ -198,10 +252,53 @@ const configureProductRef = async (
   }
 }
 
+const resolveSdkPin = async (
+  project: DetectedProject,
+  options: InitCommandOptions,
+  sdkVersions: (language: SdkLanguage) => Promise<string[]>,
+): Promise<string | undefined> => {
+  if (project.language === 'ts') return undefined
+  return pickSdkVersion(project.language, await sdkVersions(project.language), {
+    preview: options.preview ?? false,
+  })
+}
+
+const installLanguageSdk = async (
+  project: DetectedProject & { language: 'python' | 'go' },
+  version: string,
+  cwd: string,
+  features: SdkFeature[],
+): Promise<SdkCommand[]> => {
+  const { run, print } =
+    project.language === 'python'
+      ? pythonInstallCommands(project.manager, version, features)
+      : { run: goInstallCommands(version), print: [] as SdkCommand[] }
+  for (const command of run) {
+    process.stdout.write(`📦 ${formatCommand(command)}\n`)
+    const result = await runSdkCommand(command, cwd)
+    if (!result.ok) {
+      throw new Error(
+        `\`${result.command}\` failed: ${result.warning ?? 'unknown error'}\n` +
+          'Fix the cause and run it yourself; your .env is already written.',
+      )
+    }
+  }
+  if (run.length > 0) {
+    const label =
+      project.language === 'python'
+        ? pythonRequirement(version, features)
+        : `${GO_MODULE}@${version}`
+    process.stdout.write(`✅ SolvaPay SDK pinned: ${label}\n`)
+  }
+  return print
+}
+
 export const runInitInDirectory = async ({
   cwd,
   options = {},
   skipSdkInstall = false,
+  sdkVersions = fetchSdkVersions,
+  interactive = !options.yes && Boolean(process.stdin.isTTY && process.stdout.isTTY),
 }: RunInitInDirectoryOptions): Promise<void> => {
   const apiBaseUrl = resolveApiBaseUrl(options)
   printBanner()
@@ -212,17 +309,21 @@ export const runInitInDirectory = async ({
     )
   }
 
-  const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
-  if (projectCheck.action === 'cancelled') {
-    process.stdout.write('Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n')
-    return
-  }
-
-  const packageManager = await detectPackageManager(cwd)
-  if (projectCheck.action === 'created') {
-    process.stdout.write(`🔍 Detected ${packageManager} project (package.json created)\n`)
+  // Decide the language, and the SDK version to pin, before the browser
+  // opens: a folder init can't handle fails here, with nothing written.
+  const project = await detectProject(cwd, { language: options.language, interactive })
+  if (project.language === 'ts') {
+    process.stdout.write(
+      `🔍 Detected ${project.manager} project (package.json ${project.createdPackageJson ? 'created' : 'found'})\n`,
+    )
   } else {
-    process.stdout.write(`🔍 Detected ${packageManager} project (package.json found)\n`)
+    process.stdout.write(
+      `🔍 Detected ${LANGUAGE_LABELS[project.language]} project (${project.manager})\n`,
+    )
+  }
+  const sdkPin = skipSdkInstall ? undefined : await resolveSdkPin(project, options, sdkVersions)
+  if (sdkPin && options.preview) {
+    process.stdout.write(`🧪 Preview SDK: ${sdkPin}\n`)
   }
 
   const initSession = await createInitSession(apiBaseUrl)
@@ -391,26 +492,39 @@ export const runInitInDirectory = async ({
     process.stdout.write('🔒 Added .env to .gitignore\n')
   }
 
-  if (!skipSdkInstall) {
+  const features = options.features ?? []
+  let printed: SdkCommand[] = []
+  if (!skipSdkInstall && project.language === 'ts') {
+    const tsOptions = {
+      distTag: options.preview ? ('preview' as const) : ('latest' as const),
+      features,
+    }
     const onInstallProgress = createInstallProgressReporter()
     onInstallProgress('Resolving packages')
-    const installResult = await installSolvaPaySdk(packageManager, cwd, onInstallProgress)
+    const installResult = await installSolvaPaySdk(
+      project.manager,
+      cwd,
+      onInstallProgress,
+      tsOptions,
+    )
     finishInstallProgressReporter()
     if (installResult.ok) {
       process.stdout.write('✅ SolvaPay SDK packages installed\n')
-      const installedPackages = getSolvaPayBasePackages()
+      const installedPackages = getSolvaPayBasePackages(features)
       const packageList = installedPackages.join(', ')
       process.stdout.write(`📦 Added ${installedPackages.length} packages: ${packageList}\n`)
     } else {
-      const manualInstallCommand = await getInstallCommand(packageManager)
+      const manualInstallCommand = await getInstallCommand(project.manager, tsOptions)
       process.stdout.write(
         `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${manualInstallCommand}\n`,
       )
     }
+  } else if (sdkPin && project.language !== 'ts') {
+    printed = await installLanguageSdk(project, sdkPin, cwd, features)
   }
 
   await configureProductRef(apiBaseUrl, exchange.secretKey, cwd, options)
 
   process.stdout.write('\n')
-  printSetupComplete()
+  printSetupComplete(project, printed)
 }

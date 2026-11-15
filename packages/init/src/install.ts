@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
 import type { PackageManager } from './project'
+import type { PythonManager } from './language'
+import { GO_MODULE, PYPI_PACKAGE } from './sdk-registry'
 
 export type InstallResult = {
   ok: boolean
@@ -9,18 +11,57 @@ export type InstallResult = {
 
 const MAX_ERROR_LOG_LINES = 30
 
-const DEFAULT_DIST_TAG = 'latest'
 const SOLVAPAY_BASE_PACKAGES = ['@solvapay/server', '@solvapay/core', '@solvapay/auth']
 
-export const getSolvaPayBasePackages = (): string[] => [...SOLVAPAY_BASE_PACKAGES]
+/**
+ * What a project uses SolvaPay for (`--features mcp,agents,web`). Each adds a
+ * Python extra, or a TypeScript package. Go needs nothing: one module.
+ */
+export const SDK_FEATURES = ['mcp', 'agents', 'web'] as const
+export type SdkFeature = (typeof SDK_FEATURES)[number]
 
-const getPackageSpecifiers = async (): Promise<string[]> => {
-  const distTag = DEFAULT_DIST_TAG
-  return SOLVAPAY_BASE_PACKAGES.map(pkg => `${pkg}@${distTag}`)
+const TS_FEATURE_PACKAGES: Record<SdkFeature, string> = {
+  mcp: '@solvapay/mcp',
+  agents: '@solvapay/agents',
+  web: '@solvapay/react',
 }
 
-export const getInstallCommand = async (packageManager: PackageManager): Promise<string> => {
-  const packageSpecifiers = await getPackageSpecifiers()
+export const parseFeatures = (value: string): SdkFeature[] => {
+  const features = value
+    .split(',')
+    .map(part => part.trim().toLowerCase())
+    .filter(Boolean)
+  for (const feature of features) {
+    if (!(SDK_FEATURES as readonly string[]).includes(feature)) {
+      throw new Error(
+        `Unknown feature "${feature}" in --features. Use: ${SDK_FEATURES.join(', ')}.`,
+      )
+    }
+  }
+  return [...new Set(features)] as SdkFeature[]
+}
+
+export type TsInstallOptions = {
+  /** npm dist-tag: `latest`, or `preview` with `--preview`. */
+  distTag?: 'latest' | 'preview'
+  features?: SdkFeature[]
+}
+
+export const getSolvaPayBasePackages = (features: SdkFeature[] = []): string[] => [
+  ...SOLVAPAY_BASE_PACKAGES,
+  ...features.map(feature => TS_FEATURE_PACKAGES[feature]),
+]
+
+const getPackageSpecifiers = async (options: TsInstallOptions = {}): Promise<string[]> => {
+  const distTag = options.distTag ?? 'latest'
+  return getSolvaPayBasePackages(options.features).map(pkg => `${pkg}@${distTag}`)
+}
+
+export const getInstallCommand = async (
+  packageManager: PackageManager,
+  options: TsInstallOptions = {},
+): Promise<string> => {
+  const packageSpecifiers = await getPackageSpecifiers(options)
   const packageArgs = packageSpecifiers.join(' ')
 
   if (packageManager === 'yarn') {
@@ -115,9 +156,10 @@ export const installSolvaPaySdk = async (
   packageManager: PackageManager,
   cwd: string = process.cwd(),
   onProgress?: (message: string) => void,
+  options: TsInstallOptions = {},
 ): Promise<InstallResult> => {
-  const packageSpecifiers = await getPackageSpecifiers()
-  const command = await getInstallCommand(packageManager)
+  const packageSpecifiers = await getPackageSpecifiers(options)
+  const command = await getInstallCommand(packageManager, options)
   const errorLines: string[] = []
   let lastProgressMessage = ''
 
@@ -184,3 +226,81 @@ export const installSolvaPaySdk = async (
     })
   })
 }
+
+// --- Python and Go
+
+/** One command a language install runs, as argv (no shell). */
+export type SdkCommand = { cmd: string; args: string[] }
+
+export const formatCommand = ({ cmd, args }: SdkCommand): string =>
+  [cmd, ...args.map(arg => (/^[\w@./:=+-]+$/.test(arg) ? arg : `'${arg}'`))].join(' ')
+
+/** `solvapay[mcp,agents]==0.1.0` — the requirement that pins the Python SDK exactly. */
+export const pythonRequirement = (version: string, features: SdkFeature[] = []): string =>
+  `${PYPI_PACKAGE}${features.length ? `[${features.join(',')}]` : ''}==${version}`
+
+/**
+ * What installs the Python SDK. uv and Poetry manage the project's own
+ * environment, so init runs them. For pip it runs nothing: which interpreter
+ * to install into is the developer's choice, so init prints the command.
+ */
+export const pythonInstallCommands = (
+  manager: PythonManager,
+  version: string,
+  features: SdkFeature[] = [],
+): { run: SdkCommand[]; print: SdkCommand[] } => {
+  const requirement = pythonRequirement(version, features)
+  if (manager === 'uv') return { run: [{ cmd: 'uv', args: ['add', requirement] }], print: [] }
+  if (manager === 'poetry')
+    return { run: [{ cmd: 'poetry', args: ['add', requirement] }], print: [] }
+  return { run: [], print: [{ cmd: 'python', args: ['-m', 'pip', 'install', requirement] }] }
+}
+
+/**
+ * What installs the Go SDK. Only `go get`: a `go mod tidy` here would drop the
+ * requirement again while no file imports the module yet.
+ */
+export const goInstallCommands = (version: string): SdkCommand[] => [
+  { cmd: 'go', args: ['get', `${GO_MODULE}@${version}`] },
+]
+
+/** Runs one command in `cwd`; the last lines of its output explain a failure. */
+export const runSdkCommand = (command: SdkCommand, cwd: string): Promise<InstallResult> =>
+  new Promise(resolve => {
+    const display = formatCommand(command)
+    const lines: string[] = []
+    const child = spawn(command.cmd, command.args, {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    })
+    const record = (chunk: Buffer) => {
+      for (const line of chunk.toString('utf8').split(/\r?\n/)) {
+        const trimmed = trimLine(line)
+        if (!trimmed) continue
+        lines.push(trimmed)
+        if (lines.length > MAX_ERROR_LOG_LINES) lines.shift()
+      }
+    }
+    child.stdout?.on('data', record)
+    child.stderr?.on('data', record)
+    child.once('error', error => {
+      const missing = (error as NodeJS.ErrnoException).code === 'ENOENT'
+      resolve({
+        ok: false,
+        command: display,
+        warning: missing ? `${command.cmd} is not installed or not on PATH` : error.message,
+      })
+    })
+    child.once('close', code => {
+      resolve(
+        code === 0
+          ? { ok: true, command: display }
+          : {
+              ok: false,
+              command: display,
+              warning: `exited with code ${code ?? 'unknown'}${lines.length ? `\n${lines.join('\n')}` : ''}`,
+            },
+      )
+    })
+  })

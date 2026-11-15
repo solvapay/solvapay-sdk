@@ -28,17 +28,25 @@ vi.mock('./products', () => ({
   listProducts: vi.fn(),
 }))
 
-vi.mock('./install', () => ({
-  getInstallCommand: vi.fn(),
-  getSolvaPayBasePackages: vi.fn(),
-  installSolvaPaySdk: vi.fn(),
-}))
+vi.mock('./install', async () => {
+  const actual = await vi.importActual<typeof import('./install')>('./install')
+  return {
+    ...actual,
+    getInstallCommand: vi.fn(),
+    getSolvaPayBasePackages: vi.fn(),
+    installSolvaPaySdk: vi.fn(),
+    runSdkCommand: vi.fn(),
+  }
+})
 
 vi.mock('./project', () => ({
-  detectPackageManager: vi.fn(),
-  ensureNodeProject: vi.fn(),
   waitForEnter: vi.fn(),
 }))
+
+vi.mock('./language', async () => {
+  const actual = await vi.importActual<typeof import('./language')>('./language')
+  return { ...actual, detectProject: vi.fn() }
+})
 
 import {
   createInitSession,
@@ -54,14 +62,20 @@ import {
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
-import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
+import {
+  getInstallCommand,
+  getSolvaPayBasePackages,
+  installSolvaPaySdk,
+  runSdkCommand,
+} from './install'
 import {
   askKeepConfiguredProduct,
   formatConfiguredProductLabel,
   pickProductInteractive,
 } from './product-picker'
 import { listProducts } from './products'
-import { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
+import { detectProject } from './language'
+import { waitForEnter } from './project'
 
 const TEST_CWD = '/tmp/project'
 
@@ -106,11 +120,11 @@ describe('runInitInDirectory', () => {
     output.length = 0
     vi.clearAllMocks()
     vi.restoreAllMocks()
-    vi.mocked(ensureNodeProject).mockResolvedValue({
-      filePath: '/tmp/project/package.json',
-      action: 'existing',
+    vi.mocked(detectProject).mockResolvedValue({
+      language: 'ts',
+      manager: 'npm',
+      createdPackageJson: false,
     })
-    vi.mocked(detectPackageManager).mockResolvedValue('npm')
     vi.mocked(waitForEnter).mockResolvedValue()
     vi.mocked(ensureEnvInGitignore).mockResolvedValue({
       filePath: '/tmp/project/.gitignore',
@@ -170,14 +184,13 @@ describe('runInitInDirectory', () => {
     await expect(options?.confirmOverwrite?.()).resolves.toBe(true)
   })
 
-  it('threads cwd through ensureNodeProject and env writes', async () => {
+  it('threads cwd through detectProject and env writes', async () => {
     mockSuccessfulAuth()
     vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
 
-    await runInitInDirectory({ cwd: TEST_CWD })
+    await runInitInDirectory({ cwd: TEST_CWD, interactive: true })
 
-    expect(ensureNodeProject).toHaveBeenCalledWith({ cwd: TEST_CWD, autoCreate: undefined })
-    expect(detectPackageManager).toHaveBeenCalledWith(TEST_CWD)
+    expect(detectProject).toHaveBeenCalledWith(TEST_CWD, { language: undefined, interactive: true })
     expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', { cwd: TEST_CWD })
     expect(ensureEnvInGitignore).toHaveBeenCalledWith(TEST_CWD)
   })
@@ -262,22 +275,18 @@ describe('runInitInDirectory', () => {
     )
   })
 
-  it('exits cleanly when package.json is missing and user declines creation', async () => {
-    vi.mocked(ensureNodeProject).mockResolvedValue({
-      filePath: '/tmp/project/package.json',
-      action: 'cancelled',
-    })
+  it('stops before sign-in when the project cannot be detected', async () => {
+    vi.mocked(detectProject).mockRejectedValue(new Error('Pass --language ts|python|go.'))
 
-    await runInitInDirectory({ cwd: TEST_CWD })
-
-    expect(output.join('')).toContain('Initialization cancelled')
+    await expect(runInitInDirectory({ cwd: TEST_CWD })).rejects.toThrow('Pass --language')
     expect(createInitSession).not.toHaveBeenCalled()
   })
 
   it('prints created package.json message when project is bootstrapped', async () => {
-    vi.mocked(ensureNodeProject).mockResolvedValue({
-      filePath: '/tmp/project/package.json',
-      action: 'created',
+    vi.mocked(detectProject).mockResolvedValue({
+      language: 'ts',
+      manager: 'npm',
+      createdPackageJson: true,
     })
     mockSuccessfulAuth()
     vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'skipped', reason: 'zero_products' })
@@ -300,7 +309,10 @@ describe('runInitInDirectory', () => {
 
     await runInitInDirectory({ cwd: TEST_CWD, options: { yes: true } })
 
-    expect(ensureNodeProject).toHaveBeenCalledWith({ cwd: TEST_CWD, autoCreate: true })
+    expect(detectProject).toHaveBeenCalledWith(TEST_CWD, {
+      language: undefined,
+      interactive: false,
+    })
     expect(waitForEnter).not.toHaveBeenCalled()
     expect(openAuthUrl).toHaveBeenCalledWith('https://app.solvapay.com/auth/cli-init?session_id=s1')
   })
@@ -584,5 +596,131 @@ describe('runInitInDirectory', () => {
 
     expect(output.join('')).toMatch(/Merchant lookup failed/i)
     expect(output.join('')).toContain("You're all set. SolvaPay credentials were saved to .env.")
+  })
+
+  describe('Python and Go projects', () => {
+    const versions = (python: string[], go: string[]) => async (language: 'python' | 'go') =>
+      language === 'python' ? python : go
+
+    beforeEach(() => {
+      mockSuccessfulAuth()
+      vi.mocked(pickProductInteractive).mockResolvedValue({
+        action: 'skipped',
+        reason: 'zero_products',
+      })
+      vi.mocked(runSdkCommand).mockImplementation(async command => ({
+        ok: true,
+        command: [command.cmd, ...command.args].join(' '),
+      }))
+    })
+
+    it('pins the newest stable Python SDK with uv and never touches npm', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, features: ['mcp'] },
+        sdkVersions: versions(['0.1.0', '0.2.0.dev3', '0.1.1'], []),
+      })
+
+      expect(installSolvaPaySdk).not.toHaveBeenCalled()
+      expect(runSdkCommand).toHaveBeenCalledWith(
+        { cmd: 'uv', args: ['add', 'solvapay[mcp]==0.1.1'] },
+        TEST_CWD,
+      )
+      const text = output.join('')
+      expect(text).toContain('Detected Python project (uv)')
+      expect(text).toContain('reads environment variables, not .env')
+      expect(text).toContain('npx solvapay verify')
+    })
+
+    it('fails before sign-in when only previews exist and --preview is not set', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+
+      await expect(
+        runInitInDirectory({
+          cwd: TEST_CWD,
+          options: { yes: true },
+          sdkVersions: versions(['0.1.0.dev4', '0.1.0.dev12'], []),
+        }),
+      ).rejects.toThrow(
+        /no stable release on PyPI yet \(newest preview: 0\.1\.0\.dev12\)\. Pass --preview/,
+      )
+      expect(createInitSession).not.toHaveBeenCalled()
+    })
+
+    it('pins the newest preview with --preview', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'poetry' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, preview: true },
+        sdkVersions: versions(['0.1.0.dev4', '0.1.0.dev12', '0.1.0.dev5'], []),
+      })
+
+      expect(runSdkCommand).toHaveBeenCalledWith(
+        { cmd: 'poetry', args: ['add', 'solvapay==0.1.0.dev12'] },
+        TEST_CWD,
+      )
+      expect(output.join('')).toContain('Preview SDK: 0.1.0.dev12')
+    })
+
+    it('prints the pip command instead of running it', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'pip' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, features: ['mcp', 'agents'] },
+        sdkVersions: versions(['0.1.0'], []),
+      })
+
+      expect(runSdkCommand).not.toHaveBeenCalled()
+      expect(output.join('')).toContain("python -m pip install 'solvapay[mcp,agents]==0.1.0'")
+    })
+
+    it('runs go get for a Go module', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'go', manager: 'go' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, preview: true },
+        sdkVersions: versions([], ['v0.1.0-dev.1', 'v0.1.0-dev.7', 'v0.1.0-dev.10']),
+      })
+
+      expect(runSdkCommand).toHaveBeenCalledWith(
+        { cmd: 'go', args: ['get', 'github.com/solvapay/solvapay-sdk/go@v0.1.0-dev.10'] },
+        TEST_CWD,
+      )
+      expect(installSolvaPaySdk).not.toHaveBeenCalled()
+    })
+
+    it('throws with the command when the install fails', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'go', manager: 'go' })
+      vi.mocked(runSdkCommand).mockResolvedValue({
+        ok: false,
+        command: 'go get github.com/solvapay/solvapay-sdk/go@v0.1.0',
+        warning: 'go is not installed or not on PATH',
+      })
+
+      await expect(
+        runInitInDirectory({
+          cwd: TEST_CWD,
+          options: { yes: true },
+          sdkVersions: versions([], ['v0.1.0']),
+        }),
+      ).rejects.toThrow(/go get .* failed: go is not installed/)
+    })
+
+    it('installs the npm preview tag for TypeScript with --preview', async () => {
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, preview: true, features: ['mcp'] },
+      })
+
+      expect(installSolvaPaySdk).toHaveBeenCalledWith('npm', TEST_CWD, expect.any(Function), {
+        distTag: 'preview',
+        features: ['mcp'],
+      })
+    })
   })
 })
