@@ -10,6 +10,8 @@ description: "Sell MCP tools from Go: paid and free tools, SolvaPay sign-in and 
 - The Go SDK installed and `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/go/setup/installation).
 - A public HTTPS URL for your server. In development, use a tunnel such as ngrok (see [Run it locally](#run-it-locally)).
 
+To start from a working project instead, run `npm create solvapay@latest my-mcp-server -- --type mcp --language go`: it scaffolds this server with one paid and one free tool, tests and a Dockerfile.
+
 ## Create a server with a paid tool
 
 ```go main.go

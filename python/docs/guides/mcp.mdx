@@ -11,6 +11,8 @@ description: "Build an MCP server in Python whose customers sign in with SolvaPa
 - `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` set. See [Installation](/sdks/python/setup/installation).
 - A public HTTPS URL for the server. In development, use a tunnel such as [ngrok](https://ngrok.com).
 
+To start from a working project instead, run `npm create solvapay@latest my-mcp-server -- --type mcp --language python`: it scaffolds this server with one paid and one free tool, tests and a Dockerfile.
+
 ## Create the server
 
 Save this as `server.py`:
