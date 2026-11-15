@@ -19,6 +19,8 @@ import { PACKAGE_ROOT } from '../../package-root'
 export const BASE_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_base')
 export const FROM_OPENAPI_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-openapi')
 export const FROM_SCRATCH_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-scratch')
+export const PYTHON_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp-python')
+export const GO_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp-go')
 export const NEXT_AUTH0_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'next-auth0')
 export const SCAFFOLD_SCRIPT_PATH = join(PACKAGE_ROOT, 'scripts', 'mcp', 'scaffold.mjs')
 
@@ -30,6 +32,9 @@ export const PLACEHOLDERS = Object.freeze({
   PUBLIC_BASE_URL: '__MCP_PUBLIC_BASE_URL__',
   TOOL_NAME: '__TOOL_NAME__',
   TOOL_NAME_PASCAL: '__TOOL_NAME_PASCAL__',
+  PROJECT_NAME: '__PROJECT_NAME__',
+  GO_MODULE: '__GO_MODULE__',
+  SOLVAPAY_VERSION: '__SOLVAPAY_VERSION__',
 })
 
 /**
@@ -79,6 +84,10 @@ const TEXT_EXTENSIONS = new Set([
   '.toml',
   '.env',
   '.example',
+  '.py',
+  '.go',
+  '.mod',
+  '.dockerignore',
 ])
 
 function isTextFile(name: string): boolean {
@@ -278,6 +287,26 @@ export type WriteBootstrapEnvOptions = {
 
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
+/**
+ * The bootstrap `.env` for a Python or Go server: the product ref and where
+ * the server listens, before `solvapay init` adds the secret key.
+ */
+export async function writeLanguageBootstrapEnv(
+  target: string,
+  productRef: string,
+  options: WriteBootstrapEnvOptions & { port: number },
+): Promise<void> {
+  const lines = [
+    '# Created by create-solvapay. `npx solvapay init` adds SOLVAPAY_SECRET_KEY.',
+    `SOLVAPAY_PRODUCT_REF=${productRef}`,
+    '# The URL MCP clients use to reach this server: set it to your tunnel or deployed URL.',
+    `PUBLIC_BASE_URL=http://localhost:${options.port}`,
+    `PORT=${options.port}`,
+  ]
+  if (options.dev) lines.push(`SOLVAPAY_API_BASE_URL=${DEV_API_BASE_URL}`)
+  await writeFile(join(target, '.env'), `${lines.join('\n')}\n`, 'utf8')
+}
+
 export async function writeBootstrapEnv(
   target: string,
   productRef: string,
@@ -395,6 +424,8 @@ export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<string> = Object.freeze([
 export type ResolveSolvapayVersionsOptions = {
   /** Use the template's pins instead of asking the npm registry. */
   offline?: boolean
+  /** The npm dist-tag to pin from: `latest` (default), or `preview` from a preview scaffolder. */
+  distTag?: 'latest' | 'preview'
   /** Per-package timeout in milliseconds. Defaults to 10000ms. */
   timeoutMs?: number
   /** Optional logger. Defaults to writing one line per package to stdout. */
@@ -436,6 +467,7 @@ export async function resolveSolvapayVersions(
       process.stdout.write(`   ${entry.name}@${entry.version}${suffix}\n`)
     })
 
+  const distTag = options.distTag ?? 'latest'
   if (options.offline) {
     const pins = await readTemplateSolvapayPins(deps)
     for (const [name, version] of pins) onResolve({ name, version, source: 'template' })
@@ -445,7 +477,7 @@ export async function resolveSolvapayVersions(
   const timeoutMs = options.timeoutMs ?? 10_000
   const settled = await Promise.all(
     deps.map(async name => {
-      const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/latest`
+      const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${distTag}`
       try {
         const response = await fetch(url, {
           headers: { accept: 'application/json' },
@@ -471,7 +503,7 @@ export async function resolveSolvapayVersions(
   )
   if (failed.length > 0) {
     throw new Error(
-      `Could not resolve the latest @solvapay/* versions from the npm registry:\n` +
+      `Could not resolve the ${distTag} @solvapay/* versions from the npm registry:\n` +
         failed.map(entry => `  - ${entry.name}: ${entry.error}`).join('\n') +
         `\nCheck your network or registry access, or pass --offline to use the versions this create-solvapay release ships with.`,
     )

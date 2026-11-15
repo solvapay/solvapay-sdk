@@ -107,8 +107,16 @@ describe('runInitInDirectory (integration)', () => {
     expect(gitignoreContent).toContain('.env')
   })
 
-  it('creates package.json in the target cwd when missing under --yes', async () => {
-    await runInitInDirectory({ cwd, options: { yes: true } })
+  it('fails under --yes in an empty folder instead of creating package.json', async () => {
+    await expect(runInitInDirectory({ cwd, options: { yes: true } })).rejects.toThrow(
+      /Pass --language ts/,
+    )
+    await expect(readFile(path.join(cwd, 'package.json'), 'utf8')).rejects.toThrow(/ENOENT/)
+    expect(createInitSession).not.toHaveBeenCalled()
+  })
+
+  it('creates package.json in an empty folder with --language ts', async () => {
+    await runInitInDirectory({ cwd, options: { yes: true, language: 'ts' } })
 
     const pkg = JSON.parse(await readFile(path.join(cwd, 'package.json'), 'utf8'))
     expect(pkg.version).toBe('1.0.0')

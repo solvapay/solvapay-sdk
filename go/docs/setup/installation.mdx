@@ -22,6 +22,22 @@ import solvapay "github.com/solvapay/solvapay-sdk/go"
 
 Agent payments live in a subpackage, `github.com/solvapay/solvapay-sdk/go/agents`. See [Agent payments](/sdks/go/guides/agents).
 
+## Set up with the CLI
+
+In an existing project, `npx solvapay init` signs you in, writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`, and runs `go get` for the module, pinned exactly. It needs Node.js 22 or later to run. The SDK reads environment variables, not `.env`, so load `.env` when your app starts or export the variables.
+
+```bash
+npx solvapay init
+```
+
+For a new paid MCP server, scaffold one instead:
+
+```bash
+npm create solvapay@latest my-mcp-server -- --type mcp --language go
+```
+
+`npx solvapay doctor` checks that the SDK is the newest release and prints the upgrade command. See [CLI setup](/sdks/typescript/setup/cli) for the flags.
+
 ## Set your keys
 
 1. In SolvaPay Console, go to **Developers** > **API Keys** and copy a sandbox secret key (`sk_sandbox_…`).

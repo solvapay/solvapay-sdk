@@ -1,0 +1,4 @@
+.env
+.git/
+*_test.go
+server

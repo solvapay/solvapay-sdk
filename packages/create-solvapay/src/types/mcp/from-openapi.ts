@@ -41,6 +41,8 @@ export type FromOpenapiInput = {
   skipInit?: boolean
   /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
   offline?: boolean
+  /** Pin `@solvapay/*` from npm's `preview` tag (set by a preview scaffolder). */
+  preview?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env` (via the `apiBaseUrl` field in
@@ -100,6 +102,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     skipInstall,
     skipInit,
     offline,
+    preview,
     dev,
   } = input
 
@@ -165,9 +168,12 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   process.stdout.write(
     offline
       ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
-      : '🔄 Resolving latest @solvapay/* versions from npm registry…\n',
+      : `🔄 Resolving ${preview ? 'preview' : 'latest'} @solvapay/* versions from npm registry…\n`,
   )
-  const versionMap = await resolveSolvapayVersions(undefined, { offline })
+  const versionMap = await resolveSolvapayVersions(undefined, {
+    offline,
+    distTag: preview ? 'preview' : 'latest',
+  })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)
@@ -206,7 +212,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   }
   if (skipInit) {
     process.stdout.write(
-      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+      `   npx -y solvapay@${preview ? 'preview' : 'latest'} init   # --skip-init was set; run to wire up auth + product\n`,
     )
   }
   process.stdout.write(

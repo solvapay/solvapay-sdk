@@ -18,7 +18,9 @@ Shared primitives for SolvaPay CLI tooling — browser auth, env writes, product
 - Browser auth: `createInitSession`, `openAuthUrl`, `waitForExchange`, `verifySecretKey`, `verifyProductRef`
 - Env writers: `writeSolvaPaySecretToEnv`, `writeSolvaPayProductRefToEnv`, `ensureEnvInGitignore`
 - Product picker: `listProducts`, `pickProductInteractive`, `askKeepConfiguredProduct`
-- Package managers: `detectPackageManager`, `installSolvaPaySdk`, `getInstallCommand`
+- Projects: `detectProject` (TypeScript, Python or Go, and the package manager), `parseLanguage`
+- Installs: `installSolvaPaySdk`, `getInstallCommand` (npm), `pythonInstallCommands`, `goInstallCommands`, `runSdkCommand`
+- SDK versions: `fetchSdkVersions` (PyPI, Go module proxy), `pickSdkVersion`, `installedPythonSdk`, `installedGoSdk`
 
 ## Stability
 

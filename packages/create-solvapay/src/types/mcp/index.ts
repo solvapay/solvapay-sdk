@@ -3,22 +3,26 @@ import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import type { ProjectType } from '../registry'
 import type { RunOptions } from '../../args'
+import { parseLanguage, type Language } from '@solvapay/init'
 import {
   inferMcpMode,
   MCP_HELP_TEXT,
   parseMcpArgs,
   toInitOptions,
+  validateSnakeToolName,
   validateToolName,
 } from '../../args'
 import { isAbsoluteHttpUrl, runFromOpenapi } from './from-openapi'
 import { runFromScratch } from './from-scratch'
+import { DEFAULT_SNAKE_TOOL_NAME, runLanguageFromScratch } from './from-scratch-language'
 
 const DEFAULT_TOOL_NAME = 'helloTool'
 
 export const mcpProjectType: ProjectType = {
   id: 'mcp',
-  label: 'MCP server (Cloudflare Workers)',
-  summary: 'Monetized MCP server on Cloudflare Workers (from-openapi or from-scratch)',
+  label: 'MCP server (TypeScript on Cloudflare Workers, or Python / Go)',
+  summary:
+    'Monetized MCP server: TypeScript on Cloudflare Workers, or Python / Go in a container (--language)',
   parseArgs: parseMcpArgs,
   run,
 }
@@ -30,6 +34,34 @@ async function run(opts: RunOptions): Promise<void> {
 
   if (mcpArgs.unknownFlag) {
     throw new Error(`Unknown or invalid MCP flag: ${mcpArgs.unknownFlag}\n\n${MCP_HELP_TEXT}`)
+  }
+
+  const language: Language = common.language ? parseLanguage(common.language) : 'ts'
+  if (language !== 'ts') {
+    if (mcpArgs.openapi) {
+      throw new Error(
+        `--openapi is TypeScript only. Python and Go servers are scaffolded from scratch: drop --openapi, or use --language ts.`,
+      )
+    }
+    if (common.offline) {
+      throw new Error(
+        '--offline pins the npm packages this release ships with; Python and Go have no such pins. Drop --offline.',
+      )
+    }
+    const toolName = await resolveSnakeToolName(mcpArgs.toolName, nonInteractive)
+    await runLanguageFromScratch({
+      target,
+      projectName,
+      toolName,
+      language,
+      options: toInitOptions(common),
+      productRef: common.product,
+      skipInstall: common.skipInstall,
+      skipInit: common.skipInit,
+      preview: common.preview,
+      dev: common.dev,
+    })
+    return
   }
 
   let mode = inferMcpMode(mcpArgs)
@@ -60,6 +92,7 @@ async function run(opts: RunOptions): Promise<void> {
       skipInstall: common.skipInstall,
       skipInit: common.skipInit,
       offline: common.offline,
+      preview: common.preview,
       dev: common.dev,
     })
     return
@@ -75,11 +108,31 @@ async function run(opts: RunOptions): Promise<void> {
     skipInstall: common.skipInstall,
     skipInit: common.skipInit,
     offline: common.offline,
+    preview: common.preview,
     dev: common.dev,
   })
 }
 
-async function resolveOpenapiSpec(value: string | undefined, nonInteractive: boolean): Promise<string> {
+async function resolveSnakeToolName(
+  value: string | undefined,
+  nonInteractive: boolean,
+): Promise<string> {
+  const answer =
+    value ??
+    (nonInteractive || !stdin.isTTY
+      ? DEFAULT_SNAKE_TOOL_NAME
+      : (
+          await ask(`Placeholder tool name (snake_case, default ${DEFAULT_SNAKE_TOOL_NAME}): `)
+        ).trim() || DEFAULT_SNAKE_TOOL_NAME)
+  const validated = validateSnakeToolName(answer)
+  if (!validated.ok) throw new Error(validated.reason)
+  return validated.name
+}
+
+async function resolveOpenapiSpec(
+  value: string | undefined,
+  nonInteractive: boolean,
+): Promise<string> {
   if (value && value.trim()) return resolveSpecLocation(value.trim())
   if (nonInteractive) {
     throw new Error('--openapi <url|path> is required in non-interactive from-openapi mode.')
