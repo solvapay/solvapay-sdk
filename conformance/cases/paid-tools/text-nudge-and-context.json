@@ -1,0 +1,99 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paid-tools",
+  "case": "text-nudge-and-context",
+  "description": "options.text replaces the JSON in content[0]; a low-balance nudge on a plan that is not credit based falls back to the approaching-limit copy, appended to the text, followed by the data as JSON and the nudge as a solvapay://nudge resource. ctx.customer is the snapshot from the limits check and ctx.product the product ref.",
+  "input": {
+    "fn": "callPaidTool",
+    "args": {
+      "productRef": "prd_tl_paid2",
+      "customerRef": "cus_TLPAID02",
+      "tool": {
+        "name": "quote",
+        "kind": "payable"
+      },
+      "handler": {
+        "respond": {
+          "data": {
+            "answer": 42
+          },
+          "echo": true,
+          "text": "The answer is 42.",
+          "nudge": {
+            "kind": "low-balance"
+          }
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 2,
+            "meterName": "requests"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/usages",
+          "body": {
+            "reference": "usage_tl",
+            "success": true
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "The answer is 42.\n\nHeads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom."
+        },
+        {
+          "type": "text",
+          "json": {
+            "answer": 42,
+            "customer": {
+              "ref": "cus_TLPAID02",
+              "isCreditBased": false,
+              "remaining": 2,
+              "withinLimits": true,
+              "overage": false,
+              "plan": null
+            },
+            "product": {
+              "reference": "prd_tl_paid2",
+              "name": "prd_tl_paid2"
+            }
+          }
+        },
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "solvapay://nudge",
+            "mimeType": "text/plain",
+            "text": "Heads up — approaching your plan's limit this period. Call the `account` tool with view: 'checkout' for more headroom."
+          }
+        }
+      ],
+      "structuredContent": {
+        "answer": 42,
+        "customer": {
+          "ref": "cus_TLPAID02",
+          "isCreditBased": false,
+          "remaining": 2,
+          "withinLimits": true,
+          "overage": false,
+          "plan": null
+        },
+        "product": {
+          "reference": "prd_tl_paid2",
+          "name": "prd_tl_paid2"
+        }
+      }
+    }
+  }
+}

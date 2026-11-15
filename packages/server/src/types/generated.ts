@@ -834,6 +834,36 @@ export interface components {
         | 'payment_required'
         | 'invalid'
     }
+    /** @description Error response. Besides the fields listed, an error can carry fields specific to its `code`. */
+    ApiError: {
+      /**
+       * A stable identifier to branch on, when the error has one.
+       * @example KEY_ENV_MISMATCH
+       */
+      code?: string
+      /**
+       * The HTTP status text.
+       * @example Not Found
+       */
+      error?: string
+      /** @description On a validation failure, one entry per invalid field. */
+      errors?: {
+        [key: string]: unknown
+      }[]
+      /** @description What went wrong, for a person to read. */
+      message?: string | string[]
+      /** @description The request path. */
+      path: string
+      /**
+       * The HTTP status code.
+       * @example 404
+       */
+      statusCode: number
+      /** Format: date-time */
+      timestamp: string
+    } & {
+      [key: string]: unknown
+    }
     AttachBusinessDetailsResponse: {
       /** @description Calculated tax breakdown */
       taxBreakdown: components['schemas']['TaxBreakdownDto']
@@ -997,6 +1027,13 @@ export interface components {
          * @enum {string}
          */
         actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+        cost?: {
+          amount: string
+          /** @enum {string} */
+          currency: 'USD'
+          /** @enum {string} */
+          source: 'reported' | 'provisional'
+        }
         customerRef: string
         description?: string
         duration?: number
@@ -1032,6 +1069,8 @@ export interface components {
       creditDebit?:
         | components['schemas']['CreditDebitSuccessResponse']
         | components['schemas']['CreditDebitSkippedResponse']
+        | components['schemas']['CostDebitSuccessResponse']
+        | components['schemas']['CostDebitSkippedResponse']
       /** @example usage_A1B2C3D4 */
       reference: string
     }
@@ -1282,6 +1321,43 @@ export interface components {
       /** @description Updated product */
       product: components['schemas']['SdkProductResponse']
     }
+    CostDebitSkippedResponse: {
+      debited: false
+      /**
+       * @example duplicate
+       * @enum {string}
+       */
+      reason: 'duplicate' | 'customer_not_found' | 'record_failed'
+    }
+    CostDebitSuccessResponse: {
+      /**
+       * Whole credits the balance dropped by (0 for a cost below one credit; the exact amount is in amountUsd)
+       * @example 0
+       */
+      amount: number
+      /**
+       * Exact amount debited, USD decimal string
+       * @example 0.000043
+       */
+      amountUsd: string
+      autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
+      /**
+       * Balance in whole credits after the debit
+       * @example 30000
+       */
+      balanceCredits: number
+      /**
+       * Exact balance after the debit, USD decimal string
+       * @example 2.999957
+       */
+      balanceUsd: string
+      /**
+       * Set on a debit by reported cost: whether the cost was reported or an estimate
+       * @enum {string}
+       */
+      costSource: 'reported' | 'provisional'
+      debited: true
+    }
     CreateCheckoutSessionRequest: {
       customerRef: string
       planRef?: string
@@ -1484,6 +1560,13 @@ export interface components {
        * @enum {string}
        */
       actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+      cost?: {
+        amount?: string
+        /** @enum {string} */
+        currency?: 'USD'
+        /** @enum {string} */
+        source?: 'reported' | 'provisional'
+      }
       customerRef: string
       description?: string
       duration?: number
@@ -1541,7 +1624,6 @@ export interface components {
       hasMore: boolean
     }
     CreditDebitSkippedResponse: {
-      /** @enum {number} */
       debited: false
       /**
        * Reason no credit debit was recorded
@@ -1556,6 +1638,7 @@ export interface components {
         | 'plan_not_credit_based'
         | 'not_credit_drawn'
         | 'within_included'
+        | 'free_meter'
     }
     CreditDebitSuccessResponse: {
       /**
@@ -1564,7 +1647,6 @@ export interface components {
        */
       amount: number
       autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
-      /** @enum {number} */
       debited: true
       /**
        * How many metered items the remaining credit balance still covers
@@ -2922,6 +3004,8 @@ export interface components {
       creditDebit?:
         | components['schemas']['CreditDebitSuccessResponse']
         | components['schemas']['CreditDebitSkippedResponse']
+        | components['schemas']['CostDebitSuccessResponse']
+        | components['schemas']['CostDebitSkippedResponse']
       /** @example usage_A1B2C3D4 */
       reference: string
       /** @example true */
@@ -3169,6 +3253,33 @@ export interface operations {
           'application/json': components['schemas']['ActivatePlanResponseDto']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   AutoRechargeSdkController_getAutoRecharge: {
@@ -3196,7 +3307,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3227,7 +3367,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3256,7 +3425,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3287,7 +3485,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3317,14 +3544,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Customer not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3362,6 +3620,24 @@ export interface operations {
           'application/json': unknown
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
@@ -3369,6 +3645,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3405,6 +3690,33 @@ export interface operations {
           'application/json': unknown
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   CustomerSdkController_getCustomer: {
@@ -3428,6 +3740,24 @@ export interface operations {
           'application/json': components['schemas']['CustomerResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
@@ -3435,6 +3765,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3470,14 +3809,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Customer not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3502,6 +3872,24 @@ export interface operations {
           'application/json': components['schemas']['CustomerBalanceResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
@@ -3509,6 +3897,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3541,12 +3938,41 @@ export interface operations {
           'application/json': components['schemas']['GrantCustomerCreditsResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3582,6 +4008,24 @@ export interface operations {
           'application/json': unknown
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
@@ -3589,6 +4033,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3614,6 +4067,24 @@ export interface operations {
           'application/json': components['schemas']['GetCustomerSessionResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer session not found */
       404: {
         headers: {
@@ -3621,6 +4092,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3652,14 +4132,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Customer or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3681,12 +4192,41 @@ export interface operations {
           'application/json': components['schemas']['SdkMerchantResponseDto']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Provider not found in the requested environment. Body includes a `code` (`provider_not_found_in_environment`), the `requestedEnvironment`, and `providerExistsInSandbox` so the SDK / CLI can branch on the recovery path. */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3720,14 +4260,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Customer not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3763,14 +4334,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description One or more customers not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3795,6 +4397,33 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SdkPaymentIntentListResponse']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3834,6 +4463,33 @@ export interface operations {
           'application/json': unknown
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   PaymentIntentSdkController_attachBusinessDetails: {
@@ -3866,14 +4522,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Payment intent not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -3919,6 +4606,33 @@ export interface operations {
           'application/json': unknown
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   PaymentIntentSdkController_getPaymentIntent: {
@@ -3942,6 +4656,24 @@ export interface operations {
           'application/json': components['schemas']['SdkPaymentIntentResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Payment intent not found */
       404: {
         headers: {
@@ -3949,6 +4681,15 @@ export interface operations {
         }
         content: {
           'application/json': unknown
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -3992,6 +4733,33 @@ export interface operations {
               }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   getPlatformConfig: {
@@ -4010,6 +4778,33 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SdkPlatformConfigResponseDto']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }
@@ -4056,6 +4851,33 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   ProductSdkController_createProduct: {
@@ -4085,7 +4907,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4110,12 +4961,41 @@ export interface operations {
           'application/json': components['schemas']['SdkProductResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4144,12 +5024,41 @@ export interface operations {
           'application/json': components['schemas']['SdkProductResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4181,12 +5090,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4215,12 +5153,41 @@ export interface operations {
           'application/json': components['schemas']['SdkProductResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4254,14 +5221,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4297,12 +5295,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4331,12 +5358,41 @@ export interface operations {
           'application/json': components['schemas']['Plan']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4363,12 +5419,41 @@ export interface operations {
           'application/json': components['schemas']['Plan']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Plan or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4399,12 +5484,41 @@ export interface operations {
           'application/json': components['schemas']['Plan']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Plan or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4433,12 +5547,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Plan or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4469,7 +5612,36 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4510,6 +5682,33 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   PurchaseSdkController_getPurchase: {
@@ -4533,12 +5732,41 @@ export interface operations {
           'application/json': components['schemas']['SdkPurchaseResponse']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Purchase not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4570,12 +5798,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Purchase not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4608,14 +5865,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Purchase not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4645,12 +5933,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Customer not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4677,12 +5994,41 @@ export interface operations {
           }
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
       /** @description Product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4713,7 +6059,54 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_customer_mismatch: a cost names a decision made for another customer */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_already_debited: the decision was already debited by another usage event */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_not_found: a cost names a decision this provider does not have */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4744,7 +6137,54 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_customer_mismatch: a cost names a decision made for another customer */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_already_debited: the decision was already debited by another usage event */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description decision_not_found: a cost names a decision this provider does not have */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4775,14 +6215,45 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
       /** @description Customer or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
       }
     }
   }
@@ -4803,6 +6274,33 @@ export interface operations {
           'application/json': components['schemas']['WebhookEventDto']
         }
       }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
     }
   }
   WebhookSdkController_listEventTypes: {
@@ -4820,6 +6318,33 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['WebhookEventCategoryDto'][]
+        }
+      }
+      /** @description Missing or invalid credentials */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description The credentials are not allowed to do this */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
+        }
+      }
+      /** @description Unexpected server error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ApiError']
         }
       }
     }

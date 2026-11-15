@@ -1,0 +1,19 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "business-unsupported-country",
+  "description": "A business country Stripe Tax does not support is refused before the tax ID is checked.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "ZZ",
+      "taxId": "123"
+    }
+  },
+  "expect": {
+    "result": {
+      "invalid": "Country is not supported for business purchases"
+    }
+  }
+}

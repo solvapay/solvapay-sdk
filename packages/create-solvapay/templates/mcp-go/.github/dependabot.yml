@@ -1,0 +1,14 @@
+# Keeps the SolvaPay SDK and the other dependencies current.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      solvapay:
+        patterns: ['github.com/solvapay/*']
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly

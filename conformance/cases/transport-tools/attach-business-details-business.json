@@ -1,0 +1,69 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "attach-business-details-business",
+  "description": "Valid business details are sent and the API's tax breakdown comes back as it is.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "paymentIntentId": "pi_1",
+        "isBusiness": true,
+        "businessName": " Acme GmbH ",
+        "country": "de",
+        "taxId": "DE 123456789"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_1/business-details",
+          "body": {
+            "taxBreakdown": {
+              "subtotal": 2900,
+              "taxAmount": 0,
+              "taxRate": 0,
+              "treatment": "reverse_charge",
+              "total": 2900,
+              "currency": "EUR",
+              "inclusive": false
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "taxBreakdown": {
+              "subtotal": 2900,
+              "taxAmount": 0,
+              "taxRate": 0,
+              "treatment": "reverse_charge",
+              "total": 2900,
+              "currency": "EUR",
+              "inclusive": false
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "taxBreakdown": {
+          "subtotal": 2900,
+          "taxAmount": 0,
+          "taxRate": 0,
+          "treatment": "reverse_charge",
+          "total": 2900,
+          "currency": "EUR",
+          "inclusive": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "webhook-verification",
+  "case": "valid-at-tolerance-past",
+  "description": "A signature exactly 300 seconds old is still inside the window.",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"id\":\"evt_0123456789abcdef\",\"type\":\"purchase.created\",\"created\":1794484800,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"reference\":\"pur_ABC12345\",\"status\":\"active\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1794484500,v1=40361b28e73ae02993796fba7920ac791acc2720486f03a8a74efdf34f4fbb04",
+      "secret": "whsec_conformance_0123456789abcdef0123456789abcdef"
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "id": "evt_0123456789abcdef",
+      "type": "purchase.created",
+      "created": 1794484800,
+      "api_version": "2025-10-01",
+      "data": {
+        "object": {
+          "reference": "pur_ABC12345",
+          "status": "active"
+        },
+        "previous_attributes": null
+      },
+      "livemode": false,
+      "request": {
+        "id": null,
+        "idempotency_key": null
+      }
+    }
+  }
+}

@@ -1,0 +1,333 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "approval-wait",
+  "description": "With 2 seconds to wait for the owner, a call SolvaPay holds for approval asks again after each retryAfterSeconds with the time left (2, 1, 0) and is refused as approval_timed_out when the time is up; a call the owner approves while it waits runs and completes.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 2
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Spend more?"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Spend more, approved?"
+              }
+            }
+          }
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_am_wait1",
+            "message": "Approval apr_am_1 for more budget is waiting for your owner.",
+            "approval": {
+              "reference": "apr_am_1",
+              "expiresAt": "2026-11-12T12:15:00.000Z"
+            },
+            "retryAfterSeconds": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_am_wait1",
+            "message": "Approval apr_am_1 for more budget is waiting for your owner.",
+            "approval": {
+              "reference": "apr_am_1",
+              "expiresAt": "2026-11-12T12:15:00.000Z"
+            },
+            "retryAfterSeconds": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_am_wait1",
+            "message": "Approval apr_am_1 for more budget is waiting for your owner.",
+            "approval": {
+              "reference": "apr_am_1",
+              "expiresAt": "2026-11-12T12:15:00.000Z"
+            },
+            "retryAfterSeconds": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_am_wait2",
+            "message": "Approval apr_am_1 for more budget is waiting for your owner.",
+            "approval": {
+              "reference": "apr_am_1",
+              "expiresAt": "2026-11-12T12:15:00.000Z"
+            },
+            "retryAfterSeconds": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_wait2",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_wait2/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_wait2",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.004",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Approval apr_am_1 for more budget is waiting for your owner."
+                }
+              ],
+              "structuredContent": {
+                "refusal": {
+                  "reason": "approval_timed_out",
+                  "message": "Approval apr_am_1 for more budget is waiting for your owner."
+                }
+              },
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 2,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "json": {
+                    "args": {
+                      "question": "Spend more, approved?"
+                    },
+                    "callRef": "call_am_wait2",
+                    "agentRef": "agt_am_research",
+                    "principalRef": "ppl_am_owner01"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:8bd06e338503cea58b241b7f182f4e1bc75010e57d293079a3c03d58d88d7aa3",
+            "toolError": false,
+            "wait": 2
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:8bd06e338503cea58b241b7f182f4e1bc75010e57d293079a3c03d58d88d7aa3",
+            "toolError": false,
+            "wait": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:8bd06e338503cea58b241b7f182f4e1bc75010e57d293079a3c03d58d88d7aa3",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-2>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:b00e38db0a492f36e8b869ae72673aa77fdc5757bdd5f7dca890ab31e69c090f",
+            "toolError": false,
+            "wait": 2
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-2>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:b00e38db0a492f36e8b869ae72673aa77fdc5757bdd5f7dca890ab31e69c090f",
+            "toolError": false,
+            "wait": 1
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_wait2/complete",
+          "body": {
+            "status": 200,
+            "cost": {
+              "amount": "0.004",
+              "currency": "USD"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

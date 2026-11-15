@@ -1,0 +1,63 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-topup",
+  "description": "A top-up payment intent with auto-recharge answers like a plan one; without a connected account there is no accountId.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "topup",
+        "amount": 1000,
+        "currency": "USD",
+        "description": "Credits",
+        "autoRecharge": {
+          "enabled": true,
+          "triggerType": "balance",
+          "thresholdAmountMajor": 5,
+          "topupAmountMajor": 10,
+          "currency": "USD"
+        }
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents",
+          "body": {
+            "processorPaymentId": "pi_2",
+            "clientSecret": "pi_2_secret_abc",
+            "publishableKey": "pk_test_1",
+            "amount": 1000,
+            "currency": "usd",
+            "status": "requires_payment_method",
+            "customerRef": "cus_conform1"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "processorPaymentId": "pi_2",
+            "clientSecret": "pi_2_secret_abc",
+            "publishableKey": "pk_test_1",
+            "customerRef": "cus_conform1"
+          }
+        }
+      ],
+      "structuredContent": {
+        "processorPaymentId": "pi_2",
+        "clientSecret": "pi_2_secret_abc",
+        "publishableKey": "pk_test_1",
+        "customerRef": "cus_conform1"
+      }
+    }
+  }
+}

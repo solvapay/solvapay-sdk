@@ -1,0 +1,34 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-payment-intent-plan-without-plan-ref",
+  "description": "A plan payment intent needs a planRef.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_payment_intent",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "purpose": "plan"
+      },
+      "api": []
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Pass purpose: \"plan\" with planRef and productRef."
+        }
+      ],
+      "structuredContent": {
+        "error": "create_payment_intent plan requires planRef",
+        "status": 400,
+        "details": "Pass purpose: \"plan\" with planRef and productRef."
+      },
+      "isError": true
+    }
+  }
+}

@@ -12,7 +12,8 @@ import {
   patchSolvapayVersions,
   PLACEHOLDERS,
   printConnectionSnippets,
-  resolveLatestSolvapayVersions,
+  readTemplateSolvapayPins,
+  resolveSolvapayVersions,
   SOLVAPAY_RUNTIME_DEPS,
   substitute,
   writeBootstrapEnv,
@@ -203,6 +204,15 @@ describe('copyDir + applyOverlay (round-trip)', () => {
     // dev.mjs should have copied into scripts/.
     const dev = await readFile(path.join(target, 'scripts', 'dev.mjs'), 'utf8')
     expect(dev).toContain('wrangler')
+
+    // The project keeps its SDK current: Dependabot groups @solvapay/*, and deploy checks versions.
+    const dependabot = await readFile(path.join(target, '.github', 'dependabot.yml'), 'utf8')
+    expect(dependabot).toContain("'@solvapay/*'")
+    const deploy = await readFile(path.join(target, 'scripts', 'deploy.mjs'), 'utf8')
+    expect(deploy).toContain('outdatedSolvapayMessage(projectRoot')
+    expect(await readFile(path.join(target, 'scripts', 'lib', 'sdk-versions.mjs'), 'utf8')).toContain(
+      'findOutdatedSolvapayPackages',
+    )
   })
 
   it('appends overlay payloads onto matching base files', async () => {
@@ -276,32 +286,24 @@ describe('mcp-app.html color-scheme meta', () => {
 })
 
 describe('SOLVAPAY_RUNTIME_DEPS', () => {
-  it('covers the four @solvapay/* runtime packages with non-empty fallbacks', () => {
-    const names = SOLVAPAY_RUNTIME_DEPS.map(d => d.name).sort()
-    expect(names).toEqual([
+  it('covers the four @solvapay/* runtime packages', () => {
+    expect([...SOLVAPAY_RUNTIME_DEPS].sort()).toEqual([
       '@solvapay/mcp',
       '@solvapay/mcp-core',
       '@solvapay/react',
       '@solvapay/server',
     ])
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(dep.fallback).toMatch(/^\d+\.\d+\.\d+/)
-    }
   })
 
-  it('fallbacks match the caret pins in templates/mcp/_base/package.json', async () => {
-    const raw = await readFile(path.join(BASE_TEMPLATE_DIR, 'package.json'), 'utf8')
-    const pkg = JSON.parse(raw) as { dependencies: Record<string, string> }
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      const declared = pkg.dependencies[dep.name]
-      expect(declared, `${dep.name} should be present in _base/package.json`).toBeDefined()
-      // Template pin is `^<version>`; fallback drops the caret.
-      expect(declared.replace(/^[~^]/, '')).toBe(dep.fallback)
+  it('templates/mcp/_base/package.json pins each of them exactly', async () => {
+    const pins = await readTemplateSolvapayPins()
+    for (const name of SOLVAPAY_RUNTIME_DEPS) {
+      expect(pins.get(name), name).toMatch(/^\d+\.\d+\.\d+$/)
     }
   })
 })
 
-describe('resolveLatestSolvapayVersions', () => {
+describe('resolveSolvapayVersions', () => {
   const originalFetch = globalThis.fetch
 
   afterEach(() => {
@@ -326,46 +328,34 @@ describe('resolveLatestSolvapayVersions', () => {
     }) as typeof fetch
 
     const onResolve = vi.fn()
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
+    const map = await resolveSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
 
-    expect(map.get('@solvapay/mcp')).toBe('0.9.9')
-    expect(map.get('@solvapay/mcp-core')).toBe('0.8.1')
-    expect(map.get('@solvapay/server')).toBe('2.0.0')
-    expect(map.get('@solvapay/react')).toBe('3.1.4')
+    expect(Object.fromEntries(map)).toEqual(versions)
     expect(onResolve).toHaveBeenCalledTimes(SOLVAPAY_RUNTIME_DEPS.length)
     for (const call of onResolve.mock.calls) {
       expect(call[0].source).toBe('registry')
     }
   })
 
-  it('falls back to hardcoded versions when fetch throws (offline)', async () => {
+  it('throws, naming the package and the cause, when fetch fails', async () => {
     globalThis.fetch = vi.fn(async () => {
       throw new Error('ENETUNREACH')
     }) as typeof fetch
 
-    const onResolve = vi.fn()
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve })
-
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(map.get(dep.name)).toBe(dep.fallback)
-    }
-    for (const call of onResolve.mock.calls) {
-      expect(call[0].source).toBe('fallback')
-    }
+    await expect(resolveSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /@solvapay\/mcp: .*ENETUNREACH[\s\S]*--offline/,
+    )
   })
 
-  it('falls back when the registry returns a non-2xx response', async () => {
-    globalThis.fetch = vi.fn(
-      async () => new Response('not found', { status: 404 }),
-    ) as typeof fetch
+  it('throws when the registry returns a non-2xx response', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('not found', { status: 404 })) as typeof fetch
 
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(map.get(dep.name)).toBe(dep.fallback)
-    }
+    await expect(resolveSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /answered 404/,
+    )
   })
 
-  it('falls back when the registry returns malformed JSON', async () => {
+  it('throws when the registry returns malformed JSON', async () => {
     globalThis.fetch = vi.fn(
       async () =>
         new Response(JSON.stringify({ notVersion: 'oops' }), {
@@ -374,9 +364,22 @@ describe('resolveLatestSolvapayVersions', () => {
         }),
     ) as typeof fetch
 
-    const map = await resolveLatestSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })
-    for (const dep of SOLVAPAY_RUNTIME_DEPS) {
-      expect(map.get(dep.name)).toBe(dep.fallback)
+    await expect(resolveSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { onResolve: () => {} })).rejects.toThrow(
+      /returned no version/,
+    )
+  })
+
+  it('uses the template pins with offline, without touching the network', async () => {
+    const fetchSpy = vi.fn()
+    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    const onResolve = vi.fn()
+
+    const map = await resolveSolvapayVersions(SOLVAPAY_RUNTIME_DEPS, { offline: true, onResolve })
+
+    expect(map).toEqual(await readTemplateSolvapayPins())
+    expect(fetchSpy).not.toHaveBeenCalled()
+    for (const call of onResolve.mock.calls) {
+      expect(call[0].source).toBe('template')
     }
   })
 })
@@ -532,6 +535,16 @@ async function writeResolvableTemplateCopy(target: string): Promise<void> {
 }
 
 describe('committed template package.json resolves', () => {
+  it("template pins are npm's latest (run scripts/sync-sdk-pins.mjs after a release)", async () => {
+    const pins = await readTemplateSolvapayPins()
+    for (const [name, pinned] of pins) {
+      const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/latest`)
+      expect(response.ok, `npm registry answered ${response.status} for ${name}`).toBe(true)
+      const { version } = (await response.json()) as { version: string }
+      expect(pinned, `${name} is behind npm latest: run node packages/create-solvapay/scripts/sync-sdk-pins.mjs`).toBe(version)
+    }
+  }, 60_000)
+
   it('npm can resolve the checked-in pins without ERESOLVE', async () => {
     const target = await makeTempDir()
     try {

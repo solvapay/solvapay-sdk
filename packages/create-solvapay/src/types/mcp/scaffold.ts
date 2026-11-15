@@ -19,6 +19,8 @@ import { PACKAGE_ROOT } from '../../package-root'
 export const BASE_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_base')
 export const FROM_OPENAPI_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-openapi')
 export const FROM_SCRATCH_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-scratch')
+export const PYTHON_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp-python')
+export const GO_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp-go')
 export const NEXT_AUTH0_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'next-auth0')
 export const SCAFFOLD_SCRIPT_PATH = join(PACKAGE_ROOT, 'scripts', 'mcp', 'scaffold.mjs')
 
@@ -30,6 +32,9 @@ export const PLACEHOLDERS = Object.freeze({
   PUBLIC_BASE_URL: '__MCP_PUBLIC_BASE_URL__',
   TOOL_NAME: '__TOOL_NAME__',
   TOOL_NAME_PASCAL: '__TOOL_NAME_PASCAL__',
+  PROJECT_NAME: '__PROJECT_NAME__',
+  GO_MODULE: '__GO_MODULE__',
+  SOLVAPAY_VERSION: '__SOLVAPAY_VERSION__',
 })
 
 /**
@@ -53,13 +58,17 @@ export function deriveServerName(projectName: string): string {
 }
 
 /**
- * Capitalize the first character — used to derive `TOOL_NAME_PASCAL`
- * from the user's camelCase input (e.g. `fetchPet` → `FetchPet`) so
- * scaffolded `register<ToolName>` identifiers compile cleanly.
+ * PascalCase for `TOOL_NAME_PASCAL`, the scaffolded `register<ToolName>`
+ * function: split on underscores and capitalize each part, so snake_case
+ * and camelCase both give a clean identifier
+ * (`generate_haiku` and `generateHaiku` → `GenerateHaiku`).
  */
 export function pascalize(name: string): string {
-  if (!name) return name
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return name
+    .split('_')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('')
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -79,6 +88,10 @@ const TEXT_EXTENSIONS = new Set([
   '.toml',
   '.env',
   '.example',
+  '.py',
+  '.go',
+  '.mod',
+  '.dockerignore',
 ])
 
 function isTextFile(name: string): boolean {
@@ -278,6 +291,26 @@ export type WriteBootstrapEnvOptions = {
 
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
 
+/**
+ * The bootstrap `.env` for a Python or Go server: the product ref and where
+ * the server listens, before `solvapay init` adds the secret key.
+ */
+export async function writeLanguageBootstrapEnv(
+  target: string,
+  productRef: string,
+  options: WriteBootstrapEnvOptions & { port: number },
+): Promise<void> {
+  const lines = [
+    '# Created by create-solvapay. `npx solvapay init` adds SOLVAPAY_SECRET_KEY.',
+    `SOLVAPAY_PRODUCT_REF=${productRef}`,
+    '# The URL MCP clients use to reach this server: set it to your tunnel or deployed URL.',
+    `PUBLIC_BASE_URL=http://localhost:${options.port}`,
+    `PORT=${options.port}`,
+  ]
+  if (options.dev) lines.push(`SOLVAPAY_API_BASE_URL=${DEV_API_BASE_URL}`)
+  await writeFile(join(target, '.env'), `${lines.join('\n')}\n`, 'utf8')
+}
+
 export async function writeBootstrapEnv(
   target: string,
   productRef: string,
@@ -376,75 +409,114 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
 }
 
 /**
- * Runtime dependencies whose versions we resolve against the npm
- * registry at scaffold time so each new scaffold picks up the latest
- * `@solvapay/*` publish without republishing `create-solvapay`. The
- * `fallback` is used when the registry call fails (offline, blocked
- * network, registry outage) — it mirrors the caret pin currently in
- * `templates/mcp/_base/package.json` so the generated project is still
- * installable in that case.
+ * The `@solvapay/*` runtime packages a scaffold pins. Their versions come
+ * from the npm registry's `latest` dist-tag at scaffold time, so a new
+ * project always starts on the current SDK without republishing
+ * `create-solvapay`.
+ *
+ * The only other source is `templates/mcp/_base/package.json`, used when the
+ * user passes `--offline`. `scripts/sync-sdk-pins.mjs` writes those pins from
+ * npm's `latest`, and a test fails when they fall behind it.
  */
-export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
-  Object.freeze([
-    { name: '@solvapay/mcp', fallback: '0.4.3' },
-    { name: '@solvapay/mcp-core', fallback: '0.4.4' },
-    { name: '@solvapay/server', fallback: '2.8.0' },
-    { name: '@solvapay/react', fallback: '2.3.1' },
-  ])
+export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<string> = Object.freeze([
+  '@solvapay/mcp',
+  '@solvapay/mcp-core',
+  '@solvapay/server',
+  '@solvapay/react',
+])
 
-export type ResolveLatestVersionsOptions = {
-  /** Per-package timeout in milliseconds. Defaults to 3000ms. */
+export type ResolveSolvapayVersionsOptions = {
+  /** Use the template's pins instead of asking the npm registry. */
+  offline?: boolean
+  /** The npm dist-tag to pin from: `latest` (default), or `preview` from a preview scaffolder. */
+  distTag?: 'latest' | 'preview'
+  /** Per-package timeout in milliseconds. Defaults to 10000ms. */
   timeoutMs?: number
   /** Optional logger. Defaults to writing one line per package to stdout. */
-  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
+  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'template' }) => void
+}
+
+/** The `@solvapay/*` pins in `templates/mcp/_base/package.json`. */
+export async function readTemplateSolvapayPins(
+  deps: ReadonlyArray<string> = SOLVAPAY_RUNTIME_DEPS,
+): Promise<Map<string, string>> {
+  const path = join(BASE_TEMPLATE_DIR, 'package.json')
+  const pkg = JSON.parse(await readFile(path, 'utf8')) as { dependencies?: Record<string, string> }
+  const pins = new Map<string, string>()
+  for (const name of deps) {
+    const version = pkg.dependencies?.[name]
+    if (!version) throw new Error(`${path} has no pin for ${name}`)
+    pins.set(name, version)
+  }
+  return pins
 }
 
 /**
- * Resolve the current `latest` dist-tag for each dep against the npm
- * registry. Runs all lookups in parallel with a per-package abort
- * timeout. Any failure (network error, non-2xx response, malformed
- * payload, timeout) silently falls back to the dep's hardcoded
- * `fallback` so offline scaffolds still produce an installable
- * `package.json`.
+ * The version each dep should be pinned to: npm's `latest`, or with
+ * `offline` the template's pins.
+ *
+ * A registry lookup that fails (network error, timeout, non-2xx response,
+ * malformed payload) stops the scaffold with an error naming each package
+ * and why. It never falls back quietly: a quiet fallback is how scaffolds
+ * ended up weeks behind the SDK.
  */
-export async function resolveLatestSolvapayVersions(
-  deps: ReadonlyArray<{ name: string; fallback: string }> = SOLVAPAY_RUNTIME_DEPS,
-  options: ResolveLatestVersionsOptions = {},
+export async function resolveSolvapayVersions(
+  deps: ReadonlyArray<string> = SOLVAPAY_RUNTIME_DEPS,
+  options: ResolveSolvapayVersionsOptions = {},
 ): Promise<Map<string, string>> {
-  const timeoutMs = options.timeoutMs ?? 3000
   const onResolve =
     options.onResolve ??
     (entry => {
-      const suffix = entry.source === 'fallback' ? ' (offline fallback)' : ''
+      const suffix = entry.source === 'template' ? ' (--offline: template pin)' : ''
       process.stdout.write(`   ${entry.name}@${entry.version}${suffix}\n`)
     })
 
+  const distTag = options.distTag ?? 'latest'
+  if (options.offline) {
+    const pins = await readTemplateSolvapayPins(deps)
+    for (const [name, version] of pins) onResolve({ name, version, source: 'template' })
+    return pins
+  }
+
+  const timeoutMs = options.timeoutMs ?? 10_000
   const settled = await Promise.all(
-    deps.map(async dep => {
+    deps.map(async name => {
+      const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${distTag}`
       try {
-        const url = `https://registry.npmjs.org/${encodeURIComponent(dep.name)}/latest`
         const response = await fetch(url, {
           headers: { accept: 'application/json' },
           signal: AbortSignal.timeout(timeoutMs),
         })
-        if (!response.ok) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
-        }
+        if (!response.ok) return { name, error: `${url} answered ${response.status}` }
         const body = (await response.json()) as { version?: unknown }
         if (typeof body.version !== 'string' || body.version.length === 0) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
+          return { name, error: `${url} returned no version` }
         }
-        return { dep, version: body.version, source: 'registry' as const }
-      } catch {
-        return { dep, version: dep.fallback, source: 'fallback' as const }
+        return { name, version: body.version }
+      } catch (error) {
+        return {
+          name,
+          error: `${url} failed: ${error instanceof Error ? error.message : String(error)}`,
+        }
       }
     }),
   )
 
+  const failed = settled.filter(
+    (entry): entry is { name: string; error: string } => 'error' in entry,
+  )
+  if (failed.length > 0) {
+    throw new Error(
+      `Could not resolve the ${distTag} @solvapay/* versions from the npm registry:\n` +
+        failed.map(entry => `  - ${entry.name}: ${entry.error}`).join('\n') +
+        `\nCheck your network or registry access, or pass --offline to use the versions this create-solvapay release ships with.`,
+    )
+  }
+
   const result = new Map<string, string>()
-  for (const entry of settled) {
-    result.set(entry.dep.name, entry.version)
-    onResolve({ name: entry.dep.name, version: entry.version, source: entry.source })
+  for (const entry of settled as { name: string; version: string }[]) {
+    result.set(entry.name, entry.version)
+    onResolve({ name: entry.name, version: entry.version, source: 'registry' })
   }
   return result
 }

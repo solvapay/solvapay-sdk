@@ -1,0 +1,115 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "errors-customer-create-fails",
+  "description": "A customer create that fails with anything but 409 fails with the API's code (http_500) and is not remembered: the next call looks up and creates again.",
+  "setup": {
+    "productRef": "prd_ec_1"
+  },
+  "steps": [
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "user_ec_1",
+        "externalRef": "user_ec_1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found",
+            "error": "Not Found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "message": "Internal server error",
+            "error": "Internal Server Error"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "http_500"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_ec_1"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_ec_1-1794484800000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_ec_1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "user_ec_1",
+        "externalRef": "user_ec_1"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found",
+            "error": "Not Found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_EC04",
+            "email": "user_ec_1-1794484801000@auto-created.local",
+            "name": "user_ec_1",
+            "externalRef": "user_ec_1"
+          }
+        }
+      ],
+      "expect": {
+        "result": "cus_EC04",
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_ec_1"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_ec_1-1794484801000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_ec_1"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

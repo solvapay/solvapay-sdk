@@ -1,0 +1,394 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "account-signed-in-text-mode",
+  "description": "account view account in text mode for a signed-in customer with an active Pro plan, a card and a credit balance: every customer read is made, the active purchase is enriched with display prices, and the narration names the plan, card and links.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_tl_acct2",
+      "customerRef": "cus_TL20",
+      "arguments": {
+        "view": "account",
+        "mode": "text"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_tl"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme",
+            "legalName": "Acme Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_acct2",
+          "body": {
+            "reference": "prd_tl_acct2",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_acct2/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_tl_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "cap": 100
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": false,
+                "price": 0
+              },
+              {
+                "reference": "pln_tl_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_TL20",
+          "body": {
+            "reference": "cus_TL20",
+            "email": "ada@example.test",
+            "name": "Ada",
+            "purchases": [
+              {
+                "reference": "pur_tl20",
+                "status": "active",
+                "productRef": "prd_tl_acct2",
+                "planRef": "pln_tl_pro",
+                "customerRef": "cus_TL20",
+                "amount": 2900,
+                "currency": "EUR",
+                "originalAmount": 2700,
+                "isRecurring": true,
+                "startDate": "2026-11-01T00:00:00Z",
+                "createdAt": "2026-11-01T00:00:00Z",
+                "planSnapshot": {
+                  "reference": "pln_tl_pro",
+                  "name": "Pro",
+                  "price": 2700,
+                  "currency": "EUR",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    }
+                  ]
+                },
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00Z",
+                  "periodEnd": "2026-12-01T00:00:00Z"
+                }
+              },
+              {
+                "reference": "pur_tl20_old",
+                "status": "expired",
+                "productRef": "prd_tl_acct2",
+                "planRef": "pln_tl_pro",
+                "customerRef": "cus_TL20",
+                "amount": 2900,
+                "currency": "EUR",
+                "originalAmount": 2700,
+                "isRecurring": true,
+                "startDate": "2026-11-01T00:00:00Z",
+                "createdAt": "2026-11-01T00:00:00Z",
+                "planSnapshot": {
+                  "reference": "pln_tl_pro",
+                  "name": "Pro",
+                  "price": 2700,
+                  "currency": "EUR",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    }
+                  ]
+                },
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00Z",
+                  "periodEnd": "2026-12-01T00:00:00Z"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/payment-method",
+          "body": {
+            "kind": "card",
+            "brand": "visa",
+            "last4": "4242",
+            "expMonth": 12,
+            "expYear": 2030,
+            "reusable": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_TL20/balance",
+          "body": {
+            "customerRef": "cus_TL20",
+            "credits": 2500,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0.25,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.25",
+              "rateSource": "parity"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 80,
+            "meterName": "requests",
+            "planRef": "pln_tl_pro",
+            "purchaseRef": "pur_tl20"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "sessionId": "ss_tl20",
+            "customerUrl": "https://portal.conformance.test/s/tl20"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_tl20",
+            "checkoutUrl": "https://checkout.conformance.test/s/tl20"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Pro, €27 a month. Unlimited calls, renewing Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: ada@example.test · cus_TL20\nManage: [Manage account](https://portal.conformance.test/s/tl20) (expires in 15 minutes)\nCheckout: [Open checkout](https://checkout.conformance.test/s/tl20) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://portal.conformance.test/s/tl20",
+          "name": "Manage account"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://checkout.conformance.test/s/tl20",
+          "name": "Open checkout"
+        }
+      ],
+      "structuredContent": {
+        "view": "account",
+        "productRef": "prd_tl_acct2",
+        "stripePublishableKey": "pk_test_tl",
+        "returnUrl": "https://mcp.conformance.test",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Ltd"
+        },
+        "product": {
+          "reference": "prd_tl_acct2",
+          "name": "Stock Research",
+          "status": "active",
+          "balance": 0,
+          "isManagedMcp": false,
+          "isMcpPay": false,
+          "totalTransactions": 0,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "updatedAt": "2026-01-01T00:00:00Z"
+        },
+        "plans": [
+          {
+            "reference": "pln_tl_free",
+            "name": "Free",
+            "type": "recurring",
+            "status": "active",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "cap": 100
+              }
+            ],
+            "isActive": true,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "requiresPayment": false,
+            "price": 0
+          },
+          {
+            "reference": "pln_tl_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "status": "active",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              }
+            ],
+            "isActive": true,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "requiresPayment": true,
+            "price": 2900,
+            "currency": "USD"
+          }
+        ],
+        "customer": {
+          "ref": "cus_TL20",
+          "email": "ada@example.test",
+          "name": "Ada",
+          "purchase": {
+            "customerRef": "cus_TL20",
+            "email": "ada@example.test",
+            "name": "Ada",
+            "purchases": [
+              {
+                "reference": "pur_tl20",
+                "status": "active",
+                "productRef": "prd_tl_acct2",
+                "planRef": "pln_tl_pro",
+                "customerRef": "cus_TL20",
+                "amount": 2900,
+                "currency": "EUR",
+                "originalAmount": 2700,
+                "isRecurring": true,
+                "startDate": "2026-11-01T00:00:00Z",
+                "createdAt": "2026-11-01T00:00:00Z",
+                "planSnapshot": {
+                  "reference": "pln_tl_pro",
+                  "name": "Pro",
+                  "price": 2700,
+                  "currency": "EUR",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    }
+                  ],
+                  "priceDisplay": "€27.00"
+                },
+                "usage": {
+                  "periodStart": "2026-11-01T00:00:00Z",
+                  "periodEnd": "2026-12-01T00:00:00Z"
+                },
+                "priceDisplay": "€27.00",
+                "priceUsdDisplay": "$29.00"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "card",
+            "brand": "visa",
+            "last4": "4242",
+            "expMonth": 12,
+            "expYear": 2030,
+            "reusable": true
+          },
+          "balance": {
+            "customerRef": "cus_TL20",
+            "credits": 2500,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0.25,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.25",
+              "rateSource": "parity"
+            }
+          },
+          "usage": {
+            "meterRef": "requests",
+            "total": null,
+            "used": null,
+            "remaining": 80,
+            "percentUsed": null,
+            "periodStart": "2026-11-01T00:00:00Z",
+            "periodEnd": "2026-12-01T00:00:00Z",
+            "purchaseRef": "pur_tl20"
+          },
+          "limits": {
+            "withinLimits": true,
+            "remaining": 80,
+            "meterName": "requests",
+            "planRef": "pln_tl_pro",
+            "purchaseRef": "pur_tl20"
+          },
+          "canCall": true,
+          "remainingCalls": 80,
+          "isCreditBased": false
+        },
+        "checkoutUrl": "https://checkout.conformance.test/s/tl20",
+        "portalUrl": "https://portal.conformance.test/s/tl20",
+        "autoRechargeUrl": "https://portal.conformance.test/s/tl20?tab=credits&intent=autorecharge"
+      }
+    }
+  }
+}

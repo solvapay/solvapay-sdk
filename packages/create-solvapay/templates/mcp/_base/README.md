@@ -122,6 +122,8 @@ npm run deploy
 
 `scripts/deploy.mjs` reads `.env` and forwards `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` / `SOLVAPAY_API_BASE_URL` as `--var` overrides to `wrangler deploy`. `SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, `UPSTREAM_API_HEADERS`, and `UPSTREAM_OAUTH_*` values are uploaded from `.env` as Worker secrets on the first deploy when present; subsequent deploys log "already set on worker — skipping upload" and leave them alone.
 
+`npm run deploy` first checks that every installed `@solvapay/*` package matches npm's `latest` (or `preview`, for a preview build). If one is behind, it stops and prints the exact upgrade command, so you don't ship an SDK bug that's already fixed. Pass `--allow-outdated` to deploy those versions on purpose.
+
 `npm run deploy` confirms the resolved `*.workers.dev` URL with `[Y/n]` before deploying. Add `--yes` (or set `SOLVAPAY_DEPLOY_YES=1`) to skip the prompt in CI; it's also skipped when a `custom_domain` route is configured or stdin is not a TTY.
 
 On a default `*.workers.dev` deploy, `deploy.mjs` auto-resolves `MCP_PUBLIC_BASE_URL` from the Cloudflare API before the first deploy — no manual second deploy needed. For custom domains, set `MCP_PUBLIC_BASE_URL` in `.env` explicitly before deploying.

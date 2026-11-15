@@ -5,12 +5,12 @@ description: "Set up SolvaPay SDK in an existing project, or scaffold a new one 
 
 Two CLIs cover the two starting points:
 
-- **`npx solvapay@latest init`** — add SolvaPay to an **existing** project
+- **`npx solvapay@latest init`** — add SolvaPay to an **existing** project, in TypeScript, Python or Go
 - **`npm create solvapay@latest`** — scaffold a **new** project from a template (`npx create-solvapay@latest` is equivalent)
 
 ## Prerequisites
 
-- Node.js 22 or later (the CLI installs `@solvapay/server`, which requires it)
+- Node.js 22 or later, to run the CLI (also for Python and Go projects)
 - A project directory where you want to add SolvaPay (for `solvapay init`)
 
 ## Run setup
@@ -25,23 +25,54 @@ npx solvapay@latest init
 
 When you run `npx solvapay@latest init`, the CLI:
 
-1. Checks for `package.json` and offers to create one if missing
-2. Detects your package manager (`npm`, `yarn`, or `pnpm`)
-3. Opens your browser to sign in to SolvaPay Console
-4. Writes `SOLVAPAY_SECRET_KEY` to `.env`
-5. Ensures `.env` is listed in `.gitignore`
-6. Installs `@solvapay/server`, `@solvapay/core`, and `@solvapay/auth`
-7. Verifies your secret key with SolvaPay
-8. Prints a quick start snippet
+1. Detects the project's language and package manager from the files in the folder (table below)
+2. Opens your browser to sign in to SolvaPay Console
+3. Writes `SOLVAPAY_SECRET_KEY` to `.env`
+4. Ensures `.env` is listed in `.gitignore`
+5. Installs the SolvaPay SDK for that language
+6. Verifies your secret key with SolvaPay and saves `SOLVAPAY_PRODUCT_REF`
+7. Prints the next steps
+
+| Found in the folder | Language | Installs |
+| --- | --- | --- |
+| `package.json` | TypeScript | `@solvapay/server`, `@solvapay/core` and `@solvapay/auth` with npm, pnpm or yarn (by lockfile) |
+| `uv.lock` | Python | `uv add 'solvapay==<version>'` |
+| `poetry.lock`, or `[tool.poetry]` in `pyproject.toml` | Python | `poetry add 'solvapay==<version>'` |
+| any other `pyproject.toml`, or `requirements.txt` | Python | Nothing: it prints the `python -m pip install` command, because it doesn't choose your interpreter |
+| `go.mod` | Go | `go get github.com/solvapay/solvapay-sdk/go@<version>` |
+
+Python and Go versions are pinned exactly, to the newest stable release. The preview CLI (`npx solvapay@preview init`) pins the newest preview instead; until Python or Go has a stable release, the stable CLI stops and tells you to use it. The Python and Go SDKs read environment variables, not `.env`: load `.env` when the app starts (python-dotenv in Python, a few lines in Go) or export the variables.
+
+When the folder has files for two languages (a Next.js app beside a Python API), or none, `init` asks which language. With `--yes`, or when no one is at a terminal, it stops and asks for `--language` instead of guessing; it creates a `package.json` only with `--language ts`.
+
+| Flag | What it does |
+| --- | --- |
+| `--language ts\|python\|go` | The project's language |
+| `--features mcp,agents,web` | What you use SolvaPay for: the `solvapay[...]` extras in Python, or `@solvapay/mcp`, `@solvapay/agents` and `@solvapay/react` in TypeScript. `agents` is agent payments, a preview |
+| `--product <ref>` | Saves this product instead of asking |
+| `-y`, `--yes` | Skips the prompts |
 
 ## Files the CLI creates or updates
 
 | File | What changes |
 | --- | --- |
-| `package.json` | Created if missing (after confirmation) |
-| `.env` | Adds or updates `SOLVAPAY_SECRET_KEY` |
+| `package.json` | Created only with `--language ts` in a folder without one |
+| `.env` | Adds or updates `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` |
 | `.gitignore` | Adds `.env` if needed |
-| `node_modules` and lockfile | Installs base SolvaPay SDK packages |
+| Lockfile (`package-lock.json`, `uv.lock`, `poetry.lock`, `go.mod`) | Adds the SolvaPay SDK |
+
+## Check a project or a running server
+
+```bash
+# The key, the product and its plans, and that the SDK is the newest release
+# (npm, PyPI or the Go module proxy). Prints the exact upgrade command.
+npx solvapay@latest doctor
+
+# A running MCP server in any language: OAuth discovery, the tool list and the
+# sign-in challenge. Add --credentials-file <file with an accessToken> to also
+# check the paywall and the account tool.
+npx solvapay@latest verify https://my-server.example.com/mcp
+```
 
 ## Add stack-specific packages
 
@@ -64,6 +95,10 @@ npm create solvapay@latest my-mcp-app -- --type mcp
 # Generate MCP tools from an OpenAPI spec
 npm create solvapay@latest my-api-mcp -- --type mcp --openapi ./openapi.yaml
 
+# Paid MCP server in Python (uv) or Go, with a Dockerfile for any container host
+npm create solvapay@latest my-mcp-app -- --type mcp --language python
+npm create solvapay@latest my-mcp-app -- --type mcp --language go
+
 # Next.js + Auth0 starter with SolvaPay customer linkage
 npm create solvapay@latest my-app -- --type next-auth0
 ```
@@ -72,12 +107,13 @@ npm create solvapay@latest my-app -- --type next-auth0
 
 | `--type` | What you get |
 | --- | --- |
-| `mcp` | A paid MCP server on Cloudflare Workers: `@solvapay/mcp` server factory, OAuth bridge, and an embedded checkout widget built with `@solvapay/react/mcp`. With `--openapi <url\|path>`, tools are generated from your API spec; with `--no-openapi` you get a placeholder paid tool |
+| `mcp` | A paid MCP server on Cloudflare Workers: `@solvapay/mcp` server factory, OAuth bridge, and an embedded checkout widget built with `@solvapay/react/mcp`. With `--openapi <url\|path>`, tools are generated from your API spec; with `--no-openapi` you get a placeholder paid tool. With `--language python` or `--language go`: a server on the Python or Go SDK with one paid tool, one free tool with a cap, tests, `.env.example`, a Dockerfile and Dependabot (from scratch only; `--openapi` is TypeScript only) |
 | `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type |
 
 Useful flags: `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
-`--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
-skip it). Run `npm create solvapay@latest -- --list-types` to see available templates.
+`--skip-install`, `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
+skip it), and `--offline` (pin `@solvapay/*` to the versions the scaffolder ships with instead of
+npm's latest; without it, a failed registry lookup stops the scaffold). Run `npm create solvapay@latest -- --list-types` to see available templates.
 
 ## Re-run setup safely
 

@@ -1,7 +1,7 @@
 /**
  * `from-scratch` mode — copy the mode-agnostic `_base/` tree, layer the
  * `from-scratch/` overlay (placeholder paid tool), substitute the user's
- * camelCase tool name into both filename and source, and write a
+ * tool name (snake_case, or camelCase) into both filename and source, and write a
  * minimal `.env` ready for `solvapay init` to populate.
  */
 
@@ -20,7 +20,7 @@ import {
   installProjectDependencies,
   patchSolvapayVersions,
   printConnectionSnippets,
-  resolveLatestSolvapayVersions,
+  resolveSolvapayVersions,
   writeBootstrapEnv,
 } from './scaffold'
 
@@ -32,6 +32,10 @@ export type FromScratchInput = {
   productRef?: string
   skipInstall?: boolean
   skipInit?: boolean
+  /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
+  offline?: boolean
+  /** Pin `@solvapay/*` from npm's `preview` tag (set by a preview scaffolder). */
+  preview?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`
    * into the scaffolded `.env`. Propagated separately from `options.dev`
@@ -42,7 +46,18 @@ export type FromScratchInput = {
 }
 
 export async function runFromScratch(input: FromScratchInput): Promise<void> {
-  const { target, projectName, toolName, options, productRef, skipInstall, skipInit, dev } = input
+  const {
+    target,
+    projectName,
+    toolName,
+    options,
+    productRef,
+    skipInstall,
+    skipInit,
+    offline,
+    preview,
+    dev,
+  } = input
 
   await assertTargetDirAbsent(target)
 
@@ -69,8 +84,15 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
 
   await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF, { dev })
 
-  process.stdout.write('🔄 Resolving latest @solvapay/* versions from npm registry…\n')
-  const versionMap = await resolveLatestSolvapayVersions()
+  process.stdout.write(
+    offline
+      ? '🔄 Pinning @solvapay/* to the versions this release ships with (--offline)…\n'
+      : `🔄 Resolving ${preview ? 'preview' : 'latest'} @solvapay/* versions from npm registry…\n`,
+  )
+  const versionMap = await resolveSolvapayVersions(undefined, {
+    offline,
+    distTag: preview ? 'preview' : 'latest',
+  })
   await patchSolvapayVersions(target, versionMap)
 
   const packageManager = await detectPackageManager(target)
@@ -109,7 +131,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   }
   if (skipInit) {
     process.stdout.write(
-      `   npx -y solvapay@latest init   # --skip-init was set; run to wire up auth + product\n`,
+      `   npx -y solvapay@${preview ? 'preview' : 'latest'} init   # --skip-init was set; run to wire up auth + product\n`,
     )
   }
   process.stdout.write(

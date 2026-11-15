@@ -1,0 +1,165 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-claim-checks",
+  "description": "After the signature and time checks, the claims are checked in order with a fixed message: cid must be a string (checked first), sub an agt_ reference, principal a ppl_ reference, scope exactly \"usage\", env sandbox or live. jti, iat, exp and sub are required. px counts only when it is the boolean true, and an empty cid is no client.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "tokens": {
+        "missingJti": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJpYXQiOjE3OTQ1NzExNDAsImV4cCI6MTc5NDU3MTgwMH0.zUhgND5xVGwBRUTNFHUwGvQdrtcGnU2ngGeKJAc-jdFlnrpc_7EIKEiETfLQFOj-ZyT-fxn4YrA_ebfyOG94BA",
+        "missingIat": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImV4cCI6MTc5NDU3MTgwMH0.baNVSMZLPl4Jdn73hyfJiX_7fGu_fa9oUATt4L4siAOqmGRVjzxCXYBMyGAhnr6gddhTIP2ajjNdDWsVZkgV1w",
+        "missingExp": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MH0.4ec2sa9RSRd11-1QLL5cWECfjn2MsyRw_6nNp-WUDTN8ajDJYQ4xuzB9u5AqTWSN-8zZDiLBO805D1dw5UpoNQ",
+        "missingSub": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50IiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.DiKwTDcwuvMbv5BnmrVRI8YJRyZ5c-T20vt6mTQxT1wfgye3YUySQhTn0aBkiRT99rT6YAcc4DvKdobpaLEI3A",
+        "subNotAgent": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoidXNyX2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.dyfyHc4iCaqu-r0QQ01MZQEpuqnO0u-mHlMaxSpGDp6ok7aRZmeGQDQO4EmqCD7e9sUxygBM8q6pjmxXEpx8aQ",
+        "subNumber": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjo0MiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.am4wIQfOu6tavu0PM36iKzQ9wjLt4p8Vmi-OGDi0bEvSzYhcbNksy9yke_y9Kb-gEhbz9tC_AnCm6DtX8ZCpnw",
+        "missingPrincipal": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.lrVdE38RwpcGTOsphPLuH6CZ-DK0UG65eao5E22UFsPcfIlMV5HUOFJzk8d0gjnwJRS9bSGh1L46Oaj3rwmA0w",
+        "principalNotPpl": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoiYWNjX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.vZ_nnPkJ42dnKEU5oMJ1VYwZBI9fZmvc4xk7DHALkBe1TpS5rqOsFNHUq9fZzs7mC6lxfiTuMhiXxBdB3ZfdtA",
+        "missingScope": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.lJ8tcs0b9w3FiDj6D5o_jFsZbGE67HhuAIizf7FEHy1O2Oq1z3fNku1L2Tu4LH4heg41E_EcKhM1scSb73dApg",
+        "scopeList": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSBhZG1pbiIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.PCbEXvt6uuGx5xQz9kFH1Jgjdmy7zi4AXmhO9Ip6VWW53IMva8mhX5wO-rZUnbpAdcc9j4oH8dly1ByW6Am22A",
+        "scopeArray": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOlsidXNhZ2UiXSwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.R0bVxdXD8r4MtLvxD31dNBDv8XS36iSr4I0uQPlOaGwuCNFnrAEYdtDiQ2wHZZseKDBfHSjx_73LcUCebG6PyQ",
+        "missingEnv": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.KHfzih-ItMtbPCEuThJPUyoXj9aA3jZtNmfjToMi949u3MwpN_ezqbA9QWYLqTkQx3b5GVq9qAuw72PZ6Rgczw",
+        "envProduction": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InByb2R1Y3Rpb24iLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.F4m5Pv6F-CaFVZnFn2gHpgi102HSf7bvu1rXOlGTJOXXlg8WvquwineU21H7Y6MVkQaLvFuv-3SI3seYewnXdg",
+        "cidNumber": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJjaWQiOjd9.DGzpH_TOEncNdG5MZ1N5gtPS2_jJn7wTTad1DRix-8KU6SwBms96-GIPMLZAcvJQgHTHayij5i0tsuZiYcsGkg",
+        "cidNumberAndBadSub": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoidXNyX2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJhZG1pbiIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJjaWQiOjd9.E6Nn9T9udxV7aEX4ko4JgDDQI4E5SD2PrQBNnQa0Y2qqhk7fQ57WjZBr5stJPsJATaOMsP6-_FxeWGL9PflLbw",
+        "badSubAndScope": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoidXNyX2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJhZG1pbiIsImVudiI6IngiLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.g79Z0mkXpTx4EFKgs2SQh8P3B7ld2FRnfRwt7gWLStT0_7GE7bJ1-u4kAORQ0AB_Sn_7ygA8pkWc9uJ0DMKVag",
+        "emptyCid": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJjaWQiOiIifQ.Nx13cHxuZaIcOlrgiz4uwr_RBFi6FLl8EiJdRKA6Kd3U3FSSlbQqsKaT_wjlUcw4GrY1c7jtv2khSb-UQqk0WA",
+        "pxString": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJweCI6InRydWUifQ.B9hTDFn8iU1tGq3rZ1OQ9hv4IHBLy-Z0Mq1vuplLThowR33WTbtsWg2zARtUGl0rxWuyYjjJnnYzUhxv3AhgHQ",
+        "pxFalse": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJweCI6ZmFsc2V9.6P9LnaoKGPiUj_hXcZrlmxcRNyKzhNfsf_5mwtRfGBQo3PklwFQbGiOuWWesCtpAqfv7POr2HZWWlveVaVVR3A"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "missingJti": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "missingIat": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "missingExp": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "missingSub": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "subNotAgent": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "sub is not an agent reference"
+      },
+      "subNumber": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "sub is not an agent reference"
+      },
+      "missingPrincipal": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "principal is missing"
+      },
+      "principalNotPpl": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "principal is missing"
+      },
+      "missingScope": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "scope is not usage"
+      },
+      "scopeList": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "scope is not usage"
+      },
+      "scopeArray": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "scope is not usage"
+      },
+      "missingEnv": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "env is not sandbox or live"
+      },
+      "envProduction": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "env is not sandbox or live"
+      },
+      "cidNumber": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "cid is not a string"
+      },
+      "cidNumberAndBadSub": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "cid is not a string"
+      },
+      "badSubAndScope": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "sub is not an agent reference"
+      },
+      "emptyCid": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "pxString": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "pxFalse": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      }
+    }
+  }
+}

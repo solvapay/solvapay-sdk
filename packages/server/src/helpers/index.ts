@@ -15,6 +15,7 @@ export { isErrorResult, handleRouteError } from './error'
 
 // Export auth helpers
 export { getAuthenticatedUserCore } from './auth'
+export { withCustomerRef } from './caller'
 
 // Export customer helpers
 export { syncCustomerCore, getCustomerBalanceCore } from './customer'

@@ -1,0 +1,119 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-key-selection",
+  "description": "A JWKS member verifies an ES256 token only when it is an EC P-256 key whose alg (if any) is ES256, whose use (if any) is sig and whose key_ops (if any) include verify. A token without a kid uses the one member that qualifies; a P-384 key never does.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Noun2opvxJ-M30hjLrHYecnZiB0ORb8h73F5TD7mtUc",
+            "y": "JDJcucNwt21zXgRK-_Uzs0S2Hcdqo882V1x-9DOp4CE",
+            "crv": "P-256",
+            "kid": "sel-enc",
+            "use": "enc"
+          },
+          {
+            "kty": "EC",
+            "x": "Noun2opvxJ-M30hjLrHYecnZiB0ORb8h73F5TD7mtUc",
+            "y": "JDJcucNwt21zXgRK-_Uzs0S2Hcdqo882V1x-9DOp4CE",
+            "crv": "P-256",
+            "kid": "sel-alg",
+            "alg": "ES384"
+          },
+          {
+            "kty": "EC",
+            "x": "Noun2opvxJ-M30hjLrHYecnZiB0ORb8h73F5TD7mtUc",
+            "y": "JDJcucNwt21zXgRK-_Uzs0S2Hcdqo882V1x-9DOp4CE",
+            "crv": "P-256",
+            "kid": "sel-ops",
+            "key_ops": ["sign"]
+          },
+          {
+            "kty": "EC",
+            "x": "kfSaJh8ja4Nj95dETbFVJrSVd0-JCCCtJSUaN3zvfObCU8jcgEfK3-TL5CQFaw5I",
+            "y": "x6SAacZp-8RMPLaIqDyYnN8hCRznEQijlyiTbYxdFBBqCCqjBbw-hDRjNolotIDM",
+            "crv": "P-384",
+            "kid": "sel-p384"
+          },
+          {
+            "kty": "EC",
+            "x": "Noun2opvxJ-M30hjLrHYecnZiB0ORb8h73F5TD7mtUc",
+            "y": "JDJcucNwt21zXgRK-_Uzs0S2Hcdqo882V1x-9DOp4CE",
+            "crv": "P-256",
+            "kid": "sel-ok",
+            "alg": "ES256",
+            "use": "sig",
+            "key_ops": ["verify"]
+          }
+        ]
+      },
+      "tokens": {
+        "useEnc": "eyJhbGciOiJFUzI1NiIsImtpZCI6InNlbC1lbmMifQ.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.p6LyN0muP87XVFk6yzYEpZH3BeFjSJ9hE4Xwj0tjGaqJpoxStShcNEqxvQxvEIOf5bWfJg5JVluzrTjjdPzxJw",
+        "algEs384": "eyJhbGciOiJFUzI1NiIsImtpZCI6InNlbC1hbGcifQ.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.FYHl3x5A5fPcyEpwLkPMAPPef2_1X8I2He333lANR_6fmMJRAsQc0UYA-Gs2DqbJc6JhSXq69dHCVjIUGTOG2A",
+        "keyOpsSign": "eyJhbGciOiJFUzI1NiIsImtpZCI6InNlbC1vcHMifQ.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.nNVtWAM_EaiAMJvNLpF5Too4OJAQj94qd1CEt-PA6KaTdGqDqTuTZtuZmO2hksm1wxByaEec_fCDnj8pKzVl5g",
+        "p384Kid": "eyJhbGciOiJFUzI1NiIsImtpZCI6InNlbC1wMzg0In0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.aKf045HaRm7zjPgvrRF5mAfpAY6Jw-nsKLkxo7lH2x_LB0a6iS30-0TgNpBLkRcXs_08R8w31JdOFH9MR0Vf_g",
+        "qualifying": "eyJhbGciOiJFUzI1NiIsImtpZCI6InNlbC1vayJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.VeA__AGmo6cVxP4jkLpeR4UsotR_jAr_mX8VDvdnODGWAn4xTSoOcgqWgUxpigMtatNEVFM0uwXQKgiCOWfzpA",
+        "noKid": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.lEKK65VYp8vRpwC4BhzzCEnY767XXfQsPtjepkUbmnd4rjJjXTiuPVO6M_bFX5_7sFXcKAfGEx7ZeBgNTcsoTg",
+        "es384Token": "eyJhbGciOiJFUzM4NCIsImtpZCI6InNlbC1wMzg0In0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.ITByj7Se2fynEii42YrYpN92cbKMcIU-IIWS1qyg5-hy_m_7b0qzpzx8R7GZC93zDKIDFevm2CpfeTAGmCaSIiCKnobi2IpDbRQAaM8pNuBsYcuGF_BlZWPfmabo8bAZ"
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "useEnc": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "algEs384": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "keyOpsSign": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "p384Kid": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "qualifying": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_delta",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_5",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "noKid": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_delta",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_5",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "es384Token": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      }
+    }
+  }
+}

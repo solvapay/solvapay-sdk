@@ -1,0 +1,148 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-tool-merchant-not-found",
+  "description": "When the API has no merchant for the secret key, the account tool fails with status 404 and the recovery steps (run `solvapay init`, redeploy).",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_nr_nomerch",
+      "customerRef": null,
+      "arguments": {
+        "view": "checkout"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "status": 404,
+          "body": {
+            "message": "Merchant not found"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_nomerch",
+          "body": {
+            "reference": "prd_nr_nomerch",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_nomerch/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_nr_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": false,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 100,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "charge",
+                    "per": "flat",
+                    "amountMinor": 2900,
+                    "currency": "USD"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 5000,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_payg",
+                "name": "Pay as you go",
+                "type": "usage-based",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "charge",
+                    "per": "unit",
+                    "amountMinor": 2,
+                    "currency": "USD",
+                    "meter": "requests"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_nr"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Provider account not found on this SolvaPay deployment.\n\nThe Worker secret key authenticates against SolvaPay, but no merchant\nrecord exists for it. This usually means the secret key was created\nmanually (without running `solvapay init`) or the merchant was deleted.\n\nTo recover:\n  1. Run `npx solvapay init` in the project root. It will create the\n     merchant on the backend and write a valid secret key to `.env`.\n  2. Redeploy with `npm run deploy` to push the corrected secret to\n     the Worker.\n\nNo tool calls will succeed until the merchant exists."
+        }
+      ],
+      "structuredContent": {
+        "error": "Provider account not found on this SolvaPay deployment.\n\nThe Worker secret key authenticates against SolvaPay, but no merchant\nrecord exists for it. This usually means the secret key was created\nmanually (without running `solvapay init`) or the merchant was deleted.\n\nTo recover:\n  1. Run `npx solvapay init` in the project root. It will create the\n     merchant on the backend and write a valid secret key to `.env`.\n  2. Redeploy with `npm run deploy` to push the corrected secret to\n     the Worker.\n\nNo tool calls will succeed until the merchant exists.",
+        "status": 404,
+        "details": "Provider account not found on this SolvaPay deployment.\n\nThe Worker secret key authenticates against SolvaPay, but no merchant\nrecord exists for it. This usually means the secret key was created\nmanually (without running `solvapay init`) or the merchant was deleted.\n\nTo recover:\n  1. Run `npx solvapay init` in the project root. It will create the\n     merchant on the backend and write a valid secret key to `.env`.\n  2. Redeploy with `npm run deploy` to push the corrected secret to\n     the Worker.\n\nNo tool calls will succeed until the merchant exists."
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,862 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "token-errors-normalised",
+  "description": "An error from SolvaPay's token or revoke endpoint reaches the client as an RFC 6749 error with the same status. A body that already names a token error code passes through whole; a NestJS body is mapped (401/403 invalid_client, 5xx server_error, then by the validation error's field: grant_type sent but unknown is unsupported_grant_type, missing is invalid_request, code or refresh_token invalid_grant, scope invalid_scope, client credentials invalid_client) and described from the validation errors or the message; a non-JSON body keeps short text as the description. A code outside the token set (unsupported_token_type) is mapped, not passed through.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_tokerr",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/revoke",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/revoke",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "rawBody": "grant_type=authorization_code&code=sic_err"
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "error": "invalid_grant",
+            "error_description": "The code has expired",
+            "error_uri": "https://docs.example/errors"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 401,
+          "body": {
+            "statusCode": 401,
+            "message": "Unauthorized",
+            "error": "Unauthorized"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 403,
+          "body": {}
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Validation failed",
+            "errors": [
+              {
+                "path": ["grant_type"],
+                "message": "Invalid enum value",
+                "received": "password"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Validation failed",
+            "errors": [
+              {
+                "path": ["grant_type"],
+                "message": "Required",
+                "received": "undefined"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "errors": [
+              {
+                "path": ["code"],
+                "message": "Required"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "errors": [
+              {
+                "path": ["body", "refresh_token"],
+                "message": "Expected string"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "errors": [
+              {
+                "path": ["scope"],
+                "message": "Unknown scope"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "errors": [
+              {
+                "path": ["client_secret"],
+                "message": "Required"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "ignored",
+            "errors": [
+              {
+                "path": ["redirect_uri", 0]
+              },
+              {
+                "message": "Must be https"
+              },
+              {
+                "path": [],
+                "message": ""
+              },
+              "oops",
+              null,
+              {
+                "path": "not-a-list",
+                "message": "Odd"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Bad request",
+            "errors": []
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": ["client_id must be a string", 3, "code must be a string"]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": [1, 2]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 500,
+          "body": {
+            "statusCode": 500,
+            "error": "Internal Server Error"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 502,
+          "text": "Bad gateway",
+          "headers": {
+            "content-type": "text/plain"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "text": ""
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 400,
+          "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "headers": {
+            "content-type": "text/plain"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "status": 503,
+          "text": "\"down for maintenance\"",
+          "headers": {
+            "content-type": "application/json"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Token not found",
+            "error": "Bad Request"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "status": 400,
+          "body": {
+            "error": "unsupported_token_type"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "unreachable": true
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_grant",
+            "error_description": "The code has expired",
+            "error_uri": "https://docs.example/errors"
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_client",
+            "error_description": "Unauthorized"
+          }
+        },
+        {
+          "status": 403,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_client"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "unsupported_grant_type",
+            "error_description": "grant_type: Invalid enum value"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request",
+            "error_description": "grant_type: Required"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_grant",
+            "error_description": "code: Required"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_grant",
+            "error_description": "body.refresh_token: Expected string"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_scope",
+            "error_description": "scope: Unknown scope"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_client",
+            "error_description": "client_secret: Required"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request",
+            "error_description": "redirect_uri; Must be https; Odd"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request",
+            "error_description": "Bad request"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request",
+            "error_description": "client_id must be a string; code must be a string"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request"
+          }
+        },
+        {
+          "status": 500,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "server_error"
+          }
+        },
+        {
+          "status": 502,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "server_error",
+            "error_description": "Bad gateway"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request"
+          }
+        },
+        {
+          "status": 503,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "server_error",
+            "error_description": "\"down for maintenance\""
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request",
+            "error_description": "Token not found"
+          }
+        },
+        {
+          "status": 400,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "invalid_request"
+          }
+        },
+        {
+          "status": 502,
+          "headers": {
+            "content-type": "application/json",
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "vary": "Origin"
+          },
+          "body": {
+            "error": "upstream_unreachable"
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/revoke",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/customer/auth/token",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=authorization_code&code=sic_err"
+        }
+      ]
+    }
+  }
+}

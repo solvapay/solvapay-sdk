@@ -1,0 +1,12 @@
+[project]
+name = "solvapay-example-mcp-parity"
+version = "0.0.0"
+description = "The parity MCP server in Python (example, not published)"
+requires-python = ">=3.10"
+dependencies = ["solvapay[mcp,agents]", "uvicorn>=0.32", "python-dotenv>=1.0"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+solvapay = { path = "../../../python", editable = true }

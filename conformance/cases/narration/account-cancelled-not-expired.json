@@ -1,0 +1,197 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-cancelled-not-expired",
+  "description": "A cancelled plan whose end date is still ahead (state J): it runs until Dec 1, 19 days from the clock, with the remaining calls, and the recovery names the account view to reactivate.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_free",
+            "name": "Free",
+            "type": "recurring",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 2,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ]
+          },
+          {
+            "reference": "pln_lifetime",
+            "name": "Lifetime",
+            "type": "one-time",
+            "price": 19900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 19900,
+                "currency": "USD"
+              }
+            ]
+          }
+        ],
+        "customer": {
+          "ref": "cus_42",
+          "email": "ada@example.com",
+          "name": "Ada",
+          "purchase": {
+            "customerRef": "cus_42",
+            "purchases": [
+              {
+                "reference": "pur_pro",
+                "status": "active",
+                "productRef": "prd_research",
+                "planRef": "pln_pro",
+                "planSnapshot": {
+                  "reference": "pln_pro",
+                  "name": "Pro",
+                  "price": 2900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 2900,
+                      "currency": "USD"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 5000,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 2900,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": true,
+                "cancelledAt": "2026-11-10T09:00:00.000Z",
+                "endDate": "2026-12-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": {
+            "meterRef": "requests",
+            "total": 5000,
+            "used": 800,
+            "remaining": 4200,
+            "percentUsed": null,
+            "periodStart": "2026-11-01T00:00:00.000Z",
+            "periodEnd": "2026-12-01T00:00:00.000Z"
+          },
+          "limits": {
+            "withinLimits": true,
+            "remaining": 4200,
+            "planRef": "pln_pro",
+            "meterName": "requests"
+          }
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+        "portalUrl": "https://solvapay.com/customer/manage?session=sess_1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge"
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research's Pro plan is cancelled and runs until Dec 1, 19 days away, with 4,200 of 5,000 calls left. Calls stop after that. Call `account` with view: 'account' to reactivate it.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"account\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/manage?session=sess_1",
+          "name": "Manage account"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_1",
+          "name": "Open checkout"
+        }
+      ]
+    }
+  }
+}

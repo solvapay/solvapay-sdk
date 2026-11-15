@@ -1,0 +1,444 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-calls",
+  "case": "wait-runs-out",
+  "description": "The merchant stops waiting at maxWaitSeconds: the hold asked for shrinks with the time left (10, 6, 2, 0 s), and the call is refused as approval_timed_out with SolvaPay's waiting sentence; the step's start time within a second does not change the count.",
+  "setup": {
+    "productRef": "prd_ac_calls",
+    "agentCalls": {
+      "maxWaitSeconds": 10
+    }
+  },
+  "steps": [
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_23",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:00:00.000Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC23",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC23",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 4
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC23",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC23",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 4
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC23",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC23",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 4
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC23",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC23",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 4
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "approval_timed_out",
+            "message": "Waiting for the owner to approve this call."
+          },
+          "log": [
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_23",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC23",
+                "approvalRef": "apr_AC23"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_23",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC23",
+                "approvalRef": "apr_AC23"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_23",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC23",
+                "approvalRef": "apr_AC23"
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_23",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "approval_timed_out",
+                "callRef": "call_AC23",
+                "approvalRef": "apr_AC23"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_23",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 10
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_23",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 6
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_23",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 2
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_23",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "beginCall",
+      "args": {
+        "requestId": "req_ac_24",
+        "agentToken": "agk_ac_key01",
+        "agent": {
+          "agentRef": "agt_ac_01",
+          "principalRef": "user_ac_01",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        },
+        "item": "claude-haiku-4-5",
+        "estimate": {
+          "amount": "0.005142",
+          "currency": "USD"
+        }
+      },
+      "clock": "2026-11-13T12:01:00.600Z",
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC24",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC24",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 3
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC24",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC24",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 3
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC24",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC24",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 3
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC24",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC24",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 3
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "waiting",
+            "callRef": "call_AC24",
+            "message": "Waiting for the owner to approve this call.",
+            "approval": {
+              "reference": "apr_AC24",
+              "expiresAt": "2026-11-13T12:10:00.000Z"
+            },
+            "retryAfterSeconds": 3
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": {
+            "kind": "refused",
+            "reason": "approval_timed_out",
+            "message": "Waiting for the owner to approve this call."
+          },
+          "log": [
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_24",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC24",
+                "approvalRef": "apr_AC24"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_24",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC24",
+                "approvalRef": "apr_AC24"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_24",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC24",
+                "approvalRef": "apr_AC24"
+              }
+            },
+            {
+              "event": "call.waiting",
+              "fields": {
+                "requestId": "req_ac_24",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "callRef": "call_AC24",
+                "approvalRef": "apr_AC24"
+              }
+            },
+            {
+              "event": "call.refused",
+              "fields": {
+                "requestId": "req_ac_24",
+                "agentRef": "agt_ac_01",
+                "userRef": "user_ac_01",
+                "item": "claude-haiku-4-5",
+                "estimate": "0.005142 USD",
+                "reason": "approval_timed_out",
+                "callRef": "call_AC24",
+                "approvalRef": "apr_AC24"
+              }
+            }
+          ]
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_24",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 10
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_24",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 7
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_24",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 4
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_24",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 1
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/agent/calls",
+            "body": {
+              "agentToken": "agk_ac_key01",
+              "requestId": "req_ac_24",
+              "item": "claude-haiku-4-5",
+              "estimate": {
+                "amount": "0.005142",
+                "currency": "USD"
+              },
+              "wait": 0
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

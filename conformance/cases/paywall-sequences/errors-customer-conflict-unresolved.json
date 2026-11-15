@@ -1,0 +1,135 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "errors-customer-conflict-unresolved",
+  "description": "A 409 on create that the lookup by externalRef cannot resolve fails the decision with customer_conflict. Once the customer is linked, the next call finds it and is allowed.",
+  "setup": {
+    "productRef": "prd_ec_1"
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "user_ec_2"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found",
+            "error": "Not Found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "status": 409,
+          "body": {
+            "statusCode": 409,
+            "message": "Customer with identifier email user_ec_2@example.com already exists",
+            "error": "Conflict"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found",
+            "error": "Not Found"
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "code": "customer_conflict"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_ec_2"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_ec_2-1794484800000@auto-created.local",
+              "metadata": {},
+              "externalRef": "user_ec_2"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_ec_2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "user_ec_2"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_EC05",
+            "email": "user_ec_2@example.com",
+            "name": "Ada",
+            "externalRef": "user_ec_2"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 5,
+            "plan": "Pro",
+            "meterName": "requests",
+            "checkoutUrl": "https://checkout.conformance.test/s/ec"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_EC05"
+        },
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_ec_2"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_EC05",
+              "productRef": "prd_ec_1",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

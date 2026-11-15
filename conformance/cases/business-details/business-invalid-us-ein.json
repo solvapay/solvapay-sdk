@@ -1,0 +1,19 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "business-invalid-us-ein",
+  "description": "A tax ID that does not match the country's format (a US EIN here) is refused, naming the country.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "us",
+      "taxId": "12-345"
+    }
+  },
+  "expect": {
+    "result": {
+      "invalid": "Enter a valid tax ID for US"
+    }
+  }
+}

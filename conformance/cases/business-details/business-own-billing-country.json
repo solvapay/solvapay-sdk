@@ -1,0 +1,22 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "business-details",
+  "case": "business-own-billing-country",
+  "description": "A business keeps a supported billing country of its own; without a tax ID there is no tax ID type.",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "DE",
+      "customerCountry": "fr",
+      "businessName": "   "
+    }
+  },
+  "expect": {
+    "result": {
+      "isBusiness": true,
+      "country": "DE",
+      "customerCountry": "FR"
+    }
+  }
+}

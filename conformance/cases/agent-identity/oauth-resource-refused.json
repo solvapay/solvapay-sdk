@@ -1,0 +1,49 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "oauth-resource-refused",
+  "description": "A URL with a fragment or credentials cannot be an OAuth resource and is refused with a message naming it; a relative URL is refused too.",
+  "input": {
+    "fn": "oauthResources",
+    "args": {
+      "resources": {
+        "fragment": {
+          "resource": "https://mcp.conformance.test/mcp#tools",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "credentials": {
+          "resource": "https://user:secret@mcp.conformance.test/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "usernameOnly": {
+          "resource": "https://user@mcp.conformance.test/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        },
+        "relative": {
+          "resource": "/mcp",
+          "authorizationServer": "https://api.conformance.test/v1/agent",
+          "description": "x"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "fragment": {
+        "refused": "https://mcp.conformance.test/mcp#tools cannot be an OAuth resource: no fragment or credentials"
+      },
+      "credentials": {
+        "refused": "https://user:secret@mcp.conformance.test/mcp cannot be an OAuth resource: no fragment or credentials"
+      },
+      "usernameOnly": {
+        "refused": "https://user@mcp.conformance.test/mcp cannot be an OAuth resource: no fragment or credentials"
+      },
+      "relative": {
+        "refused": "<not compared>"
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "needs-topup-flag-with-plan",
+  "description": "needsTopUp from the API is a topup gate even without credit fields. A customer who holds a plan is not told to pick one, and auto-recharge being off is named.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_pw_gate",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "needsTopUp": true,
+        "purchaseRef": "pur_pw_1",
+        "autoRecharge": {
+          "enabled": false,
+          "thresholdCredits": 100,
+          "amountMinor": 1000
+        },
+        "checkoutUrl": "https://checkout.conformance.test/s/2"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_pw_gate",
+      "checkoutUrl": "https://checkout.conformance.test/s/2",
+      "message": "Included usage is exhausted. [Add credits](https://checkout.conformance.test/s/2) to add credits (expires in 15 minutes), or call the `account` tool with view: 'topup'. Auto-recharge is off — call the `account` tool with view: 'account' to turn it on and avoid this next time.",
+      "reason": "topup_required",
+      "nextAction": "topup",
+      "remainingCalls": 0,
+      "purchaseRef": "pur_pw_1",
+      "autoRecharge": {
+        "enabled": false,
+        "thresholdCredits": 100,
+        "amountMinor": 1000
+      },
+      "links": {
+        "checkout": "https://checkout.conformance.test/s/2"
+      }
+    }
+  }
+}

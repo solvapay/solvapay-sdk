@@ -1,0 +1,91 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-key-rotation",
+  "description": "When the JWKS holds two keys without kids (a rotation done that way), a token without a kid matches both and is refused as ambiguous, whichever key signed it; a kid picks its key among them. nbf must be a number, and a fractional nbf just past the 30 seconds of tolerance is not yet valid.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "YMvYXQZ9bBZb65AS17pp7pk8O-2mamOHhe_yoEsPZwQ",
+            "y": "to_qev--cTdEGc82KOv6Mm7YPNSyeHeyRReFbwgTbQ4",
+            "crv": "P-256"
+          },
+          {
+            "kty": "EC",
+            "x": "S5iEzyCydx8dSKX152iqyQwKovruoqTvCIyLiQvlsRA",
+            "y": "0cCpG858gs7-E3UgDOtLpTb9Hll25H3eZYeobttHmEk",
+            "crv": "P-256"
+          },
+          {
+            "kty": "EC",
+            "x": "JbR40mMbkqySbHBACHbWgQHydfAkjWQhUa1b-D3CTeo",
+            "y": "RZLk80mWnmjbRD9oZp_HrSEEbd2H00kK1_cePWx8wOw",
+            "crv": "P-256",
+            "kid": "rot-c"
+          }
+        ]
+      },
+      "tokens": {
+        "signedByFirst": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.cjNXqeHdJ9HhKn7tpfCNe7cbdnkVWyhGLAEOYVTgAzWwWKbeNJqZOZEOMpLbIGAEvKgQJ9F6AnfkhiatovXptg",
+        "signedBySecond": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.jW94GdlsmrpwGSXp7vGQ6GQMEKD9MIsN6r85Bqv03N2n-AXfsVlNw7tqGmjiI6J85DWk99OMzz0BlMgmJWbtCg",
+        "kidAmongThem": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJvdC1jIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.lUcervcXhAmK9O9zsI9Efwrx3epGT289TL8XnYLUnCANepiYTEZgPeospyG3K8W5tuwTlzeAeYgX_n4Kawnw7Q",
+        "stringNbf": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJvdC1jIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJuYmYiOiIxNzk0NTcxMjAwIn0.D1WYr45Vw4-nZ-uICn7qUaXB3Vbf4NP0n2E49mz3NY-i_eihinM-ST7vY1J0v_cl0uey-XcwWAffD5cIQfa4uw",
+        "fractionalNbf": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJvdC1jIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJuYmYiOjE3OTQ1NzEyMzAuNX0.8a_xuLdIZ0pqEc773rY9BQRj1cksififHie7APt0P8V609ns7jXYM8fs8rAMh6eUksz72NgBvxXBXSvNrJ_KIw",
+        "nbfAtTolerance": "eyJhbGciOiJFUzI1NiIsImtpZCI6InJvdC1jIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2RlbHRhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfNSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJuYmYiOjE3OTQ1NzEyMzB9.OXJXx424u40zo5DvCdDr_xfWFU2fG31YpI4loW9TfmqDvBGK4OnsJMxnf8f4LFcno9154nW-W8bUbdvE1o4v2A"
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "signedByFirst": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "signedBySecond": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "kidAmongThem": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_delta",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_5",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "stringNbf": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "fractionalNbf": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "nbfAtTolerance": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_delta",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_5",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      }
+    }
+  }
+}

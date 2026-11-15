@@ -1,0 +1,51 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-resource-audience-without-resource",
+  "description": "Without an OAuth resource configured, a token whose audience is a resource URL is refused, and the provider reference alone is accepted.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "tokens": {
+        "resourceAudience": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoiaHR0cHM6Ly9tY3AuY29uZm9ybWFuY2UudGVzdC9tY3AiLCJzdWIiOiJhZ3RfYWlfYWxwaGEiLCJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.e2TfLScqH05CGubkDsWxPD6OgVfTcJaly1s-si8mPkrzsBUvEz5PY2c2obuai0flL7yFrIgxgE5FojvPGLFMTQ",
+        "provider": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2JldGEiLCJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8yIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.TZid4U0iKjFPAOkmiNnVsgtWvHcJ1ECqBwoOrNgbEzCdvoy-jTuMUNUyFy6mrrg7qJMlCn37XaB-2vk2ZJs2dQ"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "resourceAudience": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "provider": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_beta",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_2",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      }
+    }
+  }
+}

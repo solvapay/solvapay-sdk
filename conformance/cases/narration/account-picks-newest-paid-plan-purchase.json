@@ -1,0 +1,156 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-picks-newest-paid-plan-purchase",
+  "description": "Of the customer's active purchases, another product's plan and a credit top-up do not count; the newest start wins, with undated and misdated purchases oldest, and paid beats free on the same start. The winner is a legacy one-time plan with no pricing options, so it reads as paid but of unknown shape: its price once and no usage yet.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_pick",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_pick",
+          "name": "Stock Research"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_NR10",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR10",
+            "purchases": [
+              {
+                "reference": "pur_nr_other",
+                "status": "active",
+                "productRef": "prd_nr_elsewhere",
+                "planRef": "pln_nr_x",
+                "planSnapshot": {
+                  "reference": "pln_nr_x",
+                  "name": "Elsewhere",
+                  "price": 900,
+                  "currency": "USD"
+                },
+                "amount": 900,
+                "startDate": "2026-11-11T00:00:00.000Z"
+              },
+              {
+                "reference": "pur_nr_topup",
+                "status": "active",
+                "productRef": "prd_nr_pick",
+                "metadata": {
+                  "purpose": "credit_topup"
+                },
+                "planSnapshot": {
+                  "reference": "pln_nr_pack",
+                  "name": "Credit pack",
+                  "price": 1000,
+                  "currency": "USD"
+                },
+                "amount": 1000,
+                "startDate": "2026-11-10T00:00:00.000Z"
+              },
+              {
+                "reference": "pur_nr_nodate",
+                "status": "active",
+                "productRef": "prd_nr_pick",
+                "planRef": "pln_nr_nodate",
+                "planSnapshot": {
+                  "reference": "pln_nr_nodate",
+                  "name": "Undated",
+                  "price": 500,
+                  "currency": "USD"
+                },
+                "amount": 500
+              },
+              {
+                "reference": "pur_nr_baddate",
+                "status": "active",
+                "productRef": "prd_nr_pick",
+                "planRef": "pln_nr_bad",
+                "planSnapshot": {
+                  "reference": "pln_nr_bad",
+                  "name": "Misdated",
+                  "price": 500,
+                  "currency": "USD"
+                },
+                "amount": 500,
+                "startDate": "not-a-date"
+              },
+              {
+                "reference": "pur_nr_free",
+                "status": "active",
+                "productRef": "prd_nr_pick",
+                "planRef": "pln_nr_free",
+                "planSnapshot": {
+                  "reference": "pln_nr_free",
+                  "name": "Free",
+                  "price": 0,
+                  "currency": "USD",
+                  "requiresPayment": false,
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 100,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "startDate": "2026-11-01T00:00:00.000Z"
+              },
+              {
+                "reference": "pur_nr_legacy",
+                "status": "active",
+                "productRef": "prd_nr_pick",
+                "planRef": "pln_nr_legacy",
+                "planSnapshot": {
+                  "reference": "pln_nr_legacy",
+                  "name": "Legacy",
+                  "price": 1500,
+                  "currency": "USD"
+                },
+                "amount": 1500,
+                "startDate": "2026-11-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": null,
+          "limits": null
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Legacy, $15 once. After your first call. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR10\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

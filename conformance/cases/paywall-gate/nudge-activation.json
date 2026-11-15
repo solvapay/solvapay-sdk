@@ -1,0 +1,20 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "nudge-activation",
+  "description": "An activation nudge names activate_plan and links checkout.",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": "activation_required",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 1,
+        "checkoutUrl": "https://checkout.conformance.test/s/7"
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — this plan still needs activation. Call the `activate_plan` tool with a `planRef`, or [Open checkout](https://checkout.conformance.test/s/7)."
+  }
+}

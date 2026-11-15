@@ -1,0 +1,91 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "process-payment-recurring",
+  "description": "process_payment answers the API's result as it is: status, type and the purchase.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "process_payment",
+      "productRef": "prd_conform1",
+      "customerRef": "cus_conform1",
+      "arguments": {
+        "paymentIntentId": "pi_1",
+        "productRef": "prd_conform1",
+        "planRef": "pln_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_1/process",
+          "body": {
+            "status": "succeeded",
+            "type": "recurring",
+            "purchase": {
+              "reference": "pur_1",
+              "status": "active",
+              "productRef": "prd_conform1",
+              "productName": "Stock Research",
+              "planRef": "pln_pro",
+              "customerRef": "cus_conform1",
+              "amount": 2900,
+              "currency": "USD",
+              "isRecurring": true,
+              "billingCycle": "monthly",
+              "startDate": "2026-11-01T00:00:00Z",
+              "endDate": "2026-12-01T00:00:00Z",
+              "createdAt": "2026-11-01T00:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "status": "succeeded",
+            "type": "recurring",
+            "purchase": {
+              "reference": "pur_1",
+              "status": "active",
+              "productRef": "prd_conform1",
+              "productName": "Stock Research",
+              "planRef": "pln_pro",
+              "customerRef": "cus_conform1",
+              "amount": 2900,
+              "currency": "USD",
+              "isRecurring": true,
+              "billingCycle": "monthly",
+              "startDate": "2026-11-01T00:00:00Z",
+              "endDate": "2026-12-01T00:00:00Z",
+              "createdAt": "2026-11-01T00:00:00Z"
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "status": "succeeded",
+        "type": "recurring",
+        "purchase": {
+          "reference": "pur_1",
+          "status": "active",
+          "productRef": "prd_conform1",
+          "productName": "Stock Research",
+          "planRef": "pln_pro",
+          "customerRef": "cus_conform1",
+          "amount": 2900,
+          "currency": "USD",
+          "isRecurring": true,
+          "billingCycle": "monthly",
+          "startDate": "2026-11-01T00:00:00Z",
+          "endDate": "2026-12-01T00:00:00Z",
+          "createdAt": "2026-11-01T00:00:00Z"
+        }
+      }
+    }
+  }
+}

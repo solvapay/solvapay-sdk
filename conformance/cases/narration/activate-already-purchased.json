@@ -1,0 +1,18 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-already-purchased",
+  "description": "An already purchased plan points at the account view.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "already_purchased",
+        "planName": "Pro"
+      }
+    }
+  },
+  "expect": {
+    "result": "Pro is already purchased. Call `account` with view: 'account' to manage it."
+  }
+}

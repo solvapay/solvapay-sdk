@@ -1,0 +1,92 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-free-plan-usage-unknown",
+  "description": "On the free plan with no count of calls left yet, the narration says when the allowance resets.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_nr_free",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_free",
+          "name": "Stock Research"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_NR16",
+          "email": null,
+          "name": null,
+          "purchase": {
+            "customerRef": "cus_NR16",
+            "purchases": [
+              {
+                "reference": "pur_nr_free2",
+                "status": "active",
+                "productRef": "prd_nr_free",
+                "planRef": "pln_nr_free",
+                "planSnapshot": {
+                  "reference": "pln_nr_free",
+                  "name": "Free",
+                  "price": 0,
+                  "currency": "USD",
+                  "requiresPayment": false,
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 100,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "startDate": "2026-11-01T00:00:00.000Z"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": {
+            "meterRef": "requests",
+            "total": null,
+            "used": null,
+            "remaining": null,
+            "percentUsed": null,
+            "periodEnd": "2026-12-01T00:00:00.000Z"
+          },
+          "limits": null
+        },
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: resets Dec 1. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: cus_NR16\n\nTo continue, call `account` with view: \"checkout\"."
+        }
+      ]
+    }
+  }
+}

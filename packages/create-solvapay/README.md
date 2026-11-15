@@ -24,6 +24,15 @@ From scratch (single placeholder tool):
 npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi
 ```
 
+In Python or Go (from scratch, one paid tool and one free tool, tests and a Dockerfile for any container host):
+
+```bash
+npm create solvapay@latest my-mcp-app -- --type mcp --language python   # uv project
+npm create solvapay@latest my-mcp-app -- --type mcp --language go       # Go 1.26+
+```
+
+The SDK pins follow the scaffolder: `npm create solvapay@latest` pins the newest stable releases, `npm create solvapay@preview` the newest previews. Until Python and Go have a stable release, use `@preview` for them.
+
 Next.js + Auth0 starter:
 
 ```bash
@@ -75,6 +84,7 @@ npm run deploy       # Cloudflare Workers deploy
 | `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input |
 | `--skip-install` | Skip post-scaffold `npm install` |
 | `--skip-init` | Skip post-scaffold `solvapay init` (no browser OAuth) |
+| `--offline` | Pin `@solvapay/*` to the versions this release ships with, not npm's latest. Without it, a failed registry lookup stops the scaffold. |
 | `--dev` | Target api-dev.solvapay.com (internal testing only) |
 | `--list-types` | List available project types and exit |
 
@@ -84,7 +94,7 @@ npm run deploy       # Cloudflare Workers deploy
 | --- | --- |
 | `--openapi <url\|path>` | OpenAPI / Swagger spec — implies from-openapi mode |
 | `--no-openapi` | From-scratch mode with a placeholder paid tool |
-| `--tool-name <camel>` | Placeholder tool name in from-scratch mode (default: `helloTool`) |
+| `--tool-name <name>` | Placeholder tool name in from-scratch mode, snake_case (default: `hello_tool`); camelCase is also accepted |
 
 Run `npm create solvapay@latest my-app -- --type mcp --help` for MCP-specific help.
 

@@ -1,0 +1,48 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-attach-business-details-fails",
+  "description": "Valid business details the API rejects answer the API's 400.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "attach_business_details",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "paymentIntentId": "pi_ec_2",
+        "isBusiness": true,
+        "businessName": "Acme AB",
+        "country": "SE"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_ec_2/business-details",
+          "status": 400,
+          "body": {
+            "statusCode": 400,
+            "message": "Payment intent pi_ec_2 is already confirmed",
+            "error": "Bad Request"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 400,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "tool-descriptors",
+  "case": "bootstrap-resource-anonymous",
+  "description": "solvapay://bootstrap.json reads the same snapshot account answers without a view: for no signed-in customer, the catalog with view checkout.",
+  "input": {
+    "fn": "readResource",
+    "args": {
+      "productRef": "prd_tl_boot",
+      "uri": "solvapay://bootstrap.json",
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_tl"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme",
+            "legalName": "Acme Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_boot",
+          "body": {
+            "reference": "prd_tl_boot",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_boot/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_tl_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "cap": 100
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": false,
+                "price": 0
+              },
+              {
+                "reference": "pln_tl_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "contents": [
+        {
+          "uri": "solvapay://bootstrap.json",
+          "mimeType": "application/json",
+          "json": {
+            "view": "checkout",
+            "productRef": "prd_tl_boot",
+            "stripePublishableKey": "pk_test_tl",
+            "returnUrl": "https://mcp.conformance.test",
+            "merchant": {
+              "displayName": "Acme",
+              "legalName": "Acme Ltd"
+            },
+            "product": {
+              "reference": "prd_tl_boot",
+              "name": "Stock Research",
+              "status": "active",
+              "balance": 0,
+              "isManagedMcp": false,
+              "isMcpPay": false,
+              "totalTransactions": 0,
+              "createdAt": "2026-01-01T00:00:00Z",
+              "updatedAt": "2026-01-01T00:00:00Z"
+            },
+            "plans": [
+              {
+                "reference": "pln_tl_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "cap": 100
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": false,
+                "price": 0
+              },
+              {
+                "reference": "pln_tl_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  }
+                ],
+                "isActive": true,
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z",
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD"
+              }
+            ],
+            "customer": null,
+            "checkoutUrl": null,
+            "portalUrl": null,
+            "autoRechargeUrl": null
+          }
+        }
+      ]
+    }
+  }
+}

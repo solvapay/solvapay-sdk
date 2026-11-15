@@ -1,0 +1,100 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-identity",
+  "case": "token-signature-and-keys",
+  "description": "Only an ES256 token signed by a key in the JWKS verifies. A valid token yields the agent, its principal, jti, expiry, prompt-excerpt flag, environment and OAuth client; an unknown kid, another key's signature, an HS256 or unsigned token, a token without a kid and anything that is not a JWS are refused as invalid.",
+  "input": {
+    "fn": "verifyAgentTokens",
+    "args": {
+      "issuer": "https://api.conformance.test/v1/agent",
+      "providerRef": "prv_ai_merchant",
+      "tokens": {
+        "valid": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwLCJweCI6dHJ1ZSwiY2lkIjoiaHR0cHM6Ly9jbGllbnQuY29uZm9ybWFuY2UudGVzdC9jaW1kLmpzb24ifQ.6LN79Hxx8CAeQCGWCI2SoE6-5QnHZghW6Lkb3gmy-8E1o35MZPGVXZXBB54VEF_0fLNqQV_Sgqd0QUBQwdtLFg",
+        "unknownKid": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS11bmtub3duIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.rrjk3ejIoRg2rde_XfxkdsgSfbgWshzb5ijmtb_g-FkeozV9ejqsFK4EqG2RFumUMg5FmwlJ0zEVF4vCQUwBKg",
+        "otherKeysSignature": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.8CpDb58c9qEozATDttV29-GsDbV7Bkl4EYWk6mMvQCsQsgBjpxyx1tMYzNHEVk2El9J-aqozmtKZ3ZbDpnOQuA",
+        "hs256": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.Y47QVtL2R2p8aJlvJzVd4voD3xwtfqxJ22YsGekqeeo",
+        "unsigned": "eyJhbGciOiJub25lIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.",
+        "tamperedPayload": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFpLWtleS0xIn0.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX21hbGxvcnkiLCJwcmluY2lwYWwiOiJwcGxfYWlfb3duZXIiLCJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsImp0aSI6Imp0aV9haV8xIiwiaWF0IjoxNzk0NTcxMTQwLCJleHAiOjE3OTQ1NzE4MDB9.LsQ5yP28vaTMsS3NDwx68AE_leRGNXAmmidHiQGxLYTT0eFfEmnYKkx2KmjuYntCai06Ig2DQaKTMbGJZxdR6w",
+        "noKid": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb25mb3JtYW5jZS50ZXN0L3YxL2FnZW50IiwiYXVkIjoicHJ2X2FpX21lcmNoYW50Iiwic3ViIjoiYWd0X2FpX2FscGhhIiwicHJpbmNpcGFsIjoicHBsX2FpX293bmVyIiwic2NvcGUiOiJ1c2FnZSIsImVudiI6InNhbmRib3giLCJqdGkiOiJqdGlfYWlfMSIsImlhdCI6MTc5NDU3MTE0MCwiZXhwIjoxNzk0NTcxODAwfQ.VHyuISvGKsbEURpT0E-NYYS4bUvA0QQTCEYqHq8rln6kfTS80TTqzPL4NkLSuu4khakl2VAu7m4sZlLg66WOig",
+        "notAJws": "not-a-jwt",
+        "garbageSegments": "abc.def.ghi"
+      },
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "Xw10l5zMUvgnFhsseGL0OWEo3A_YiNND9OVcJ9CgJHE",
+            "y": "RtSB9r9LSWpJ9DgmKFyOh4QaAushFQEAE4k8NWgMkb0",
+            "crv": "P-256",
+            "kid": "ai-key-1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      }
+    },
+    "clock": "2026-11-13T12:00:00.000Z"
+  },
+  "expect": {
+    "result": {
+      "valid": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": true,
+          "environment": "sandbox",
+          "clientId": "https://client.conformance.test/cimd.json"
+        }
+      },
+      "unknownKid": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "otherKeysSignature": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "hs256": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "unsigned": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "tamperedPayload": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "noKid": {
+        "ok": true,
+        "agent": {
+          "agentRef": "agt_ai_alpha",
+          "principalRef": "ppl_ai_owner",
+          "tokenId": "jti_ai_1",
+          "expiresAt": "2026-11-13T12:10:00.000Z",
+          "promptExcerpt": false,
+          "environment": "sandbox"
+        }
+      },
+      "notAJws": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      },
+      "garbageSegments": {
+        "ok": false,
+        "reason": "invalid",
+        "detail": "<not compared>"
+      }
+    }
+  }
+}

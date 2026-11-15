@@ -1,0 +1,145 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "cors-preflight",
+  "description": "CORS preflights on the OAuth endpoints and the MCP endpoint: 204, the requested method plus OPTIONS and the requested headers echoed (POST and `authorization, content-type` when not asked), a 600 s max age, and the origin mirrored only for a native client scheme, never with Allow-Credentials. Preflight on a metadata path is a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_cors",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "requests": [
+        {
+          "method": "OPTIONS",
+          "path": "/oauth/register",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval",
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "content-type"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/oauth/token",
+          "headers": {
+            "origin": "vscode://vscode.github-authentication"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/oauth/authorize",
+          "headers": {
+            "access-control-request-method": "GET"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/oauth/revoke",
+          "headers": {
+            "origin": "https://attacker.example",
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "authorization"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/mcp",
+          "headers": {
+            "origin": "claude://claude.ai",
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "authorization, content-type, mcp-protocol-version"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/mcp",
+          "headers": {
+            "origin": "cursor:",
+            "access-control-request-method": "POST"
+          }
+        },
+        {
+          "method": "OPTIONS",
+          "path": "/.well-known/oauth-authorization-server",
+          "headers": {
+            "origin": "cursor://anysphere.cursor-retrieval"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-origin": "cursor://anysphere.cursor-retrieval",
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "content-type",
+            "access-control-max-age": "600",
+            "vary": "Origin"
+          },
+          "body": null
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-origin": "vscode://vscode.github-authentication",
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "authorization, content-type",
+            "access-control-max-age": "600",
+            "vary": "Origin"
+          },
+          "body": null
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-methods": "GET, OPTIONS",
+            "access-control-allow-headers": "authorization, content-type",
+            "access-control-max-age": "600"
+          },
+          "body": null
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "authorization",
+            "access-control-max-age": "600"
+          },
+          "body": null
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-origin": "claude://claude.ai",
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "authorization, content-type, mcp-protocol-version",
+            "access-control-max-age": "600",
+            "vary": "Origin"
+          },
+          "body": null
+        },
+        {
+          "status": 204,
+          "headers": {
+            "access-control-allow-methods": "POST, OPTIONS",
+            "access-control-allow-headers": "authorization, content-type",
+            "access-control-max-age": "600"
+          },
+          "body": null
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

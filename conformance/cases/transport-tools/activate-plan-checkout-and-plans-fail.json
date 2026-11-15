@@ -1,0 +1,55 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "activate-plan-checkout-and-plans-fail",
+  "description": "When the checkout session and the plan list both fail, payment_required is still answered, without a link or a plan name.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "activate_plan",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL09",
+      "arguments": {
+        "planRef": "pln_tl_pro"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/activate",
+          "body": {
+            "status": "payment_required"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "status": 500,
+          "body": {
+            "message": "boom"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_tl_tools/plans",
+          "status": 500,
+          "body": {
+            "message": "boom"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "This plan requires payment. Call `account` with view: 'checkout' to pay."
+        }
+      ],
+      "structuredContent": {
+        "status": "payment_required"
+      }
+    }
+  }
+}

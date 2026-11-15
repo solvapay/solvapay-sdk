@@ -7,8 +7,8 @@
  */
 
 import {
-  buildAuthInfoFromBearer,
-  McpBearerAuthError,
+  createSolvaPayTokenVerifier,
+  verifyAuthInfoFromBearer,
   type BuildAuthInfoFromBearerOptions,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
@@ -115,6 +115,8 @@ export function createSolvaPayMcpFetchHandler(
     oauthPaths,
   })
 
+  const verifyToken = createSolvaPayTokenVerifier({ apiBaseUrl })
+
   const mcpHandler = buildMcpHandlerFace(factory, {
     ...(responseMode !== undefined ? { responseMode } : {}),
     ...(legacy !== undefined ? { legacy } : {}),
@@ -143,14 +145,29 @@ export function createSolvaPayMcpFetchHandler(
     }
 
     const authHeader = req.headers.get('authorization')
-    let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
+    let resolvedAuthInfo: Awaited<ReturnType<typeof verifyAuthInfoFromBearer>> = null
     if (authHeader || requireAuth) {
       try {
-        resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
-        if (!resolvedAuthInfo) {
-          throw new McpBearerAuthError('Missing bearer token')
-        }
-      } catch {
+        // SolvaPay verifies the token and names the customer; the token's own
+        // payload is never trusted for identity.
+        resolvedAuthInfo = await verifyAuthInfoFromBearer(authHeader, verifyToken, authInfo)
+      } catch (error) {
+        const headers = new Headers({ 'content-type': 'application/json' })
+        applyNativeCors(req.headers, headers)
+        const jsonRpcId = await readJsonRpcId(req)
+        return new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: jsonRpcId,
+            error: {
+              code: -32603,
+              message: `Could not verify the bearer token: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          }),
+          { status: 503, headers },
+        )
+      }
+      if (!resolvedAuthInfo) {
         const jsonRpcId = await readJsonRpcId(req)
         return authChallenge(req, {
           publicBaseUrl,

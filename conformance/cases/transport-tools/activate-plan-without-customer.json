@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "activate-plan-without-customer",
+  "description": "activate_plan with a planRef and no signed-in customer is a 401.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "activate_plan",
+      "productRef": "prd_tl_tools",
+      "customerRef": null,
+      "arguments": {
+        "planRef": "pln_tl_pro"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "customer_ref missing from MCP auth context"
+        }
+      ],
+      "structuredContent": {
+        "error": "Unauthorized",
+        "status": 401,
+        "details": "customer_ref missing from MCP auth context"
+      },
+      "isError": true
+    }
+  }
+}

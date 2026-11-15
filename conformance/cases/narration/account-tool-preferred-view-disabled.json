@@ -1,0 +1,245 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-tool-preferred-view-disabled",
+  "description": "With only the top-up and account views enabled, an anonymous call without a view would land on checkout; it falls through the priority order (checkout, topup, account) to topup.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_nr_views",
+      "customerRef": null,
+      "views": ["topup", "account"],
+      "arguments": {
+        "mode": "text"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme Data",
+            "legalName": "Acme Data Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_views",
+          "body": {
+            "reference": "prd_nr_views",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_views/plans",
+          "body": {
+            "plans": [
+              {
+                "reference": "pln_nr_free",
+                "name": "Free",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": false,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 100,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_pro",
+                "name": "Pro",
+                "type": "recurring",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 2900,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "billingCycle",
+                    "interval": "month"
+                  },
+                  {
+                    "kind": "charge",
+                    "per": "flat",
+                    "amountMinor": 2900,
+                    "currency": "USD"
+                  },
+                  {
+                    "kind": "limit",
+                    "meter": "requests",
+                    "cap": 5000,
+                    "onExceed": "block"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              },
+              {
+                "reference": "pln_nr_payg",
+                "name": "Pay as you go",
+                "type": "usage-based",
+                "status": "active",
+                "isActive": true,
+                "requiresPayment": true,
+                "price": 0,
+                "currency": "USD",
+                "options": [
+                  {
+                    "kind": "charge",
+                    "per": "unit",
+                    "amountMinor": 2,
+                    "currency": "USD",
+                    "meter": "requests"
+                  }
+                ],
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-01T00:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "stripePublishableKey": "pk_test_nr"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Top up — Stock Research**\n\n\nTo continue, call `account` with view: \"account\"."
+        }
+      ],
+      "structuredContent": {
+        "view": "topup",
+        "productRef": "prd_nr_views",
+        "stripePublishableKey": "pk_test_nr",
+        "returnUrl": "https://mcp.conformance.test",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_views",
+          "name": "Stock Research",
+          "status": "active",
+          "balance": 0,
+          "isManagedMcp": false,
+          "isMcpPay": false,
+          "totalTransactions": 0,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "updatedAt": "2026-01-01T00:00:00Z"
+        },
+        "plans": [
+          {
+            "reference": "pln_nr_free",
+            "name": "Free",
+            "type": "recurring",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": false,
+            "price": 0,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "reference": "pln_nr_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": true,
+            "price": 2900,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "reference": "pln_nr_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "status": "active",
+            "isActive": true,
+            "requiresPayment": true,
+            "price": 0,
+            "currency": "USD",
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 2,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ],
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        ],
+        "customer": null,
+        "checkoutUrl": null,
+        "portalUrl": null,
+        "autoRechargeUrl": null
+      }
+    }
+  }
+}

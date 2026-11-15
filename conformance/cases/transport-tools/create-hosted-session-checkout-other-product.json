@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "create-hosted-session-checkout-other-product",
+  "description": "A hosted checkout for another product, without a plan, sends that product and no planRef.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "create_hosted_session",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL10",
+      "arguments": {
+        "kind": "checkout",
+        "productRef": "prd_tl_other",
+        "planRef": ""
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_tl10",
+            "checkoutUrl": "https://checkout.conformance.test/s/tl10"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "sessionId": "cs_tl10",
+            "checkoutUrl": "https://checkout.conformance.test/s/tl10"
+          }
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "cs_tl10",
+        "checkoutUrl": "https://checkout.conformance.test/s/tl10"
+      }
+    }
+  }
+}

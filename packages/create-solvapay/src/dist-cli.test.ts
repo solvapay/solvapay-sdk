@@ -98,9 +98,11 @@ describe('dist/cli.js published-package paths', () => {
     await expect(
       readFile(path.join(cwd, 'mcp-scratch', 'wrangler.jsonc'), 'utf8'),
     ).resolves.toBeTruthy()
-    await expect(
-      readFile(path.join(cwd, 'mcp-scratch', 'src', 'tools', 'helloTool.ts'), 'utf8'),
-    ).resolves.toBeTruthy()
+    const tool = await readFile(path.join(cwd, 'mcp-scratch', 'src', 'tools', 'hello_tool.ts'), 'utf8')
+    expect(tool).toContain('export function registerHelloTool(')
+    expect(tool).toContain("ctx.registerPayable('hello_tool'")
+    const index = await readFile(path.join(cwd, 'mcp-scratch', 'src', 'tools', 'index.ts'), 'utf8')
+    expect(index).toContain("import { registerHelloTool } from './hello_tool'")
   }, 60_000)
 
   it('resolves a relative --openapi path against the user cwd', async () => {

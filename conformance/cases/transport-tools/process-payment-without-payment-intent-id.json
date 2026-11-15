@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "process-payment-without-payment-intent-id",
+  "description": "process_payment with an empty paymentIntentId is refused with 400 before any API call.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "process_payment",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL05",
+      "arguments": {
+        "paymentIntentId": "",
+        "productRef": "prd_tl_tools"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "paymentIntentId and productRef are required"
+        }
+      ],
+      "structuredContent": {
+        "error": "paymentIntentId and productRef are required",
+        "status": 400
+      },
+      "isError": true
+    }
+  }
+}

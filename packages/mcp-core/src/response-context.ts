@@ -47,7 +47,7 @@ export interface BuildResponseContextParams {
   /**
    * Active plan projection from the bootstrap payload's purchase
    * snapshot. Optional; when not passed, a minimal stub is synthesised
-   * from `limits.plan`.
+   * from `limits.planRef`.
    */
   bootstrapPlan?: BootstrapPlan | null
   /** SolvaPay instance used for `ctx.customer.fresh()` round-trips. */
@@ -60,15 +60,16 @@ export interface BuildResponseContextParams {
 }
 
 /**
- * Synthesize a minimal `BootstrapPlan` from the deprecated
- * `LimitResponseWithPlan.plan` alias. Prefer `planRef` on the limits
- * response, or a richer bootstrap plan projection from the caller.
+ * Synthesize a minimal `BootstrapPlan` from the limits response's
+ * `planRef`, the active plan the API reports. (`plan` is a deprecated
+ * alias the backend never fills in.)
  */
 function synthesizePlanStub(limits: LimitResponseWithPlan | null): BootstrapPlan | null {
-  if (!limits?.plan) return null
+  const reference = limits?.planRef
+  if (!reference) return null
   // Only `.reference` is guaranteed meaningful. Remaining fields cast
   // through `BootstrapPlan` to stay structurally compatible.
-  return { reference: limits.plan } as unknown as BootstrapPlan
+  return { reference } as unknown as BootstrapPlan
 }
 
 /**
@@ -117,8 +118,7 @@ export function buildResponseContext(
   const { customerRef, limits, product, bootstrapProduct, solvaPay, freeLimit } = params
 
   // Resolve `bootstrapPlan`: caller-provided projection wins; otherwise
-  // synthesize a minimal plan stub from `limits.plan` (the plan ref
-  // string) so `ctx.customer.plan` is non-null for customers with an
+  // synthesize a minimal plan stub from `limits.planRef` so `ctx.customer.plan` is non-null for customers with an
   // active plan. The stub carries only `.reference`; merchants
   // consuming richer fields should fetch from their own bootstrap.
   const bootstrapPlan: BootstrapPlan | null =

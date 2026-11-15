@@ -104,6 +104,13 @@ describe('createSolvaPayMcpFetchHandler', () => {
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
       Buffer.from(JSON.stringify({ sub: 'cust_1', exp: 9_999_999_999 })).toString('base64url') +
       '.sig'
+    // SolvaPay verifies the token; only then is the request served.
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ sub: 'cust_1' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
 
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {

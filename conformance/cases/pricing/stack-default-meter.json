@@ -1,0 +1,288 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "pricing",
+  "case": "stack-default-meter",
+  "description": "A plan carrying every option kind, with unknown kinds and malformed options among them: each reader skips what it cannot read, the first valid billing cycle and positive trial win, headline charges keep one recurring flat charge per currency, the zero per-unit charge gives way to the one band that charges (so the rate is not a floor), the limit without a meter is the first with a numeric cap, and a balance in another currency gives no credits per call.",
+  "input": {
+    "fn": "planPricing",
+    "args": {
+      "plan": {
+        "reference": "pln_nr_stack",
+        "name": "Stack",
+        "requiresPayment": true,
+        "price": 9900,
+        "currency": "eur",
+        "options": [
+          {
+            "kind": "discount",
+            "percent": 10
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "day"
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "year",
+            "count": 2
+          },
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "trial",
+            "days": 0
+          },
+          {
+            "kind": "trial",
+            "days": 14
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 4900,
+            "currency": "EUR",
+            "oneTime": true
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 9900,
+            "currency": "eur"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 10900,
+            "currency": "EUR"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 11900,
+            "currency": "USD"
+          },
+          {
+            "kind": "charge",
+            "per": "month",
+            "amountMinor": 5,
+            "currency": "EUR"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": "3",
+            "currency": "EUR",
+            "meter": "requests"
+          },
+          {
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 0,
+            "currency": "EUR",
+            "meter": "requests"
+          },
+          {
+            "kind": "tier",
+            "from": 1000,
+            "to": null,
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 2,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": 1000,
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 0,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": "lots",
+            "mode": "graduated",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 1,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "stepped",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 1,
+              "currency": "EUR",
+              "meter": "requests"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "volume",
+            "charge": {
+              "per": "unit",
+              "amountMinor": 7,
+              "currency": "EUR",
+              "meter": "tokens"
+            }
+          },
+          {
+            "kind": "tier",
+            "from": 0,
+            "to": null,
+            "mode": "volume"
+          },
+          {
+            "kind": "limit",
+            "meter": "requests",
+            "cap": "many"
+          },
+          {
+            "kind": "limit",
+            "meter": "tokens",
+            "cap": 50000,
+            "onExceed": "draw_credits"
+          },
+          {
+            "kind": "limit",
+            "meter": "requests",
+            "cap": 1000,
+            "onExceed": "block"
+          },
+          null,
+          "x"
+        ]
+      },
+      "balance": {
+        "displayCurrency": "USD",
+        "displayExchangeRate": 1,
+        "creditsPerMinorUnit": 100
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "charges": [
+        {
+          "per": "flat",
+          "amountMinor": 4900,
+          "currency": "EUR",
+          "oneTime": true
+        },
+        {
+          "per": "flat",
+          "amountMinor": 9900,
+          "currency": "eur"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 10900,
+          "currency": "EUR"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 11900,
+          "currency": "USD"
+        },
+        {
+          "per": "unit",
+          "amountMinor": 0,
+          "currency": "EUR",
+          "meter": "requests"
+        }
+      ],
+      "headlineCharges": [
+        {
+          "per": "flat",
+          "amountMinor": 9900,
+          "currency": "eur"
+        },
+        {
+          "per": "flat",
+          "amountMinor": 11900,
+          "currency": "USD"
+        }
+      ],
+      "perUnitCharge": {
+        "per": "unit",
+        "amountMinor": 0,
+        "currency": "EUR",
+        "meter": "requests"
+      },
+      "billingCycle": {
+        "interval": "year",
+        "count": 2
+      },
+      "tierBands": [
+        {
+          "from": 0,
+          "to": 1000,
+          "mode": "graduated",
+          "charge": {
+            "per": "unit",
+            "amountMinor": 0,
+            "currency": "EUR",
+            "meter": "requests"
+          }
+        },
+        {
+          "from": 1000,
+          "to": null,
+          "mode": "graduated",
+          "charge": {
+            "per": "unit",
+            "amountMinor": 2,
+            "currency": "EUR",
+            "meter": "requests"
+          }
+        }
+      ],
+      "tierMeters": ["requests", "tokens"],
+      "usageRate": {
+        "per": "unit",
+        "amountMinor": 2,
+        "currency": "EUR",
+        "meter": "requests",
+        "tiered": false
+      },
+      "trialDays": 14,
+      "includedUnits": 50000,
+      "meterName": "requests",
+      "countsUsage": true,
+      "planPricingShape": {
+        "shape": "hybrid",
+        "headlineMinor": 9900,
+        "currency": "EUR",
+        "cycle": {
+          "interval": "year",
+          "count": 2
+        },
+        "rate": {
+          "per": "unit",
+          "amountMinor": 2,
+          "currency": "EUR",
+          "meter": "requests",
+          "tiered": false
+        }
+      },
+      "creditsPerUnitFromBalance": null
+    }
+  }
+}

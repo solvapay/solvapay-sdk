@@ -2,3 +2,9 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'examples/*'
+  - 'conformance/runners/*'
+  - 'mcp-app'
+  # Version sources only (private package.json files, never on npm): let a
+  # changeset bump the Python package and the Go module.
+  - 'python'
+  - 'go'

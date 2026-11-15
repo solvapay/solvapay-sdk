@@ -1,0 +1,46 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "errors-process-payment-fails",
+  "description": "Processing a payment intent the API cannot process answers the API's 409.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "process_payment",
+      "productRef": "prd_ec_1",
+      "customerRef": "cus_EC01",
+      "arguments": {
+        "paymentIntentId": "pi_ec_1",
+        "productRef": "prd_ec_1"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/payment-intents/pi_ec_1/process",
+          "status": 409,
+          "body": {
+            "statusCode": 409,
+            "message": "Payment intent pi_ec_1 is not confirmed yet",
+            "error": "Conflict"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<api message>"
+        }
+      ],
+      "structuredContent": {
+        "error": "<api message>",
+        "status": 409,
+        "details": "<api message>"
+      },
+      "isError": true
+    }
+  }
+}

@@ -19,7 +19,7 @@ export function resolveProductRef(explicit?: string): string | undefined {
 export function requireProductRef(explicit?: string): string {
   const resolved = resolveProductRef(explicit)
   if (!resolved) {
-    throw new SolvaPayError(MISSING_PRODUCT_REF_MESSAGE)
+    throw new SolvaPayError(MISSING_PRODUCT_REF_MESSAGE, { code: 'missing_product' })
   }
   return resolved
 }

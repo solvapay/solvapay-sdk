@@ -100,6 +100,7 @@ export function getSolvaPayConfig(): SolvaPayConfig {
   if (!solvapaySecretKey) {
     throw new SolvaPayError(
       'Server configuration error: SolvaPay secret key not configured. Missing SOLVAPAY_SECRET_KEY environment variable.',
+      { code: 'missing_secret' },
     )
   }
 

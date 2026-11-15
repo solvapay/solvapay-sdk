@@ -1,0 +1,38 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "errors-missing-product",
+  "description": "Without a product, a decision and a paid call both fail with missing_product before calling the API.",
+  "setup": {
+    "productRef": ""
+  },
+  "steps": [
+    {
+      "fn": "decide",
+      "clock": "2026-11-12T12:00:00.000Z",
+      "args": {
+        "customerRef": "cus_EC06"
+      },
+      "expect": {
+        "error": {
+          "code": "missing_product"
+        },
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "paidCall",
+      "clock": "2026-11-12T12:00:01.000Z",
+      "args": {
+        "customerRef": "cus_EC06",
+        "toolName": "search"
+      },
+      "expect": {
+        "error": {
+          "code": "missing_product"
+        },
+        "apiCalls": []
+      }
+    }
+  ]
+}

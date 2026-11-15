@@ -12,8 +12,10 @@
   },
   "ignore": [
     "@example/*",
+    "@solvapay/conformance-typescript",
     "@solvapay/demo-services",
     "@solvapay/examples-shared",
+    "@solvapay/mcp-app",
     "@solvapay/test-utils",
     "checkout-demo",
     "hosted-checkout-demo",

@@ -23,6 +23,10 @@ export type { MockAuthAdapter as MockAuthAdapterType } from './mock'
 export { SolvapayAuthAdapter, SolvapayOAuthClient } from './solvapay'
 export type { SolvapayAuthAdapterConfig, SolvapayOAuthConfig, TokenResponse } from './solvapay'
 
+// Bearer token verification shared by every route helper
+export { verifyBearerToken, TOKEN_NOT_VERIFIABLE } from './verify-token'
+export type { TokenVerification, VerifyBearerTokenOptions } from './verify-token'
+
 // Export Next.js route utilities
 export {
   getUserIdFromRequest,

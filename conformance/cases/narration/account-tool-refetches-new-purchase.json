@@ -1,0 +1,302 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-tool-refetches-new-purchase",
+  "description": "checkLimits enrols the customer on the free plan after the parallel customer read: the account tool reads the customer again and narrates the new plan. Failed plan and platform-config reads leave plans empty and no publishable key; a portal link without a query gets '?'.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "account",
+      "productRef": "prd_nr_enrol",
+      "customerRef": "cus_NR02",
+      "arguments": {
+        "view": "account",
+        "mode": "text"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/merchant",
+          "body": {
+            "displayName": "Acme Data",
+            "legalName": "Acme Data Ltd"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_enrol",
+          "body": {
+            "reference": "prd_nr_enrol",
+            "name": "Stock Research",
+            "status": "active",
+            "balance": 0,
+            "isManagedMcp": false,
+            "isMcpPay": false,
+            "totalTransactions": 0,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/products/prd_nr_enrol/plans",
+          "body": {
+            "message": "plans down"
+          },
+          "status": 500
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/platform-config",
+          "body": {
+            "message": "config down"
+          },
+          "status": 500
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_NR02",
+          "body": {
+            "reference": "cus_NR02",
+            "customerRef": "cus_NR02",
+            "email": "bo@example.com",
+            "name": "Bo",
+            "purchases": []
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_NR02",
+          "body": {
+            "reference": "cus_NR02",
+            "customerRef": "cus_NR02",
+            "email": "bo@example.com",
+            "name": "Bo",
+            "purchases": [
+              {
+                "customerRef": "cus_NR02",
+                "createdAt": "2026-11-10T00:00:00.000Z",
+                "reference": "pur_nr_free",
+                "status": "active",
+                "productRef": "prd_nr_enrol",
+                "planRef": "pln_nr_free",
+                "planSnapshot": {
+                  "reference": "pln_nr_free",
+                  "name": "Free",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 100,
+                      "onExceed": "block"
+                    }
+                  ]
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-11-10T00:00:00.000Z",
+                "isRecurring": true,
+                "usage": {
+                  "periodStart": "2026-11-10T00:00:00.000Z",
+                  "periodEnd": "2026-12-10T00:00:00.000Z"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/payment-method",
+          "body": {
+            "kind": "none"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers/cus_NR02/balance",
+          "body": {
+            "customerRef": "cus_NR02",
+            "credits": 0,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.00",
+              "rateSource": "parity"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": 97,
+            "limit": 100,
+            "planRef": "pln_nr_free",
+            "meterName": "requests",
+            "purchaseRef": "pur_nr_free",
+            "used": 3
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers/customer-sessions",
+          "body": {
+            "sessionId": "ss_nr2",
+            "customerUrl": "https://solvapay.com/customer/manage/ss_nr2"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/checkout-sessions",
+          "body": {
+            "sessionId": "cs_nr2",
+            "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_nr2"
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: 97 of 100 calls left this month, resetting Dec 10. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: bo@example.com · cus_NR02\nManage: [Manage account](https://solvapay.com/customer/manage/ss_nr2) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr2) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/manage/ss_nr2",
+          "name": "Manage account"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_nr2",
+          "name": "Open checkout"
+        }
+      ],
+      "structuredContent": {
+        "view": "account",
+        "productRef": "prd_nr_enrol",
+        "stripePublishableKey": null,
+        "returnUrl": "https://mcp.conformance.test",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_nr_enrol",
+          "name": "Stock Research",
+          "status": "active",
+          "balance": 0,
+          "isManagedMcp": false,
+          "isMcpPay": false,
+          "totalTransactions": 0,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "updatedAt": "2026-01-01T00:00:00Z"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_NR02",
+          "email": "bo@example.com",
+          "name": "Bo",
+          "purchase": {
+            "customerRef": "cus_NR02",
+            "email": "bo@example.com",
+            "name": "Bo",
+            "purchases": [
+              {
+                "customerRef": "cus_NR02",
+                "createdAt": "2026-11-10T00:00:00.000Z",
+                "reference": "pur_nr_free",
+                "status": "active",
+                "productRef": "prd_nr_enrol",
+                "planRef": "pln_nr_free",
+                "planSnapshot": {
+                  "reference": "pln_nr_free",
+                  "name": "Free",
+                  "price": 0,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "limit",
+                      "meter": "requests",
+                      "cap": 100,
+                      "onExceed": "block"
+                    }
+                  ],
+                  "priceDisplay": "$0.00"
+                },
+                "amount": 0,
+                "currency": "USD",
+                "startDate": "2026-11-10T00:00:00.000Z",
+                "isRecurring": true,
+                "usage": {
+                  "periodStart": "2026-11-10T00:00:00.000Z",
+                  "periodEnd": "2026-12-10T00:00:00.000Z"
+                },
+                "priceDisplay": "$0.00"
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": {
+            "customerRef": "cus_NR02",
+            "credits": 0,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "display": {
+              "amountMajor": 0,
+              "currency": "USD",
+              "exchangeRate": 1,
+              "formatted": "$0.00",
+              "rateSource": "parity"
+            }
+          },
+          "usage": {
+            "meterRef": "requests",
+            "total": 100,
+            "used": 3,
+            "remaining": 97,
+            "percentUsed": 3,
+            "periodStart": "2026-11-10T00:00:00.000Z",
+            "periodEnd": "2026-12-10T00:00:00.000Z",
+            "purchaseRef": "pur_nr_free"
+          },
+          "limits": {
+            "withinLimits": true,
+            "remaining": 97,
+            "limit": 100,
+            "planRef": "pln_nr_free",
+            "meterName": "requests",
+            "purchaseRef": "pur_nr_free",
+            "used": 3
+          },
+          "canCall": true,
+          "remainingCalls": 97,
+          "isCreditBased": false
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_nr2",
+        "portalUrl": "https://solvapay.com/customer/manage/ss_nr2",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage/ss_nr2?tab=credits&intent=autorecharge"
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "transport-tools",
+  "case": "get-history-default-product",
+  "description": "get_history without arguments reads the server product's purchases and all credit activity.",
+  "input": {
+    "fn": "callTool",
+    "args": {
+      "tool": "get_history",
+      "productRef": "prd_tl_tools",
+      "customerRef": "cus_TL12",
+      "arguments": {},
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/purchases",
+          "body": {
+            "purchases": []
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/v1/sdk/credits/activity",
+          "body": {
+            "entries": [],
+            "hasMore": false
+          }
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "json": {
+            "charges": [],
+            "creditActivity": {
+              "entries": [],
+              "hasMore": false
+            }
+          }
+        }
+      ],
+      "structuredContent": {
+        "charges": [],
+        "creditActivity": {
+          "entries": [],
+          "hasMore": false
+        }
+      }
+    }
+  }
+}

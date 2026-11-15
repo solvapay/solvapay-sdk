@@ -1,0 +1,176 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "account-one-time",
+  "description": "A one-time plan with no limit option (state C) is priced once and reads Unlimited calls, with no renewal date.",
+  "input": {
+    "fn": "narrateAccount",
+    "args": {
+      "view": "account",
+      "mode": "text",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_research",
+        "stripePublishableKey": null,
+        "returnUrl": "https://research.example.com",
+        "merchant": {
+          "displayName": "Acme Data",
+          "legalName": "Acme Data Ltd"
+        },
+        "product": {
+          "reference": "prd_research",
+          "name": "Stock Research"
+        },
+        "plans": [
+          {
+            "reference": "pln_free",
+            "name": "Free",
+            "type": "recurring",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 100,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_pro",
+            "name": "Pro",
+            "type": "recurring",
+            "price": 2900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 2900,
+                "currency": "USD"
+              },
+              {
+                "kind": "limit",
+                "meter": "requests",
+                "cap": 5000,
+                "onExceed": "block"
+              }
+            ]
+          },
+          {
+            "reference": "pln_payg",
+            "name": "Pay as you go",
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 2,
+                "currency": "USD",
+                "meter": "requests"
+              }
+            ]
+          },
+          {
+            "reference": "pln_lifetime",
+            "name": "Lifetime",
+            "type": "one-time",
+            "price": 19900,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 19900,
+                "currency": "USD"
+              }
+            ]
+          }
+        ],
+        "customer": {
+          "ref": "cus_42",
+          "email": "ada@example.com",
+          "name": "Ada",
+          "purchase": {
+            "customerRef": "cus_42",
+            "purchases": [
+              {
+                "reference": "pur_lifetime",
+                "status": "active",
+                "productRef": "prd_research",
+                "planRef": "pln_lifetime",
+                "planSnapshot": {
+                  "reference": "pln_lifetime",
+                  "name": "Lifetime",
+                  "price": 19900,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 19900,
+                      "currency": "USD"
+                    }
+                  ]
+                },
+                "amount": 19900,
+                "currency": "USD",
+                "startDate": "2026-11-01T00:00:00.000Z",
+                "isRecurring": false
+              }
+            ]
+          },
+          "paymentMethod": {
+            "kind": "none"
+          },
+          "balance": null,
+          "usage": null,
+          "limits": {
+            "withinLimits": true,
+            "remaining": -1,
+            "planRef": "pln_lifetime"
+          }
+        },
+        "checkoutUrl": "https://solvapay.com/customer/checkout?id=cs_1",
+        "portalUrl": "https://solvapay.com/customer/manage?session=sess_1",
+        "autoRechargeUrl": "https://solvapay.com/customer/manage?session=sess_1&tab=credits&intent=autorecharge"
+      }
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Stock Research — your account**\n\nStock Research is on Lifetime, $199 once. Unlimited calls. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/manage?session=sess_1",
+          "name": "Manage account"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://solvapay.com/customer/checkout?id=cs_1",
+          "name": "Open checkout"
+        }
+      ]
+    }
+  }
+}

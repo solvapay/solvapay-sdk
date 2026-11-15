@@ -1,0 +1,221 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "oauth-sign-in-first",
+  "description": "With lazyAuth false, a host that has not signed in may still initialize and list tools, but every tools/call, free ones too, gets the sign-in challenge.",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0,
+        "protectedResource": {
+          "resource": "https://merchant-am.test/mcp"
+        },
+        "lazyAuth": false
+      },
+      "tools": [
+        {
+          "name": "answer",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 0.004,
+              "currency": "USD"
+            },
+            "echo": true
+          }
+        }
+      ],
+      "freeTools": [
+        {
+          "name": "ping",
+          "description": "Answers pong, free for anyone.",
+          "text": "pong"
+        }
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+              "protocolVersion": "2025-06-18",
+              "capabilities": {},
+              "clientInfo": {
+                "name": "agent-am",
+                "version": "1.0.0"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+              "name": "ping",
+              "arguments": {}
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+              "name": "answer",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "serverInfo": {
+                "name": "am-research",
+                "version": "0.1.0"
+              }
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 2,
+            "result": {
+              "tools": [
+                {
+                  "name": "answer",
+                  "title": "answer",
+                  "description": "Answers a research question from the merchant's index.",
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false
+                  },
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                      "depth": {
+                        "type": "integer",
+                        "description": "How many sources to read."
+                      },
+                      "question": {
+                        "type": "string",
+                        "description": "What to answer."
+                      }
+                    },
+                    "required": ["question"]
+                  }
+                },
+                {
+                  "name": "ping",
+                  "description": "Answers pong, free for anyone.",
+                  "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        },
+        {
+          "status": 401,
+          "headers": {
+            "www-authenticate": "Bearer error=\"invalid_token\", error_description=\"Sign in to pay for this tool\", resource_metadata=\"https://merchant-am.test/.well-known/oauth-protected-resource/mcp\", scope=\"usage\"",
+            "access-control-expose-headers": "WWW-Authenticate"
+          },
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "error": {
+              "code": -32001,
+              "message": "Sign in to pay for this tool"
+            }
+          }
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

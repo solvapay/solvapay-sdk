@@ -1,0 +1,33 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-gate",
+  "case": "free-plan-at-cap",
+  "description": "An active free plan at its cap is limit_reached: the message names the included usage and links checkout with the 15-minute expiry.",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_x",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "free",
+        "checkoutUrl": "https://pay.example.com/checkout"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_x",
+      "checkoutUrl": "https://pay.example.com/checkout",
+      "message": "You've reached the included usage for this period. [Open checkout](https://pay.example.com/checkout) to continue (expires in 15 minutes), or call the `account` tool with view: 'checkout'.",
+      "planRef": "free",
+      "reason": "limit_reached",
+      "nextAction": "checkout",
+      "remainingCalls": 0,
+      "links": {
+        "checkout": "https://pay.example.com/checkout"
+      }
+    }
+  }
+}

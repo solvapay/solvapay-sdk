@@ -1,0 +1,17 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "narration",
+  "case": "activate-invalid",
+  "description": "An invalid planRef without a message gets the default sentence.",
+  "input": {
+    "fn": "narrateActivatePlan",
+    "args": {
+      "result": {
+        "status": "invalid"
+      }
+    }
+  },
+  "expect": {
+    "result": "That planRef is not valid for this product. Call `account` with view: 'checkout' to see plans."
+  }
+}

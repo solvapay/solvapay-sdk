@@ -1,0 +1,605 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "agent-mcp",
+  "case": "upstream-failures",
+  "description": "A tool whose upstream cannot be reached releases the call (completed as a 502 with interrupted upstream_unreachable, nothing charged) and answers the default sentence, or the tool's own unreachableMessage. An upstream error and an answer that broke off complete with their status, cost and interrupted reason, and the agent still gets the result when SolvaPay cannot be told (complete fails).",
+  "input": {
+    "fn": "agentMcpRoute",
+    "args": {
+      "issuer": "https://api.solvapay.test/v1/agent",
+      "providerRef": "prov_AMCONF01",
+      "jwks": {
+        "keys": [
+          {
+            "kty": "EC",
+            "x": "VKu9Clta0pxUiCFMZy2_0SznbIfyIdSvlJv7bTnwxhE",
+            "y": "KZ5Dl5g06XPQ7bGdwSSlq9KpX6NggQEBK2MRTwYHc84",
+            "crv": "P-256",
+            "kid": "am-k1",
+            "alg": "ES256",
+            "use": "sig"
+          }
+        ]
+      },
+      "route": {
+        "mcpPath": "/mcp",
+        "serverName": "am-research",
+        "maxWaitSeconds": 0
+      },
+      "tools": [
+        {
+          "name": "answer_down",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "throw": "ECONNREFUSED"
+          }
+        },
+        {
+          "name": "answer_down_custom",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "throw": "ETIMEDOUT"
+          },
+          "unreachableMessage": "The research index is offline. Nothing was charged."
+        },
+        {
+          "name": "answer_error",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 502,
+            "cost": null,
+            "text": "Upstream error."
+          }
+        },
+        {
+          "name": "answer_broken",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 1.23e-8,
+              "currency": "USD"
+            },
+            "interrupted": "stream_broken",
+            "text": "Partial answer"
+          }
+        },
+        {
+          "name": "answer_untold",
+          "description": "Answers a research question from the merchant's index.",
+          "input": {
+            "question": {
+              "type": "string",
+              "description": "What to answer."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many sources to read.",
+              "optional": true
+            }
+          },
+          "item": "answer-v1",
+          "estimate": {
+            "amount": "0.01",
+            "currency": "USD"
+          },
+          "prompt": "question",
+          "run": {
+            "status": 200,
+            "cost": {
+              "amount": 1.5,
+              "currency": "EUR"
+            },
+            "text": "Full answer"
+          }
+        }
+      ],
+      "freeTools": [],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+              "name": "answer_down",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+              "name": "answer_down_custom",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+              "name": "answer_error",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+              "name": "answer_broken",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/mcp",
+          "authorization": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+              "name": "answer_untold",
+              "arguments": {
+                "question": "Q"
+              }
+            }
+          }
+        }
+      ],
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_up1",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up1/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_up1",
+            "settled": false,
+            "source": "none",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_up2",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up2/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_up2",
+            "settled": false,
+            "source": "none",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_up3",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up3/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_up3",
+            "settled": false,
+            "source": "none",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_up4",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up4/complete",
+          "status": 200,
+          "body": {
+            "callRef": "call_am_up4",
+            "settled": true,
+            "source": "reported",
+            "amount": {
+              "amount": "0.00000001",
+              "currency": "USD"
+            },
+            "duplicate": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "status": "allowed",
+            "callRef": "call_am_up5",
+            "reservation": {
+              "held": {
+                "amount": "0.01",
+                "currency": "USD"
+              },
+              "expiresAt": "2026-11-12T12:30:00.000Z"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up5/complete",
+          "status": 500,
+          "body": {
+            "message": "boom"
+          }
+        }
+      ]
+    },
+    "clock": "2026-11-12T12:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "mcp": {
+            "id": 1,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "The service behind this tool could not be reached. Nothing was charged."
+                }
+              ],
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 2,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "The research index is offline. Nothing was charged."
+                }
+              ],
+              "isError": true
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 3,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Upstream error."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 4,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Partial answer"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "status": 200,
+          "mcp": {
+            "id": 5,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Full answer"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "apiCalls": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-1>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:4ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up1/complete",
+          "body": {
+            "status": 502,
+            "cost": null,
+            "interrupted": "upstream_unreachable"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-2>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:4ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up2/complete",
+          "body": {
+            "status": 502,
+            "cost": null,
+            "interrupted": "upstream_unreachable"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-3>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:4ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up3/complete",
+          "body": {
+            "status": 502,
+            "cost": null
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-4>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:4ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up4/complete",
+          "body": {
+            "status": 200,
+            "cost": {
+              "amount": "0.00000001",
+              "currency": "USD"
+            },
+            "interrupted": "stream_broken"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls",
+          "body": {
+            "agentToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFtLWsxIn0.eyJzY29wZSI6InVzYWdlIiwiZW52Ijoic2FuZGJveCIsInByaW5jaXBhbCI6InBwbF9hbV9vd25lcjAxIiwiaXNzIjoiaHR0cHM6Ly9hcGkuc29sdmFwYXkudGVzdC92MS9hZ2VudCIsImF1ZCI6InByb3ZfQU1DT05GMDEiLCJzdWIiOiJhZ3RfYW1fcmVzZWFyY2giLCJqdGkiOiJqdGlfYW1fMSIsImlhdCI6MTc5NDQ4NDc0MCwiZXhwIjoxNzk0NDg1NjQwfQ.ZPNSW5EYl24_U1It8xxt7vH1bUKsvs9m05VyJ1TjPayPtNlamsGCEy10oMiXLI0-_dgZMPyO0g37yR9JfBMWJA",
+            "requestId": "<uuid-5>",
+            "item": "answer-v1",
+            "estimate": {
+              "amount": "0.01",
+              "currency": "USD"
+            },
+            "promptHash": "sha256:4ae81572f06e1b88fd5ced7a1a000945432e83e1551e6f721ee9c00b8cc33260",
+            "toolError": false,
+            "wait": 0
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/agent/calls/call_am_up5/complete",
+          "body": {
+            "status": 200,
+            "cost": {
+              "amount": "1.5",
+              "currency": "EUR"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "paywall-sequences",
+  "case": "ensure-customer-with-details",
+  "description": "ensureCustomer with an externalRef, email and name looks the customer up, then creates it with all three; a paid call for that user reuses the mapping. Without an externalRef there is no lookup and the email is generated from the clock. A cus_ ref is returned as is, and a customer found by a different externalRef is mapped to the user without being created.",
+  "setup": {
+    "productRef": "prd_pw_seq"
+  },
+  "steps": [
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:00.000Z",
+      "args": {
+        "customerRef": "user_pw_02",
+        "externalRef": "user_pw_ext02",
+        "email": "ada@example.com",
+        "name": "Ada Lovelace"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "status": 404,
+          "body": {
+            "statusCode": 404,
+            "message": "Customer not found"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_PW02",
+            "email": "ada@example.com",
+            "name": "Ada Lovelace",
+            "externalRef": "user_pw_ext02"
+          }
+        }
+      ],
+      "expect": {
+        "result": "cus_PW02",
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_pw_ext02"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "ada@example.com",
+              "metadata": {},
+              "name": "Ada Lovelace",
+              "externalRef": "user_pw_ext02"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "decide",
+      "clock": "2026-11-13T09:20:01.000Z",
+      "args": {
+        "customerRef": "user_pw_02"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/limits",
+          "body": {
+            "withinLimits": true,
+            "remaining": -1,
+            "plan": "pln_pw_unl"
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "outcome": "allow",
+          "customerRef": "cus_PW02"
+        },
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/limits",
+            "body": {
+              "customerRef": "cus_PW02",
+              "productRef": "prd_pw_seq",
+              "meterName": "requests",
+              "includeCheckoutSession": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:02.000Z",
+      "args": {
+        "customerRef": "user_pw_03",
+        "name": "Grace Hopper"
+      },
+      "api": [
+        {
+          "method": "POST",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_PW03",
+            "email": "user_pw_03-1794561602000@auto-created.local",
+            "name": "Grace Hopper"
+          }
+        }
+      ],
+      "expect": {
+        "result": "cus_PW03",
+        "apiCalls": [
+          {
+            "method": "POST",
+            "path": "/v1/sdk/customers",
+            "body": {
+              "email": "user_pw_03-1794561602000@auto-created.local",
+              "metadata": {},
+              "name": "Grace Hopper"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:03.000Z",
+      "args": {
+        "customerRef": "user_pw_03"
+      },
+      "api": [],
+      "expect": {
+        "result": "cus_PW03",
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:04.000Z",
+      "args": {
+        "customerRef": "cus_PW04"
+      },
+      "api": [],
+      "expect": {
+        "result": "cus_PW04",
+        "apiCalls": []
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:05.000Z",
+      "args": {
+        "customerRef": "user_pw_07",
+        "externalRef": "user_pw_ext07",
+        "email": "linus@example.com"
+      },
+      "api": [
+        {
+          "method": "GET",
+          "path": "/v1/sdk/customers",
+          "body": {
+            "reference": "cus_PW07",
+            "email": "linus@example.com",
+            "name": "Linus",
+            "externalRef": "user_pw_ext07"
+          }
+        }
+      ],
+      "expect": {
+        "result": "cus_PW07",
+        "apiCalls": [
+          {
+            "method": "GET",
+            "path": "/v1/sdk/customers",
+            "query": {
+              "externalRef": "user_pw_ext07"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fn": "ensureCustomer",
+      "clock": "2026-11-13T09:20:06.000Z",
+      "args": {
+        "customerRef": "user_pw_07"
+      },
+      "api": [],
+      "expect": {
+        "result": "cus_PW07",
+        "apiCalls": []
+      }
+    }
+  ]
+}
