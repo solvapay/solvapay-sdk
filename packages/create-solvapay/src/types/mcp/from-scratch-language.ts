@@ -5,7 +5,7 @@
  * templates share nothing with the TypeScript `_base/`.
  *
  * Order: pick the SDK version (fails before anything is written when there is
- * no stable release and no `--preview`), check the toolchain, copy the
+ * no stable release and this is not the preview scaffolder), check the toolchain, copy the
  * template with the version pinned, `uv sync` / `go mod tidy`, then
  * `solvapay init` for the key and product.
  */

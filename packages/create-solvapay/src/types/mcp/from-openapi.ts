@@ -41,7 +41,7 @@ export type FromOpenapiInput = {
   skipInit?: boolean
   /** Pin `@solvapay/*` from the template instead of npm's latest (`--offline`). */
   offline?: boolean
-  /** Pin `@solvapay/*` from npm's `preview` tag (`--preview`). */
+  /** Pin `@solvapay/*` from npm's `preview` tag (set by a preview scaffolder). */
   preview?: boolean
   /**
    * When true, seed `SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com`

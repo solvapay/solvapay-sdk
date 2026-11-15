@@ -634,7 +634,7 @@ describe('runInitInDirectory', () => {
       expect(text).toContain('npx solvapay verify')
     })
 
-    it('fails before sign-in when only previews exist and --preview is not set', async () => {
+    it('fails before sign-in when only previews exist and the CLI is stable', async () => {
       vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
 
       await expect(
@@ -644,12 +644,12 @@ describe('runInitInDirectory', () => {
           sdkVersions: versions(['0.1.0.dev4', '0.1.0.dev12'], []),
         }),
       ).rejects.toThrow(
-        /no stable release on PyPI yet \(newest preview: 0\.1\.0\.dev12\)\. Pass --preview/,
+        /no stable release on PyPI yet \(newest preview: 0\.1\.0\.dev12\)\. Until a stable release is out, use the preview CLI/,
       )
       expect(createInitSession).not.toHaveBeenCalled()
     })
 
-    it('pins the newest preview with --preview', async () => {
+    it('pins the newest preview from a preview CLI', async () => {
       vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'poetry' })
 
       await runInitInDirectory({
@@ -711,7 +711,7 @@ describe('runInitInDirectory', () => {
       ).rejects.toThrow(/go get .* failed: go is not installed/)
     })
 
-    it('installs the npm preview tag for TypeScript with --preview', async () => {
+    it('installs the npm preview tag for TypeScript from a preview CLI', async () => {
       await runInitInDirectory({
         cwd: TEST_CWD,
         options: { yes: true, preview: true, features: ['mcp'] },

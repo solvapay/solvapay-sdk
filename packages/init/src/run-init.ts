@@ -140,8 +140,10 @@ export type InitCommandOptions = {
    */
   language?: Language
   /**
-   * `--preview`: install the newest preview of the SDK (npm `preview` tag,
-   * newest PyPI / Go proxy pre-release) instead of the newest stable release.
+   * Install the newest preview of the SDK (npm `preview` tag, newest PyPI /
+   * Go proxy pre-release) instead of the newest stable release. Not a flag:
+   * the CLI sets it when it is itself a preview build, so the preview CLI
+   * and the preview SDKs always go together.
    */
   preview?: boolean
   /** `--features mcp,agents,web`: Python extras, or extra TypeScript packages. */

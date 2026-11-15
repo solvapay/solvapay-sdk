@@ -5,10 +5,12 @@
  * - Go: `github.com/solvapay/solvapay-sdk/go` on the Go module proxy.
  *   Previews are `v<next>-dev.<n>` (semver pre-release).
  *
- * Without `--preview` the newest stable release is pinned; when there is
- * none, the run fails and names the newest preview, so nothing installs a
- * preview by surprise. With `--preview` the newest version of any kind is
- * pinned, the way npm's `preview` tag points at the latest snapshot.
+ * The channel follows the CLI's own build. The stable CLI pins the newest
+ * stable release and, when there is none, fails naming the newest preview,
+ * so nothing installs a preview by surprise. The preview CLI
+ * (`npx solvapay@preview`, `npm create solvapay@preview`) pins the newest
+ * version of any kind, the way npm's `preview` tag points at the latest
+ * snapshot.
  */
 
 export const PYPI_PACKAGE = 'solvapay'
@@ -193,8 +195,9 @@ export const newestAny = (language: SdkLanguage, versions: string[]): string | u
   newest(language, versions)
 
 /**
- * The version to pin: newest stable, or with `preview` the newest of any kind.
- * Throws when nothing fits, naming `--preview` if a preview would.
+ * The version to pin: newest stable, or with `preview` (a preview CLI) the
+ * newest of any kind. Throws when nothing fits, naming the preview CLI if a
+ * preview would.
  */
 export const pickSdkVersion = (
   language: SdkLanguage,
@@ -209,7 +212,7 @@ export const pickSdkVersion = (
   if (!stable) {
     throw new Error(
       `${rule.name} has no stable release on ${rule.registry} yet (newest preview: ${any}). ` +
-        'Pass --preview to install the preview.',
+        'Until a stable release is out, use the preview CLI (npx solvapay@preview, npm create solvapay@preview), which installs previews.',
     )
   }
   return stable

@@ -1,3 +1,4 @@
+import { isPreviewBuild } from '@solvapay/init'
 import { parseInitArgs, parseVerifyArgs } from './args'
 import { runDoctorCommand } from './commands/doctor'
 import { runInitCommand } from './commands/init'
@@ -32,8 +33,6 @@ Flags for init:
                         pyproject.toml, requirements.txt or package.json.
   --features <list>     What you use SolvaPay for: mcp, agents, web (comma
                         separated). Python extras, or extra npm packages.
-  --preview             Install the newest preview of the SDK instead of the
-                        newest stable release.
   --product <ref>       Verify and persist SOLVAPAY_PRODUCT_REF without product picker
   --dev                 Target the SolvaPay dev backend (api-dev.solvapay.com).
                         Internal testing only — production secret keys are rejected
@@ -74,7 +73,11 @@ const main = async () => {
 
   if (command === 'init') {
     printVersionBanner()
-    await runInitCommand(parseInitArgs(process.argv.slice(3)))
+    // A preview CLI installs preview SDKs; a stable one, stable SDKs.
+    await runInitCommand({
+      ...parseInitArgs(process.argv.slice(3)),
+      ...(isPreviewBuild(PACKAGE_VERSION) ? { preview: true } : {}),
+    })
     return
   }
 

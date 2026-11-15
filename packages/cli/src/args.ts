@@ -15,8 +15,6 @@ export function parseInitArgs(argv: string[]): InitCommandOptions {
       options.yes = true
     } else if (arg === '--dev') {
       options.dev = true
-    } else if (arg === '--preview') {
-      options.preview = true
     } else if (arg === '--product') {
       options.productRef = valueOf(argv, ++i, '--product')
     } else if (arg === '--language') {

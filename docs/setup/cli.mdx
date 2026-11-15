@@ -41,7 +41,7 @@ When you run `npx solvapay@latest init`, the CLI:
 | any other `pyproject.toml`, or `requirements.txt` | Python | Nothing: it prints the `python -m pip install` command, because it doesn't choose your interpreter |
 | `go.mod` | Go | `go get github.com/solvapay/solvapay-sdk/go@<version>` |
 
-Python and Go versions are pinned exactly, to the newest stable release. The Python and Go SDKs read environment variables, not `.env`: load `.env` when the app starts (python-dotenv in Python, a few lines in Go) or export the variables.
+Python and Go versions are pinned exactly, to the newest stable release. The preview CLI (`npx solvapay@preview init`) pins the newest preview instead; until Python or Go has a stable release, the stable CLI stops and tells you to use it. The Python and Go SDKs read environment variables, not `.env`: load `.env` when the app starts (python-dotenv in Python, a few lines in Go) or export the variables.
 
 When the folder has files for two languages (a Next.js app beside a Python API), or none, `init` asks which language. With `--yes`, or when no one is at a terminal, it stops and asks for `--language` instead of guessing; it creates a `package.json` only with `--language ts`.
 

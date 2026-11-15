@@ -219,25 +219,20 @@ describe('validateToolName', () => {
   })
 })
 
-describe('--language and --preview', () => {
-  it('parses both as common flags and skips them in the MCP parser', () => {
-    const argv = [
-      'srv',
-      '--type',
-      'mcp',
-      '--language',
-      'python',
-      '--preview',
-      '--tool-name',
-      'get_quote',
-    ]
-    expect(parseArgs(argv)).toMatchObject({ language: 'python', preview: true, type: 'mcp' })
+describe('--language', () => {
+  it('parses it as a common flag and skips it in the MCP parser', () => {
+    const argv = ['srv', '--type', 'mcp', '--language', 'python', '--tool-name', 'get_quote']
+    expect(parseArgs(argv)).toMatchObject({ language: 'python', type: 'mcp', preview: false })
     expect(parseMcpArgs(argv)).toMatchObject({ toolName: 'get_quote' })
     expect(parseMcpArgs(argv).unknownFlag).toBeUndefined()
   })
 
-  it('passes --preview to init', () => {
-    expect(toInitOptions(parseArgs(['srv', '--preview']))).toMatchObject({ preview: true })
+  it('has no --preview flag: the scaffolder build decides', () => {
+    expect(parseArgs(['srv', '--preview']).unknownFlag).toBe('--preview')
+  })
+
+  it('passes preview to init only when set', () => {
+    expect(toInitOptions({ ...parseArgs(['srv']), preview: true })).toMatchObject({ preview: true })
     expect(toInitOptions(parseArgs(['srv']))).not.toHaveProperty('preview')
   })
 })

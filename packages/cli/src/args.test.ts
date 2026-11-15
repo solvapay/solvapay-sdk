@@ -7,7 +7,6 @@ describe('parseInitArgs', () => {
       parseInitArgs([
         '--yes',
         '--dev',
-        '--preview',
         '--product',
         'prd_1',
         '--language',
@@ -18,7 +17,6 @@ describe('parseInitArgs', () => {
     ).toEqual({
       yes: true,
       dev: true,
-      preview: true,
       productRef: 'prd_1',
       language: 'python',
       features: ['mcp', 'agents'],
@@ -29,6 +27,7 @@ describe('parseInitArgs', () => {
     expect(() => parseInitArgs(['--language', 'ruby'])).toThrow('Unknown --language "ruby"')
     expect(() => parseInitArgs(['--features', 'mcp,billing'])).toThrow('Unknown feature "billing"')
     expect(() => parseInitArgs(['--force'])).toThrow('Unknown init flag: --force')
+    expect(() => parseInitArgs(['--preview'])).toThrow('Unknown init flag: --preview')
     expect(() => parseInitArgs(['--language'])).toThrow('--language requires a value')
   })
 })

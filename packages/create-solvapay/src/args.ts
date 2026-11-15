@@ -17,7 +17,10 @@ export type ParsedCommonArgs = {
   language?: string
   yes: boolean
   dev: boolean
-  /** `--preview`: pin the newest SDK previews instead of the newest stable releases. */
+  /**
+   * Pin the newest SDK previews instead of the newest stable releases. Not a
+   * flag: set when this scaffolder is itself a preview build.
+   */
   preview: boolean
   nonInteractive: boolean
   help: boolean
@@ -64,7 +67,6 @@ const COMMON_SKIP_FLAGS = new Set([
   '--offline',
   '--dev',
   '--language',
-  '--preview',
 ])
 
 const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product', '--language'])
@@ -78,7 +80,6 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--skip-init',
   '--offline',
   '--dev',
-  '--preview',
 ])
 
 const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name'])
@@ -141,7 +142,6 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--skip-init') out.skipInit = true
       if (arg === '--offline') out.offline = true
       if (arg === '--dev') out.dev = true
-      if (arg === '--preview') out.preview = true
       continue
     }
 
@@ -303,8 +303,6 @@ Common flags:
   --offline              Pin @solvapay/* to the versions this release ships with instead of
                          npm's latest (without it, a failed registry lookup stops the scaffold).
                          TypeScript only.
-  --preview              Pin the newest SDK previews (npm \`preview\` tag, newest PyPI /
-                         Go proxy pre-release) instead of the newest stable releases
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only — production keys are rejected
                          by api-dev. Seeds .env and forwards through to
@@ -333,7 +331,6 @@ MCP flags:
   --tool-name <name>     Placeholder paid tool name in from-scratch mode: camelCase
                          for TypeScript (default helloTool), snake_case for Python
                          and Go (default hello_tool).
-  --preview              Pin the newest SDK preview instead of the newest stable release.
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only. Seeds .env with
                          SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com

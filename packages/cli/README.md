@@ -127,7 +127,6 @@ It runs `claude mcp add-json` at user scope with a `headersHelper` that reads th
 | `-y`, `--yes`                 | Skip the browser confirmation prompt and the language question. In a folder with no project files, or files for two languages, init fails and asks for `--language`. It never creates a `package.json` unless `--language ts` is passed. |
 | `--language <ts\|python\|go>` | The project's language. Needed when the folder has files for two languages, or none, and no one is at a terminal.                                                                                                                        |
 | `--features <mcp,agents,web>` | What you use SolvaPay for. Python: the `solvapay[...]` extras. TypeScript: adds `@solvapay/mcp`, `@solvapay/agents` or `@solvapay/react`. Go: nothing (one module).                                                                      |
-| `--preview`                   | Install the newest SDK preview (npm `preview` tag, newest PyPI or Go proxy pre-release) instead of the newest stable release. Without it, init fails when the language has no stable release yet.                                        |
 | `--dev`                       | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev.                                                           |
 
 ## What `solvapay init` does
@@ -142,7 +141,7 @@ It runs `claude mcp add-json` at user scope with a `headersHelper` that reads th
   | any other `pyproject.toml`, or `requirements.txt`     | Python     | nothing: prints the `python -m pip install` command, because init doesn't choose your interpreter |
   | `package.json`                                        | TypeScript | npm, pnpm or yarn (by lockfile): `@solvapay/server`, `@solvapay/core`, `@solvapay/auth`           |
 
-  Python and Go pins are exact: the newest stable release, or with `--preview` the newest preview.
+  Python and Go pins are exact: the newest stable release. The preview CLI (`npx solvapay@preview init`) pins the newest preview instead (npm `preview` tag, newest PyPI or Go proxy pre-release), so the preview CLI and preview SDKs go together. While Python or Go has no stable release, the stable CLI stops and says so.
 
 - Shows auth URL and asks you to press Enter before opening browser authentication
 - Writes `SOLVAPAY_SECRET_KEY` to `.env` (with overwrite confirmation)

@@ -95,8 +95,8 @@ describe('runLanguageFromScratch', () => {
     )
   })
 
-  it('fails before writing anything when only previews exist and --preview is not set', async () => {
-    await expect(scaffold('python', { preview: false })).rejects.toThrow(/Pass --preview/)
+  it('fails before writing anything when only previews exist and the scaffolder is stable', async () => {
+    await expect(scaffold('python', { preview: false })).rejects.toThrow(/use the preview CLI/)
     await expect(stat(target)).rejects.toThrow(/ENOENT/)
   })
 

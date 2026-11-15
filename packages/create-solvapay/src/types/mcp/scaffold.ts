@@ -424,7 +424,7 @@ export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<string> = Object.freeze([
 export type ResolveSolvapayVersionsOptions = {
   /** Use the template's pins instead of asking the npm registry. */
   offline?: boolean
-  /** The npm dist-tag to pin from: `latest` (default) or `preview` (`--preview`). */
+  /** The npm dist-tag to pin from: `latest` (default), or `preview` from a preview scaffolder. */
   distTag?: 'latest' | 'preview'
   /** Per-package timeout in milliseconds. Defaults to 10000ms. */
   timeoutMs?: number
@@ -469,11 +469,6 @@ export async function resolveSolvapayVersions(
 
   const distTag = options.distTag ?? 'latest'
   if (options.offline) {
-    if (distTag !== 'latest') {
-      throw new Error(
-        '--offline and --preview conflict: --offline pins the versions this release ships with.',
-      )
-    }
     const pins = await readTemplateSolvapayPins(deps)
     for (const [name, version] of pins) onResolve({ name, version, source: 'template' })
     return pins

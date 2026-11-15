@@ -31,7 +31,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp --language python   # uv pro
 npm create solvapay@latest my-mcp-app -- --type mcp --language go       # Go 1.26+
 ```
 
-Add `--preview` to pin the newest SDK preview instead of the newest stable release.
+The SDK pins follow the scaffolder: `npm create solvapay@latest` pins the newest stable releases, `npm create solvapay@preview` the newest previews. Until Python and Go have a stable release, use `@preview` for them.
 
 Next.js + Auth0 starter:
 

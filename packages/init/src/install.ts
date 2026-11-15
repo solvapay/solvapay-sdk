@@ -42,7 +42,7 @@ export const parseFeatures = (value: string): SdkFeature[] => {
 }
 
 export type TsInstallOptions = {
-  /** npm dist-tag: `latest`, or `preview` with `--preview`. */
+  /** npm dist-tag: `latest`, or `preview` when the CLI is a preview build. */
   distTag?: 'latest' | 'preview'
   features?: SdkFeature[]
 }

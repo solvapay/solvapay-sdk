@@ -75,6 +75,7 @@ export type { ListProductsResult, ProductSummary } from './products'
 export { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
 export type { EnsureNodeProjectResult, PackageManager } from './project'
 
+export { isPreviewBuild } from './preview'
 export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'
 
