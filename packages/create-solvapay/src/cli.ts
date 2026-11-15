@@ -101,6 +101,26 @@ async function main(): Promise<void> {
     typeId = await promptProjectType()
   }
 
+  if (
+    args.language &&
+    typeId !== 'mcp' &&
+    !['ts', 'typescript'].includes(args.language.toLowerCase())
+  ) {
+    process.stderr.write(
+      `--language ${args.language} is only available with --type mcp. ${typeId} is TypeScript only.\n`,
+    )
+    process.exitCode = 2
+    return
+  }
+
+  if (args.preview && typeId !== 'mcp') {
+    process.stderr.write(
+      `--preview is only available with --type mcp; ${typeId} pins its own versions.\n`,
+    )
+    process.exitCode = 2
+    return
+  }
+
   const factory = PROJECT_TYPES[typeId]
   if (!factory) {
     process.stderr.write(

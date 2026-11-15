@@ -24,6 +24,15 @@ From scratch (single placeholder tool):
 npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi
 ```
 
+In Python or Go (from scratch, one paid tool and one free tool, tests and a Dockerfile for any container host):
+
+```bash
+npm create solvapay@latest my-mcp-app -- --type mcp --language python   # uv project
+npm create solvapay@latest my-mcp-app -- --type mcp --language go       # Go 1.26+
+```
+
+Add `--preview` to pin the newest SDK preview instead of the newest stable release.
+
 Next.js + Auth0 starter:
 
 ```bash

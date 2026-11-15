@@ -13,8 +13,12 @@ export type ParsedCommonArgs = {
   type?: string
   auth?: string
   product?: string
+  /** `--language ts|python|go` (raw; validated by the project type). */
+  language?: string
   yes: boolean
   dev: boolean
+  /** `--preview`: pin the newest SDK previews instead of the newest stable releases. */
+  preview: boolean
   nonInteractive: boolean
   help: boolean
   version: boolean
@@ -59,9 +63,11 @@ const COMMON_SKIP_FLAGS = new Set([
   '--skip-init',
   '--offline',
   '--dev',
+  '--language',
+  '--preview',
 ])
 
-const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product'])
+const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product', '--language'])
 const COMMON_BOOLEAN_FLAGS = new Set([
   '--yes',
   '--non-interactive',
@@ -72,6 +78,7 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--skip-init',
   '--offline',
   '--dev',
+  '--preview',
 ])
 
 const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name'])
@@ -83,6 +90,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
   const out: ParsedCommonArgs = {
     yes: false,
     dev: false,
+    preview: false,
     nonInteractive: false,
     help: false,
     version: false,
@@ -116,6 +124,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--type') out.type = value
       if (arg === '--auth') out.auth = value
       if (arg === '--product') out.product = value
+      if (arg === '--language') out.language = value
       continue
     }
 
@@ -132,6 +141,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--skip-init') out.skipInit = true
       if (arg === '--offline') out.offline = true
       if (arg === '--dev') out.dev = true
+      if (arg === '--preview') out.preview = true
       continue
     }
 
@@ -168,7 +178,7 @@ export function parseMcpArgs(argv: readonly string[]): ParsedMcpArgs {
     }
 
     if (COMMON_SKIP_FLAGS.has(arg)) {
-      if (arg === '--type' || arg === '--auth' || arg === '--product') {
+      if (arg === '--type' || arg === '--auth' || arg === '--product' || arg === '--language') {
         i++
       }
       continue
@@ -214,7 +224,12 @@ export function inferMcpMode(args: ParsedMcpArgs): McpMode | null {
 }
 
 export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
-  return { yes: common.yes, dev: common.dev, productRef: common.product }
+  return {
+    yes: common.yes,
+    dev: common.dev,
+    productRef: common.product,
+    ...(common.preview ? { preview: true } : {}),
+  }
 }
 
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/
@@ -238,6 +253,22 @@ export function sanitizeProjectName(name: string): { ok: true; name: string } | 
 }
 
 const CAMEL_RE = /^[a-z][a-zA-Z0-9]*$/
+const SNAKE_RE = /^[a-z][a-z0-9_]*$/
+
+/** A Python or Go tool name: snake_case, so it is also a valid Python function name. */
+export function validateSnakeToolName(
+  name: string,
+): { ok: true; name: string } | { ok: false; reason: string } {
+  const trimmed = name.trim()
+  if (!trimmed) return { ok: false, reason: 'tool name is empty' }
+  if (!SNAKE_RE.test(trimmed)) {
+    return {
+      ok: false,
+      reason: `"${name}" must be snake_case for Python and Go (lowercase letters, digits and underscores, starting with a letter)`,
+    }
+  }
+  return { ok: true, name: trimmed }
+}
 
 export function validateToolName(name: string): { ok: true; name: string } | { ok: false; reason: string } {
   const trimmed = name.trim()
@@ -255,7 +286,8 @@ export const HELP_TEXT = `Usage:
   npm create solvapay <project-name> -- --type <kind> [flags]
 
 Project types:
-  mcp    Monetized MCP server on Cloudflare Workers (from-openapi or from-scratch)
+  mcp    Monetized MCP server: TypeScript on Cloudflare Workers (from-openapi or
+         from-scratch), or Python / Go in a container (from-scratch)
   next-auth0  Next.js + Auth0 starter with SolvaPay middleware wiring
 
 Common flags:
@@ -268,7 +300,10 @@ Common flags:
   --skip-install         Skip the post-scaffold dependency install (run \`npm install\` manually)
   --skip-init            Skip the post-scaffold \`solvapay init\` step (no browser OAuth)
   --offline              Pin @solvapay/* to the versions this release ships with instead of
-                         npm's latest (without it, a failed registry lookup stops the scaffold)
+                         npm's latest (without it, a failed registry lookup stops the scaffold).
+                         TypeScript only.
+  --preview              Pin the newest SDK previews (npm \`preview\` tag, newest PyPI /
+                         Go proxy pre-release) instead of the newest stable releases
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only — production keys are rejected
                          by api-dev. Seeds .env and forwards through to
@@ -288,9 +323,16 @@ MCP sub-modes:
   from-scratch    Scaffold with a single placeholder paid tool (no upstream API).
 
 MCP flags:
+  --language <lang>      ts (default), python or go. Python and Go servers are
+                         from-scratch only and run in a container (Dockerfile
+                         included); TypeScript runs on Cloudflare Workers.
   --openapi <url|path>   Spec URL or local path. Implies from-openapi sub-mode.
+                         TypeScript only.
   --no-openapi           Skip OpenAPI; scaffold from-scratch.
-  --tool-name <camel>    Placeholder tool name in from-scratch mode (default: helloTool).
+  --tool-name <name>     Placeholder paid tool name in from-scratch mode: camelCase
+                         for TypeScript (default helloTool), snake_case for Python
+                         and Go (default hello_tool).
+  --preview              Pin the newest SDK preview instead of the newest stable release.
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only. Seeds .env with
                          SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com

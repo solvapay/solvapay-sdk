@@ -218,3 +218,26 @@ describe('validateToolName', () => {
     expect(validateToolName('').ok).toBe(false)
   })
 })
+
+describe('--language and --preview', () => {
+  it('parses both as common flags and skips them in the MCP parser', () => {
+    const argv = [
+      'srv',
+      '--type',
+      'mcp',
+      '--language',
+      'python',
+      '--preview',
+      '--tool-name',
+      'get_quote',
+    ]
+    expect(parseArgs(argv)).toMatchObject({ language: 'python', preview: true, type: 'mcp' })
+    expect(parseMcpArgs(argv)).toMatchObject({ toolName: 'get_quote' })
+    expect(parseMcpArgs(argv).unknownFlag).toBeUndefined()
+  })
+
+  it('passes --preview to init', () => {
+    expect(toInitOptions(parseArgs(['srv', '--preview']))).toMatchObject({ preview: true })
+    expect(toInitOptions(parseArgs(['srv']))).not.toHaveProperty('preview')
+  })
+})
