@@ -96,9 +96,11 @@ For a Python or Go server: `npm create solvapay@latest my-mcp-app -- --type mcp 
 | [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) | Supabase Edge | One-liner `@solvapay/server/fetch` handlers |
 | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge) | Node MCP | OAuth bridge + `payable.mcp()` |
 
-## Paying as an agent: `launch` and `connect`
+## Paying as an agent: `launch` and `connect` (preview)
 
 The other side of SolvaPay: a person (or their agent) paying a merchant that takes agent payments.
+
+Agent payments are a preview. SolvaPay turns them on per merchant, and a merchant that hasn't got them yet is refused with a plain message. Live agent payments aren't open yet: everything runs in sandbox with test money, and nothing real is charged.
 
 ```bash
 # Start Claude Code on Opper, paying with an agent key. The first time, it shows a
@@ -110,7 +112,7 @@ npx solvapay launch claude opper
 npx solvapay launch hermes opper -- -q "What changed in agent payments this week?"
 ```
 
-An agent connecting itself runs `npx solvapay connect <providerRef> --client <hermes|claude-code>` and shows its user the link it prints. Once they have approved, it runs the same command again, which saves the key and sets the agent up; until then it says they have not answered yet. A declined or expired request is dropped, so the same command asks again; when already connected it says so (`--new` asks again anyway). Keys are kept one per merchant in `~/.solvapay/agents` (mode 600) and never printed.
+An agent connecting itself runs `npx solvapay connect <merchant> --client <claude|hermes>` and shows its user the link it prints. The merchant is its launch name in the SolvaPay catalog (`opper`) or its `prov_…` reference. The user signs in to SolvaPay to approve; if they have no account, one is made when they sign in. Once they have approved, it runs the same command again, which saves the key and sets the agent up; until then it says they have not answered yet. A declined or expired request is dropped, so the same command asks again; when already connected it says so (`--new` asks again anyway). Keys are kept one per merchant in `~/.solvapay/agents` (mode 600) and never printed.
 
 For Claude Code, `--add-mcp` also adds the merchant's MCP server once the connection is approved, so its tools are there in Claude Code paying with that key:
 
@@ -126,7 +128,7 @@ It runs `claude mcp add-json` at user scope with a `headersHelper` that reads th
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-y`, `--yes`                 | Skip the browser confirmation prompt and the language question. In a folder with no project files, or files for two languages, init fails and asks for `--language`. It never creates a `package.json` unless `--language ts` is passed. |
 | `--language <ts\|python\|go>` | The project's language. Needed when the folder has files for two languages, or none, and no one is at a terminal.                                                                                                                        |
-| `--features <mcp,agents,web>` | What you use SolvaPay for. Python: the `solvapay[...]` extras. TypeScript: adds `@solvapay/mcp`, `@solvapay/agents` or `@solvapay/react`. Go: nothing (one module).                                                                      |
+| `--features <mcp,agents,web>` | What you use SolvaPay for. Python: the `solvapay[...]` extras. TypeScript: adds `@solvapay/mcp`, `@solvapay/agents` or `@solvapay/react`. Go: nothing (one module). `agents` is a preview.                                               |
 | `--dev`                       | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev.                                                           |
 
 ## What `solvapay init` does

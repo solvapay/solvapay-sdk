@@ -93,6 +93,46 @@ describe('connect', () => {
     expect(opens).toBe(1)
   })
 
+  it('tells the owner it is a sandbox preview where nothing real is charged', async () => {
+    await run(['connect', PROV, '--client', 'hermes', '--api', API])
+    const text = lines.join('\n')
+    expect(text).toContain('an account is made if they have none')
+    expect(text).toContain('sandbox with test money, and nothing real is charged while live payments are closed')
+  })
+
+  it.each([
+    ['agent_payments_not_enabled', 'Opper does not take agent payments yet.', "This merchant hasn't turned on SolvaPay agent payments yet."],
+    ['feature_not_enabled', 'Feature agent_payments is not enabled', "This merchant hasn't turned on SolvaPay agent payments yet."],
+    ['agent_live_disabled', 'Live agent payments are switched off', "Live agent payments aren't open yet. Use sandbox"],
+  ])('says %s plainly instead of the raw 403', async (code, message, plain) => {
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      const path = url.slice(API.length)
+      if (path === `/catalog/listings/${PROV}`) return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
+      if (path === '/agent/connect-requests' && init?.method === 'POST') {
+        return Response.json({ code, message }, { status: 403 })
+      }
+      return new Response('not found', { status: 404 })
+    })
+    const failure = run(['connect', PROV, '--client', 'hermes', '--api', API])
+    await expect(failure).rejects.toThrow(plain)
+    await expect(failure).rejects.not.toThrow('failed (403)')
+    await expect(failure).rejects.toMatchObject({ status: 403, code })
+  })
+
+  it('keeps the raw failure for a refusal it has no plain message for', async () => {
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      const path = url.slice(API.length)
+      if (path === `/catalog/listings/${PROV}`) return Response.json({ providerRef: PROV, mcpUrl: 'https://mcp.opper.test/mcp' })
+      if (path === '/agent/connect-requests' && init?.method === 'POST') {
+        return Response.json({ code: 'something_else', message: 'No.' }, { status: 403 })
+      }
+      return new Response('not found', { status: 404 })
+    })
+    await expect(run(['connect', PROV, '--client', 'hermes', '--api', API])).rejects.toThrow(
+      'POST /agent/connect-requests failed (403): No.',
+    )
+  })
+
   it('refuses a launch name no merchant in the catalog has', async () => {
     await expect(run(['connect', 'opp', '--client', 'hermes', '--api', API])).rejects.toThrow(
       'No merchant in the SolvaPay catalog is called "opp". Use its launch name or its prov_… reference.',

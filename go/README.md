@@ -1,7 +1,7 @@
 # SolvaPay Go SDK
 
 `github.com/solvapay/solvapay-sdk/go`: the SolvaPay API client, paywall,
-webhooks, paid MCP tools and agent payments for Go. Go 1.26+.
+webhooks, paid MCP tools and agent payments (preview) for Go. Go 1.26+.
 
 ```bash
 go get github.com/solvapay/solvapay-sdk/go@latest

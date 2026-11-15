@@ -10,8 +10,10 @@ export interface LauncherDeps {
   npx?: string
 }
 export const DEFAULT_API: string
+/** Plain messages for the refusals agent payments give while they are a preview, by error code. */
+export const PLAIN_ERRORS: Record<string, string>
 export function parseArgs(argv: string[]): { positional: string[]; flags: Record<string, string>; rest?: string[] }
-/** `launch …` or `connect <providerRef> …`; resolves to the exit code. */
+/** `launch …` or `connect <merchant> …`; resolves to the exit code. */
 export function main(argv: string[], deps?: LauncherDeps): Promise<number>
 export function keyEnvName(providerRef: string): string
 export function serverName(merchantName: string): string

@@ -18,7 +18,7 @@ With agent payments, an AI agent pays for each tool call from a budget its owner
 
 | Variable | What it is |
 | --- | --- |
-| `SOLVAPAY_SECRET_KEY` | Your secret key |
+| `SOLVAPAY_SECRET_KEY` | Your secret key. Live agent payments aren't open yet, so build and test with a sandbox key (`sk_sandbox_…`); when live opens, you switch keys and your code doesn't change. |
 | `SOLVAPAY_PROVIDER_REF` | Your merchant (provider) reference, `prov_...`. Agent tokens are issued for it. |
 | `SOLVAPAY_AGENT_ISSUER` | The agent token issuer: your API base URL plus `/v1/agent`, such as `https://api.solvapay.com/v1/agent` |
 

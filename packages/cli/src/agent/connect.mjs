@@ -60,12 +60,27 @@ async function api(base, path, init) {
     throw new Error(`${init?.method ?? 'GET'} ${path} answered ${response.status} with no JSON: ${text.slice(0, 200)}`)
   }
   if (!response.ok) {
+    const code = body?.code ?? body?.error?.code
+    const plain = typeof code === 'string' ? PLAIN_ERRORS[code] : undefined
     const message = body?.message ?? body?.error?.message ?? text
-    const error = new Error(`${init?.method ?? 'GET'} ${path} failed (${response.status}): ${typeof message === 'string' ? message : JSON.stringify(message)}`)
+    const error = new Error(
+      plain ?? `${init?.method ?? 'GET'} ${path} failed (${response.status}): ${typeof message === 'string' ? message : JSON.stringify(message)}`,
+    )
     error.status = response.status
+    if (typeof code === 'string') error.code = code
     throw error
   }
   return body
+}
+
+/** Refusals agent payments give while they are a preview, said plainly instead of as a raw HTTP failure. */
+const NOT_ENABLED =
+  "This merchant hasn't turned on SolvaPay agent payments yet. Agent payments are a preview that SolvaPay turns on per merchant."
+export const PLAIN_ERRORS = {
+  agent_payments_not_enabled: NOT_ENABLED,
+  feature_not_enabled: NOT_ENABLED,
+  agent_live_disabled:
+    "Live agent payments aren't open yet. Use sandbox: everything runs with test money and nothing real is charged.",
 }
 
 /** The sub-commands `connect` had before it became one command run until it is done. */
@@ -206,6 +221,7 @@ async function ask(providerRef, merchant, flags, env, out, npx) {
       `  ${opened.verificationUrl}`,
       `  (code ${opened.userCode}, valid until ${opened.expiresAt})`,
       `They sign in to SolvaPay (an account is made if they have none), review the budget and approve with Face ID or Touch ID. Nothing is charged before they approve.`,
+      `Agent payments are a preview: they run in sandbox with test money, and nothing real is charged while live payments are closed.`,
       `When they have approved, run the same command again:`,
       `  ${againCommand(npx, merchant, flags)}`,
     ].join('\n'),
@@ -383,7 +399,15 @@ async function spendSince(base, agentKey, since, file) {
         `Its owner may have revoked it in their SolvaPay account. To connect a new one, remove ${file} and launch again.`,
     )
   }
-  if (!response.ok) throw new Error(`GET /agent/spend answered ${response.status}: ${text.slice(0, 300)}`)
+  if (!response.ok) {
+    let code
+    try {
+      code = JSON.parse(text)?.code
+    } catch {
+      // Not JSON: the raw answer below says what came back.
+    }
+    throw new Error(PLAIN_ERRORS[code] ?? `GET /agent/spend answered ${response.status}: ${text.slice(0, 300)}`)
+  }
   return JSON.parse(text)
 }
 
@@ -413,7 +437,7 @@ function runCaptured(command, args, env) {
 }
 
 const USAGE = [
-  'Usage:',
+  'Usage (preview: agent payments run in sandbox with test money for now):',
   '  solvapay launch <claude|hermes> <merchant launch name or providerRef> [--model-url <anthropic-compatible url>] [--model <id>] [--api <url>] [--name <name>] [-- <agent args>]',
   '  solvapay connect <merchant launch name or providerRef> --client <claude|hermes> [--name <name>] [--api <url>] [--mcp-url <url>] [--model-url <anthropic-compatible url> --model <id>] [--add-mcp] [--timeout <seconds>] [--new]',
   '      Run it again until it says connected: the first run asks the owner, a later one waits for their answer.',

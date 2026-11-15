@@ -40,7 +40,7 @@ The package is ESM only. It imports `node:crypto`, so on Cloudflare Workers turn
 
 You need:
 
-- Your secret key (`sk_sandbox_…` or `sk_live_…`).
+- Your secret key. Use a sandbox key (`sk_sandbox_…`) while live agent payments aren't open (see [Sandbox and production](#sandbox-and-production)).
 - Your provider reference (`prov_…`). SolvaPay issues each agent token for one provider.
 - Agent payments turned on for your account (see the warning above).
 
@@ -436,12 +436,12 @@ Each result is `matched`, `adjusted`, `pending`, `already_reconciled` or `ignore
 
 Agents spend in one environment, and so does your secret key:
 
-- A sandbox key (`sk_sandbox_…`) serves sandbox agents.
-- A production key (`sk_live_…`) serves live agents.
+- A sandbox key (`sk_sandbox_…`) serves sandbox agents, which pay with test money.
+- A production key (`sk_live_…`) will serve live agents. Live agent payments aren't open yet, so SolvaPay refuses live agents, live cards and live top-ups with `agent_live_disabled` for now.
 
 `secretKeyEnvironment(secretKey)` reads the environment from the key's prefix, or returns `undefined` when the prefix doesn't say. Pass it as `environment` to both verifiers. An agent from the other environment is then refused with `environment_mismatch` (403) before your server calls SolvaPay. Without `environment`, SolvaPay refuses that agent at authorize as `agent_not_accepted`.
 
-Test with a sandbox key and a sandbox agent first. Switch to the production key when you go live. Your code doesn't change.
+Build and test with a sandbox key and a sandbox agent. When live agent payments open, you switch to the production key. Your code doesn't change.
 
 ## Test without SolvaPay
 

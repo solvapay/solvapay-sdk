@@ -114,7 +114,7 @@ Set these in your environment:
 
 | Variable | Meaning |
 | --- | --- |
-| `SOLVAPAY_SECRET_KEY` | Your secret key. Its prefix sets the environment: sandbox agents can only pay sandbox merchants, and live agents live ones. |
+| `SOLVAPAY_SECRET_KEY` | Your secret key. Its prefix sets the environment: sandbox agents can only pay sandbox merchants. Live agent payments aren't open yet, so build and test with a sandbox key (`sk_sandbox_…`); when live opens, you switch keys and your code doesn't change. |
 | `SOLVAPAY_PROVIDER_REF` | Your merchant account's provider reference. Agent tokens issued for any other merchant are refused. |
 | `PUBLIC_BASE_URL` | Where agents reach this server, as for [`PublicBaseURL`](/sdks/go/guides/mcp#set-publicbaseurl-to-the-url-clients-use). |
 
