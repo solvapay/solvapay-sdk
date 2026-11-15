@@ -1,5 +1,30 @@
 # create-solvapay
 
+## 0.9.0
+
+### Minor Changes
+
+- a611caa: The CLI handles Python and Go projects.
+  - `solvapay init` detects the project's language (`go.mod`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt`, `package.json`) before it touches anything, and installs the SDK exactly pinned with uv, Poetry or `go get`; for pip it prints the command. It no longer creates a `package.json` in a folder without one unless `--language ts` is passed: with no terminal, or `--yes`, a folder with no project files or files for two languages fails and names `--language`. New flags: `--language ts|python|go` and `--features mcp,agents,web` (`agents` is agent payments, a preview). Which SDK release it installs follows the CLI's own build: the stable CLI pins the newest stable release (and fails, naming the preview CLI, when a language has none), the preview CLI pins the newest preview.
+  - `solvapay doctor` checks the SDK version in every language the project uses (npm, PyPI, the Go module proxy) and prints the exact upgrade command. A project with no SolvaPay SDK in any language now fails instead of passing with "nothing to check".
+  - New `solvapay verify <server url>`: the TypeScript template's contract checks, for a running MCP server in any language.
+  - `create-solvapay --type mcp --language python|go` scaffolds a from-scratch paid MCP server with one paid and one free tool, tests, `.env.example`, a Dockerfile and Dependabot. A preview build of create-solvapay pins the newest SDK previews (for TypeScript too, from npm's `preview` tag); a stable build pins stable releases.
+
+- 6f8eb1e: Scaffolds no longer start, or stay, behind the SDK.
+  - If the npm registry lookup for `@solvapay/*` fails, the scaffold stops with an error naming each package and why, instead of quietly pinning old fallback versions. Pass `--offline` to pin the versions this release ships with on purpose.
+  - The template's `@solvapay/*` pins are exact and current (`@solvapay/mcp` 0.5.0, `@solvapay/mcp-core` 0.5.0, `@solvapay/server` 2.11.0, `@solvapay/react` 2.7.1). `pnpm --filter create-solvapay sync:sdk-pins` keeps them on npm's `latest` after each release.
+  - A generated project's `npm run deploy` stops when an installed `@solvapay/*` package is behind npm and prints the exact upgrade command. `--allow-outdated` deploys those versions on purpose.
+  - Generated projects ship `.github/dependabot.yml`, which opens one weekly pull request moving all `@solvapay/*` packages to npm's latest together.
+
+- 82369d2: `--tool-name` takes snake_case for TypeScript MCP servers, the MCP naming convention, and defaults to `hello_tool`. The name is used as-is for the file and the registered tool, and the generated function is `register<PascalCase>` (`generate_haiku` → `registerGenerateHaiku`), so no rename is needed after scaffolding. camelCase is still accepted.
+
+### Patch Changes
+
+- ec77a0e: `solvapay` and `create-solvapay` depend on the exact `@solvapay/init` version they were released with. With a caret range, a preview build (`…-preview-<commit sha>`) resolved `@solvapay/init` to the preview whose commit sha sorts last alphabetically, not its own, and failed to start when that build lacked an export it uses.
+- Updated dependencies [a611caa]
+- Updated dependencies [469aa57]
+  - @solvapay/init@0.6.0
+
 ## 0.8.2
 
 ### Patch Changes

@@ -1,5 +1,25 @@
 # @solvapay/next
 
+## 1.4.1
+
+### Patch Changes
+
+- Updated dependencies [57026b6]
+- Updated dependencies [a2e2f9f]
+- Updated dependencies [98a315b]
+- Updated dependencies [0874abe]
+- Updated dependencies [74dbdb7]
+- Updated dependencies [f2b03e5]
+- Updated dependencies [5960ef4]
+- Updated dependencies [d4e90a8]
+- Updated dependencies [80b8b65]
+- Updated dependencies [5aa5637]
+- Updated dependencies [261a5a7]
+- Updated dependencies [267440c]
+  - @solvapay/server@2.12.0
+  - @solvapay/auth@1.3.0
+  - @solvapay/core@1.9.0
+
 ## 1.4.0
 
 ### Minor Changes

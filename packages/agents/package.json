@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/agents",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "SolvaPay agent payments for merchants (preview): verify agent tokens, authorize and complete each paid call, report usage, with adapters for MCP servers (/mcp) and HTTP APIs (/http). Everything else runs in SolvaPay.",
   "main": "./dist/index.js",
