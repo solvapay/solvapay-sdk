@@ -293,6 +293,7 @@ Project types:
 Common flags:
   --type <kind>          Project type to scaffold (default: prompt; required if non-interactive)
   --auth <provider>      Shortcut surface for auth-focused starters (e.g. auth0).
+  --language <lang>      ts (default), python or go. Python and Go need --type mcp.
   -y, --yes              Non-interactive: accept all defaults
   --product <ref>        Pre-fill SOLVAPAY_PRODUCT_REF (skip the picker)
   --non-interactive      Alias for --yes; fail fast on any missing prompt input
