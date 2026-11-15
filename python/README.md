@@ -106,12 +106,15 @@ gets them, since its widget can only call listed tools.
 Its Content Security Policy allows Stripe and the SolvaPay API. Add domains with
 `csp={"connectDomains": [...], "resourceDomains": [...], "frameDomains": [...]}`.
 
-### Paid by agents
+### Paid by agents (preview)
 
 `solvapay.agents.mcp.create_agent_mcp_route` serves an MCP server that SolvaPay
 agents pay for per call: each paid tool call is authorized with SolvaPay before
 it runs and completed at the cost the upstream reports. Install
 `solvapay[agents,mcp]`.
+
+Agent payments are a preview. SolvaPay turns them on per merchant, and live
+agent payments aren't open yet, so build and test with a sandbox key.
 
 ## React web checkout
 
