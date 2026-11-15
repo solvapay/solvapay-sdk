@@ -33,7 +33,7 @@
     "sync:sdk-pins": "node scripts/sync-sdk-pins.mjs"
   },
   "dependencies": {
-    "@solvapay/init": "workspace:^"
+    "@solvapay/init": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
