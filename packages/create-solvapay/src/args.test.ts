@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { pascalize } from './types/mcp/scaffold'
 import {
   hasMcpSpecificFlags,
   inferMcpMode,
@@ -208,6 +209,7 @@ describe('validateToolName', () => {
 
   it('rejects PascalCase', () => {
     expect(validateToolName('FetchPet').ok).toBe(false)
+    expect(validateToolName('Fetch_pet').ok).toBe(false)
   })
 
   it('rejects kebab-case', () => {
@@ -234,5 +236,22 @@ describe('--language', () => {
   it('passes preview to init only when set', () => {
     expect(toInitOptions({ ...parseArgs(['srv']), preview: true })).toMatchObject({ preview: true })
     expect(toInitOptions(parseArgs(['srv']))).not.toHaveProperty('preview')
+  })
+})
+
+describe('pascalize', () => {
+  it('turns snake_case and camelCase into one PascalCase identifier', () => {
+    expect(pascalize('generate_haiku')).toBe('GenerateHaiku')
+    expect(pascalize('generateHaiku')).toBe('GenerateHaiku')
+    expect(pascalize('get_item_2')).toBe('GetItem2')
+    expect(pascalize('hello')).toBe('Hello')
+  })
+})
+
+describe('snake_case tool names', () => {
+  it('accepts snake_case and camelCase', () => {
+    expect(validateToolName('generate_haiku')).toEqual({ ok: true, name: 'generate_haiku' })
+    expect(validateToolName('get_item_2')).toEqual({ ok: true, name: 'get_item_2' })
+    expect(validateToolName('generateHaiku')).toEqual({ ok: true, name: 'generateHaiku' })
   })
 })
