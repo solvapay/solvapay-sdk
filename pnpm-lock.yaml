@@ -1214,7 +1214,7 @@ importers:
   packages/cli:
     dependencies:
       '@solvapay/init':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../init
       yaml:
         specifier: 2.8.1
@@ -1249,7 +1249,7 @@ importers:
   packages/create-solvapay:
     dependencies:
       '@solvapay/init':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../init
     devDependencies:
       tsup:
