@@ -1,5 +1,29 @@
 # @solvapay/mcp-core changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- 3b7fecd: Merchant MCP servers built with `createSolvaPayMcpFetch` or `createMcpOAuthBridge` now verify every bearer token with SolvaPay (`/v1/customer/auth/userinfo`) before serving a request. The customer comes from SolvaPay's answer, never from the token's own payload, so a token SolvaPay doesn't recognise is refused with the 401 sign-in challenge. If SolvaPay can't be reached, the request gets a 503 instead of being served. Valid answers are cached for 60 seconds. `@solvapay/mcp-core` adds `createSolvaPayTokenVerifier` and `verifyAuthInfoFromBearer`. Upgrade is strongly recommended.
+
+### Patch Changes
+
+- f2b03e5: The route helpers (`checkPurchaseCore`, `syncCustomerCore` and the routes built on them) always look the caller's user up by `externalRef`. Before, a user id starting with `cus_` was used as that customer, so a user whose id was `cus_<someone>` acted for them.
+
+  Server code that already knows the customer marks the request with the new `withCustomerRef(request, customerRef)`; the helpers then act for that customer as `ensureCustomer` does. `@solvapay/mcp-core`'s `buildSolvaPayRequest` marks the requests the widget tools build with the signed-in `customer_ref`, so MCP servers need no change.
+
+- 5aa5637: Fixes found by the conformance coverage work:
+  - A customer create that fails with anything but 409 no longer leaves the user marked as attempted. The next call creates the customer instead of sending your own user id to the API as a customer ref.
+  - A plan priced only in tier bands is narrated as paid, not as "requires no payment".
+  - One unit of a plural meter reads in the singular: "per search", "per query", not "per searche".
+  - A recurring plan with a price but no currency says how often it bills ("is billed every year") instead of "is a year".
+  - `ctx.customer.plan` is read from the limits response's `planRef`, which the API sends. It was always null.
+  - The ChatGPT `tools/list` bypass finds the user-agent on MCP SDK v2's `ctx.http.req`, not only on `requestInfo`.
+  - An invalid `publicBaseUrl` throws a `SolvaPayError` with code `invalid_argument`.
+
+- Updated dependencies [80b8b65]
+  - @solvapay/core@1.9.0
+
 ## 0.5.0
 
 ### Minor Changes
