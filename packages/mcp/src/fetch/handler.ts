@@ -113,6 +113,7 @@ export function createSolvaPayMcpFetchHandler(
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
+    mcpPath,
   })
 
   const verifyToken = createSolvaPayTokenVerifier({ apiBaseUrl })

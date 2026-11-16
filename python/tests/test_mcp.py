@@ -325,3 +325,41 @@ async def test_a_signed_in_request_through_the_public_host_is_served() -> None:
 
 def client_for(app: Any, base_url: str) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=base_url)
+
+
+@respx.mock
+async def test_the_endpoint_is_stateless_by_default() -> None:
+    # Like the TypeScript server: no mcp-session-id, and a request needs no
+    # earlier initialize on the same instance, so any replica can answer it.
+    respx.get(f"{API}/v1/customer/auth/userinfo").respond(200, json={"sub": "cus_1"})
+    respx.route(host="mcp.test").pass_through()
+    headers = {
+        "authorization": f"Bearer {TOKEN}",
+        "accept": "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-06-18",
+    }
+    app = server().http_app()
+    async with app.router.lifespan_context(app), client_for(app, PUBLIC) as http:
+        initialized = await http.post("/mcp", json=INITIALIZE, headers=headers)
+        listed = await http.post(
+            "/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, headers=headers
+        )
+    assert initialized.status_code == 200
+    assert "mcp-session-id" not in initialized.headers
+    assert listed.status_code == 200
+    assert '"name":"account"' in listed.text.replace(" ", "")
+
+
+@respx.mock
+async def test_sessions_are_an_opt_in() -> None:
+    respx.get(f"{API}/v1/customer/auth/userinfo").respond(200, json={"sub": "cus_1"})
+    respx.route(host="mcp.test").pass_through()
+    headers = {
+        "authorization": f"Bearer {TOKEN}",
+        "accept": "application/json, text/event-stream",
+    }
+    app = server().http_app(stateless_http=False)
+    async with app.router.lifespan_context(app), client_for(app, PUBLIC) as http:
+        initialized = await http.post("/mcp", json=INITIALIZE, headers=headers)
+    assert initialized.status_code == 200
+    assert initialized.headers["mcp-session-id"]

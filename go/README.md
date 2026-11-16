@@ -13,6 +13,20 @@ import solvapay "github.com/solvapay/solvapay-sdk/go"
 
 API reference: [pkg.go.dev/github.com/solvapay/solvapay-sdk/go](https://pkg.go.dev/github.com/solvapay/solvapay-sdk/go).
 
+## With an AI coding agent
+
+Install the SolvaPay skills, then ask your agent for what you want, naming the product to bill:
+
+```bash
+npx skills add solvapay/skills -a claude-code -y   # other agents: -a <agent>
+```
+
+> Add SolvaPay to this Go server so that `GET /forecast` is paid per call. Bill product `prd_…`.
+
+Installed during a Claude Code session? It loads right away if `.claude/skills/` existed when the session started; otherwise type `/reload-skills`. Or skip the install: start the prompt with "First run `npx -y skills use solvapay/skills --skill app-integration` and follow the skill it prints."
+
+The agent runs `npx -y solvapay@latest init --language go --product prd_…`; approve it. It opens your browser to sign in to SolvaPay and writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`. Create the product, with the plan that sets the price, in [SolvaPay Console](https://app.solvapay.com/products) first. If your server has no sign-in yet, decide how callers are identified first: the paywall bills your own user id.
+
 ## Same behaviour as the TypeScript SDK
 
 The paywall, its messages, the MCP tools' narration and webhook verification

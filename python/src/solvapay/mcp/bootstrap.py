@@ -233,6 +233,12 @@ def derive_usage_snapshot(
     }
 
 
+# What customers and models see of the product. The rest (the merchant's
+# metadata, its own revenue figures, its MCP and delivery config) stays out, and
+# a field the platform adds later stays out until it is named here.
+_CUSTOMER_PRODUCT_FIELDS = ("reference", "name", "status", "description", "imageUrl")
+
+
 def _dump(model: Any) -> Any:
     if isinstance(model, BaseModel):
         return model.model_dump(mode="json", by_alias=True, exclude_unset=True)
@@ -471,7 +477,9 @@ async def build_bootstrap_payload(
         "stripePublishableKey": stripe_key,
         "returnUrl": public_base_url,
         "merchant": merchant_data,
-        "product": product_data,
+        "product": {
+            key: product_data[key] for key in _CUSTOMER_PRODUCT_FIELDS if key in product_data
+        },
         "plans": plan_list,
         "customer": payload_customer,
         "checkoutUrl": coalesce(get(checkout, "checkoutUrl"), None),

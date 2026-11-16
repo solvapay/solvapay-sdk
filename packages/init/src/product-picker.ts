@@ -95,8 +95,18 @@ export const pickProductInteractive = async (
 
   const nonInteractive = options.yes || !process.stdin.isTTY || !process.stdout.isTTY
   if (nonInteractive) {
+    // No one can answer a prompt (an agent, CI, --yes), and guessing could bill
+    // the wrong product. List the choices with the exact command, so whoever
+    // runs init (often an AI agent) can ask its user and finish in one step.
+    printProductList(products, total)
     process.stdout.write(
-      'Skipped product auto-selection in non-interactive mode. Set SOLVAPAY_PRODUCT_REF in .env or pass --product <prd_...> when you are ready. .env still has the placeholder and deploy will fail until it is set.\n',
+      [
+        'No product was chosen: init asks only at a terminal, and SOLVAPAY_PRODUCT_REF is still unset.',
+        'Pick the product to bill, then run:',
+        '   npx -y solvapay@latest init --product <prd_...>',
+        `For a new product, create it at ${CONSOLE_PRODUCTS_URL} first.`,
+        '',
+      ].join('\n'),
     )
     return { action: 'skipped', reason: 'non_interactive_requires_product' }
   }

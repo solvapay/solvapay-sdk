@@ -34,6 +34,10 @@ func main() {
 		Client:        client,
 		PublicBaseURL: publicBaseURL,
 		Name:          "__SERVER_NAME__",
+		// The widget's own tools stay callable but out of tools/list, so the
+		// model sees only yours and account. ChatGPT still gets the full list:
+		// its iframe can only call listed tools.
+		HideToolsByAudience: []string{"ui"},
 	})
 	if err != nil {
 		log.Fatal(err)
