@@ -1,5 +1,13 @@
 # chat-checkout-demo
 
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies [b03ef76]
+  - @solvapay/server@2.12.1
+  - @solvapay/react@2.7.2
+
 ## 0.0.24
 
 ### Patch Changes

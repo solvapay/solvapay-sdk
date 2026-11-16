@@ -1,5 +1,26 @@
 # create-solvapay
 
+## 0.9.1
+
+### Patch Changes
+
+- 1971bee: A failed `npm install` now stops the scaffold with an error and a non-zero exit, as `uv sync` and `go mod tidy` already did for Python and Go. TypeScript MCP and next-auth0 projects used to print a warning, skip nothing, and finish with exit 0, leaving a project with no `node_modules` that looked complete.
+- 0981bf1: New MCP projects start on the SDK released with it: `@solvapay/mcp` 0.5.1, `@solvapay/mcp-core` 0.6.0, `@solvapay/server` 2.12.0 and `@solvapay/react` 2.7.2.
+- 5040df6: `solvapay init` no longer breaks a Python MCP server that runs on `mcp` 1.x.
+  - With `--features mcp`, init reads `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt` and the project's `.py` files before the browser opens. It stops, with nothing written, when `mcp` is locked below 2, a requirement rules out `mcp` 2.3, the project uses `fastapi-mcp`, or code imports `mcp.server.fastmcp` or `fastapi_mcp`. Installing `solvapay[mcp]` there used to upgrade `mcp` to 2.x and leave a server that couldn't start. The message names each cause and links the `mcp` 2.x migration guide and the SolvaPay MCP guide. A project on fastmcp gets a warning that SolvaPay has no fastmcp adapter.
+  - init saves the product to `.env` before installing the SDK, so a failed install leaves a complete `.env`.
+  - With `--features mcp` in Python and Go, init adds `PORT` and `PUBLIC_BASE_URL` to `.env` when they're missing (`8080`, as the scaffolds do), links the language's MCP guide in its next steps and prints `npx -y solvapay@latest` (or `@preview`) commands.
+  - `solvapay doctor` scans a Python project's `.py` files. An import of `mcp.server.fastmcp` or `fastapi_mcp` fails the run once the project is on `mcp` 2.x and only warns while it is still on 1.x. The `SOLVAPAY_DEBUG` warning now shows only for TypeScript projects.
+  - Without a terminal (an AI agent, CI, `--yes`), init lists the account's products with their refs and prints the exact `npx -y solvapay@latest init --product <prd_...>` command, instead of only saying it skipped the choice.
+  - An empty value in `.env` (`SOLVAPAY_PRODUCT_REF=`) is read as unset. Before, init and doctor read the next line as its value, and replacing a key also removed the blank lines above it.
+
+- c5f8d2d: The Python and Go MCP servers are stateless by default, as the TypeScript server is.
+  - Python `http_app()` and Go `Handler()` issue no `mcp-session-id`, and a request needs no earlier `initialize` on the same instance. In-memory sessions broke once a load balancer spread one client over several instances, and clients that send one request per call got `400 Missing session ID` (Python) or `method "tools/list" is invalid during session initialization` (Go). For sessions, pass `http_app(stateless_http=False)` in Python or set `MCPServerOptions.Stateful` in Go, on a single instance or with sticky routing.
+  - The Python and Go scaffolds from `create-solvapay` pass `hide_tools_by_audience=["ui"]` / `HideToolsByAudience: []string{"ui"}`, as the TypeScript template does, so the widget's own tools stay out of `tools/list` and `solvapay verify` passes on a fresh scaffold. The MCP guides' first example does the same.
+
+- Updated dependencies [5040df6]
+  - @solvapay/init@0.6.1
+
 ## 0.9.0
 
 ### Minor Changes
