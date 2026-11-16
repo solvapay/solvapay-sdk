@@ -40,12 +40,11 @@ async function run(opts: RunOptions): Promise<void> {
     process.stdout.write(`📦 Installing dependencies with ${packageManager}...\n`)
     const installResult = await installProjectDependencies(packageManager, target)
     if (!installResult.ok) {
-      process.stdout.write(
-        `⚠️  ${installResult.command} failed (${installResult.warning ?? 'unknown error'}).\n`,
+      throw new Error(
+        `\`${installResult.command}\` failed in ${target}: ${installResult.warning ?? 'unknown error'}`,
       )
-    } else {
-      process.stdout.write('✅ Dependencies installed\n')
     }
+    process.stdout.write('✅ Dependencies installed\n')
   }
 
   if (common.skipInit) {

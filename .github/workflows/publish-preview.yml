@@ -89,6 +89,13 @@ jobs:
       - name: Version snapshot
         run: pnpm changeset version --snapshot preview
 
+      # Changesets moves a dependent's peer range to the exact snapshot
+      # version without bumping the dependent, so it would not be published
+      # and its @preview would keep pinning an older snapshot. This bumps
+      # those packages too, and fails if any exact pin is left stale.
+      - name: Snapshot the packages whose dependencies moved
+        run: node scripts/snapshot-peer-dependents.mjs
+
       - name: Publish snapshot to @preview
         id: publish
         run: |
