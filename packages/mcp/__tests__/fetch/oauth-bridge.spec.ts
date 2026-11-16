@@ -42,6 +42,37 @@ describe('createProtectedResourceHandler', () => {
     expect(res).toBeNull()
   })
 
+  it('serves the endpoint as the resource at the RFC 9728 path-suffixed URL', async () => {
+    const handler = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/mcp' })
+    const root = (await (await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
+    ))!.json()) as Record<string, unknown>
+    const suffixed = await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`),
+    )
+    expect(suffixed!.status).toBe(200)
+    // RFC 9728 §3.3: the resource is the URL the client started from. The root
+    // document keeps the origin; both name this server as the issuer.
+    expect(await suffixed!.json()).toEqual({ ...root, resource: `${publicBaseUrl}/mcp` })
+    expect(root.resource).toBe(publicBaseUrl)
+    expect(
+      await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/other`)),
+    ).toBeNull()
+  })
+
+  it('follows a custom MCP path and serves no suffix without one', async () => {
+    const custom = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/rpc/' })
+    const rpc = await custom(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/rpc`),
+    )
+    expect(rpc!.status).toBe(200)
+    expect(((await rpc!.json()) as { resource: string }).resource).toBe(`${publicBaseUrl}/rpc`)
+    const none = createProtectedResourceHandler({ publicBaseUrl })
+    expect(
+      await none(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`)),
+    ).toBeNull()
+  })
+
   it('returns null for non-GET methods', async () => {
     const handler = createProtectedResourceHandler({ publicBaseUrl })
     const res = await handler(
@@ -202,9 +233,7 @@ describe('createOAuthAuthorizeHandler', () => {
     const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
 
     expect(res!.status).toBe(302)
-    expect(res!.headers.get('location')).toBe(
-      `${apiBaseUrl}/v1/customer/auth/authorize?${query}`,
-    )
+    expect(res!.headers.get('location')).toBe(`${apiBaseUrl}/v1/customer/auth/authorize?${query}`)
   })
 })
 
@@ -426,9 +455,9 @@ describe('createOAuthFetchRouter', () => {
         productRef: '__SOLVAPAY_PRODUCT_REF__',
       }),
     ).toThrow(/scaffolder placeholder/)
-    expect(() =>
-      createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' }),
-    ).toThrow(/productRef is required/)
+    expect(() => createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' })).toThrow(
+      /productRef is required/,
+    )
   })
 
   beforeEach(() => {
