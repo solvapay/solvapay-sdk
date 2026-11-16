@@ -202,6 +202,40 @@ export const writeSolvaPayProductRefToEnv = async (
 }
 
 /**
+ * The settings an MCP server built from the Python or Go guide reads with no
+ * default: `PORT` and `PUBLIC_BASE_URL`. Adds each one `.env` doesn't set yet,
+ * with the scaffolds' values, and never changes one that is set. Returns the
+ * keys it added.
+ */
+export const writeMcpServerEnvDefaults = async (
+  options: { cwd?: string } = {},
+): Promise<string[]> => {
+  const cwd = options.cwd || process.cwd()
+  const envPath = path.join(cwd, '.env')
+  const current = (await envFileExists(envPath)) ? await readFile(envPath, 'utf8') : ''
+  const port = (await readEnvKeyFromFile('PORT', cwd)) ?? '8080'
+  const lines: string[] = []
+  const added: string[] = []
+  if (!envValueRegex('PUBLIC_BASE_URL').test(current)) {
+    lines.push(
+      '# The URL MCP clients use to reach this server: a tunnel (ngrok, cloudflared)',
+      '# in development, the deployed URL in production. OAuth sign-in fails when it',
+      '# differs from the URL the client connects to.',
+      `PUBLIC_BASE_URL=http://localhost:${port}`,
+    )
+    added.push('PUBLIC_BASE_URL')
+  }
+  if (!envValueRegex('PORT').test(current)) {
+    lines.push(`PORT=${port}`)
+    added.push('PORT')
+  }
+  if (lines.length === 0) return added
+  const prefix = current.length === 0 ? '' : `${normalizeTrailingNewline(current)}\n`
+  await writeFile(envPath, `${prefix}${lines.join('\n')}\n`, 'utf8')
+  return added
+}
+
+/**
  * Persist `SOLVAPAY_API_BASE_URL=<url>` to the project's `.env`. Append-safe
  * and idempotent — mirrors `writeSolvaPaySecretToEnv` / `writeSolvaPayProductRefToEnv`:
  *   - creates `.env` if missing,
