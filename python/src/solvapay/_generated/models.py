@@ -2267,10 +2267,6 @@ class SdkProductResponse(BaseModel):
         extra="allow",
         populate_by_name=True,
     )
-    balance: Annotated[int | float, Field(examples=[0])]
-    """
-    Product balance in cents
-    """
     config: ProductConfigDto | None = None
     """
     Product-specific configuration
@@ -2335,10 +2331,6 @@ class SdkProductResponse(BaseModel):
     status: Annotated[str, Field(examples=["active"])]
     """
     Product status
-    """
-    total_transactions: Annotated[int | float, Field(alias="totalTransactions", examples=[0])]
-    """
-    Total number of transactions
     """
     updated_at: Annotated[str, Field(alias="updatedAt")]
     """
