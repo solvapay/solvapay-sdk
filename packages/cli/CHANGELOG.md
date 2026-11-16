@@ -1,5 +1,26 @@
 # solvapay
 
+## 1.5.1
+
+### Patch Changes
+
+- 5040df6: `solvapay init` no longer breaks a Python MCP server that runs on `mcp` 1.x.
+  - With `--features mcp`, init reads `uv.lock`, `poetry.lock`, `pyproject.toml`, `requirements.txt` and the project's `.py` files before the browser opens. It stops, with nothing written, when `mcp` is locked below 2, a requirement rules out `mcp` 2.3, the project uses `fastapi-mcp`, or code imports `mcp.server.fastmcp` or `fastapi_mcp`. Installing `solvapay[mcp]` there used to upgrade `mcp` to 2.x and leave a server that couldn't start. The message names each cause and links the `mcp` 2.x migration guide and the SolvaPay MCP guide. A project on fastmcp gets a warning that SolvaPay has no fastmcp adapter.
+  - init saves the product to `.env` before installing the SDK, so a failed install leaves a complete `.env`.
+  - With `--features mcp` in Python and Go, init adds `PORT` and `PUBLIC_BASE_URL` to `.env` when they're missing (`8080`, as the scaffolds do), links the language's MCP guide in its next steps and prints `npx -y solvapay@latest` (or `@preview`) commands.
+  - `solvapay doctor` scans a Python project's `.py` files. An import of `mcp.server.fastmcp` or `fastapi_mcp` fails the run once the project is on `mcp` 2.x and only warns while it is still on 1.x. The `SOLVAPAY_DEBUG` warning now shows only for TypeScript projects.
+  - Without a terminal (an AI agent, CI, `--yes`), init lists the account's products with their refs and prints the exact `npx -y solvapay@latest init --product <prd_...>` command, instead of only saying it skipped the choice.
+  - An empty value in `.env` (`SOLVAPAY_PRODUCT_REF=`) is read as unset. Before, init and doctor read the next line as its value, and replacing a key also removed the blank lines above it.
+
+- 2bf1da2: `solvapay verify` now connects the way MCP hosts do: it sends `initialize` and `notifications/initialized`, then pins the `mcp-session-id` the server issued. Servers that keep sessions, the Python and Go SDK defaults, no longer fail every check with HTTP 400 or "invalid during session initialization".
+
+  The paywall check calls each tool with arguments built from its `inputSchema` instead of a fixed `query`/`symbol`/`ticker`, so it reaches the gate on tools that validate their arguments first. It skips widget-only tools by their `audience: "ui"` tag, still runs when the tools check fails on leaked UI tools, and says which calls errored instead of blaming the customer's balance. A token the server rejects now fails the run.
+
+  `verify` never charges: it reads `account` before probing, and when the customer can already pay (`canCall: true`) it skips the paywall check and says to sign in as a customer with no plan. If `account` fails, it skips the probe too.
+
+- Updated dependencies [5040df6]
+  - @solvapay/init@0.6.1
+
 ## 1.5.0
 
 ### Minor Changes
