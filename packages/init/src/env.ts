@@ -11,7 +11,7 @@ const SOLVAPAY_API_BASE_URL = 'SOLVAPAY_API_BASE_URL'
 
 export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = CORE_PRODUCT_REF_PLACEHOLDER
 
-const envValueRegex = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, 'm')
+const envValueRegex = (key: string) => new RegExp(`^[ \\t]*${key}[ \\t]*=[ \\t]*(.*)$`, 'm')
 
 export type EnvWriteResult = {
   filePath: string
@@ -129,7 +129,7 @@ export const writeSolvaPaySecretToEnv = async (
   }
 
   const updatedContent = currentContent.replace(
-    /^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m,
+    /^[ \t]*SOLVAPAY_SECRET_KEY[ \t]*=.*$/m,
     keyLine,
   )
   await writeFile(envPath, updatedContent, 'utf8')
@@ -196,7 +196,7 @@ export const writeSolvaPayProductRefToEnv = async (
     return { filePath: envPath, action: 'unchanged' }
   }
 
-  const updatedContent = currentContent.replace(/^\s*SOLVAPAY_PRODUCT_REF\s*=.*$/m, keyLine)
+  const updatedContent = currentContent.replace(/^[ \t]*SOLVAPAY_PRODUCT_REF[ \t]*=.*$/m, keyLine)
   await writeFile(envPath, updatedContent, 'utf8')
   return { filePath: envPath, action: 'updated' }
 }
@@ -263,8 +263,8 @@ export const writeSolvaPayApiBaseUrlToEnv = async (
   }
 
   const currentContent = await readFile(envPath, 'utf8')
-  const liveRegex = new RegExp(`^\\s*${SOLVAPAY_API_BASE_URL}\\s*=\\s*(.*)$`, 'm')
-  const commentedRegex = new RegExp(`^\\s*#\\s*${SOLVAPAY_API_BASE_URL}\\s*=.*$`, 'm')
+  const liveRegex = new RegExp(`^[ \\t]*${SOLVAPAY_API_BASE_URL}[ \\t]*=[ \\t]*(.*)$`, 'm')
+  const commentedRegex = new RegExp(`^[ \\t]*#[ \\t]*${SOLVAPAY_API_BASE_URL}[ \\t]*=.*$`, 'm')
 
   if (liveRegex.test(currentContent)) {
     const match = currentContent.match(liveRegex)

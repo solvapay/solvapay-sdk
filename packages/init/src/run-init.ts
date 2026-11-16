@@ -314,11 +314,7 @@ const configureProductRef = async (
       process.stdout.write('Skipped — set SOLVAPAY_PRODUCT_REF in .env later.\n')
       break
     case 'skipped':
-      if (pick.reason === 'non_interactive_requires_product') {
-        process.stdout.write(
-          'No product ref was saved. Set SOLVAPAY_PRODUCT_REF in .env or re-run `solvapay init --product <prd_...>` after confirming the intended product.\n',
-        )
-      }
+      // The picker already said why and what to run next.
       break
   }
 }

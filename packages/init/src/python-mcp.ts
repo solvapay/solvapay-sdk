@@ -134,7 +134,7 @@ const mcpRequirements = (
   }
   // Poetry: mcp = "^1.30" or mcp = { version = "^1.30", extras = [...] }
   for (const match of text.matchAll(
-    /^\s*mcp\s*=\s*(?:"([^"]+)"|\{[^}\n]*\bversion\s*=\s*"([^"]+)"[^}\n]*\})/gim,
+    /^[ \t]*mcp[ \t]*=[ \t]*(?:"([^"]+)"|\{[^}\n]*\bversion\s*=\s*"([^"]+)"[^}\n]*\})/gim,
   )) {
     const spec = match[1] ?? match[2]
     found.push({ requirement: `mcp = "${spec}"`, spec })

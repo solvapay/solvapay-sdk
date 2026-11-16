@@ -432,7 +432,6 @@ describe('runInitInDirectory', () => {
       { yes: true },
     )
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
-    expect(output.join('')).toContain('No product ref was saved')
   })
 
   it('verifies and writes an explicit productRef option without running the picker', async () => {

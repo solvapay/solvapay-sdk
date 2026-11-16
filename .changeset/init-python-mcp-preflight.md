@@ -10,3 +10,5 @@
 - init saves the product to `.env` before installing the SDK, so a failed install leaves a complete `.env`.
 - With `--features mcp` in Python and Go, init adds `PORT` and `PUBLIC_BASE_URL` to `.env` when they're missing (`8080`, as the scaffolds do), links the language's MCP guide in its next steps and prints `npx -y solvapay@latest` (or `@preview`) commands.
 - `solvapay doctor` scans a Python project's `.py` files. An import of `mcp.server.fastmcp` or `fastapi_mcp` fails the run once the project is on `mcp` 2.x and only warns while it is still on 1.x. The `SOLVAPAY_DEBUG` warning now shows only for TypeScript projects.
+- Without a terminal (an AI agent, CI, `--yes`), init lists the account's products with their refs and prints the exact `npx -y solvapay@latest init --product <prd_...>` command, instead of only saying it skipped the choice.
+- An empty value in `.env` (`SOLVAPAY_PRODUCT_REF=`) is read as unset. Before, init and doctor read the next line as its value, and replacing a key also removed the blank lines above it.
