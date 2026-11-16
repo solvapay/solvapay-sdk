@@ -232,7 +232,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on Pro, $29 a month. Renews Dec 2. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cy@example.com · cus_NR03\nManage: [Manage account](https://solvapay.com/customer/manage?id=ss_nr3) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr3) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on Pro, $29 a month. Renews Dec 2. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cy@example.com · cus_NR03\nManage: [Manage account](https://solvapay.com/customer/manage?id=ss_nr3) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr3) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",
@@ -258,10 +258,8 @@
           "reference": "prd_nr_nolimits",
           "name": "Stock Research",
           "status": "active",
-          "balance": 0,
           "isManagedMcp": false,
           "isMcpPay": false,
-          "totalTransactions": 0,
           "createdAt": "2026-01-01T00:00:00Z",
           "updatedAt": "2026-01-01T00:00:00Z"
         },

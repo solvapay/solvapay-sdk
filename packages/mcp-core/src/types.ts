@@ -33,10 +33,12 @@ import { VIEWER_TOOL_NAME } from './tool-names'
 export type BootstrapMerchant = SdkMerchantResponse
 
 /**
- * Product projection surfaced on every `BootstrapPayload`. Structural
- * alias for the server's `SdkProductResponse`.
+ * Product projection surfaced on every `BootstrapPayload`: the server's
+ * `SdkProductResponse` without `balance` and `totalTransactions`, which are
+ * the merchant's own figures for the product, not the customer's. Customers
+ * and models read this payload; the customer's balance is `customer.balance`.
  */
-export type BootstrapProduct = SdkProductResponse
+export type BootstrapProduct = Omit<SdkProductResponse, 'balance' | 'totalTransactions'>
 
 /**
  * Plan projection surfaced on every `BootstrapPayload`. Structural

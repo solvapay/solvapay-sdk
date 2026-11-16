@@ -172,7 +172,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: 97 of 100 calls left this month, resetting Dec 10. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: bo@example.com · cus_NR02\nManage: [Manage account](https://solvapay.com/customer/manage/ss_nr2) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr2) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on the free plan: 97 of 100 calls left this month, resetting Dec 10. Credits are not used on Free. Call `account` with view: 'checkout' for more calls.\nSigned in as: bo@example.com · cus_NR02\nManage: [Manage account](https://solvapay.com/customer/manage/ss_nr2) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_nr2) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",
@@ -198,10 +198,8 @@
           "reference": "prd_nr_enrol",
           "name": "Stock Research",
           "status": "active",
-          "balance": 0,
           "isManagedMcp": false,
           "isMcpPay": false,
-          "totalTransactions": 0,
           "createdAt": "2026-01-01T00:00:00Z",
           "updatedAt": "2026-01-01T00:00:00Z"
         },

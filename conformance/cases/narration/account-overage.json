@@ -180,7 +180,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is over its Pro allowance: 5,300 of 5,000 calls used. Calls still work, paid from your credits. Call `account` with view: 'checkout' for a higher limit.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is over its Pro allowance: 5,300 of 5,000 calls used. Calls still work, paid from your credits. Call `account` with view: 'checkout' for a higher limit.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",

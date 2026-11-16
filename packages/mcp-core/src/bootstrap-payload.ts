@@ -296,6 +296,14 @@ export function createBuildBootstrapPayload(
 
     const checkout = okOrNull(checkoutResult)
     const portal = okOrNull(portalResult)
+    // `balance` and `totalTransactions` are the merchant's own figures for the
+    // product, not the customer's. They don't belong in a payload customers and
+    // models read; the customer's balance is `customer.balance`.
+    const {
+      balance: _merchantBalance,
+      totalTransactions: _merchantTransactions,
+      ...product
+    } = productResult
 
     return {
       view,
@@ -303,7 +311,7 @@ export function createBuildBootstrapPayload(
       stripePublishableKey,
       returnUrl: publicBaseUrl,
       merchant: merchantResult,
-      product: productResult,
+      product,
       plans,
       customer,
       checkoutUrl: checkout?.checkoutUrl ?? null,
