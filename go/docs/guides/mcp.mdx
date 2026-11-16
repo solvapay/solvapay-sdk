@@ -33,9 +33,10 @@ func main() {
 		log.Fatal(err)
 	}
 	server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
-		Client:        client, // the product comes from SOLVAPAY_PRODUCT_REF
-		PublicBaseURL: os.Getenv("PUBLIC_BASE_URL"),
-		Name:          "research",
+		Client:              client, // the product comes from SOLVAPAY_PRODUCT_REF
+		PublicBaseURL:       os.Getenv("PUBLIC_BASE_URL"),
+		Name:                "research",
+		HideToolsByAudience: []string{"ui"}, // keep the widget's own tools out of tools/list
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -177,6 +178,7 @@ server, err := solvapay.NewMCPServer(solvapay.MCPServerOptions{
 | `HideToolsByAudience` | Leaves tools whose `_meta.audience` is listed out of `tools/list`. They stay callable. The widget tools have audience `ui`. ChatGPT still gets the full list, because its widget can only call listed tools (`HideToolsBypass` changes who does). |
 | `Name`, `Version`, `Instructions` | The server's identity and instructions. `Name` defaults to `solvapay-mcp` and sets the widget's URI. |
 | `MCPPath`, `OAuthPaths` | Where the MCP endpoint and the OAuth endpoints are served. |
+| `Stateful` | Keeps an in-memory session per client (`Mcp-Session-Id`). Off by default, as in the TypeScript server: each request stands alone, so any instance behind a load balancer can answer it. Turn it on only on a single instance or with sticky routing. |
 
 To add your own tools, prompts or resources without SolvaPay's paywall, use the underlying server: `server.Server()` returns the `*mcp.Server`.
 
