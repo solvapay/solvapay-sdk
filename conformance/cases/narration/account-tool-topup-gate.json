@@ -328,11 +328,7 @@
         "product": {
           "reference": "prd_nr_topup",
           "name": "Stock Research",
-          "status": "active",
-          "isManagedMcp": false,
-          "isMcpPay": false,
-          "createdAt": "2026-01-01T00:00:00Z",
-          "updatedAt": "2026-01-01T00:00:00Z"
+          "status": "active"
         },
         "plans": [
           {

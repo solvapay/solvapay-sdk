@@ -33,7 +33,7 @@ import {
   enrichPurchase,
   signedInCustomerRefOnly,
 } from './helpers'
-import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
+import type { BootstrapPayload, BootstrapProduct, McpToolExtra, SolvaPayMcpViewKind } from './types'
 import { selectActivePlanPurchase } from './active-purchase'
 import { createMcpCheckoutSession } from './hosted-checkout'
 import { autoRechargeUrlFrom } from './portal-links'
@@ -296,14 +296,19 @@ export function createBuildBootstrapPayload(
 
     const checkout = okOrNull(checkoutResult)
     const portal = okOrNull(portalResult)
-    // `balance` and `totalTransactions` are the merchant's own figures for the
-    // product, not the customer's. They don't belong in a payload customers and
-    // models read; the customer's balance is `customer.balance`.
-    const {
-      balance: _merchantBalance,
-      totalTransactions: _merchantTransactions,
-      ...product
-    } = productResult
+    // Customers and models read this payload, so the product carries only what
+    // they need to see. The rest of the product (the merchant's metadata, its
+    // own revenue figures, its MCP and delivery config) stays out, and a field
+    // the platform adds later stays out until it is named here.
+    const product: BootstrapProduct = {
+      reference: productResult.reference,
+      name: productResult.name,
+      status: productResult.status,
+      ...(productResult.description !== undefined
+        ? { description: productResult.description }
+        : {}),
+      ...(productResult.imageUrl !== undefined ? { imageUrl: productResult.imageUrl } : {}),
+    }
 
     return {
       view,
