@@ -9,6 +9,20 @@ Universal server SDK for Node.js and edge runtimes — API client, paywall prote
 
 **Works in:** Node.js, Vercel Edge, Cloudflare Workers, Deno, Supabase Edge Functions, and more.
 
+## With an AI coding agent
+
+Install the SolvaPay skills, then ask your agent for what you want, naming the product to bill:
+
+```bash
+npx skills add solvapay/skills -a claude-code -y   # other agents: -a <agent>
+```
+
+> Add SolvaPay to this Express app so that `GET /forecast` is paid per call. Bill product `prd_…`.
+
+Installed during a Claude Code session? It loads right away if `.claude/skills/` existed when the session started; otherwise type `/reload-skills`. Or skip the install: start the prompt with "First run `npx -y skills use solvapay/skills --skill app-integration` and follow the skill it prints."
+
+The agent runs `npx -y solvapay@latest init --product prd_…`; approve it. It opens your browser to sign in to SolvaPay and writes `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF` to `.env`. Create the product, with the plan that sets the price, in [SolvaPay Console](https://app.solvapay.com/products) first. If your app has no sign-in yet, decide how callers are identified first: the paywall bills your own user id.
+
 ## Install
 
 ```bash

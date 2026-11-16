@@ -28,6 +28,7 @@ mcp = create_solvapay_mcp_server(
     solvapay=create_solvapay(),
     public_base_url=os.environ["PUBLIC_BASE_URL"],  # where MCP clients reach this server
     name="research",
+    hide_tools_by_audience=["ui"],  # keep the widget's own tools out of tools/list
 )
 
 
@@ -40,6 +41,8 @@ mcp.register_payable("quote", handler=quote, description="Latest price for a sym
 
 app = mcp.http_app()  # the MCP endpoint is /mcp
 ```
+
+The endpoint is stateless, as the TypeScript server's is: it issues no `mcp-session-id`, so any instance behind a load balancer can answer any request. `mcp.http_app(stateless_http=False)` keeps an in-memory session per client instead; use it only on a single instance or with sticky routing.
 
 A handler is an async function. Its parameters, except the `ResponseContext`, become the tool's input schema. Use `Annotated[str, Field(description=...)]` to describe a parameter to the model. The handler must return `ctx.respond(...)`.
 

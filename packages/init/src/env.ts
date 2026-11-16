@@ -11,7 +11,7 @@ const SOLVAPAY_API_BASE_URL = 'SOLVAPAY_API_BASE_URL'
 
 export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = CORE_PRODUCT_REF_PLACEHOLDER
 
-const envValueRegex = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, 'm')
+const envValueRegex = (key: string) => new RegExp(`^[ \\t]*${key}[ \\t]*=[ \\t]*(.*)$`, 'm')
 
 export type EnvWriteResult = {
   filePath: string
@@ -129,7 +129,7 @@ export const writeSolvaPaySecretToEnv = async (
   }
 
   const updatedContent = currentContent.replace(
-    /^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m,
+    /^[ \t]*SOLVAPAY_SECRET_KEY[ \t]*=.*$/m,
     keyLine,
   )
   await writeFile(envPath, updatedContent, 'utf8')
@@ -196,9 +196,43 @@ export const writeSolvaPayProductRefToEnv = async (
     return { filePath: envPath, action: 'unchanged' }
   }
 
-  const updatedContent = currentContent.replace(/^\s*SOLVAPAY_PRODUCT_REF\s*=.*$/m, keyLine)
+  const updatedContent = currentContent.replace(/^[ \t]*SOLVAPAY_PRODUCT_REF[ \t]*=.*$/m, keyLine)
   await writeFile(envPath, updatedContent, 'utf8')
   return { filePath: envPath, action: 'updated' }
+}
+
+/**
+ * The settings an MCP server built from the Python or Go guide reads with no
+ * default: `PORT` and `PUBLIC_BASE_URL`. Adds each one `.env` doesn't set yet,
+ * with the scaffolds' values, and never changes one that is set. Returns the
+ * keys it added.
+ */
+export const writeMcpServerEnvDefaults = async (
+  options: { cwd?: string } = {},
+): Promise<string[]> => {
+  const cwd = options.cwd || process.cwd()
+  const envPath = path.join(cwd, '.env')
+  const current = (await envFileExists(envPath)) ? await readFile(envPath, 'utf8') : ''
+  const port = (await readEnvKeyFromFile('PORT', cwd)) ?? '8080'
+  const lines: string[] = []
+  const added: string[] = []
+  if (!envValueRegex('PUBLIC_BASE_URL').test(current)) {
+    lines.push(
+      '# The URL MCP clients use to reach this server: a tunnel (ngrok, cloudflared)',
+      '# in development, the deployed URL in production. OAuth sign-in fails when it',
+      '# differs from the URL the client connects to.',
+      `PUBLIC_BASE_URL=http://localhost:${port}`,
+    )
+    added.push('PUBLIC_BASE_URL')
+  }
+  if (!envValueRegex('PORT').test(current)) {
+    lines.push(`PORT=${port}`)
+    added.push('PORT')
+  }
+  if (lines.length === 0) return added
+  const prefix = current.length === 0 ? '' : `${normalizeTrailingNewline(current)}\n`
+  await writeFile(envPath, `${prefix}${lines.join('\n')}\n`, 'utf8')
+  return added
 }
 
 /**
@@ -229,8 +263,8 @@ export const writeSolvaPayApiBaseUrlToEnv = async (
   }
 
   const currentContent = await readFile(envPath, 'utf8')
-  const liveRegex = new RegExp(`^\\s*${SOLVAPAY_API_BASE_URL}\\s*=\\s*(.*)$`, 'm')
-  const commentedRegex = new RegExp(`^\\s*#\\s*${SOLVAPAY_API_BASE_URL}\\s*=.*$`, 'm')
+  const liveRegex = new RegExp(`^[ \\t]*${SOLVAPAY_API_BASE_URL}[ \\t]*=[ \\t]*(.*)$`, 'm')
+  const commentedRegex = new RegExp(`^[ \\t]*#[ \\t]*${SOLVAPAY_API_BASE_URL}[ \\t]*=.*$`, 'm')
 
   if (liveRegex.test(currentContent)) {
     const match = currentContent.match(liveRegex)

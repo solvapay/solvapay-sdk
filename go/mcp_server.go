@@ -86,6 +86,13 @@ type MCPServerOptions struct {
 	// IsChatGPTRequest (ChatGPT's iframe can only call listed tools).
 	HideToolsBypass func(ctx context.Context, req mcp.Request) bool
 
+	// Stateful keeps an in-memory session per client (mcp-session-id), for
+	// server-initiated messages over a held stream. Off by default, as in the
+	// TypeScript server: each request then stands alone, so any instance
+	// behind a load balancer can answer it. Turn it on only on a single
+	// instance or with sticky routing.
+	Stateful bool
+
 	Logger *slog.Logger
 }
 
@@ -105,6 +112,7 @@ type MCPServer struct {
 	logger         *slog.Logger
 	views          []string
 
+	stateful        bool
 	hiddenAudiences map[string]bool
 	hideBypass      func(context.Context, mcp.Request) bool
 	bypassWarning   sync.Once
@@ -204,6 +212,7 @@ func NewMCPServer(options MCPServerOptions) (*MCPServer, error) {
 		logger:         logger,
 		views:          views,
 		hideBypass:     options.HideToolsBypass,
+		stateful:       options.Stateful,
 		annotations:    map[string]map[string]any{},
 		freeMeters:     map[string]*freeMeter{},
 	}

@@ -9,7 +9,15 @@ import {
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
 } from './env'
+import { findLanguageMarkers } from './language'
 import { detectPackageManager } from './project'
+import {
+  describeLegacyImports,
+  inspectPythonMcpProject,
+  majorVersion,
+  MCP_MIGRATION_GUIDE,
+  PYTHON_MCP_GUIDE,
+} from './python-mcp'
 import {
   fetchDistTags,
   findOutdatedSolvapayPackages,
@@ -154,21 +162,25 @@ const checkLanguageVersion = async (
 /**
  * One version check per language the project uses SolvaPay in. A project
  * with no SolvaPay SDK in any language fails: doctor has nothing to vouch for.
+ * Also returns the `@solvapay/*` npm packages found, `null` without a
+ * readable package.json.
  */
 const checkSdkVersions = async (
   cwd: string,
   distTags: FetchDistTags,
   sdkVersions: (language: SdkLanguage) => Promise<string[]>,
-): Promise<DoctorCheckResult[]> => {
+): Promise<{ results: DoctorCheckResult[]; npmNames: string[] | null }> => {
   const results: DoctorCheckResult[] = []
-  const npmNames = await solvapayDependencies(cwd).catch((error: unknown) => {
+  let npmNames: string[] | null = null
+  try {
+    npmNames = await solvapayDependencies(cwd)
+  } catch (error) {
     results.push({
       name: '@solvapay/* versions',
       ok: false,
       detail: error instanceof Error ? error.message : String(error),
     })
-    return null
-  })
+  }
   if (npmNames && npmNames.length > 0) results.push(await checkNpmVersions(cwd, npmNames, distTags))
 
   for (const [language, read] of [
@@ -197,7 +209,51 @@ const checkSdkVersions = async (
         'Run `npx solvapay init` here, or run doctor from the project folder.',
     })
   }
-  return results
+  return { results, npmNames }
+}
+
+/**
+ * Imports that need `mcp` 1.x (`mcp.server.fastmcp`, `fastapi_mcp`) fail
+ * once the project is on `mcp` 2.x, which `solvapay[mcp]` requires. A version
+ * check can't catch it: with the SDK installed, `mcp` is always 2.3 or later.
+ */
+const checkPythonMcpImports = async (cwd: string): Promise<DoctorCheckResult> => {
+  const name = 'Python MCP imports'
+  try {
+    const project = await inspectPythonMcpProject(cwd)
+    const legacy = describeLegacyImports(project.imports)
+    const fastmcp = project.imports.filter(hit => hit.module === 'fastmcp')
+    if (legacy.length > 0) {
+      const mcpLabel = project.mcp
+        ? `mcp ${project.mcp.version} in ${project.mcp.source}`
+        : 'mcp version not pinned'
+      const stillOnV1 =
+        project.mcp !== undefined && majorVersion(project.mcp.version) < 2 && !project.solvapayMcpExtra
+      if (stillOnV1) {
+        return {
+          name,
+          ok: true,
+          detail: `warning: ${legacy.join('; ')}. This code runs today (${mcpLabel}), but SolvaPay's MCP server needs mcp 2.3 or later. Migrate before adding it: ${MCP_MIGRATION_GUIDE}`,
+        }
+      }
+      return {
+        name,
+        ok: false,
+        detail: `${legacy.join('; ')}, so the server can't start on mcp 2.x (${mcpLabel}). Migrate: ${MCP_MIGRATION_GUIDE}, then register the tools on create_solvapay_mcp_server: ${PYTHON_MCP_GUIDE}`,
+      }
+    }
+    if (fastmcp.length > 0) {
+      const at = fastmcp.slice(0, 3).map(hit => `${hit.file}:${hit.line}`).join(', ')
+      return {
+        name,
+        ok: true,
+        detail: `warning: ${at} imports fastmcp. SolvaPay has no fastmcp adapter; paid tools register on create_solvapay_mcp_server: ${PYTHON_MCP_GUIDE}`,
+      }
+    }
+    return { name, ok: true, detail: 'none that need mcp 1.x' }
+  } catch (error) {
+    return { name, ok: false, detail: error instanceof Error ? error.message : String(error) }
+  }
 }
 
 export const runDoctorInDirectory = async ({
@@ -318,17 +374,27 @@ export const runDoctorInDirectory = async ({
     }
   }
 
-  checks.push(...(await checkSdkVersions(cwd, distTags, sdkVersions)))
+  const sdkChecks = await checkSdkVersions(cwd, distTags, sdkVersions)
+  checks.push(...sdkChecks.results)
 
-  const debugRaw = process.env.SOLVAPAY_DEBUG
-  checks.push({
-    name: 'SOLVAPAY_DEBUG defaults',
-    ok: true,
-    detail:
-      debugRaw === undefined
-        ? 'warning: unset — factory treats debug as ON (!== "false") while client/paywall treat it as OFF (=== "true"). Set explicitly to "true" or "false".'
-        : `set to "${debugRaw}"`,
-  })
+  const markers = await findLanguageMarkers(cwd)
+  if (markers.some(marker => marker.language === 'python')) {
+    checks.push(await checkPythonMcpImports(cwd))
+  }
+
+  // The TypeScript factory and paywall read SOLVAPAY_DEBUG differently; the
+  // Python and Go SDKs don't, so the warning is for TypeScript projects only.
+  if (sdkChecks.npmNames && sdkChecks.npmNames.length > 0) {
+    const debugRaw = process.env.SOLVAPAY_DEBUG
+    checks.push({
+      name: 'SOLVAPAY_DEBUG defaults',
+      ok: true,
+      detail:
+        debugRaw === undefined
+          ? 'warning: unset — factory treats debug as ON (!== "false") while client/paywall treat it as OFF (=== "true"). Set explicitly to "true" or "false".'
+          : `set to "${debugRaw}"`,
+    })
+  }
 
   for (const check of checks) {
     printCheck(check)

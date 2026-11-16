@@ -80,10 +80,11 @@ describe('pickProductInteractive', () => {
     })
 
     expect(result).toEqual({ action: 'skipped', reason: 'non_interactive_requires_product' })
-    expect(output.join('')).toContain('Skipped product auto-selection in non-interactive mode')
-    expect(output.join('')).toContain(
-      '.env still has the placeholder and deploy will fail until it is set.',
-    )
+    const text = output.join('')
+    expect(text).toContain('Products on your account:')
+    expect(text).toMatch(/1\. .+ \(prd_/)
+    expect(text).toContain('No product was chosen: init asks only at a terminal')
+    expect(text).toContain('npx -y solvapay@latest init --product <prd_...>')
   })
 
   it('skips on network error', async () => {
