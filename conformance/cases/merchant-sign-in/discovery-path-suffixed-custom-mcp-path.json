@@ -1,0 +1,53 @@
+{
+  "$schema": "../../case.schema.json",
+  "suite": "merchant-sign-in",
+  "case": "discovery-path-suffixed-custom-mcp-path",
+  "description": "With a custom MCP endpoint path, the path-suffixed protected-resource URL follows it (/.well-known/oauth-protected-resource/rpc) and serves the same document as the root. The default suffix (/mcp) is then a 404.",
+  "input": {
+    "fn": "merchantMcpHttp",
+    "args": {
+      "productRef": "prd_si_suffixed_rpc",
+      "publicBaseUrl": "https://mcp-si.conformance.test",
+      "mcpPath": "/rpc",
+      "requests": [
+        {
+          "path": "/.well-known/oauth-protected-resource/rpc"
+        },
+        {
+          "path": "/.well-known/oauth-protected-resource/mcp"
+        }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "responses": [
+        {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "body": {
+            "resource": "https://mcp-si.conformance.test",
+            "authorization_servers": [
+              "https://mcp-si.conformance.test"
+            ],
+            "scopes_supported": [
+              "openid",
+              "profile",
+              "email"
+            ]
+          }
+        },
+        {
+          "status": 404,
+          "headers": {
+            "content-type": "text/plain"
+          },
+          "body": "not_found"
+        }
+      ],
+      "apiCalls": []
+    }
+  }
+}

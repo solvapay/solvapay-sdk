@@ -42,6 +42,32 @@ describe('createProtectedResourceHandler', () => {
     expect(res).toBeNull()
   })
 
+  it('serves the same document under the MCP path (RFC 9728 path-suffixed URL)', async () => {
+    const handler = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/mcp' })
+    const root = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
+    const suffixed = await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`),
+    )
+    expect(suffixed!.status).toBe(200)
+    // The same resource either way, so tokens are bound alike whichever a client found.
+    expect(await suffixed!.json()).toEqual(await root!.json())
+    expect(
+      await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/other`)),
+    ).toBeNull()
+  })
+
+  it('follows a custom MCP path and serves no suffix without one', async () => {
+    const custom = createProtectedResourceHandler({ publicBaseUrl, mcpPath: '/rpc/' })
+    expect(
+      (await custom(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/rpc`)))!
+        .status,
+    ).toBe(200)
+    const none = createProtectedResourceHandler({ publicBaseUrl })
+    expect(
+      await none(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource/mcp`)),
+    ).toBeNull()
+  })
+
   it('returns null for non-GET methods', async () => {
     const handler = createProtectedResourceHandler({ publicBaseUrl })
     const res = await handler(
@@ -202,9 +228,7 @@ describe('createOAuthAuthorizeHandler', () => {
     const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
 
     expect(res!.status).toBe(302)
-    expect(res!.headers.get('location')).toBe(
-      `${apiBaseUrl}/v1/customer/auth/authorize?${query}`,
-    )
+    expect(res!.headers.get('location')).toBe(`${apiBaseUrl}/v1/customer/auth/authorize?${query}`)
   })
 })
 
@@ -426,9 +450,9 @@ describe('createOAuthFetchRouter', () => {
         productRef: '__SOLVAPAY_PRODUCT_REF__',
       }),
     ).toThrow(/scaffolder placeholder/)
-    expect(() =>
-      createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' }),
-    ).toThrow(/productRef is required/)
+    expect(() => createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' })).toThrow(
+      /productRef is required/,
+    )
   })
 
   beforeEach(() => {

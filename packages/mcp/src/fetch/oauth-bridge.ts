@@ -22,6 +22,7 @@ import {
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
+import { protectedResourcePaths } from '../internal/protected-resource-paths'
 import { applyNativeCors, corsPreflight } from './cors'
 
 export interface FetchOAuthOptions {
@@ -31,6 +32,8 @@ export interface FetchOAuthOptions {
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
+  /** The MCP endpoint's path; the protected-resource document is also served under it. */
+  mcpPath?: string
 }
 
 type FetchHandler = (req: Request) => Promise<Response | null>
@@ -81,10 +84,11 @@ function queryOf(req: Request): string {
 export function createProtectedResourceHandler(options: {
   publicBaseUrl: string
   protectedResourcePath?: string
+  mcpPath?: string
 }): FetchHandler {
-  const path = options.protectedResourcePath ?? '/.well-known/oauth-protected-resource'
+  const paths = protectedResourcePaths(options.protectedResourcePath, options.mcpPath)
   return async req => {
-    if (req.method !== 'GET' || pathOf(req) !== path) return null
+    if (req.method !== 'GET' || !paths.includes(pathOf(req))) return null
     return jsonResponse(req, 200, getOAuthProtectedResourceResponse(options.publicBaseUrl))
   }
 }
@@ -259,6 +263,7 @@ export function createOAuthFetchRouter(options: FetchOAuthOptions): FetchHandler
     createProtectedResourceHandler({
       publicBaseUrl: options.publicBaseUrl,
       protectedResourcePath: options.protectedResourcePath,
+      mcpPath: options.mcpPath,
     }),
     createAuthorizationServerHandler({
       publicBaseUrl: options.publicBaseUrl,

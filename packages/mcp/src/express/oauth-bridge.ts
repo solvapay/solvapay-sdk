@@ -22,6 +22,7 @@ import {
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
+import { protectedResourcePaths } from '../internal/protected-resource-paths'
 
 type JsonRpcId = string | number | null
 
@@ -446,8 +447,13 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     }
   }
 
+  const resourceDocumentPaths = protectedResourcePaths(protectedResourcePath, mcpPath)
   const protectedResourceMiddleware: Middleware = (req, res, next) => {
-    if (req.method !== 'GET' || req.path !== protectedResourcePath) {
+    if (
+      req.method !== 'GET' ||
+      req.path === undefined ||
+      !resourceDocumentPaths.includes(req.path)
+    ) {
       next()
       return
     }
