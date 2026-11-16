@@ -130,7 +130,7 @@ export type InstalledSdk = {
   extras?: string[]
 }
 
-const readText = async (file: string): Promise<string | null> => {
+export const readText = async (file: string): Promise<string | null> => {
   try {
     return await readFile(file, 'utf8')
   } catch (error) {
@@ -140,7 +140,10 @@ const readText = async (file: string): Promise<string | null> => {
 }
 
 /** The `[[package]]` entry named `name` in a uv.lock or poetry.lock. */
-const lockedPackage = (lock: string, name: string): { version?: string; block: string } | null => {
+export const lockedPackage = (
+  lock: string,
+  name: string,
+): { version?: string; block: string } | null => {
   for (const block of lock.split(/^\[\[package\]\]\s*$/m).slice(1)) {
     const nameMatch = /^name\s*=\s*"([^"]+)"/m.exec(block)
     if (nameMatch?.[1].toLowerCase() !== name) continue

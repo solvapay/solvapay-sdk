@@ -15,8 +15,14 @@ vi.mock('./env', () => ({
   ensureEnvInGitignore: vi.fn(),
   readSolvaPayProductRefFromEnv: vi.fn(),
   writeSolvaPayProductRefToEnv: vi.fn(),
+  writeMcpServerEnvDefaults: vi.fn(),
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER: '__SOLVAPAY_PRODUCT_REF__',
 }))
+
+vi.mock('./python-mcp', async () => {
+  const actual = await vi.importActual<typeof import('./python-mcp')>('./python-mcp')
+  return { ...actual, inspectPythonMcpProject: vi.fn() }
+})
 
 vi.mock('./product-picker', () => ({
   pickProductInteractive: vi.fn(),
@@ -59,9 +65,11 @@ import {
 import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
+  writeMcpServerEnvDefaults,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
+import { inspectPythonMcpProject, type PythonMcpProject } from './python-mcp'
 import {
   getInstallCommand,
   getSolvaPayBasePackages,
@@ -424,7 +432,6 @@ describe('runInitInDirectory', () => {
       { yes: true },
     )
     expect(writeSolvaPayProductRefToEnv).not.toHaveBeenCalled()
-    expect(output.join('')).toContain('No product ref was saved')
   })
 
   it('verifies and writes an explicit productRef option without running the picker', async () => {
@@ -602,8 +609,19 @@ describe('runInitInDirectory', () => {
     const versions = (python: string[], go: string[]) => async (language: 'python' | 'go') =>
       language === 'python' ? python : go
 
+    const cleanPythonProject: PythonMcpProject = {
+      mcp: { version: '2.3.0', source: 'uv.lock' },
+      mcpCaps: [],
+      fastapiMcp: [],
+      fastmcp: [],
+      solvapayMcpExtra: false,
+      imports: [],
+    }
+
     beforeEach(() => {
       mockSuccessfulAuth()
+      vi.mocked(inspectPythonMcpProject).mockResolvedValue(cleanPythonProject)
+      vi.mocked(writeMcpServerEnvDefaults).mockResolvedValue(['PUBLIC_BASE_URL', 'PORT'])
       vi.mocked(pickProductInteractive).mockResolvedValue({
         action: 'skipped',
         reason: 'zero_products',
@@ -631,7 +649,115 @@ describe('runInitInDirectory', () => {
       const text = output.join('')
       expect(text).toContain('Detected Python project (uv)')
       expect(text).toContain('reads environment variables, not .env')
-      expect(text).toContain('npx solvapay verify')
+      expect(text).toContain('PUBLIC_BASE_URL and PORT added to .env')
+      expect(text).toContain('https://docs.solvapay.com/sdks/python/guides/mcp')
+      expect(text).toContain('npx -y solvapay@latest verify <server url>/mcp')
+      expect(text).toContain('npx -y solvapay@latest doctor')
+      expect(writeMcpServerEnvDefaults).toHaveBeenCalledWith({ cwd: TEST_CWD })
+    })
+
+    it('stops before sign-in when the project locks mcp 1.x', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+      vi.mocked(inspectPythonMcpProject).mockResolvedValue({
+        ...cleanPythonProject,
+        mcp: { version: '1.30.0', source: 'uv.lock' },
+        imports: [{ file: 'server.py', line: 1, module: 'mcp.server.fastmcp' }],
+      })
+
+      const run = runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, features: ['mcp'] },
+        sdkVersions: versions(['0.1.0'], []),
+      })
+
+      await expect(run).rejects.toThrow(/uv\.lock locks mcp 1\.30\.0/)
+      await expect(run).rejects.toThrow(
+        /server\.py:1 imports mcp\.server\.fastmcp, which mcp 2\.0 removed/,
+      )
+      await expect(run).rejects.toThrow(/py\.sdk\.modelcontextprotocol\.io\/v2\/migration/)
+      expect(createInitSession).not.toHaveBeenCalled()
+      expect(writeSolvaPaySecretToEnv).not.toHaveBeenCalled()
+      expect(runSdkCommand).not.toHaveBeenCalled()
+    })
+
+    it('stops before sign-in on fastapi-mcp', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+      vi.mocked(inspectPythonMcpProject).mockResolvedValue({
+        ...cleanPythonProject,
+        fastapiMcp: ['pyproject.toml', 'uv.lock'],
+      })
+
+      await expect(
+        runInitInDirectory({
+          cwd: TEST_CWD,
+          options: { yes: true, features: ['mcp'] },
+          sdkVersions: versions(['0.1.0'], []),
+        }),
+      ).rejects.toThrow(/pyproject\.toml and uv\.lock list fastapi-mcp, which runs only on mcp 1\.x/)
+      expect(createInitSession).not.toHaveBeenCalled()
+    })
+
+    it('warns on fastmcp and carries on', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+      vi.mocked(inspectPythonMcpProject).mockResolvedValue({
+        ...cleanPythonProject,
+        fastmcp: ['pyproject.toml'],
+        imports: [{ file: 'server.py', line: 3, module: 'fastmcp' }],
+      })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, features: ['mcp'] },
+        sdkVersions: versions(['0.1.0'], []),
+      })
+
+      expect(output.join('')).toContain(
+        'This project uses fastmcp (pyproject.toml, server.py:3). SolvaPay has no fastmcp adapter',
+      )
+      expect(runSdkCommand).toHaveBeenCalled()
+    })
+
+    it('does not inspect mcp without --features mcp', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true },
+        sdkVersions: versions(['0.1.0'], []),
+      })
+
+      expect(inspectPythonMcpProject).not.toHaveBeenCalled()
+      expect(writeMcpServerEnvDefaults).not.toHaveBeenCalled()
+      const text = output.join('')
+      expect(text).toContain('https://docs.solvapay.com/sdks/python/setup/quick-start')
+      expect(text).not.toContain('verify <server url>')
+    })
+
+    it('saves the product before the SDK install, so a failed install leaves .env complete', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'python', manager: 'uv' })
+      vi.mocked(pickProductInteractive).mockResolvedValue({ action: 'picked', product: mockProduct })
+      vi.mocked(writeSolvaPayProductRefToEnv).mockResolvedValue({
+        filePath: '/tmp/project/.env',
+        action: 'appended',
+      })
+      vi.mocked(runSdkCommand).mockResolvedValue({
+        ok: false,
+        command: "uv add 'solvapay[mcp]==0.1.0'",
+        warning: 'exited with code 1',
+      })
+
+      await expect(
+        runInitInDirectory({
+          cwd: TEST_CWD,
+          options: { yes: true, features: ['mcp'] },
+          sdkVersions: versions(['0.1.0'], []),
+        }),
+      ).rejects.toThrow(/\.env is already complete/)
+      expect(writeSolvaPayProductRefToEnv).toHaveBeenCalledWith('prd_newest', { cwd: TEST_CWD })
+      expect(writeMcpServerEnvDefaults).toHaveBeenCalled()
+      expect(vi.mocked(writeSolvaPayProductRefToEnv).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(runSdkCommand).mock.invocationCallOrder[0],
+      )
     })
 
     it('fails before sign-in when only previews exist and the CLI is stable', async () => {
@@ -692,6 +818,21 @@ describe('runInitInDirectory', () => {
         TEST_CWD,
       )
       expect(installSolvaPaySdk).not.toHaveBeenCalled()
+      expect(output.join('')).toContain('npx -y solvapay@preview doctor')
+    })
+
+    it('writes the server settings and links the Go MCP guide with --features mcp', async () => {
+      vi.mocked(detectProject).mockResolvedValue({ language: 'go', manager: 'go' })
+
+      await runInitInDirectory({
+        cwd: TEST_CWD,
+        options: { yes: true, features: ['mcp'] },
+        sdkVersions: versions([], ['v0.1.0']),
+      })
+
+      expect(inspectPythonMcpProject).not.toHaveBeenCalled()
+      expect(writeMcpServerEnvDefaults).toHaveBeenCalledWith({ cwd: TEST_CWD })
+      expect(output.join('')).toContain('https://docs.solvapay.com/sdks/go/guides/mcp')
     })
 
     it('throws with the command when the install fails', async () => {

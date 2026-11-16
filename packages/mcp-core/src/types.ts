@@ -33,10 +33,16 @@ import { VIEWER_TOOL_NAME } from './tool-names'
 export type BootstrapMerchant = SdkMerchantResponse
 
 /**
- * Product projection surfaced on every `BootstrapPayload`. Structural
- * alias for the server's `SdkProductResponse`.
+ * Product projection surfaced on every `BootstrapPayload`: only the fields a
+ * customer and a model should see (`reference`, `name`, `status`,
+ * `description`, `imageUrl`). The rest of the server's `SdkProductResponse`
+ * (the merchant's `metadata`, its own `balance` and `totalTransactions`, its
+ * MCP and delivery config) never reaches this payload.
  */
-export type BootstrapProduct = SdkProductResponse
+export type BootstrapProduct = Pick<
+  SdkProductResponse,
+  'reference' | 'name' | 'status' | 'description' | 'imageUrl'
+>
 
 /**
  * Plan projection surfaced on every `BootstrapPayload`. Structural
@@ -111,7 +117,11 @@ export interface SolvaPayCallToolResult {
   content: Array<
     | { type: 'text'; text: string; annotations?: SolvaPayContentAnnotations }
     | { type: 'image'; data: string; mimeType: string; annotations?: SolvaPayContentAnnotations }
-    | { type: 'resource'; resource: Record<string, unknown>; annotations?: SolvaPayContentAnnotations }
+    | {
+        type: 'resource'
+        resource: Record<string, unknown>
+        annotations?: SolvaPayContentAnnotations
+      }
   >
   structuredContent?: Record<string, unknown>
   isError?: boolean
