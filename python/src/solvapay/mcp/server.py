@@ -190,8 +190,15 @@ class SolvaPayMcpServer:
         (from ``public_base_url``) and localhost. Without the public host, the
         MCP SDK answers every request through the public URL (a tunnel, a
         load balancer) with 421. Pass ``transport_security`` to set your own.
+
+        The endpoint is stateless, as the TypeScript server's is: no
+        ``mcp-session-id``, each request stands alone. In-memory sessions break
+        once a load balancer spreads one client over several instances. Pass
+        ``stateless_http=False`` for sessions (server-initiated messages over a
+        held stream), on a single instance or with sticky routing.
         """
         options.setdefault("transport_security", self.transport_security())
+        options.setdefault("stateless_http", True)
         app = self.server.streamable_http_app(streamable_http_path=self.mcp_path, **options)
         app.add_exception_handler(404, _not_found)
         app.add_middleware(

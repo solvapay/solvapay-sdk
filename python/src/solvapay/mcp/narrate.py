@@ -585,9 +585,15 @@ def _activate_recovery(plan_ref: Any) -> str:
     return f'To continue, call `{ACTIVATE_PLAN_TOOL_NAME}` with planRef: "{plan_ref}".'
 
 
-def _recovery_for_state(state: str, free_plan_ref: Any) -> str:
-    if state == "B":
-        return _recovery_line(["topup"])
+def _recovery_for_state(state: str, free_plan_ref: Any) -> str | None:
+    """The call that unblocks a customer who can't call a paid tool, or None.
+
+    A funded or within-allowance customer (states B, C, E, I, J) gets no
+    recovery line: "To continue" reads as a block, and the body already names
+    the optional next step.
+    """
+    if state in ("A", "F"):
+        return _recovery_line(["checkout"])
     if state == "D":
         return _recovery_line(["topup", "checkout"])
     if state == "H":
@@ -596,9 +602,7 @@ def _recovery_for_state(state: str, free_plan_ref: Any) -> str:
             if truthy(free_plan_ref)
             else _recovery_line(["checkout"])
         )
-    if state == "J":
-        return _recovery_line(["account"])
-    return _recovery_line(["checkout"])
+    return None
 
 
 def _account_body(
@@ -875,8 +879,9 @@ def narrate_manage_account(data: Json, now: datetime | None = None) -> NarratorO
     checkout = _checkout_row(data)
     if checkout:
         lines.append(checkout)
-    lines.append("")
-    lines.append(_recovery_for_state(state, get(free, "reference")))
+    recovery = _recovery_for_state(state, get(free, "reference"))
+    if recovery:
+        lines.extend(["", recovery])
 
     links = [link for link in (_hosted_portal_link(data), _checkout_link(data)) if link]
     return NarratorOutput(text="\n".join(lines), links=links)

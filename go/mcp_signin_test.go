@@ -115,3 +115,52 @@ func TestMCPHandlerServesBehindALocalProxy(t *testing.T) {
 		t.Fatalf("initialize behind a local proxy: %d %s", w.Code, w.Body.String())
 	}
 }
+
+// The endpoint is stateless unless Stateful is set, as in TypeScript: no
+// Mcp-Session-Id, and a request needs no earlier initialize on the same
+// instance, so any replica behind a load balancer can answer it.
+func TestMCPHandlerIsStatelessByDefault(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/customer/auth/userinfo" {
+			t.Errorf("unexpected API call %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = io.WriteString(w, `{"sub":"cus_VERIFIED"}`)
+	}))
+	defer api.Close()
+	client, err := NewClient(Config{APIKey: "sk_test", APIBaseURL: api.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	post := func(server *MCPServer, body string) *http.Response {
+		r := httptest.NewRequest(http.MethodPost, "https://mcp.example.com/mcp", strings.NewReader(body))
+		r.Header.Set("Authorization", "Bearer "+testToken)
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Accept", "application/json, text/event-stream")
+		r.Header.Set("Mcp-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+		server.Handler().ServeHTTP(w, r)
+		return w.Result()
+	}
+	const initialize = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}`
+
+	stateless, err := NewMCPServer(MCPServerOptions{Client: client, ProductRef: "prd_1", PublicBaseURL: "https://mcp.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if init := post(stateless, initialize); init.StatusCode != http.StatusOK || init.Header.Get("Mcp-Session-Id") != "" {
+		t.Fatalf("initialize: %d, session %q; want 200 and no session", init.StatusCode, init.Header.Get("Mcp-Session-Id"))
+	}
+	list := post(stateless, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	body, _ := io.ReadAll(list.Body)
+	if list.StatusCode != http.StatusOK || !strings.Contains(string(body), `"name":"account"`) {
+		t.Fatalf("tools/list without a session: %d %s", list.StatusCode, body)
+	}
+
+	stateful, err := NewMCPServer(MCPServerOptions{Client: client, ProductRef: "prd_1", PublicBaseURL: "https://mcp.example.com", Stateful: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if init := post(stateful, initialize); init.Header.Get("Mcp-Session-Id") == "" {
+		t.Fatalf("Stateful: initialize returned no Mcp-Session-Id")
+	}
+}

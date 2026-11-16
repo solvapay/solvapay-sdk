@@ -179,7 +179,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research's Pro plan is cancelled and runs until Dec 1, 19 days away, with 4,200 of 5,000 calls left. Calls stop after that. Call `account` with view: 'account' to reactivate it.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"account\"."
+          "text": "**Stock Research — your account**\n\nStock Research's Pro plan is cancelled and runs until Dec 1, 19 days away, with 4,200 of 5,000 calls left. Calls stop after that. Call `account` with view: 'account' to reactivate it.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",
