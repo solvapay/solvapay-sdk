@@ -677,7 +677,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
       'Cool MCP is on Pay as you go, 200 credits per call. Balance 599,800 credits, about 2,999 calls.',
     )
     expect(text).toContain("Call `account` with view: 'topup' to add credits.")
-    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "topup"`)
+    // Not blocked, so no recovery line: "To continue" would read as a block.
+    expect(text).not.toContain('To continue')
     expect(text).not.toContain('Auto-recharge')
   })
 
@@ -713,7 +714,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
     )
     expect(text).toContain('Credits are not used on this plan')
     expect(text).toContain("Call `account` with view: 'checkout' to switch.")
-    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
+    // Not blocked, so no recovery line: "To continue" would read as a block.
+    expect(text).not.toContain('To continue')
   })
 
   it('D · balance spent: snapshot with shortfall, not blocked-tool wording', () => {
@@ -770,7 +772,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
     )
     expect(text).toContain('Credits are not used on Free')
     expect(text).toContain("Call `account` with view: 'checkout' for more calls.")
-    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
+    // Not blocked, so no recovery line: "To continue" would read as a block.
+    expect(text).not.toContain('To continue')
   })
 
   it('F · allowance used up: anti-trap, other plans, say a name', () => {
@@ -960,7 +963,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
     expect(text).toContain("Call `account` with view: 'checkout' for a higher limit.")
     expect(text).not.toContain('$12.40')
     expect(text).not.toContain('will add')
-    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout"`)
+    // Not blocked, so no recovery line: "To continue" would read as a block.
+    expect(text).not.toContain('To continue')
   })
 
   it('J · cancelled: runs until date, days left, reactivate', () => {
@@ -999,7 +1003,8 @@ describe('narrateManageAccount v3 text-only copy', () => {
     )
     expect(text).toContain('Calls stop after that')
     expect(text).toContain("Call `account` with view: 'account' to reactivate it.")
-    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "account"`)
+    // Not blocked, so no recovery line: "To continue" would read as a block.
+    expect(text).not.toContain('To continue')
   })
 })
 

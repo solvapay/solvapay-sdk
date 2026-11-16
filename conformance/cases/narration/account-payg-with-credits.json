@@ -167,7 +167,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on Pay as you go, 200 credits per call. Balance 5,000 credits, about 25 calls. Call `account` with view: 'topup' to add credits.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Add credits](https://solvapay.com/customer/checkout/topup?id=cs_2) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"topup\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on Pay as you go, 200 credits per call. Balance 5,000 credits, about 25 calls. Call `account` with view: 'topup' to add credits.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Add credits](https://solvapay.com/customer/checkout/topup?id=cs_2) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",

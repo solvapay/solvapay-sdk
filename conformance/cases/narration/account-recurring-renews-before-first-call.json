@@ -84,7 +84,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on Pro, $29 a month. Renews Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR11\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on Pro, $29 a month. Renews Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR11"
         }
       ]
     }
