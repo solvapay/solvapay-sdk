@@ -443,6 +443,8 @@ func (s *MCPServer) logDCRFailure(status int, body string) {
 func (s *MCPServer) Handler() http.Handler {
 	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s.server }, &mcp.StreamableHTTPOptions{
 		Logger: s.logger,
+		// No mcp-session-id unless Stateful is set: see MCPServerOptions.Stateful.
+		Stateless: !s.stateful,
 		// The MCP SDK refuses a request that arrives on a loopback address with
 		// a public Host, against DNS rebinding of unauthenticated local servers.
 		// That is every request behind a tunnel or proxy on the same machine

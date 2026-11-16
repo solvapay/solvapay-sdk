@@ -37,6 +37,10 @@ def build() -> SolvaPayMcpServer:
         # OAuth sign-in fails when it differs from the URL the client uses.
         public_base_url=required("PUBLIC_BASE_URL"),
         name="__SERVER_NAME__",
+        # The widget's own tools stay callable but out of tools/list, so the
+        # model sees only yours and `account`. ChatGPT still gets the full
+        # list: its iframe can only call listed tools.
+        hide_tools_by_audience=["ui"],
     )
     register_tools(mcp)
     return mcp

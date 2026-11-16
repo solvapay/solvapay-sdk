@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   ensureEnvInGitignore,
   readSolvaPayProductRefFromEnv,
+  writeMcpServerEnvDefaults,
   writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
@@ -306,6 +307,76 @@ describe('writeSolvaPayApiBaseUrlToEnv', () => {
 
       expect(result.action).toBe('unchanged')
       expect(content).toBe(`SOLVAPAY_API_BASE_URL=${DEV_URL}\n`)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('writeMcpServerEnvDefaults', () => {
+  const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-mcp-'))
+
+  it('adds PUBLIC_BASE_URL and PORT with the scaffold values', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'SOLVAPAY_SECRET_KEY=sk_test_x', 'utf8')
+      const added = await writeMcpServerEnvDefaults({ cwd })
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+
+      expect(added).toEqual(['PUBLIC_BASE_URL', 'PORT'])
+      expect(content).toMatch(/^SOLVAPAY_SECRET_KEY=sk_test_x\n\n# The URL MCP clients use/)
+      expect(content).toContain('\nPUBLIC_BASE_URL=http://localhost:8080\nPORT=8080\n')
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps values that are set and builds the URL from an existing PORT', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeFile(path.join(cwd, '.env'), 'PORT=9000\n', 'utf8')
+      expect(await writeMcpServerEnvDefaults({ cwd })).toEqual(['PUBLIC_BASE_URL'])
+      const content = await readFile(path.join(cwd, '.env'), 'utf8')
+      expect(content).toContain('PUBLIC_BASE_URL=http://localhost:9000\n')
+      expect(content.match(/^PORT=/gm)).toHaveLength(1)
+
+      expect(await writeMcpServerEnvDefaults({ cwd })).toEqual([])
+      expect(await readFile(path.join(cwd, '.env'), 'utf8')).toBe(content)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('empty values in .env', () => {
+  it('reads an empty key as unset instead of taking the next line', async () => {
+    const cwd = await mkdtemp(path.join(os.tmpdir(), 'solvapay-init-empty-'))
+    try {
+      await writeFile(
+        path.join(cwd, '.env'),
+        'SOLVAPAY_SECRET_KEY=sk_test_x\nSOLVAPAY_PRODUCT_REF=\nFORECAST_API_KEYS=k:user_1\n',
+        'utf8',
+      )
+      expect(await readSolvaPayProductRefFromEnv(cwd)).toBeUndefined()
+
+      const result = await writeSolvaPayProductRefToEnv('prd_new', { cwd })
+      expect(result.action).toBe('updated')
+      expect(await readFile(path.join(cwd, '.env'), 'utf8')).toBe(
+        'SOLVAPAY_SECRET_KEY=sk_test_x\nSOLVAPAY_PRODUCT_REF=prd_new\nFORECAST_API_KEYS=k:user_1\n',
+      )
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps blank lines above a key it replaces', async () => {
+    const cwd = await mkdtemp(path.join(os.tmpdir(), 'solvapay-init-blank-'))
+    try {
+      await writeFile(path.join(cwd, '.env'), 'FOO=bar\n\n\nSOLVAPAY_SECRET_KEY=sk_old\n', 'utf8')
+      await writeSolvaPaySecretToEnv('sk_new', { cwd, confirmOverwrite: async () => true })
+      expect(await readFile(path.join(cwd, '.env'), 'utf8')).toBe(
+        'FOO=bar\n\n\nSOLVAPAY_SECRET_KEY=sk_new\n',
+      )
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
