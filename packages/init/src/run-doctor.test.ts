@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -259,6 +259,86 @@ describe('runDoctorInDirectory', () => {
       const report = await run(['v0.1.0'])
       expect(report.checks.find(c => c.name === 'SolvaPay SDK')).toBeUndefined()
       expect(sdkCheck(report, 'solvapay-sdk/go version')?.ok).toBe(true)
+    })
+  })
+
+  describe('Python MCP imports and the SOLVAPAY_DEBUG line', () => {
+    let cwd: string
+    const write = (name: string, content: string) => writeFile(path.join(cwd, name), content)
+    const run = () => runDoctorInDirectory({ cwd, sdkVersions: async () => ['0.1.0'] })
+    const importsCheck = (report: Awaited<ReturnType<typeof run>>) =>
+      report.checks.find(c => c.name === 'Python MCP imports')
+    const lock = (mcp: string) =>
+      `version = 1\n\n[[package]]\nname = "mcp"\nversion = "${mcp}"\n\n[[package]]\nname = "solvapay"\nversion = "0.1.0"\n`
+
+    beforeEach(async () => {
+      cwd = await mkdtemp(path.join(os.tmpdir(), 'doctor-mcp-'))
+      vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
+      vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, ok: false }))
+    })
+
+    afterEach(async () => {
+      await rm(cwd, { recursive: true, force: true })
+    })
+
+    it('fails a FastMCP import once init has moved the project to mcp 2.x', async () => {
+      await write('pyproject.toml', 'dependencies = ["mcp[cli]>=1.30.0", "solvapay[mcp]==0.1.0"]\n')
+      await write('uv.lock', lock('2.3.0'))
+      await write('server.py', 'from mcp.server.fastmcp import FastMCP\n')
+
+      const report = await run()
+      const check = importsCheck(report)
+
+      expect(report.ok).toBe(false)
+      expect(check?.ok).toBe(false)
+      expect(check?.detail).toContain(
+        "server.py:1 imports mcp.server.fastmcp, which mcp 2.0 removed (FastMCP is now MCPServer), so the server can't start on mcp 2.x (mcp 2.3.0 in uv.lock)",
+      )
+      expect(check?.detail).toContain('https://py.sdk.modelcontextprotocol.io/v2/migration/')
+    })
+
+    it('only warns while the project is still on mcp 1.x without solvapay[mcp]', async () => {
+      await write('pyproject.toml', 'dependencies = ["mcp[cli]>=1.30.0", "solvapay==0.1.0"]\n')
+      await write('uv.lock', lock('1.30.0'))
+      await write('server.py', 'from mcp.server.fastmcp import FastMCP\n')
+
+      const check = importsCheck(await run())
+
+      expect(check?.ok).toBe(true)
+      expect(check?.detail).toMatch(/^warning: .*This code runs today \(mcp 1\.30\.0 in uv\.lock\)/)
+    })
+
+    it('passes a clean Python project and leaves out the TypeScript-only debug line', async () => {
+      await write('pyproject.toml', 'dependencies = ["solvapay[mcp]==0.1.0"]\n')
+      await write('uv.lock', lock('2.3.0'))
+      await write('server.py', 'from solvapay.mcp import create_solvapay_mcp_server\n')
+
+      const report = await run()
+
+      expect(importsCheck(report)).toEqual({
+        name: 'Python MCP imports',
+        ok: true,
+        detail: 'none that need mcp 1.x',
+      })
+      expect(report.checks.find(c => c.name === 'SOLVAPAY_DEBUG defaults')).toBeUndefined()
+    })
+
+    it('keeps the debug line for a TypeScript project', async () => {
+      await write('package.json', JSON.stringify({ dependencies: { '@solvapay/server': '1.0.0' } }))
+      await mkdir(path.join(cwd, 'node_modules', '@solvapay', 'server'), { recursive: true })
+      await write(
+        'node_modules/@solvapay/server/package.json',
+        JSON.stringify({ version: '1.0.0' }),
+      )
+
+      const report = await runDoctorInDirectory({
+        cwd,
+        distTags: async () => ({ latest: '1.0.0' }),
+      })
+
+      expect(report.checks.find(c => c.name === 'SOLVAPAY_DEBUG defaults')).toBeDefined()
+      expect(importsCheck(report)).toBeUndefined()
     })
   })
 })

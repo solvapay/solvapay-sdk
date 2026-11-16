@@ -654,23 +654,30 @@ function activateRecovery(planRef: string): string {
   return `To continue, call \`${MCP_TOOL_NAMES.activatePlan}\` with planRef: "${planRef}".`
 }
 
-function recoveryForState(state: NarratorAccountState, freePlanRef?: string | null): string {
+/**
+ * The one call that unblocks a customer who can't call a paid tool, or null
+ * when nothing blocks them. A funded or within-allowance customer gets no
+ * recovery line: "To continue, call …" reads as a block, and the body already
+ * names the optional next step (top up, switch plan, reactivate).
+ */
+function recoveryForState(
+  state: NarratorAccountState,
+  freePlanRef?: string | null,
+): string | null {
   switch (state) {
     case 'A':
-      return recoveryLine(['checkout'])
-    case 'B':
-      return recoveryLine(['topup'])
-    case 'C':
-    case 'E':
     case 'F':
-    case 'I':
       return recoveryLine(['checkout'])
     case 'D':
       return recoveryLine(['topup', 'checkout'])
     case 'H':
       return freePlanRef ? activateRecovery(freePlanRef) : recoveryLine(['checkout'])
+    case 'B':
+    case 'C':
+    case 'E':
+    case 'I':
     case 'J':
-      return recoveryLine(['account'])
+      return null
   }
 }
 
@@ -952,8 +959,8 @@ export function narrateManageAccount(
     const checkout = checkoutRow(data)
     if (checkout) lines.push(checkout)
   }
-  lines.push('')
-  lines.push(recoveryForState(state, free?.reference))
+  const recovery = recoveryForState(state, free?.reference)
+  if (recovery) lines.push('', recovery)
 
   const links: NarratorOutput['links'] = []
   const portal = hostedPortalLink(data)

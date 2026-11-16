@@ -169,7 +169,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on Unlimited, $99 a month. Unlimited calls, renewing Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on Unlimited, $99 a month. Unlimited calls, renewing Dec 1. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: ada@example.com · cus_42\nManage: [Manage account](https://solvapay.com/customer/manage?session=sess_1) (expires in 15 minutes)\nCheckout: [Open checkout](https://solvapay.com/customer/checkout?id=cs_1) (expires in 15 minutes)"
         },
         {
           "type": "resource_link",

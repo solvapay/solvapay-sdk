@@ -148,7 +148,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Stock Research — your account**\n\nStock Research is on Legacy, $15 once. After your first call. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR10\n\nTo continue, call `account` with view: \"checkout\"."
+          "text": "**Stock Research — your account**\n\nStock Research is on Legacy, $15 once. After your first call. Credits are not used on this plan. Call `account` with view: 'checkout' to switch.\nSigned in as: cus_NR10"
         }
       ]
     }
